@@ -42,10 +42,10 @@ const TransitStopInfo: React.FC<TransitStopInfoProps> = ({
       )}
 
       {isTooFar && (
-        <div className="alert alert-warning text-xs mt-2 p-2">
+        <div className="alert alert-warning text-xs mt-2 p-2 flex items-start">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="stroke-current shrink-0 h-4 w-4"
+            className="stroke-current shrink-0 h-4 w-4 mt-0.5"
             fill="none"
             viewBox="0 0 24 24"
           >
@@ -56,10 +56,10 @@ const TransitStopInfo: React.FC<TransitStopInfoProps> = ({
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
             />
           </svg>
-          <span>
+          <span className="ml-1">
             {isOrigin ? "出発地" : "目的地"}からバス停まで{" "}
-            {distanceInMeters ? distanceInMeters : "不明"} m
-            離れています（徒歩約{" "}
+            {distanceInMeters ? distanceInMeters : "不明"} m 離れています
+            （徒歩約{" "}
             {distanceInMeters ? Math.round(distanceInMeters / 80) : "不明"} 分）
           </span>
         </div>

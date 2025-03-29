@@ -25,9 +25,15 @@ export default function DestinationSelector({
     setError(null);
 
     try {
+      // 「千代田区」が含まれていない場合は接頭辞として追加
+      let searchAddress = address.trim();
+      if (!searchAddress.includes("千代田区")) {
+        searchAddress = `千代田区 ${searchAddress}`;
+      }
+
       // Google Maps Geocoding APIを呼び出し
       const response = await fetch(
-        `/api/geocode?address=${encodeURIComponent(address)}`
+        `/api/geocode?address=${encodeURIComponent(searchAddress)}`
       );
       const data = await response.json();
 
@@ -63,7 +69,7 @@ export default function DestinationSelector({
           <input
             type="text"
             className="input input-bordered w-full"
-            placeholder="例: 東京都千代田区霞が関1-1-1"
+            placeholder="えみふる"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             disabled={loading}

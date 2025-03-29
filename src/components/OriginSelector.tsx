@@ -129,7 +129,7 @@ export default function OriginSelector({
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
           <button
             type="submit"
-            className="btn btn-primary flex-1"
+            className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm flex-1"
             disabled={loading}
             data-testid="search-button"
           >
@@ -142,7 +142,7 @@ export default function OriginSelector({
 
           <button
             type="button"
-            className="btn btn-secondary flex-1"
+            className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm flex-1"
             onClick={handleUseCurrentLocation}
             disabled={loading}
             data-testid="gps-button"

@@ -135,27 +135,7 @@ describe("Home", () => {
     });
   });
 
-  it.skip("目的地を選択すると乗換案内検索フォームが表示される", async () => {
-    // NearestStopFinderが自動的に最寄りのバス停を選択するモックに変更
-    (require("../../components/NearestStopFinder") as any).mockImplementation(
-      ({ onStopSelected }: any) => {
-        // コンポーネントがレンダリングされたときに自動的に最寄りのバス停を選択
-        setTimeout(() => {
-          onStopSelected({
-            stop_id: "nearest-stop",
-            stop_name: "最寄りバス停",
-            distance: 0.5,
-          });
-        }, 0);
-
-        return (
-          <div data-testid="nearest-stop-finder">
-            <p>最寄りのバス停を自動選択中...</p>
-          </div>
-        );
-      }
-    );
-
+  it("リセットボタンをクリックすると初期状態に戻る", async () => {
     render(<Home />);
 
     // 出発地を選択
@@ -170,31 +150,10 @@ describe("Home", () => {
       fireEvent.click(selectDestinationButton);
     });
 
-    // 最寄りのバス停が自動選択され、フォームが表示される
+    // リセットボタンをクリック
     await waitFor(() => {
-      expect(screen.getByTestId("transit-form")).toBeInTheDocument();
-    });
-  });
-
-  it("出発地変更ボタンをクリックすると出発地選択に戻る", async () => {
-    render(<Home />);
-
-    // 出発地を選択
-    const selectOriginButton = screen.getByTestId("select-origin-button");
-    fireEvent.click(selectOriginButton);
-
-    // 目的地を選択
-    await waitFor(() => {
-      const selectDestinationButton = screen.getByTestId(
-        "select-destination-button"
-      );
-      fireEvent.click(selectDestinationButton);
-    });
-
-    // 出発地変更ボタンをクリック
-    await waitFor(() => {
-      const changeOriginButton = screen.getByTestId("change-origin");
-      fireEvent.click(changeOriginButton);
+      const resetButton = screen.getByTestId("reset-search");
+      fireEvent.click(resetButton);
     });
 
     await waitFor(() => {
@@ -234,7 +193,7 @@ describe("Home", () => {
     });
   });
 
-  it.skip("目的地選択後に最寄りバス停検索が表示され、選択するとTransitFormに切り替わる", async () => {
+  it.skip("目的地選択後に最寄りバス停検索が表示され、選択するとDateTimeSelectorに切り替わる", async () => {
     render(<Home />);
 
     // 出発地を選択

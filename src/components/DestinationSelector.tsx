@@ -79,7 +79,7 @@ export default function DestinationSelector({
 
         <button
           type="submit"
-          className="btn btn-primary w-full"
+          className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm w-full"
           disabled={loading}
           data-testid="search-destination-button"
         >

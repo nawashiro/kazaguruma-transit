@@ -55,11 +55,12 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             type="button"
             className={`flex-1 py-3 px-4 font-medium transition-colors duration-200 ${
               isDeparture
-                ? "bg-black text-white font-bold"
+                ? "bg-gray-300 text-gray-800"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
             }`}
             onClick={() => toggleTimeType(true)}
             data-testid="departure-tab"
+            disabled={disabled}
           >
             出発
           </button>
@@ -67,11 +68,12 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             type="button"
             className={`flex-1 py-3 px-4 font-medium transition-colors duration-200 ${
               !isDeparture
-                ? "bg-black text-white font-bold"
+                ? "bg-gray-300 text-gray-800"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
             }`}
             onClick={() => toggleTimeType(false)}
             data-testid="arrival-tab"
+            disabled={disabled}
           >
             到着
           </button>
@@ -95,14 +97,17 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             required
             className="input input-bordered w-full"
             data-testid={isDeparture ? "departure-input" : "arrival-input"}
+            disabled={disabled}
           />
         </div>
       </div>
 
       <button
         type="submit"
-        className={`btn w-full mt-4 ${
-          disabled ? "btn-disabled" : "btn-primary"
+        className={`btn w-full mt-4 px-6 py-3 ${
+          disabled
+            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+            : "bg-gray-200 text-gray-700 hover:bg-gray-300 shadow-sm"
         }`}
         data-testid="search-button"
         disabled={disabled}

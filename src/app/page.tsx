@@ -199,10 +199,6 @@ export default function Home() {
     }
   };
 
-  const resetDestination = () => {
-    setSelectedDestination(null);
-  };
-
   // 出発地と目的地が両方選択されたら、経路検索を行う
   useEffect(() => {
     if (selectedOrigin && selectedDestination) {
@@ -253,7 +249,28 @@ export default function Home() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
           {!selectedOrigin ? (
-            <OriginSelector onOriginSelected={handleOriginSelected} />
+            <>
+              <OriginSelector onOriginSelected={handleOriginSelected} />
+              <div className="flex justify-center mt-4">
+                <button
+                  className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
+                  onClick={() => {
+                    // すべての状態をリセット
+                    setSearchPerformed(false);
+                    setDepartures([]);
+                    setError(null);
+                    setRouteInfo(null);
+                    setRouteLoading(false);
+                    setSelectedOrigin(null);
+                    setSelectedDestination(null);
+                    setNearestStopFound(false);
+                  }}
+                  data-testid="reset-search"
+                >
+                  検索条件をリセット
+                </button>
+              </div>
+            </>
           ) : !selectedDestination ? (
             <>
               <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
@@ -264,17 +281,29 @@ export default function Home() {
                       6
                     )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
                 </p>
-                <button
-                  className="btn btn-sm btn-outline mt-2"
-                  onClick={() => setSelectedOrigin(null)}
-                  data-testid="change-origin"
-                >
-                  出発地を変更
-                </button>
               </div>
               <DestinationSelector
                 onDestinationSelected={handleDestinationSelected}
               />
+              <div className="flex justify-center mt-4">
+                <button
+                  className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
+                  onClick={() => {
+                    // すべての状態をリセット
+                    setSearchPerformed(false);
+                    setDepartures([]);
+                    setError(null);
+                    setRouteInfo(null);
+                    setRouteLoading(false);
+                    setSelectedOrigin(null);
+                    setSelectedDestination(null);
+                    setNearestStopFound(false);
+                  }}
+                  data-testid="reset-search"
+                >
+                  検索条件をリセット
+                </button>
+              </div>
             </>
           ) : (
             <>
@@ -286,13 +315,6 @@ export default function Home() {
                       6
                     )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
                 </p>
-                <button
-                  className="btn btn-sm btn-outline mt-2"
-                  onClick={() => setSelectedOrigin(null)}
-                  data-testid="change-origin"
-                >
-                  出発地を変更
-                </button>
               </div>
 
               <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
@@ -303,13 +325,6 @@ export default function Home() {
                       6
                     )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
                 </p>
-                <button
-                  className="btn btn-sm btn-outline mt-2"
-                  onClick={resetDestination}
-                  data-testid="change-destination"
-                >
-                  目的地を変更
-                </button>
               </div>
 
               {/* バス停情報 */}
@@ -355,22 +370,67 @@ export default function Home() {
 
               {/* 最寄りバス停の検索と自動選択 */}
               {!nearestStopFound ? (
-                <NearestStopFinder
-                  userLocation={selectedOrigin}
-                  onStopSelected={handleStopSelected}
-                />
+                <>
+                  <NearestStopFinder
+                    userLocation={selectedOrigin}
+                    onStopSelected={handleStopSelected}
+                  />
+                  <div className="flex justify-center mt-4">
+                    <button
+                      className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
+                      onClick={() => {
+                        // すべての状態をリセット
+                        setSearchPerformed(false);
+                        setDepartures([]);
+                        setError(null);
+                        setRouteInfo(null);
+                        setRouteLoading(false);
+                        setSelectedOrigin(null);
+                        setSelectedDestination(null);
+                        setNearestStopFound(false);
+                      }}
+                      data-testid="reset-search"
+                    >
+                      検索条件をリセット
+                    </button>
+                  </div>
+                </>
               ) : (
                 /* 最寄りバス停が見つかったら日時選択フォームを表示 */
-                <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-                  <h2 className="text-xl font-bold mb-2">
-                    いつ出発/到着しますか？
-                  </h2>
-                  <DateTimeSelector
-                    initialStopId={originStop?.stop_id || ""}
-                    onSubmit={handleFormSubmit}
-                    disabled={!!(routeInfo && routeInfo.type === "none")}
-                  />
-                </div>
+                <>
+                  <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+                    <h2 className="text-xl font-bold mb-2">
+                      いつ出発/到着しますか？
+                    </h2>
+                    <DateTimeSelector
+                      initialStopId={originStop?.stop_id || ""}
+                      onSubmit={handleFormSubmit}
+                      disabled={
+                        !!(routeInfo && routeInfo.type === "none") ||
+                        searchPerformed
+                      }
+                    />
+                  </div>
+                  <div className="flex justify-center mt-4">
+                    <button
+                      className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
+                      onClick={() => {
+                        // すべての状態をリセット
+                        setSearchPerformed(false);
+                        setDepartures([]);
+                        setError(null);
+                        setRouteInfo(null);
+                        setRouteLoading(false);
+                        setSelectedOrigin(null);
+                        setSelectedDestination(null);
+                        setNearestStopFound(false);
+                      }}
+                      data-testid="reset-search"
+                    >
+                      検索条件をリセット
+                    </button>
+                  </div>
+                </>
               )}
             </>
           )}

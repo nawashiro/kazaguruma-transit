@@ -38,58 +38,62 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
     });
   };
 
-  const toggleTimeType = () => {
-    setIsDeparture(!isDeparture);
+  const toggleTimeType = (newValue: boolean) => {
+    setIsDeparture(newValue);
   };
 
+  const inputId = isDeparture ? "departure-time" : "arrival-time";
+
   return (
-    <form onSubmit={handleSubmit} className="transit-form">
-      <div className="form-group">
-        <div className="time-toggle">
-          <button
-            type="button"
-            className={isDeparture ? "active" : ""}
-            onClick={toggleTimeType}
-            disabled={isDeparture}
+    <form onSubmit={handleSubmit} className="w-full">
+      <div className="mb-4">
+        {/* daisyUIのtabsコンポーネントを使用 */}
+        <div role="tablist" className="tabs tabs-boxed mb-4">
+          <a
+            role="tab"
+            className={`tab ${isDeparture ? "tab-active" : ""}`}
+            onClick={() => toggleTimeType(true)}
+            data-testid="departure-tab"
           >
             出発
-          </button>
-          <button
-            type="button"
-            className={!isDeparture ? "active" : ""}
-            onClick={toggleTimeType}
-            disabled={!isDeparture}
+          </a>
+          <a
+            role="tab"
+            className={`tab ${!isDeparture ? "tab-active" : ""}`}
+            onClick={() => toggleTimeType(false)}
+            data-testid="arrival-tab"
           >
             到着
-          </button>
+          </a>
         </div>
 
-        {isDeparture ? (
-          <div className="time-input">
-            <label htmlFor="departure-time">出発日時</label>
-            <input
-              id="departure-time"
-              type="datetime-local"
-              value={dateTime}
-              onChange={(e) => setDateTime(e.target.value)}
-              required
-            />
-          </div>
-        ) : (
-          <div className="time-input">
-            <label htmlFor="arrival-time">到着日時</label>
-            <input
-              id="arrival-time"
-              type="datetime-local"
-              value={dateTime}
-              onChange={(e) => setDateTime(e.target.value)}
-              required
-            />
-          </div>
-        )}
+        <div className="form-control w-full">
+          <label htmlFor={inputId} className="label">
+            <span
+              className="label-text font-medium"
+              data-testid={isDeparture ? "departure-label" : "arrival-label"}
+            >
+              {isDeparture ? "出発日時" : "到着日時"}
+            </span>
+          </label>
+          <input
+            id={inputId}
+            name={inputId}
+            type="datetime-local"
+            value={dateTime}
+            onChange={(e) => setDateTime(e.target.value)}
+            required
+            className="input input-bordered w-full"
+            data-testid={isDeparture ? "departure-input" : "arrival-input"}
+          />
+        </div>
       </div>
 
-      <button type="submit" className="search-button">
+      <button
+        type="submit"
+        className="btn btn-primary w-full mt-4"
+        data-testid="search-button"
+      >
         検索
       </button>
     </form>

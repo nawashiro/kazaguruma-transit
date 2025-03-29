@@ -16,8 +16,9 @@ describe("DateTimeSelector", () => {
     );
 
     // 出発日時入力フィールドが存在することを確認
-    const departureDateTimeInput = screen.getByLabelText(/出発日時/);
+    const departureDateTimeInput = screen.getByTestId("departure-input");
     expect(departureDateTimeInput).toBeInTheDocument();
+    expect(screen.getByTestId("departure-label")).toHaveTextContent("出発日時");
 
     // 値を設定
     fireEvent.change(departureDateTimeInput, {
@@ -32,17 +33,16 @@ describe("DateTimeSelector", () => {
     );
 
     // デフォルトでは出発日時が表示されていることを確認
-    expect(screen.getByLabelText(/出発日時/)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/到着日時/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("departure-label")).toHaveTextContent("出発日時");
 
-    // 到着日時に切り替え
-    const toggleButton = screen.getByRole("button", { name: /到着/ });
-    fireEvent.click(toggleButton);
+    // 到着タブをクリック
+    const arrivalTab = screen.getByTestId("arrival-tab");
+    fireEvent.click(arrivalTab);
 
     // 到着日時入力フィールドが表示されていることを確認
     await waitFor(() => {
-      expect(screen.queryByLabelText(/出発日時/)).not.toBeInTheDocument();
-      expect(screen.getByLabelText(/到着日時/)).toBeInTheDocument();
+      expect(screen.getByTestId("arrival-label")).toHaveTextContent("到着日時");
+      expect(screen.getByTestId("arrival-input")).toBeInTheDocument();
     });
   });
 
@@ -52,11 +52,11 @@ describe("DateTimeSelector", () => {
     );
 
     // 日時を設定
-    const dateTimeInput = screen.getByLabelText(/出発日時/);
+    const dateTimeInput = screen.getByTestId("departure-input");
     fireEvent.change(dateTimeInput, { target: { value: "2023-11-01T09:00" } });
 
     // フォームを送信
-    const submitButton = screen.getByRole("button", { name: /検索/ });
+    const submitButton = screen.getByTestId("search-button");
     fireEvent.click(submitButton);
 
     // onSubmitが正しいパラメータで呼ばれることを確認

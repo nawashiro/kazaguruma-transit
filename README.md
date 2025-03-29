@@ -1,4 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# かざぐるま乗換案内
+
+千代田区福祉交通「かざぐるま」の乗換案内ウェブアプリケーション
+
+## セットアップ
+
+```bash
+npm install
+```
+
+## 環境変数の設定
+
+プロジェクトのルートに `.env.local` ファイルを作成し、以下の環境変数を設定してください：
+
+```
+# Google Maps API Key（ジオコーディングAPIを有効化したキー）
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=あなたのGoogleMapsAPIキー
+```
+
+## 開発サーバーの起動
+
+```bash
+npm run dev
+```
+
+## テストの実行
+
+```bash
+npm test
+```
+
+## ビルド
+
+```bash
+npm run build
+```
+
+## デプロイ
+
+```bash
+npm run start
+```
+
+## 主な機能
+
+- 住所や現在地からの乗換案内の検索
+- バス停の出発時刻の表示
+- 路線別フィルタリング
+
+## 技術スタック
+
+- Next.js
+- TypeScript
+- DaisyUI (Tailwind CSS)
+- Jest + React Testing Library
 
 ## Getting Started
 

@@ -29,7 +29,14 @@ export interface Route {
   textColor?: string;
 }
 
+export interface Location {
+  lat: number;
+  lng: number;
+  address?: string;
+}
+
 export interface TransitFormData {
   stopId?: string;
   routeId?: string;
+  origin?: Location;
 }

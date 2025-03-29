@@ -3,13 +3,21 @@
 import { useState } from "react";
 import TransitForm from "../components/TransitForm";
 import DeparturesList from "../components/DeparturesList";
-import { Departure, TransitFormData } from "../types/transit";
+import OriginSelector from "../components/OriginSelector";
+import { Departure, TransitFormData, Location } from "../types/transit";
 
 export default function Home() {
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchPerformed, setSearchPerformed] = useState(false);
+  const [selectedOrigin, setSelectedOrigin] = useState<Location | null>(null);
+
+  const handleOriginSelected = (location: Location) => {
+    setSelectedOrigin(location);
+    // この段階ではまだ目的地選択などは実装していないため、
+    // 出発地が選択されただけでは検索処理は実行しません
+  };
 
   const handleFormSubmit = async (formData: TransitFormData) => {
     setLoading(true);
@@ -45,12 +53,34 @@ export default function Home() {
     <div className="container mx-auto p-4">
       <header className="text-center my-8">
         <h1 className="text-3xl font-bold text-primary">かざぐるま乗換案内</h1>
-        <p className="mt-2 text-lg">千代田線の乗換案内サービス</p>
+        <p className="mt-2 text-lg">千代田区福祉交通の乗換案内サービス</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
-          <TransitForm onSubmit={handleFormSubmit} />
+          {!selectedOrigin ? (
+            <OriginSelector onOriginSelected={handleOriginSelected} />
+          ) : (
+            <>
+              <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+                <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
+                <p data-testid="selected-origin">
+                  {selectedOrigin.address ||
+                    `緯度: ${selectedOrigin.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
+                </p>
+                <button
+                  className="btn btn-sm btn-outline mt-2"
+                  onClick={() => setSelectedOrigin(null)}
+                  data-testid="change-origin"
+                >
+                  出発地を変更
+                </button>
+              </div>
+              <TransitForm onSubmit={handleFormSubmit} />
+            </>
+          )}
         </div>
 
         <div className="md:col-span-2">

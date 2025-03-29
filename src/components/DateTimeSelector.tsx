@@ -47,24 +47,32 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
   return (
     <form onSubmit={handleSubmit} className="w-full">
       <div className="mb-4">
-        {/* daisyUIのtabsコンポーネントを使用 */}
-        <div role="tablist" className="tabs tabs-boxed mb-4">
-          <a
-            role="tab"
-            className={`tab ${isDeparture ? "tab-active" : ""}`}
+        {/* カスタムデザインのトグルを実装 */}
+        <div className="flex rounded-lg overflow-hidden mb-4">
+          <button
+            type="button"
+            className={`flex-1 py-3 px-4 font-medium transition-colors duration-200 ${
+              isDeparture
+                ? "bg-black text-white font-bold"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
             onClick={() => toggleTimeType(true)}
             data-testid="departure-tab"
           >
             出発
-          </a>
-          <a
-            role="tab"
-            className={`tab ${!isDeparture ? "tab-active" : ""}`}
+          </button>
+          <button
+            type="button"
+            className={`flex-1 py-3 px-4 font-medium transition-colors duration-200 ${
+              !isDeparture
+                ? "bg-black text-white font-bold"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
             onClick={() => toggleTimeType(false)}
             data-testid="arrival-tab"
           >
             到着
-          </a>
+          </button>
         </div>
 
         <div className="form-control w-full">

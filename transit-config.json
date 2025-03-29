@@ -1,0 +1,9 @@
+{
+  "sqlitePath": ".temp/gtfs",
+  "agencies": [
+    {
+      "agency_key": "chiyoda",
+      "url": "https://api-public.odpt.org/api/v4/files/odpt/HitachiAutomobileTransportation/Chiyoda_ALLLINES.zip?date=20241227"
+    }
+  ]
+}

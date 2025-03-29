@@ -398,19 +398,19 @@ export default function Home() {
               ) : (
                 /* 最寄りバス停が見つかったら日時選択フォームを表示 */
                 <>
-                  <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-                    <h2 className="text-xl font-bold mb-2">
-                      いつ出発/到着しますか？
-                    </h2>
-                    <DateTimeSelector
-                      initialStopId={originStop?.stop_id || ""}
-                      onSubmit={handleFormSubmit}
-                      disabled={
-                        !!(routeInfo && routeInfo.type === "none") ||
-                        searchPerformed
-                      }
-                    />
-                  </div>
+                  {/* ルートが見つからない場合は日時選択を表示しない */}
+                  {!(routeInfo && routeInfo.type === "none") && (
+                    <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+                      <h2 className="text-xl font-bold mb-2">
+                        いつ出発/到着しますか？
+                      </h2>
+                      <DateTimeSelector
+                        initialStopId={originStop?.stop_id || ""}
+                        onSubmit={handleFormSubmit}
+                        disabled={searchPerformed}
+                      />
+                    </div>
+                  )}
                   <div className="flex justify-center mt-4">
                     <button
                       className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"

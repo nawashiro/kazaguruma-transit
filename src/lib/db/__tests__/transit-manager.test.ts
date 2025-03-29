@@ -142,8 +142,6 @@ describe("TransitManager", () => {
     // テスト前にモックをリセット
     jest.clearAllMocks();
     transitManager = TransitManager.getInstance();
-    // 環境変数のモック時刻を無効化
-    process.env.MOCK_TIME = "false";
   });
 
   test("getInstance returns a singleton instance", () => {

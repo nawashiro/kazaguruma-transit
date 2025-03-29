@@ -23,11 +23,6 @@ const CONFIG_PATH = path.join(process.cwd(), "transit-config.json");
 let isImporting = false;
 let importPromise: Promise<any> | null = null;
 
-// テスト用に現在時刻を固定するオプション
-const USE_MOCK_TIME = process.env.MOCK_TIME === "true";
-const MOCK_HOUR = parseInt(process.env.MOCK_HOUR || "12", 10);
-const MOCK_MINUTE = parseInt(process.env.MOCK_MINUTE || "0", 10);
-
 /**
  * 交通データの取得と管理を担当するマネージャークラス
  */
@@ -239,14 +234,9 @@ export class TransitManager {
   }
 
   /**
-   * 現在時刻を取得する（テスト用のモック時刻対応）
+   * 現在時刻を取得する
    */
   private getCurrentTime(): Date {
-    if (USE_MOCK_TIME) {
-      const now = new Date();
-      now.setHours(MOCK_HOUR, MOCK_MINUTE, 0, 0);
-      return now;
-    }
     return new Date();
   }
 

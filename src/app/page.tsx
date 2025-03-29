@@ -8,6 +8,7 @@ import DestinationSelector from "../components/DestinationSelector";
 import NearestStopFinder from "../components/NearestStopFinder";
 import TransitStopInfo from "../components/TransitStopInfo";
 import RouteDetail from "../components/RouteDetail";
+import IntegratedRouteDisplay from "../components/IntegratedRouteDisplay";
 import { Departure, TransitFormData, Location } from "../types/transit";
 
 interface StopInfo {
@@ -139,9 +140,13 @@ export default function Home() {
     try {
       // APIパラメータを構築
       const params = new URLSearchParams();
+
+      // 新しいAPI形式にアクション追加
+      params.append("action", "getDepartures");
+
       if (formData.stopId) {
         console.log("バス停ID検索:", formData.stopId);
-        params.append("stop", formData.stopId);
+        params.append("stopId", formData.stopId);
       }
 
       // 日時と出発/到着情報を追加
@@ -157,7 +162,7 @@ export default function Home() {
 
       // 特定の路線が選択されている場合にのみ追加
       if (formData.routeId) {
-        params.append("route", formData.routeId);
+        params.append("routeId", formData.routeId);
       }
 
       // 出発地と目的地の情報を追加
@@ -364,12 +369,13 @@ export default function Home() {
                   <p className="mt-4">経路を検索中...</p>
                 </div>
               ) : routeInfo ? (
-                <RouteDetail
+                <IntegratedRouteDisplay
                   originStop={routeInfo.originStop}
                   destinationStop={routeInfo.destinationStop}
                   routes={routeInfo.routes}
                   type={routeInfo.type}
                   transfers={routeInfo.transfers}
+                  departures={departures}
                   message={routeInfo.message}
                 />
               ) : (
@@ -398,7 +404,8 @@ export default function Home() {
             </div>
           )}
 
-          {searchPerformed && (
+          {/* 検索結果が表示されており、かつ経路検索結果に表示されていない場合のみ、従来の出発案内を表示 */}
+          {searchPerformed && !routeInfo && (
             <div className="bg-base-200 p-4 rounded-lg shadow-md">
               <h2 className="text-xl font-bold mb-4">出発案内</h2>
               <DeparturesList

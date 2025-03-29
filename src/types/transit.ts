@@ -93,3 +93,41 @@ export interface GTFSTrip {
   trip_headsign?: string;
   [key: string]: any;
 }
+
+// 統合経路表示のための型定義
+export interface StopInfo {
+  stop_id: string;
+  stop_name: string;
+  stop_lat: number;
+  stop_lon: number;
+  distance?: number;
+}
+
+export interface TransferInfo {
+  transferStop: {
+    stopId: string;
+    stopName: string;
+    stopLat: number;
+    stopLon: number;
+  };
+  nextRoute: RouteDetail;
+}
+
+export interface RouteDetail {
+  routeId: string;
+  routeName: string;
+  routeShortName: string;
+  routeLongName: string;
+  routeColor: string;
+  routeTextColor: string;
+  transfers?: TransferInfo[];
+}
+
+export interface RouteResponse {
+  originStop: StopInfo;
+  destinationStop: StopInfo;
+  routes: RouteDetail[];
+  type: "direct" | "transfer" | "none";
+  transfers: number;
+  message?: string;
+}

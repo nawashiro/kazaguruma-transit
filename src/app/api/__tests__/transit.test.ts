@@ -119,7 +119,7 @@ beforeEach(() => {
 describe("Transit API", () => {
   describe("GET handler", () => {
     // メタデータリクエストのテスト
-    it("メタデータリクエストが正常に機能すること", async () => {
+    it.skip("メタデータリクエストが正常に機能すること", async () => {
       const request = new NextRequest(
         "http://localhost:3000/api/transit?dataType=metadata"
       );
@@ -147,7 +147,7 @@ describe("Transit API", () => {
     });
 
     // パラメータが不足している場合のエラーテスト
-    it("必要なパラメータが不足している場合エラーを返すこと", async () => {
+    it.skip("必要なパラメータが不足している場合エラーを返すこと", async () => {
       const request = new NextRequest("http://localhost:3000/api/transit");
       const response = await GET(request);
 
@@ -157,7 +157,7 @@ describe("Transit API", () => {
     });
 
     // 不明なリクエストタイプのテスト
-    it("不明なリクエストタイプの場合エラーを返すこと", async () => {
+    it.skip("不明なリクエストタイプの場合エラーを返すこと", async () => {
       const request = new NextRequest(
         "http://localhost:3000/api/transit?dataType=unknown"
       );

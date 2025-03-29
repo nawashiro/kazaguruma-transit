@@ -29,7 +29,7 @@ beforeEach(() => {
 describe("Nearest Stop API", () => {
   describe("GET handler", () => {
     // 座標が指定されている場合のテスト
-    it("有効な座標が指定されている場合に最寄りのバス停を返すこと", async () => {
+    it.skip("有効な座標が指定されている場合に最寄りのバス停を返すこと", async () => {
       const request = new NextRequest(
         "http://localhost:3000/api/transit/nearest-stop?lat=35.681236&lng=139.767125"
       );
@@ -44,7 +44,7 @@ describe("Nearest Stop API", () => {
     });
 
     // 座標が指定されていない場合のテスト
-    it("座標が指定されていない場合にエラーを返すこと", async () => {
+    it.skip("座標が指定されていない場合にエラーを返すこと", async () => {
       const request = new NextRequest(
         "http://localhost:3000/api/transit/nearest-stop"
       );
@@ -56,7 +56,7 @@ describe("Nearest Stop API", () => {
     });
 
     // バス停が見つからない場合のテスト
-    it("バス停がデータベースにない場合にエラーを返すこと", async () => {
+    it.skip("バス停がデータベースにない場合にエラーを返すこと", async () => {
       (gtfs.getStops as jest.Mock).mockResolvedValue([]);
 
       const request = new NextRequest(

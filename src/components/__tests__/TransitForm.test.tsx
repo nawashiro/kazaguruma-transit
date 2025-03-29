@@ -4,8 +4,10 @@ import TransitForm from "../TransitForm";
 
 // モックフェッチの実装
 global.fetch = jest.fn();
+const mockFetch = global.fetch as jest.Mock;
 
 describe("TransitForm", () => {
+  const mockStop = { stop_id: "stop1", stop_name: "テスト停留所" };
   const mockOnSubmit = jest.fn();
 
   beforeEach(() => {
@@ -13,16 +15,21 @@ describe("TransitForm", () => {
     jest.clearAllMocks();
 
     // メタデータ取得のモック
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        stops: [
-          { id: "stop1", name: "大手町" },
-          { id: "stop2", name: "国会議事堂前" },
-        ],
+        stops: [mockStop],
         routes: [
-          { id: "route1", name: "千代田線" },
-          { id: "route2", name: "日比谷線" },
+          {
+            route_id: "route1",
+            route_short_name: "1",
+            route_long_name: "テストルート1",
+          },
+          {
+            route_id: "route2",
+            route_short_name: "2",
+            route_long_name: "テストルート2",
+          },
         ],
       }),
     });
@@ -31,11 +38,13 @@ describe("TransitForm", () => {
   it("renders the form correctly", async () => {
     render(<TransitForm onSubmit={mockOnSubmit} />);
 
-    expect(screen.getByText("乗換案内")).toBeInTheDocument();
+    // 最初はローディング状態
+    expect(screen.getByText("データを読み込み中...")).toBeInTheDocument();
 
     // APIからデータが読み込まれるのを待つ
     await waitFor(() => {
-      expect(screen.getByText("大手町")).toBeInTheDocument();
+      expect(screen.getByLabelText(/バス停/)).toBeInTheDocument();
+      expect(screen.getByText("テスト停留所")).toBeInTheDocument();
     });
 
     // メタデータを取得するためのAPIが呼ばれたことを確認
@@ -47,61 +56,123 @@ describe("TransitForm", () => {
 
     // データが読み込まれるのを待つ
     await waitFor(() => {
-      expect(screen.getByText("大手町")).toBeInTheDocument();
+      expect(screen.getByLabelText(/バス停/)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId("submit-button"));
+    // 検索ボタンをクリック
+    const submitButton = screen.getByRole("button", { name: /検索/ });
+    fireEvent.click(submitButton);
 
-    expect(screen.getByText("駅を選択してください")).toBeInTheDocument();
+    // バリデーションにより送信されない
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
-  it("calls onSubmit when form is submitted with valid data", async () => {
+  it("calls onSubmit with the correct parameters when form is submitted", async () => {
     render(<TransitForm onSubmit={mockOnSubmit} />);
 
     // データが読み込まれるのを待つ
     await waitFor(() => {
-      expect(screen.getByText("大手町")).toBeInTheDocument();
+      expect(screen.getByLabelText(/バス停/)).toBeInTheDocument();
     });
 
     // 駅を選択
-    fireEvent.change(screen.getByTestId("stop-select"), {
-      target: { value: "stop1" },
-    });
+    const stopSelect = screen.getByLabelText(/バス停/);
+    fireEvent.change(stopSelect, { target: { value: "stop1" } });
 
     // 路線を選択
-    fireEvent.change(screen.getByTestId("route-select"), {
-      target: { value: "route1" },
-    });
+    const routeSelect = screen.getByLabelText(/路線/);
+    fireEvent.change(routeSelect, { target: { value: "route1" } });
 
     // 送信
-    fireEvent.click(screen.getByTestId("submit-button"));
+    const submitButton = screen.getByRole("button", { name: /検索/ });
+    fireEvent.click(submitButton);
 
     expect(mockOnSubmit).toHaveBeenCalledWith({
       stopId: "stop1",
       routeId: "route1",
+      dateTime: expect.any(String),
+      isDeparture: true,
     });
   });
 
-  it("submits the form with only stop ID when route is not selected", async () => {
-    render(<TransitForm onSubmit={mockOnSubmit} />);
+  it("出発日時入力フィールドが表示され、値を入力できること", async () => {
+    render(
+      <TransitForm initialStopId={mockStop.stop_id} onSubmit={mockOnSubmit} />
+    );
 
-    // データが読み込まれるのを待つ
+    // メタデータが読み込まれるのを待つ
     await waitFor(() => {
-      expect(screen.getByText("大手町")).toBeInTheDocument();
+      expect(screen.getByLabelText(/バス停/)).toBeInTheDocument();
     });
 
-    // 駅を選択
-    fireEvent.change(screen.getByTestId("stop-select"), {
-      target: { value: "stop1" },
+    // 出発日時入力フィールドが存在することを確認
+    const departureDateTimeInput = screen.getByLabelText(/出発日時/);
+    expect(departureDateTimeInput).toBeInTheDocument();
+
+    // 値を設定
+    fireEvent.change(departureDateTimeInput, {
+      target: { value: "2023-11-01T09:00" },
+    });
+    expect(departureDateTimeInput).toHaveValue("2023-11-01T09:00");
+  });
+
+  it("出発/到着切り替えが機能し、到着日時入力フィールドに切り替わること", async () => {
+    render(
+      <TransitForm initialStopId={mockStop.stop_id} onSubmit={mockOnSubmit} />
+    );
+
+    // メタデータが読み込まれるのを待つ
+    await waitFor(() => {
+      expect(screen.getByLabelText(/バス停/)).toBeInTheDocument();
     });
 
-    // 送信
-    fireEvent.click(screen.getByTestId("submit-button"));
+    // デフォルトでは出発日時が表示されていることを確認
+    expect(screen.getByLabelText(/出発日時/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/到着日時/)).not.toBeInTheDocument();
 
+    // 到着日時に切り替え
+    const toggleButton = screen.getByRole("button", { name: /到着/ });
+    fireEvent.click(toggleButton);
+
+    // 到着日時入力フィールドが表示されていることを確認
+    await waitFor(() => {
+      expect(screen.queryByLabelText(/出発日時/)).not.toBeInTheDocument();
+      expect(screen.getByLabelText(/到着日時/)).toBeInTheDocument();
+    });
+  });
+
+  it("フォーム送信時に日時情報が含まれること", async () => {
+    render(
+      <TransitForm initialStopId={mockStop.stop_id} onSubmit={mockOnSubmit} />
+    );
+
+    // メタデータが読み込まれるのを待つ
+    await waitFor(() => {
+      expect(screen.getByLabelText(/バス停/)).toBeInTheDocument();
+    });
+
+    // バス停を選択
+    const stopSelect = screen.getByLabelText(/バス停/);
+    fireEvent.change(stopSelect, { target: { value: "stop1" } });
+
+    // ルートを選択
+    const routeSelect = screen.getByLabelText(/路線/);
+    fireEvent.change(routeSelect, { target: { value: "route1" } });
+
+    // 日時を設定
+    const dateTimeInput = screen.getByLabelText(/出発日時/);
+    fireEvent.change(dateTimeInput, { target: { value: "2023-11-01T09:00" } });
+
+    // フォームを送信
+    const submitButton = screen.getByRole("button", { name: /検索/ });
+    fireEvent.click(submitButton);
+
+    // onSubmitが正しいパラメータで呼ばれることを確認
     expect(mockOnSubmit).toHaveBeenCalledWith({
       stopId: "stop1",
-      routeId: undefined,
+      routeId: "route1",
+      dateTime: "2023-11-01T09:00",
+      isDeparture: true,
     });
   });
 });

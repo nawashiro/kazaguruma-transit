@@ -26,9 +26,6 @@ export default function NearestStopFinder({
 }: NearestStopFinderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [nearestStop, setNearestStop] = useState<
-    NearestStopResponse["nearestStop"] | null
-  >(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -60,30 +57,15 @@ export default function NearestStopFinder({
         if (data.nearestStop && isMounted) {
           const stopData = data.nearestStop;
           console.log("最寄りバス停を見つけました:", stopData);
-          console.log("バス停ID:", stopData.stop_id);
-          console.log("バス停名:", stopData.stop_name);
 
-          setNearestStop(stopData);
-
-          // デバッグ: データ形式を確認
-          console.log("onStopSelected呼び出し前のデータ:", {
+          // 直接呼び出し、表示は行わない
+          const stopDataToSend = {
             stop_id: stopData.stop_id,
             stop_name: stopData.stop_name,
-          });
+            distance: stopData.distance,
+          };
 
-          // 自動的に最寄りのバス停を選択 (遅延を設定して状態更新後に実行)
-          setTimeout(() => {
-            if (isMounted) {
-              console.log("最寄りバス停を選択中...");
-              const stopDataToSend = {
-                stop_id: stopData.stop_id,
-                stop_name: stopData.stop_name,
-                distance: stopData.distance,
-              };
-              console.log("選択するバス停データ:", stopDataToSend);
-              onStopSelected(stopDataToSend);
-            }
-          }, 500);
+          onStopSelected(stopDataToSend);
         } else if (isMounted) {
           console.log("近くにバス停が見つかりませんでした");
           setError("近くにバス停が見つかりませんでした");
@@ -130,33 +112,6 @@ export default function NearestStopFinder({
     );
   }
 
-  if (!nearestStop) {
-    return (
-      <div className="bg-base-200 p-4 rounded-lg shadow-md">
-        <div className="alert alert-warning">
-          <span>最寄りのバス停が見つかりませんでした</span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-base-200 p-4 rounded-lg shadow-md">
-      <h3 className="text-lg font-bold">
-        最寄りのバス停: {nearestStop.stop_name}
-      </h3>
-      <p className="text-sm">（自動的に選択されました）</p>
-      {nearestStop.distance !== undefined && (
-        <p className="text-xs mt-2">
-          現在地からの距離: 約{nearestStop.distance.toFixed(2)}km
-        </p>
-      )}
-      <button
-        className="btn btn-sm btn-primary mt-2"
-        onClick={() => onStopSelected(nearestStop)}
-      >
-        このバス停を選択
-      </button>
-    </div>
-  );
+  // バス停が見つかった場合は何も表示しない（処理はすでに完了）
+  return null;
 }

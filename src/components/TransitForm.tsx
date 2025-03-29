@@ -1,144 +1,171 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
-import { Stop, Route, TransitFormData } from "../types/transit";
+import React, { useState, useEffect } from "react";
+import { Stop, Route } from "../types/transit";
 
 interface TransitFormProps {
-  onSubmit: (formData: TransitFormData) => void;
+  initialStopId?: string;
+  onSubmit: (formData: {
+    stopId: string;
+    routeId: string;
+    dateTime?: string;
+    isDeparture: boolean;
+  }) => void;
 }
 
-export default function TransitForm({ onSubmit }: TransitFormProps) {
+const TransitForm: React.FC<TransitFormProps> = ({
+  initialStopId,
+  onSubmit,
+}) => {
   const [stops, setStops] = useState<Stop[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [selectedStop, setSelectedStop] = useState<string>(initialStopId || "");
+  const [selectedRoute, setSelectedRoute] = useState<string>("");
+  const [dateTime, setDateTime] = useState<string>("");
+  const [isDeparture, setIsDeparture] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectedStop, setSelectedStop] = useState<string>("");
-  const [selectedRoute, setSelectedRoute] = useState<string>("");
-
-  // APIからデータを取得
   useEffect(() => {
-    const fetchTransitData = async () => {
+    const fetchMetadata = async () => {
       try {
         setLoading(true);
-        // 駅と路線データを取得
         const response = await fetch("/api/transit?dataType=metadata");
-
         if (!response.ok) {
-          throw new Error("データの取得に失敗しました");
+          throw new Error("メタデータの取得に失敗しました");
         }
-
         const data = await response.json();
+        setStops(data.stops);
+        setRoutes(data.routes);
 
-        if (data.stops) {
-          setStops(data.stops);
-        }
+        // 現在の日時を初期値として設定
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        const hours = String(now.getHours()).padStart(2, "0");
+        const minutes = String(now.getMinutes()).padStart(2, "0");
+        setDateTime(`${year}-${month}-${day}T${hours}:${minutes}`);
 
-        if (data.routes) {
-          setRoutes(data.routes);
-        }
+        setError(null);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "予期せぬエラーが発生しました"
-        );
-        console.error("データ取得エラー:", err);
+        setError("データ取得中にエラーが発生しました");
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTransitData();
+    fetchMetadata();
   }, []);
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!selectedStop) {
-      setError("駅を選択してください");
-      return;
+  useEffect(() => {
+    if (initialStopId) {
+      setSelectedStop(initialStopId);
     }
+  }, [initialStopId]);
 
-    const formData: TransitFormData = {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
       stopId: selectedStop,
-      routeId: selectedRoute || undefined,
-    };
-
-    onSubmit(formData);
+      routeId: selectedRoute,
+      dateTime: dateTime || undefined,
+      isDeparture,
+    });
   };
 
+  const toggleTimeType = () => {
+    setIsDeparture(!isDeparture);
+  };
+
+  if (loading) return <div>データを読み込み中...</div>;
+  if (error) return <div className="error">{error}</div>;
+
   return (
-    <div className="bg-base-200 p-4 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">乗換案内</h2>
-
-      {error && (
-        <div className="alert alert-error mb-4">
-          <span>{error}</span>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text">駅名</span>
-          </label>
-          <select
-            className="select select-bordered w-full text-base-content"
-            value={selectedStop}
-            onChange={(e) => setSelectedStop(e.target.value)}
-            data-testid="stop-select"
-            disabled={loading}
-          >
-            <option value="" className="text-base-content">
-              駅を選択
-            </option>
-            {stops.map((stop) => (
-              <option
-                key={stop.id}
-                value={stop.id}
-                className="text-base-content"
-              >
-                {stop.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text">路線（オプション）</span>
-          </label>
-          <select
-            className="select select-bordered w-full text-base-content"
-            value={selectedRoute}
-            onChange={(e) => setSelectedRoute(e.target.value)}
-            data-testid="route-select"
-            disabled={loading}
-          >
-            <option value="" className="text-base-content">
-              路線を選択
-            </option>
-            {routes.map((route) => (
-              <option
-                key={route.id}
-                value={route.id}
-                className="text-base-content"
-              >
-                {route.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <button
-          type="submit"
-          className="btn btn-primary w-full"
-          disabled={loading}
-          data-testid="submit-button"
+    <form onSubmit={handleSubmit} className="transit-form">
+      <div className="form-group">
+        <label htmlFor="stop-select">バス停</label>
+        <select
+          id="stop-select"
+          value={selectedStop}
+          onChange={(e) => setSelectedStop(e.target.value)}
+          required
         >
-          {loading ? <span className="loading loading-spinner"></span> : "検索"}
-        </button>
-      </form>
-    </div>
+          <option value="">バス停を選択</option>
+          {stops.map((stop) => (
+            <option key={stop.stop_id} value={stop.stop_id}>
+              {stop.stop_name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="route-select">路線</label>
+        <select
+          id="route-select"
+          value={selectedRoute}
+          onChange={(e) => setSelectedRoute(e.target.value)}
+          required
+        >
+          <option value="">路線を選択</option>
+          {routes.map((route) => (
+            <option key={route.route_id} value={route.route_id}>
+              {route.route_short_name} - {route.route_long_name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="form-group">
+        <div className="time-toggle">
+          <button
+            type="button"
+            className={isDeparture ? "active" : ""}
+            onClick={toggleTimeType}
+            disabled={isDeparture}
+          >
+            出発
+          </button>
+          <button
+            type="button"
+            className={!isDeparture ? "active" : ""}
+            onClick={toggleTimeType}
+            disabled={!isDeparture}
+          >
+            到着
+          </button>
+        </div>
+
+        {isDeparture ? (
+          <div className="time-input">
+            <label htmlFor="departure-time">出発日時</label>
+            <input
+              id="departure-time"
+              type="datetime-local"
+              value={dateTime}
+              onChange={(e) => setDateTime(e.target.value)}
+            />
+          </div>
+        ) : (
+          <div className="time-input">
+            <label htmlFor="arrival-time">到着日時</label>
+            <input
+              id="arrival-time"
+              type="datetime-local"
+              value={dateTime}
+              onChange={(e) => setDateTime(e.target.value)}
+            />
+          </div>
+        )}
+      </div>
+
+      <button type="submit" className="search-button">
+        検索
+      </button>
+    </form>
   );
-}
+};
+
+export default TransitForm;

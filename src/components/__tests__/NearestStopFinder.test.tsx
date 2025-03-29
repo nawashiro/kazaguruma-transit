@@ -51,14 +51,18 @@ describe("NearestStopFinder", () => {
       expect(mockFetch).toHaveBeenCalledWith(
         `/api/transit/nearest-stop?lat=${mockLocation.lat}&lng=${mockLocation.lng}`
       );
-      expect(mockOnStopSelected).toHaveBeenCalledWith(mockNearestStop);
+      expect(mockOnStopSelected).toHaveBeenCalledWith({
+        stop_id: mockNearestStop.stop_id,
+        stop_name: mockNearestStop.stop_name,
+        distance: mockNearestStop.distance,
+      });
     });
 
-    // 最寄りのバス停名が表示される
+    // 成功すると何も表示されない（nullが返される）
     expect(
-      screen.getByText(/最寄りのバス停: ひたちなか市役所/)
-    ).toBeInTheDocument();
-    expect(screen.getByText(/現在地からの距離: 約0.50km/)).toBeInTheDocument();
+      screen.queryByText("最寄りのバス停を検索中...")
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/最寄りのバス停/)).not.toBeInTheDocument();
   });
 
   it("バス停が取得できなかった場合エラーメッセージが表示される", async () => {

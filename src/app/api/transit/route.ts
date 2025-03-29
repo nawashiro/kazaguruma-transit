@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import path from "path";
 import fs from "fs";
 import { Stop, Route, Departure } from "../../../types/transit";
@@ -36,6 +36,21 @@ if (USE_MOCK_TIME) {
       MOCK_MINUTE < 10 ? "0" + MOCK_MINUTE : MOCK_MINUTE
     }`
   );
+}
+
+// GTFSのStopTime型を定義
+interface GTFSStopTime {
+  trip_id?: string;
+  arrival_time?: string;
+  departure_time?: string;
+  stop_id?: string;
+  stop_sequence?: number;
+  stop_headsign?: string;
+  pickup_type?: number;
+  drop_off_type?: number;
+  shape_dist_traveled?: number;
+  timepoint?: number;
+  route_id?: string; // GTFSでは通常定義されていないがAPIで拡張している
 }
 
 // データベース接続を適切に管理するための関数
@@ -397,10 +412,10 @@ async function gtfsGetDepartures(
   };
 
   // 選択されたストップのルートと時刻を取得
-  const stoptimes = await gtfsGetStoptimes({
+  const stoptimes = (await gtfsGetStoptimes({
     stop_id: stop_id || undefined,
     route_id: route_id || undefined,
-  });
+  })) as GTFSStopTime[];
 
   // 対応するルート情報を取得
   const allRoutes = await gtfsGetRoutes();
@@ -444,15 +459,7 @@ async function gtfsGetDepartures(
     const nowTime = getCurrentTime().getTime();
 
     // stoptimesを型安全に処理
-    interface GTFSStopTime {
-      route_id?: string;
-      stop_id?: string;
-      trip_id?: string;
-      departure_time?: string;
-      [key: string]: any;
-    }
-
-    for (const stoptime of stoptimes as GTFSStopTime[]) {
+    for (const stoptime of stoptimes) {
       if (!stoptime.route_id || !stoptime.departure_time || !stoptime.stop_id)
         continue;
 
@@ -493,61 +500,183 @@ async function gtfsGetDepartures(
   }
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const dataType = searchParams.get("dataType");
-  const stopId = searchParams.get("stop");
-  const routeId = searchParams.get("route");
-
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    // GTFSデータの準備
-    const preparationResult = await prepareGTFSData();
-    if (!preparationResult.success) {
-      return NextResponse.json(
-        { error: "GTFSデータの準備に失敗しました" },
-        { status: 500 }
-      );
-    }
+    await ensureDbConnection();
+    await checkDatabaseIntegrity();
 
-    // メタデータリクエスト（駅と路線の一覧）
+    const url = new URL(request.url);
+    const searchParams = url.searchParams;
+    const dataType = searchParams.get("dataType");
+    const stopId = searchParams.get("stop");
+    const routeId = searchParams.get("route");
+    const dateTimeParam = searchParams.get("dateTime");
+    const isDepartureParam = searchParams.get("isDeparture");
+
+    // dataTypeがmetadataの場合はメタデータを返す
     if (dataType === "metadata") {
-      try {
-        const [stops, routes] = await Promise.all([getStops(), getRoutes()]);
-
-        return NextResponse.json({ stops, routes });
-      } catch (error) {
-        console.error("メタデータ取得エラー:", error);
-        return NextResponse.json(
-          { error: "メタデータの取得に失敗しました" },
-          { status: 500 }
-        );
-      }
+      return await getMetadata();
     }
 
-    // 出発データリクエスト
+    // 出発時刻の取得リクエスト
     if (stopId) {
-      try {
-        const departures = await getDepartures(stopId, routeId || undefined);
-        return NextResponse.json({ departures });
-      } catch (error) {
-        console.error("発車時刻データ取得エラー:", error);
-        return NextResponse.json(
-          { error: "発車時刻データの取得に失敗しました" },
-          { status: 500 }
-        );
+      const isDeparture = isDepartureParam !== "false"; // デフォルトはtrue
+      let dateTime: Date | undefined = undefined;
+
+      if (dateTimeParam) {
+        dateTime = new Date(dateTimeParam);
+        if (isNaN(dateTime.getTime())) {
+          dateTime = undefined; // 無効な日時形式の場合は無視
+        }
       }
+
+      return await getDeparturesByStop(stopId, routeId, dateTime, isDeparture);
     }
 
-    // パラメータ不足
+    // その他のリクエストタイプが追加される可能性があるが、
+    // 現時点では上記以外はエラーとして扱う
     return NextResponse.json(
-      { error: "必要なパラメータが不足しています" },
+      { error: "無効なリクエストです" },
       { status: 400 }
     );
   } catch (error) {
     console.error("APIエラー:", error);
     return NextResponse.json(
-      { error: "乗換案内データの取得に失敗しました" },
+      { error: "サーバーエラーが発生しました" },
+      { status: 500 }
+    );
+  } finally {
+    await safeCloseDb();
+  }
+}
+
+// 特定のバス停の出発時刻を取得
+async function getDeparturesByStop(
+  stopId: string,
+  routeId: string | null,
+  dateTime?: Date,
+  isDeparture: boolean = true
+): Promise<NextResponse> {
+  try {
+    await ensureDbConnection();
+
+    // 日時が指定されていない場合は現在時刻を使用
+    const targetDateTime = dateTime || getCurrentTime();
+
+    // GTFS からの発車/到着情報の取得
+    const stoptimes = (await gtfsGetStoptimes({
+      stop_id: stopId,
+      route_id: routeId || undefined,
+    })) as GTFSStopTime[];
+
+    // 対応するルートと停留所の情報を取得
+    const routesMap = new Map();
+    const routes = await gtfsGetRoutes();
+    for (const route of routes) {
+      routesMap.set(route.route_id, route);
+    }
+
+    const stopsMap = new Map();
+    const stops = await gtfsGetStops({ stop_id: stopId });
+    for (const stop of stops) {
+      stopsMap.set(stop.stop_id, stop);
+    }
+
+    // 発車情報を構築
+    const departures: Departure[] = [];
+    const targetTime = targetDateTime.getTime();
+
+    for (const stoptime of stoptimes) {
+      if (!stoptime.route_id || !stoptime.trip_id) continue;
+
+      // 時刻情報を取得
+      const timeField = isDeparture
+        ? stoptime.departure_time
+        : stoptime.arrival_time;
+      if (!timeField) continue;
+
+      // 時刻をDateオブジェクトに変換
+      const [hours, minutes, seconds] = timeField.split(":").map(Number);
+      const departureDate = new Date(targetDateTime);
+      departureDate.setHours(hours % 24, minutes, seconds || 0);
+
+      // 日付が次の日になる場合は調整
+      if (hours >= 24) {
+        departureDate.setDate(departureDate.getDate() + Math.floor(hours / 24));
+      }
+
+      const departureTime = departureDate.getTime();
+
+      // 出発/到着時刻のフィルタリング
+      if (isDeparture) {
+        // 出発時刻モード: 指定時刻以降の時刻のみ
+        if (departureTime < targetTime) continue;
+      } else {
+        // 到着時刻モード: 指定時刻以前の時刻のみ
+        if (departureTime > targetTime) continue;
+      }
+
+      const route = routesMap.get(stoptime.route_id);
+      const stop = stopsMap.get(stopId);
+
+      if (!route || !stop) continue;
+
+      departures.push({
+        routeId: stoptime.route_id,
+        routeName:
+          route.route_long_name || route.route_short_name || "名称不明",
+        stopId: stopId,
+        stopName: stop.stop_name || "名称不明",
+        direction: "不明",
+        scheduledTime: departureDate.toISOString(),
+        realtime: false,
+        delay: null,
+      });
+
+      // 出発時刻モードでは最大10件まで、到着時刻モードでは過去10件まで
+      if (departures.length >= 10) break;
+    }
+
+    // 日時でソート（出発モードは昇順、到着モードは降順）
+    departures.sort((a, b) => {
+      const timeA = new Date(a.scheduledTime).getTime();
+      const timeB = new Date(b.scheduledTime).getTime();
+      return isDeparture ? timeA - timeB : timeB - timeA;
+    });
+
+    return NextResponse.json({ departures });
+  } catch (error) {
+    console.error("時刻取得エラー:", error);
+    return NextResponse.json(
+      {
+        error: isDeparture
+          ? "出発時刻の取得に失敗しました"
+          : "到着時刻の取得に失敗しました",
+      },
       { status: 500 }
     );
   }
 }
+
+// getMetadata 関数の実装
+async function getMetadata(): Promise<NextResponse> {
+  try {
+    await ensureDbConnection();
+    // stops と routes を取得
+    const stops = await getStops();
+    const routes = await getRoutes();
+
+    return NextResponse.json({
+      stops,
+      routes,
+    });
+  } catch (error) {
+    console.error("メタデータ取得エラー:", error);
+    return NextResponse.json(
+      { error: "メタデータの取得に失敗しました" },
+      { status: 500 }
+    );
+  }
+}
+
+// ... その他の関数

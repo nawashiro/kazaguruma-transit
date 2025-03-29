@@ -1,12 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import TransitForm from "../components/TransitForm";
+import DateTimeSelector from "../components/DateTimeSelector";
 import DeparturesList from "../components/DeparturesList";
 import OriginSelector from "../components/OriginSelector";
 import DestinationSelector from "../components/DestinationSelector";
 import NearestStopFinder from "../components/NearestStopFinder";
+import TransitStopInfo from "../components/TransitStopInfo";
 import { Departure, TransitFormData, Location } from "../types/transit";
+
+interface StopInfo {
+  stop_id: string;
+  stop_name: string;
+  distance?: number;
+}
 
 export default function Home() {
   const [departures, setDepartures] = useState<Departure[]>([]);
@@ -17,6 +24,8 @@ export default function Home() {
   const [selectedDestination, setSelectedDestination] =
     useState<Location | null>(null);
   const [nearestStopFound, setNearestStopFound] = useState(false);
+  const [originStop, setOriginStop] = useState<StopInfo | null>(null);
+  const [destinationStop, setDestinationStop] = useState<StopInfo | null>(null);
 
   const handleOriginSelected = (location: Location) => {
     setSelectedOrigin(location);
@@ -26,9 +35,49 @@ export default function Home() {
   const handleDestinationSelected = (location: Location) => {
     setSelectedDestination(location);
     // 目的地が選択されたら、次のステップに進む
+
+    // 目的地の最寄りバス停も検索して保存する
+    fetchDestinationStop(location);
   };
 
-  const handleStopSelected = (stop: any) => {
+  // 目的地の最寄りバス停を検索する関数
+  const fetchDestinationStop = async (location: Location) => {
+    if (!location || !location.lat || !location.lng) {
+      console.error("目的地の位置情報が不正です");
+      return;
+    }
+
+    try {
+      console.log("目的地の最寄りバス停を検索中...", location);
+
+      const response = await fetch(
+        `/api/transit/nearest-stop?lat=${location.lat}&lng=${location.lng}`
+      );
+      const data = await response.json();
+      console.log("目的地の最寄りバス停API応答:", data);
+
+      if (!response.ok) {
+        throw new Error(data.error || "バス停の取得に失敗しました");
+      }
+
+      if (data.nearestStop) {
+        const stopData = data.nearestStop;
+        console.log("目的地の最寄りバス停を見つけました:", stopData);
+
+        setDestinationStop({
+          stop_id: stopData.stop_id,
+          stop_name: stopData.stop_name,
+          distance: stopData.distance,
+        });
+      } else {
+        console.log("目的地の近くにバス停が見つかりませんでした");
+      }
+    } catch (err) {
+      console.error("目的地の最寄りバス停取得エラー:", err);
+    }
+  };
+
+  const handleStopSelected = (stop: StopInfo) => {
     console.log("最寄りバス停が選択されました:", stop);
 
     if (!stop || !stop.stop_id) {
@@ -36,17 +85,10 @@ export default function Home() {
       return;
     }
 
-    // GTFSデータの形式（stop_id）からアプリの形式（stopId）に変換
-    const formData: TransitFormData = {
-      stopId: stop.stop_id,
-    };
-    console.log("フォームデータを準備:", formData);
+    // 最寄りバス停情報を保存
+    setOriginStop(stop);
 
-    // 検索を実行
-    console.log("発車時刻検索を開始します");
-    // 最寄りバス停選択後にフォームを表示しないように直接検索実行
-    handleFormSubmit(formData);
-    // 検索後に最寄りバス停検索済みフラグを設定
+    // 最寄りバス停が見つかったフラグを設定
     setNearestStopFound(true);
   };
 
@@ -62,7 +104,22 @@ export default function Home() {
         console.log("バス停ID検索:", formData.stopId);
         params.append("stop", formData.stopId);
       }
-      if (formData.routeId) params.append("route", formData.routeId);
+
+      // 日時と出発/到着情報を追加
+      if (formData.dateTime) {
+        console.log("日時:", formData.dateTime);
+        params.append("dateTime", formData.dateTime);
+      }
+
+      if (formData.isDeparture !== undefined) {
+        console.log("出発モード:", formData.isDeparture);
+        params.append("isDeparture", formData.isDeparture.toString());
+      }
+
+      // 特定の路線が選択されている場合にのみ追加
+      if (formData.routeId) {
+        params.append("route", formData.routeId);
+      }
 
       // 出発地と目的地の情報を追加
       if (selectedOrigin) {
@@ -171,12 +228,46 @@ export default function Home() {
                 </button>
               </div>
 
+              {/* バス停情報 */}
+              {(originStop || destinationStop) && (
+                <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+                  <h2 className="text-xl font-bold mb-2">バス停情報</h2>
+                  <div className="space-y-2">
+                    {originStop && (
+                      <TransitStopInfo
+                        stopInfo={originStop}
+                        location={selectedOrigin}
+                        type="origin"
+                      />
+                    )}
+                    {destinationStop && (
+                      <TransitStopInfo
+                        stopInfo={destinationStop}
+                        location={selectedDestination}
+                        type="destination"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* 最寄りバス停の検索と自動選択 */}
-              {!nearestStopFound && (
+              {!nearestStopFound ? (
                 <NearestStopFinder
                   userLocation={selectedOrigin}
                   onStopSelected={handleStopSelected}
                 />
+              ) : (
+                /* 最寄りバス停が見つかったら日時選択フォームを表示 */
+                <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+                  <h2 className="text-xl font-bold mb-2">
+                    いつ出発/到着しますか？
+                  </h2>
+                  <DateTimeSelector
+                    initialStopId={originStop?.stop_id || ""}
+                    onSubmit={handleFormSubmit}
+                  />
+                </div>
               )}
             </>
           )}

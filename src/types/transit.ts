@@ -18,6 +18,8 @@ export interface Stop {
   id: string;
   name: string;
   code?: string;
+  stop_id?: string;
+  stop_name?: string;
 }
 
 export interface Route {
@@ -27,6 +29,9 @@ export interface Route {
   longName?: string;
   color?: string;
   textColor?: string;
+  route_id?: string;
+  route_short_name?: string;
+  route_long_name?: string;
 }
 
 export interface Location {
@@ -40,4 +45,6 @@ export interface TransitFormData {
   routeId?: string;
   origin?: Location;
   destination?: Location;
+  dateTime?: string;
+  isDeparture?: boolean;
 }

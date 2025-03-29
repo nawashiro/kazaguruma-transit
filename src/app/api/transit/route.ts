@@ -24,6 +24,20 @@ let isImporting = false;
 let importPromise: Promise<any> | null = null;
 let isDbOpen = false;
 
+// テスト用に現在時刻を固定するオプション
+const USE_MOCK_TIME = process.env.MOCK_TIME === "true";
+const MOCK_HOUR = parseInt(process.env.MOCK_HOUR || "12", 10);
+const MOCK_MINUTE = parseInt(process.env.MOCK_MINUTE || "0", 10);
+
+// 開発時のデバッグ情報を表示
+if (USE_MOCK_TIME) {
+  console.log(
+    `モック時刻を使用: ${MOCK_HOUR}:${
+      MOCK_MINUTE < 10 ? "0" + MOCK_MINUTE : MOCK_MINUTE
+    }`
+  );
+}
+
 // データベース接続を適切に管理するための関数
 async function ensureDbConnection() {
   if (!isDbOpen) {
@@ -248,6 +262,18 @@ async function getRoutes(): Promise<Route[]> {
   }));
 }
 
+// 現在時刻を取得する関数（モック可能）
+function getCurrentTime(): Date {
+  if (USE_MOCK_TIME) {
+    const mockDate = new Date();
+    mockDate.setHours(MOCK_HOUR);
+    mockDate.setMinutes(MOCK_MINUTE);
+    mockDate.setSeconds(0);
+    return mockDate;
+  }
+  return new Date();
+}
+
 // GTFSから発車時刻情報を取得
 async function getDepartures(
   stopId: string,
@@ -256,8 +282,8 @@ async function getDepartures(
   try {
     await ensureDbConnection();
 
-    // 現在の日時
-    const now = DateTime.now();
+    // 現在の日時 - モック時刻に対応
+    const now = DateTime.fromJSDate(getCurrentTime());
     // GTFSが数値形式を期待しているため、文字列ではなく数値に変換
     const currentDate = parseInt(now.toFormat("yyyyMMdd"), 10);
 
@@ -289,7 +315,7 @@ async function getDepartures(
 
     // 発車情報を構築
     const departures: Departure[] = [];
-    const nowTime = now.toMillis();
+    const nowTime = getCurrentTime().getTime();
 
     for (const stoptime of stoptimes) {
       // まずトリップ情報を取得
@@ -336,7 +362,7 @@ async function getDepartures(
         stopId: stop.stop_id,
         stopName: stop.stop_name || "名称不明",
         direction: "不明", // 常に「不明」を設定
-        scheduledTime: adjustedDate.toISO() || new Date().toISOString(),
+        scheduledTime: adjustedDate.toISO() || getCurrentTime().toISOString(),
         realtime: false, // GTFS-RTデータがないためfalse
         delay: null, // 遅延情報なし
       });
@@ -353,6 +379,116 @@ async function getDepartures(
     );
   } catch (error) {
     console.error("発車時刻取得エラー:", error);
+    return [];
+  }
+}
+
+// GTFSから発車時刻情報を取得
+async function gtfsGetDepartures(
+  stop_id: string | null = null,
+  route_id: string | null = null
+): Promise<Departure[]> {
+  await ensureDbConnection();
+
+  // stop_id と route_id に基づいて発車時刻を取得
+  const options = {
+    date: new Date(getCurrentTime().setHours(0, 0, 0, 0)), // 現在日付の00:00:00
+    today: true,
+  };
+
+  // 選択されたストップのルートと時刻を取得
+  const stoptimes = await gtfsGetStoptimes({
+    stop_id: stop_id || undefined,
+    route_id: route_id || undefined,
+  });
+
+  // 対応するルート情報を取得
+  const allRoutes = await gtfsGetRoutes();
+  const routesMap = new Map();
+  for (const route of allRoutes) {
+    routesMap.set(route.route_id, route);
+  }
+
+  // 時刻データをDateオブジェクトに変換するヘルパー関数
+  const getTimeAsDate = (timeStr: string) => {
+    const now = getCurrentTime();
+    const [hours, minutes, seconds] = timeStr.split(":").map(Number);
+    const date = new Date(now);
+    date.setHours(hours, minutes, seconds || 0);
+    return date;
+  };
+
+  // 時刻フォーマット用の関数
+  const formatTime = (date: Date): string => {
+    return date.toLocaleTimeString("ja-JP", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // 出発までの時間を表示する関数
+  const formatTimeUntilDeparture = (msUntilDeparture: number): string => {
+    const minutesUntilDeparture = Math.floor(msUntilDeparture / 60000);
+    if (minutesUntilDeparture < 60) {
+      return `${minutesUntilDeparture}分後`;
+    } else {
+      const hours = Math.floor(minutesUntilDeparture / 60);
+      const minutes = minutesUntilDeparture % 60;
+      return `${hours}時間${minutes > 0 ? `${minutes}分` : ""}後`;
+    }
+  };
+
+  try {
+    // 発車情報を構築
+    const departures: Departure[] = [];
+    const nowTime = getCurrentTime().getTime();
+
+    // stoptimesを型安全に処理
+    interface GTFSStopTime {
+      route_id?: string;
+      stop_id?: string;
+      trip_id?: string;
+      departure_time?: string;
+      [key: string]: any;
+    }
+
+    for (const stoptime of stoptimes as GTFSStopTime[]) {
+      if (!stoptime.route_id || !stoptime.departure_time || !stoptime.stop_id)
+        continue;
+
+      const route = routesMap.get(stoptime.route_id) || {
+        route_short_name: "Unknown",
+        route_long_name: "未知のルート",
+      };
+      const departureTime = getTimeAsDate(stoptime.departure_time);
+      const departureTimeMs = departureTime.getTime();
+
+      // 現在時刻以降の出発のみを含める（過去の出発は含まない）
+      if (departureTimeMs >= nowTime) {
+        departures.push({
+          routeId: stoptime.route_id,
+          routeName:
+            route.route_short_name || route.route_long_name || "名称不明",
+          stopId: stoptime.stop_id,
+          stopName: "名称不明", // API側では名前を設定する
+          direction: "不明", // 方向情報
+          scheduledTime: departureTime.toISOString(),
+          realtime: false,
+          delay: null,
+        });
+      }
+    }
+
+    // 発車時刻でソート
+    departures.sort(
+      (a, b) =>
+        new Date(a.scheduledTime).getTime() -
+        new Date(b.scheduledTime).getTime()
+    );
+
+    return departures;
+  } catch (err) {
+    console.error("発車時刻取得エラー:", err);
     return [];
   }
 }

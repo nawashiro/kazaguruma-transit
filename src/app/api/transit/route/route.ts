@@ -398,11 +398,15 @@ export async function GET(request: NextRequest) {
           stopId: originStop.stop_id,
           stopName: originStop.stop_name,
           distance: originStop.distance,
+          stop_lat: originStop.stop_lat,
+          stop_lon: originStop.stop_lon,
         },
         destinationStop: {
           stopId: destStop.stop_id,
           stopName: destStop.stop_name,
           distance: destStop.distance,
+          stop_lat: destStop.stop_lat,
+          stop_lon: destStop.stop_lon,
         },
         routes: [],
       });
@@ -420,11 +424,15 @@ export async function GET(request: NextRequest) {
         stopId: originStop.stop_id,
         stopName: originStop.stop_name,
         distance: originStop.distance,
+        stop_lat: originStop.stop_lat,
+        stop_lon: originStop.stop_lon,
       },
       destinationStop: {
         stopId: destStop.stop_id,
         stopName: destStop.stop_name,
         distance: destStop.distance,
+        stop_lat: destStop.stop_lat,
+        stop_lon: destStop.stop_lon,
       },
     });
   } catch (error) {

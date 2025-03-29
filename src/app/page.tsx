@@ -456,6 +456,10 @@ export default function Home() {
                   transfers={routeInfo.transfers}
                   departures={departures}
                   message={routeInfo.message}
+                  originLat={selectedOrigin?.lat}
+                  originLng={selectedOrigin?.lng}
+                  destLat={selectedDestination?.lat}
+                  destLng={selectedDestination?.lng}
                 />
               ) : routeInfo && routeInfo.type === "none" ? null : !routeInfo ? ( // ルートが見つからない場合は何も表示しない（左側に既にメッセージがあるため）
                 <div className="alert alert-info shadow-lg">

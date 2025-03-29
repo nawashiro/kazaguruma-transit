@@ -130,4 +130,6 @@ export interface RouteResponse {
   type: "direct" | "transfer" | "none";
   transfers: number;
   message?: string;
+  originToStopMapLink?: string;
+  stopToDestinationMapLink?: string;
 }

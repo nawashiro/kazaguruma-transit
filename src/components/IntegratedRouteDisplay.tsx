@@ -2,12 +2,15 @@
 
 import React from "react";
 import { Departure } from "../types/transit";
+import { generateGoogleMapDirectionLink } from "../utils/maps";
 
 // page.tsxで使用している型定義に合わせる
 interface StopInfo {
   stop_id: string;
   stop_name: string;
   distance?: number;
+  stop_lat?: number;
+  stop_lon?: number;
 }
 
 interface RouteInfo {
@@ -36,17 +39,25 @@ interface IntegratedRouteDisplayProps {
     stopId: string;
     stopName: string;
     distance: number;
+    stop_lat?: number;
+    stop_lon?: number;
   };
   destinationStop: {
     stopId: string;
     stopName: string;
     distance: number;
+    stop_lat?: number;
+    stop_lon?: number;
   };
   routes: RouteInfo[];
   type: "direct" | "transfer" | "none";
   transfers: number;
   departures: Departure[];
   message?: string;
+  originLat?: number;
+  originLng?: number;
+  destLat?: number;
+  destLng?: number;
 }
 
 const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
@@ -57,6 +68,10 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
   transfers,
   departures,
   message,
+  originLat,
+  originLng,
+  destLat,
+  destLng,
 }) => {
   // 出発時刻を取得する関数
   const getDepartureTime = (stopId: string, routeId?: string) => {
@@ -102,6 +117,27 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
     }
   };
 
+  // Googleマップリンクを生成（両方の緯度経度が存在する場合のみ）
+  const originToStopMapLink =
+    originLat && originLng && originStop.stop_lat && originStop.stop_lon
+      ? generateGoogleMapDirectionLink(
+          originLat,
+          originLng,
+          parseFloat(originStop.stop_lat.toString()),
+          parseFloat(originStop.stop_lon.toString())
+        )
+      : undefined;
+
+  const stopToDestinationMapLink =
+    destLat && destLng && destinationStop.stop_lat && destinationStop.stop_lon
+      ? generateGoogleMapDirectionLink(
+          parseFloat(destinationStop.stop_lat.toString()),
+          parseFloat(destinationStop.stop_lon.toString()),
+          destLat,
+          destLng
+        )
+      : undefined;
+
   return (
     <div className="bg-base-200 p-4 rounded-lg shadow-md">
       {type === "none" ? (
@@ -116,6 +152,20 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
       ) : (
         // ルートが見つかった場合
         <div>
+          {/* 出発地から出発地バス停へのリンク */}
+          {originToStopMapLink && (
+            <div className="mb-4 text-center">
+              <a
+                href={originToStopMapLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-sm btn-outline btn-primary underline"
+              >
+                出発地 → {originStop.stopName} Googleマップ
+              </a>
+            </div>
+          )}
+
           {routes.map((route, index) => {
             // 各ルートの時刻を計算
             const departureTime =
@@ -251,6 +301,20 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
               </div>
             );
           })}
+
+          {/* 目的地バス停から目的地へのリンク */}
+          {stopToDestinationMapLink && (
+            <div className="mt-4 text-center">
+              <a
+                href={stopToDestinationMapLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-sm btn-outline btn-primary underline"
+              >
+                {destinationStop.stopName} → 目的地 Googleマップ
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>

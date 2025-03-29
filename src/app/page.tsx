@@ -313,24 +313,42 @@ export default function Home() {
               </div>
 
               {/* バス停情報 */}
-              {(originStop || destinationStop) && (
+              {(originStop || destinationStop) &&
+                routeInfo &&
+                routeInfo.type !== "none" && (
+                  <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+                    <h2 className="text-xl font-bold mb-2">バス停情報</h2>
+                    <div className="space-y-2">
+                      {originStop && (
+                        <TransitStopInfo
+                          stopInfo={originStop}
+                          location={selectedOrigin}
+                          type="origin"
+                        />
+                      )}
+                      {destinationStop && (
+                        <TransitStopInfo
+                          stopInfo={destinationStop}
+                          location={selectedDestination}
+                          type="destination"
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              {/* ルートが見つからない場合のメッセージを独立したセクションとして表示 */}
+              {routeInfo && routeInfo.type === "none" && (
                 <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-                  <h2 className="text-xl font-bold mb-2">バス停情報</h2>
-                  <div className="space-y-2">
-                    {originStop && (
-                      <TransitStopInfo
-                        stopInfo={originStop}
-                        location={selectedOrigin}
-                        type="origin"
-                      />
-                    )}
-                    {destinationStop && (
-                      <TransitStopInfo
-                        stopInfo={destinationStop}
-                        location={selectedDestination}
-                        type="destination"
-                      />
-                    )}
+                  <h2 className="text-xl font-bold mb-2">経路検索結果</h2>
+                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                    <p className="text-red-700 font-medium">
+                      ルートが見つかりません
+                    </p>
+                    <p className="text-sm text-red-600 mt-1">
+                      この2つの地点を結ぶルートが見つかりませんでした。
+                      最寄りのバス停まで歩くか、別の交通手段をご検討ください。
+                    </p>
                   </div>
                 </div>
               )}
@@ -350,6 +368,7 @@ export default function Home() {
                   <DateTimeSelector
                     initialStopId={originStop?.stop_id || ""}
                     onSubmit={handleFormSubmit}
+                    disabled={!!(routeInfo && routeInfo.type === "none")}
                   />
                 </div>
               )}
@@ -359,7 +378,7 @@ export default function Home() {
 
         <div className="md:col-span-2">
           {/* 経路検索結果の表示 */}
-          {selectedOrigin && selectedDestination && (
+          {selectedOrigin && selectedDestination && searchPerformed && (
             <div className="mb-6">
               <h2 className="text-xl font-bold mb-4">経路検索結果</h2>
 
@@ -368,7 +387,7 @@ export default function Home() {
                   <span className="loading loading-spinner loading-lg text-primary"></span>
                   <p className="mt-4">経路を検索中...</p>
                 </div>
-              ) : routeInfo ? (
+              ) : routeInfo && routeInfo.type !== "none" ? (
                 <IntegratedRouteDisplay
                   originStop={routeInfo.originStop}
                   destinationStop={routeInfo.destinationStop}
@@ -378,7 +397,7 @@ export default function Home() {
                   departures={departures}
                   message={routeInfo.message}
                 />
-              ) : (
+              ) : routeInfo && routeInfo.type === "none" ? null : !routeInfo ? ( // ルートが見つからない場合は何も表示しない（左側に既にメッセージがあるため）
                 <div className="alert alert-info shadow-lg">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -400,19 +419,7 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* 検索結果が表示されており、かつ経路検索結果に表示されていない場合のみ、従来の出発案内を表示 */}
-          {searchPerformed && !routeInfo && (
-            <div className="bg-base-200 p-4 rounded-lg shadow-md">
-              <h2 className="text-xl font-bold mb-4">出発案内</h2>
-              <DeparturesList
-                departures={departures}
-                loading={loading}
-                error={error}
-              />
+              ) : null}
             </div>
           )}
         </div>

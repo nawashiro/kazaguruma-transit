@@ -9,11 +9,13 @@ interface DateTimeSelectorProps {
     dateTime: string;
     isDeparture: boolean;
   }) => void;
+  disabled?: boolean;
 }
 
 const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
   initialStopId,
   onSubmit,
+  disabled = false,
 }) => {
   const [dateTime, setDateTime] = useState<string>("");
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
@@ -99,8 +101,11 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
 
       <button
         type="submit"
-        className="btn btn-primary w-full mt-4"
+        className={`btn w-full mt-4 ${
+          disabled ? "btn-disabled" : "btn-primary"
+        }`}
         data-testid="search-button"
+        disabled={disabled}
       >
         検索
       </button>

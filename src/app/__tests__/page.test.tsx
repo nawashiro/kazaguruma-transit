@@ -85,6 +85,28 @@ jest.mock("../../components/NearestStopFinder", () => {
   };
 });
 
+// DateTimeSelectorのモック
+jest.mock("../../components/DateTimeSelector", () => {
+  return function MockDateTimeSelector({ initialStopId, onSubmit }: any) {
+    return (
+      <div data-testid="datetime-selector">
+        <button
+          data-testid="search-button"
+          onClick={() =>
+            onSubmit({
+              stopId: initialStopId,
+              dateTime: "2023-11-01T09:00",
+              isDeparture: true,
+            })
+          }
+        >
+          検索
+        </button>
+      </div>
+    );
+  };
+});
+
 describe("Home", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -238,14 +260,14 @@ describe("Home", () => {
     );
     fireEvent.click(selectNearestStopButton);
 
-    // TransitFormコンポーネントの代わりにレンダリングされるmockTransitFormが表示される
+    // DateTimeSelectorが表示されることを確認
     await waitFor(() => {
       // nearest-stop-finderが表示されなくなる
       expect(
         screen.queryByTestId("nearest-stop-finder")
       ).not.toBeInTheDocument();
-      // transit-formが表示される
-      expect(screen.getByTestId("transit-form")).toBeInTheDocument();
+      // DateTimeSelectorが表示される
+      expect(screen.getByTestId("datetime-selector")).toBeInTheDocument();
     });
   });
 });

@@ -2,11 +2,16 @@ export interface Departure {
   routeId: string;
   routeName: string;
   stopId: string;
-  stopName: string;
-  direction: string;
-  scheduledTime: string;
-  realtime: boolean;
-  delay: number | null;
+  stopName?: string;
+  direction?: string;
+  scheduledTime?: string;
+  realtime?: boolean;
+  delay?: number | null;
+  tripId?: string;
+  time?: string;
+  timeUntilDeparture?: string;
+  msUntilDeparture?: number;
+  headsign?: string;
 }
 
 export interface TransitApiResponse {
@@ -47,4 +52,44 @@ export interface TransitFormData {
   destination?: Location;
   dateTime?: string;
   isDeparture?: boolean;
+}
+
+export interface GTFSStop {
+  stop_id: string;
+  stop_name: string;
+  stop_code?: string;
+  stop_lat: string;
+  stop_lon: string;
+  [key: string]: any;
+}
+
+export interface GTFSRoute {
+  route_id: string;
+  route_short_name?: string;
+  route_long_name?: string;
+  route_color?: string;
+  route_text_color?: string;
+  [key: string]: any;
+}
+
+export interface GTFSStopTime {
+  trip_id?: string;
+  arrival_time?: string;
+  departure_time?: string;
+  stop_id?: string;
+  stop_sequence?: number;
+  stop_headsign?: string;
+  pickup_type?: number;
+  drop_off_type?: number;
+  shape_dist_traveled?: number;
+  timepoint?: number;
+  [key: string]: any;
+}
+
+export interface GTFSTrip {
+  trip_id: string;
+  route_id: string;
+  service_id: string;
+  trip_headsign?: string;
+  [key: string]: any;
 }

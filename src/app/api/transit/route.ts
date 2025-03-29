@@ -8,6 +8,8 @@ import {
   getRoutes as gtfsGetRoutes,
   getTrips as gtfsGetTrips,
   getStoptimes as gtfsGetStoptimes,
+  openDb,
+  closeDb,
 } from "gtfs";
 import { DateTime } from "luxon";
 
@@ -16,6 +18,77 @@ const GTFS_TEMP_DIR = ".temp";
 
 // configファイルのパス
 const CONFIG_PATH = path.join(process.cwd(), "transit-config.json");
+
+// インポート処理のロック状態を追跡する変数
+let isImporting = false;
+let importPromise: Promise<any> | null = null;
+let isDbOpen = false;
+
+// データベース接続を適切に管理するための関数
+async function ensureDbConnection() {
+  if (!isDbOpen) {
+    const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+    await openDb(config);
+    isDbOpen = true;
+  }
+}
+
+// データベース接続を閉じる関数
+async function safeCloseDb() {
+  if (isDbOpen) {
+    try {
+      await closeDb();
+      isDbOpen = false;
+    } catch (error) {
+      console.warn("データベース接続を閉じる際にエラーが発生しました:", error);
+    }
+  }
+}
+
+// データベースの整合性をチェックする関数
+async function checkDatabaseIntegrity() {
+  try {
+    const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+    const dbFilePath = path.join(process.cwd(), config.sqlitePath);
+
+    // ファイルが存在しない場合は整合性がない
+    if (!fs.existsSync(dbFilePath)) {
+      console.log(
+        "データベースファイルが存在しません。再インポートが必要です。"
+      );
+      return false;
+    }
+
+    // 既存の接続を閉じてから新しい接続を作成
+    await safeCloseDb();
+
+    try {
+      // データベース接続を開く
+      await ensureDbConnection();
+
+      // 最も基本的なテーブルに対してクエリを実行してみる - 空のクエリで最初の数件を取得
+      const stops = await gtfsGetStops();
+      const routes = await gtfsGetRoutes();
+
+      // 結果の最初の要素だけを確認
+      if (!stops || stops.length === 0 || !routes || routes.length === 0) {
+        console.log(
+          "データベースにデータが不足しています。再インポートが必要です。"
+        );
+        return false;
+      }
+
+      console.log("データベースの整合性チェックに成功しました。");
+      return true;
+    } catch (error) {
+      console.error("データベースの整合性チェックに失敗しました:", error);
+      return false;
+    }
+  } catch (error) {
+    console.error("データベース整合性チェックエラー:", error);
+    return false;
+  }
+}
 
 // GTFSデータをダウンロードして設定ファイルを作成する関数
 async function prepareGTFSData() {
@@ -30,27 +103,125 @@ async function prepareGTFSData() {
     // GTFSデータをインポート
     const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
 
-    // GTFSデータがまだインポートされていない場合はインポート
-    try {
-      console.log(
-        `GTFSデータのインポートを開始します...（パス：${config.sqlitePath}）`
-      );
-      await importGtfs(config);
-      console.log("GTFSデータのインポートが完了しました");
-    } catch (importError) {
-      console.error("GTFSデータのインポートに失敗しました:", importError);
-      return { success: false, error: importError };
+    // DBファイルのパス
+    const dbFilePath = path.join(process.cwd(), config.sqlitePath);
+
+    // すでにインポート中の場合は、そのPromiseを返す
+    if (isImporting && importPromise) {
+      console.log("別のリクエストが既にインポート中です。待機します...");
+      return importPromise;
+    }
+
+    // データベースの整合性チェック
+    const isDbValid = await checkDatabaseIntegrity();
+
+    // GTFSデータがまだインポートされていない場合、またはskipImportがfalseの場合、
+    // またはデータベースの整合性に問題がある場合はインポート
+    if (
+      !fs.existsSync(dbFilePath) ||
+      config.skipImport === false ||
+      !isDbValid
+    ) {
+      try {
+        // インポート状態をロック
+        isImporting = true;
+
+        // 新しいインポートPromiseを作成
+        importPromise = (async () => {
+          console.log(
+            `GTFSデータのインポートを開始します...（パス：${config.sqlitePath}）`
+          );
+
+          // 既存のDBファイルを削除してクリーンな状態からインポート
+          if (fs.existsSync(dbFilePath)) {
+            try {
+              // データベース接続を閉じる
+              await safeCloseDb();
+
+              // 同期削除の代わりに非同期削除を使用
+              await new Promise<void>((resolve, reject) => {
+                fs.unlink(dbFilePath, (err) => {
+                  if (err) {
+                    console.warn("DBファイルの削除に失敗しました:", err);
+                    // 失敗してもresolveして続行
+                    resolve();
+                  } else {
+                    console.log(
+                      `既存のDBファイルを削除しました: ${dbFilePath}`
+                    );
+                    resolve();
+                  }
+                });
+              });
+
+              // 削除後に少し待機して確実にファイルが解放されるようにする
+              await new Promise((resolve) => setTimeout(resolve, 500));
+            } catch (deleteError) {
+              console.warn(
+                "DBファイルの削除中にエラーが発生しました:",
+                deleteError
+              );
+              // 削除に失敗してもインポートは試行する
+            }
+          }
+
+          // importGtfsを実行
+          await importGtfs(config);
+          console.log("GTFSデータのインポートが完了しました");
+
+          // データベース接続を初期化
+          await safeCloseDb();
+          await ensureDbConnection();
+
+          // データベースの整合性を再チェック
+          const isDbValidAfterImport = await checkDatabaseIntegrity();
+          if (!isDbValidAfterImport) {
+            throw new Error(
+              "インポート後もデータベースの整合性に問題があります"
+            );
+          }
+
+          // インポート成功したら、次回はスキップするように設定を更新
+          if (config.skipImport === false) {
+            config.skipImport = true;
+            fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+            console.log("設定ファイルを更新しました: skipImport = true");
+          }
+
+          return { success: true };
+        })();
+
+        // インポート完了後にロック解除
+        const result = await importPromise;
+        isImporting = false;
+        importPromise = null;
+        return result;
+      } catch (importError) {
+        console.error("GTFSデータのインポートに失敗しました:", importError);
+        // エラー時もロック解除
+        isImporting = false;
+        importPromise = null;
+        return { success: false, error: importError };
+      }
+    } else {
+      console.log("GTFSデータは既にインポート済みです。スキップします。");
+      // 正常なデータベースに接続
+      await ensureDbConnection();
     }
 
     return { success: true };
   } catch (error) {
     console.error("GTFSデータの準備エラー:", error);
+    // エラー時もロック解除
+    isImporting = false;
+    importPromise = null;
     return { success: false, error };
   }
 }
 
 // GTFSから駅一覧を取得
 async function getStops(): Promise<Stop[]> {
+  await ensureDbConnection();
   const stopsFromGTFS = await gtfsGetStops();
 
   return stopsFromGTFS.map((stop) => ({
@@ -62,6 +233,7 @@ async function getStops(): Promise<Stop[]> {
 
 // GTFSから路線一覧を取得
 async function getRoutes(): Promise<Route[]> {
+  await ensureDbConnection();
   const routesFromGTFS = await gtfsGetRoutes();
 
   return routesFromGTFS.map((route) => ({
@@ -82,6 +254,8 @@ async function getDepartures(
   routeId?: string
 ): Promise<Departure[]> {
   try {
+    await ensureDbConnection();
+
     // 現在の日時
     const now = DateTime.now();
     // GTFSが数値形式を期待しているため、文字列ではなく数値に変換

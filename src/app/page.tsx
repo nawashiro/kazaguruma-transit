@@ -4,6 +4,7 @@ import { useState } from "react";
 import TransitForm from "../components/TransitForm";
 import DeparturesList from "../components/DeparturesList";
 import OriginSelector from "../components/OriginSelector";
+import DestinationSelector from "../components/DestinationSelector";
 import { Departure, TransitFormData, Location } from "../types/transit";
 
 export default function Home() {
@@ -12,11 +13,17 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [selectedOrigin, setSelectedOrigin] = useState<Location | null>(null);
+  const [selectedDestination, setSelectedDestination] =
+    useState<Location | null>(null);
 
   const handleOriginSelected = (location: Location) => {
     setSelectedOrigin(location);
-    // この段階ではまだ目的地選択などは実装していないため、
-    // 出発地が選択されただけでは検索処理は実行しません
+    // 出発地が選択されたら、次は目的地選択に進む
+  };
+
+  const handleDestinationSelected = (location: Location) => {
+    setSelectedDestination(location);
+    // 目的地が選択されたら、次のステップに進む
   };
 
   const handleFormSubmit = async (formData: TransitFormData) => {
@@ -29,6 +36,15 @@ export default function Home() {
       const params = new URLSearchParams();
       if (formData.stopId) params.append("stop", formData.stopId);
       if (formData.routeId) params.append("route", formData.routeId);
+
+      // 出発地と目的地の情報を追加
+      if (selectedOrigin) {
+        formData.origin = selectedOrigin;
+      }
+
+      if (selectedDestination) {
+        formData.destination = selectedDestination;
+      }
 
       // API呼び出し
       const response = await fetch(`/api/transit?${params}`);
@@ -49,6 +65,10 @@ export default function Home() {
     }
   };
 
+  const resetDestination = () => {
+    setSelectedDestination(null);
+  };
+
   return (
     <div className="container mx-auto p-4">
       <header className="text-center my-8">
@@ -60,6 +80,28 @@ export default function Home() {
         <div className="md:col-span-1">
           {!selectedOrigin ? (
             <OriginSelector onOriginSelected={handleOriginSelected} />
+          ) : !selectedDestination ? (
+            <>
+              <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+                <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
+                <p data-testid="selected-origin">
+                  {selectedOrigin.address ||
+                    `緯度: ${selectedOrigin.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
+                </p>
+                <button
+                  className="btn btn-sm btn-outline mt-2"
+                  onClick={() => setSelectedOrigin(null)}
+                  data-testid="change-origin"
+                >
+                  出発地を変更
+                </button>
+              </div>
+              <DestinationSelector
+                onDestinationSelected={handleDestinationSelected}
+              />
+            </>
           ) : (
             <>
               <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
@@ -78,6 +120,24 @@ export default function Home() {
                   出発地を変更
                 </button>
               </div>
+
+              <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+                <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
+                <p data-testid="selected-destination">
+                  {selectedDestination.address ||
+                    `緯度: ${selectedDestination.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
+                </p>
+                <button
+                  className="btn btn-sm btn-outline mt-2"
+                  onClick={resetDestination}
+                  data-testid="change-destination"
+                >
+                  目的地を変更
+                </button>
+              </div>
+
               <TransitForm onSubmit={handleFormSubmit} />
             </>
           )}

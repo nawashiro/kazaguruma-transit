@@ -39,4 +39,5 @@ export interface TransitFormData {
   stopId?: string;
   routeId?: string;
   origin?: Location;
+  destination?: Location;
 }

@@ -1,18 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DateTimeSelector from "../components/DateTimeSelector";
 import DeparturesList from "../components/DeparturesList";
 import OriginSelector from "../components/OriginSelector";
 import DestinationSelector from "../components/DestinationSelector";
 import NearestStopFinder from "../components/NearestStopFinder";
 import TransitStopInfo from "../components/TransitStopInfo";
+import RouteDetail from "../components/RouteDetail";
 import { Departure, TransitFormData, Location } from "../types/transit";
 
 interface StopInfo {
   stop_id: string;
   stop_name: string;
   distance?: number;
+}
+
+interface RouteDetailInfo {
+  routeId: string;
+  routeName: string;
+  routeShortName: string;
+  routeLongName: string;
+  routeColor: string;
+  routeTextColor: string;
+  transfers?: {
+    transferStop: {
+      stopId: string;
+      stopName: string;
+      stopLat: number;
+      stopLon: number;
+    };
+    nextRoute: RouteDetailInfo;
+  }[];
+}
+
+interface RouteResponse {
+  hasRoute: boolean;
+  routes: RouteDetailInfo[];
+  type: "direct" | "transfer" | "none";
+  transfers: number;
+  message?: string;
+  originStop: {
+    stopId: string;
+    stopName: string;
+    distance: number;
+  };
+  destinationStop: {
+    stopId: string;
+    stopName: string;
+    distance: number;
+  };
 }
 
 export default function Home() {
@@ -26,6 +63,8 @@ export default function Home() {
   const [nearestStopFound, setNearestStopFound] = useState(false);
   const [originStop, setOriginStop] = useState<StopInfo | null>(null);
   const [destinationStop, setDestinationStop] = useState<StopInfo | null>(null);
+  const [routeInfo, setRouteInfo] = useState<RouteResponse | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
 
   const handleOriginSelected = (location: Location) => {
     setSelectedOrigin(location);
@@ -159,6 +198,46 @@ export default function Home() {
     setSelectedDestination(null);
   };
 
+  // 出発地と目的地が両方選択されたら、経路検索を行う
+  useEffect(() => {
+    if (selectedOrigin && selectedDestination) {
+      searchRoute();
+    }
+  }, [originStop, destinationStop]);
+
+  // 経路検索を行う関数
+  const searchRoute = async () => {
+    if (
+      !selectedOrigin ||
+      !selectedDestination ||
+      !originStop ||
+      !destinationStop
+    ) {
+      return;
+    }
+
+    setRouteLoading(true);
+
+    try {
+      const response = await fetch(
+        `/api/transit/route?originLat=${selectedOrigin.lat}&originLng=${selectedOrigin.lng}&destLat=${selectedDestination.lat}&destLng=${selectedDestination.lng}`
+      );
+
+      const data = await response.json();
+      console.log("経路検索結果:", data);
+
+      if (response.ok) {
+        setRouteInfo(data);
+      } else {
+        console.error("経路検索エラー:", data.error || "不明なエラー");
+      }
+    } catch (err) {
+      console.error("経路検索リクエストエラー:", err);
+    } finally {
+      setRouteLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
       <header className="text-center my-8">
@@ -274,6 +353,51 @@ export default function Home() {
         </div>
 
         <div className="md:col-span-2">
+          {/* 経路検索結果の表示 */}
+          {selectedOrigin && selectedDestination && (
+            <div className="mb-6">
+              <h2 className="text-xl font-bold mb-4">経路検索結果</h2>
+
+              {routeLoading ? (
+                <div className="flex flex-col items-center justify-center p-6 bg-base-200 rounded-lg shadow-md">
+                  <span className="loading loading-spinner loading-lg text-primary"></span>
+                  <p className="mt-4">経路を検索中...</p>
+                </div>
+              ) : routeInfo ? (
+                <RouteDetail
+                  originStop={routeInfo.originStop}
+                  destinationStop={routeInfo.destinationStop}
+                  routes={routeInfo.routes}
+                  type={routeInfo.type}
+                  transfers={routeInfo.transfers}
+                  message={routeInfo.message}
+                />
+              ) : (
+                <div className="alert alert-info shadow-lg">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    className="stroke-current shrink-0 w-6 h-6"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    ></path>
+                  </svg>
+                  <div>
+                    <h3 className="font-bold">経路情報の取得に失敗しました</h3>
+                    <div className="text-xs">
+                      しばらく待ってから再度お試しください
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {searchPerformed && (
             <div className="bg-base-200 p-4 rounded-lg shadow-md">
               <h2 className="text-xl font-bold mb-4">出発案内</h2>

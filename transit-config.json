@@ -8,7 +8,7 @@
       "ignoreDuplicates": true
     }
   ],
-  "skipImport": false,
+  "skipImport": true,
   "verbose": true,
   "ignoreDuplicates": true
 }

@@ -188,14 +188,15 @@ async function findDirectRoutes(
         FROM stop_times st
         WHERE st.stop_id = ?
       )
-      SELECT ot.trip_id, ot.departure_time, dt.arrival_time, t.route_id, r.route_short_name, r.route_long_name, r.route_color, r.route_text_color
+      SELECT ot.trip_id, ot.departure_time, dt.arrival_time, t.route_id, r.route_short_name, r.route_long_name, r.route_color, r.route_text_color,
+      (julianday(dt.arrival_time) - julianday(ot.departure_time)) * 24 * 60 AS trip_duration_minutes
       FROM origin_trips ot
       JOIN dest_trips dt ON ot.trip_id = dt.trip_id
       JOIN trips t ON ot.trip_id = t.trip_id
       JOIN routes r ON t.route_id = r.route_id
       WHERE dt.stop_sequence > ot.stop_sequence
-      ORDER BY ot.departure_time
-      LIMIT 10
+      ORDER BY trip_duration_minutes, ot.departure_time
+      LIMIT 1
     `;
 
     // クエリパラメータを設定
@@ -227,6 +228,7 @@ async function findDirectRoutes(
       departureTime: route.departure_time,
       arrivalTime: route.arrival_time,
       tripId: route.trip_id,
+      tripDurationMinutes: route.trip_duration_minutes,
     }));
   } catch (error) {
     console.error("直接ルート検索エラー:", error);
@@ -282,7 +284,7 @@ async function findRouteWithTransfers(
   if (directRoutes.length > 0) {
     return {
       hasRoute: true,
-      routes: directRoutes,
+      routes: [directRoutes[0]], // 最も最適な1つのルートのみを返す
       type: "direct",
       transfers: 0,
     };
@@ -446,9 +448,20 @@ async function findRouteWithTransfers(
         );
 
         if (secondLegRoutes.length > 0) {
+          // 最初のルート（最適なもの）だけを使用
+          const firstLeg = firstLegRoutes[0];
+          const secondLeg = secondLegRoutes[0];
+
+          // 総所要時間を計算 (もし存在する場合)
+          let totalDuration = 0;
+          if (firstLeg.tripDurationMinutes && secondLeg.tripDurationMinutes) {
+            totalDuration =
+              firstLeg.tripDurationMinutes + secondLeg.tripDurationMinutes;
+          }
+
           transferRoutes.push({
-            firstLeg: firstLegRoutes[0],
-            secondLeg: secondLegRoutes[0],
+            firstLeg,
+            secondLeg,
             transferStop: {
               stopId: transferStop.stop_id,
               stopName: transferStop.stop_name,
@@ -461,6 +474,7 @@ async function findRouteWithTransfers(
                   ? parseFloat(transferStop.stop_lon)
                   : transferStop.stop_lon,
             },
+            totalDuration,
           });
         }
       }
@@ -476,39 +490,43 @@ async function findRouteWithTransfers(
       };
     }
 
-    // 乗り換え経路を整形
-    const formattedRoutes = transferRoutes.map((tr) => {
-      return {
-        routeId: tr.firstLeg.routeId,
-        routeName: tr.firstLeg.routeName,
-        routeShortName: tr.firstLeg.routeShortName,
-        routeLongName: tr.firstLeg.routeLongName,
-        routeColor: tr.firstLeg.routeColor,
-        routeTextColor: tr.firstLeg.routeTextColor,
-        transfers: [
-          {
-            transferStop: {
-              stopId: tr.transferStop.stopId,
-              stopName: tr.transferStop.stopName,
-              stopLat: tr.transferStop.stopLat,
-              stopLon: tr.transferStop.stopLon,
-            },
-            nextRoute: {
-              routeId: tr.secondLeg.routeId,
-              routeName: tr.secondLeg.routeName,
-              routeShortName: tr.secondLeg.routeShortName,
-              routeLongName: tr.secondLeg.routeLongName,
-              routeColor: tr.secondLeg.routeColor,
-              routeTextColor: tr.secondLeg.routeTextColor,
-            },
+    // 総所要時間でソート
+    transferRoutes.sort((a, b) => a.totalDuration - b.totalDuration);
+
+    // 最適な乗り換えルート（所要時間が最も短いもの）を選択
+    const optimalTransferRoute = transferRoutes[0];
+
+    // 最適な乗り換え経路のみを整形して返す
+    const formattedRoute = {
+      routeId: optimalTransferRoute.firstLeg.routeId,
+      routeName: optimalTransferRoute.firstLeg.routeName,
+      routeShortName: optimalTransferRoute.firstLeg.routeShortName,
+      routeLongName: optimalTransferRoute.firstLeg.routeLongName,
+      routeColor: optimalTransferRoute.firstLeg.routeColor,
+      routeTextColor: optimalTransferRoute.firstLeg.routeTextColor,
+      transfers: [
+        {
+          transferStop: {
+            stopId: optimalTransferRoute.transferStop.stopId,
+            stopName: optimalTransferRoute.transferStop.stopName,
+            stopLat: optimalTransferRoute.transferStop.stopLat,
+            stopLon: optimalTransferRoute.transferStop.stopLon,
           },
-        ],
-      };
-    });
+          nextRoute: {
+            routeId: optimalTransferRoute.secondLeg.routeId,
+            routeName: optimalTransferRoute.secondLeg.routeName,
+            routeShortName: optimalTransferRoute.secondLeg.routeShortName,
+            routeLongName: optimalTransferRoute.secondLeg.routeLongName,
+            routeColor: optimalTransferRoute.secondLeg.routeColor,
+            routeTextColor: optimalTransferRoute.secondLeg.routeTextColor,
+          },
+        },
+      ],
+    };
 
     return {
       hasRoute: true,
-      routes: formattedRoutes,
+      routes: [formattedRoute], // 最適な1つのルートのみを返す
       type: "transfer",
       transfers: 1,
     };

@@ -52,7 +52,7 @@ interface IntegratedRouteDisplayProps {
   routes: RouteInfo[];
   type: "direct" | "transfer" | "none";
   transfers: number;
-  departures: Departure[];
+  departures?: Departure[];
   message?: string;
   originLat?: number;
   originLng?: number;
@@ -66,7 +66,6 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
   routes,
   type,
   transfers,
-  departures,
   message,
   originLat,
   originLng,
@@ -75,22 +74,9 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
 }) => {
   // 出発時刻を取得する関数
   const getDepartureTime = (stopId: string, routeId?: string) => {
-    if (!departures || departures.length === 0) return "時刻不明";
-
-    // まず指定されたバス停と路線の出発時刻を探す
-    if (routeId) {
-      const matchedDeparture = departures.find(
-        (d) => d.stopId === stopId && d.routeId === routeId
-      );
-      if (matchedDeparture) return matchedDeparture.time;
-    }
-
-    // バス停のみで探す
-    const stopDepartures = departures.filter((d) => d.stopId === stopId);
-    if (stopDepartures.length > 0) return stopDepartures[0].time;
-
-    // どれにも該当しなければ最初の出発時刻を返す
-    return departures[0]?.time || "時刻不明";
+    return (
+      routes.find((r) => r.routeId === routeId)?.departureTime || "時刻不明"
+    );
   };
 
   // 到着時刻を計算する関数 (出発時刻 + 所要時間の概算)
@@ -192,15 +178,23 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                     </div>
 
                     {/* ルート情報 */}
-                    <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
-                      <div className="badge badge-primary mr-2">
-                        {route.routeShortName}
+                    {route.routeLongName ? (
+                      <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
+                        <div className="badge badge-primary mr-2">
+                          {route.routeShortName}
+                        </div>
+                        <div className="flex-1">{route.routeLongName}</div>
+                        <div className="text-xs text-gray-500 ml-2">
+                          {route.stopCount && `${route.stopCount}駅`}
+                        </div>
                       </div>
-                      <div className="flex-1">{route.routeLongName}</div>
-                      <div className="text-xs text-gray-500 ml-2">
-                        {route.stopCount && `${route.stopCount}駅`}
+                    ) : (
+                      <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
+                        <div className="badge badge-primary mr-2">
+                          {route.routeShortName}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* 到着バス停と時刻（乗換がない場合は最終目的地） */}
                     {!route.transfers || route.transfers.length === 0 ? (
@@ -267,18 +261,26 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                             </div>
 
                             {/* 次のルート情報 */}
-                            <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
-                              <div className="badge badge-primary mr-2">
-                                {transfer.nextRoute.routeShortName}
+                            {transfer.nextRoute.routeLongName ? (
+                              <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
+                                <div className="badge badge-primary mr-2">
+                                  {transfer.nextRoute.routeShortName}
+                                </div>
+                                <div className="flex-1">
+                                  {transfer.nextRoute.routeLongName}
+                                </div>
+                                <div className="text-xs text-gray-500 ml-2">
+                                  {transfer.nextRoute.stopCount &&
+                                    `${transfer.nextRoute.stopCount}駅`}
+                                </div>
                               </div>
-                              <div className="flex-1">
-                                {transfer.nextRoute.routeLongName}
+                            ) : (
+                              <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
+                                <div className="badge badge-primary mr-2">
+                                  {transfer.nextRoute.routeShortName}
+                                </div>
                               </div>
-                              <div className="text-xs text-gray-500 ml-2">
-                                {transfer.nextRoute.stopCount &&
-                                  `${transfer.nextRoute.stopCount}駅`}
-                              </div>
-                            </div>
+                            )}
 
                             {/* 最終到着駅と時刻 */}
                             <div className="flex justify-between items-center">

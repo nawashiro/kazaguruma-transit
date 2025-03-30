@@ -4,14 +4,14 @@ import { Departure } from "../types/transit";
 
 interface DeparturesListProps {
   departures: Departure[];
-  loading: boolean;
-  error: string | null;
+  loading?: boolean;
+  error?: string | null;
 }
 
 export default function DeparturesList({
   departures,
-  loading,
-  error,
+  loading = false,
+  error = null,
 }: DeparturesListProps) {
   if (loading) {
     return (
@@ -43,12 +43,27 @@ export default function DeparturesList({
   }
 
   // 時刻をフォーマットする関数
-  const formatTime = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString("ja-JP", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatTime = (timeStr: string) => {
+    if (!timeStr) return "--:--";
+
+    // ISO形式の日時文字列の場合
+    if (timeStr.includes("T")) {
+      const date = new Date(timeStr);
+      return date.toLocaleTimeString("ja-JP", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+
+    // HH:MM:SS形式の場合
+    if (timeStr.includes(":")) {
+      const parts = timeStr.split(":");
+      if (parts.length >= 2) {
+        return `${parts[0]}:${parts[1]}`;
+      }
+    }
+
+    return timeStr;
   };
 
   // 遅延表示のための関数
@@ -75,18 +90,23 @@ export default function DeparturesList({
           <tr>
             <th>時刻</th>
             <th>路線</th>
-            <th>駅名</th>
+            <th>行先</th>
             <th>状態</th>
           </tr>
         </thead>
         <tbody>
           {departures.map((departure, index) => (
-            <tr key={index} data-testid={`departure-${index}`}>
+            <tr
+              key={`departure-${departure.routeId}-${index}`}
+              data-testid={`departure-${index}`}
+            >
               <td className="font-bold">
-                {formatTime(departure.scheduledTime)}
+                {formatTime(departure.time || departure.scheduledTime || "")}
               </td>
-              <td>{departure.routeName}</td>
-              <td>{departure.stopName}</td>
+              <td>
+                <div className="badge badge-primary">{departure.routeName}</div>
+              </td>
+              <td>{departure.headsign || "不明"}</td>
               <td>{renderDelay(departure)}</td>
             </tr>
           ))}

@@ -1,139 +1,44 @@
 import { NextResponse, NextRequest } from "next/server";
-import { TransitManager } from "../../../lib/db/transit-manager";
+import { TransitService } from "@/lib/transit/transit-service";
+import { TransitQuery, TransitResponse } from "@/types/transit-api";
 
-// GET: /api/transit
-export async function GET(request: NextRequest): Promise<NextResponse> {
+/**
+ * 統合トランジットAPIエンドポイント
+ * POST: /api/transit
+ * 単一のエンドポイントで複数の機能を提供
+ */
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const { searchParams } = new URL(request.url);
-    const action = searchParams.get("action");
-    const dateTime = searchParams.get("dateTime");
-    const isDeparture = searchParams.get("isDeparture") === "true";
+    const body: TransitQuery = await request.json();
+    const transitService = TransitService.getInstance();
 
-    const transitManager = TransitManager.getInstance();
-
-    // まずGTFSデータの準備を確認
-    const prepareResult = await transitManager.prepareGTFSData();
-    if (!prepareResult) {
-      return NextResponse.json(
-        { error: "データの準備に失敗しました" },
-        { status: 500 }
-      );
-    }
-
-    // 要求されたアクションによって処理を分岐
-    switch (action) {
-      case "getStops":
-        return await getStopsResponse(transitManager);
-      case "getRoutes":
-        return await getRoutesResponse(transitManager);
-      case "getDepartures":
-        const stopId = searchParams.get("stopId");
-        const routeId = searchParams.get("routeId");
-        if (!stopId) {
-          return NextResponse.json(
-            { error: "バス停IDが指定されていません" },
-            { status: 400 }
-          );
-        }
-        return await getDeparturesResponse(
-          transitManager,
-          stopId,
-          routeId || undefined,
-          dateTime ? new Date(dateTime) : undefined,
-          isDeparture
-        );
-      case "getMetadata":
-        return await getMetadataResponse();
-      default:
-        return NextResponse.json(
-          { error: "無効なアクションです" },
-          { status: 400 }
-        );
-    }
+    const result: TransitResponse = await transitService.process(body);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("トランジットAPIエラー:", error);
     return NextResponse.json(
-      { error: "サーバーエラーが発生しました" },
-      { status: 500 }
-    );
-  }
-}
-
-// すべてのバス停を取得する
-async function getStopsResponse(
-  transitManager: TransitManager
-): Promise<NextResponse> {
-  try {
-    const stops = await transitManager.getStops();
-    return NextResponse.json({ stops }, { status: 200 });
-  } catch (error) {
-    console.error("バス停データの取得に失敗しました:", error);
-    return NextResponse.json(
-      { error: "バス停データの取得に失敗しました" },
-      { status: 500 }
-    );
-  }
-}
-
-// すべての路線を取得する
-async function getRoutesResponse(
-  transitManager: TransitManager
-): Promise<NextResponse> {
-  try {
-    const routes = await transitManager.getRoutes();
-    return NextResponse.json({ routes }, { status: 200 });
-  } catch (error) {
-    console.error("路線データの取得に失敗しました:", error);
-    return NextResponse.json(
-      { error: "路線データの取得に失敗しました" },
-      { status: 500 }
-    );
-  }
-}
-
-// 指定されたバス停の出発時刻を取得する
-async function getDeparturesResponse(
-  transitManager: TransitManager,
-  stopId: string,
-  routeId?: string,
-  targetDate?: Date,
-  isDeparture: boolean = true
-): Promise<NextResponse> {
-  try {
-    const departures = await transitManager.getDepartures(
-      stopId,
-      routeId,
-      targetDate,
-      isDeparture
-    );
-
-    return NextResponse.json({ departures }, { status: 200 });
-  } catch (error) {
-    console.error("出発時刻データの取得に失敗しました:", error);
-    return NextResponse.json(
-      { error: "出発時刻データの取得に失敗しました" },
-      { status: 500 }
-    );
-  }
-}
-
-// API情報のメタデータを取得する
-async function getMetadataResponse(): Promise<NextResponse> {
-  try {
-    // GTFSデータのバージョン情報やその他メタデータを返す
-    return NextResponse.json(
       {
-        version: "1.0.0",
-        source: "GTFS Static",
-        lastUpdated: new Date().toISOString(),
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("メタデータの取得に失敗しました:", error);
-    return NextResponse.json(
-      { error: "メタデータの取得に失敗しました" },
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "サーバーエラーが発生しました",
+      } as TransitResponse,
       { status: 500 }
     );
   }
+}
+
+/**
+ * GET: /api/transit
+ * 後方互換性のために残しておくが、将来的には廃止
+ */
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "GET APIは非推奨です。POST /api/transitを使用してください。",
+    } as TransitResponse,
+    { status: 400 }
+  );
 }

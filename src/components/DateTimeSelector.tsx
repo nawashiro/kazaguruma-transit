@@ -4,14 +4,16 @@ import React, { useState, useEffect } from "react";
 import { TransitFormData } from "../types/transit";
 
 interface DateTimeSelectorProps {
-  initialStopId: string;
-  onSubmit: (formData: TransitFormData) => void;
+  initialStopId?: string;
+  onSubmit?: (formData: TransitFormData) => void;
+  onDateTimeSelected?: (formData: TransitFormData) => void;
   disabled?: boolean;
 }
 
 const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
-  initialStopId,
+  initialStopId = "",
   onSubmit,
+  onDateTimeSelected,
   disabled = false,
 }) => {
   const [dateTime, setDateTime] = useState<string>("");
@@ -33,24 +35,40 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
       setDateTime(initialDateTime);
 
       // 初期値を親に通知
-      onSubmit({
+      const formData = {
         stopId: initialStopId,
         dateTime: initialDateTime,
         isDeparture,
-      });
+      };
+
+      if (onSubmit) {
+        onSubmit(formData);
+      }
+
+      if (onDateTimeSelected) {
+        onDateTimeSelected(formData);
+      }
     }
-  }, [initialStopId, onSubmit, isDeparture, dateTime]);
+  }, [initialStopId, onSubmit, onDateTimeSelected, isDeparture, dateTime]);
 
   // 値が変更されたときに親コンポーネントに通知
   const handleChange = (newDateTime: string, newIsDeparture: boolean) => {
     setDateTime(newDateTime);
     setIsDeparture(newIsDeparture);
 
-    onSubmit({
+    const formData = {
       stopId: initialStopId,
       dateTime: newDateTime,
       isDeparture: newIsDeparture,
-    });
+    };
+
+    if (onSubmit) {
+      onSubmit(formData);
+    }
+
+    if (onDateTimeSelected) {
+      onDateTimeSelected(formData);
+    }
   };
 
   const toggleTimeType = (newValue: boolean) => {

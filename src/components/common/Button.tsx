@@ -9,6 +9,7 @@ interface ButtonProps {
   loading?: boolean;
   className?: string;
   fullWidth?: boolean;
+  secondary?: boolean;
   testId?: string;
   children: React.ReactNode;
 }
@@ -20,11 +21,13 @@ export default function Button({
   loading = false,
   className = "",
   fullWidth = false,
+  secondary = false,
   testId,
   children,
 }: ButtonProps) {
-  const baseClasses =
-    "btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm transition-all duration-200";
+  const baseClasses = secondary
+    ? "btn bg-gray-100 text-gray-600 hover:bg-gray-200 px-6 py-2 shadow-sm transition-all duration-200"
+    : "btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm transition-all duration-200";
   const widthClass = fullWidth ? "w-full" : "";
 
   return (

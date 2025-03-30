@@ -38,12 +38,13 @@ export default function OriginSelector({
         `/api/geocode?address=${encodeURIComponent(searchAddress)}`
       );
       const data = await response.json();
+      console.log("Geocode API Response:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "ジオコーディングに失敗しました");
       }
 
-      onOriginSelected(data.location);
+      onOriginSelected(data.data.location);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "予期せぬエラーが発生しました"
@@ -77,9 +78,10 @@ export default function OriginSelector({
               `/api/geocode?address=${location.lat},${location.lng}`
             );
             const data = await response.json();
+            console.log("Reverse Geocode API Response:", data);
 
-            if (response.ok && data.location) {
-              location.address = data.location.address;
+            if (response.ok && data.success && data.data?.location) {
+              location.address = data.data.location.address;
             }
           } catch (error) {
             console.error("逆ジオコーディングエラー:", error);

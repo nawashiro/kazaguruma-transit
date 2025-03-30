@@ -39,12 +39,13 @@ export default function DestinationSelector({
         `/api/geocode?address=${encodeURIComponent(searchAddress)}`
       );
       const data = await response.json();
+      console.log("Geocode API Response:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "ジオコーディングに失敗しました");
       }
 
-      onDestinationSelected(data.location);
+      onDestinationSelected(data.data.location);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "予期せぬエラーが発生しました"

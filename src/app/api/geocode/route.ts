@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Client } from "@googlemaps/google-maps-services-js";
 
+export interface GeocodeResponse {
+  success: boolean;
+  data?: {
+    location: {
+      lat: number;
+      lng: number;
+      address: string;
+    };
+  };
+  error?: string;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -8,7 +20,10 @@ export async function GET(req: NextRequest) {
 
     if (!address) {
       return NextResponse.json(
-        { error: "住所パラメータが必要です" },
+        {
+          success: false,
+          error: "住所パラメータが必要です",
+        } as GeocodeResponse,
         { status: 400 }
       );
     }
@@ -30,14 +45,20 @@ export async function GET(req: NextRequest) {
     if (response.data.status !== "OK") {
       console.error("Geocoding API error:", response.data.status);
       return NextResponse.json(
-        { error: `ジオコーディングに失敗しました: ${response.data.status}` },
+        {
+          success: false,
+          error: `ジオコーディングに失敗しました: ${response.data.status}`,
+        } as GeocodeResponse,
         { status: 400 }
       );
     }
 
     if (response.data.results.length === 0) {
       return NextResponse.json(
-        { error: "指定された住所が見つかりませんでした" },
+        {
+          success: false,
+          error: "指定された住所が見つかりませんでした",
+        } as GeocodeResponse,
         { status: 404 }
       );
     }
@@ -49,11 +70,17 @@ export async function GET(req: NextRequest) {
       address: result.formatted_address,
     };
 
-    return NextResponse.json({ location });
+    return NextResponse.json({
+      success: true,
+      data: { location },
+    } as GeocodeResponse);
   } catch (error) {
     console.error("Geocoding error:", error);
     return NextResponse.json(
-      { error: "ジオコーディング処理中にエラーが発生しました" },
+      {
+        success: false,
+        error: "ジオコーディング処理中にエラーが発生しました",
+      } as GeocodeResponse,
       { status: 500 }
     );
   }

@@ -177,6 +177,9 @@ export default function Home() {
         const bestJourney =
           data?.journeys && data.journeys.length > 0 ? data.journeys[0] : null;
 
+        // APIレスポンスをログ出力して確認
+        console.log("選択されたルート:", bestJourney);
+
         // 新しいAPIから旧APIの形式に変換
         const convertedResponse: RouteResponse = {
           hasRoute: Boolean(bestJourney),
@@ -185,7 +188,7 @@ export default function Home() {
                 {
                   routeId: bestJourney.route || "",
                   routeName: bestJourney.route || "",
-                  routeShortName: bestJourney.route || "",
+                  routeShortName: bestJourney.route || "内神田ルート",
                   routeLongName: "",
                   routeColor: bestJourney.color || "#000000",
                   routeTextColor: bestJourney.textColor || "#FFFFFF",

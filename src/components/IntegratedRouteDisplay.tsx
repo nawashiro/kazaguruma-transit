@@ -178,23 +178,19 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                     </div>
 
                     {/* ルート情報 */}
-                    {route.routeLongName ? (
-                      <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
-                        <div className="badge badge-primary mr-2">
-                          {route.routeShortName}
-                        </div>
+                    <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
+                      <div className="badge badge-primary mr-2">
+                        {route.routeShortName}
+                      </div>
+                      {route.routeLongName && (
                         <div className="flex-1">{route.routeLongName}</div>
+                      )}
+                      {route.stopCount && (
                         <div className="text-xs text-gray-500 ml-2">
-                          {route.stopCount && `${route.stopCount}駅`}
+                          {`${route.stopCount}駅`}
                         </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
-                        <div className="badge badge-primary mr-2">
-                          {route.routeShortName}
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
 
                     {/* 到着バス停と時刻（乗換がない場合は最終目的地） */}
                     {!route.transfers || route.transfers.length === 0 ? (
@@ -261,26 +257,21 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                             </div>
 
                             {/* 次のルート情報 */}
-                            {transfer.nextRoute.routeLongName ? (
-                              <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
-                                <div className="badge badge-primary mr-2">
-                                  {transfer.nextRoute.routeShortName}
-                                </div>
+                            <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
+                              <div className="badge badge-primary mr-2">
+                                {transfer.nextRoute.routeShortName}
+                              </div>
+                              {transfer.nextRoute.routeLongName && (
                                 <div className="flex-1">
                                   {transfer.nextRoute.routeLongName}
                                 </div>
+                              )}
+                              {transfer.nextRoute.stopCount && (
                                 <div className="text-xs text-gray-500 ml-2">
-                                  {transfer.nextRoute.stopCount &&
-                                    `${transfer.nextRoute.stopCount}駅`}
+                                  {`${transfer.nextRoute.stopCount}駅`}
                                 </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
-                                <div className="badge badge-primary mr-2">
-                                  {transfer.nextRoute.routeShortName}
-                                </div>
-                              </div>
-                            )}
+                              )}
+                            </div>
 
                             {/* 最終到着駅と時刻 */}
                             <div className="flex justify-between items-center">

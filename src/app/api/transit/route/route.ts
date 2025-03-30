@@ -371,7 +371,18 @@ async function findRouteWithTransfers(
         JOIN stop_times st2 ON st2.trip_id = st1.trip_id
         JOIN stops s2 ON st2.stop_id = s2.stop_id
         WHERE st1.stop_id = ?
-        ${timeFilter ? `AND ${timeFilter}` : ""}
+        ${
+          timeFilter
+            ? `AND ${
+                isDeparture
+                  ? `st1.departure_time ${timeFilter.replace(
+                      "departure_time",
+                      ""
+                    )}`
+                  : `st1.arrival_time ${timeFilter.replace("arrival_time", "")}`
+              }`
+            : ""
+        }
         ${
           serviceIds.length > 0
             ? `AND t1.service_id IN (${serviceIds.map(() => "?").join(",")})`
@@ -439,12 +450,31 @@ async function findRouteWithTransfers(
       );
 
       if (firstLegRoutes.length > 0) {
+        // 第一区間の予想到着時刻を基に第二区間の出発時刻を計算
+        let secondLegDateTime = targetDateTime;
+
+        if (isDeparture && firstLegRoutes[0].arrivalTime) {
+          // 第一区間の到着時刻を解析
+          const [arrivalHours, arrivalMinutes] = firstLegRoutes[0].arrivalTime
+            .split(":")
+            .map(Number);
+
+          // 新しい日時オブジェクトを作成
+          const newDateTime = new Date(targetDateTime || new Date());
+          newDateTime.setHours(arrivalHours, arrivalMinutes, 0, 0);
+
+          // 乗り換え待ち時間を追加（例: 3分）
+          newDateTime.setMinutes(newDateTime.getMinutes() + 3);
+
+          secondLegDateTime = newDateTime;
+        }
+
         // 乗換地点から目的地への経路
         const secondLegRoutes = await findDirectRoutes(
           transferStop.stop_id,
           destinationStopId,
-          targetDateTime,
-          isDeparture
+          secondLegDateTime, // 更新された出発時刻を使用
+          true // 第二区間は常に出発時刻ベースで検索
         );
 
         if (secondLegRoutes.length > 0) {

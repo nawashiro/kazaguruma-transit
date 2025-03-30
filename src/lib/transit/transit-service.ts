@@ -201,6 +201,13 @@ export class TransitService {
       }
 
       try {
+        // 時刻文字列をDate型に変換
+        const requestedTime = time ? new Date(time) : new Date();
+        const timeStr = this.formatTime(requestedTime);
+
+        // 結果格納変数
+        let allRoutes: any[] = [];
+
         // 直行便を探す
         const directResults = await this.findDirectRoute(
           from,
@@ -208,18 +215,126 @@ export class TransitService {
           time,
           isDeparture
         );
+
+        // 直行便があれば結果に追加
         if (directResults.success && directResults.data.journeys?.length > 0) {
-          return directResults;
+          allRoutes = [...directResults.data.journeys];
         }
 
-        // 乗り換えが必要な場合
+        // 乗り換えが必要な場合も検索
         const transferResults = await this.findRouteWithTransfer(
           from,
           to,
           time,
           isDeparture
         );
-        return transferResults;
+
+        // 乗り換え経路があれば結果に追加
+        if (
+          transferResults.success &&
+          transferResults.data.journeys?.length > 0
+        ) {
+          allRoutes = [...allRoutes, ...transferResults.data.journeys];
+        }
+
+        // ルートが見つからなかった場合
+        if (allRoutes.length === 0) {
+          return {
+            success: true,
+            data: {
+              journeys: [],
+              stops: [
+                {
+                  id: from.stop_id,
+                  name: from.stop_name,
+                  distance: 0,
+                },
+                {
+                  id: to.stop_id,
+                  name: to.stop_name,
+                  distance: 0,
+                },
+              ],
+              message: "経路が見つかりませんでした",
+            },
+          };
+        }
+
+        // すべてのルートを時間順にソート
+        const sortedRoutes = allRoutes.sort((a, b) => {
+          // 出発/到着時刻に基づいて比較する時刻を選択
+          const timeA = isDeparture
+            ? new Date(`2000-01-01T${a.departure}`).getTime()
+            : new Date(`2000-01-01T${a.arrival}`).getTime();
+          const timeB = isDeparture
+            ? new Date(`2000-01-01T${b.departure}`).getTime()
+            : new Date(`2000-01-01T${b.arrival}`).getTime();
+
+          // 出発時刻指定: 早い順、到着時刻指定: 遅い順
+          return isDeparture ? timeA - timeB : timeB - timeA;
+        });
+
+        // 指定時刻をミリ秒に変換（基準日付を2000-01-01に固定）
+        const requestedTimeMs = isDeparture
+          ? new Date(`2000-01-01T${timeStr}`).getTime()
+          : new Date(`2000-01-01T${timeStr}`).getTime();
+
+        // 最適なルートを探す
+        let bestRouteIndex = 0;
+
+        if (isDeparture) {
+          // 出発時刻指定の場合：指定時刻以降の最も早い便を探す
+          for (let i = 0; i < sortedRoutes.length; i++) {
+            const routeTime = new Date(
+              `2000-01-01T${sortedRoutes[i].departure}`
+            ).getTime();
+            if (routeTime >= requestedTimeMs) {
+              bestRouteIndex = i;
+              break;
+            }
+            // 指定時刻以降の便がない場合は最初（最も早い）の便
+            bestRouteIndex = 0;
+          }
+        } else {
+          // 到着時刻指定の場合：指定時刻以前の最も遅い便を探す
+          for (let i = 0; i < sortedRoutes.length; i++) {
+            const routeTime = new Date(
+              `2000-01-01T${sortedRoutes[i].arrival}`
+            ).getTime();
+            if (routeTime <= requestedTimeMs) {
+              bestRouteIndex = i;
+              break;
+            }
+            // 指定時刻以前の便がない場合は最後（最も遅い）の便
+            bestRouteIndex = sortedRoutes.length - 1;
+          }
+        }
+
+        // 最適なルートを取得
+        const bestRoute = sortedRoutes[bestRouteIndex];
+
+        // 最寄りバス停リストを作成
+        const stops = [
+          {
+            id: from.stop_id,
+            name: from.stop_name,
+            distance: 0,
+          },
+          {
+            id: to.stop_id,
+            name: to.stop_name,
+            distance: 0,
+          },
+        ];
+
+        // 最適なルートのみを返す
+        return {
+          success: true,
+          data: {
+            journeys: [bestRoute],
+            stops: stops,
+          },
+        };
       } catch (error: any) {
         console.error("[TransitService] 経路検索クエリエラー:", error);
         throw error;

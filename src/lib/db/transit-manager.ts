@@ -313,9 +313,11 @@ export class TransitManager {
 
     // 出発/到着時刻フィルターを追加
     if (isDeparture) {
-      stoptimeQuery.departure_time = { $gte: timeStr };
+      // $gteなどのオペレータは使用せず、SQL文字列として直接比較する形に変更
+      stoptimeQuery.departure_time = `>= '${timeStr}'`;
     } else {
-      stoptimeQuery.arrival_time = { $gte: timeStr };
+      // $gteなどのオペレータは使用せず、SQL文字列として直接比較する形に変更
+      stoptimeQuery.arrival_time = `>= '${timeStr}'`;
     }
 
     const stoptimes = (await getStoptimes(stoptimeQuery)) as GTFSStopTime[];

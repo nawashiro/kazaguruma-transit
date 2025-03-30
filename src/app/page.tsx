@@ -155,220 +155,169 @@ export default function Home() {
         <p className="mt-2 text-lg">千代田区福祉交通の乗換案内サービス</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1">
-          {!selectedDestination ? (
-            <DestinationSelector
-              onDestinationSelected={handleDestinationSelected}
-            />
-          ) : !selectedOrigin ? (
-            <>
-              <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-                <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
-                <p data-testid="selected-destination">
-                  {selectedDestination.address ||
-                    `緯度: ${selectedDestination.lat.toFixed(
-                      6
-                    )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
-                </p>
-              </div>
-              <OriginSelector onOriginSelected={handleOriginSelected} />
-              <div className="flex justify-center mt-4">
-                <button
-                  className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
-                  onClick={resetSearch}
-                  data-testid="reset-search"
-                >
-                  検索条件をリセット
-                </button>
-              </div>
-            </>
-          ) : !searchPerformed ? (
-            <>
-              <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-                <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
-                <p data-testid="selected-destination">
-                  {selectedDestination.address ||
-                    `緯度: ${selectedDestination.lat.toFixed(
-                      6
-                    )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
-                </p>
-              </div>
-
-              <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-                <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
-                <p data-testid="selected-origin">
-                  {selectedOrigin.address ||
-                    `緯度: ${selectedOrigin.lat.toFixed(
-                      6
-                    )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
-                </p>
-              </div>
-
-              <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-                <h2 className="text-xl font-bold mb-2">
-                  いつ出発/到着しますか？
-                </h2>
-                <DateTimeSelector
-                  onSubmit={handleDateTimeSelected}
-                  initialStopId=""
-                />
-                <button
-                  className="btn w-full mt-4 px-6 py-3 bg-green-600 text-white hover:bg-green-700 shadow-sm"
-                  onClick={handleSearch}
-                  data-testid="route-search-button"
-                >
-                  経路を検索
-                </button>
-              </div>
-
-              <div className="flex justify-center mt-4">
-                <button
-                  className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
-                  onClick={resetSearch}
-                  data-testid="reset-search"
-                >
-                  検索条件をリセット
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-                <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
-                <p data-testid="selected-destination">
-                  {selectedDestination.address ||
-                    `緯度: ${selectedDestination.lat.toFixed(
-                      6
-                    )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
-                </p>
-              </div>
-
-              <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-                <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
-                <p data-testid="selected-origin">
-                  {selectedOrigin.address ||
-                    `緯度: ${selectedOrigin.lat.toFixed(
-                      6
-                    )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
-                </p>
-              </div>
-
-              <div className="flex justify-center mt-4">
-                <button
-                  className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
-                  onClick={resetSearch}
-                  data-testid="reset-search"
-                >
-                  検索条件をリセット
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="md:col-span-2">
-          {/* 経路検索結果の表示 */}
-          {searchPerformed && (
-            <div className="mb-6">
-              <h2 className="text-xl font-bold mb-4">経路検索結果</h2>
-
-              {routeLoading ? (
-                <div className="flex flex-col items-center justify-center p-6 bg-base-200 rounded-lg shadow-md">
-                  <span className="loading loading-spinner loading-lg text-primary"></span>
-                  <p className="mt-4">経路を検索中...</p>
-                </div>
-              ) : error ? (
-                <div className="alert alert-error shadow-lg">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    className="stroke-current shrink-0 w-6 h-6"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    ></path>
-                  </svg>
-                  <div>
-                    <h3 className="font-bold">エラー</h3>
-                    <div className="text-xs">{error}</div>
-                  </div>
-                </div>
-              ) : routeInfo && routeInfo.type !== "none" ? (
-                <IntegratedRouteDisplay
-                  originStop={routeInfo.originStop}
-                  destinationStop={routeInfo.destinationStop}
-                  routes={routeInfo.routes}
-                  type={routeInfo.type}
-                  transfers={routeInfo.transfers}
-                  departures={departures}
-                  message={routeInfo.message}
-                  originLat={selectedOrigin?.lat}
-                  originLng={selectedOrigin?.lng}
-                  destLat={selectedDestination?.lat}
-                  destLng={selectedDestination?.lng}
-                />
-              ) : routeInfo && routeInfo.type === "none" ? (
-                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-red-700 font-medium">
-                    ルートが見つかりません
-                  </p>
-                  <p className="text-sm text-red-600 mt-1">
-                    この2つの地点を結ぶルートが見つかりませんでした。
-                    最寄りのバス停まで歩くか、別の交通手段をご検討ください。
-                  </p>
-                </div>
-              ) : (
-                <div className="alert alert-info shadow-lg">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    className="stroke-current shrink-0 w-6 h-6"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    ></path>
-                  </svg>
-                  <div>
-                    <h3 className="font-bold">経路情報の取得に失敗しました</h3>
-                    <div className="text-xs">
-                      しばらく待ってから再度お試しください
-                    </div>
-                  </div>
-                </div>
-              )}
+      <div className="max-w-md mx-auto">
+        {!selectedDestination ? (
+          <DestinationSelector
+            onDestinationSelected={handleDestinationSelected}
+          />
+        ) : !selectedOrigin ? (
+          <>
+            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+              <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
+              <p data-testid="selected-destination">
+                {selectedDestination.address ||
+                  `緯度: ${selectedDestination.lat.toFixed(
+                    6
+                  )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
+              </p>
             </div>
-          )}
-        </div>
+            <OriginSelector onOriginSelected={handleOriginSelected} />
+            <div className="flex justify-center mt-4">
+              <button
+                className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
+                onClick={resetSearch}
+                data-testid="reset-search"
+              >
+                検索条件をリセット
+              </button>
+            </div>
+          </>
+        ) : !searchPerformed ? (
+          <>
+            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+              <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
+              <p data-testid="selected-destination">
+                {selectedDestination.address ||
+                  `緯度: ${selectedDestination.lat.toFixed(
+                    6
+                  )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
+              </p>
+            </div>
+
+            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+              <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
+              <p data-testid="selected-origin">
+                {selectedOrigin.address ||
+                  `緯度: ${selectedOrigin.lat.toFixed(
+                    6
+                  )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
+              </p>
+            </div>
+
+            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+              <h2 className="text-xl font-bold mb-2">
+                いつ出発/到着しますか？
+              </h2>
+              <DateTimeSelector
+                onSubmit={handleDateTimeSelected}
+                initialStopId=""
+              />
+              <button
+                className="btn w-full mt-4 px-6 py-3 bg-green-600 text-white hover:bg-green-700 shadow-sm"
+                onClick={handleSearch}
+                data-testid="route-search-button"
+              >
+                経路を検索
+              </button>
+            </div>
+
+            <div className="flex justify-center mt-4">
+              <button
+                className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
+                onClick={resetSearch}
+                data-testid="reset-search"
+              >
+                検索条件をリセット
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+              <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
+              <p data-testid="selected-destination">
+                {selectedDestination.address ||
+                  `緯度: ${selectedDestination.lat.toFixed(
+                    6
+                  )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
+              </p>
+            </div>
+
+            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+              <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
+              <p data-testid="selected-origin">
+                {selectedOrigin.address ||
+                  `緯度: ${selectedOrigin.lat.toFixed(
+                    6
+                  )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
+              </p>
+            </div>
+
+            {routeLoading ? (
+              <div className="text-center py-8">
+                <span className="loading loading-spinner loading-lg text-primary"></span>
+                <p className="mt-2">経路を検索中...</p>
+              </div>
+            ) : error ? (
+              <div className="alert alert-error mb-4">
+                <span>{error}</span>
+              </div>
+            ) : routeInfo ? (
+              <div className="mb-6">
+                <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+                  <h2 className="text-xl font-bold mb-2">検索結果</h2>
+                  {routeInfo.message && (
+                    <div className="alert alert-info mb-4">
+                      <span>{routeInfo.message}</span>
+                    </div>
+                  )}
+
+                  <IntegratedRouteDisplay
+                    originStop={routeInfo.originStop}
+                    destinationStop={routeInfo.destinationStop}
+                    routes={routeInfo.routes}
+                    type={routeInfo.type}
+                    transfers={routeInfo.transfers}
+                    departures={departures}
+                    message={routeInfo.message}
+                    originLat={selectedOrigin.lat}
+                    originLng={selectedOrigin.lng}
+                    destLat={selectedDestination.lat}
+                    destLng={selectedDestination.lng}
+                  />
+                </div>
+
+                {departures.length > 0 && (
+                  <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+                    <h2 className="text-xl font-bold mb-4">発車時刻</h2>
+                    <DeparturesList
+                      departures={departures}
+                      loading={false}
+                      error={null}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p>経路情報が見つかりませんでした。</p>
+              </div>
+            )}
+
+            <div className="flex justify-center mt-4">
+              <button
+                className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
+                onClick={resetSearch}
+              >
+                検索条件をリセット
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
-      <footer className="text-center text-sm text-gray-500 mt-16 mb-8">
-        <p>© {new Date().getFullYear()} かざぐるま乗換案内 - 非公式サービス</p>
-        <p className="mt-1">
-          このサービスは
-          <a
-            href="https://github.com/BlinkTagInc/transit-departures-widget"
-            className="text-primary hover:underline"
-          >
-            transit-departures-widget
-          </a>
-          と
-          <a
-            href="https://daisyui.com/"
-            className="text-primary hover:underline"
-          >
-            DaisyUI
-          </a>
-          を利用しています
-        </p>
+      <footer className="text-center mt-8 text-sm text-gray-500">
+        <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
       </footer>
     </div>
   );

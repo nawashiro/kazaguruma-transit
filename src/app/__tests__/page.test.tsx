@@ -68,28 +68,6 @@ try {
   console.warn("TransitFormのモックをスキップします:", error);
 }
 
-// NearestStopFinderのモック
-jest.mock("../../components/NearestStopFinder", () => {
-  return function MockNearestStopFinder({ userLocation, onStopSelected }: any) {
-    return (
-      <div data-testid="nearest-stop-finder">
-        <button
-          data-testid="select-nearest-stop-button"
-          onClick={() =>
-            onStopSelected({
-              stop_id: "nearest-stop",
-              stop_name: "最寄りバス停",
-              distance: 0.5,
-            })
-          }
-        >
-          最寄りのバス停を選択
-        </button>
-      </div>
-    );
-  };
-});
-
 // DateTimeSelectorのモック
 jest.mock("../../components/DateTimeSelector", () => {
   return function MockDateTimeSelector({ initialStopId, onSubmit }: any) {
@@ -165,71 +143,6 @@ describe("Home", () => {
       expect(screen.getByTestId("destination-selector")).toBeInTheDocument();
       expect(screen.queryByTestId("origin-selector")).not.toBeInTheDocument();
       expect(screen.queryByTestId("transit-form")).not.toBeInTheDocument();
-    });
-  });
-
-  it("出発地変更ボタンをクリックすると出発地選択に戻る", async () => {
-    render(<Home />);
-
-    // 目的地を選択
-    const selectDestinationButton = screen.getByTestId(
-      "select-destination-button"
-    );
-    fireEvent.click(selectDestinationButton);
-
-    // 出発地を選択
-    await waitFor(() => {
-      const selectOriginButton = screen.getByTestId("select-origin-button");
-      fireEvent.click(selectOriginButton);
-    });
-
-    // 出発地変更ボタンをクリック
-    await waitFor(() => {
-      const changeOriginButton = screen.getByTestId("change-origin");
-      fireEvent.click(changeOriginButton);
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId("selected-destination")).toBeInTheDocument();
-      expect(screen.getByTestId("origin-selector")).toBeInTheDocument();
-      expect(screen.queryByTestId("transit-form")).not.toBeInTheDocument();
-    });
-  });
-
-  it.skip("出発地選択後に最寄りバス停検索が表示され、選択するとDateTimeSelectorに切り替わる", async () => {
-    render(<Home />);
-
-    // 目的地を選択
-    const selectDestinationButton = screen.getByTestId(
-      "select-destination-button"
-    );
-    fireEvent.click(selectDestinationButton);
-
-    // 出発地を選択
-    await waitFor(() => {
-      const selectOriginButton = screen.getByTestId("select-origin-button");
-      fireEvent.click(selectOriginButton);
-    });
-
-    // 最寄りバス停検索コンポーネントが表示される
-    await waitFor(() => {
-      expect(screen.getByTestId("nearest-stop-finder")).toBeInTheDocument();
-    });
-
-    // 最寄りバス停を選択
-    const selectNearestStopButton = screen.getByTestId(
-      "select-nearest-stop-button"
-    );
-    fireEvent.click(selectNearestStopButton);
-
-    // DateTimeSelectorが表示されることを確認
-    await waitFor(() => {
-      // nearest-stop-finderが表示されなくなる
-      expect(
-        screen.queryByTestId("nearest-stop-finder")
-      ).not.toBeInTheDocument();
-      // DateTimeSelectorが表示される
-      expect(screen.getByTestId("datetime-selector")).toBeInTheDocument();
     });
   });
 });

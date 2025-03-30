@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Location } from "../types/transit";
 import InputField from "./common/InputField";
+import Button from "./common/Button";
 
 interface OriginSelectorProps {
   onOriginSelected: (location: Location) => void;
@@ -122,32 +123,26 @@ export default function OriginSelector({
         />
 
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-          <button
+          <Button
             type="submit"
-            className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm flex-1"
             disabled={loading}
-            data-testid="search-button"
+            loading={loading}
+            className="flex-1"
+            testId="search-button"
           >
-            {loading ? (
-              <span className="loading loading-spinner"></span>
-            ) : (
-              "この住所で検索"
-            )}
-          </button>
+            この住所で検索
+          </Button>
 
-          <button
+          <Button
             type="button"
-            className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm flex-1"
             onClick={handleUseCurrentLocation}
             disabled={loading}
-            data-testid="gps-button"
+            loading={loading}
+            className="flex-1"
+            testId="gps-button"
           >
-            {loading ? (
-              <span className="loading loading-spinner"></span>
-            ) : (
-              "現在地を使用"
-            )}
-          </button>
+            現在地を使用
+          </Button>
         </div>
       </form>
     </div>

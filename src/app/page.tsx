@@ -6,6 +6,7 @@ import DeparturesList from "../components/DeparturesList";
 import OriginSelector from "../components/OriginSelector";
 import DestinationSelector from "../components/DestinationSelector";
 import IntegratedRouteDisplay from "../components/IntegratedRouteDisplay";
+import Button from "../components/common/Button";
 import { Departure, TransitFormData, Location } from "../types/transit";
 
 interface RouteDetailInfo {
@@ -172,13 +173,9 @@ export default function Home() {
             </div>
             <OriginSelector onOriginSelected={handleOriginSelected} />
             <div className="flex justify-center mt-4">
-              <button
-                className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
-                onClick={resetSearch}
-                data-testid="reset-search"
-              >
+              <Button onClick={resetSearch} testId="reset-search">
                 検索条件をリセット
-              </button>
+              </Button>
             </div>
           </>
         ) : !searchPerformed ? (
@@ -211,23 +208,19 @@ export default function Home() {
                 onSubmit={handleDateTimeSelected}
                 initialStopId=""
               />
-              <button
-                className="btn w-full mt-4 px-6 py-3 bg-green-600 text-white hover:bg-green-700 shadow-sm"
+              <Button
                 onClick={handleSearch}
-                data-testid="route-search-button"
+                className="w-full mt-4"
+                testId="route-search-button"
               >
                 経路を検索
-              </button>
+              </Button>
             </div>
 
             <div className="flex justify-center mt-4">
-              <button
-                className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
-                onClick={resetSearch}
-                data-testid="reset-search"
-              >
+              <Button onClick={resetSearch} testId="reset-search">
                 検索条件をリセット
-              </button>
+              </Button>
             </div>
           </>
         ) : (
@@ -304,12 +297,7 @@ export default function Home() {
             )}
 
             <div className="flex justify-center mt-4">
-              <button
-                className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
-                onClick={resetSearch}
-              >
-                検索条件をリセット
-              </button>
+              <Button onClick={resetSearch}>検索条件をリセット</Button>
             </div>
           </>
         )}

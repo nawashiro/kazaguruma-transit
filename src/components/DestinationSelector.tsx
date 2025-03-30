@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Location } from "../types/transit";
 import LocationSuggestions from "./LocationSuggestions";
 import InputField from "./common/InputField";
+import Button from "./common/Button";
 
 interface DestinationSelectorProps {
   onDestinationSelected: (location: Location) => void;
@@ -82,18 +83,15 @@ export default function DestinationSelector({
             testId="destination-input"
           />
 
-          <button
+          <Button
             type="submit"
-            className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm w-full"
             disabled={loading}
-            data-testid="search-destination-button"
+            loading={loading}
+            fullWidth
+            testId="search-destination-button"
           >
-            {loading ? (
-              <span className="loading loading-spinner"></span>
-            ) : (
-              "この行き先で検索"
-            )}
-          </button>
+            この行き先で検索
+          </Button>
         </form>
       </div>
     </div>

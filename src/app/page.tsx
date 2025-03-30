@@ -173,12 +173,134 @@ export default function Home() {
       if (response.ok && apiResponse.success) {
         const data = apiResponse.data;
 
-        // 最適なルートを1つだけ選択（最初のルートを使用）
-        const bestJourney =
-          data?.journeys && data.journeys.length > 0 ? data.journeys[0] : null;
+        // 利用可能なルートを時間順にソート（出発時刻が早い順）
+        const sortedJourneys = data?.journeys
+          ? [...data.journeys].sort((a, b) => {
+              // 時刻をタイムスタンプに変換して比較
+              const timeA = a.departure ? new Date(a.departure).getTime() : 0;
+              const timeB = b.departure ? new Date(b.departure).getTime() : 0;
+              return timeA - timeB;
+            })
+          : [];
+
+        // 時刻文字列から時間と分を取得するヘルパー関数
+        const extractTimeComponents = (timeString: string) => {
+          // ISO形式の場合（例：2023-01-01T10:30:00）
+          const isoMatch = timeString.match(/T(\d{2}):(\d{2})/);
+          if (isoMatch) {
+            return {
+              hours: parseInt(isoMatch[1], 10),
+              minutes: parseInt(isoMatch[2], 10),
+            };
+          }
+
+          // 単純な時刻形式の場合（例：10:30:00 または 10:30）
+          const simpleMatch = timeString.match(/^(\d{2}):(\d{2})/);
+          if (simpleMatch) {
+            return {
+              hours: parseInt(simpleMatch[1], 10),
+              minutes: parseInt(simpleMatch[2], 10),
+            };
+          }
+
+          return null;
+        };
+
+        // 指定時刻の取得
+        const requestedTimeComponents = extractTimeComponents(selectedDateTime);
+        console.log("指定された時刻コンポーネント:", requestedTimeComponents);
+
+        // 指定時刻以降の最も早い便を選択
+        let bestJourney = null;
+        if (sortedJourneys.length > 0 && requestedTimeComponents) {
+          const reqHours = requestedTimeComponents.hours;
+          const reqMinutes = requestedTimeComponents.minutes;
+
+          for (const journey of sortedJourneys) {
+            if (!journey.departure) continue;
+
+            const journeyTimeComponents = extractTimeComponents(
+              journey.departure
+            );
+            if (!journeyTimeComponents) continue;
+
+            const jHours = journeyTimeComponents.hours;
+            const jMinutes = journeyTimeComponents.minutes;
+
+            console.log(
+              `便の時刻比較: ${jHours}:${jMinutes} vs 指定時刻 ${reqHours}:${reqMinutes}`
+            );
+
+            // 時間を分に変換して比較（より正確）
+            const reqTotalMinutes = reqHours * 60 + reqMinutes;
+            const jTotalMinutes = jHours * 60 + jMinutes;
+
+            // 指定時刻以降の便を選択
+            if (jTotalMinutes >= reqTotalMinutes) {
+              bestJourney = journey;
+              console.log(`最適な便が見つかりました: ${jHours}:${jMinutes}`);
+              break;
+            }
+          }
+
+          // 指定時刻以降の便がない場合は最初の便を選択
+          if (!bestJourney && sortedJourneys.length > 0) {
+            bestJourney = sortedJourneys[0];
+            console.log(
+              "指定時刻以降の便がないため、最初の便を選択:",
+              bestJourney
+            );
+          }
+        } else {
+          if (sortedJourneys.length > 0) {
+            bestJourney = sortedJourneys[0];
+            console.log("時刻比較ができないため、最初の便を選択:", bestJourney);
+          }
+        }
+
+        console.log("時間順にソートされたルート:", sortedJourneys);
+        console.log("選択された最適なルート:", bestJourney);
 
         // APIレスポンスをログ出力して確認
         console.log("選択されたルート:", bestJourney);
+        console.log("選択されたルートの出発時刻:", bestJourney?.departure);
+        console.log("選択されたルートの到着時刻:", bestJourney?.arrival);
+        console.log("利用可能な全ルート:", data?.journeys);
+
+        // 時刻の形式を確認
+        if (bestJourney?.departure) {
+          console.log(
+            "時刻形式:",
+            typeof bestJourney.departure,
+            bestJourney.departure
+          );
+        }
+
+        // 日付部分と時刻部分が含まれている場合は時刻部分のみを抽出
+        const formatTime = (timeString?: string): string => {
+          if (!timeString) return "";
+
+          // 抽出した時間コンポーネントを使用
+          const timeComponents = extractTimeComponents(timeString);
+          if (timeComponents) {
+            // 時・分を適切にフォーマット（秒は省略）
+            return `${String(timeComponents.hours).padStart(2, "0")}:${String(
+              timeComponents.minutes
+            ).padStart(2, "0")}`;
+          }
+
+          // 既存のロジックもバックアップとして維持
+          // ISO形式の日時から時刻部分のみを抽出（例：2023-01-01T12:34:56Z → 12:34:56）
+          const match = timeString.match(/T(\d{2}:\d{2}:\d{2})/);
+          if (match && match[1]) {
+            return match[1];
+          }
+          // 既に時刻形式の場合はそのまま返す
+          if (timeString.match(/^\d{2}:\d{2}(:\d{2})?$/)) {
+            return timeString;
+          }
+          return timeString; // 不明な形式の場合はそのまま返す
+        };
 
         // 新しいAPIから旧APIの形式に変換
         const convertedResponse: RouteResponse = {
@@ -192,8 +314,8 @@ export default function Home() {
                   routeLongName: "",
                   routeColor: bestJourney.color || "#000000",
                   routeTextColor: bestJourney.textColor || "#FFFFFF",
-                  departureTime: bestJourney.departure,
-                  arrivalTime: bestJourney.arrival,
+                  departureTime: formatTime(bestJourney.departure),
+                  arrivalTime: formatTime(bestJourney.arrival),
                 },
               ]
             : [],

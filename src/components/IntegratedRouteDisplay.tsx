@@ -157,10 +157,27 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
             const departureTime =
               route.departureTime ||
               getDepartureTime(originStop.stopId, route.routeId || "");
+
+            console.log(
+              "表示する出発時刻:",
+              route.departureTime,
+              departureTime
+            );
+
             const firstSegmentDuration = type === "direct" ? 45 : 30; // 直通か乗換かで所要時間を調整
             const arrivalTime =
               route.arrivalTime ||
               getArrivalTime(departureTime, firstSegmentDuration);
+
+            console.log("表示する到着時刻:", route.arrivalTime, arrivalTime);
+
+            // 時刻表示のためのフォーマッター
+            const formatTimeDisplay = (time: string) => {
+              if (time === "時刻不明") return time;
+              // 秒を省略して表示（例：12:34:56 → 12:34）
+              const match = time.match(/^(\d{2}:\d{2}):\d{2}$/);
+              return match ? match[1] : time;
+            };
 
             return (
               <div key={route.routeId} className="mb-6">
@@ -173,7 +190,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                         <div className="font-bold">{originStop.stopName}</div>
                       </div>
                       <div className="badge badge-primary text-lg p-3">
-                        {departureTime}
+                        {formatTimeDisplay(departureTime)}
                       </div>
                     </div>
 
@@ -201,7 +218,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                           </div>
                         </div>
                         <div className="badge badge-secondary text-lg p-3">
-                          {arrivalTime}
+                          {formatTimeDisplay(arrivalTime)}
                         </div>
                       </div>
                     ) : (
@@ -213,7 +230,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                           </div>
                         </div>
                         <div className="badge badge-secondary text-lg p-3">
-                          {arrivalTime}
+                          {formatTimeDisplay(arrivalTime)}
                         </div>
                       </div>
                     )}
@@ -251,8 +268,10 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                                 </div>
                               </div>
                               <div className="badge badge-primary text-lg p-3">
-                                {transfer.nextRoute.departureTime ||
-                                  transferDepartureTime}
+                                {formatTimeDisplay(
+                                  transfer.nextRoute.departureTime ||
+                                    transferDepartureTime
+                                )}
                               </div>
                             </div>
 
@@ -281,8 +300,10 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                                 </div>
                               </div>
                               <div className="badge badge-secondary text-lg p-3">
-                                {transfer.nextRoute.arrivalTime ||
-                                  finalArrivalTime}
+                                {formatTimeDisplay(
+                                  transfer.nextRoute.arrivalTime ||
+                                    finalArrivalTime
+                                )}
                               </div>
                             </div>
                           </div>

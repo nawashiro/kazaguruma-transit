@@ -17,6 +17,7 @@ export interface RouteQuery {
     lng: number;
   };
   time?: string; // ISO8601形式の日時文字列
+  isDeparture?: boolean; // trueの場合は出発時刻、falseの場合は到着時刻
 }
 
 /**

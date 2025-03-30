@@ -72,7 +72,23 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
   };
 
   const toggleTimeType = (newValue: boolean) => {
-    handleChange(dateTime, newValue);
+    console.log(`時間タイプを切り替え: ${newValue ? "出発" : "到着"}`);
+    setIsDeparture(newValue); // ローカルステートを更新
+
+    // 親コンポーネントに通知
+    const formData = {
+      stopId: initialStopId,
+      dateTime: dateTime,
+      isDeparture: newValue,
+    };
+
+    if (onSubmit) {
+      onSubmit(formData);
+    }
+
+    if (onDateTimeSelected) {
+      onDateTimeSelected(formData);
+    }
   };
 
   const inputId = isDeparture ? "departure-time" : "arrival-time";

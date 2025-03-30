@@ -129,10 +129,16 @@ export default function Home() {
 
   const handleDateTimeSelected = (formData: TransitFormData) => {
     setSelectedDateTime(formData.dateTime || "");
-    // オプショナルのbooleanプロパティを確実にbooleanに変換
+    // isDepartureプロパティが存在する場合はその値を設定、存在しない場合はデフォルトでtrue
     setIsDeparture(
-      !!formData.isDeparture || formData.isDeparture === undefined
+      formData.isDeparture !== undefined ? formData.isDeparture : true
     );
+    console.log("時刻設定が変更されました:", {
+      dateTime: formData.dateTime,
+      isDeparture: formData.isDeparture,
+      newIsDeparture:
+        formData.isDeparture !== undefined ? formData.isDeparture : true,
+    });
   };
 
   const handleSearch = async () => {
@@ -157,7 +163,17 @@ export default function Home() {
           lng: selectedDestination.lng,
         },
         time: selectedDateTime,
+        isDeparture: isDeparture,
       };
+
+      console.log("APIリクエスト送信:", {
+        type: routeQuery.type,
+        origin: `${routeQuery.origin.lat}, ${routeQuery.origin.lng}`,
+        destination: `${routeQuery.destination.lat}, ${routeQuery.destination.lng}`,
+        time: routeQuery.time,
+        isDeparture: routeQuery.isDeparture,
+        timeType: isDeparture ? "出発時刻" : "到着時刻",
+      });
 
       const response = await fetch("/api/transit", {
         method: "POST",
@@ -173,13 +189,27 @@ export default function Home() {
       if (response.ok && apiResponse.success) {
         const data = apiResponse.data;
 
-        // 利用可能なルートを時間順にソート（出発時刻が早い順）
+        // 利用可能なルートを時間順にソート
         const sortedJourneys = data?.journeys
           ? [...data.journeys].sort((a, b) => {
-              // 時刻をタイムスタンプに変換して比較
-              const timeA = a.departure ? new Date(a.departure).getTime() : 0;
-              const timeB = b.departure ? new Date(b.departure).getTime() : 0;
-              return timeA - timeB;
+              // 出発/到着時刻に基づいて比較する時刻を選択
+              const timeA = isDeparture
+                ? a.departure
+                  ? new Date(a.departure).getTime()
+                  : 0
+                : a.arrival
+                ? new Date(a.arrival).getTime()
+                : 0;
+              const timeB = isDeparture
+                ? b.departure
+                  ? new Date(b.departure).getTime()
+                  : 0
+                : b.arrival
+                ? new Date(b.arrival).getTime()
+                : 0;
+
+              // 出発時刻指定: 早い順、到着時刻指定: 遅い順
+              return isDeparture ? timeA - timeB : timeB - timeA;
             })
           : [];
 
@@ -217,28 +247,42 @@ export default function Home() {
           const reqMinutes = requestedTimeComponents.minutes;
 
           for (const journey of sortedJourneys) {
-            if (!journey.departure) continue;
+            // 出発時刻か到着時刻かに応じて比較する時刻を選択
+            const timeToCompare = isDeparture
+              ? journey.departure
+              : journey.arrival;
 
-            const journeyTimeComponents = extractTimeComponents(
-              journey.departure
-            );
+            if (!timeToCompare) continue;
+
+            const journeyTimeComponents = extractTimeComponents(timeToCompare);
             if (!journeyTimeComponents) continue;
 
             const jHours = journeyTimeComponents.hours;
             const jMinutes = journeyTimeComponents.minutes;
 
             console.log(
-              `便の時刻比較: ${jHours}:${jMinutes} vs 指定時刻 ${reqHours}:${reqMinutes}`
+              `便の${
+                isDeparture ? "出発" : "到着"
+              }時刻比較: ${jHours}:${jMinutes} vs 指定時刻 ${reqHours}:${reqMinutes}`
             );
 
             // 時間を分に変換して比較（より正確）
             const reqTotalMinutes = reqHours * 60 + reqMinutes;
             const jTotalMinutes = jHours * 60 + jMinutes;
 
-            // 指定時刻以降の便を選択
-            if (jTotalMinutes >= reqTotalMinutes) {
+            // 出発時刻指定の場合: 指定時刻以降の便
+            // 到着時刻指定の場合: 指定時刻以前の便
+            if (
+              isDeparture
+                ? jTotalMinutes >= reqTotalMinutes
+                : jTotalMinutes <= reqTotalMinutes
+            ) {
               bestJourney = journey;
-              console.log(`最適な便が見つかりました: ${jHours}:${jMinutes}`);
+              console.log(
+                `最適な便が見つかりました: ${
+                  isDeparture ? "出発" : "到着"
+                }時刻 ${jHours}:${jMinutes}`
+              );
               break;
             }
           }
@@ -247,7 +291,11 @@ export default function Home() {
           if (!bestJourney && sortedJourneys.length > 0) {
             bestJourney = sortedJourneys[0];
             console.log(
-              "指定時刻以降の便がないため、最初の便を選択:",
+              `指定${
+                isDeparture ? "出発" : "到着"
+              }時刻の便が見つからないため、${
+                isDeparture ? "最初" : "最後"
+              }の便を選択:`,
               bestJourney
             );
           }
@@ -258,7 +306,10 @@ export default function Home() {
           }
         }
 
-        console.log("時間順にソートされたルート:", sortedJourneys);
+        console.log(
+          `${isDeparture ? "出発" : "到着"}時刻順にソートされたルート:`,
+          sortedJourneys
+        );
         console.log("選択された最適なルート:", bestJourney);
 
         // APIレスポンスをログ出力して確認

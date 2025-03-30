@@ -154,113 +154,84 @@ export class TransitService {
    * 経路検索を処理する
    * 出発地点と目的地点の座標から最適な経路を検索
    */
-  private async findRoute(query: RouteQuery): Promise<RouteResponse> {
-    const { origin, destination, time } = query;
-    const timeStr = this.formatTime(time ? new Date(time) : new Date());
-
-    // 最適化された単一SQLクエリを使用して経路検索
-    const sql = `
-      WITH origin_stop AS (
-        SELECT stop_id, stop_name, stop_lat, stop_lon,
-               (((stop_lat - ?) * (stop_lat - ?)) + ((stop_lon - ?) * (stop_lon - ?))) AS distance
-        FROM stops 
-        ORDER BY distance ASC
-        LIMIT 1
-      ),
-      destination_stop AS (
-        SELECT stop_id, stop_name, stop_lat, stop_lon,
-               (((stop_lat - ?) * (stop_lat - ?)) + ((stop_lon - ?) * (stop_lon - ?))) AS distance
-        FROM stops
-        ORDER BY distance ASC
-        LIMIT 1
-      ),
-      available_trips AS (
-        SELECT 
-          origin_st.trip_id,
-          origin_st.departure_time AS origin_departure,
-          dest_st.arrival_time AS destination_arrival,
-          (julianday(dest_st.arrival_time) - julianday(origin_st.departure_time)) * 24 * 60 AS duration_minutes,
-          t.route_id,
-          t.trip_headsign,
-          t.service_id
-        FROM stop_times origin_st
-        JOIN stop_times dest_st ON origin_st.trip_id = dest_st.trip_id
-        JOIN trips t ON origin_st.trip_id = t.trip_id
-        JOIN origin_stop o ON origin_st.stop_id = o.stop_id
-        JOIN destination_stop d ON dest_st.stop_id = d.stop_id
-        WHERE origin_st.stop_sequence < dest_st.stop_sequence
-          AND origin_st.departure_time >= ?
-          AND t.service_id IN (
-            SELECT service_id FROM calendar 
-            WHERE 
-              (
-                (strftime('%w', ?) = '1' AND monday = 1) OR
-                (strftime('%w', ?) = '2' AND tuesday = 1) OR
-                (strftime('%w', ?) = '3' AND wednesday = 1) OR
-                (strftime('%w', ?) = '4' AND thursday = 1) OR
-                (strftime('%w', ?) = '5' AND friday = 1) OR
-                (strftime('%w', ?) = '6' AND saturday = 1) OR
-                (strftime('%w', ?) = '0' AND sunday = 1)
-              )
-              AND start_date <= strftime('%Y%m%d', ?)
-              AND end_date >= strftime('%Y%m%d', ?)
-          )
-        ORDER BY duration_minutes ASC, origin_departure ASC
-        LIMIT 5
-      )
-      SELECT 
-        a.*,
-        r.route_short_name, r.route_long_name, r.route_color, r.route_text_color,
-        o.stop_id as origin_stop_id, o.stop_name as origin_stop_name, o.distance as origin_distance,
-        d.stop_id as dest_stop_id, d.stop_name as dest_stop_name, d.distance as dest_distance
-      FROM available_trips a
-      JOIN routes r ON a.route_id = r.route_id
-      JOIN origin_stop o ON 1=1
-      JOIN destination_stop d ON 1=1
-    `;
-
-    const dateStr = time
-      ? new Date(time).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0];
-
-    const params = [
-      origin.lat,
-      origin.lat,
-      origin.lng,
-      origin.lng,
-      destination.lat,
-      destination.lat,
-      destination.lng,
-      destination.lng,
-      timeStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-    ];
-
+  private async findRoute(query: RouteQuery): Promise<TransitResponse> {
     try {
-      const results = await this.db.prepare(sql).all(...params);
+      const { origin, destination, time, isDeparture = true } = query;
 
-      if (!results || results.length === 0) {
-        // 直接の経路が見つからない場合は乗り換え経路を検索
-        const transferResults = await this.findRouteWithTransfer(
-          origin,
-          destination,
-          time
-        );
-        return transferResults;
+      console.log(
+        `[TransitService] 経路検索: ${origin.lat},${origin.lng} → ${
+          destination.lat
+        },${destination.lng}, ${isDeparture ? "出発" : "到着"}時刻 = ${time}`
+      );
+
+      // 最寄りのバス停を特定
+      const originStop = await this.findNearestStop(origin.lat, origin.lng);
+      const destStop = await this.findNearestStop(
+        destination.lat,
+        destination.lng
+      );
+
+      if (!originStop || !destStop) {
+        return {
+          success: false,
+          error: "最寄りのバス停が見つかりませんでした",
+          data: { journeys: [], stops: [] },
+        };
       }
 
-      return this.formatRouteResults(results, false);
+      const from = {
+        ...origin,
+        stop_id: originStop.stop_id,
+        stop_name: originStop.stop_name,
+      };
+
+      const to = {
+        ...destination,
+        stop_id: destStop.stop_id,
+        stop_name: destStop.stop_name,
+      };
+
+      // 同じバス停の場合はエラー
+      if (from.stop_id === to.stop_id) {
+        return {
+          success: false,
+          error: "出発地と目的地が同じバス停です",
+          data: { journeys: [], stops: [] },
+        };
+      }
+
+      try {
+        // 直行便を探す
+        const directResults = await this.findDirectRoute(
+          from,
+          to,
+          time,
+          isDeparture
+        );
+        if (directResults.success && directResults.data.journeys?.length > 0) {
+          return directResults;
+        }
+
+        // 乗り換えが必要な場合
+        const transferResults = await this.findRouteWithTransfer(
+          from,
+          to,
+          time,
+          isDeparture
+        );
+        return transferResults;
+      } catch (error: any) {
+        console.error("[TransitService] 経路検索クエリエラー:", error);
+        throw error;
+      }
     } catch (error) {
-      console.error("[TransitService] 経路検索クエリエラー:", error);
-      throw error;
+      console.error("[TransitService] 経路検索エラー:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "経路検索に失敗しました",
+        data: { journeys: [], stops: [] },
+      };
     }
   }
 
@@ -270,15 +241,23 @@ export class TransitService {
   private async findRouteWithTransfer(
     origin: any,
     destination: any,
-    time?: string
-  ): Promise<RouteResponse> {
+    time?: string,
+    isDeparture: boolean = true
+  ): Promise<TransitResponse> {
     const timeStr = this.formatTime(time ? new Date(time) : new Date());
     const dateStr = time
       ? new Date(time).toISOString().split("T")[0]
       : new Date().toISOString().split("T")[0];
 
+    console.log(
+      `[TransitService] 乗り換え経路検索: ${
+        isDeparture ? "出発" : "到着"
+      }時刻 = ${timeStr}`
+    );
+
     // 乗り換え経路を一度のクエリで検索する最適化SQLクエリ
-    const sql = `
+    const sql = isDeparture
+      ? `
       WITH origin_stop AS (
         SELECT stop_id, stop_name, stop_lat, stop_lon,
                (((stop_lat - ?) * (stop_lat - ?)) + ((stop_lon - ?) * (stop_lon - ?))) AS distance
@@ -370,191 +349,396 @@ export class TransitService {
         LIMIT 5
       )
       SELECT * FROM second_leg
+    `
+      : `
+      WITH origin_stop AS (
+        SELECT stop_id, stop_name, stop_lat, stop_lon,
+               (((stop_lat - ?) * (stop_lat - ?)) + ((stop_lon - ?) * (stop_lon - ?))) AS distance
+        FROM stops 
+        ORDER BY distance ASC
+        LIMIT 1
+      ),
+      destination_stop AS (
+        SELECT stop_id, stop_name, stop_lat, stop_lon,
+               (((stop_lat - ?) * (stop_lat - ?)) + ((stop_lon - ?) * (stop_lon - ?))) AS distance
+        FROM stops
+        ORDER BY distance ASC
+        LIMIT 1
+      ),
+      valid_services AS (
+        SELECT service_id FROM calendar 
+        WHERE 
+          (
+            (strftime('%w', ?) = '1' AND monday = 1) OR
+            (strftime('%w', ?) = '2' AND tuesday = 1) OR
+            (strftime('%w', ?) = '3' AND wednesday = 1) OR
+            (strftime('%w', ?) = '4' AND thursday = 1) OR
+            (strftime('%w', ?) = '5' AND friday = 1) OR
+            (strftime('%w', ?) = '6' AND saturday = 1) OR
+            (strftime('%w', ?) = '0' AND sunday = 1)
+          )
+          AND start_date <= strftime('%Y%m%d', ?)
+          AND end_date >= strftime('%Y%m%d', ?)
+      ),
+      transfer_stops AS (
+        SELECT 
+          s.stop_id, s.stop_name, s.stop_lat, s.stop_lon,
+          (((s.stop_lat - (SELECT stop_lat FROM origin_stop)) * (s.stop_lat - (SELECT stop_lat FROM origin_stop))) + 
+           ((s.stop_lon - (SELECT stop_lon FROM origin_stop)) * (s.stop_lon - (SELECT stop_lon FROM origin_stop)))) AS from_origin_distance,
+          (((s.stop_lat - (SELECT stop_lat FROM destination_stop)) * (s.stop_lat - (SELECT stop_lat FROM destination_stop))) + 
+           ((s.stop_lon - (SELECT stop_lon FROM destination_stop)) * (s.stop_lon - (SELECT stop_lon FROM destination_stop)))) AS to_dest_distance
+        FROM stops s
+        WHERE s.stop_id != (SELECT stop_id FROM origin_stop)
+          AND s.stop_id != (SELECT stop_id FROM destination_stop)
+        ORDER BY (from_origin_distance + to_dest_distance) ASC
+        LIMIT 10
+      ),
+      second_leg_arrival AS (
+        SELECT 
+          ts.stop_id as transfer_stop_id, ts.stop_name as transfer_stop_name,
+          ts.stop_lat as transfer_stop_lat, ts.stop_lon as transfer_stop_lon,
+          d.stop_id as dest_stop_id, d.stop_name as dest_stop_name,
+          st3.departure_time as transfer_departure,
+          st4.arrival_time as dest_arrival,
+          (julianday(st4.arrival_time) - julianday(st3.departure_time)) * 24 * 60 AS second_leg_duration,
+          t2.trip_id as second_leg_trip, t2.route_id as second_leg_route_id,
+          r2.route_short_name as second_route_short_name, r2.route_long_name as second_route_long_name,
+          r2.route_color as second_route_color, r2.route_text_color as second_route_text_color
+        FROM transfer_stops ts
+        CROSS JOIN destination_stop d
+        JOIN stop_times st4 ON d.stop_id = st4.stop_id
+        JOIN trips t2 ON st4.trip_id = t2.trip_id
+        JOIN routes r2 ON t2.route_id = r2.route_id
+        JOIN stop_times st3 ON t2.trip_id = st3.trip_id AND ts.stop_id = st3.stop_id
+        JOIN valid_services vs ON t2.service_id = vs.service_id
+        WHERE st4.arrival_time <= ?
+          AND st3.stop_sequence < st4.stop_sequence
+        ORDER BY st4.arrival_time DESC
+        LIMIT 20
+      ),
+      first_leg_arrival AS (
+        SELECT 
+          sl.*,
+          o.stop_id as origin_stop_id, o.stop_name as origin_stop_name,
+          st1.departure_time as origin_departure,
+          st2.arrival_time as transfer_arrival,
+          (julianday(st2.arrival_time) - julianday(st1.departure_time)) * 24 * 60 AS first_leg_duration,
+          t.trip_id as first_leg_trip, t.route_id as first_leg_route_id,
+          r.route_short_name as first_route_short_name, r.route_long_name as first_route_long_name,
+          r.route_color as first_route_color, r.route_text_color as first_route_text_color,
+          (julianday(sl.dest_arrival) - julianday(st1.departure_time)) * 24 * 60 AS total_duration,
+          (julianday(sl.transfer_departure) - julianday(st2.arrival_time)) * 24 * 60 AS transfer_wait_time
+        FROM second_leg_arrival sl
+        CROSS JOIN origin_stop o
+        JOIN stop_times st1 ON o.stop_id = st1.stop_id
+        JOIN trips t ON st1.trip_id = t.trip_id
+        JOIN routes r ON t.route_id = r.route_id
+        JOIN stop_times st2 ON t.trip_id = st2.trip_id AND sl.transfer_stop_id = st2.stop_id
+        JOIN valid_services vs ON t.service_id = vs.service_id
+        WHERE st2.arrival_time < sl.transfer_departure
+          AND st2.stop_sequence > st1.stop_sequence
+          AND (julianday(sl.transfer_departure) - julianday(st2.arrival_time)) * 24 * 60 BETWEEN 3 AND 60 -- 乗り換え待機時間を3分〜60分に制限
+        ORDER BY total_duration ASC, dest_arrival DESC
+        LIMIT 5
+      )
+      SELECT * FROM first_leg_arrival
     `;
 
-    const params = [
-      origin.lat,
-      origin.lat,
-      origin.lng,
-      origin.lng,
-      destination.lat,
-      destination.lat,
-      destination.lng,
-      destination.lng,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      timeStr,
-    ];
-
     try {
-      const results = await this.db.prepare(sql).all(...params);
+      // this.dbを初期化
+      await this.initDb();
 
-      if (!results || results.length === 0) {
+      if (!this.db) {
+        throw new Error("データベース接続が初期化されていません");
+      }
+
+      console.log(`[TransitService] 乗り換え経路検索SQLを実行中...`);
+
+      // バインドパラメータの準備
+      const params = isDeparture
+        ? [
+            // origin_stop WHERE部分
+            origin.lat,
+            origin.lat,
+            origin.lng,
+            origin.lng,
+            // destination_stop WHERE部分
+            destination.lat,
+            destination.lat,
+            destination.lng,
+            destination.lng,
+            // valid_services WHERE部分（曜日判定）
+            dateStr,
+            dateStr,
+            dateStr,
+            dateStr,
+            dateStr,
+            dateStr,
+            dateStr,
+            // valid_services WHERE部分（日付範囲判定）
+            dateStr,
+            dateStr,
+            // first_leg WHERE部分（出発時刻制限）
+            timeStr,
+          ]
+        : [
+            // origin_stop WHERE部分
+            origin.lat,
+            origin.lat,
+            origin.lng,
+            origin.lng,
+            // destination_stop WHERE部分
+            destination.lat,
+            destination.lat,
+            destination.lng,
+            destination.lng,
+            // valid_services WHERE部分（曜日判定）
+            dateStr,
+            dateStr,
+            dateStr,
+            dateStr,
+            dateStr,
+            dateStr,
+            dateStr,
+            // valid_services WHERE部分（日付範囲判定）
+            dateStr,
+            dateStr,
+            // second_leg_arrival WHERE部分（到着時刻制限）
+            timeStr,
+          ];
+
+      try {
+        // better-sqlite3の同期APIを使用
+        const stmt = this.db.prepare(sql);
+        const rows = stmt.all(...params);
+
+        if (!rows || rows.length === 0) {
+          return {
+            success: true,
+            data: {
+              journeys: [],
+              stops: [],
+              message: "経路が見つかりませんでした",
+            },
+          };
+        }
+
+        return this.formatRouteResults(rows, true);
+      } catch (dbError) {
+        console.error("[TransitService] SQLクエリ実行エラー:", dbError);
+        throw new Error("乗り換え経路検索クエリの実行中にエラーが発生しました");
+      }
+    } catch (error) {
+      console.error("[TransitService] 乗り換え経路検索エラー:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "経路検索に失敗しました",
+        data: { journeys: [], stops: [] },
+      };
+    }
+  }
+
+  /**
+   * バス停検索
+   */
+  private async findStops(query: StopQuery): Promise<TransitResponse> {
+    try {
+      console.log(
+        `[TransitService] バス停検索：${query.name || "位置情報から"}`
+      );
+
+      const { location, name, radius = 1 } = query;
+      let sql = "";
+      let params: any[] = [];
+
+      if (location) {
+        // 位置情報からの検索
+        sql = `
+          SELECT 
+            stop_id, stop_name, stop_lat, stop_lon,
+            (((stop_lat - ?) * (stop_lat - ?)) + ((stop_lon - ?) * (stop_lon - ?))) AS distance
+          FROM stops
+          ORDER BY distance ASC
+          LIMIT 10
+        `;
+        params = [location.lat, location.lat, location.lng, location.lng];
+      } else if (name) {
+        // 名前からの検索
+        sql = `
+          SELECT 
+            stop_id, stop_name, stop_lat, stop_lon
+          FROM stops
+          WHERE stop_name LIKE ?
+          ORDER BY stop_name
+          LIMIT 10
+        `;
+        params = [`%${name}%`];
+      } else {
         return {
-          success: true,
-          data: {
-            journeys: [],
-            stops: [],
-            message: "経路が見つかりませんでした",
-          },
+          success: false,
+          error: "検索条件が指定されていません",
+          data: { stops: [] },
         };
       }
 
-      return this.formatRouteResults(results, true);
+      // this.dbを初期化
+      await this.initDb();
+
+      if (!this.db) {
+        throw new Error("データベース接続が初期化されていません");
+      }
+
+      try {
+        // better-sqlite3の同期APIを使用
+        const stmt = this.db.prepare(sql);
+        const rows = stmt.all(...params);
+
+        if (!rows || rows.length === 0) {
+          return {
+            success: true,
+            data: { stops: [] },
+          };
+        }
+
+        return {
+          success: true,
+          data: {
+            stops: rows.map((stop: any) => ({
+              id: stop.stop_id,
+              name: stop.stop_name,
+              lat: stop.stop_lat,
+              lng: stop.stop_lon,
+              distance: stop.distance
+                ? Math.sqrt(stop.distance) * 111.32
+                : undefined, // 概算kmに変換
+            })),
+          },
+        };
+      } catch (dbError) {
+        console.error("[TransitService] SQLクエリ実行エラー:", dbError);
+        throw new Error("バス停検索クエリの実行中にエラーが発生しました");
+      }
     } catch (error) {
-      console.error("[TransitService] 乗り換え経路検索クエリエラー:", error);
-      throw error;
+      console.error("[TransitService] バス停検索エラー:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "バス停検索に失敗しました",
+        data: { stops: [] },
+      };
     }
   }
 
   /**
-   * バス停検索を処理する
+   * 時刻表取得
    */
-  private async findStops(query: StopQuery): Promise<StopResponse> {
-    // 位置情報による検索か名前による検索かを判断
-    if (query.location) {
-      const { lat, lng } = query.location;
-      const radius = query.radius || 1; // デフォルト1km半径
+  private async getTimetable(query: TimetableQuery): Promise<TransitResponse> {
+    try {
+      const { stopId, time } = query;
+      console.log(`[TransitService] 時刻表取得：バス停ID ${stopId}`);
+
+      const timeStr = this.formatTime(time ? new Date(time) : new Date());
+      const dateStr = time
+        ? new Date(time).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0];
 
       const sql = `
         SELECT 
-          stop_id, stop_name, stop_lat, stop_lon,
-          (((stop_lat - ?) * (stop_lat - ?)) + ((stop_lon - ?) * (stop_lon - ?))) * 111.32 AS distance
-        FROM stops
-        WHERE ((stop_lat - ?) * (stop_lat - ?)) + ((stop_lon - ?) * (stop_lon - ?)) < ? * ? / (111.32 * 111.32)
-        ORDER BY distance ASC
-        LIMIT 20
+          st.departure_time, st.arrival_time, 
+          r.route_id, r.route_short_name, r.route_long_name, r.route_color, r.route_text_color,
+          t.trip_headsign, t.direction_id
+        FROM stop_times st
+        JOIN trips t ON st.trip_id = t.trip_id
+        JOIN routes r ON t.route_id = r.route_id
+        WHERE st.stop_id = ?
+          AND st.departure_time >= ?
+          AND t.service_id IN (
+            SELECT service_id FROM calendar 
+            WHERE 
+              (
+                (strftime('%w', ?) = '1' AND monday = 1) OR
+                (strftime('%w', ?) = '2' AND tuesday = 1) OR
+                (strftime('%w', ?) = '3' AND wednesday = 1) OR
+                (strftime('%w', ?) = '4' AND thursday = 1) OR
+                (strftime('%w', ?) = '5' AND friday = 1) OR
+                (strftime('%w', ?) = '6' AND saturday = 1) OR
+                (strftime('%w', ?) = '0' AND sunday = 1)
+              )
+              AND start_date <= strftime('%Y%m%d', ?)
+              AND end_date >= strftime('%Y%m%d', ?)
+          )
+        ORDER BY st.departure_time
+        LIMIT 30
       `;
 
-      const params = [lat, lat, lng, lng, lat, lat, lng, lng, radius, radius];
+      const params = [
+        stopId,
+        timeStr,
+        dateStr,
+        dateStr,
+        dateStr,
+        dateStr,
+        dateStr,
+        dateStr,
+        dateStr,
+        dateStr,
+        dateStr,
+      ];
 
-      const results = await this.db.prepare(sql).all(...params);
+      // this.dbを初期化
+      await this.initDb();
 
+      if (!this.db) {
+        throw new Error("データベース接続が初期化されていません");
+      }
+
+      try {
+        // better-sqlite3の同期APIを使用
+        const stmt = this.db.prepare(sql);
+        const rows = stmt.all(...params);
+
+        if (!rows || rows.length === 0) {
+          return {
+            success: true,
+            data: { timetable: [] },
+          };
+        }
+
+        return {
+          success: true,
+          data: {
+            timetable: rows.map((entry: any) => ({
+              departureTime: entry.departure_time,
+              arrivalTime: entry.arrival_time,
+              routeId: entry.route_id,
+              routeName: entry.route_short_name || entry.route_long_name,
+              routeShortName: entry.route_short_name || "",
+              routeLongName: entry.route_long_name || "",
+              routeColor: entry.route_color
+                ? `#${entry.route_color}`
+                : "#000000",
+              routeTextColor: entry.route_text_color
+                ? `#${entry.route_text_color}`
+                : "#FFFFFF",
+              headsign: entry.trip_headsign,
+              directionId: entry.direction_id,
+            })),
+          },
+        };
+      } catch (dbError) {
+        console.error("[TransitService] SQLクエリ実行エラー:", dbError);
+        throw new Error("時刻表取得クエリの実行中にエラーが発生しました");
+      }
+    } catch (error) {
+      console.error("[TransitService] 時刻表取得エラー:", error);
       return {
-        success: true,
-        data: {
-          stops: results.map((stop: any) => ({
-            id: stop.stop_id,
-            name: stop.stop_name,
-            lat: parseFloat(stop.stop_lat),
-            lng: parseFloat(stop.stop_lon),
-            distance: parseFloat(stop.distance.toFixed(2)),
-          })),
-        },
+        success: false,
+        error:
+          error instanceof Error ? error.message : "時刻表取得に失敗しました",
+        data: { timetable: [] },
       };
-    } else if (query.name) {
-      // 名前による検索
-      const name = query.name;
-
-      const sql = `
-        SELECT stop_id, stop_name, stop_lat, stop_lon
-        FROM stops
-        WHERE stop_name LIKE ?
-        ORDER BY stop_name
-        LIMIT 20
-      `;
-
-      const results = await this.db.prepare(sql).all(`%${name}%`);
-
-      return {
-        success: true,
-        data: {
-          stops: results.map((stop: any) => ({
-            id: stop.stop_id,
-            name: stop.stop_name,
-            lat: parseFloat(stop.stop_lat),
-            lng: parseFloat(stop.stop_lon),
-          })),
-        },
-      };
-    } else {
-      throw new Error("検索パラメータが指定されていません");
     }
-  }
-
-  /**
-   * 時刻表を取得する
-   */
-  private async getTimetable(
-    query: TimetableQuery
-  ): Promise<TimetableResponse> {
-    const { stopId, time } = query;
-    const timeStr = this.formatTime(time ? new Date(time) : new Date());
-    const dateStr = time
-      ? new Date(time).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0];
-
-    const sql = `
-      SELECT 
-        st.departure_time, st.arrival_time, 
-        r.route_id, r.route_short_name, r.route_long_name, r.route_color, r.route_text_color,
-        t.trip_headsign, t.direction_id
-      FROM stop_times st
-      JOIN trips t ON st.trip_id = t.trip_id
-      JOIN routes r ON t.route_id = r.route_id
-      WHERE st.stop_id = ?
-        AND st.departure_time >= ?
-        AND t.service_id IN (
-          SELECT service_id FROM calendar 
-          WHERE 
-            (
-              (strftime('%w', ?) = '1' AND monday = 1) OR
-              (strftime('%w', ?) = '2' AND tuesday = 1) OR
-              (strftime('%w', ?) = '3' AND wednesday = 1) OR
-              (strftime('%w', ?) = '4' AND thursday = 1) OR
-              (strftime('%w', ?) = '5' AND friday = 1) OR
-              (strftime('%w', ?) = '6' AND saturday = 1) OR
-              (strftime('%w', ?) = '0' AND sunday = 1)
-            )
-            AND start_date <= strftime('%Y%m%d', ?)
-            AND end_date >= strftime('%Y%m%d', ?)
-        )
-      ORDER BY st.departure_time
-      LIMIT 50
-    `;
-
-    const params = [
-      stopId,
-      timeStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-      dateStr,
-    ];
-
-    const results = await this.db.prepare(sql).all(...params);
-
-    return {
-      success: true,
-      data: {
-        timetable: results.map((entry: any) => ({
-          departureTime: entry.departure_time,
-          arrivalTime: entry.arrival_time,
-          routeId: entry.route_id,
-          routeName: entry.route_short_name || entry.route_long_name,
-          routeShortName: entry.route_short_name || "",
-          routeLongName: entry.route_long_name || "",
-          routeColor: entry.route_color ? `#${entry.route_color}` : "#000000",
-          routeTextColor: entry.route_text_color
-            ? `#${entry.route_text_color}`
-            : "#FFFFFF",
-          headsign: entry.trip_headsign,
-          directionId: entry.direction_id,
-        })),
-      },
-    };
   }
 
   /**
@@ -563,7 +747,7 @@ export class TransitService {
   private formatRouteResults(
     results: any[],
     isTransfer: boolean
-  ): RouteResponse {
+  ): TransitResponse {
     if (isTransfer) {
       // 乗り換え経路のフォーマット
       return {
@@ -574,6 +758,19 @@ export class TransitService {
             arrival: route.dest_arrival,
             duration: Math.round(route.total_duration),
             transfers: 1,
+            from: route.origin_stop_name,
+            to: route.dest_stop_name,
+            route: `${
+              route.first_route_short_name || route.first_route_long_name
+            } → ${
+              route.second_route_short_name || route.second_route_long_name
+            }`,
+            color: route.first_route_color
+              ? `#${route.first_route_color}`
+              : "#000000",
+            textColor: route.first_route_text_color
+              ? `#${route.first_route_text_color}`
+              : "#FFFFFF",
             segments: [
               {
                 from: route.origin_stop_name,
@@ -635,8 +832,8 @@ export class TransitService {
         success: true,
         data: {
           journeys: results.map((route: any) => ({
-            departure: route.origin_departure,
-            arrival: route.destination_arrival,
+            departure: route.departure_time,
+            arrival: route.arrival_time,
             duration: Math.round(route.duration_minutes),
             transfers: 0,
             route: route.route_short_name || route.route_long_name,
@@ -672,5 +869,235 @@ export class TransitService {
     const hours = date.getHours().toString().padStart(2, "0");
     const minutes = date.getMinutes().toString().padStart(2, "0");
     return `${hours}:${minutes}:00`;
+  }
+
+  private async findDirectRoute(
+    origin: any,
+    destination: any,
+    time?: string,
+    isDeparture: boolean = true
+  ): Promise<TransitResponse> {
+    const timeStr = this.formatTime(time ? new Date(time) : new Date());
+    const dateStr = time
+      ? new Date(time).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0];
+
+    console.log(
+      `[TransitService] 直行経路検索: ${
+        isDeparture ? "出発" : "到着"
+      }時刻 = ${timeStr}`
+    );
+
+    // 直行経路を一度のクエリで検索する最適化SQLクエリ
+    // 出発停留所から目的地停留所まで同一路線で行けるルートを検索
+    const sql = isDeparture
+      ? `
+      WITH valid_services AS (
+        SELECT service_id FROM calendar 
+        WHERE 
+          (
+            (strftime('%w', ?) = '1' AND monday = 1) OR
+            (strftime('%w', ?) = '2' AND tuesday = 1) OR
+            (strftime('%w', ?) = '3' AND wednesday = 1) OR
+            (strftime('%w', ?) = '4' AND thursday = 1) OR
+            (strftime('%w', ?) = '5' AND friday = 1) OR
+            (strftime('%w', ?) = '6' AND saturday = 1) OR
+            (strftime('%w', ?) = '0' AND sunday = 1)
+          )
+          AND start_date <= strftime('%Y%m%d', ?)
+          AND end_date >= strftime('%Y%m%d', ?)
+      )
+      SELECT 
+        origin_st.departure_time as departure_time, 
+        dest_st.arrival_time as arrival_time,
+        t.trip_id, t.route_id, t.trip_headsign, t.direction_id,
+        r.route_short_name, r.route_long_name, r.route_color, r.route_text_color,
+        (julianday(dest_st.arrival_time) - julianday(origin_st.departure_time)) * 24 * 60 as duration_minutes
+      FROM stop_times origin_st
+      JOIN stop_times dest_st ON origin_st.trip_id = dest_st.trip_id
+      JOIN trips t ON origin_st.trip_id = t.trip_id
+      JOIN routes r ON t.route_id = r.route_id
+      JOIN valid_services vs ON t.service_id = vs.service_id
+      WHERE origin_st.stop_id = ?
+        AND dest_st.stop_id = ?
+        AND origin_st.stop_sequence < dest_st.stop_sequence
+        AND origin_st.departure_time >= ?
+      ORDER BY origin_st.departure_time
+      LIMIT 20
+      `
+      : `
+      WITH valid_services AS (
+        SELECT service_id FROM calendar 
+        WHERE 
+          (
+            (strftime('%w', ?) = '1' AND monday = 1) OR
+            (strftime('%w', ?) = '2' AND tuesday = 1) OR
+            (strftime('%w', ?) = '3' AND wednesday = 1) OR
+            (strftime('%w', ?) = '4' AND thursday = 1) OR
+            (strftime('%w', ?) = '5' AND friday = 1) OR
+            (strftime('%w', ?) = '6' AND saturday = 1) OR
+            (strftime('%w', ?) = '0' AND sunday = 1)
+          )
+          AND start_date <= strftime('%Y%m%d', ?)
+          AND end_date >= strftime('%Y%m%d', ?)
+      )
+      SELECT 
+        origin_st.departure_time as departure_time, 
+        dest_st.arrival_time as arrival_time,
+        t.trip_id, t.route_id, t.trip_headsign, t.direction_id,
+        r.route_short_name, r.route_long_name, r.route_color, r.route_text_color,
+        (julianday(dest_st.arrival_time) - julianday(origin_st.departure_time)) * 24 * 60 as duration_minutes
+      FROM stop_times origin_st
+      JOIN stop_times dest_st ON origin_st.trip_id = dest_st.trip_id
+      JOIN trips t ON origin_st.trip_id = t.trip_id
+      JOIN routes r ON t.route_id = r.route_id
+      JOIN valid_services vs ON t.service_id = vs.service_id
+      WHERE origin_st.stop_id = ?
+        AND dest_st.stop_id = ?
+        AND origin_st.stop_sequence < dest_st.stop_sequence
+        AND dest_st.arrival_time <= ?
+      ORDER BY dest_st.arrival_time DESC
+      LIMIT 20
+      `;
+
+    const params = isDeparture
+      ? [
+          // valid_services用の日付パラメータ
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          // 検索条件
+          origin.stop_id,
+          destination.stop_id,
+          timeStr,
+        ]
+      : [
+          // valid_services用の日付パラメータ
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          // 検索条件
+          origin.stop_id,
+          destination.stop_id,
+          timeStr,
+        ];
+
+    try {
+      // this.dbを初期化
+      await this.initDb();
+
+      if (!this.db) {
+        throw new Error("データベース接続が初期化されていません");
+      }
+
+      try {
+        // better-sqlite3の同期APIを使用
+        const stmt = this.db.prepare(sql);
+        const rows = stmt.all(...params);
+
+        // 結果があれば経路情報として整形して返す
+        if (rows && rows.length > 0) {
+          return {
+            success: true,
+            data: {
+              journeys: rows.map((entry: any) => ({
+                departure: entry.departure_time,
+                arrival: entry.arrival_time,
+                duration: Math.round(entry.duration_minutes),
+                transfers: 0,
+                route: entry.route_short_name || entry.route_long_name,
+                from: origin.stop_name,
+                to: destination.stop_name,
+                color: entry.route_color ? `#${entry.route_color}` : "#000000",
+                textColor: entry.route_text_color
+                  ? `#${entry.route_text_color}`
+                  : "#FFFFFF",
+              })),
+              stops: [
+                {
+                  id: origin.stop_id,
+                  name: origin.stop_name,
+                  distance: 0,
+                },
+                {
+                  id: destination.stop_id,
+                  name: destination.stop_name,
+                  distance: 0,
+                },
+              ],
+            },
+          };
+        }
+
+        // 結果がなければ空の結果を返す
+        return {
+          success: true,
+          data: {
+            journeys: [],
+            stops: [],
+            message: "直行便が見つかりませんでした",
+          },
+        };
+      } catch (dbError) {
+        console.error("[TransitService] SQLクエリ実行エラー:", dbError);
+        throw new Error("直行経路検索クエリの実行中にエラーが発生しました");
+      }
+    } catch (error) {
+      console.error("[TransitService] 直行経路検索エラー:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "経路検索に失敗しました",
+        data: { journeys: [], stops: [] },
+      };
+    }
+  }
+
+  /**
+   * 最寄りのバス停を検索する
+   */
+  private async findNearestStop(lat: number, lng: number): Promise<any> {
+    const sql = `
+      SELECT 
+        stop_id, stop_name, stop_lat, stop_lon,
+        (((stop_lat - ?) * (stop_lat - ?)) + ((stop_lon - ?) * (stop_lon - ?))) AS distance
+      FROM stops
+      ORDER BY distance ASC
+      LIMIT 1
+    `;
+
+    try {
+      // this.dbを初期化
+      await this.initDb();
+
+      if (!this.db) {
+        throw new Error("データベース接続が初期化されていません");
+      }
+
+      try {
+        // better-sqlite3の同期APIを使用
+        const stmt = this.db.prepare(sql);
+        const row = stmt.get(lat, lat, lng, lng);
+        return row;
+      } catch (dbError) {
+        console.error("[TransitService] SQLクエリ実行エラー:", dbError);
+        throw new Error("バス停検索クエリの実行中にエラーが発生しました");
+      }
+    } catch (error) {
+      console.error("[TransitService] 最寄りバス停検索エラー:", error);
+      return null;
+    }
   }
 }

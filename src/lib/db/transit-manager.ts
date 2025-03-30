@@ -299,18 +299,6 @@ export class TransitManager {
     const now = date;
     const nowTime = DateTime.fromJSDate(now);
 
-    // 曜日を取得してGTFSの形式に変換
-    const dayOfWeek = nowTime.weekday;
-    const serviceQuery: { [key: string]: number } = {};
-
-    if (dayOfWeek === 6) {
-      serviceQuery.saturday = 1;
-    } else if (dayOfWeek === 7) {
-      serviceQuery.sunday = 1;
-    } else {
-      serviceQuery.monday = 1;
-    }
-
     // 時刻のフィルター用の文字列
     const timeStr = `${nowTime.hour
       .toString()
@@ -318,9 +306,9 @@ export class TransitManager {
 
     // GTFSからstoptimesを取得
     // クエリパラメータを構築
+    // 曜日による直接フィルタリングを行わずに全てのstoptimesを取得
     const stoptimeQuery: any = {
       stop_id: stop_id || undefined,
-      ...serviceQuery,
     };
 
     // 出発/到着時刻フィルターを追加
@@ -340,6 +328,34 @@ export class TransitManager {
     const trips = (await getTrips({
       trip_id: stoptimes.map((st) => st.trip_id),
     })) as GTFSTrip[];
+
+    // 曜日を取得
+    const dayOfWeek = nowTime.weekday; // 1 = 月曜日, 7 = 日曜日
+
+    // 現在の曜日に対応するtrip_idのフィルタリング
+    // 日曜、平日などservice_idの命名規則に基づくフィルタリング
+    const validTrips = trips.filter((trip) => {
+      const serviceId = trip.service_id;
+
+      // serviceIdが「日祝」の場合、日曜日のみ有効
+      if (serviceId === "日祝" && dayOfWeek === 7) {
+        return true;
+      }
+
+      // serviceIdが「除月火」の場合、水曜～日曜のみ有効
+      if (serviceId === "除月火" && dayOfWeek >= 3) {
+        return true;
+      }
+
+      // serviceIdが「除日曜」の場合、月曜～土曜のみ有効
+      if (serviceId === "除日曜" && dayOfWeek !== 7) {
+        return true;
+      }
+
+      return false;
+    });
+
+    const validTripIds = new Set(validTrips.map((trip) => trip.trip_id));
 
     const tripRouteMap = new Map<string, string>();
     trips.forEach((trip) => {
@@ -392,6 +408,11 @@ export class TransitManager {
     // stoptimesを処理して出発情報を作成
     const departures: Departure[] = stoptimes
       .map((stoptime: GTFSStopTime) => {
+        // 有効なtrip_idのみを処理
+        if (!stoptime.trip_id || !validTripIds.has(stoptime.trip_id)) {
+          return null;
+        }
+
         // 対応するトリップを使ってルートIDを取得
         const tripRouteId = stoptime.trip_id
           ? tripRouteMap.get(stoptime.trip_id)

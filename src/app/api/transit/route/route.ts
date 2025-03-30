@@ -31,8 +31,19 @@ async function ensureGtfsImported() {
       // 設定ファイルの内容を読み込む
       const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
 
+      // データベースディレクトリが存在するか確認し、なければ作成
+      const dbDir = path.join(process.cwd(), ".temp", "gtfs");
+      if (!fs.existsSync(path.join(process.cwd(), ".temp"))) {
+        fs.mkdirSync(path.join(process.cwd(), ".temp"));
+        console.log("ディレクトリを作成しました: .temp");
+      }
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir);
+        console.log(`ディレクトリを作成しました: ${dbDir}`);
+      }
+
       // データベースファイルの存在を確認
-      const dbPath = path.join(process.cwd(), ".temp", "gtfs", "gtfs.db");
+      const dbPath = path.join(dbDir, "gtfs.db");
       const dbExists = fs.existsSync(dbPath);
 
       if (!dbExists) {
@@ -159,21 +170,19 @@ async function findDirectRoutes(
 
     // 日時が指定されている場合、gtfsライブラリの形式に合わせてフィルターを追加
     if (targetDateTime) {
-      const day = targetDateTime.getDay();
-      // GTFSの曜日に変換（0=日曜から6=土曜、GTFSではそれぞれ0または1で表現）
-      const dayMapping: { [key: number]: string } = {
-        0: "sunday",
-        1: "monday",
-        2: "tuesday",
-        3: "wednesday",
-        4: "thursday",
-        5: "friday",
-        6: "saturday",
-      };
+      // 曜日を取得してGTFSの形式に変換
+      const dayOfWeek = targetDateTime.getDay() + 1; // 0-6 から 1-7 に変換
 
-      const dayField = dayMapping[day];
-      if (dayField) {
-        stoptimesQuery[dayField] = 1;
+      // GTFSの曜日フィールドにマッピング
+      if (dayOfWeek === 7) {
+        // 日曜日
+        stoptimesQuery.sunday = 1;
+      } else if (dayOfWeek === 6) {
+        // 土曜日
+        stoptimesQuery.saturday = 1;
+      } else {
+        // 平日
+        stoptimesQuery.monday = 1;
       }
 
       // 時刻のフィルターを追加

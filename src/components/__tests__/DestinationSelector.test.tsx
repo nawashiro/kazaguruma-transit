@@ -1,6 +1,29 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DestinationSelector from "../DestinationSelector";
+import { Location } from "../../types/transit";
+
+// LocationSuggestionsコンポーネントをモック
+jest.mock("../LocationSuggestions", () => {
+  return function MockLocationSuggestions({ onLocationSelected }: any) {
+    return (
+      <div data-testid="location-suggestions">
+        <button
+          data-testid="select-suggestion"
+          onClick={() =>
+            onLocationSelected({
+              lat: 35.69404386157018,
+              lng: 139.7534462933312,
+              address: "千代田区役所",
+            })
+          }
+        >
+          サンプル施設を選択
+        </button>
+      </div>
+    );
+  };
+});
 
 // モックのfetch API
 global.fetch = jest.fn();
@@ -21,6 +44,7 @@ describe("DestinationSelector", () => {
     expect(
       screen.getByText("最初に行き先を選択してください")
     ).toBeInTheDocument();
+    expect(screen.getByTestId("location-suggestions")).toBeInTheDocument();
     expect(screen.getByTestId("destination-input")).toBeInTheDocument();
     expect(screen.getByTestId("search-destination-button")).toBeInTheDocument();
   });
@@ -97,5 +121,21 @@ describe("DestinationSelector", () => {
       await screen.findByText("ジオコーディングに失敗しました: ZERO_RESULTS")
     ).toBeInTheDocument();
     expect(mockOnDestinationSelected).not.toHaveBeenCalled();
+  });
+
+  it("LocationSuggestionsから場所を選択すると、onDestinationSelectedが呼ばれる", () => {
+    render(
+      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
+    );
+
+    const selectSuggestionButton = screen.getByTestId("select-suggestion");
+    fireEvent.click(selectSuggestionButton);
+
+    expect(mockOnDestinationSelected).toHaveBeenCalledTimes(1);
+    expect(mockOnDestinationSelected).toHaveBeenCalledWith({
+      lat: 35.69404386157018,
+      lng: 139.7534462933312,
+      address: "千代田区役所",
+    });
   });
 });

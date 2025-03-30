@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Location } from "../types/transit";
+import LocationSuggestions from "./LocationSuggestions";
 
 interface DestinationSelectorProps {
   onDestinationSelected: (location: Location) => void;
@@ -51,45 +52,57 @@ export default function DestinationSelector({
     }
   };
 
+  const handleLocationSelected = (location: Location) => {
+    onDestinationSelected(location);
+  };
+
   return (
-    <div className="bg-base-200 p-4 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">最初に行き先を選択してください</h2>
+    <div>
+      <div className="bg-base-200 p-4 rounded-lg shadow-md">
+        <h2 className="text-xl font-bold mb-4">
+          最初に行き先を選択してください
+        </h2>
 
-      {error && (
-        <div className="alert alert-error mb-4" data-testid="error-message">
-          <span>{error}</span>
-        </div>
-      )}
+        {error && (
+          <div className="alert alert-error mb-4" data-testid="error-message">
+            <span>{error}</span>
+          </div>
+        )}
 
-      <form onSubmit={handleAddressSubmit} className="space-y-4">
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text">行き先の住所や場所</span>
-          </label>
-          <input
-            type="text"
-            className="input input-bordered w-full"
-            placeholder="えみふる"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
+        <LocationSuggestions onLocationSelected={handleLocationSelected} />
+
+        <div className="divider text-sm text-gray-500">または住所を入力</div>
+
+        <form onSubmit={handleAddressSubmit} className="space-y-4">
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">行き先の住所や場所</span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered w-full"
+              placeholder="えみふる"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              disabled={loading}
+              data-testid="destination-input"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm w-full"
             disabled={loading}
-            data-testid="destination-input"
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm w-full"
-          disabled={loading}
-          data-testid="search-destination-button"
-        >
-          {loading ? (
-            <span className="loading loading-spinner"></span>
-          ) : (
-            "この行き先で検索"
-          )}
-        </button>
-      </form>
+            data-testid="search-destination-button"
+          >
+            {loading ? (
+              <span className="loading loading-spinner"></span>
+            ) : (
+              "この行き先で検索"
+            )}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

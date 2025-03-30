@@ -189,212 +189,126 @@ export default function Home() {
       if (response.ok && apiResponse.success) {
         const data = apiResponse.data;
 
-        // 利用可能なルートを時間順にソート
-        const sortedJourneys = data?.journeys
-          ? [...data.journeys].sort((a, b) => {
-              // 出発/到着時刻に基づいて比較する時刻を選択
-              const timeA = isDeparture
-                ? a.departure
-                  ? new Date(a.departure).getTime()
-                  : 0
-                : a.arrival
-                ? new Date(a.arrival).getTime()
-                : 0;
-              const timeB = isDeparture
-                ? b.departure
-                  ? new Date(b.departure).getTime()
-                  : 0
-                : b.arrival
-                ? new Date(b.arrival).getTime()
-                : 0;
+        if (data?.journeys && data.journeys.length > 0) {
+          // ベストな経路は既にAPIから最適な順に返されているので最初のものを使用
+          const bestJourney = data.journeys[0];
 
-              // 出発時刻指定: 早い順、到着時刻指定: 遅い順
-              return isDeparture ? timeA - timeB : timeB - timeA;
-            })
-          : [];
+          // 最寄りバス停情報
+          const originStop = {
+            stopId:
+              data.stops.find((s) => s.name === bestJourney.from)?.id ||
+              "unknown",
+            stopName: bestJourney.from,
+            distance:
+              data.stops.find((s) => s.name === bestJourney.from)?.distance ||
+              0,
+          };
 
-        // 時刻文字列から時間と分を取得するヘルパー関数
-        const extractTimeComponents = (timeString: string) => {
-          // ISO形式の場合（例：2023-01-01T10:30:00）
-          const isoMatch = timeString.match(/T(\d{2}):(\d{2})/);
-          if (isoMatch) {
-            return {
-              hours: parseInt(isoMatch[1], 10),
-              minutes: parseInt(isoMatch[2], 10),
+          const destinationStop = {
+            stopId:
+              data.stops.find((s) => s.name === bestJourney.to)?.id ||
+              "unknown",
+            stopName: bestJourney.to,
+            distance:
+              data.stops.find((s) => s.name === bestJourney.to)?.distance || 0,
+          };
+
+          // 経路タイプと乗り換え回数
+          const type = bestJourney.transfers > 0 ? "transfer" : "direct";
+          const transfers = bestJourney.transfers || 0;
+
+          // 経路情報をIntegratedRouteDisplay用の形式に変換
+          let routeDetails: RouteDetailInfo[] = [];
+
+          // 乗り換えがない場合は単一の経路情報
+          if (!bestJourney.segments || bestJourney.segments.length === 0) {
+            routeDetails = [
+              {
+                routeId: "route-1",
+                routeName: bestJourney.route || "不明",
+                routeShortName: bestJourney.route || "不明",
+                routeLongName: "",
+                routeColor: bestJourney.color || "#000000",
+                routeTextColor: bestJourney.textColor || "#FFFFFF",
+                departureTime: bestJourney.departure,
+                arrivalTime: bestJourney.arrival,
+              },
+            ];
+          }
+          // 乗り換えがある場合は各セグメントの情報を構築
+          else {
+            // 最初のセグメント
+            const firstSegment = bestJourney.segments[0];
+            const firstRoute: RouteDetailInfo = {
+              routeId: "route-1",
+              routeName: firstSegment.route,
+              routeShortName: firstSegment.route,
+              routeLongName: "",
+              routeColor: firstSegment.color || "#000000",
+              routeTextColor: firstSegment.textColor || "#FFFFFF",
+              departureTime: firstSegment.departure,
+              arrivalTime: firstSegment.arrival,
             };
-          }
 
-          // 単純な時刻形式の場合（例：10:30:00 または 10:30）
-          const simpleMatch = timeString.match(/^(\d{2}):(\d{2})/);
-          if (simpleMatch) {
-            return {
-              hours: parseInt(simpleMatch[1], 10),
-              minutes: parseInt(simpleMatch[2], 10),
-            };
-          }
+            // 乗り換え情報がある場合は追加
+            if (bestJourney.transferInfo && bestJourney.segments.length > 1) {
+              const secondSegment = bestJourney.segments[1];
 
-          return null;
-        };
-
-        // 指定時刻の取得
-        const requestedTimeComponents = extractTimeComponents(selectedDateTime);
-        console.log("指定された時刻コンポーネント:", requestedTimeComponents);
-
-        // 指定時刻以降の最も早い便を選択
-        let bestJourney = null;
-        if (sortedJourneys.length > 0 && requestedTimeComponents) {
-          const reqHours = requestedTimeComponents.hours;
-          const reqMinutes = requestedTimeComponents.minutes;
-
-          for (const journey of sortedJourneys) {
-            // 出発時刻か到着時刻かに応じて比較する時刻を選択
-            const timeToCompare = isDeparture
-              ? journey.departure
-              : journey.arrival;
-
-            if (!timeToCompare) continue;
-
-            const journeyTimeComponents = extractTimeComponents(timeToCompare);
-            if (!journeyTimeComponents) continue;
-
-            const jHours = journeyTimeComponents.hours;
-            const jMinutes = journeyTimeComponents.minutes;
-
-            console.log(
-              `便の${
-                isDeparture ? "出発" : "到着"
-              }時刻比較: ${jHours}:${jMinutes} vs 指定時刻 ${reqHours}:${reqMinutes}`
-            );
-
-            // 時間を分に変換して比較（より正確）
-            const reqTotalMinutes = reqHours * 60 + reqMinutes;
-            const jTotalMinutes = jHours * 60 + jMinutes;
-
-            // 出発時刻指定の場合: 指定時刻以降の便
-            // 到着時刻指定の場合: 指定時刻以前の便
-            if (
-              isDeparture
-                ? jTotalMinutes >= reqTotalMinutes
-                : jTotalMinutes <= reqTotalMinutes
-            ) {
-              bestJourney = journey;
-              console.log(
-                `最適な便が見つかりました: ${
-                  isDeparture ? "出発" : "到着"
-                }時刻 ${jHours}:${jMinutes}`
-              );
-              break;
-            }
-          }
-
-          // 指定時刻以降の便がない場合は最初の便を選択
-          if (!bestJourney && sortedJourneys.length > 0) {
-            bestJourney = sortedJourneys[0];
-            console.log(
-              `指定${
-                isDeparture ? "出発" : "到着"
-              }時刻の便が見つからないため、${
-                isDeparture ? "最初" : "最後"
-              }の便を選択:`,
-              bestJourney
-            );
-          }
-        } else {
-          if (sortedJourneys.length > 0) {
-            bestJourney = sortedJourneys[0];
-            console.log("時刻比較ができないため、最初の便を選択:", bestJourney);
-          }
-        }
-
-        console.log(
-          `${isDeparture ? "出発" : "到着"}時刻順にソートされたルート:`,
-          sortedJourneys
-        );
-        console.log("選択された最適なルート:", bestJourney);
-
-        // APIレスポンスをログ出力して確認
-        console.log("選択されたルート:", bestJourney);
-        console.log("選択されたルートの出発時刻:", bestJourney?.departure);
-        console.log("選択されたルートの到着時刻:", bestJourney?.arrival);
-        console.log("利用可能な全ルート:", data?.journeys);
-
-        // 時刻の形式を確認
-        if (bestJourney?.departure) {
-          console.log(
-            "時刻形式:",
-            typeof bestJourney.departure,
-            bestJourney.departure
-          );
-        }
-
-        // 日付部分と時刻部分が含まれている場合は時刻部分のみを抽出
-        const formatTime = (timeString?: string): string => {
-          if (!timeString) return "";
-
-          // 抽出した時間コンポーネントを使用
-          const timeComponents = extractTimeComponents(timeString);
-          if (timeComponents) {
-            // 時・分を適切にフォーマット（秒は省略）
-            return `${String(timeComponents.hours).padStart(2, "0")}:${String(
-              timeComponents.minutes
-            ).padStart(2, "0")}`;
-          }
-
-          // 既存のロジックもバックアップとして維持
-          // ISO形式の日時から時刻部分のみを抽出（例：2023-01-01T12:34:56Z → 12:34:56）
-          const match = timeString.match(/T(\d{2}:\d{2}:\d{2})/);
-          if (match && match[1]) {
-            return match[1];
-          }
-          // 既に時刻形式の場合はそのまま返す
-          if (timeString.match(/^\d{2}:\d{2}(:\d{2})?$/)) {
-            return timeString;
-          }
-          return timeString; // 不明な形式の場合はそのまま返す
-        };
-
-        // 新しいAPIから旧APIの形式に変換
-        const convertedResponse: RouteResponse = {
-          hasRoute: Boolean(bestJourney),
-          routes: bestJourney
-            ? [
+              firstRoute.transfers = [
                 {
-                  routeId: bestJourney.route || "",
-                  routeName: bestJourney.route || "",
-                  routeShortName: bestJourney.route || "内神田ルート",
-                  routeLongName: "",
-                  routeColor: bestJourney.color || "#000000",
-                  routeTextColor: bestJourney.textColor || "#FFFFFF",
-                  departureTime: formatTime(bestJourney.departure),
-                  arrivalTime: formatTime(bestJourney.arrival),
+                  transferStop: {
+                    stopId: "transfer-stop",
+                    stopName: bestJourney.transferInfo.stop,
+                    stopLat: bestJourney.transferInfo.location.lat,
+                    stopLon: bestJourney.transferInfo.location.lng,
+                  },
+                  nextRoute: {
+                    routeId: "route-2",
+                    routeName: secondSegment.route,
+                    routeShortName: secondSegment.route,
+                    routeLongName: "",
+                    routeColor: secondSegment.color || "#000000",
+                    routeTextColor: secondSegment.textColor || "#FFFFFF",
+                    departureTime: secondSegment.departure,
+                    arrivalTime: secondSegment.arrival,
+                  },
                 },
-              ]
-            : [],
-          type:
-            bestJourney && bestJourney.transfers && bestJourney.transfers > 0
-              ? "transfer"
-              : bestJourney
-              ? "direct"
-              : "none",
-          transfers: bestJourney?.transfers || 0,
-          message: data?.message,
-          originStop: {
-            stopId: data?.stops?.[0]?.id || "",
-            stopName: data?.stops?.[0]?.name || "",
-            distance: data?.stops?.[0]?.distance || 0,
-            stop_lat: 0,
-            stop_lon: 0,
-          },
-          destinationStop: {
-            stopId: data?.stops?.[1]?.id || "",
-            stopName: data?.stops?.[1]?.name || "",
-            distance: data?.stops?.[1]?.distance || 0,
-            stop_lat: 0,
-            stop_lon: 0,
-          },
-        };
+              ];
+            }
 
-        setRouteInfo(convertedResponse);
+            routeDetails = [firstRoute];
+          }
+
+          // 経路情報をセット
+          setRouteInfo({
+            hasRoute: true,
+            routes: routeDetails,
+            type,
+            transfers,
+            message: data.message,
+            originStop,
+            destinationStop,
+          });
+        } else {
+          // 経路が見つからない場合
+          setRouteInfo({
+            hasRoute: false,
+            routes: [],
+            type: "none",
+            transfers: 0,
+            message: data?.message || "経路が見つかりませんでした",
+            originStop: {
+              stopId: "unknown",
+              stopName: "最寄りバス停",
+              distance: 0,
+            },
+            destinationStop: {
+              stopId: "unknown",
+              stopName: "目的地最寄りバス停",
+              distance: 0,
+            },
+          });
+        }
       } else {
         setError(apiResponse.error || "経路検索に失敗しました");
       }

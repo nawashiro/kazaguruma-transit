@@ -182,7 +182,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
             return (
               <div key={route.routeId} className="mb-6">
                 {/* 最初のセグメント */}
-                <div className="card bg-base-100 shadow-sm mb-4">
+                <div className="card bg-base-100 shadow-sm mb-4 border-l-4 border-yellow-400">
                   <div className="card-body p-4">
                     {/* 出発バス停と時刻 */}
                     <div className="flex justify-between items-center mb-2">
@@ -240,7 +240,11 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 {/* 乗換情報（ある場合） */}
                 {route.transfers && route.transfers.length > 0 && (
                   <>
-                    <div className="divider text-center font-bold">乗換</div>
+                    <div className="text-center my-4">
+                      <div className="inline-block bg-yellow-100 px-4 py-2 rounded-full font-bold text-yellow-800 border border-yellow-300 shadow-sm">
+                        ここで乗り換え
+                      </div>
+                    </div>
 
                     {route.transfers.map((transfer, tIndex) => {
                       // 乗換後の時刻を計算
@@ -257,7 +261,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                       return (
                         <div
                           key={tIndex}
-                          className="card bg-base-100 shadow-sm mb-4"
+                          className="card bg-base-100 shadow-sm mb-4 border-l-4 border-yellow-400"
                         >
                           <div className="card-body p-4">
                             {/* 乗換駅出発時刻 */}

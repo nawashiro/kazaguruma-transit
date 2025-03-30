@@ -406,7 +406,7 @@ export default function Home() {
   return (
     <div className="container mx-auto p-4">
       <header className="text-center my-8">
-        <h1 className="text-3xl font-bold text-primary">かざぐるま乗換案内</h1>
+        <h1 className="text-3xl font-bold text-primary">風ぐるま乗換案内</h1>
         <p className="mt-2 text-lg">千代田区福祉交通の乗換案内サービス</p>
       </header>
 

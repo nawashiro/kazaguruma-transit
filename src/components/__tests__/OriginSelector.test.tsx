@@ -33,7 +33,9 @@ describe("OriginSelector", () => {
   it("正しくレンダリングされる", () => {
     render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
 
-    expect(screen.getByText("どこから行きますか？")).toBeInTheDocument();
+    expect(
+      screen.getByText("次に出発地を選択してください")
+    ).toBeInTheDocument();
     expect(screen.getByTestId("address-input")).toBeInTheDocument();
     expect(screen.getByTestId("search-button")).toBeInTheDocument();
     expect(screen.getByTestId("gps-button")).toBeInTheDocument();

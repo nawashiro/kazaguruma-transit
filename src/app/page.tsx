@@ -60,13 +60,16 @@ export default function Home() {
   const handleOriginSelected = (location: Location) => {
     setSelectedOrigin(location);
     // 選択値をリセット
-    setSelectedDestination(null);
     setSearchPerformed(false);
     setRouteInfo(null);
   };
 
   const handleDestinationSelected = (location: Location) => {
     setSelectedDestination(location);
+    // 選択値をリセット
+    setSelectedOrigin(null);
+    setSearchPerformed(false);
+    setRouteInfo(null);
   };
 
   const handleDateTimeSelected = (formData: TransitFormData) => {
@@ -154,22 +157,22 @@ export default function Home() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
-          {!selectedOrigin ? (
-            <OriginSelector onOriginSelected={handleOriginSelected} />
-          ) : !selectedDestination ? (
+          {!selectedDestination ? (
+            <DestinationSelector
+              onDestinationSelected={handleDestinationSelected}
+            />
+          ) : !selectedOrigin ? (
             <>
               <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-                <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
-                <p data-testid="selected-origin">
-                  {selectedOrigin.address ||
-                    `緯度: ${selectedOrigin.lat.toFixed(
+                <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
+                <p data-testid="selected-destination">
+                  {selectedDestination.address ||
+                    `緯度: ${selectedDestination.lat.toFixed(
                       6
-                    )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
+                    )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
                 </p>
               </div>
-              <DestinationSelector
-                onDestinationSelected={handleDestinationSelected}
-              />
+              <OriginSelector onOriginSelected={handleOriginSelected} />
               <div className="flex justify-center mt-4">
                 <button
                   className="btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm"
@@ -183,22 +186,22 @@ export default function Home() {
           ) : !searchPerformed ? (
             <>
               <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-                <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
-                <p data-testid="selected-origin">
-                  {selectedOrigin.address ||
-                    `緯度: ${selectedOrigin.lat.toFixed(
-                      6
-                    )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
-                </p>
-              </div>
-
-              <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
                 <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
                 <p data-testid="selected-destination">
                   {selectedDestination.address ||
                     `緯度: ${selectedDestination.lat.toFixed(
                       6
                     )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
+                </p>
+              </div>
+
+              <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+                <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
+                <p data-testid="selected-origin">
+                  {selectedOrigin.address ||
+                    `緯度: ${selectedOrigin.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
                 </p>
               </div>
 
@@ -232,22 +235,22 @@ export default function Home() {
           ) : (
             <>
               <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-                <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
-                <p data-testid="selected-origin">
-                  {selectedOrigin.address ||
-                    `緯度: ${selectedOrigin.lat.toFixed(
-                      6
-                    )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
-                </p>
-              </div>
-
-              <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
                 <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
                 <p data-testid="selected-destination">
                   {selectedDestination.address ||
                     `緯度: ${selectedDestination.lat.toFixed(
                       6
                     )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
+                </p>
+              </div>
+
+              <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+                <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
+                <p data-testid="selected-origin">
+                  {selectedOrigin.address ||
+                    `緯度: ${selectedOrigin.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
                 </p>
               </div>
 

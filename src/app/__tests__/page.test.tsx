@@ -48,20 +48,25 @@ jest.mock("../../components/DestinationSelector", () => {
   };
 });
 
-jest.mock("../../components/TransitForm", () => {
-  return function MockTransitForm({ onSubmit }: any) {
-    return (
-      <div data-testid="transit-form">
-        <button
-          data-testid="submit-transit-form"
-          onClick={() => onSubmit({ stopId: "stop1", routeId: "route1" })}
-        >
-          検索
-        </button>
-      </div>
-    );
-  };
-});
+// TransitFormのモックを試みる
+try {
+  jest.mock("../../components/TransitForm", () => {
+    return function MockTransitForm({ onSubmit }: any) {
+      return (
+        <div data-testid="transit-form">
+          <button
+            data-testid="submit-transit-form"
+            onClick={() => onSubmit({ stopId: "stop1", routeId: "route1" })}
+          >
+            検索
+          </button>
+        </div>
+      );
+    };
+  });
+} catch (error) {
+  console.warn("TransitFormのモックをスキップします:", error);
+}
 
 // NearestStopFinderのモック
 jest.mock("../../components/NearestStopFinder", () => {
@@ -112,25 +117,25 @@ describe("Home", () => {
     jest.clearAllMocks();
   });
 
-  it("初期状態では出発地選択コンポーネントのみが表示される", () => {
+  it("初期状態では目的地選択コンポーネントのみが表示される", () => {
     render(<Home />);
 
-    expect(screen.getByTestId("origin-selector")).toBeInTheDocument();
-    expect(
-      screen.queryByTestId("destination-selector")
-    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("destination-selector")).toBeInTheDocument();
+    expect(screen.queryByTestId("origin-selector")).not.toBeInTheDocument();
     expect(screen.queryByTestId("transit-form")).not.toBeInTheDocument();
   });
 
-  it("出発地を選択すると目的地選択コンポーネントが表示される", async () => {
+  it("目的地を選択すると出発地選択コンポーネントが表示される", async () => {
     render(<Home />);
 
-    const selectOriginButton = screen.getByTestId("select-origin-button");
-    fireEvent.click(selectOriginButton);
+    const selectDestinationButton = screen.getByTestId(
+      "select-destination-button"
+    );
+    fireEvent.click(selectDestinationButton);
 
     await waitFor(() => {
-      expect(screen.getByTestId("selected-origin")).toBeInTheDocument();
-      expect(screen.getByTestId("destination-selector")).toBeInTheDocument();
+      expect(screen.getByTestId("selected-destination")).toBeInTheDocument();
+      expect(screen.getByTestId("origin-selector")).toBeInTheDocument();
       expect(screen.queryByTestId("transit-form")).not.toBeInTheDocument();
     });
   });
@@ -138,16 +143,16 @@ describe("Home", () => {
   it("リセットボタンをクリックすると初期状態に戻る", async () => {
     render(<Home />);
 
-    // 出発地を選択
-    const selectOriginButton = screen.getByTestId("select-origin-button");
-    fireEvent.click(selectOriginButton);
-
     // 目的地を選択
+    const selectDestinationButton = screen.getByTestId(
+      "select-destination-button"
+    );
+    fireEvent.click(selectDestinationButton);
+
+    // 出発地を選択
     await waitFor(() => {
-      const selectDestinationButton = screen.getByTestId(
-        "select-destination-button"
-      );
-      fireEvent.click(selectDestinationButton);
+      const selectOriginButton = screen.getByTestId("select-origin-button");
+      fireEvent.click(selectOriginButton);
     });
 
     // リセットボタンをクリック
@@ -157,55 +162,53 @@ describe("Home", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId("origin-selector")).toBeInTheDocument();
-      expect(
-        screen.queryByTestId("destination-selector")
-      ).not.toBeInTheDocument();
-      expect(screen.queryByTestId("transit-form")).not.toBeInTheDocument();
-    });
-  });
-
-  it("目的地変更ボタンをクリックすると目的地選択に戻る", async () => {
-    render(<Home />);
-
-    // 出発地を選択
-    const selectOriginButton = screen.getByTestId("select-origin-button");
-    fireEvent.click(selectOriginButton);
-
-    // 目的地を選択
-    await waitFor(() => {
-      const selectDestinationButton = screen.getByTestId(
-        "select-destination-button"
-      );
-      fireEvent.click(selectDestinationButton);
-    });
-
-    // 目的地変更ボタンをクリック
-    await waitFor(() => {
-      const changeDestinationButton = screen.getByTestId("change-destination");
-      fireEvent.click(changeDestinationButton);
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId("selected-origin")).toBeInTheDocument();
       expect(screen.getByTestId("destination-selector")).toBeInTheDocument();
+      expect(screen.queryByTestId("origin-selector")).not.toBeInTheDocument();
       expect(screen.queryByTestId("transit-form")).not.toBeInTheDocument();
     });
   });
 
-  it.skip("目的地選択後に最寄りバス停検索が表示され、選択するとDateTimeSelectorに切り替わる", async () => {
+  it("出発地変更ボタンをクリックすると出発地選択に戻る", async () => {
     render(<Home />);
 
+    // 目的地を選択
+    const selectDestinationButton = screen.getByTestId(
+      "select-destination-button"
+    );
+    fireEvent.click(selectDestinationButton);
+
     // 出発地を選択
-    const selectOriginButton = screen.getByTestId("select-origin-button");
-    fireEvent.click(selectOriginButton);
+    await waitFor(() => {
+      const selectOriginButton = screen.getByTestId("select-origin-button");
+      fireEvent.click(selectOriginButton);
+    });
+
+    // 出発地変更ボタンをクリック
+    await waitFor(() => {
+      const changeOriginButton = screen.getByTestId("change-origin");
+      fireEvent.click(changeOriginButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("selected-destination")).toBeInTheDocument();
+      expect(screen.getByTestId("origin-selector")).toBeInTheDocument();
+      expect(screen.queryByTestId("transit-form")).not.toBeInTheDocument();
+    });
+  });
+
+  it.skip("出発地選択後に最寄りバス停検索が表示され、選択するとDateTimeSelectorに切り替わる", async () => {
+    render(<Home />);
 
     // 目的地を選択
+    const selectDestinationButton = screen.getByTestId(
+      "select-destination-button"
+    );
+    fireEvent.click(selectDestinationButton);
+
+    // 出発地を選択
     await waitFor(() => {
-      const selectDestinationButton = screen.getByTestId(
-        "select-destination-button"
-      );
-      fireEvent.click(selectDestinationButton);
+      const selectOriginButton = screen.getByTestId("select-origin-button");
+      fireEvent.click(selectOriginButton);
     });
 
     // 最寄りバス停検索コンポーネントが表示される

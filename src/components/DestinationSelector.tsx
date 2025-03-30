@@ -53,7 +53,7 @@ export default function DestinationSelector({
 
   return (
     <div className="bg-base-200 p-4 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">どこへ行きたいですか？</h2>
+      <h2 className="text-xl font-bold mb-4">最初に行き先を選択してください</h2>
 
       {error && (
         <div className="alert alert-error mb-4" data-testid="error-message">

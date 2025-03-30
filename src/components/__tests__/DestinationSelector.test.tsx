@@ -1,7 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DestinationSelector from "../DestinationSelector";
-import { Location } from "../../types/transit";
 
 // モックのfetch API
 global.fetch = jest.fn();
@@ -19,7 +18,9 @@ describe("DestinationSelector", () => {
       <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
     );
 
-    expect(screen.getByText("どこへ行きたいですか？")).toBeInTheDocument();
+    expect(
+      screen.getByText("最初に行き先を選択してください")
+    ).toBeInTheDocument();
     expect(screen.getByTestId("destination-input")).toBeInTheDocument();
     expect(screen.getByTestId("search-destination-button")).toBeInTheDocument();
   });

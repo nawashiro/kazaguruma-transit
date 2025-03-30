@@ -102,7 +102,7 @@ export default function OriginSelector({
 
   return (
     <div className="bg-base-200 p-4 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">どこから行きますか？</h2>
+      <h2 className="text-xl font-bold mb-4">次に出発地を選択してください</h2>
 
       {error && (
         <div className="alert alert-error mb-4" data-testid="error-message">

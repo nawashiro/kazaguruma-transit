@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Location } from "../types/transit";
+import InputField from "./common/InputField";
 
 interface OriginSelectorProps {
   onOriginSelected: (location: Location) => void;
@@ -111,20 +112,14 @@ export default function OriginSelector({
       )}
 
       <form onSubmit={handleAddressSubmit} className="space-y-4">
-        <div className="form-control">
-          <label className="label">
-            <span className="label-text">住所や場所</span>
-          </label>
-          <input
-            type="text"
-            className="input input-bordered w-full"
-            placeholder="千代田区役所"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            disabled={loading}
-            data-testid="address-input"
-          />
-        </div>
+        <InputField
+          label="住所や場所"
+          placeholder="千代田区役所"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          disabled={loading}
+          testId="address-input"
+        />
 
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
           <button

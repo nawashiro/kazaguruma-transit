@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Location } from "../types/transit";
 import LocationSuggestions from "./LocationSuggestions";
+import InputField from "./common/InputField";
 
 interface DestinationSelectorProps {
   onDestinationSelected: (location: Location) => void;
@@ -71,23 +72,15 @@ export default function DestinationSelector({
 
         <LocationSuggestions onLocationSelected={handleLocationSelected} />
 
-        <div className="divider text-sm text-gray-500">または住所を入力</div>
-
         <form onSubmit={handleAddressSubmit} className="space-y-4">
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text">行き先の住所や場所</span>
-            </label>
-            <input
-              type="text"
-              className="input input-bordered w-full"
-              placeholder="えみふる"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              disabled={loading}
-              data-testid="destination-input"
-            />
-          </div>
+          <InputField
+            label="または住所を入力"
+            placeholder="えみふる"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            disabled={loading}
+            testId="destination-input"
+          />
 
           <button
             type="submit"

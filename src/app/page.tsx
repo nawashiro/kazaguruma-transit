@@ -46,7 +46,6 @@ interface RouteResponse {
 
 export default function Home() {
   const [departures, setDepartures] = useState<Departure[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [selectedOrigin, setSelectedOrigin] = useState<Location | null>(null);

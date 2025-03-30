@@ -153,7 +153,8 @@ async function findDirectRoutes(
     let serviceIds: string[] = [];
     if (serviceIdQuery) {
       try {
-        const serviceRows = await db.all(serviceIdQuery);
+        // db.allではなくdb.prepare().allを使用
+        const serviceRows = db.prepare(serviceIdQuery).all();
         serviceIds = serviceRows.map(
           (row: { service_id: string }) => row.service_id
         );
@@ -205,7 +206,8 @@ async function findDirectRoutes(
     params.push(destinationStopId);
 
     // クエリを実行
-    const routes = await db.all(routeQuery, params);
+    // db.allではなくdb.prepare().allを使用
+    const routes = db.prepare(routeQuery).all(...params);
 
     if (routes.length === 0) {
       console.log("直接のルートが見つかりません");
@@ -341,12 +343,18 @@ async function findRouteWithTransfers(
       `;
 
       try {
-        const serviceRows = await db.all(serviceIdQuery);
+        // db.allではなくdb.prepare().allを使用
+        const serviceRows = db.prepare(serviceIdQuery).all();
         serviceIds = serviceRows.map(
           (row: { service_id: string }) => row.service_id
         );
+
+        if (serviceIds.length === 0) {
+          console.log("選択された日付の運行サービスが見つかりません");
+        }
       } catch (err) {
         console.error("service_id取得エラー:", err);
+        // エラーが発生した場合、フィルターなしで続行
       }
     }
 
@@ -403,7 +411,8 @@ async function findRouteWithTransfers(
     params.push(originStopId, destinationStopId);
 
     // 乗り換え候補バス停を取得
-    const transferStops = await db.all(transferQuery, params);
+    // db.allではなくdb.prepare().allを使用
+    const transferStops = db.prepare(transferQuery).all(...params);
 
     if (transferStops.length === 0) {
       return {

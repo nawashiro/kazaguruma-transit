@@ -45,6 +45,8 @@ interface NearbyStop {
   id: string;
   name: string;
   distance: number;
+  lat?: number;
+  lng?: number;
 }
 
 interface RouteResponseData {
@@ -192,26 +194,81 @@ export default function Home() {
         if (data?.journeys && data.journeys.length > 0) {
           // ベストな経路は既にAPIから最適な順に返されているので最初のものを使用
           const bestJourney = data.journeys[0];
+          console.log("選択された経路:", bestJourney);
+          console.log("APIから返された停留所情報:", data.stops);
 
-          // 最寄りバス停情報
+          // 最寄りバス停情報（APIのレスポンスからstopsを探す）
+          const originStopInfo = data.stops.find(
+            (s) => s.name === bestJourney.from
+          );
+          const destStopInfo = data.stops.find(
+            (s) => s.name === bestJourney.to
+          );
+
+          console.log("最寄りバス停情報:", {
+            originStopInfo,
+            destStopInfo,
+            allStops: data.stops,
+          });
+
+          // バス停の座標情報を使用(APIから返されたものを必ず使用)
           const originStop = {
-            stopId:
-              data.stops.find((s) => s.name === bestJourney.from)?.id ||
-              "unknown",
+            stopId: originStopInfo?.id || "unknown",
             stopName: bestJourney.from,
-            distance:
-              data.stops.find((s) => s.name === bestJourney.from)?.distance ||
-              0,
+            distance: originStopInfo?.distance || 0,
+            stop_lat:
+              originStopInfo?.lat !== undefined
+                ? originStopInfo.lat
+                : selectedOrigin.lat,
+            stop_lon:
+              originStopInfo?.lng !== undefined
+                ? originStopInfo.lng
+                : selectedOrigin.lng,
+            lat:
+              originStopInfo?.lat !== undefined
+                ? originStopInfo.lat
+                : selectedOrigin.lat,
+            lng:
+              originStopInfo?.lng !== undefined
+                ? originStopInfo.lng
+                : selectedOrigin.lng,
           };
 
           const destinationStop = {
-            stopId:
-              data.stops.find((s) => s.name === bestJourney.to)?.id ||
-              "unknown",
+            stopId: destStopInfo?.id || "unknown",
             stopName: bestJourney.to,
-            distance:
-              data.stops.find((s) => s.name === bestJourney.to)?.distance || 0,
+            distance: destStopInfo?.distance || 0,
+            stop_lat:
+              destStopInfo?.lat !== undefined
+                ? destStopInfo.lat
+                : selectedDestination.lat,
+            stop_lon:
+              destStopInfo?.lng !== undefined
+                ? destStopInfo.lng
+                : selectedDestination.lng,
+            lat:
+              destStopInfo?.lat !== undefined
+                ? destStopInfo.lat
+                : selectedDestination.lat,
+            lng:
+              destStopInfo?.lng !== undefined
+                ? destStopInfo.lng
+                : selectedDestination.lng,
           };
+
+          console.log("使用されるバス停オブジェクト:", {
+            originStop,
+            destinationStop,
+          });
+
+          // 乗り換え情報がある場合は乗り換え地点の緯度経度も取得
+          let transferLocation = null;
+          if (bestJourney.transferInfo && bestJourney.transferInfo.location) {
+            transferLocation = {
+              lat: bestJourney.transferInfo.location.lat,
+              lng: bestJourney.transferInfo.location.lng,
+            };
+          }
 
           // 経路タイプと乗り換え回数
           const type = bestJourney.transfers > 0 ? "transfer" : "direct";
@@ -288,6 +345,20 @@ export default function Home() {
             message: data.message,
             originStop,
             destinationStop,
+          });
+
+          console.log("出発地→バス停の情報:", {
+            originLat: selectedOrigin.lat,
+            originLng: selectedOrigin.lng,
+            stopLat: originStop.stop_lat,
+            stopLon: originStop.stop_lon,
+          });
+
+          console.log("バス停→目的地の情報:", {
+            stopLat: destinationStop.stop_lat,
+            stopLon: destinationStop.stop_lon,
+            destLat: selectedDestination.lat,
+            destLng: selectedDestination.lng,
           });
         } else {
           // 経路が見つからない場合

@@ -41,6 +41,8 @@ interface IntegratedRouteDisplayProps {
     distance: number;
     stop_lat?: number;
     stop_lon?: number;
+    lat?: number;
+    lng?: number;
   };
   destinationStop: {
     stopId: string;
@@ -48,6 +50,8 @@ interface IntegratedRouteDisplayProps {
     distance: number;
     stop_lat?: number;
     stop_lon?: number;
+    lat?: number;
+    lng?: number;
   };
   routes: RouteInfo[];
   type: "direct" | "transfer" | "none";
@@ -105,20 +109,30 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
 
   // Googleマップリンクを生成（両方の緯度経度が存在する場合のみ）
   const originToStopMapLink =
-    originLat && originLng && originStop.stop_lat && originStop.stop_lon
+    originLat &&
+    originLng &&
+    (originStop.stop_lat || originStop.lat) &&
+    (originStop.stop_lon || originStop.lng)
       ? generateGoogleMapDirectionLink(
           originLat,
           originLng,
-          parseFloat(originStop.stop_lat.toString()),
-          parseFloat(originStop.stop_lon.toString())
+          parseFloat((originStop.stop_lat || originStop.lat || 0).toString()),
+          parseFloat((originStop.stop_lon || originStop.lng || 0).toString())
         )
       : undefined;
 
   const stopToDestinationMapLink =
-    destLat && destLng && destinationStop.stop_lat && destinationStop.stop_lon
+    destLat &&
+    destLng &&
+    (destinationStop.stop_lat || destinationStop.lat) &&
+    (destinationStop.stop_lon || destinationStop.lng)
       ? generateGoogleMapDirectionLink(
-          parseFloat(destinationStop.stop_lat.toString()),
-          parseFloat(destinationStop.stop_lon.toString()),
+          parseFloat(
+            (destinationStop.stop_lat || destinationStop.lat || 0).toString()
+          ),
+          parseFloat(
+            (destinationStop.stop_lon || destinationStop.lng || 0).toString()
+          ),
           destLat,
           destLng
         )

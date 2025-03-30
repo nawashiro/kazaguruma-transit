@@ -248,11 +248,15 @@ export class TransitService {
                   id: from.stop_id,
                   name: from.stop_name,
                   distance: 0,
+                  lat: parseFloat(originStop.stop_lat),
+                  lng: parseFloat(originStop.stop_lon),
                 },
                 {
                   id: to.stop_id,
                   name: to.stop_name,
                   distance: 0,
+                  lat: parseFloat(destStop.stop_lat),
+                  lng: parseFloat(destStop.stop_lon),
                 },
               ],
               message: "経路が見つかりませんでした",
@@ -319,11 +323,15 @@ export class TransitService {
             id: from.stop_id,
             name: from.stop_name,
             distance: 0,
+            lat: parseFloat(originStop.stop_lat),
+            lng: parseFloat(originStop.stop_lon),
           },
           {
             id: to.stop_id,
             name: to.stop_name,
             distance: 0,
+            lat: parseFloat(destStop.stop_lat),
+            lng: parseFloat(destStop.stop_lon),
           },
         ];
 
@@ -932,11 +940,15 @@ export class TransitService {
               id: results[0].origin_stop_id,
               name: results[0].origin_stop_name,
               distance: results[0].origin_distance,
+              lat: parseFloat(results[0].origin_stop_lat),
+              lng: parseFloat(results[0].origin_stop_lon),
             },
             {
               id: results[0].dest_stop_id,
               name: results[0].dest_stop_name,
               distance: results[0].dest_distance,
+              lat: parseFloat(results[0].dest_stop_lat),
+              lng: parseFloat(results[0].dest_stop_lon),
             },
           ],
         },
@@ -964,11 +976,15 @@ export class TransitService {
               id: results[0].origin_stop_id,
               name: results[0].origin_stop_name,
               distance: results[0].origin_distance,
+              lat: parseFloat(results[0].origin_stop_lat),
+              lng: parseFloat(results[0].origin_stop_lon),
             },
             {
               id: results[0].dest_stop_id,
               name: results[0].dest_stop_name,
               distance: results[0].dest_distance,
+              lat: parseFloat(results[0].dest_stop_lat),
+              lng: parseFloat(results[0].dest_stop_lon),
             },
           ],
         },
@@ -1021,18 +1037,31 @@ export class TransitService {
           )
           AND start_date <= strftime('%Y%m%d', ?)
           AND end_date >= strftime('%Y%m%d', ?)
+      ),
+      origin_stop AS (
+        SELECT stop_id, stop_name, stop_lat, stop_lon FROM stops WHERE stop_id = ?
+      ),
+      dest_stop AS (
+        SELECT stop_id, stop_name, stop_lat, stop_lon FROM stops WHERE stop_id = ?
       )
       SELECT 
         origin_st.departure_time as departure_time, 
         dest_st.arrival_time as arrival_time,
         t.trip_id, t.route_id, t.trip_headsign, t.direction_id,
         r.route_short_name, r.route_long_name, r.route_color, r.route_text_color,
-        (julianday(dest_st.arrival_time) - julianday(origin_st.departure_time)) * 24 * 60 as duration_minutes
+        os.stop_id as origin_stop_id, os.stop_name as origin_stop_name, 
+        os.stop_lat as origin_stop_lat, os.stop_lon as origin_stop_lon,
+        ds.stop_id as dest_stop_id, ds.stop_name as dest_stop_name,
+        ds.stop_lat as dest_stop_lat, ds.stop_lon as dest_stop_lon,
+        (julianday(dest_st.arrival_time) - julianday(origin_st.departure_time)) * 24 * 60 as duration_minutes,
+        0 as origin_distance, 0 as dest_distance
       FROM stop_times origin_st
       JOIN stop_times dest_st ON origin_st.trip_id = dest_st.trip_id
       JOIN trips t ON origin_st.trip_id = t.trip_id
       JOIN routes r ON t.route_id = r.route_id
       JOIN valid_services vs ON t.service_id = vs.service_id
+      JOIN origin_stop os ON origin_st.stop_id = os.stop_id
+      JOIN dest_stop ds ON dest_st.stop_id = ds.stop_id
       WHERE origin_st.stop_id = ?
         AND dest_st.stop_id = ?
         AND origin_st.stop_sequence < dest_st.stop_sequence
@@ -1055,18 +1084,31 @@ export class TransitService {
           )
           AND start_date <= strftime('%Y%m%d', ?)
           AND end_date >= strftime('%Y%m%d', ?)
+      ),
+      origin_stop AS (
+        SELECT stop_id, stop_name, stop_lat, stop_lon FROM stops WHERE stop_id = ?
+      ),
+      dest_stop AS (
+        SELECT stop_id, stop_name, stop_lat, stop_lon FROM stops WHERE stop_id = ?
       )
       SELECT 
         origin_st.departure_time as departure_time, 
         dest_st.arrival_time as arrival_time,
         t.trip_id, t.route_id, t.trip_headsign, t.direction_id,
         r.route_short_name, r.route_long_name, r.route_color, r.route_text_color,
-        (julianday(dest_st.arrival_time) - julianday(origin_st.departure_time)) * 24 * 60 as duration_minutes
+        os.stop_id as origin_stop_id, os.stop_name as origin_stop_name, 
+        os.stop_lat as origin_stop_lat, os.stop_lon as origin_stop_lon,
+        ds.stop_id as dest_stop_id, ds.stop_name as dest_stop_name,
+        ds.stop_lat as dest_stop_lat, ds.stop_lon as dest_stop_lon,
+        (julianday(dest_st.arrival_time) - julianday(origin_st.departure_time)) * 24 * 60 as duration_minutes,
+        0 as origin_distance, 0 as dest_distance
       FROM stop_times origin_st
       JOIN stop_times dest_st ON origin_st.trip_id = dest_st.trip_id
       JOIN trips t ON origin_st.trip_id = t.trip_id
       JOIN routes r ON t.route_id = r.route_id
       JOIN valid_services vs ON t.service_id = vs.service_id
+      JOIN origin_stop os ON origin_st.stop_id = os.stop_id
+      JOIN dest_stop ds ON dest_st.stop_id = ds.stop_id
       WHERE origin_st.stop_id = ?
         AND dest_st.stop_id = ?
         AND origin_st.stop_sequence < dest_st.stop_sequence
@@ -1087,7 +1129,10 @@ export class TransitService {
           dateStr,
           dateStr,
           dateStr,
-          // 検索条件
+          // 出発停留所と目的地停留所のID
+          origin.stop_id,
+          destination.stop_id,
+          // WHERE条件
           origin.stop_id,
           destination.stop_id,
           timeStr,
@@ -1103,7 +1148,10 @@ export class TransitService {
           dateStr,
           dateStr,
           dateStr,
-          // 検索条件
+          // 出発停留所と目的地停留所のID
+          origin.stop_id,
+          destination.stop_id,
+          // WHERE条件
           origin.stop_id,
           destination.stop_id,
           timeStr,
@@ -1124,6 +1172,8 @@ export class TransitService {
 
         // 結果があれば経路情報として整形して返す
         if (rows && rows.length > 0) {
+          // 最初の結果からバス停情報を取得（すべての結果で同じ停留所を使用するため）
+          const firstRow = rows[0];
           return {
             success: true,
             data: {
@@ -1133,8 +1183,8 @@ export class TransitService {
                 duration: Math.round(entry.duration_minutes),
                 transfers: 0,
                 route: entry.route_short_name || entry.route_long_name,
-                from: origin.stop_name,
-                to: destination.stop_name,
+                from: entry.origin_stop_name,
+                to: entry.dest_stop_name,
                 color: entry.route_color ? `#${entry.route_color}` : "#000000",
                 textColor: entry.route_text_color
                   ? `#${entry.route_text_color}`
@@ -1142,14 +1192,18 @@ export class TransitService {
               })),
               stops: [
                 {
-                  id: origin.stop_id,
-                  name: origin.stop_name,
-                  distance: 0,
+                  id: firstRow.origin_stop_id,
+                  name: firstRow.origin_stop_name,
+                  distance: firstRow.origin_distance,
+                  lat: parseFloat(firstRow.origin_stop_lat),
+                  lng: parseFloat(firstRow.origin_stop_lon),
                 },
                 {
-                  id: destination.stop_id,
-                  name: destination.stop_name,
-                  distance: 0,
+                  id: firstRow.dest_stop_id,
+                  name: firstRow.dest_stop_name,
+                  distance: firstRow.dest_distance,
+                  lat: parseFloat(firstRow.dest_stop_lat),
+                  lng: parseFloat(firstRow.dest_stop_lon),
                 },
               ],
             },

@@ -1,14 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { TransitFormData } from "../types/transit";
 
 interface DateTimeSelectorProps {
   initialStopId: string;
-  onSubmit: (formData: {
-    stopId: string;
-    dateTime: string;
-    isDeparture: boolean;
-  }) => void;
+  onSubmit: (formData: TransitFormData) => void;
   disabled?: boolean;
 }
 
@@ -20,6 +17,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
   const [dateTime, setDateTime] = useState<string>("");
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
 
+  // 初期値設定
   useEffect(() => {
     // 現在の日時を初期値として設定
     const now = new Date();
@@ -28,26 +26,41 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
     const day = String(now.getDate()).padStart(2, "0");
     const hours = String(now.getHours()).padStart(2, "0");
     const minutes = String(now.getMinutes()).padStart(2, "0");
-    setDateTime(`${year}-${month}-${day}T${hours}:${minutes}`);
-  }, []);
+    const initialDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    // 既に値が設定されている場合は更新しない
+    if (!dateTime) {
+      setDateTime(initialDateTime);
+
+      // 初期値を親に通知
+      onSubmit({
+        stopId: initialStopId,
+        dateTime: initialDateTime,
+        isDeparture,
+      });
+    }
+  }, [initialStopId, onSubmit, isDeparture, dateTime]);
+
+  // 値が変更されたときに親コンポーネントに通知
+  const handleChange = (newDateTime: string, newIsDeparture: boolean) => {
+    setDateTime(newDateTime);
+    setIsDeparture(newIsDeparture);
+
     onSubmit({
       stopId: initialStopId,
-      dateTime: dateTime,
-      isDeparture,
+      dateTime: newDateTime,
+      isDeparture: newIsDeparture,
     });
   };
 
   const toggleTimeType = (newValue: boolean) => {
-    setIsDeparture(newValue);
+    handleChange(dateTime, newValue);
   };
 
   const inputId = isDeparture ? "departure-time" : "arrival-time";
 
   return (
-    <form onSubmit={handleSubmit} className="w-full">
+    <div className="w-full">
       <div className="mb-4">
         {/* カスタムデザインのトグルを実装 */}
         <div className="flex rounded-lg overflow-hidden mb-4">
@@ -93,7 +106,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             name={inputId}
             type="datetime-local"
             value={dateTime}
-            onChange={(e) => setDateTime(e.target.value)}
+            onChange={(e) => handleChange(e.target.value, isDeparture)}
             required
             className="input input-bordered w-full"
             data-testid={isDeparture ? "departure-input" : "arrival-input"}
@@ -101,20 +114,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
           />
         </div>
       </div>
-
-      <button
-        type="submit"
-        className={`btn w-full mt-4 px-6 py-3 ${
-          disabled
-            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-            : "bg-gray-200 text-gray-700 hover:bg-gray-300 shadow-sm"
-        }`}
-        data-testid="search-button"
-        disabled={disabled}
-      >
-        検索
-      </button>
-    </form>
+    </div>
   );
 };
 

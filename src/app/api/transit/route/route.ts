@@ -144,16 +144,54 @@ async function findNearestStop(lat: number, lng: number, maxDistance = 1) {
   }
 }
 
-// 2つのバス停間の直接ルートを検索
+// 2つのバス停間の直接ルートを検索（日時とisDepartureパラメータを追加）
 async function findDirectRoutes(
   originStopId: string,
-  destinationStopId: string
+  destinationStopId: string,
+  targetDateTime?: Date,
+  isDeparture: boolean = true
 ) {
   try {
     await ensureDbConnection();
 
+    // クエリパラメータの作成
+    let stoptimesQuery: any = { stop_id: originStopId };
+
+    // 日時が指定されている場合、gtfsライブラリの形式に合わせてフィルターを追加
+    if (targetDateTime) {
+      const day = targetDateTime.getDay();
+      // GTFSの曜日に変換（0=日曜から6=土曜、GTFSではそれぞれ0または1で表現）
+      const dayMapping: { [key: number]: string } = {
+        0: "sunday",
+        1: "monday",
+        2: "tuesday",
+        3: "wednesday",
+        4: "thursday",
+        5: "friday",
+        6: "saturday",
+      };
+
+      const dayField = dayMapping[day];
+      if (dayField) {
+        stoptimesQuery[dayField] = 1;
+      }
+
+      // 時刻のフィルターを追加
+      const hours = targetDateTime.getHours();
+      const minutes = targetDateTime.getMinutes();
+      const timeString = `${hours.toString().padStart(2, "0")}:${minutes
+        .toString()
+        .padStart(2, "0")}:00`;
+
+      if (isDeparture) {
+        stoptimesQuery.departure_time = { $gte: timeString };
+      } else {
+        stoptimesQuery.arrival_time = { $gte: timeString };
+      }
+    }
+
     // 出発バス停を通過するすべての停車時刻を取得
-    const originStoptimes = await getStoptimes({ stop_id: originStopId });
+    const originStoptimes = await getStoptimes(stoptimesQuery);
 
     if (originStoptimes.length === 0) {
       return [];
@@ -229,13 +267,20 @@ async function getStopDetails(stopId: string) {
   };
 }
 
-// 乗り換えを含む経路を検索
+// 乗り換えを含む経路を検索（日時とisDepartureパラメータを追加）
 async function findRouteWithTransfers(
   originStopId: string,
-  destinationStopId: string
+  destinationStopId: string,
+  targetDateTime?: Date,
+  isDeparture: boolean = true
 ) {
   // まず直接のルートを検索
-  const directRoutes = await findDirectRoutes(originStopId, destinationStopId);
+  const directRoutes = await findDirectRoutes(
+    originStopId,
+    destinationStopId,
+    targetDateTime,
+    isDeparture
+  );
 
   if (directRoutes.length > 0) {
     return {
@@ -350,104 +395,135 @@ async function findRouteWithTransfers(
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const originLat = parseFloat(searchParams.get("originLat") || "");
-    const originLng = parseFloat(searchParams.get("originLng") || "");
-    const destLat = parseFloat(searchParams.get("destLat") || "");
-    const destLng = parseFloat(searchParams.get("destLng") || "");
+    const { searchParams } = new URL(request.url);
 
-    // 入力値のバリデーション
-    if (
-      isNaN(originLat) ||
-      isNaN(originLng) ||
-      isNaN(destLat) ||
-      isNaN(destLng)
-    ) {
+    // パラメータを取得
+    const originLat = searchParams.get("originLat");
+    const originLng = searchParams.get("originLng");
+    const destLat = searchParams.get("destLat");
+    const destLng = searchParams.get("destLng");
+    const dateTime = searchParams.get("dateTime");
+    const isDeparture = searchParams.get("isDeparture");
+
+    // パラメータのバリデーション
+    if (!originLat || !originLng || !destLat || !destLng) {
       return NextResponse.json(
-        { error: "出発地と目的地の緯度経度を正しく指定してください" },
+        { error: "必須パラメータが不足しています" },
         { status: 400 }
       );
     }
 
-    await ensureDbConnection();
+    // 数値型に変換
+    const originLatNum = parseFloat(originLat);
+    const originLngNum = parseFloat(originLng);
+    const destLatNum = parseFloat(destLat);
+    const destLngNum = parseFloat(destLng);
 
-    // 最寄りのバス停を見つける
-    const originStop = await findNearestStop(originLat, originLng);
-    const destStop = await findNearestStop(destLat, destLng);
+    try {
+      // GTFSデータベース接続を確保
+      await ensureDbConnection();
 
-    if (!originStop) {
-      return NextResponse.json({
-        hasRoute: false,
-        message: "出発地の近くにバス停が見つかりませんでした（1km以内）",
-      });
+      // 出発地と目的地の最寄りバス停を検索
+      const originStop = await findNearestStop(originLatNum, originLngNum);
+      const destinationStop = await findNearestStop(destLatNum, destLngNum);
+
+      // 最寄りバス停がない場合
+      if (!originStop || !destinationStop) {
+        return NextResponse.json(
+          {
+            hasRoute: false,
+            routes: [],
+            type: "none",
+            transfers: 0,
+            message: "最寄りのバス停が見つかりませんでした",
+            originStop: originStop
+              ? {
+                  stopId: originStop.stop_id,
+                  stopName: originStop.stop_name,
+                  distance: originStop.distance,
+                }
+              : null,
+            destinationStop: destinationStop
+              ? {
+                  stopId: destinationStop.stop_id,
+                  stopName: destinationStop.stop_name,
+                  distance: destinationStop.distance,
+                }
+              : null,
+          },
+          { status: 200 }
+        );
+      }
+
+      // 日時パラメータを処理
+      let targetDateTime: Date | undefined;
+      if (dateTime) {
+        targetDateTime = new Date(dateTime);
+      }
+
+      // 経路検索
+      const routes = await findRouteWithTransfers(
+        originStop.stop_id,
+        destinationStop.stop_id,
+        targetDateTime,
+        isDeparture === "true"
+      );
+
+      // レスポンスの作成
+      if (routes.hasRoute) {
+        return NextResponse.json(
+          {
+            ...routes,
+            originStop: {
+              stopId: originStop.stop_id,
+              stopName: originStop.stop_name,
+              distance: originStop.distance,
+            },
+            destinationStop: {
+              stopId: destinationStop.stop_id,
+              stopName: destinationStop.stop_name,
+              distance: destinationStop.distance,
+            },
+          },
+          { status: 200 }
+        );
+      } else {
+        return NextResponse.json(
+          {
+            hasRoute: false,
+            routes: [],
+            type: "none",
+            transfers: 0,
+            message: "ルートが見つかりませんでした",
+            originStop: {
+              stopId: originStop.stop_id,
+              stopName: originStop.stop_name,
+              distance: originStop.distance,
+            },
+            destinationStop: {
+              stopId: destinationStop.stop_id,
+              stopName: destinationStop.stop_name,
+              distance: destinationStop.distance,
+            },
+          },
+          { status: 200 }
+        );
+      }
+    } catch (error) {
+      console.error("ルート検索処理エラー:", error);
+      return NextResponse.json(
+        { error: "ルート検索処理に失敗しました" },
+        { status: 500 }
+      );
+    } finally {
+      // データベース接続を閉じる
+      await safeCloseDb();
     }
-
-    if (!destStop) {
-      return NextResponse.json({
-        hasRoute: false,
-        message: "目的地の近くにバス停が見つかりませんでした（1km以内）",
-      });
-    }
-
-    // 同じバス停の場合は特別なレスポンスを返す
-    if (originStop.stop_id === destStop.stop_id) {
-      return NextResponse.json({
-        hasRoute: true,
-        message: "出発地と目的地のバス停が同じです",
-        originStop: {
-          stopId: originStop.stop_id,
-          stopName: originStop.stop_name,
-          distance: originStop.distance,
-          stop_lat: originStop.stop_lat,
-          stop_lon: originStop.stop_lon,
-        },
-        destinationStop: {
-          stopId: destStop.stop_id,
-          stopName: destStop.stop_name,
-          distance: destStop.distance,
-          stop_lat: destStop.stop_lat,
-          stop_lon: destStop.stop_lon,
-        },
-        routes: [],
-      });
-    }
-
-    // ルートを検索（乗り換えを含む）
-    const routeInfo = await findRouteWithTransfers(
-      originStop.stop_id,
-      destStop.stop_id
-    );
-
-    return NextResponse.json({
-      ...routeInfo,
-      originStop: {
-        stopId: originStop.stop_id,
-        stopName: originStop.stop_name,
-        distance: originStop.distance,
-        stop_lat: originStop.stop_lat,
-        stop_lon: originStop.stop_lon,
-      },
-      destinationStop: {
-        stopId: destStop.stop_id,
-        stopName: destStop.stop_name,
-        distance: destStop.distance,
-        stop_lat: destStop.stop_lat,
-        stop_lon: destStop.stop_lon,
-      },
-    });
   } catch (error) {
-    console.error("経路検索エラー:", error);
+    console.error("API処理エラー:", error);
     return NextResponse.json(
-      {
-        hasRoute: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : "経路情報の取得に失敗しました",
-      },
+      { error: "サーバーエラーが発生しました" },
       { status: 500 }
     );
-  } finally {
-    await safeCloseDb();
   }
 }

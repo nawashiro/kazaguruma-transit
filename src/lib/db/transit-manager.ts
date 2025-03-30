@@ -245,10 +245,13 @@ export class TransitManager {
    */
   public async getDepartures(
     stopId: string,
-    routeId?: string
+    routeId?: string,
+    targetDate?: Date,
+    isDeparture: boolean = true
   ): Promise<Departure[]> {
     return this.db.withConnection(async () => {
-      const now = this.getCurrentTime();
+      // 日付が指定されていない場合は現在時刻を使用
+      const now = targetDate || this.getCurrentTime();
       const nowTime = DateTime.fromJSDate(now);
 
       // 曜日を取得（1 = 月曜日、7 = 日曜日）
@@ -275,7 +278,9 @@ export class TransitManager {
       // GTFSからデータを取得して整形
       const departuresFromGtfs = await this.gtfsGetDepartures(
         stopId,
-        routeId || null
+        routeId || null,
+        now,
+        isDeparture
       );
 
       return departuresFromGtfs;
@@ -287,15 +292,45 @@ export class TransitManager {
    */
   private async gtfsGetDepartures(
     stop_id: string | null = null,
-    route_id: string | null = null
+    route_id: string | null = null,
+    date: Date = new Date(),
+    isDeparture: boolean = true
   ): Promise<Departure[]> {
-    const now = this.getCurrentTime();
+    const now = date;
     const nowTime = DateTime.fromJSDate(now);
 
+    // 曜日を取得してGTFSの形式に変換
+    const dayOfWeek = nowTime.weekday;
+    const serviceQuery: { [key: string]: number } = {};
+
+    if (dayOfWeek === 6) {
+      serviceQuery.saturday = 1;
+    } else if (dayOfWeek === 7) {
+      serviceQuery.sunday = 1;
+    } else {
+      serviceQuery.monday = 1;
+    }
+
+    // 時刻のフィルター用の文字列
+    const timeStr = `${nowTime.hour
+      .toString()
+      .padStart(2, "0")}:${nowTime.minute.toString().padStart(2, "0")}:00`;
+
     // GTFSからstoptimesを取得
-    const stoptimes = (await getStoptimes({
+    // クエリパラメータを構築
+    const stoptimeQuery: any = {
       stop_id: stop_id || undefined,
-    })) as GTFSStopTime[];
+      ...serviceQuery,
+    };
+
+    // 出発/到着時刻フィルターを追加
+    if (isDeparture) {
+      stoptimeQuery.departure_time = { $gte: timeStr };
+    } else {
+      stoptimeQuery.arrival_time = { $gte: timeStr };
+    }
+
+    const stoptimes = (await getStoptimes(stoptimeQuery)) as GTFSStopTime[];
 
     if (!stoptimes || stoptimes.length === 0) {
       return [];

@@ -6,6 +6,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action");
+    const dateTime = searchParams.get("dateTime");
+    const isDeparture = searchParams.get("isDeparture") === "true";
 
     const transitManager = TransitManager.getInstance();
 
@@ -36,7 +38,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         return await getDeparturesResponse(
           transitManager,
           stopId,
-          routeId || undefined
+          routeId || undefined,
+          dateTime ? new Date(dateTime) : undefined,
+          isDeparture
         );
       case "getMetadata":
         return await getMetadataResponse();
@@ -91,10 +95,17 @@ async function getRoutesResponse(
 async function getDeparturesResponse(
   transitManager: TransitManager,
   stopId: string,
-  routeId?: string
+  routeId?: string,
+  targetDate?: Date,
+  isDeparture: boolean = true
 ): Promise<NextResponse> {
   try {
-    const departures = await transitManager.getDepartures(stopId, routeId);
+    const departures = await transitManager.getDepartures(
+      stopId,
+      routeId,
+      targetDate,
+      isDeparture
+    );
 
     return NextResponse.json({ departures }, { status: 200 });
   } catch (error) {

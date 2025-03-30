@@ -20,7 +20,6 @@ export default function LocationSuggestions({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     async function fetchAddressData() {
@@ -55,13 +54,6 @@ export default function LocationSuggestions({
     } else {
       setActiveCategory(category);
     }
-  };
-
-  const filteredLocations = (category: AddressCategory) => {
-    if (!searchTerm) return category.locations;
-    return category.locations.filter((loc) =>
-      loc.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
   };
 
   if (loading) {
@@ -111,37 +103,8 @@ export default function LocationSuggestions({
           よく利用される施設から選択
         </h2>
 
-        <div className="form-control w-full mb-4">
-          <div className="input-group">
-            <input
-              type="text"
-              placeholder="施設を検索..."
-              className="input input-bordered focus:input-primary w-full"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <button className="btn btn-square btn-primary">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-
         <div className="flex flex-row flex-wrap gap-2 mb-4">
           {categories.map((category) => {
-            const filteredCount = filteredLocations(category).length;
             return (
               <button
                 key={category.category}
@@ -151,10 +114,8 @@ export default function LocationSuggestions({
                       ? "btn-primary border-primary text-primary-content"
                       : "btn-ghost border-base-200 hover:border-primary/50 hover:bg-primary/5"
                   }
-                  ${filteredCount === 0 ? "opacity-50" : ""}
                 `}
                 onClick={() => toggleCategory(category.category)}
-                disabled={filteredCount === 0}
               >
                 {category.category}
               </button>
@@ -165,40 +126,40 @@ export default function LocationSuggestions({
         {activeCategory && (
           <div className="bg-base-200 rounded-box p-3 animate-fadeIn max-h-64 overflow-y-auto">
             <div className="flex flex-col gap-2">
-              {filteredLocations(
-                categories.find((c) => c.category === activeCategory)!
-              ).map((location) => (
-                <button
-                  key={location.name}
-                  className="btn btn-sm h-auto min-h-0 py-2 btn-outline btn-primary justify-start normal-case w-full"
-                  onClick={() => handleLocationSelect(location)}
-                  title={location.name}
-                >
-                  <div className="flex items-center w-full overflow-hidden">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 mr-2 flex-shrink-0"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                    <span className="truncate">{location.name}</span>
-                  </div>
-                </button>
-              ))}
+              {categories
+                .find((c) => c.category === activeCategory)!
+                .locations.map((location) => (
+                  <button
+                    key={location.name}
+                    className="btn btn-sm h-auto min-h-0 py-2 btn-outline btn-primary justify-start normal-case w-full"
+                    onClick={() => handleLocationSelect(location)}
+                    title={location.name}
+                  >
+                    <div className="flex items-center w-full overflow-hidden">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 mr-2 flex-shrink-0"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                      </svg>
+                      <span className="truncate">{location.name}</span>
+                    </div>
+                  </button>
+                ))}
             </div>
           </div>
         )}

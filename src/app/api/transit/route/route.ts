@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStops, openDb, closeDb } from "gtfs";
 import { TransitManager } from "@/lib/db/transit-manager";
 import { DateTime } from "luxon";
 
@@ -30,51 +29,29 @@ async function findNearestStop(lat: number, lng: number, maxDistance = 1) {
     const transitManager = TransitManager.getInstance();
     await transitManager.prepareGTFSData();
 
-    // GTFSのstopsデータを取得 (APIドキュメントに基づく方法)
-    const stops = getStops({});
+    // TransitManagerの関数を使ってバス停を取得
+    const { stops, nearestStop } = await transitManager.getNearestStops(
+      lat,
+      lng
+    );
 
     if (!stops || stops.length === 0) {
       console.log("バス停データがありません");
       return null;
     }
 
-    // 各バス停までの距離を計算
-    const stopsWithDistance = stops
-      .filter((stop) => stop.stop_lat && stop.stop_lon)
-      .map((stop) => {
-        const stopLat =
-          typeof stop.stop_lat === "string"
-            ? parseFloat(stop.stop_lat)
-            : stop.stop_lat || 0;
-        const stopLon =
-          typeof stop.stop_lon === "string"
-            ? parseFloat(stop.stop_lon)
-            : stop.stop_lon || 0;
+    // 最寄りのバス停が見つからなかった場合
+    if (!nearestStop) {
+      return null;
+    }
 
-        if (!isNaN(stopLat) && !isNaN(stopLon)) {
-          const distance = haversineDistance(lat, lng, stopLat, stopLon);
-          return { ...stop, distance };
-        }
-        return { ...stop, distance: Number.MAX_VALUE };
-      });
-
-    // 距離順にソート
-    stopsWithDistance.sort((a, b) => a.distance - b.distance);
-
-    // 最も近いバス停を返す（ただし最大距離以内の場合のみ）
-    const nearestStop = stopsWithDistance[0];
-    if (nearestStop && nearestStop.distance <= maxDistance) {
+    // 距離によるフィルタリング
+    if (nearestStop.distance <= maxDistance) {
       return {
         stop_id: nearestStop.stop_id,
         stop_name: nearestStop.stop_name,
-        stop_lat:
-          typeof nearestStop.stop_lat === "string"
-            ? parseFloat(nearestStop.stop_lat)
-            : nearestStop.stop_lat,
-        stop_lon:
-          typeof nearestStop.stop_lon === "string"
-            ? parseFloat(nearestStop.stop_lon)
-            : nearestStop.stop_lon,
+        stop_lat: nearestStop.stop_lat,
+        stop_lon: nearestStop.stop_lon,
         distance: nearestStop.distance,
       };
     }
@@ -98,9 +75,6 @@ async function findDirectRoutes(
     const transitManager = TransitManager.getInstance();
     await transitManager.prepareGTFSData();
 
-    // データベース接続を取得
-    const db = await openDb();
-
     // 時刻のフィルター条件を作成
     let timeFilter = "";
     if (targetDateTime) {
@@ -115,62 +89,17 @@ async function findDirectRoutes(
         : `arrival_time >= '${timeString}'`;
     }
 
-    // 日付に基づくservice_idを取得するクエリを作成 - 日付形式は'YYYYMMDD'
-    let serviceIdQuery = "";
-    if (targetDateTime) {
-      // GTFSの日付形式 (YYYYMMDD)
-      const formattedDate = targetDateTime
-        .toISOString()
-        .slice(0, 10)
-        .replace(/-/g, "");
-
-      // 曜日を取得 (0 = 日曜日, 1 = 月曜日, ...)
-      const dayOfWeek = targetDateTime.getDay();
-
-      // GTFSカレンダーの曜日カラム名
-      const dayColumns = [
-        "sunday",
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-      ];
-
-      // 対応する曜日カラムを選択
-      const dayColumn = dayColumns[dayOfWeek];
-
-      serviceIdQuery = `
-        SELECT service_id FROM calendar 
-        WHERE ${dayColumn} = 1 
-        AND start_date <= '${formattedDate}' 
-        AND end_date >= '${formattedDate}'
-      `;
-    }
-
-    // service_idを取得 (日付条件がある場合)
+    // 日付に基づくservice_idを取得
     let serviceIds: string[] = [];
-    if (serviceIdQuery) {
-      try {
-        // db.allではなくdb.prepare().allを使用
-        const serviceRows = db.prepare(serviceIdQuery).all();
-        serviceIds = serviceRows.map(
-          (row: { service_id: string }) => row.service_id
-        );
-
-        if (serviceIds.length === 0) {
-          console.log("選択された日付の運行サービスが見つかりません");
-          return [];
-        }
-      } catch (err) {
-        console.error("service_id取得エラー:", err);
-        // エラーが発生した場合、フィルターなしで続行
+    if (targetDateTime) {
+      serviceIds = await transitManager.getValidServiceIds(targetDateTime);
+      if (serviceIds.length === 0) {
+        console.log("選択された日付の運行サービスが見つかりません");
       }
     }
 
-    // originstopsから目的地へのルートを検索するクエリ
-    let routeQuery = `
+    // クエリの構築
+    const routeQuery = `
       WITH origin_trips AS (
         SELECT st.trip_id, st.departure_time, st.stop_sequence
         FROM stop_times st
@@ -199,16 +128,17 @@ async function findDirectRoutes(
       LIMIT 1
     `;
 
-    // クエリパラメータを設定
+    // パラメータの準備
     const params = [originStopId];
     if (serviceIds.length > 0) {
       params.push(...serviceIds);
     }
     params.push(destinationStopId);
 
-    // クエリを実行
-    // db.allではなくdb.prepare().allを使用
-    const routes = db.prepare(routeQuery).all(...params);
+    // トランジットマネージャーを通してデータベースクエリを実行
+    const routes = await transitManager.withCustomSQLQuery<any[]>((db) => {
+      return db.prepare(routeQuery).all(...params);
+    });
 
     if (routes.length === 0) {
       console.log("直接のルートが見つかりません");
@@ -242,23 +172,22 @@ async function getStopDetails(stopId: string) {
     const transitManager = TransitManager.getInstance();
     await transitManager.prepareGTFSData();
 
-    // GTFSのAPIドキュメントに基づいた方法
-    const stops = getStops({ stop_id: stopId });
+    // TransitManagerを使ってバス停情報を取得
+    const stops = await transitManager.getStops();
+    const stop = stops.find((s) => s.id === stopId);
 
-    if (!stops || stops.length === 0) return null;
+    if (!stop) return null;
 
-    const stop = stops[0];
+    // バス停の位置情報を取得するために、TransitManagerの内部APIを使用
+    const locationInfo = await transitManager.getStopLocation(stopId);
+
+    if (!locationInfo) return null;
+
     return {
-      stopId: stop.stop_id,
-      stopName: stop.stop_name,
-      stopLat:
-        typeof stop.stop_lat === "string"
-          ? parseFloat(stop.stop_lat)
-          : stop.stop_lat,
-      stopLon:
-        typeof stop.stop_lon === "string"
-          ? parseFloat(stop.stop_lon)
-          : stop.stop_lon,
+      stopId: stop.id,
+      stopName: stop.name,
+      stopLat: locationInfo.lat,
+      stopLon: locationInfo.lon,
     };
   } catch (error) {
     console.error("バス停詳細取得エラー:", error);
@@ -295,8 +224,6 @@ async function findRouteWithTransfers(
     const transitManager = TransitManager.getInstance();
     await transitManager.prepareGTFSData();
 
-    const db = await openDb();
-
     // 時刻のフィルター条件を作成
     let timeFilter = "";
     if (targetDateTime) {
@@ -311,57 +238,13 @@ async function findRouteWithTransfers(
         : `arrival_time >= '${timeString}'`;
     }
 
-    // 日付に基づくservice_idを取得するクエリを作成
+    // 有効なサービスIDを取得
     let serviceIds: string[] = [];
     if (targetDateTime) {
-      // GTFSの日付形式 (YYYYMMDD)
-      const formattedDate = targetDateTime
-        .toISOString()
-        .slice(0, 10)
-        .replace(/-/g, "");
-
-      // 曜日を取得 (0 = 日曜日, 1 = 月曜日, ...)
-      const dayOfWeek = targetDateTime.getDay();
-
-      // GTFSカレンダーの曜日カラム名
-      const dayColumns = [
-        "sunday",
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-      ];
-
-      // 対応する曜日カラムを選択
-      const dayColumn = dayColumns[dayOfWeek];
-
-      const serviceIdQuery = `
-        SELECT service_id FROM calendar 
-        WHERE ${dayColumn} = 1 
-        AND start_date <= '${formattedDate}' 
-        AND end_date >= '${formattedDate}'
-      `;
-
-      try {
-        // db.allではなくdb.prepare().allを使用
-        const serviceRows = db.prepare(serviceIdQuery).all();
-        serviceIds = serviceRows.map(
-          (row: { service_id: string }) => row.service_id
-        );
-
-        if (serviceIds.length === 0) {
-          console.log("選択された日付の運行サービスが見つかりません");
-        }
-      } catch (err) {
-        console.error("service_id取得エラー:", err);
-        // エラーが発生した場合、フィルターなしで続行
-      }
+      serviceIds = await transitManager.getValidServiceIds(targetDateTime);
     }
 
     // 乗り換え候補バス停を検索するクエリ
-    // 出発バス停から行けるすべてのバス停と、目的地バス停に到着するすべてのバス停の共通部分を探す
     const transferQuery = `
       WITH origin_stops AS (
         -- 出発バス停から行けるバス停
@@ -423,9 +306,12 @@ async function findRouteWithTransfers(
     }
     params.push(originStopId, destinationStopId);
 
-    // 乗り換え候補バス停を取得
-    // db.allではなくdb.prepare().allを使用
-    const transferStops = db.prepare(transferQuery).all(...params);
+    // トランジットマネージャーを通してクエリを実行
+    const transferStops = await transitManager.withCustomSQLQuery<any[]>(
+      (db) => {
+        return db.prepare(transferQuery).all(...params);
+      }
+    );
 
     if (transferStops.length === 0) {
       return {
@@ -695,13 +581,6 @@ export async function GET(request: NextRequest) {
         { error: "ルート検索処理に失敗しました" },
         { status: 500 }
       );
-    } finally {
-      // データベース接続を閉じる
-      try {
-        await closeDb();
-      } catch (error) {
-        console.warn("データベース接続閉じるエラー:", error);
-      }
     }
   } catch (error) {
     console.error("API処理エラー:", error);

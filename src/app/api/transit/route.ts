@@ -13,7 +13,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // まずGTFSデータの準備を確認
     const prepareResult = await transitManager.prepareGTFSData();
-    if (!prepareResult.success) {
+    if (!prepareResult) {
       return NextResponse.json(
         { error: "データの準備に失敗しました" },
         { status: 500 }

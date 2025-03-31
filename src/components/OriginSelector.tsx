@@ -52,7 +52,17 @@ export default function OriginSelector({
         throw new Error(data.error || "ジオコーディングに失敗しました");
       }
 
-      onOriginSelected(data.data.location);
+      if (data.success && data.results?.length > 0) {
+        const firstResult = data.results[0];
+        const location: Location = {
+          lat: firstResult.lat,
+          lng: firstResult.lng,
+          address: firstResult.formattedAddress,
+        };
+        onOriginSelected(location);
+      } else {
+        throw new Error("住所が見つかりませんでした");
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "予期せぬエラーが発生しました"

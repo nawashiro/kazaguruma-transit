@@ -6,7 +6,7 @@ import Link from "next/link";
 
 const KofiSupportCard: React.FC = () => {
   return (
-    <div className="mb-8 bg-white rounded-lg shadow-lg overflow-hidden">
+    <div className="mb-8 bg-white rounded-lg shadow-lg overflow-hidden max-w-3xl mx-auto">
       <Link
         href="https://ko-fi.com/nawashiro/tiers"
         target="_blank"

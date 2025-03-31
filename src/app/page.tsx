@@ -548,14 +548,6 @@ export default function Home() {
           </a>
           で最新の運行情報を確認できます
         </p>
-        <div className="mt-3">
-          <button
-            onClick={() => setIsSupporterModalOpen(true)}
-            className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 px-4 py-1 text-sm rounded-lg shadow-sm transition-all duration-200"
-          >
-            支援者登録
-          </button>
-        </div>
       </footer>
 
       {/* レート制限モーダル */}

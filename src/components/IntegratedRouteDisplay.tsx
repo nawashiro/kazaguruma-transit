@@ -3,6 +3,7 @@
 import React from "react";
 import { Departure } from "../types/transit";
 import { generateGoogleMapDirectionLink } from "../utils/maps";
+import { logger } from "../utils/logger";
 
 // page.tsxで使用している型定義に合わせる
 interface StopInfo {
@@ -172,18 +173,10 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
               route.departureTime ||
               getDepartureTime(originStop.stopId, route.routeId || "");
 
-            console.log(
-              "表示する出発時刻:",
-              route.departureTime,
-              departureTime
-            );
-
             const firstSegmentDuration = type === "direct" ? 45 : 30; // 直通か乗換かで所要時間を調整
             const arrivalTime =
               route.arrivalTime ||
               getArrivalTime(departureTime, firstSegmentDuration);
-
-            console.log("表示する到着時刻:", route.arrivalTime, arrivalTime);
 
             // 時刻表示のためのフォーマッター
             const formatTimeDisplay = (time: string) => {

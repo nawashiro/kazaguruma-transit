@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { TransitFormData } from "../types/transit";
+import { logger } from "../utils/logger";
 
 interface DateTimeSelectorProps {
   initialStopId?: string;
@@ -71,23 +72,14 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
     }
   };
 
-  const toggleTimeType = (newValue: boolean) => {
-    console.log(`時間タイプを切り替え: ${newValue ? "出発" : "到着"}`);
-    setIsDeparture(newValue); // ローカルステートを更新
-
-    // 親コンポーネントに通知
-    const formData = {
-      stopId: initialStopId,
-      dateTime: dateTime,
-      isDeparture: newValue,
-    };
-
-    if (onSubmit) {
-      onSubmit(formData);
-    }
-
+  const handleTimeTypeChange = (newValue: boolean) => {
+    setIsDeparture(newValue);
+    logger.log(`時間タイプを切り替え: ${newValue ? "出発" : "到着"}`);
     if (onDateTimeSelected) {
-      onDateTimeSelected(formData);
+      onDateTimeSelected({
+        dateTime,
+        isDeparture: newValue,
+      });
     }
   };
 
@@ -105,7 +97,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
                 ? "bg-gray-300 text-gray-800"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
             }`}
-            onClick={() => toggleTimeType(true)}
+            onClick={() => handleTimeTypeChange(true)}
             data-testid="departure-tab"
             disabled={disabled}
           >
@@ -118,7 +110,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
                 ? "bg-gray-300 text-gray-800"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
             }`}
-            onClick={() => toggleTimeType(false)}
+            onClick={() => handleTimeTypeChange(false)}
             data-testid="arrival-tab"
             disabled={disabled}
           >

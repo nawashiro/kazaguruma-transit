@@ -9,6 +9,7 @@ import Button from "../components/common/Button";
 import ResetButton from "../components/common/ResetButton";
 import { TransitFormData, Location } from "../types/transit";
 import KofiSupportCard from "../components/KofiSupportCard";
+import { logger } from "../utils/logger";
 
 interface JourneySegment {
   from: string;
@@ -136,7 +137,7 @@ export default function Home() {
     setIsDeparture(
       formData.isDeparture !== undefined ? formData.isDeparture : true
     );
-    console.log("時刻設定が変更されました:", {
+    logger.log("時刻設定が変更されました:", {
       dateTime: formData.dateTime,
       isDeparture: formData.isDeparture,
       newIsDeparture:
@@ -169,7 +170,7 @@ export default function Home() {
         isDeparture: isDeparture,
       };
 
-      console.log("APIリクエスト送信:", {
+      logger.log("APIリクエスト送信:", {
         type: routeQuery.type,
         origin: `${routeQuery.origin.lat}, ${routeQuery.origin.lng}`,
         destination: `${routeQuery.destination.lat}, ${routeQuery.destination.lng}`,
@@ -187,7 +188,7 @@ export default function Home() {
       });
 
       const apiResponse: ApiResponse = await response.json();
-      console.log("経路検索結果:", apiResponse);
+      logger.log("経路検索結果:", apiResponse);
 
       if (response.ok && apiResponse.success) {
         const data = apiResponse.data;
@@ -195,8 +196,8 @@ export default function Home() {
         if (data?.journeys && data.journeys.length > 0) {
           // ベストな経路は既にAPIから最適な順に返されているので最初のものを使用
           const bestJourney = data.journeys[0];
-          console.log("選択された経路:", bestJourney);
-          console.log("APIから返された停留所情報:", data.stops);
+          logger.log("選択された経路:", bestJourney);
+          logger.log("APIから返された停留所情報:", data.stops);
 
           // 最寄りバス停情報（APIのレスポンスからstopsを探す）
           const originStopInfo = data.stops.find(
@@ -206,7 +207,7 @@ export default function Home() {
             (s) => s.name === bestJourney.to
           );
 
-          console.log("最寄りバス停情報:", {
+          logger.log("最寄りバス停情報:", {
             originStopInfo,
             destStopInfo,
             allStops: data.stops,
@@ -257,7 +258,7 @@ export default function Home() {
                 : selectedDestination.lng,
           };
 
-          console.log("使用されるバス停オブジェクト:", {
+          logger.log("使用されるバス停オブジェクト:", {
             originStop,
             destinationStop,
           });
@@ -348,14 +349,14 @@ export default function Home() {
             destinationStop,
           });
 
-          console.log("出発地→バス停の情報:", {
+          logger.log("出発地→バス停の情報:", {
             originLat: selectedOrigin.lat,
             originLng: selectedOrigin.lng,
             stopLat: originStop.stop_lat,
             stopLon: originStop.stop_lon,
           });
 
-          console.log("バス停→目的地の情報:", {
+          logger.log("バス停→目的地の情報:", {
             stopLat: destinationStop.stop_lat,
             stopLon: destinationStop.stop_lon,
             destLat: selectedDestination.lat,
@@ -385,7 +386,7 @@ export default function Home() {
         setError(apiResponse.error || "経路検索に失敗しました");
       }
     } catch (err) {
-      console.error("経路検索リクエストエラー:", err);
+      logger.error("経路検索リクエストエラー:", err);
       setError(
         err instanceof Error ? err.message : "予期せぬエラーが発生しました"
       );

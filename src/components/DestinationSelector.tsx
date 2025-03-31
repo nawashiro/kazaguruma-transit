@@ -5,6 +5,7 @@ import { Location } from "../types/transit";
 import LocationSuggestions from "./LocationSuggestions";
 import InputField from "./common/InputField";
 import Button from "./common/Button";
+import { logger } from "../utils/logger";
 
 interface DestinationSelectorProps {
   onDestinationSelected: (location: Location) => void;
@@ -39,7 +40,7 @@ export default function DestinationSelector({
         `/api/geocode?address=${encodeURIComponent(searchAddress)}`
       );
       const data = await response.json();
-      console.log("Geocode API Response:", data);
+      logger.log("Geocode API Response:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "ジオコーディングに失敗しました");

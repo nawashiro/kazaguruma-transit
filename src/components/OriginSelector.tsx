@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Location } from "../types/transit";
 import InputField from "./common/InputField";
 import Button from "./common/Button";
+import { logger } from "../utils/logger";
 
 interface OriginSelectorProps {
   onOriginSelected: (location: Location) => void;
@@ -38,7 +39,7 @@ export default function OriginSelector({
         `/api/geocode?address=${encodeURIComponent(searchAddress)}`
       );
       const data = await response.json();
-      console.log("Geocode API Response:", data);
+      logger.log("Geocode API Response:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "ジオコーディングに失敗しました");
@@ -78,13 +79,13 @@ export default function OriginSelector({
               `/api/geocode?address=${location.lat},${location.lng}`
             );
             const data = await response.json();
-            console.log("Reverse Geocode API Response:", data);
+            logger.log("Reverse Geocode API Response:", data);
 
             if (response.ok && data.success && data.data?.location) {
               location.address = data.data.location.address;
             }
           } catch (error) {
-            console.error("逆ジオコーディングエラー:", error);
+            logger.error("逆ジオコーディングエラー:", error);
             // 逆ジオコーディングに失敗しても続行する
           }
 

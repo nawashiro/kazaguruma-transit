@@ -405,9 +405,11 @@ export default function Home() {
   };
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4 min-h-screen">
       <header className="text-center my-8">
-        <h1 className="text-3xl font-bold text-primary">風ぐるま乗換案内</h1>
+        <h1 className="text-3xl font-bold text-primary bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-indigo-500">
+          風ぐるま乗換案内
+        </h1>
         <p className="mt-2 text-lg">千代田区福祉交通の乗換案内サービス</p>
       </header>
 
@@ -434,7 +436,7 @@ export default function Home() {
           </>
         ) : !searchPerformed ? (
           <>
-            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+            <div className="bg-base-200/70 p-4 rounded-lg shadow-md mb-4 backdrop-blur-sm border border-gray-100">
               <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
               <p data-testid="selected-destination">
                 {selectedDestination.address ||
@@ -444,7 +446,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+            <div className="bg-base-200/70 p-4 rounded-lg shadow-md mb-4 backdrop-blur-sm border border-gray-100">
               <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
               <p data-testid="selected-origin">
                 {selectedOrigin.address ||
@@ -454,7 +456,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
+            <div className="bg-base-200/70 p-4 rounded-lg shadow-md mb-4 backdrop-blur-sm border border-gray-100">
               <h2 className="text-xl font-bold mb-2">日時の選択</h2>
               <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
 
@@ -504,14 +506,14 @@ export default function Home() {
         )}
       </div>
 
-      <footer className="text-center mt-8 text-sm text-gray-500">
+      <footer className="text-center mt-8 mb-4 text-sm text-gray-600 bg-white/60 backdrop-blur-sm p-4 rounded-lg shadow-sm mx-auto max-w-md border border-gray-100">
         <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
         <p className="mt-2">
           <a
             href="https://lin.ee/CgIBOSd"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-500 hover:underline"
+            className="text-blue-500 hover:text-indigo-600 font-medium transition-colors"
           >
             千代田区公式LINE
           </a>

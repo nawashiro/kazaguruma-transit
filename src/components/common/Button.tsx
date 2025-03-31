@@ -26,16 +26,18 @@ export default function Button({
   children,
 }: ButtonProps) {
   const baseClasses = secondary
-    ? "btn bg-gray-100 text-gray-600 hover:bg-gray-200 px-6 py-2 shadow-sm transition-all duration-200"
-    : "btn bg-gray-200 text-gray-700 hover:bg-gray-300 px-6 py-2 shadow-sm transition-all duration-200";
+    ? "btn bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 px-6 py-2 rounded-lg shadow-sm transition-all duration-200"
+    : "btn bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 px-6 py-2 rounded-lg shadow-md transition-all duration-200";
   const widthClass = fullWidth ? "w-full" : "";
+  const disabledClass =
+    disabled || loading ? "opacity-70 cursor-not-allowed" : "";
 
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
-      className={`${baseClasses} ${widthClass} ${className}`}
+      className={`${baseClasses} ${widthClass} ${disabledClass} ${className}`}
       data-testid={testId}
     >
       {loading ? <span className="loading loading-spinner"></span> : children}

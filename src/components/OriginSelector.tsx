@@ -21,13 +21,15 @@ export default function OriginSelector({
 
   const handleAddressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!address.trim()) {
-      setError("住所を入力してください");
-      return;
-    }
-
     setLoading(true);
     setError(null);
+
+    // 入力値のバリデーション
+    if (!address.trim()) {
+      setError("住所を入力してください");
+      setLoading(false);
+      return;
+    }
 
     try {
       // 「千代田区」が含まれていない場合は接頭辞として追加
@@ -146,6 +148,7 @@ export default function OriginSelector({
             onChange={(e) => setAddress(e.target.value)}
             disabled={loading}
             testId="address-input"
+            required
           />
 
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">

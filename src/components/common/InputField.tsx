@@ -10,6 +10,7 @@ interface InputFieldProps {
   disabled?: boolean;
   testId?: string;
   type?: string;
+  required?: boolean;
 }
 
 export default function InputField({
@@ -20,6 +21,7 @@ export default function InputField({
   disabled = false,
   testId,
   type = "text",
+  required = false,
 }: InputFieldProps) {
   return (
     <div className="form-control">
@@ -36,6 +38,7 @@ export default function InputField({
         onChange={onChange}
         disabled={disabled}
         data-testid={testId}
+        required={required}
       />
     </div>
   );

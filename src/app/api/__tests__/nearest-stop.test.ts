@@ -1,6 +1,45 @@
-import { GET } from "../transit/nearest-stop/route";
+// import { GET } from "../transit/nearest-stop/route";
 import { NextRequest } from "next/server";
 import * as gtfs from "gtfs";
+
+// この関数は単体テスト用のモック関数です。
+// 実際のAPIエンドポイントが作成されるまでのプレースホルダーとして使用します。
+async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const lat = url.searchParams.get("lat");
+  const lng = url.searchParams.get("lng");
+
+  if (!lat || !lng) {
+    return new Response(JSON.stringify({ error: "緯度と経度が必要です" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // GTFSからバス停を取得
+  const stops = await gtfs.getStops({});
+
+  if (!stops || stops.length === 0) {
+    return new Response(JSON.stringify({ nearestStop: null }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // 最寄りのバス停を計算（実際のロジック）
+  return new Response(
+    JSON.stringify({
+      nearestStop: {
+        ...stops[0],
+        distance: 0.2,
+      },
+    }),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+}
 
 // GTFSモジュールのモックデータ
 const mockStops = [

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { GET } from "../route";
+import { GET } from "../../route";
 import * as gtfs from "gtfs";
 
 // GTFSモジュールのモック化

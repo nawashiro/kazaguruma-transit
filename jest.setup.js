@@ -4,6 +4,9 @@
 // learn more: https://github.com/testing-library/jest-dom
 require("@testing-library/jest-dom");
 
+// Fetch APIのモック設定
+require("jest-fetch-mock").enableMocks();
+
 // コンポーネントテスト用のモック設定
 // NextResponseのモックは削除 - コンポーネントテストでは不要
 

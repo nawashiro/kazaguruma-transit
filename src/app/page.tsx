@@ -10,6 +10,7 @@ import ResetButton from "../components/common/ResetButton";
 import { TransitFormData, Location } from "../types/transit";
 import KofiSupportCard from "../components/KofiSupportCard";
 import { logger } from "../utils/logger";
+import RateLimitModal from "../components/RateLimitModal";
 
 interface JourneySegment {
   from: string;
@@ -61,6 +62,7 @@ interface ApiResponse {
   success: boolean;
   data?: RouteResponseData;
   error?: string;
+  limitExceeded?: boolean;
 }
 
 // 旧APIのレスポンス型を新APIに変換するための型
@@ -116,6 +118,7 @@ export default function Home() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [selectedDateTime, setSelectedDateTime] = useState<string>("");
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
+  const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
 
   const handleOriginSelected = (location: Location) => {
     setSelectedOrigin(location);
@@ -189,6 +192,13 @@ export default function Home() {
 
       const apiResponse: ApiResponse = await response.json();
       logger.log("経路検索結果:", apiResponse);
+
+      // レート制限に達した場合
+      if (response.status === 429 && apiResponse.limitExceeded) {
+        setIsRateLimitModalOpen(true);
+        setRouteLoading(false);
+        return;
+      }
 
       if (response.ok && apiResponse.success) {
         const data = apiResponse.data;
@@ -521,6 +531,12 @@ export default function Home() {
           で最新の運行情報を確認できます
         </p>
       </footer>
+
+      {/* レート制限モーダル */}
+      <RateLimitModal
+        isOpen={isRateLimitModalOpen}
+        onClose={() => setIsRateLimitModalOpen(false)}
+      />
     </div>
   );
 }

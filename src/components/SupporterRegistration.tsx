@@ -85,20 +85,46 @@ export default function SupporterRegistration({
       const data = await response.json();
 
       if (data.success) {
-        setSuccess(data.message);
+        // 成功メッセージを設定
+        setSuccess(data.message || "認証が完了しました！");
 
-        // 確認が完了したら親コンポーネントに通知
+        // フォームをリセット
+        setEmail("");
+        setCode("");
+
+        // ローカルストレージにログイン情報の痕跡を残さない（セキュリティ対策）
+        // sessionStorageやlocalStorageにはメールアドレスなどの機密情報を保存しない
+
+        // 確認が完了したらリダイレクトかUIの更新
         if (onComplete) {
           setTimeout(() => {
+            // 認証完了のイベントを発火（オプション）
+            const authEvent = new CustomEvent("auth-completed", {
+              detail: { email },
+            });
+            window.dispatchEvent(authEvent);
+
+            // 親コンポーネントのコールバックを実行
             onComplete();
+
+            // ページリロードによるセッション適用
+            window.location.href = window.location.pathname;
           }, 1500);
         }
       } else {
         setError(data.message || "認証に失敗しました");
+        // 再試行を促すメッセージを追加
+        if (data.message && data.message.includes("期限切れ")) {
+          setError(data.message + " 新しいコードを要求してください。");
+          // 再度メールフォームに戻るオプションを提供
+          setStep("email");
+        }
       }
     } catch (error) {
       logger.error("コード検証エラー:", error);
-      setError("コードの検証中にエラーが発生しました");
+      setError(
+        "コードの検証中にエラーが発生しました。ネットワーク接続を確認してください。"
+      );
     } finally {
       setLoading(false);
     }
@@ -153,6 +179,9 @@ export default function SupporterRegistration({
               placeholder="your@email.com"
               required
             />
+            <p className="mt-1 text-xs text-gray-500">
+              メールアドレスに確認コードを送信します。認証済みのメールでも再認証できます。
+            </p>
           </div>
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "送信中..." : "確認コードを送信"}

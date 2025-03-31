@@ -113,11 +113,18 @@ export async function setSessionData(
 
 // セッションを削除（ログアウト）
 export async function clearSession(res: NextResponse): Promise<NextResponse> {
+  // クッキーを完全に削除するためのオプション
   res.cookies.set({
     name: sessionOptions.cookieName,
     value: "",
-    expires: new Date(0),
+    expires: new Date(0), // 過去の日付で期限切れに
     path: "/",
+    // Secure属性をプロダクション環境では常に設定
+    secure: process.env.NODE_ENV === "production",
+    // HttpOnly属性を設定してJavaScriptからのアクセスを防止
+    httpOnly: true,
+    // 同一サイトポリシーを設定
+    sameSite: "lax",
   });
   return res;
 }

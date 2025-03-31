@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DateTimeSelector from "../components/DateTimeSelector";
 import OriginSelector from "../components/OriginSelector";
 import DestinationSelector from "../components/DestinationSelector";
@@ -11,6 +11,7 @@ import { TransitFormData, Location } from "../types/transit";
 import KofiSupportCard from "../components/KofiSupportCard";
 import { logger } from "../utils/logger";
 import RateLimitModal from "../components/RateLimitModal";
+import SupporterRegistrationModal from "../components/SupporterRegistrationModal";
 
 interface JourneySegment {
   from: string;
@@ -119,6 +120,23 @@ export default function Home() {
   const [selectedDateTime, setSelectedDateTime] = useState<string>("");
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
   const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
+  const [isSupporterModalOpen, setIsSupporterModalOpen] = useState(false);
+
+  // カスタムイベントリスナーを追加
+  useEffect(() => {
+    const handleOpenSupporterModal = () => {
+      setIsSupporterModalOpen(true);
+    };
+
+    window.addEventListener("open-supporter-modal", handleOpenSupporterModal);
+
+    return () => {
+      window.removeEventListener(
+        "open-supporter-modal",
+        handleOpenSupporterModal
+      );
+    };
+  }, []);
 
   const handleOriginSelected = (location: Location) => {
     setSelectedOrigin(location);
@@ -530,12 +548,25 @@ export default function Home() {
           </a>
           で最新の運行情報を確認できます
         </p>
+        <div className="mt-3">
+          <button
+            onClick={() => setIsSupporterModalOpen(true)}
+            className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 px-4 py-1 text-sm rounded-lg shadow-sm transition-all duration-200"
+          >
+            支援者登録
+          </button>
+        </div>
       </footer>
 
       {/* レート制限モーダル */}
       <RateLimitModal
         isOpen={isRateLimitModalOpen}
         onClose={() => setIsRateLimitModalOpen(false)}
+      />
+
+      <SupporterRegistrationModal
+        isOpen={isSupporterModalOpen}
+        onClose={() => setIsSupporterModalOpen(false)}
       />
     </div>
   );

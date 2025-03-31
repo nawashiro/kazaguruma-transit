@@ -71,6 +71,63 @@ class SQLiteManager {
   }
 
   /**
+   * 汎用クエリ実行メソッド - 外部からのSQL実行を可能にする
+   * @param sql 実行するSQLクエリ
+   * @param params クエリパラメータ
+   * @returns SQLiteの実行結果
+   */
+  async runQuery(sql: string, params: any[] = []): Promise<any> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    try {
+      return await this.db!.run(sql, params);
+    } catch (error) {
+      logger.error("[SQLiteManager] クエリ実行エラー:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * 汎用クエリ取得メソッド（単一行）- 外部からのSQL実行を可能にする
+   * @param sql 実行するSQLクエリ
+   * @param params クエリパラメータ
+   * @returns 単一の結果行
+   */
+  async getQuery(sql: string, params: any[] = []): Promise<any> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    try {
+      return await this.db!.get(sql, params);
+    } catch (error) {
+      logger.error("[SQLiteManager] クエリ取得エラー:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * 汎用クエリ取得メソッド（複数行）- 外部からのSQL実行を可能にする
+   * @param sql 実行するSQLクエリ
+   * @param params クエリパラメータ
+   * @returns 結果行の配列
+   */
+  async allQuery(sql: string, params: any[] = []): Promise<any[]> {
+    if (!this.db) {
+      await this.init();
+    }
+
+    try {
+      return await this.db!.all(sql, params);
+    } catch (error) {
+      logger.error("[SQLiteManager] クエリ一覧取得エラー:", error);
+      throw error;
+    }
+  }
+
+  /**
    * 必要なテーブルを作成
    */
   private async createTables(): Promise<void> {
@@ -96,6 +153,19 @@ class SQLiteManager {
           code_expires INTEGER,
           verified INTEGER DEFAULT 0,
           verified_at INTEGER
+        )
+      `);
+
+      // 認証用レート制限テーブル（ブルートフォース攻撃対策）
+      await this.db.exec(`
+        CREATE TABLE IF NOT EXISTS auth_rate_limits (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          ip TEXT NOT NULL,
+          action_type TEXT NOT NULL,
+          count INTEGER DEFAULT 1,
+          first_attempt BIGINT NOT NULL,
+          last_attempt BIGINT NOT NULL,
+          UNIQUE(ip, action_type)
         )
       `);
 
@@ -349,15 +419,17 @@ class SQLiteManager {
           return false;
         }
 
+        // コードが正しく期限内であれば検証成功
         if (
           supporter.verificationCode === code &&
           supporter.codeExpires > Date.now()
         ) {
-          // 認証が成功したら支援者情報を更新
+          // 認証成功時に支援者情報を更新
+          // 既に認証済みの場合はverified=trueを保持し、最新の認証時刻を設定
           await this.createOrUpdateSupporter({
             email,
-            verified: true,
-            verifiedAt: Date.now(),
+            verified: true, // 既に認証済みでも、再度trueに設定
+            verifiedAt: Date.now(), // 認証時刻を更新
           });
           return true;
         }

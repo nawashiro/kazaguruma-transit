@@ -40,8 +40,13 @@ export default function AuthStatus({ onLoginClick }: AuthStatusProps) {
   // ログアウト処理
   const handleLogout = async () => {
     try {
+      setLoading(true);
       const response = await fetch("/api/auth/logout", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // CSRFトークンがある場合は追加する
       });
 
       if (response.ok) {
@@ -49,14 +54,37 @@ export default function AuthStatus({ onLoginClick }: AuthStatusProps) {
         setIsLoggedIn(false);
         setIsSupporter(false);
         setEmail(null);
+
+        // ブラウザリロードによる状態完全リセット（オプション）
+        window.location.href = "/";
+      } else {
+        const data = await response.json();
+        console.error("ログアウトエラー:", data.message || "サーバーエラー");
+        alert("ログアウト処理中にエラーが発生しました");
       }
     } catch (error) {
       console.error("ログアウトエラー:", error);
+      alert("ログアウト処理中に通信エラーが発生しました");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchSession();
+
+    // ログイン状態変更イベントのリスナーを追加
+    const handleAuthCompleted = () => {
+      fetchSession();
+    };
+
+    // イベントリスナーを登録
+    window.addEventListener("auth-completed", handleAuthCompleted);
+
+    // クリーンアップ関数
+    return () => {
+      window.removeEventListener("auth-completed", handleAuthCompleted);
+    };
   }, []);
 
   if (loading) {
@@ -67,6 +95,16 @@ export default function AuthStatus({ onLoginClick }: AuthStatusProps) {
     return (
       <div className="flex items-center space-x-2">
         <span className="text-sm text-gray-500">未ログイン</span>
+        <Button
+          onClick={() => {
+            // 支援者登録モーダルを開く
+            const event = new CustomEvent("open-supporter-modal");
+            window.dispatchEvent(event);
+          }}
+          className="text-sm py-1 px-2 bg-white text-blue-600 border border-blue-200"
+        >
+          私は支援者です
+        </Button>
         {onLoginClick && (
           <Button onClick={onLoginClick} className="text-sm py-1 px-2">
             支援者登録

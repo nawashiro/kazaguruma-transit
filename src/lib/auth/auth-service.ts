@@ -6,7 +6,7 @@ import crypto from "crypto";
 
 // 設定
 const VERIFICATION_CODE_LENGTH = 6;
-const VERIFICATION_CODE_EXPIRY = 30 * 60 * 1000; // 30分
+const VERIFICATION_CODE_EXPIRY = 10 * 60 * 1000; // 10分
 const KOFI_TIER_PAGE_URL =
   process.env.KOFI_TIER_PAGE_URL || "https://ko-fi.com/nawashiro/tiers";
 
@@ -43,14 +43,7 @@ export class AuthService {
         };
       }
 
-      // 既に認証済みかチェック
-      const isVerified = await sqliteManager.isVerifiedSupporter(email);
-      if (isVerified) {
-        return {
-          success: true,
-          message: "このメールアドレスは既に認証済みです",
-        };
-      }
+      // 認証済みかどうかのチェックを削除し、常に新しい確認コードを発行する
 
       // 確認コードを生成
       const code = this.generateVerificationCode();
@@ -61,11 +54,11 @@ export class AuthService {
         email,
         verificationCode: code,
         codeExpires,
-        verified: false,
+        verified: false, // 再認証が必要なので一時的にfalseに設定
       });
 
-      // メール送信
-      logger.log(`[AuthService] メール送信開始: ${email}, コード: ${code}`);
+      // メール送信 - ログからコードを削除
+      logger.log(`[AuthService] メール送信開始: ${email}`);
       const emailSent = await mailtrapService.sendVerificationCode(email, code);
 
       if (emailSent) {
@@ -92,7 +85,7 @@ export class AuthService {
   }
 
   /**
-   * 確認コードを検証して支援者登録を完了
+   * 支援者認証コードを検証する
    */
   async verifySupporterCode(
     email: string,
@@ -100,39 +93,34 @@ export class AuthService {
   ): Promise<{
     success: boolean;
     message: string;
-    redirect?: string;
+    isSupporter?: boolean;
+    needsRefresh?: boolean;
   }> {
     try {
-      // まずKo-fiでの支援者かどうかを再確認
-      const isActiveMember = await kofiApiClient.isActiveMember(email);
+      // コードの検証
+      const isValid = await sqliteManager.verifySupporter(email, code);
 
-      if (!isActiveMember) {
-        return {
-          success: false,
-          message:
-            "Ko-fiでの支援が確認できません。支援者特典を利用するにはKo-fiでの支援が必要です。",
-          redirect: KOFI_TIER_PAGE_URL,
-        };
-      }
+      if (isValid) {
+        // Ko-fiでの支援状態も確認
+        const kofiStatus = await this.checkKofiMembershipStatus(email);
 
-      const verified = await sqliteManager.verifySupporter(email, code);
-
-      if (verified) {
         return {
           success: true,
-          message: "認証が完了しました。ありがとうございます！",
-        };
-      } else {
-        return {
-          success: false,
-          message: "認証に失敗しました。コードが無効であるか期限切れです",
+          message: "認証に成功しました。支援ありがとうございます！",
+          isSupporter: kofiStatus.isActive,
+          needsRefresh: true, // 画面更新が必要であることを示すフラグ
         };
       }
-    } catch (error) {
-      logger.error("[AuthService] 確認コード検証エラー:", error);
+
       return {
         success: false,
-        message: "確認コードの検証中にエラーが発生しました",
+        message: "認証コードが無効か期限切れです",
+      };
+    } catch (error) {
+      logger.error("[AuthService] 支援者コード検証エラー:", error);
+      return {
+        success: false,
+        message: "認証処理中にエラーが発生しました",
       };
     }
   }

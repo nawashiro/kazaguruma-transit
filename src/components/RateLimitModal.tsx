@@ -35,6 +35,8 @@ export default function RateLimitModal({
     // 少し待ってからモーダルを閉じる
     setTimeout(() => {
       onClose();
+      // 画面全体をリロードして状態を更新
+      window.location.reload();
     }, 1000);
   };
 

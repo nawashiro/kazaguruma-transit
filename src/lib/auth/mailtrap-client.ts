@@ -70,7 +70,7 @@ export class MailtrapService {
 
 ${code}
 
-このコードは30分間有効です。
+このコードは10分間有効です。
 ※このメールには返信できません。
         `,
         html: `
@@ -81,7 +81,7 @@ ${code}
   <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
     <span style="font-size: 24px; font-weight: bold; letter-spacing: 3px;">${code}</span>
   </div>
-  <p>このコードは30分間有効です。</p>
+  <p>このコードは10分間有効です。</p>
   <p style="color: #6b7280; font-size: 12px;">※このメールには返信できません。</p>
   <p style="color: #6b7280; font-size: 12px;">※このサービスは非公式のもので、千代田区とは関係ありません</p>
 </div>

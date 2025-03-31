@@ -506,6 +506,17 @@ export default function Home() {
 
       <footer className="text-center mt-8 text-sm text-gray-500">
         <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
+        <p className="mt-2">
+          <a
+            href="https://lin.ee/CgIBOSd"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:underline"
+          >
+            千代田区公式LINE
+          </a>
+          で最新の運行情報を確認できます
+        </p>
       </footer>
     </div>
   );

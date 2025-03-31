@@ -8,6 +8,7 @@ import IntegratedRouteDisplay from "../components/IntegratedRouteDisplay";
 import Button from "../components/common/Button";
 import ResetButton from "../components/common/ResetButton";
 import { TransitFormData, Location } from "../types/transit";
+import KofiSupportCard from "../components/KofiSupportCard";
 
 interface JourneySegment {
   from: string;
@@ -409,6 +410,8 @@ export default function Home() {
         <h1 className="text-3xl font-bold text-primary">風ぐるま乗換案内</h1>
         <p className="mt-2 text-lg">千代田区福祉交通の乗換案内サービス</p>
       </header>
+
+      <KofiSupportCard />
 
       <div className="max-w-md mx-auto">
         {!selectedDestination ? (

@@ -43,3 +43,6 @@ next-env.d.ts
 # temp
 .temp/
 .docs/
+
+## db
+kofi-data.db

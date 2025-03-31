@@ -65,17 +65,21 @@ export class AuthService {
       });
 
       // メール送信
+      logger.log(`[AuthService] メール送信開始: ${email}, コード: ${code}`);
       const emailSent = await mailtrapService.sendVerificationCode(email, code);
 
       if (emailSent) {
+        logger.log(`[AuthService] メール送信成功: ${email}`);
         return {
           success: true,
           message: "確認コードを送信しました。メールをご確認ください",
         };
       } else {
+        logger.error(`[AuthService] メール送信失敗: ${email}`);
         return {
           success: false,
-          message: "確認コードの送信に失敗しました",
+          message:
+            "確認コードの送信に失敗しました。管理者にお問い合わせください。",
         };
       }
     } catch (error) {
@@ -96,6 +100,7 @@ export class AuthService {
   ): Promise<{
     success: boolean;
     message: string;
+    redirect?: string;
   }> {
     try {
       // まずKo-fiでの支援者かどうかを再確認
@@ -106,6 +111,7 @@ export class AuthService {
           success: false,
           message:
             "Ko-fiでの支援が確認できません。支援者特典を利用するにはKo-fiでの支援が必要です。",
+          redirect: KOFI_TIER_PAGE_URL,
         };
       }
 

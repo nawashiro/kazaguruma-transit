@@ -3,6 +3,11 @@
 import React, { useState } from "react";
 import Button from "./common/Button";
 import { logger } from "../utils/logger";
+import Link from "next/link";
+
+// Ko-fiのリンク
+const KOFI_TIER_PAGE_URL =
+  process.env.KOFI_TIER_PAGE_URL || "https://ko-fi.com/nawashiro/tiers";
 
 interface SupporterRegistrationProps {
   onComplete?: () => void;
@@ -100,11 +105,28 @@ export default function SupporterRegistration({
   };
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-md max-w-md w-full">
+    <>
       <h2 className="text-xl font-bold mb-4 text-gray-800">支援者登録</h2>
 
       {error && (
         <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>
+      )}
+
+      {/* Ko-fiへのリンクをエラーの下に表示 */}
+      {error && error.includes("Ko-fiでの支援が確認できません") && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-100 rounded">
+          <p className="text-blue-700 mb-2">
+            Ko-fiで支援者になると、すべての機能が利用できます：
+          </p>
+          <Link
+            href={KOFI_TIER_PAGE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded transition-colors text-center w-full"
+          >
+            Ko-fiで支援する
+          </Link>
+        </div>
       )}
 
       {success && (
@@ -160,6 +182,6 @@ export default function SupporterRegistration({
           </Button>
         </form>
       )}
-    </div>
+    </>
   );
 }

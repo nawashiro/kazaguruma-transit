@@ -72,10 +72,6 @@ export default function RateLimitModal({
           </div>
 
           <div className="mt-4 mb-6">
-            <div className="mb-4">
-              <AuthStatus onLoginClick={() => setIsRegistering(true)} />
-            </div>
-
             {isRegistering ? (
               <SupporterRegistration onComplete={handleRegistrationComplete} />
             ) : (
@@ -95,7 +91,7 @@ export default function RateLimitModal({
                   onClick={() => setIsRegistering(true)}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
-                  支援者として登録
+                  私は支援者です
                 </button>
                 <button
                   onClick={onClose}

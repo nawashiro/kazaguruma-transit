@@ -1,21 +1,54 @@
-import { MailtrapClient } from "mailtrap";
 import { logger } from "../../utils/logger";
+import * as nodemailer from "nodemailer";
 
 // .envから環境変数を読み込む
-const MAILTRAP_TOKEN = process.env.MAILTRAP_TOKEN || "";
+const MAILTRAP_FROM_EMAIL =
+  process.env.MAILTRAP_FROM_EMAIL || "hello@example.com";
+const MAILTRAP_FROM_NAME =
+  process.env.MAILTRAP_FROM_NAME || "風ぐるま乗換案内【非公式】";
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
+// SMTP設定
+const SMTP_HOST = IS_PRODUCTION
+  ? "live.smtp.mailtrap.io" // プロダクション用SMTP
+  : "sandbox.smtp.mailtrap.io"; // テスト用SMTP
+const SMTP_PORT = IS_PRODUCTION ? 587 : 2525;
+const SMTP_USER = process.env.MAILTRAP_USER || "";
+const SMTP_PASS = process.env.MAILTRAP_PASS || "";
 
 /**
- * Mailtrapのクライアントラッパー
+ * メール送信サービス
  */
 export class MailtrapService {
-  private client: MailtrapClient;
+  private transporter: nodemailer.Transporter;
   private sender = {
-    email: "hello@demomailtrap.co",
-    name: "風ぐるま乗換案内",
+    name: MAILTRAP_FROM_NAME,
+    address: MAILTRAP_FROM_EMAIL,
   };
 
   constructor() {
-    this.client = new MailtrapClient({ token: MAILTRAP_TOKEN });
+    try {
+      // 認証情報の確認
+      if (!SMTP_USER || !SMTP_PASS) {
+        logger.error("[MailtrapService] SMTP認証情報が設定されていません");
+      }
+
+      // Nodemailerトランスポーターの初期化
+      this.transporter = nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: false, // TLS接続
+        auth: {
+          user: SMTP_USER,
+          pass: SMTP_PASS,
+        },
+      });
+
+      logger.log("[MailtrapService] 初期化完了");
+    } catch (error) {
+      logger.error("[MailtrapService] 初期化エラー:", error);
+      throw error;
+    }
   }
 
   /**
@@ -23,11 +56,12 @@ export class MailtrapService {
    */
   async sendVerificationCode(email: string, code: string): Promise<boolean> {
     try {
-      logger.log(`[MailtrapService] メール送信: ${email}`);
+      logger.log(`[MailtrapService] メール送信準備: ${email}`);
 
-      const response = await this.client.send({
+      // メールオプション設定
+      const mailOptions = {
         from: this.sender,
-        to: [{ email }],
+        to: email,
         subject: "【風ぐるま乗換案内】確認コード",
         text: `
 風ぐるま乗換案内をご利用いただきありがとうございます。
@@ -49,15 +83,20 @@ ${code}
   </div>
   <p>このコードは30分間有効です。</p>
   <p style="color: #6b7280; font-size: 12px;">※このメールには返信できません。</p>
+  <p style="color: #6b7280; font-size: 12px;">※このサービスは非公式のもので、千代田区とは関係ありません</p>
 </div>
         `,
-        category: "Verification",
-      });
+      };
 
-      logger.log(`[MailtrapService] メール送信結果:`, response);
+      // 送信処理
+      const info = await this.transporter.sendMail(mailOptions);
+      logger.log(`[MailtrapService] メール送信成功: ${email}`);
       return true;
     } catch (error) {
       logger.error("[MailtrapService] メール送信エラー:", error);
+      if (error instanceof Error) {
+        logger.error(`[MailtrapService] エラーメッセージ: ${error.message}`);
+      }
       return false;
     }
   }

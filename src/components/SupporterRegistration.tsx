@@ -180,7 +180,7 @@ export default function SupporterRegistration({
               required
             />
             <p className="mt-1 text-xs text-gray-500">
-              メールアドレスに確認コードを送信します。認証済みのメールでも再認証できます。
+              メールアドレスに確認コードを送信します。Ko-fiで登録したメールアドレスである必要があります。
             </p>
           </div>
           <Button type="submit" disabled={loading} className="w-full">

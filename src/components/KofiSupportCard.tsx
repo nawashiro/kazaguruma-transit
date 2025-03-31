@@ -1,10 +1,54 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
 const KofiSupportCard: React.FC = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // セッション情報を取得
+  const fetchSession = async () => {
+    try {
+      const response = await fetch("/api/auth/session");
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        setIsLoggedIn(data.data.isLoggedIn);
+      } else {
+        setIsLoggedIn(false);
+      }
+    } catch (error) {
+      console.error("セッション取得エラー:", error);
+      setIsLoggedIn(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSession();
+
+    // ログイン状態変更イベントのリスナーを追加
+    const handleAuthCompleted = () => {
+      fetchSession();
+    };
+
+    // イベントリスナーを登録
+    window.addEventListener("auth-completed", handleAuthCompleted);
+
+    // クリーンアップ関数
+    return () => {
+      window.removeEventListener("auth-completed", handleAuthCompleted);
+    };
+  }, []);
+
+  // ログインしている場合は表示しない
+  if (loading || isLoggedIn) {
+    return null;
+  }
+
   return (
     <div className="mb-8 bg-white rounded-lg shadow-lg overflow-hidden max-w-3xl mx-auto">
       <Link

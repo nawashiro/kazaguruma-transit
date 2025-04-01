@@ -16,9 +16,6 @@ import {
 // 設定ファイルのパス
 const CONFIG_PATH = path.join(process.cwd(), "transit-config.json");
 
-// GTFSデータを保存するための一時ディレクトリ
-const GTFS_TEMP_DIR = ".temp";
-
 /**
  * 統合トランジットサービスクラス
  * データベース接続とトランジット関連の全ての機能を単一のクラスで提供
@@ -68,6 +65,14 @@ export class TransitService {
 
       // データベースが存在するか確認
       const dbPath = path.join(process.cwd(), this.config.sqlitePath);
+      const dbDir = path.dirname(dbPath);
+
+      // データベースディレクトリが存在しない場合は作成
+      if (!fs.existsSync(dbDir)) {
+        console.log(`[TransitService] ディレクトリを作成します: ${dbDir}`);
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+
       const dbExists = fs.existsSync(dbPath);
 
       if (!dbExists || this.config.skipImport === false) {

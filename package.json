@@ -1,14 +1,16 @@
 {
-  "name": "kazaguruma-navi",
+  "name": "chiyoda-transit-demo",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test-import": "node scripts/test-import.js"
   },
   "dependencies": {
     "@googlemaps/google-maps-services-js": "^3.4.1",

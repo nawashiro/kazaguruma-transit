@@ -93,12 +93,45 @@ export class TransitManager {
           // 新しいインポートを開始
           console.log("GTFSデータをインポート中...");
 
-          // GTFSインポートコマンドを実行（このprojectではimportコマンドはないため、適切なものに置き換える）
-          // ここでは例として、openDb()を呼んでインポートが再実行されることを期待する
-          await openDb(this.config);
-          await closeDb();
+          // 直接importGtfsを呼び出す
+          try {
+            // ファイルパスも直接指定して設定を作成
+            const importConfig = {
+              ...this.config,
+              agencies: [
+                {
+                  agency_key: "chiyoda",
+                  path: path.join(
+                    process.cwd(),
+                    "public",
+                    "gtfs",
+                    "chiyoda_fixed_20250401.zip"
+                  ),
+                  url: undefined,
+                },
+              ],
+              verbose: true,
+            };
 
-          console.log("GTFSデータのインポートが完了しました");
+            console.log("使用する設定:", JSON.stringify(importConfig, null, 2));
+
+            const result = await importGtfs(importConfig);
+            console.log("インポート結果:", result);
+          } catch (importError) {
+            console.error("importGtfs中にエラーが発生しました:", importError);
+            // エラーがあっても処理を続行
+          }
+
+          // バックアップとしてopenDbとcloseDbを実行
+          try {
+            console.log("バックアップとしてopenDbを実行");
+            const dbHandle = await openDb(this.config);
+            console.log("openDb完了、closeDbを実行");
+            await closeDb(dbHandle);
+            console.log("closeDb完了");
+          } catch (dbError) {
+            console.error("データベース操作中にエラーが発生:", dbError);
+          }
 
           // データベース接続を再確立
           await this.db.ensureConnection();

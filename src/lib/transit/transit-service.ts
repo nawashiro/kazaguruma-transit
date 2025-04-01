@@ -75,23 +75,12 @@ export class TransitService {
 
       const dbExists = fs.existsSync(dbPath);
 
-      if (!dbExists || this.config.skipImport === false) {
-        console.log("[TransitService] GTFSデータをインポートします...");
+      // GTFSライブラリの最新仕様に合わせて修正
+      // skipImportパラメータはopenDb関数内部で処理されるため、
+      // 手動でskipImportを制御する必要はありません
+      this.db = await openDb(this.config);
 
-        // importGtfs関数がないので、openDb()を使用
-        this.db = await openDb(this.config);
-
-        // インポート後に設定ファイルを更新
-        if (this.config.skipImport === false) {
-          this.config.skipImport = true;
-          fs.writeFileSync(CONFIG_PATH, JSON.stringify(this.config, null, 2));
-          console.log("[TransitService] skipImportをtrueに更新しました");
-        }
-      } else {
-        // 既存のデータベースに接続
-        this.db = await openDb(this.config);
-      }
-
+      // DBが初期化されたことを記録
       this.isDbInitialized = true;
       console.log("[TransitService] データベース接続が初期化されました");
       return this.db;
@@ -108,7 +97,7 @@ export class TransitService {
     if (this.db) {
       try {
         console.log("[TransitService] データベース接続を閉じます");
-        await closeDb();
+        await closeDb(this.db);
         this.db = null;
         this.isDbInitialized = false;
         console.log("[TransitService] データベース接続が閉じられました");

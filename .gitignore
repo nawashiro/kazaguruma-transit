@@ -46,3 +46,6 @@ next-env.d.ts
 
 ## db
 kofi-data.db
+
+## transit
+transit-config.json

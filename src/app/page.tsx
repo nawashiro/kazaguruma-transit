@@ -537,6 +537,7 @@ export default function Home() {
 
       <footer className="text-center mt-8 mb-4 text-sm text-gray-600 bg-white/60 backdrop-blur-sm p-4 rounded-lg shadow-sm mx-auto max-w-md border border-gray-100">
         <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
+        <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>
         <p className="mt-2">
           <a
             href="https://lin.ee/CgIBOSd"

@@ -46,3 +46,5 @@ next-env.d.ts
 
 ## transit
 transit-config.json
+
+public/gtfs/

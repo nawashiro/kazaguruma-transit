@@ -1,16 +1,12 @@
 import fs from "fs";
 import path from "path";
 import { openDb, closeDb } from "gtfs";
-import { DateTime } from "luxon";
 import {
   TransitQuery,
   RouteQuery,
   StopQuery,
   TimetableQuery,
   TransitResponse,
-  RouteResponse,
-  StopResponse,
-  TimetableResponse,
 } from "@/types/transit-api";
 
 // 設定ファイルのパス

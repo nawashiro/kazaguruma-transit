@@ -2,6 +2,7 @@ import sqlite3 from "sqlite3";
 import { open, Database } from "sqlite";
 import { logger } from "../../utils/logger";
 import path from "path";
+import fs from "fs";
 
 // SQLiteデータベースのパス
 const DB_PATH =
@@ -49,6 +50,20 @@ class SQLiteManager {
 
     try {
       logger.log("[SQLiteManager] データベースを初期化しています...");
+
+      // データベースディレクトリが存在するか確認し、なければ作成
+      const dbDir = path.dirname(DB_PATH);
+      if (!fs.existsSync(dbDir)) {
+        logger.log(`[SQLiteManager] ディレクトリを作成します: ${dbDir}`);
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+
+      // .temp/kofi/ ディレクトリも確認して必要なら作成
+      const kofiDir = path.join(process.cwd(), ".temp/kofi");
+      if (!fs.existsSync(kofiDir)) {
+        logger.log(`[SQLiteManager] Kofiディレクトリを作成します: ${kofiDir}`);
+        fs.mkdirSync(kofiDir, { recursive: true });
+      }
 
       // SQLiteデータベース接続を開く
       this.db = await open({

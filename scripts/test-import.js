@@ -24,7 +24,7 @@ async function testImport() {
       agencies: [
         {
           agency_key: "chiyoda",
-          path: "./public/gtfs/chiyoda_fixed_20250401.zip",
+          path: ".gtfs/chiyoda_fixed_20250401.zip",
         },
       ],
       verbose: true,

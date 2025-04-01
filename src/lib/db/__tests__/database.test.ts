@@ -82,6 +82,7 @@ describe("Database", () => {
     // 接続を閉じる
     await db.closeConnection();
     expect(closeDb).toHaveBeenCalledTimes(1);
+    expect(closeDb).toHaveBeenCalledWith(expect.anything()); // dbHandleが渡されることを確認
 
     // 2回目の呼び出しでは既に接続が閉じているため、closeDbは再度呼ばれない
     await db.closeConnection();

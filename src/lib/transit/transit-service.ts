@@ -8,9 +8,7 @@ import {
   TimetableQuery,
   TransitResponse,
 } from "@/types/transit-api";
-
-// 設定ファイルのパス
-const CONFIG_PATH = path.join(process.cwd(), "transit-config.json");
+import { loadConfig, TransitConfig } from "../config/config";
 
 /**
  * 統合トランジットサービスクラス
@@ -18,7 +16,7 @@ const CONFIG_PATH = path.join(process.cwd(), "transit-config.json");
  */
 export class TransitService {
   private db: any;
-  private config: any = null;
+  private config: TransitConfig;
   private static instance: TransitService;
   private isDbInitialized = false;
 
@@ -27,7 +25,7 @@ export class TransitService {
    */
   private constructor() {
     try {
-      this.config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+      this.config = loadConfig();
       console.log("[TransitService] 設定ファイルを読み込みました");
     } catch (error) {
       console.error(

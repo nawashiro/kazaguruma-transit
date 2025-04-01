@@ -8,8 +8,6 @@ import {
   closeDb,
 } from "gtfs";
 import { Database } from "./database";
-import fs from "fs";
-import path from "path";
 import {
   Stop,
   Route,
@@ -20,12 +18,7 @@ import {
   GTFSStop,
 } from "../../types/transit";
 import { DateTime } from "luxon";
-
-// GTFSデータを保存するための一時ディレクトリ
-const GTFS_TEMP_DIR = ".temp";
-
-// configファイルのパス
-const CONFIG_PATH = path.join(process.cwd(), "transit-config.json");
+import { loadConfig, saveConfig, TransitConfig } from "../config/config";
 
 // インポート処理のロック状態を追跡する変数
 let isImporting = false;
@@ -37,7 +30,7 @@ let importPromise: Promise<any> | null = null;
 export class TransitManager {
   private static instance: TransitManager;
   private db: Database;
-  private config: any = null;
+  private config: TransitConfig;
 
   /**
    * プライベートコンストラクタでシングルトンパターンを実現
@@ -46,7 +39,7 @@ export class TransitManager {
     this.db = Database.getInstance();
 
     try {
-      this.config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+      this.config = loadConfig();
       console.log("設定ファイルを読み込みました");
     } catch (error) {
       console.error("設定ファイルの読み込みに失敗しました:", error);
@@ -83,35 +76,13 @@ export class TransitManager {
           // 既存のデータベース接続を閉じる
           await this.db.closeConnection();
 
-          // 設定ファイルのskipImportを元に戻す
-          if (this.config.skipImport === false) {
-            this.config.skipImport = true;
-            fs.writeFileSync(CONFIG_PATH, JSON.stringify(this.config, null, 2));
-            console.log("skipImportをtrueに戻しました");
-          }
-
           // 新しいインポートを開始
           console.log("GTFSデータをインポート中...");
 
           // 直接importGtfsを呼び出す
           try {
-            // ファイルパスも直接指定して設定を作成
-            const importConfig = {
-              ...this.config,
-              agencies: [
-                {
-                  agency_key: "chiyoda",
-                  path: path.join(
-                    process.cwd(),
-                    "public",
-                    "gtfs",
-                    "chiyoda_fixed_20250401.zip"
-                  ),
-                  url: undefined,
-                },
-              ],
-              verbose: true,
-            };
+            // 設定ファイルをそのまま使用
+            const importConfig = this.config;
 
             console.log("使用する設定:", JSON.stringify(importConfig, null, 2));
 

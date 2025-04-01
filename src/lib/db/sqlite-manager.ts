@@ -5,8 +5,9 @@ import path from "path";
 import fs from "fs";
 
 // SQLiteデータベースのパス
-const DB_PATH =
-  process.env.SQLITE_DB_PATH || path.join(process.cwd(), "kofi-data.db");
+const DB_PATH = process.env.SQLITE_DB_PATH
+  ? path.resolve(process.cwd(), process.env.SQLITE_DB_PATH)
+  : path.join(process.cwd(), "kofi-data.db");
 
 export interface RateLimitRecord {
   ip: string;
@@ -58,12 +59,7 @@ class SQLiteManager {
         fs.mkdirSync(dbDir, { recursive: true });
       }
 
-      // .temp/kofi/ ディレクトリも確認して必要なら作成
-      const kofiDir = path.join(process.cwd(), ".temp/kofi");
-      if (!fs.existsSync(kofiDir)) {
-        logger.log(`[SQLiteManager] Kofiディレクトリを作成します: ${kofiDir}`);
-        fs.mkdirSync(kofiDir, { recursive: true });
-      }
+      logger.log(`[SQLiteManager] データベースパス: ${DB_PATH}`);
 
       // SQLiteデータベース接続を開く
       this.db = await open({

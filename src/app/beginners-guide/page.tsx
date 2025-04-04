@@ -11,8 +11,6 @@ export default function BeginnersGuide() {
         <p className="mt-2 text-lg">ビギナーズガイド</p>
       </header>
 
-      <KofiSupportCard />
-
       <div className="max-w-md mx-auto space-y-4">
         <section className="card bg-base-200/70 shadow-md">
           <div className="card-body">
@@ -104,7 +102,7 @@ export default function BeginnersGuide() {
           <div className="card-body">
             <h2 className="card-title">お金をとるの？</h2>
             <div className="space-y-4">
-              <p>無料でも使えます。ただし、一時間に10回までです。</p>
+              <p>無料でも使えます。ただし、一時間に10リクエストまでです。</p>
               <p>継続的な支援者は、無制限に利用することができます。</p>
               <p>
                 Nawashiroは、労働災害で障害を負い、ふつうの仕事をすることができません。貯金を取り崩して生活しています。

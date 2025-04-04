@@ -1,7 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import AuthStatus from "@/components/AuthStatus";
+import SidebarLayout from "../components/SidebarLayout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "かざぐるま乗換案内",
-  description: "千代田線の乗換案内サービス",
+  title: "風ぐるま乗換案内",
+  description: "千代田区福祉交通の乗換案内サービス",
 };
 
 export default function RootLayout({
@@ -26,14 +26,7 @@ export default function RootLayout({
   return (
     <html lang="ja" data-theme="light">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <div className="flex flex-col min-h-screen">
-          <div className="flex-grow">{children}</div>
-          <footer className="footer px-4 py-2">
-            <div className="justify-self-end">
-              <AuthStatus />
-            </div>
-          </footer>
-        </div>
+        <SidebarLayout>{children}</SidebarLayout>
       </body>
     </html>
   );

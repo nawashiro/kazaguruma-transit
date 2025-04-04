@@ -5,13 +5,36 @@ export default function BeginnersGuide() {
     <div className="container">
       <header className="text-center my-4">
         <h1 className="text-3xl font-bold">風ぐるまは初めて？</h1>
-        <p className="mt-2 text-lg">ビギナーズガイド</p>
+        <p className="mt-2 text-xl">ビギナーズガイド</p>
       </header>
 
+      <div className="max-w-md mx-auto mb-6 card bg-base-100 shadow-sm">
+        <div className="card-body">
+          <h2 className="card-title text-xl">目次</h2>
+          <ul className="menu bg-base-100 p-0">
+            <li>
+              <a href="#what-is">風ぐるまってなに？</a>
+            </li>
+            <li>
+              <a href="#how-to-ride">乗りかた</a>
+            </li>
+            <li>
+              <a href="#about-site">このサイトはなに？</a>
+            </li>
+            <li>
+              <a href="#about-me">あなたは誰？</a>
+            </li>
+            <li>
+              <a href="#payment">お金をとるの？</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
       <div className="max-w-md mx-auto space-y-4">
-        <section className="card bg-base-200/70 shadow-md">
+        <section id="what-is" className="card bg-base-200/70 shadow-md">
           <div className="card-body">
-            <h2 className="card-title text-lg">風ぐるまってなに？</h2>
+            <h2 className="card-title text-xl">風ぐるまってなに？</h2>
             <div className="space-y-4">
               <p className="text-base">
                 千代田区は、区民の外出を支援するためのサービスを提供しています。地域福祉交通「風ぐるま」をはじめ、東京都シルバーパス、車いすの貸し出しなど、様々な支援があります。
@@ -34,9 +57,9 @@ export default function BeginnersGuide() {
           </div>
         </section>
 
-        <section className="card bg-base-200/70 shadow-md">
+        <section id="how-to-ride" className="card bg-base-200/70 shadow-md">
           <div className="card-body">
-            <h2 className="card-title text-lg">乗りかた</h2>
+            <h2 className="card-title text-xl">乗りかた</h2>
             <div className="space-y-4">
               <p className="text-base">
                 <strong>料金：</strong>
@@ -66,9 +89,9 @@ export default function BeginnersGuide() {
           </div>
         </section>
 
-        <section className="card bg-base-200/70 shadow-md">
+        <section id="about-site" className="card bg-base-200/70 shadow-md">
           <div className="card-body">
-            <h2 className="card-title text-lg">このサイトはなに？</h2>
+            <h2 className="card-title text-xl">このサイトはなに？</h2>
             <div className="space-y-4">
               <p className="text-base">
                 このウェブサイトでは、風ぐるまの乗換案内サービスを提供しています。
@@ -83,9 +106,9 @@ export default function BeginnersGuide() {
           </div>
         </section>
 
-        <section className="card bg-base-200/70 shadow-md">
+        <section id="about-me" className="card bg-base-200/70 shadow-md">
           <div className="card-body">
-            <h2 className="card-title text-lg">あなたは誰？</h2>
+            <h2 className="card-title text-xl">あなたは誰？</h2>
             <div className="space-y-4">
               <p className="text-base">
                 作者のNawashiroは、ただの一般市民です。このサイトは千代田区の公式サービスではなく、個人的な取り組みとして運営しています。
@@ -97,9 +120,9 @@ export default function BeginnersGuide() {
           </div>
         </section>
 
-        <section className="card bg-base-200/70 shadow-md">
+        <section id="payment" className="card bg-base-200/70 shadow-md">
           <div className="card-body">
-            <h2 className="card-title text-lg">お金をとるの？</h2>
+            <h2 className="card-title text-xl">お金をとるの？</h2>
             <div className="space-y-4">
               <p className="text-base">
                 無料でも使えます。ただし、一時間に10リクエストまでです。

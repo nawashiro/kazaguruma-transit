@@ -303,6 +303,17 @@ export default function LocationsPage() {
 
                           <div className="card-body">
                             <h2 className="card-title">{location.name}</h2>
+                            {location.distance !== undefined && (
+                              <p className="text-sm text-gray-500">
+                                約{location.distance.toFixed(1)}km
+                              </p>
+                            )}
+
+                            {location.description && (
+                              <p className="text-sm mt-1 line-clamp-3">
+                                {location.description}
+                              </p>
+                            )}
 
                             {location.uri && (
                               <a
@@ -387,6 +398,12 @@ export default function LocationsPage() {
 
                     <div className="card-body">
                       <h2 className="card-title">{location.name}</h2>
+
+                      {location.description && (
+                        <p className="text-sm mt-1 line-clamp-3">
+                          {location.description}
+                        </p>
+                      )}
 
                       {location.uri && (
                         <a

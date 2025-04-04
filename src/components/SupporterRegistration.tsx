@@ -132,54 +132,46 @@ export default function SupporterRegistration({
 
   return (
     <>
-      <h2 className="text-xl font-bold mb-4 text-gray-800">支援者登録</h2>
+      <h2 className="text-xl font-bold mb-4">支援者確認</h2>
 
-      {error && (
-        <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>
-      )}
+      {error && <div className="alert alert-error mb-4">{error}</div>}
 
       {/* Ko-fiへのリンクをエラーの下に表示 */}
       {error && error.includes("Ko-fiでの支援が確認できません") && (
-        <div className="mb-4 p-4 bg-blue-50 border border-blue-100 rounded">
-          <p className="text-blue-700 mb-2">
-            Ko-fiで支援者になると、すべての機能が利用できます：
-          </p>
-          <Link
-            href={KOFI_TIER_PAGE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded transition-colors text-center w-full"
-          >
-            Ko-fiで支援する
-          </Link>
+        <div className="alert alert-info mb-4">
+          <div>
+            <p className="mb-2">
+              Ko-fiで支援者になると、すべての機能が利用できます
+            </p>
+            <Link
+              href={KOFI_TIER_PAGE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary"
+            >
+              Ko-fiで支援する
+            </Link>
+          </div>
         </div>
       )}
 
-      {success && (
-        <div className="mb-4 p-2 bg-green-100 text-green-700 rounded">
-          {success}
-        </div>
-      )}
+      {success && <div className="alert alert-success mb-4">{success}</div>}
 
       {step === "email" ? (
         <form onSubmit={handleEmailSubmit}>
-          <div className="mb-4">
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              メールアドレス
+          <div className="form-control mb-4 space-y-2">
+            <label className="label">
+              <span className="label-text">メールアドレス</span>
             </label>
             <input
               type="email"
-              id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input input-bordered w-full"
               placeholder="your@email.com"
               required
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="text-sm">
               メールアドレスに確認コードを送信します。Ko-fiで登録したメールアドレスである必要があります。
             </p>
           </div>
@@ -189,19 +181,15 @@ export default function SupporterRegistration({
         </form>
       ) : (
         <form onSubmit={handleCodeSubmit}>
-          <div className="mb-4">
-            <label
-              htmlFor="code"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              確認コード
+          <div className="form-control mb-4">
+            <label className="label">
+              <span className="label-text">確認コード</span>
             </label>
             <input
               type="text"
-              id="code"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input input-bordered w-full"
               placeholder="123456"
               required
             />

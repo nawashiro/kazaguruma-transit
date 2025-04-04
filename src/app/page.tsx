@@ -434,63 +434,67 @@ export default function Home() {
   };
 
   return (
-    <div className="container mx-auto p-4 min-h-screen">
-      <header className="text-center my-8">
-        <h1 className="text-3xl font-bold text-primary bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-indigo-500">
-          風ぐるま乗換案内
-        </h1>
+    <div className="container p-4">
+      <header className="text-center my-4">
+        <h1 className="text-3xl font-bold text-primary">風ぐるま乗換案内</h1>
         <p className="mt-2 text-lg">千代田区福祉交通の乗換案内サービス</p>
       </header>
 
       <KofiSupportCard />
 
-      <div className="max-w-md mx-auto">
+      <div className="max-w-md mx-auto space-y-4">
         {!selectedDestination ? (
           <DestinationSelector
             onDestinationSelected={handleDestinationSelected}
           />
         ) : !selectedOrigin ? (
           <>
-            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-              <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
-              <p data-testid="selected-destination">
-                {selectedDestination.address ||
-                  `緯度: ${selectedDestination.lat.toFixed(
-                    6
-                  )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
-              </p>
+            <div className="card bg-base-200/70 shadow-md">
+              <div className="card-body">
+                <h2 className="card-title">選択された目的地</h2>
+                <p data-testid="selected-destination">
+                  {selectedDestination.address ||
+                    `緯度: ${selectedDestination.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
+                </p>
+              </div>
             </div>
             <OriginSelector onOriginSelected={handleOriginSelected} />
-            <ResetButton onReset={resetSearch} className="mt-4" />
+            <ResetButton onReset={resetSearch} />
           </>
         ) : !searchPerformed ? (
           <>
-            <div className="bg-base-200/70 p-4 rounded-lg shadow-md mb-4 backdrop-blur-sm border border-gray-100">
-              <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
-              <p data-testid="selected-destination">
-                {selectedDestination.address ||
-                  `緯度: ${selectedDestination.lat.toFixed(
-                    6
-                  )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
-              </p>
+            <div className="card bg-base-200/70 shadow-md">
+              <div className="card-body">
+                <h2 className="card-title">選択された目的地</h2>
+                <p data-testid="selected-destination">
+                  {selectedDestination.address ||
+                    `緯度: ${selectedDestination.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
+                </p>
+              </div>
             </div>
 
-            <div className="bg-base-200/70 p-4 rounded-lg shadow-md mb-4 backdrop-blur-sm border border-gray-100">
-              <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
-              <p data-testid="selected-origin">
-                {selectedOrigin.address ||
-                  `緯度: ${selectedOrigin.lat.toFixed(
-                    6
-                  )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
-              </p>
+            <div className="card bg-base-200/70 shadow-md">
+              <div className="card-body">
+                <h2 className="card-title">選択された出発地</h2>
+                <p data-testid="selected-origin">
+                  {selectedOrigin.address ||
+                    `緯度: ${selectedOrigin.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
+                </p>
+              </div>
             </div>
 
-            <div className="bg-base-200/70 p-4 rounded-lg shadow-md mb-4 backdrop-blur-sm border border-gray-100">
-              <h2 className="text-xl font-bold mb-2">日時の選択</h2>
-              <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
+            <div className="card bg-base-200/70 shadow-md">
+              <div className="card-body">
+                <h2 className="card-title">日時の選択</h2>
+                <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
 
-              <div className="flex flex-col gap-2 mt-4">
-                <div className="flex justify-center">
+                <div className="card-actions justify-center">
                   <Button
                     onClick={handleSearch}
                     disabled={!selectedDateTime}
@@ -502,18 +506,20 @@ export default function Home() {
               </div>
             </div>
 
-            <ResetButton onReset={resetSearch} className="mt-4" />
+            <ResetButton onReset={resetSearch} />
           </>
         ) : (
           <>
-            <ResetButton onReset={resetSearch} className="mb-4" />
+            <ResetButton onReset={resetSearch} />
 
             {error ? (
-              <div className="alert alert-error mb-4">{error}</div>
+              <div className="alert alert-error">{error}</div>
             ) : routeLoading ? (
-              <div className="text-center py-8">
-                <span className="loading loading-spinner loading-lg"></span>
-                <p className="mt-2">経路を検索中...</p>
+              <div className="card">
+                <div className="card-body items-center text-center">
+                  <span className="loading loading-spinner loading-lg"></span>
+                  <p>経路を検索中...</p>
+                </div>
               </div>
             ) : routeInfo ? (
               <div>
@@ -533,23 +539,24 @@ export default function Home() {
             ) : null}
           </>
         )}
+        <div className="card bg-base-200/70 shadow-md">
+          <div className="card-body text-center text-xs">
+            <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
+            <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>
+            <p>
+              <a
+                href="https://lin.ee/CgIBOSd"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link link-primary"
+              >
+                千代田区公式LINE
+              </a>
+              で最新の運行情報を確認できます
+            </p>
+          </div>
+        </div>
       </div>
-
-      <footer className="text-center mt-8 mb-4 text-sm text-gray-600 bg-white/60 backdrop-blur-sm p-4 rounded-lg shadow-sm mx-auto max-w-md border border-gray-100">
-        <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
-        <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>
-        <p className="mt-2">
-          <a
-            href="https://lin.ee/CgIBOSd"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:text-indigo-600 font-medium transition-colors"
-          >
-            千代田区公式LINE
-          </a>
-          で最新の運行情報を確認できます
-        </p>
-      </footer>
 
       {/* レート制限モーダル */}
       <RateLimitModal

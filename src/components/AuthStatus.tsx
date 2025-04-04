@@ -88,25 +88,26 @@ export default function AuthStatus({ onLoginClick }: AuthStatusProps) {
   }, []);
 
   if (loading) {
-    return <div className="text-sm text-gray-500">読み込み中...</div>;
+    return <div className="badge badge-ghost">読み込み中...</div>;
   }
 
   if (!isLoggedIn) {
     return (
-      <div className="flex items-center space-x-2">
-        <span className="text-sm text-gray-500">未ログイン</span>
+      <div className="flex items-center gap-2">
+        <span className="badge badge-ghost">未ログイン</span>
         <Button
           onClick={() => {
             // 支援者登録モーダルを開く
             const event = new CustomEvent("open-supporter-modal");
             window.dispatchEvent(event);
           }}
-          className="text-sm py-1 px-2 bg-white text-blue-600 border border-blue-200"
+          secondary
+          className="btn-sm"
         >
           私は支援者です
         </Button>
         {onLoginClick && (
-          <Button onClick={onLoginClick} className="text-sm py-1 px-2">
+          <Button onClick={onLoginClick} className="btn-sm">
             支援者登録
           </Button>
         )}
@@ -115,24 +116,18 @@ export default function AuthStatus({ onLoginClick }: AuthStatusProps) {
   }
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-      <div className="text-sm">
-        <span className="text-gray-600 mr-1">ログイン中:</span>
-        <span
-          className={`font-medium ${
-            isSupporter ? "text-green-600" : "text-gray-700"
-          }`}
-        >
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+      <div>
+        <span className="opacity-70 mr-1">ログイン中:</span>
+        <span className={isSupporter ? "text-success font-medium" : ""}>
           {email}
         </span>
         {isSupporter && (
-          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            支援者
-          </span>
+          <span className="badge badge-success ml-2">支援者</span>
         )}
       </div>
 
-      <Button onClick={handleLogout} className="text-sm py-1 px-3">
+      <Button onClick={handleLogout} secondary className="btn-sm">
         ログアウト
       </Button>
     </div>

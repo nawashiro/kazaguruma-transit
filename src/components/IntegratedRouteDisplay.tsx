@@ -146,9 +146,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
         <div className="text-center">
           <h3 className="text-xl font-bold mb-2">ルートが見つかりません</h3>
           <p>この2つの地点を結ぶルートが見つかりませんでした</p>
-          <p className="mt-2">
-            最寄りのバス停まで歩くか、別の交通手段をご検討ください
-          </p>
+          <p className="mt-2">別の交通手段をご検討ください</p>
         </div>
       ) : (
         // ルートが見つかった場合
@@ -160,7 +158,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 href={originToStopMapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-sm btn-outline btn-primary underline"
+                className="link link-primary text-sm"
               >
                 出発地 → {originStop.stopName} Googleマップ
               </a>
@@ -202,7 +200,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                     </div>
 
                     {/* ルート情報 */}
-                    <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
+                    <div className="flex items-center my-3">
                       <div className="badge badge-primary mr-2">
                         {route.routeShortName}
                       </div>
@@ -287,7 +285,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                             </div>
 
                             {/* 次のルート情報 */}
-                            <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
+                            <div className="flex items-center my-3">
                               <div className="badge badge-primary mr-2">
                                 {transfer.nextRoute.routeShortName}
                               </div>
@@ -334,7 +332,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 href={stopToDestinationMapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-sm btn-outline btn-primary underline"
+                className="link link-primary text-sm"
               >
                 {destinationStop.stopName} → 目的地 Googleマップ
               </a>

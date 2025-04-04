@@ -83,39 +83,41 @@ export default function DestinationSelector({
 
   return (
     <>
-      <div className="bg-base-200/70 p-4 rounded-lg shadow-md backdrop-blur-sm border border-gray-100">
-        <h2 className="text-xl font-bold mb-4">目的地を選択してください</h2>
+      <div className="ard bg-base-200 shadow-lg mb-6">
+        <div className="card-body">
+          <h2 className="card-title">目的地を選択してください</h2>
 
-        {error && (
-          <div className="alert alert-error mb-4" data-testid="error-message">
-            <span>{error}</span>
-          </div>
-        )}
+          {error && (
+            <div className="alert alert-error" data-testid="error-message">
+              <span>{error}</span>
+            </div>
+          )}
 
-        <LocationSuggestions onLocationSelected={handleLocationSelected} />
+          <LocationSuggestions onLocationSelected={handleLocationSelected} />
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <InputField
-            label="目的地の住所や場所"
-            placeholder="神田駿河台"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            disabled={loading}
-            testId="address-input"
-            required
-          />
-
-          <div className="flex justify-center">
-            <Button
-              type="submit"
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <InputField
+              label="目的地の住所や場所"
+              placeholder="神田駿河台"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
               disabled={loading}
-              loading={loading}
-              testId="search-button"
-            >
-              検索
-            </Button>
-          </div>
-        </form>
+              testId="address-input"
+              required
+            />
+
+            <div className="card-actions justify-center">
+              <Button
+                type="submit"
+                disabled={loading}
+                loading={loading}
+                testId="search-button"
+              >
+                検索
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
 
       {/* レート制限モーダル */}

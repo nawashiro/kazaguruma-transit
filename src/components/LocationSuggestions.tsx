@@ -28,11 +28,6 @@ export default function LocationSuggestions({
         const data = await loadAddressData();
         setCategories(data);
         setError(null);
-
-        // 最初のカテゴリを自動的に開く
-        if (data.length > 0) {
-          setActiveCategory(data[0].category);
-        }
       } catch (err) {
         setError("住所データの読み込みに失敗しました");
         console.error(err);
@@ -99,9 +94,7 @@ export default function LocationSuggestions({
   return (
     <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden">
       <div className="card-body p-4">
-        <h2 className="card-title justify-center text-2xl font-bold mb-4 text-primary">
-          よく利用される施設から選択
-        </h2>
+        <h2 className="card-title">よく利用される施設から選択</h2>
 
         <div className="flex flex-row flex-wrap gap-2 mb-4">
           {categories.map((category) => {
@@ -112,7 +105,7 @@ export default function LocationSuggestions({
                   ${
                     activeCategory === category.category
                       ? "btn-primary border-primary text-primary-content"
-                      : "btn-ghost border-base-200 hover:border-primary/50 hover:bg-primary/5"
+                      : "btn-outline hover:border-primary/50 hover:bg-primary/5"
                   }
                 `}
                 onClick={() => toggleCategory(category.category)}
@@ -125,42 +118,42 @@ export default function LocationSuggestions({
 
         {activeCategory && (
           <div className="bg-base-200 rounded-box p-3 animate-fadeIn max-h-64 overflow-y-auto">
-            <div className="flex flex-col gap-2">
+            <ul className="menu w-full">
               {categories
                 .find((c) => c.category === activeCategory)!
                 .locations.map((location) => (
-                  <button
-                    key={location.name}
-                    className="btn btn-sm h-auto min-h-0 py-2 btn-outline btn-primary justify-start normal-case w-full"
-                    onClick={() => handleLocationSelect(location)}
-                    title={location.name}
-                  >
-                    <div className="flex items-center w-full overflow-hidden">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 mr-2 flex-shrink-0"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                      <span className="truncate">{location.name}</span>
-                    </div>
-                  </button>
+                  <li key={location.name}>
+                    <button
+                      onClick={() => handleLocationSelect(location)}
+                      title={location.name}
+                    >
+                      <div className="flex items-center w-full overflow-hidden">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4 mr-2 flex-shrink-0"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                        <span className="truncate">{location.name}</span>
+                      </div>
+                    </button>
+                  </li>
                 ))}
-            </div>
+            </ul>
           </div>
         )}
       </div>

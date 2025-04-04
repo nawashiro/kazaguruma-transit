@@ -25,16 +25,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" data-theme="light">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <div className="flex flex-col min-h-screen">
           <div className="flex-grow">{children}</div>
-          <div className="container mx-auto px-4 py-2 border-t">
-            <div className="flex justify-end">
+          <footer className="footer px-4 py-2">
+            <div className="justify-self-end">
               <AuthStatus />
             </div>
-          </div>
+          </footer>
         </div>
       </body>
     </html>

@@ -32,7 +32,7 @@ export default function InputField({
       )}
       <input
         type={type}
-        className="input input-bordered w-full bg-base-100 border border-base-200 rounded-md focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200"
+        className="input w-full"
         placeholder={placeholder}
         value={value}
         onChange={onChange}

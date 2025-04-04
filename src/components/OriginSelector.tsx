@@ -131,7 +131,7 @@ export default function OriginSelector({
 
   return (
     <>
-      <div className="bg-base-200/70 p-4 rounded-lg shadow-md backdrop-blur-sm border border-gray-100">
+      <div className="card bg-base-200/70 p-4 shadow-md">
         <h2 className="text-xl font-bold mb-4">次に出発地を選択してください</h2>
 
         {error && (

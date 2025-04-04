@@ -10,7 +10,7 @@ alwaysApply: true
 クライアントのスタイリングはdaisyuiを使用します。
 transitライブラリやgtfsライブラリを使用しています。ここに関わる処理を書くときは必ずインターネットからドキュメントを参照してください。
 npm run devする前に既存のnodeをkillすることを忘れないでください。
-PowerShellを使用しています。
+コマンドラインはWindows PowerShellを使用しています。
 
 ## 報告
 

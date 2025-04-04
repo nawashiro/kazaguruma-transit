@@ -13,7 +13,9 @@ export interface AddressCategory {
 
 export async function loadAddressData(): Promise<AddressCategory[]> {
   try {
-    const response = await fetch("/address.json");
+    const response = await fetch(
+      "https://raw.githubusercontent.com/nawashiro/chiyoda_city_main_facilities/refs/heads/main/kazaguruma_json/main_facilities.json"
+    );
     if (!response.ok) {
       throw new Error("住所データの取得に失敗しました");
     }

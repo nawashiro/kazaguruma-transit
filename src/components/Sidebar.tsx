@@ -9,9 +9,9 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   return (
-    <div className="h-full bg-base-200 w-80">
+    <div className="h-full bg-base-200 w-80 border-r">
       <div className="p-4">
-        <ul className="menu bg-base-200 w-full">
+        <ul className="menu bg-base-200 w-full text-xl">
           <li>
             <Link href="/" onClick={toggleSidebar}>
               ホーム

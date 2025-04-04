@@ -97,7 +97,7 @@ export default function DestinationSelector({
         <form onSubmit={handleSubmit} className="space-y-4">
           <InputField
             label="目的地の住所や場所"
-            placeholder="千代田区 神田駿河台"
+            placeholder="神田駿河台"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             disabled={loading}

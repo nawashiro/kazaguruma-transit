@@ -22,6 +22,11 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
               はじめての方へ
             </Link>
           </li>
+          <li>
+            <Link href="/locations" onClick={toggleSidebar}>
+              場所をさがす
+            </Link>
+          </li>
         </ul>
       </div>
     </div>

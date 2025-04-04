@@ -138,6 +138,38 @@ export default function Home() {
     };
   }, []);
 
+  // URLパラメータから目的地情報を読み取る
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const destinationParam = params.get("destination");
+
+      if (destinationParam) {
+        try {
+          const destinationObj = JSON.parse(
+            decodeURIComponent(destinationParam)
+          );
+          if (
+            destinationObj &&
+            destinationObj.lat &&
+            destinationObj.lng &&
+            destinationObj.address
+          ) {
+            setSelectedDestination(destinationObj);
+            // URLからパラメータを削除（ブラウザ履歴に残さない）
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname
+            );
+          }
+        } catch (err) {
+          console.error("目的地情報の解析に失敗しました:", err);
+        }
+      }
+    }
+  }, []);
+
   const handleOriginSelected = (location: Location) => {
     setSelectedOrigin(location);
     // 選択値をリセット

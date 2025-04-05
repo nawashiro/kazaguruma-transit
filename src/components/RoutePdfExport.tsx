@@ -1,9 +1,14 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useReactToPrint } from "react-to-print";
 import { logger } from "../utils/logger";
 import { Departure } from "../types/transit";
+import {
+  generateStaticMapWithDirectionsUrl,
+  generateStaticMapWithPolylineUrl,
+  getDirectionsPolyline,
+} from "../utils/maps";
 
 // IntegratedRouteDisplayと同様の型定義を使用
 interface StopInfo {
@@ -59,45 +64,16 @@ const formatTimeDisplay = (time: string) => {
   return match ? match[1] : time;
 };
 
-// Google Maps Static API用の関数
-const generateStaticMapUrl = (
-  startLat: number,
-  startLng: number,
-  endLat: number,
-  endLng: number,
-  width: number = 400,
-  height: number = 200
-): string => {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-  // パスパラメータ (青い線で経路を表す)
-  const path = `color:0x0000ff|weight:5|${startLat},${startLng}|${endLat},${endLng}`;
-
-  // マーカーパラメータ (始点と終点にマーカーを表示)
-  const markers = [
-    `color:green|label:S|${startLat},${startLng}`,
-    `color:red|label:E|${endLat},${endLng}`,
-  ];
-
-  // URLを文字列で構築
-  let urlString = "https://maps.googleapis.com/maps/api/staticmap";
-  urlString += `?size=${width}x${height}`;
-  urlString += `&path=${encodeURIComponent(path)}`;
-
-  // マーカーを追加
-  markers.forEach((marker) => {
-    urlString += `&markers=${encodeURIComponent(marker)}`;
-  });
-
-  // APIキーとスケールを追加
-  urlString += `&key=${apiKey || ""}`;
-  urlString += `&scale=2`; // 高解像度画像のためのスケール
-
-  return urlString;
-};
-
 // PDF出力用のコンポーネント - DaisyUIのクラスを使用
 const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
+  // 地図のポリラインデータ状態
+  const [originToStopPolyline, setOriginToStopPolyline] = useState<
+    string | null
+  >(null);
+  const [stopToDestPolyline, setStopToDestPolyline] = useState<string | null>(
+    null
+  );
+
   // 現在の日付を取得
   const today = new Date();
   const formattedDate = `${today.getFullYear()}年${
@@ -136,6 +112,77 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
     }
   };
 
+  // Directions APIからポリラインを取得
+  useEffect(() => {
+    // 出発地→バス停のポリライン取得
+    const fetchOriginToStopPolyline = async () => {
+      if (
+        props.originLat &&
+        props.originLng &&
+        (props.originStop.stop_lat !== undefined ||
+          props.originStop.lat !== undefined) &&
+        (props.originStop.stop_lon !== undefined ||
+          props.originStop.lng !== undefined)
+      ) {
+        try {
+          const polyline = await getDirectionsPolyline(
+            props.originLat,
+            props.originLng,
+            Number(props.originStop.stop_lat ?? props.originStop.lat ?? 0),
+            Number(props.originStop.stop_lon ?? props.originStop.lng ?? 0)
+          );
+
+          if (polyline) {
+            setOriginToStopPolyline(polyline);
+          }
+        } catch (error) {
+          logger.log("経路ポリライン取得エラー (出発地→バス停):", error);
+        }
+      }
+    };
+
+    // バス停→目的地のポリライン取得
+    const fetchStopToDestPolyline = async () => {
+      if (
+        props.destLat &&
+        props.destLng &&
+        (props.destinationStop.stop_lat !== undefined ||
+          props.destinationStop.lat !== undefined) &&
+        (props.destinationStop.stop_lon !== undefined ||
+          props.destinationStop.lng !== undefined)
+      ) {
+        try {
+          const polyline = await getDirectionsPolyline(
+            Number(
+              props.destinationStop.stop_lat ?? props.destinationStop.lat ?? 0
+            ),
+            Number(
+              props.destinationStop.stop_lon ?? props.destinationStop.lng ?? 0
+            ),
+            props.destLat,
+            props.destLng
+          );
+
+          if (polyline) {
+            setStopToDestPolyline(polyline);
+          }
+        } catch (error) {
+          logger.log("経路ポリライン取得エラー (バス停→目的地):", error);
+        }
+      }
+    };
+
+    fetchOriginToStopPolyline();
+    fetchStopToDestPolyline();
+  }, [
+    props.originLat,
+    props.originLng,
+    props.destLat,
+    props.destLng,
+    props.originStop,
+    props.destinationStop,
+  ]);
+
   // 地図画像のURL生成
   const originToStopMapUrl =
     props.originLat &&
@@ -144,14 +191,24 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
       props.originStop.lat !== undefined) &&
     (props.originStop.stop_lon !== undefined ||
       props.originStop.lng !== undefined)
-      ? generateStaticMapUrl(
-          props.originLat,
-          props.originLng,
-          Number(props.originStop.stop_lat ?? props.originStop.lat ?? 0),
-          Number(props.originStop.stop_lon ?? props.originStop.lng ?? 0),
-          600, // 幅
-          200 // 高さ
-        )
+      ? originToStopPolyline
+        ? generateStaticMapWithPolylineUrl(
+            props.originLat,
+            props.originLng,
+            Number(props.originStop.stop_lat ?? props.originStop.lat ?? 0),
+            Number(props.originStop.stop_lon ?? props.originStop.lng ?? 0),
+            originToStopPolyline,
+            600, // 幅
+            200 // 高さ
+          )
+        : generateStaticMapWithDirectionsUrl(
+            props.originLat,
+            props.originLng,
+            Number(props.originStop.stop_lat ?? props.originStop.lat ?? 0),
+            Number(props.originStop.stop_lon ?? props.originStop.lng ?? 0),
+            600, // 幅
+            200 // 高さ
+          )
       : null;
 
   const stopToDestMapUrl =
@@ -161,18 +218,32 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
       props.destinationStop.lat !== undefined) &&
     (props.destinationStop.stop_lon !== undefined ||
       props.destinationStop.lng !== undefined)
-      ? generateStaticMapUrl(
-          Number(
-            props.destinationStop.stop_lat ?? props.destinationStop.lat ?? 0
-          ),
-          Number(
-            props.destinationStop.stop_lon ?? props.destinationStop.lng ?? 0
-          ),
-          props.destLat,
-          props.destLng,
-          600, // 幅
-          200 // 高さ
-        )
+      ? stopToDestPolyline
+        ? generateStaticMapWithPolylineUrl(
+            Number(
+              props.destinationStop.stop_lat ?? props.destinationStop.lat ?? 0
+            ),
+            Number(
+              props.destinationStop.stop_lon ?? props.destinationStop.lng ?? 0
+            ),
+            props.destLat,
+            props.destLng,
+            stopToDestPolyline,
+            600, // 幅
+            200 // 高さ
+          )
+        : generateStaticMapWithDirectionsUrl(
+            Number(
+              props.destinationStop.stop_lat ?? props.destinationStop.lat ?? 0
+            ),
+            Number(
+              props.destinationStop.stop_lon ?? props.destinationStop.lng ?? 0
+            ),
+            props.destLat,
+            props.destLng,
+            600, // 幅
+            200 // 高さ
+          )
       : null;
 
   // ルートが見つからない場合のレンダリング
@@ -200,7 +271,7 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
   }
 
   return (
-    <div className="bg-white space-y-4 p-16">
+    <div className="bg-white space-y-4 p-8 px-32">
       <div className="text-center">
         <p className="mt-2 text-lg">{formattedDate}</p>
       </div>
@@ -208,9 +279,6 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
       {/* 出発地から停留所への地図 */}
       {originToStopMapUrl && (
         <div className="map-container mx-auto" style={{ maxWidth: "600px" }}>
-          <p className="text-center font-bold mb-1">
-            出発地 → {props.originStop.stopName}
-          </p>
           <img
             src={originToStopMapUrl}
             alt={`出発地から${props.originStop.stopName}までの経路`}
@@ -355,9 +423,6 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
       {/* 停留所から目的地への地図 */}
       {stopToDestMapUrl && (
         <div className="map-container mx-auto" style={{ maxWidth: "600px" }}>
-          <p className="text-center font-bold mb-1">
-            {props.destinationStop.stopName} → 目的地
-          </p>
           <img
             src={stopToDestMapUrl}
             alt={`${props.destinationStop.stopName}から目的地までの経路`}

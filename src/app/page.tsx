@@ -5,6 +5,7 @@ import DateTimeSelector from "../components/DateTimeSelector";
 import OriginSelector from "../components/OriginSelector";
 import DestinationSelector from "../components/DestinationSelector";
 import IntegratedRouteDisplay from "../components/IntegratedRouteDisplay";
+import RoutePdfExport from "../components/RoutePdfExport";
 import Button from "../components/common/Button";
 import ResetButton from "../components/common/ResetButton";
 import { TransitFormData, Location } from "../types/transit";
@@ -567,6 +568,23 @@ export default function Home() {
                   destLat={selectedDestination.lat}
                   destLng={selectedDestination.lng}
                 />
+
+                {/* PDF出力ボタンを追加 */}
+                {routeInfo.type !== "none" && (
+                  <div className="mt-4">
+                    <RoutePdfExport
+                      originStop={routeInfo.originStop}
+                      destinationStop={routeInfo.destinationStop}
+                      routes={routeInfo.routes}
+                      type={routeInfo.type}
+                      transfers={routeInfo.transfers}
+                      originLat={selectedOrigin.lat}
+                      originLng={selectedOrigin.lng}
+                      destLat={selectedDestination.lat}
+                      destLng={selectedDestination.lng}
+                    />
+                  </div>
+                )}
               </div>
             ) : null}
           </>

@@ -73,8 +73,8 @@ export function generateStaticMapWithDirectionsUrl(
 }
 
 /**
- * Google Maps Directions APIから実際のポリラインデータを取得する関数
- * 注: このAPI呼び出しはAPIキーが露出するためサーバーサイドで行うことをお勧めします
+ * サーバーサイドAPIを介してGoogle Maps Directions APIのポリラインデータを取得する関数
+ * 注: この実装ではAPIキーの露出を防ぐため、サーバーサイドAPIエンドポイント(/api/directions)を使用しています
  */
 export async function getDirectionsPolyline(
   startLat: number,

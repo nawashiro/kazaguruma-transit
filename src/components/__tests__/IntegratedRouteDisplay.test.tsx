@@ -109,7 +109,7 @@ describe("IntegratedRouteDisplay", () => {
     expect(screen.getByText("出発地〜乗換地ルート")).toBeInTheDocument();
 
     // 乗換情報をチェック
-    expect(screen.getByText("乗換")).toBeInTheDocument();
+    expect(screen.getByText("ここで乗り換え")).toBeInTheDocument();
     expect(screen.getAllByText("乗換バス停").length).toBeGreaterThan(0);
 
     // 乗換後のルート情報と時刻をチェック
@@ -173,6 +173,8 @@ describe("IntegratedRouteDisplay", () => {
     expect(
       screen.getByText("この2つの地点を結ぶルートが見つかりませんでした")
     ).toBeInTheDocument();
-    expect(screen.getByText(/最寄りのバス停まで歩くか/)).toBeInTheDocument();
+    expect(
+      screen.getByText("別の交通手段をご検討ください")
+    ).toBeInTheDocument();
   });
 });

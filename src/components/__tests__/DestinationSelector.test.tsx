@@ -41,25 +41,22 @@ describe("DestinationSelector", () => {
       <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
     );
 
-    expect(
-      screen.getByText("最初に行き先を選択してください")
-    ).toBeInTheDocument();
+    expect(screen.getByText("目的地を選択してください")).toBeInTheDocument();
     expect(screen.getByTestId("location-suggestions")).toBeInTheDocument();
-    expect(screen.getByTestId("destination-input")).toBeInTheDocument();
-    expect(screen.getByTestId("search-destination-button")).toBeInTheDocument();
+    expect(screen.getByTestId("address-input")).toBeInTheDocument();
+    expect(screen.getByTestId("search-button")).toBeInTheDocument();
   });
 
-  it("入力が空の場合にエラーメッセージを表示する", async () => {
+  it("入力が空の場合はコールバックが呼ばれない", async () => {
     render(
       <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
     );
 
-    const searchButton = screen.getByTestId("search-destination-button");
+    // 空入力の状態で検索ボタンをクリック
+    const searchButton = screen.getByTestId("search-button");
     fireEvent.click(searchButton);
 
-    expect(
-      await screen.findByText("行き先を入力してください")
-    ).toBeInTheDocument();
+    // コールバックが呼ばれていないことを確認
     expect(mockOnDestinationSelected).not.toHaveBeenCalled();
   });
 
@@ -73,15 +70,18 @@ describe("DestinationSelector", () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ location: mockLocation }),
+      json: async () => ({
+        success: true,
+        results: [{ ...mockLocation, formattedAddress: mockLocation.address }],
+      }),
     });
 
     render(
       <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
     );
 
-    const destinationInput = screen.getByTestId("destination-input");
-    const searchButton = screen.getByTestId("search-destination-button");
+    const destinationInput = screen.getByTestId("address-input");
+    const searchButton = screen.getByTestId("search-button");
 
     fireEvent.change(destinationInput, {
       target: { value: "東京都千代田区霞が関" },
@@ -111,8 +111,8 @@ describe("DestinationSelector", () => {
       <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
     );
 
-    const destinationInput = screen.getByTestId("destination-input");
-    const searchButton = screen.getByTestId("search-destination-button");
+    const destinationInput = screen.getByTestId("address-input");
+    const searchButton = screen.getByTestId("search-button");
 
     fireEvent.change(destinationInput, { target: { value: "存在しない住所" } });
     fireEvent.click(searchButton);

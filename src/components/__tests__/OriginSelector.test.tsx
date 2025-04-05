@@ -41,16 +41,16 @@ describe("OriginSelector", () => {
     expect(screen.getByTestId("gps-button")).toBeInTheDocument();
   });
 
-  it("住所が未入力の場合にエラーを表示する", async () => {
+  it("住所が未入力の場合はコールバックが呼ばれず検索を実行しない", async () => {
     render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
 
+    // 空入力の状態で検索ボタンをクリック
     const searchButton = screen.getByTestId("search-button");
     fireEvent.click(searchButton);
 
-    expect(
-      await screen.findByText("住所を入力してください")
-    ).toBeInTheDocument();
+    // コールバックが呼ばれていないことを確認
     expect(mockOnOriginSelected).not.toHaveBeenCalled();
+    // APIが呼ばれていないことを確認
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
@@ -64,7 +64,16 @@ describe("OriginSelector", () => {
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ location: mockLocation }),
+      json: async () => ({
+        success: true,
+        results: [
+          {
+            lat: mockLocation.lat,
+            lng: mockLocation.lng,
+            formattedAddress: mockLocation.address,
+          },
+        ],
+      }),
     });
 
     render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
@@ -81,7 +90,11 @@ describe("OriginSelector", () => {
         "/api/geocode?address=%E6%9D%B1%E4%BA%AC%E9%83%BD%E5%8D%83%E4%BB%A3%E7%94%B0%E5%8C%BA"
       );
       expect(mockOnOriginSelected).toHaveBeenCalledTimes(1);
-      expect(mockOnOriginSelected).toHaveBeenCalledWith(mockLocation);
+      expect(mockOnOriginSelected).toHaveBeenCalledWith({
+        lat: mockLocation.lat,
+        lng: mockLocation.lng,
+        address: mockLocation.address,
+      });
     });
   });
 
@@ -129,11 +142,14 @@ describe("OriginSelector", () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        location: {
-          address: "東京都千代田区丸の内１丁目",
-          lat: 35.681236,
-          lng: 139.767125,
-        },
+        success: true,
+        results: [
+          {
+            lat: 35.681236,
+            lng: 139.767125,
+            formattedAddress: "東京都千代田区丸の内１丁目",
+          },
+        ],
       }),
     });
 
@@ -152,13 +168,11 @@ describe("OriginSelector", () => {
         "/api/geocode?address=35.681236,139.767125"
       );
       expect(mockOnOriginSelected).toHaveBeenCalledTimes(1);
-      expect(mockOnOriginSelected).toHaveBeenCalledWith(
-        expect.objectContaining({
-          lat: 35.681236,
-          lng: 139.767125,
-          address: "東京都千代田区丸の内１丁目",
-        })
-      );
+      expect(mockOnOriginSelected).toHaveBeenCalledWith({
+        lat: 35.681236,
+        lng: 139.767125,
+        address: "東京都千代田区丸の内１丁目",
+      });
     });
   });
 

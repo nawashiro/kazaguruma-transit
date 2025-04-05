@@ -78,9 +78,29 @@ export default function LocationsPage() {
   const toggleCategory = (category: string) => {
     if (activeCategory === category) {
       setActiveCategory(null);
+      setSortedByDistance(false);
     } else {
       setActiveCategory(category);
-      setSortedByDistance(false);
+      if (sortedByDistance && currentPosition) {
+        const categoryLocations =
+          categories.find((c) => c.category === category)?.locations || [];
+
+        const locationsWithDistance = categoryLocations.map((location) => {
+          const distance = calculateDistance(
+            currentPosition.lat,
+            currentPosition.lng,
+            location.lat,
+            location.lng
+          );
+          return { ...location, distance };
+        });
+
+        const sorted = [...locationsWithDistance].sort(
+          (a, b) => (a.distance || Infinity) - (b.distance || Infinity)
+        );
+
+        setLocationsSorted(sorted);
+      }
     }
   };
 
@@ -208,6 +228,35 @@ export default function LocationsPage() {
         <p className="mt-2 text-xl">カテゴリから探す</p>
       </header>
 
+      <div className="mb-4 space-y-4">
+        {!sortedByDistance ? (
+          <button
+            className="btn btn-outline"
+            onClick={sortByDistance}
+            disabled={positionLoading || !activeCategory}
+          >
+            {positionLoading ? (
+              <>
+                <span className="loading loading-spinner loading-xs"></span>
+                位置情報取得中...
+              </>
+            ) : (
+              "近い順に並べ替える"
+            )}
+          </button>
+        ) : (
+          <button
+            className="btn btn-outline"
+            onClick={() => setSortedByDistance(false)}
+          >
+            通常表示に戻す
+          </button>
+        )}
+        <p className="text-sm text-gray-500">
+          スマホから利用しないと正確な位置情報が取得できない可能性があります。
+        </p>
+      </div>
+
       <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden">
         <div className="card-body p-4">
           <h2 className="card-title">カテゴリを選択</h2>
@@ -234,35 +283,6 @@ export default function LocationsPage() {
 
       {activeCategory && (
         <div className="animate-fadeIn">
-          <div className="items-center mb-4 space-y-4">
-            {!sortedByDistance ? (
-              <button
-                className="btn btn-outline"
-                onClick={sortByDistance}
-                disabled={positionLoading}
-              >
-                {positionLoading ? (
-                  <>
-                    <span className="loading loading-spinner loading-xs"></span>
-                    位置情報取得中...
-                  </>
-                ) : (
-                  "近い順に並べ替える"
-                )}
-              </button>
-            ) : (
-              <button
-                className="btn btn-outline"
-                onClick={() => setSortedByDistance(false)}
-              >
-                通常表示に戻す
-              </button>
-            )}
-            <p>
-              スマホから利用しないと正確な位置情報が取得できない可能性があります。
-            </p>
-          </div>
-
           {sortedByDistance ? (
             // 位置情報に基づいてソートされた表示
             <div>

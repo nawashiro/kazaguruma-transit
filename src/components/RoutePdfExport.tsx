@@ -4,7 +4,6 @@ import React, { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
 import { logger } from "../utils/logger";
 import { Departure } from "../types/transit";
-import IntegratedRouteDisplay from "./IntegratedRouteDisplay";
 
 // IntegratedRouteDisplayと同様の型定義を使用
 interface StopInfo {
@@ -68,36 +67,218 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
     today.getMonth() + 1
   }月${today.getDate()}日`;
 
+  // 出発時刻を取得する関数
+  const getDepartureTime = (stopId: string, routeId?: string) => {
+    return (
+      props.routes.find((r) => r.routeId === routeId)?.departureTime ||
+      "時刻不明"
+    );
+  };
+
+  // 到着時刻を計算する関数 (出発時刻 + 所要時間の概算)
+  const getArrivalTime = (
+    departureTime: string | undefined,
+    durationMinutes: number = 30
+  ) => {
+    if (!departureTime || departureTime === "時刻不明") return "時刻不明";
+
+    try {
+      const [hours, minutes] = departureTime.split(":").map(Number);
+      let arrivalMinutes = minutes + durationMinutes;
+      let arrivalHours = hours + Math.floor(arrivalMinutes / 60);
+      arrivalMinutes = arrivalMinutes % 60;
+
+      // 24時間表記に調整
+      arrivalHours = arrivalHours % 24;
+
+      return `${arrivalHours.toString().padStart(2, "0")}:${arrivalMinutes
+        .toString()
+        .padStart(2, "0")}`;
+    } catch (e) {
+      return "時刻不明";
+    }
+  };
+
   return (
-    <div className="print-content">
-      <div className="text-center my-4">
-        <h1 className="text-3xl font-bold text-primary">乗り換え案内</h1>
+    <div className="bg-white space-y-4">
+      <div className="text-center">
         <p className="mt-2 text-lg">{formattedDate}</p>
       </div>
 
-      {/* 画面表示と同じコンポーネントを使用 */}
-      <div className="print-content">
-        <IntegratedRouteDisplay {...props} />
-      </div>
-
-      <div className="card bg-base-200/70 shadow-md mt-6">
-        <div className="card-body text-center text-xs">
-          <p>千代田区福祉交通「風ぐるま」乗り換え案内</p>
-          <p>
-            ※この案内は参考情報です。実際の運行状況は各事業者にご確認ください。
-          </p>
-          <p>
-            <a
-              href="https://lin.ee/CgIBOSd"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link link-primary"
-            >
-              千代田区公式LINE
-            </a>
-            で最新の運行情報を確認できます
-          </p>
+      {/* 画面表示と同じコンポーネント内容を実装 */}
+      {props.type === "none" ? (
+        // ルートが見つからない場合の表示
+        <div className="text-center space-y-2">
+          <h3 className="text-xl font-bold">ルートが見つかりません</h3>
+          <p>この2つの地点を結ぶルートが見つかりませんでした</p>
+          <p>別の交通手段をご検討ください</p>
         </div>
+      ) : (
+        // ルートが見つかった場合
+        <div>
+          {props.routes.map((route, index) => {
+            // 各ルートの時刻を計算
+            const departureTime =
+              route.departureTime ||
+              getDepartureTime(props.originStop.stopId, route.routeId || "");
+
+            const firstSegmentDuration = props.type === "direct" ? 45 : 30; // 直通か乗換かで所要時間を調整
+            const arrivalTime =
+              route.arrivalTime ||
+              getArrivalTime(departureTime, firstSegmentDuration);
+
+            return (
+              <div key={route.routeId} className="space-y-4 p-8">
+                {/* 最初のセグメント */}
+                <div className="card bg-base-100 shadow-sm mb-4 border-l-4 border-gray-400">
+                  <div className="card-body p-4">
+                    {/* 出発バス停と時刻 */}
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex-1">
+                        <div className="font-bold">
+                          {props.originStop.stopName}
+                        </div>
+                      </div>
+                      <div className="badge badge-outline badge-neutral text-lg p-3">
+                        {formatTimeDisplay(departureTime)}
+                      </div>
+                    </div>
+
+                    {/* ルート情報 */}
+                    <div className="flex items-center my-3">
+                      <div className="badge badge-outline badge-neutral mr-2">
+                        {route.routeShortName}
+                      </div>
+                      {route.routeLongName && (
+                        <div className="flex-1">{route.routeLongName}</div>
+                      )}
+                      {route.stopCount && (
+                        <div className="text-xs text-gray-500 ml-2">
+                          {`${route.stopCount}駅`}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 到着バス停と時刻（乗換がない場合は最終目的地） */}
+                    {!route.transfers || route.transfers.length === 0 ? (
+                      <div className="flex justify-between items-center">
+                        <div className="flex-1">
+                          <div className="font-bold">
+                            {props.destinationStop.stopName}
+                          </div>
+                        </div>
+                        <div className="badge badge-outline badge-neutral text-lg p-3">
+                          {formatTimeDisplay(arrivalTime)}
+                        </div>
+                      </div>
+                    ) : (
+                      // 乗換がある場合は乗換駅を表示
+                      <div className="flex justify-between items-center">
+                        <div className="flex-1">
+                          <div className="font-bold">
+                            {route.transfers[0].transferStop.stopName}
+                          </div>
+                        </div>
+                        <div className="badge badge-outline badge-neutral text-lg p-3">
+                          {formatTimeDisplay(arrivalTime)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 乗換情報（ある場合） */}
+                {route.transfers && route.transfers.length > 0 && (
+                  <>
+                    <div className="text-center my-4">
+                      <div className="inline-block bg-gray-100 px-4 py-2 rounded-full font-bold text-gray-800 border border-gray-300 shadow-sm">
+                        ここで乗り換え
+                      </div>
+                    </div>
+
+                    {route.transfers.map((transfer, tIndex) => {
+                      // 乗換後の時刻を計算
+                      const transferWaitTime = 15; // 乗換待ち時間（分）
+                      const transferDepartureTime = getArrivalTime(
+                        arrivalTime,
+                        transferWaitTime
+                      );
+                      const finalArrivalTime = getArrivalTime(
+                        transferDepartureTime,
+                        30
+                      ); // 乗換後の所要時間
+
+                      return (
+                        <div
+                          key={tIndex}
+                          className="card bg-base-100 shadow-sm mb-4 border-l-4 border-gray-400"
+                        >
+                          <div className="card-body p-4">
+                            {/* 乗換駅出発時刻 */}
+                            <div className="flex justify-between items-center mb-2">
+                              <div className="flex-1">
+                                <div className="font-bold">
+                                  {transfer.transferStop.stopName}
+                                </div>
+                              </div>
+                              <div className="badge badge-outline badge-neutral text-lg p-3">
+                                {formatTimeDisplay(
+                                  transfer.nextRoute.departureTime ||
+                                    transferDepartureTime
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 次のルート情報 */}
+                            <div className="flex items-center my-3">
+                              <div className="badge badge-outline badge-neutral mr-2">
+                                {transfer.nextRoute.routeShortName}
+                              </div>
+                              {transfer.nextRoute.routeLongName && (
+                                <div className="flex-1">
+                                  {transfer.nextRoute.routeLongName}
+                                </div>
+                              )}
+                              {transfer.nextRoute.stopCount && (
+                                <div className="text-xs text-gray-500 ml-2">
+                                  {`${transfer.nextRoute.stopCount}駅`}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* 最終到着駅と時刻 */}
+                            <div className="flex justify-between items-center">
+                              <div className="flex-1">
+                                <div className="font-bold">
+                                  {props.destinationStop.stopName}
+                                </div>
+                              </div>
+                              <div className="badge badge-outline badge-neutral text-lg p-3">
+                                {formatTimeDisplay(
+                                  transfer.nextRoute.arrivalTime ||
+                                    finalArrivalTime
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="text-center text-xs space-y-2">
+        <img
+          src="/chiyoda_line_qr.png"
+          alt="千代田区公式LINE"
+          className="w-24 h-24 mx-auto"
+        />
+        <p>千代田区公式LINEで最新の運行情報を確認できます</p>
       </div>
     </div>
   );
@@ -124,6 +305,11 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
           break-inside: avoid;
           page-break-inside: avoid;
         }
+        /* ヘッダー・フッターを非表示 */
+        @page { margin: 0; }
+        html { margin: 0; }
+        /* about:srcdoc を非表示 */
+        .header, .footer, head { display: none !important; }
       }
     `,
     onPrintError: (errorLocation, error) => {

@@ -10,11 +10,6 @@ import {
   convertToLocation,
 } from "../../utils/addressLoader";
 
-// ロケーションの一意のキーを生成する関数
-const generateLocationKey = (location: KeyLocation): string => {
-  return `${location.name}_${location.lat}_${location.lng}`;
-};
-
 // 2点間の距離を計算する関数（ハーバーサイン公式）
 const calculateDistance = (
   lat1: number,
@@ -281,7 +276,7 @@ export default function LocationsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                       {locations.map((location) => (
                         <div
-                          key={generateLocationKey(location)}
+                          key={location.id}
                           className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow"
                         >
                           {location.imageUri && (
@@ -339,10 +334,23 @@ export default function LocationsPage() {
                                   tabIndex={0}
                                   className="dropdown-content z-[1] p-3 shadow-lg bg-base-200 rounded-box w-52"
                                 >
-                                  <p className="text-xs mb-1">データ提供:</p>
-                                  <p className="text-xs mb-2">
-                                    {location.copyright}
+                                  <p className="text-xs mb-1">
+                                    座標データ提供:
                                   </p>
+                                  <p className="text-xs mb-2">
+                                    {location.nodeCopyright}
+                                  </p>
+                                  {location.description &&
+                                    location.descriptionCopyright && (
+                                      <>
+                                        <p className="text-xs mb-1">
+                                          説明文提供:
+                                        </p>
+                                        <p className="text-xs mb-2">
+                                          {location.descriptionCopyright}
+                                        </p>
+                                      </>
+                                    )}
                                   <p className="text-xs mb-1">ライセンス:</p>
                                   <a
                                     href={location.licenceUri}
@@ -376,7 +384,7 @@ export default function LocationsPage() {
                 .find((c) => c.category === activeCategory)
                 ?.locations.map((location) => (
                   <div
-                    key={generateLocationKey(location)}
+                    key={location.id}
                     className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow"
                   >
                     {location.imageUri && (
@@ -429,8 +437,19 @@ export default function LocationsPage() {
                             tabIndex={0}
                             className="dropdown-content z-[1] p-3 shadow-lg bg-base-200 rounded-box w-52"
                           >
-                            <p className="text-xs mb-1">データ提供:</p>
-                            <p className="text-xs mb-2">{location.copyright}</p>
+                            <p className="text-xs mb-1">座標データ提供:</p>
+                            <p className="text-xs mb-2">
+                              {location.nodeCopyright}
+                            </p>
+                            {location.description &&
+                              location.descriptionCopyright && (
+                                <>
+                                  <p className="text-xs mb-1">説明文提供:</p>
+                                  <p className="text-xs mb-2">
+                                    {location.descriptionCopyright}
+                                  </p>
+                                </>
+                              )}
                             <p className="text-xs mb-1">ライセンス:</p>
                             <a
                               href={location.licenceUri}

@@ -13,11 +13,14 @@ export interface AddressCategory {
 
 // 主要施設データ用の拡張インターフェース
 export interface KeyLocation extends AddressLocation {
+  id: string;
   description: string | null;
+  descriptionCopyright: string | null;
   imageUri: string | null;
   imageCopylight: string | null;
   uri: string | null;
-  copyright: string;
+  nodeCopyright: string;
+  nodeSourceId: number | null;
   licence: string;
   licenceUri: string;
   [key: string]: any; // その他の属性（多言語名など）

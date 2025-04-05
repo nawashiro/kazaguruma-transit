@@ -152,7 +152,9 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
               <div className="card-body p-4">
                 {/* 出発バス停と時刻 */}
                 <div className="flex justify-between items-center mb-2">
-                  <div className="font-bold">{props.originStop.stopName}</div>
+                  <div className="text-lg font-bold">
+                    {props.originStop.stopName}
+                  </div>
                   <div className="badge badge-outline badge-neutral text-lg p-3">
                     {formatTimeDisplay(departureTime)}
                   </div>
@@ -173,7 +175,7 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
 
                 {/* 到着バス停と時刻 */}
                 <div className="flex justify-between items-center">
-                  <div className="font-bold">{destinationName}</div>
+                  <div className="text-lg font-bold">{destinationName}</div>
                   <div className="badge badge-outline badge-neutral text-lg p-3">
                     {formatTimeDisplay(arrivalTime)}
                   </div>
@@ -210,7 +212,7 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
                       <div className="card-body p-4">
                         {/* 乗換駅出発時刻 */}
                         <div className="flex justify-between items-center mb-2">
-                          <div className="font-bold">
+                          <div className="text-lg font-bold">
                             {transfer.transferStop.stopName}
                           </div>
                           <div className="badge badge-outline badge-neutral text-lg p-3">
@@ -240,7 +242,7 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
 
                         {/* 最終到着駅と時刻 */}
                         <div className="flex justify-between items-center">
-                          <div className="font-bold">
+                          <div className="text-lg font-bold">
                             {props.destinationStop.stopName}
                           </div>
                           <div className="badge badge-outline badge-neutral text-lg p-3">
@@ -313,21 +315,7 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
         className="btn btn-primary mt-4 flex items-center"
         aria-label="PDF出力"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-5 w-5 mr-2"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-        PDF出力 (A4)
+        だれかのために印刷する
       </button>
 
       {/* 印刷用コンテンツ（非表示） */}

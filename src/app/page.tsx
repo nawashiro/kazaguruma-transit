@@ -571,7 +571,7 @@ export default function Home() {
 
                 {/* PDF出力ボタンを追加 */}
                 {routeInfo.type !== "none" && (
-                  <div className="mt-4">
+                  <div className="mt-4 flex justify-center">
                     <RoutePdfExport
                       originStop={routeInfo.originStop}
                       destinationStop={routeInfo.destinationStop}

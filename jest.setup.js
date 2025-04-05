@@ -2,10 +2,11 @@
 // allows you to do things like:
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
-require("@testing-library/jest-dom");
+import "@testing-library/jest-dom";
 
 // Fetch APIのモック設定
-require("jest-fetch-mock").enableMocks();
+import { enableMocks } from "jest-fetch-mock";
+enableMocks();
 
 // コンポーネントテスト用のモック設定
 // NextResponseのモックは削除 - コンポーネントテストでは不要

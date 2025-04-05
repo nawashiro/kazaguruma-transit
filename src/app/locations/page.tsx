@@ -9,6 +9,7 @@ import {
   KeyLocation,
   convertToLocation,
 } from "../../utils/addressLoader";
+import { logger } from "../../utils/logger";
 
 // 2点間の距離を計算する関数（ハーバーサイン公式）
 const calculateDistance = (
@@ -57,6 +58,12 @@ export default function LocationsPage() {
   const [positionLoading, setPositionLoading] = useState(false);
   const router = useRouter();
 
+  // 住所検索のための状態
+  const [address, setAddress] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
+
   useEffect(() => {
     async function fetchLocationData() {
       try {
@@ -81,7 +88,9 @@ export default function LocationsPage() {
       setSortedByDistance(false);
     } else {
       setActiveCategory(category);
-      if (sortedByDistance && currentPosition) {
+      // 新しいカテゴリが選択されたが、現在地情報がある場合は距離順にソートする
+      if (currentPosition) {
+        // 現在地情報が存在する場合は、新しいカテゴリの施設も距離でソート
         const categoryLocations =
           categories.find((c) => c.category === category)?.locations || [];
 
@@ -100,6 +109,7 @@ export default function LocationsPage() {
         );
 
         setLocationsSorted(sorted);
+        setSortedByDistance(true);
       }
     }
   };
@@ -114,7 +124,10 @@ export default function LocationsPage() {
 
   const sortByDistance = () => {
     setPositionLoading(true);
-    setSortedByDistance(false);
+    // カテゴリが選択されていない場合はソート状態をリセットしない
+    if (activeCategory) {
+      setSortedByDistance(false);
+    }
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -145,21 +158,107 @@ export default function LocationsPage() {
 
             setLocationsSorted(sorted);
             setSortedByDistance(true);
-            setPositionLoading(false);
+          } else {
+            // カテゴリが選択されていない場合は成功メッセージで通知する
+            setSearchError(null); // 前のエラーをクリア
           }
+          setPositionLoading(false);
         },
         (error) => {
           console.error("位置情報の取得に失敗しました:", error);
-          setError(
-            "位置情報の取得に失敗しました。ブラウザの位置情報サービスを有効にしてください。"
+          setSearchError(
+            "位置情報の取得に失敗しました。検索機能で住所を指定してください。"
           );
           setPositionLoading(false);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     } else {
-      setError("お使いのブラウザは位置情報をサポートしていません。");
+      setSearchError(
+        "お使いのブラウザは位置情報をサポートしていません。検索機能で住所を指定してください。"
+      );
       setPositionLoading(false);
+    }
+  };
+
+  // 住所検索を行う関数
+  const handleAddressSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchLoading(true);
+    setSearchError(null);
+
+    // 入力値のバリデーション
+    if (!address.trim()) {
+      setSearchError("住所を入力してください");
+      setSearchLoading(false);
+      return;
+    }
+
+    try {
+      // 「千代田区」が含まれていない場合は接頭辞として追加
+      let searchAddress = address.trim();
+      if (!searchAddress.includes("千代田区")) {
+        searchAddress = `千代田区 ${searchAddress}`;
+      }
+
+      // Geocoding APIを呼び出し
+      const response = await fetch(
+        `/api/geocode?address=${encodeURIComponent(searchAddress)}`
+      );
+      const data = await response.json();
+      logger.log("Geocode API Response:", data);
+
+      if (response.status === 429 && data.limitExceeded) {
+        setIsRateLimitModalOpen(true);
+        setSearchLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || "ジオコーディングに失敗しました");
+      }
+
+      if (data.success && data.results?.length > 0) {
+        const firstResult = data.results[0];
+        const userPosition = {
+          lat: firstResult.lat,
+          lng: firstResult.lng,
+        };
+
+        setCurrentPosition(userPosition);
+
+        if (activeCategory) {
+          const categoryLocations =
+            categories.find((c) => c.category === activeCategory)?.locations ||
+            [];
+
+          const locationsWithDistance = categoryLocations.map((location) => {
+            const distance = calculateDistance(
+              userPosition.lat,
+              userPosition.lng,
+              location.lat,
+              location.lng
+            );
+            return { ...location, distance };
+          });
+
+          // 距離で昇順ソート（近い順）
+          const sorted = [...locationsWithDistance].sort(
+            (a, b) => (a.distance || Infinity) - (b.distance || Infinity)
+          );
+
+          setLocationsSorted(sorted);
+          setSortedByDistance(true);
+        }
+      } else {
+        throw new Error("住所が見つかりませんでした");
+      }
+    } catch (err) {
+      setSearchError(
+        err instanceof Error ? err.message : "予期せぬエラーが発生しました"
+      );
+    } finally {
+      setSearchLoading(false);
     }
   };
 
@@ -225,36 +324,114 @@ export default function LocationsPage() {
     <div className="container mx-auto px-4 py-8">
       <header className="text-center my-4">
         <h1 className="text-3xl font-bold">場所をさがす</h1>
-        <p className="mt-2 text-xl">カテゴリから探す</p>
+        <p className="mt-2 text-xl">
+          位置とカテゴリから千代田区のスポットをさがす
+        </p>
       </header>
 
-      <div className="mb-4 space-y-4">
-        {!sortedByDistance ? (
-          <button
-            className="btn btn-outline"
-            onClick={sortByDistance}
-            disabled={positionLoading || !activeCategory}
-          >
-            {positionLoading ? (
-              <>
-                <span className="loading loading-spinner loading-xs"></span>
-                位置情報取得中...
-              </>
-            ) : (
-              "近い順に並べ替える"
+      <div className="mb-6">
+        <div className="card bg-base-100 shadow-lg overflow-hidden">
+          <div className="card-body p-4">
+            <h2 className="card-title">位置情報を設定</h2>
+
+            {searchError && (
+              <div className="alert alert-error">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="stroke-current shrink-0 h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span>{searchError}</span>
+              </div>
             )}
-          </button>
-        ) : (
-          <button
-            className="btn btn-outline"
-            onClick={() => setSortedByDistance(false)}
-          >
-            通常表示に戻す
-          </button>
-        )}
-        <p className="text-sm text-gray-500">
-          スマホから利用しないと正確な位置情報が取得できない可能性があります。
-        </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+              <div>
+                <button
+                  className="btn btn-outline w-full sm:w-auto"
+                  onClick={sortByDistance}
+                  disabled={positionLoading}
+                >
+                  {positionLoading ? (
+                    <>
+                      <span className="loading loading-spinner loading-xs"></span>
+                      位置情報取得中...
+                    </>
+                  ) : (
+                    "現在地を取得"
+                  )}
+                </button>
+                <p className="text-xs text-gray-500 mt-1">モバイル端末向け</p>
+              </div>
+
+              <div className="divider divider-horizontal sm:flex hidden">
+                または
+              </div>
+              <div className="divider sm:hidden">または</div>
+
+              <div className="flex-1">
+                <form
+                  onSubmit={handleAddressSearch}
+                  className="flex flex-col sm:flex-row gap-2"
+                >
+                  <div className="form-control flex-1">
+                    <input
+                      type="text"
+                      placeholder="住所を入力（例：神田駿河台）"
+                      className="input input-bordered w-full"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      disabled={searchLoading}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={searchLoading}
+                  >
+                    {searchLoading ? (
+                      <span className="loading loading-spinner loading-xs"></span>
+                    ) : (
+                      "検索"
+                    )}
+                  </button>
+                </form>
+                <p className="text-xs text-gray-500 mt-1">
+                  PC向け / 詳細な位置情報を保護したい人向け
+                </p>
+              </div>
+            </div>
+
+            {currentPosition && (
+              <div className="alert alert-success">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="stroke-current shrink-0 h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span>
+                  位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden">
@@ -282,7 +459,7 @@ export default function LocationsPage() {
       </div>
 
       {activeCategory && (
-        <div className="animate-fadeIn">
+        <div className="animate-fadeIn mb-6">
           {sortedByDistance ? (
             // 位置情報に基づいてソートされた表示
             <div>
@@ -496,6 +673,36 @@ export default function LocationsPage() {
           )}
         </div>
       )}
+
+      <div className="card bg-base-100 shadow-lg overflow-hidden">
+        <div className="card-body p-4">
+          <h2 className="card-title">データ提供元</h2>
+          <p>
+            この場所データは
+            <a
+              href="https://github.com/nawashiro/chiyoda_city_main_facilities"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link link-primary"
+            >
+              千代田区主要施設座標データ
+            </a>
+            による「風ぐるまの停留所から徒歩圏内（600m以内）であることがわかっている場所」を使用しています。
+          </p>
+          <p>
+            誤りが含まれていたり、古いデータが残っていたり、新たに加えてほしい場所があるときは、直接プルリクエストを送るか、
+            <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLSeZ1eufe_2aZkRWQwr-RuCceUYUMJ7WmSfUr1ZsX5QTDRqFKQ/viewform?usp=header"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link link-primary"
+            >
+              こちらのフォーム
+            </a>
+            からお知らせください。
+          </p>
+        </div>
+      </div>
 
       <style jsx>{`
         @keyframes fadeIn {

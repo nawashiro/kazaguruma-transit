@@ -1,6 +1,37 @@
-import { NextRequest } from "next/server";
-import { GET } from "../../route";
+import { NextRequest, NextResponse } from "next/server";
 import * as gtfs from "gtfs";
+
+// SQLiteManagerをモック
+jest.mock("../../../../../lib/db/sqlite-manager", () => ({
+  sqliteManager: {
+    init: jest.fn().mockResolvedValue(undefined),
+    getRateLimitByIp: jest.fn().mockResolvedValue(null),
+    incrementRateLimit: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
+// モジュールをモック
+jest.mock("next/server", () => {
+  const originalModule = jest.requireActual("next/server");
+  return {
+    __esModule: true,
+    ...originalModule,
+    NextResponse: {
+      ...originalModule.NextResponse,
+      json: jest.fn().mockImplementation((body, options) => {
+        return {
+          status: options?.status || 200,
+          json: async () => body,
+        };
+      }),
+    },
+  };
+});
+
+// レート制限ミドルウェアをモック
+jest.mock("../../../../../lib/api/rate-limit-middleware", () => ({
+  appRouterRateLimitMiddleware: jest.fn().mockResolvedValue(undefined),
+}));
 
 // GTFSモジュールのモック化
 jest.mock("gtfs", () => ({
@@ -17,6 +48,9 @@ jest.mock("gtfs", () => ({
 beforeEach(() => {
   jest.clearAllMocks();
 });
+
+// API Routeをインポート
+const { GET } = require("../../route");
 
 describe("経路検索API", () => {
   // モックのバス停データ
@@ -63,10 +97,19 @@ describe("経路検索API", () => {
     Object.entries(params).forEach(([key, value]) => {
       url.searchParams.append(key, value);
     });
-    return new NextRequest(url);
+    return {
+      url: url.toString(),
+      method: "GET",
+      nextUrl: url,
+      searchParams: url.searchParams,
+      cookies: {
+        get: jest.fn().mockReturnValue(null),
+      },
+      headers: new Headers(),
+    } as unknown as NextRequest;
   };
 
-  test("有効なパラメータで最寄りバス停と直接ルートを検索できる", async () => {
+  test("GET APIは非推奨であることを示すエラーを返す", async () => {
     // バス停検索のモック
     (gtfs.getStops as jest.Mock).mockImplementation((query) => {
       if (!query || Object.keys(query).length === 0) {
@@ -123,20 +166,13 @@ describe("経路検索API", () => {
     const data = await res.json();
 
     // アサーション
-    expect(res.status).toBe(200);
-    expect(data).toHaveProperty("hasRoute", true);
-    expect(data).toHaveProperty("type", "direct");
-    expect(data).toHaveProperty("transfers", 0);
-    expect(data).toHaveProperty("routes");
-    expect(data.routes).toHaveLength(1);
-    expect(data.routes[0]).toHaveProperty("routeId", "route1");
-    expect(data).toHaveProperty("originStop");
-    expect(data).toHaveProperty("destinationStop");
-    expect(data.originStop).toHaveProperty("stopId", "stop1");
-    expect(data.destinationStop).toHaveProperty("stopId", "stop2");
+    expect(res.status).toBe(400);
+    expect(data).toHaveProperty("success", false);
+    expect(data).toHaveProperty("error");
+    expect(data.error).toContain("GET APIは非推奨です");
   });
 
-  test("バス停が同じ場合は特別なレスポンスを返す", async () => {
+  test("バス停が同じ場合でもGET APIは非推奨エラーを返す", async () => {
     // 両方同じバス停の場合をモック
     (gtfs.getStops as jest.Mock).mockImplementation(() => {
       return [mockOriginStop];
@@ -154,14 +190,13 @@ describe("経路検索API", () => {
     const data = await res.json();
 
     // アサーション
-    expect(res.status).toBe(200);
-    expect(data).toHaveProperty("hasRoute", true);
-    expect(data).toHaveProperty("message", "出発地と目的地のバス停が同じです");
-    expect(data).toHaveProperty("routes");
-    expect(data.routes).toHaveLength(0);
+    expect(res.status).toBe(400);
+    expect(data).toHaveProperty("success", false);
+    expect(data).toHaveProperty("error");
+    expect(data.error).toContain("GET APIは非推奨です");
   });
 
-  test("ルートが見つからない場合は適切なレスポンスを返す", async () => {
+  test("ルートが見つからない場合でもGET APIは非推奨エラーを返す", async () => {
     // バス停検索はできるが、ルートは見つからない場合をモック
     (gtfs.getStops as jest.Mock).mockImplementation(() => {
       return [mockOriginStop, mockDestStop];
@@ -183,14 +218,13 @@ describe("経路検索API", () => {
     const data = await res.json();
 
     // アサーション
-    expect(res.status).toBe(200);
-    expect(data).toHaveProperty("hasRoute", false);
-    expect(data).toHaveProperty("type", "none");
-    expect(data).toHaveProperty("message");
-    expect(data.message).toContain("ルートが見つかりませんでした");
+    expect(res.status).toBe(400);
+    expect(data).toHaveProperty("success", false);
+    expect(data).toHaveProperty("error");
+    expect(data.error).toContain("GET APIは非推奨です");
   });
 
-  test("パラメータが不足している場合はエラーを返す", async () => {
+  test("パラメータが不足していてもGET APIは非推奨エラーを返す", async () => {
     // 不完全なパラメータでリクエスト
     const req = createMockRequest({
       originLat: "35.6812",
@@ -204,10 +238,12 @@ describe("経路検索API", () => {
 
     // アサーション
     expect(res.status).toBe(400);
+    expect(data).toHaveProperty("success", false);
     expect(data).toHaveProperty("error");
+    expect(data.error).toContain("GET APIは非推奨です");
   });
 
-  test("バス停が見つからない場合は適切なレスポンスを返す", async () => {
+  test("バス停が見つからなくてもGET APIは非推奨エラーを返す", async () => {
     // バス停が見つからない場合をモック
     (gtfs.getStops as jest.Mock).mockReturnValue([]);
 
@@ -223,9 +259,9 @@ describe("経路検索API", () => {
     const data = await res.json();
 
     // アサーション
-    expect(res.status).toBe(200);
-    expect(data).toHaveProperty("hasRoute", false);
-    expect(data).toHaveProperty("message");
-    expect(data.message).toContain("バス停が見つかりませんでした");
+    expect(res.status).toBe(400);
+    expect(data).toHaveProperty("success", false);
+    expect(data).toHaveProperty("error");
+    expect(data.error).toContain("GET APIは非推奨です");
   });
 });

@@ -2,6 +2,15 @@ import { GET } from "../transit/route";
 import { NextRequest, NextResponse } from "next/server";
 import * as gtfs from "gtfs";
 
+// SQLiteManagerをモック
+jest.mock("../../../lib/db/sqlite-manager", () => ({
+  sqliteManager: {
+    init: jest.fn().mockResolvedValue(undefined),
+    getRateLimitByIp: jest.fn().mockResolvedValue(null),
+    incrementRateLimit: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
 // GTFSモジュールのモックデータ
 const mockStops = [
   {

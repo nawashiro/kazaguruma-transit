@@ -10,6 +10,7 @@ import {
   convertToLocation,
 } from "../../utils/addressLoader";
 import { logger } from "../../utils/logger";
+import RateLimitModal from "../../components/RateLimitModal";
 
 // 2点間の距離を計算する関数（ハーバーサイン公式）
 const calculateDistance = (
@@ -329,6 +330,12 @@ export default function LocationsPage() {
         </p>
       </header>
 
+      {/* レート制限モーダル */}
+      <RateLimitModal
+        isOpen={isRateLimitModalOpen}
+        onClose={() => setIsRateLimitModalOpen(false)}
+      />
+
       <div className="mb-6">
         <div className="card bg-base-100 shadow-lg overflow-hidden">
           <div className="card-body p-4">
@@ -405,7 +412,7 @@ export default function LocationsPage() {
                   </button>
                 </form>
                 <p className="text-xs text-gray-500 mt-1">
-                  PC向け / 詳細な位置情報を保護したい人向け
+                  PC向け / 任意の場所から選びたい
                 </p>
               </div>
             </div>

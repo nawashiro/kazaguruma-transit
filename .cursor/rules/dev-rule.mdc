@@ -11,6 +11,7 @@ alwaysApply: true
 transitライブラリやgtfsライブラリを使用しています。ここに関わる処理を書くときは必ずインターネットからドキュメントを参照してください。
 npm run devする前に既存のnodeをkillすることを忘れないでください。
 コマンドラインはWindows PowerShellを使用しています。
+console.logは使用せずに、logger.logを使用します。
 
 ## 報告
 

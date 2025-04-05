@@ -49,31 +49,9 @@ describe("AuthService", () => {
       });
     });
 
-    test("既に認証済みの場合は成功メッセージを返す", async () => {
+    test("確認コードを生成して送信する", async () => {
       // モックの設定
       (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(true);
-      (sqliteManager.isVerifiedSupporter as jest.Mock).mockResolvedValue(true);
-
-      const result = await authService.startSupporterRegistration(
-        "test@example.com"
-      );
-
-      expect(kofiApiClient.isActiveMember).toHaveBeenCalledWith(
-        "test@example.com"
-      );
-      expect(sqliteManager.isVerifiedSupporter).toHaveBeenCalledWith(
-        "test@example.com"
-      );
-      expect(result).toEqual({
-        success: true,
-        message: expect.stringContaining("既に認証済み"),
-      });
-    });
-
-    test("確認コードをメール送信して成功した場合", async () => {
-      // モックの設定
-      (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(true);
-      (sqliteManager.isVerifiedSupporter as jest.Mock).mockResolvedValue(false);
       (sqliteManager.createOrUpdateSupporter as jest.Mock).mockResolvedValue(
         true
       );
@@ -88,9 +66,6 @@ describe("AuthService", () => {
       expect(kofiApiClient.isActiveMember).toHaveBeenCalledWith(
         "test@example.com"
       );
-      expect(sqliteManager.isVerifiedSupporter).toHaveBeenCalledWith(
-        "test@example.com"
-      );
       expect(sqliteManager.createOrUpdateSupporter).toHaveBeenCalled();
       expect(mailtrapService.sendVerificationCode).toHaveBeenCalled();
       expect(result).toEqual({
@@ -102,7 +77,6 @@ describe("AuthService", () => {
     test("メール送信に失敗した場合", async () => {
       // モックの設定
       (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(true);
-      (sqliteManager.isVerifiedSupporter as jest.Mock).mockResolvedValue(false);
       (sqliteManager.createOrUpdateSupporter as jest.Mock).mockResolvedValue(
         true
       );
@@ -122,50 +96,30 @@ describe("AuthService", () => {
   });
 
   describe("verifySupporterCode", () => {
-    test("Ko-fiで支援者でない場合は失敗を返す", async () => {
-      // モックの設定
-      (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(false);
-
-      const result = await authService.verifySupporterCode(
-        "test@example.com",
-        "123456"
-      );
-
-      expect(kofiApiClient.isActiveMember).toHaveBeenCalledWith(
-        "test@example.com"
-      );
-      expect(result).toEqual({
-        success: false,
-        message: expect.stringContaining("Ko-fiでの支援が確認できません"),
-      });
-    });
-
     test("確認コードが正しい場合は成功を返す", async () => {
       // モックの設定
-      (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(true);
       (sqliteManager.verifySupporter as jest.Mock).mockResolvedValue(true);
+      (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(true);
 
       const result = await authService.verifySupporterCode(
         "test@example.com",
         "123456"
       );
 
-      expect(kofiApiClient.isActiveMember).toHaveBeenCalledWith(
-        "test@example.com"
-      );
       expect(sqliteManager.verifySupporter).toHaveBeenCalledWith(
         "test@example.com",
         "123456"
       );
       expect(result).toEqual({
         success: true,
-        message: expect.stringContaining("認証が完了しました"),
+        message: "認証に成功しました。支援ありがとうございます！",
+        isSupporter: true,
+        needsRefresh: true,
       });
     });
 
     test("確認コードが間違っている場合は失敗を返す", async () => {
       // モックの設定
-      (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(true);
       (sqliteManager.verifySupporter as jest.Mock).mockResolvedValue(false);
 
       const result = await authService.verifySupporterCode(
@@ -175,7 +129,25 @@ describe("AuthService", () => {
 
       expect(result).toEqual({
         success: false,
-        message: expect.stringContaining("認証に失敗しました"),
+        message: "認証コードが無効か期限切れです",
+      });
+    });
+
+    test("Ko-fiでの支援が確認できない場合でも確認コードが正しければ成功を返す", async () => {
+      // モックの設定
+      (sqliteManager.verifySupporter as jest.Mock).mockResolvedValue(true);
+      (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(false);
+
+      const result = await authService.verifySupporterCode(
+        "test@example.com",
+        "123456"
+      );
+
+      expect(result).toEqual({
+        success: true,
+        message: "認証に成功しました。支援ありがとうございます！",
+        isSupporter: false,
+        needsRefresh: true,
       });
     });
   });

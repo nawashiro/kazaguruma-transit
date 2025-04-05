@@ -41,18 +41,18 @@ export function generateStaticMapWithDirectionsUrl(
   const origin = `${startLat},${startLng}`;
   const destination = `${endLat},${endLng}`;
 
-  // マーカーパラメータ (始点と終点にマーカーを表示)
+  // マーカーパラメータ (始点と終点にマーカーを表示、グレースケールに合わせた色)
   const markers = [
-    `color:green|label:S|${startLat},${startLng}`,
-    `color:red|label:E|${endLat},${endLng}`,
+    `color:gray|label:S|${startLat},${startLng}`,
+    `color:black|label:E|${endLat},${endLng}`,
   ];
 
   // URLを構築
   let urlString = "https://maps.googleapis.com/maps/api/staticmap";
   urlString += `?size=${width}x${height}`;
 
-  // 経路を描画するパス（青い線で表示）
-  urlString += `&path=weight:5|color:0x0000ff|${origin}|${destination}`;
+  // 経路を描画するパス（黒い線で表示）
+  urlString += `&path=weight:5|color:0x000000|${origin}|${destination}`;
 
   // マーカーを追加
   markers.forEach((marker) => {
@@ -61,6 +61,9 @@ export function generateStaticMapWithDirectionsUrl(
 
   // 徒歩モードを設定
   urlString += `&mode=walking`;
+
+  // 地図をグレースケールにする
+  urlString += `&style=feature:all|element:all|saturation:-100`;
 
   // APIキーとスケールを追加
   urlString += `&key=${apiKey || ""}`;
@@ -117,18 +120,18 @@ export function generateStaticMapWithPolylineUrl(
 ): string {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-  // マーカーパラメータ (始点と終点にマーカーを表示)
+  // マーカーパラメータ (始点と終点にマーカーを表示、グレースケールに合わせた色)
   const markers = [
-    `color:green|label:S|${startLat},${startLng}`,
-    `color:red|label:E|${endLat},${endLng}`,
+    `color:gray|label:S|${startLat},${startLng}`,
+    `color:black|label:E|${endLat},${endLng}`,
   ];
 
   // URLを構築
   let urlString = "https://maps.googleapis.com/maps/api/staticmap";
   urlString += `?size=${width}x${height}`;
 
-  // ポリラインでパスを描画
-  urlString += `&path=weight:5|color:0x0000ff|enc:${encodeURIComponent(
+  // ポリラインでパスを描画（黒い線で表示）
+  urlString += `&path=weight:5|color:0x000000|enc:${encodeURIComponent(
     encodedPolyline
   )}`;
 
@@ -136,6 +139,9 @@ export function generateStaticMapWithPolylineUrl(
   markers.forEach((marker) => {
     urlString += `&markers=${encodeURIComponent(marker)}`;
   });
+
+  // 地図をグレースケールにする
+  urlString += `&style=feature:all|element:all|saturation:-100`;
 
   // APIキーとスケールを追加
   urlString += `&key=${apiKey || ""}`;

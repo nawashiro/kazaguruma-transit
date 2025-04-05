@@ -271,7 +271,7 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
   }
 
   return (
-    <div className="bg-white space-y-4 p-8 px-32">
+    <div className="bg-white space-y-4 p-8 px-24">
       <div className="text-center">
         <p className="mt-2 text-lg">{formattedDate}</p>
       </div>

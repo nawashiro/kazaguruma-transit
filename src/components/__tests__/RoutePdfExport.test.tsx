@@ -29,6 +29,38 @@ const mockRoutes = [
   },
 ];
 
+// 権限確認APIのモック設定
+// サポーター支援者の場合
+const mockSupporterResponse = {
+  success: true,
+  canPrint: true,
+  isLoggedIn: true,
+  isSupporter: true,
+};
+
+// 非認証ユーザーの場合
+const mockNonAuthResponse = {
+  success: true,
+  canPrint: false,
+  isLoggedIn: false,
+  isSupporter: false,
+};
+
+// APIのモック化
+global.fetch = jest.fn().mockImplementation((url) => {
+  if (url === "/api/pdf/check-permission") {
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(mockSupporterResponse),
+    });
+  }
+  // 他のAPIエンドポイントの場合はデフォルトのレスポンスを返す
+  return Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({ success: true }),
+  });
+});
+
 // react-to-printのモック
 jest.mock("react-to-print", () => ({
   useReactToPrint: jest.fn().mockImplementation(() => jest.fn()),
@@ -37,9 +69,22 @@ jest.mock("react-to-print", () => ({
 describe("RoutePdfExport", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // デフォルトではサポーター権限があるようにモック設定
+    (global.fetch as jest.Mock).mockImplementation((url) => {
+      if (url === "/api/pdf/check-permission") {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockSupporterResponse),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      });
+    });
   });
 
-  it("PDFダウンロードボタンがレンダリングされること", () => {
+  it("サポーターの場合、PDF出力ボタンが表示されること", async () => {
     render(
       <RoutePdfExport
         originStop={mockOriginStop}
@@ -50,8 +95,45 @@ describe("RoutePdfExport", () => {
       />
     );
 
-    const button = screen.getByRole("button", { name: /PDF出力/i });
-    expect(button).toBeInTheDocument();
+    // 読み込み中の表示
+    expect(screen.getByText("読み込み中...")).toBeInTheDocument();
+
+    // 認証確認後の表示を待機
+    await waitFor(() => {
+      expect(screen.getByText("印刷する")).toBeInTheDocument();
+    });
+  });
+
+  it("非サポーターの場合、支援者限定メッセージとKo-fiリンクが表示されること", async () => {
+    // 非認証ユーザーのレスポンスに変更
+    (global.fetch as jest.Mock).mockImplementation((url) => {
+      if (url === "/api/pdf/check-permission") {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockNonAuthResponse),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      });
+    });
+
+    render(
+      <RoutePdfExport
+        originStop={mockOriginStop}
+        destinationStop={mockDestinationStop}
+        routes={mockRoutes}
+        type="direct"
+        transfers={0}
+      />
+    );
+
+    // 認証確認後の表示を待機
+    await waitFor(() => {
+      expect(screen.getByText(/印刷する（支援者限定）/i)).toBeInTheDocument();
+      expect(screen.getByText(/支援者登録/i)).toBeInTheDocument();
+    });
   });
 
   it("PDFボタンをクリックするとPDF出力処理が呼ばれること", async () => {
@@ -69,15 +151,40 @@ describe("RoutePdfExport", () => {
       />
     );
 
-    const button = screen.getByRole("button", { name: /PDF出力/i });
+    // 認証確認後の表示を待機
+    await waitFor(() => {
+      expect(screen.getByText("印刷する")).toBeInTheDocument();
+    });
+
+    const button = screen.getByText("印刷する");
     fireEvent.click(button);
 
+    // Promiseを解決するために少し待機
     await waitFor(() => {
       expect(mockPrintHandler).toHaveBeenCalled();
     });
   });
 
-  it("ルート情報が表示用コンポーネントに正しく渡されること", () => {
+  it("APIエラー時にエラーメッセージが表示されること", async () => {
+    // エラーレスポンスを返すようにモックを設定
+    (global.fetch as jest.Mock).mockImplementation((url) => {
+      if (url === "/api/pdf/check-permission") {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+          json: () =>
+            Promise.resolve({
+              success: false,
+              error: "サーバーエラーが発生しました",
+            }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      });
+    });
+
     render(
       <RoutePdfExport
         originStop={mockOriginStop}
@@ -88,9 +195,33 @@ describe("RoutePdfExport", () => {
       />
     );
 
-    // 印刷プレビューに表示される情報を確認
-    expect(screen.getByText("乗り換え案内")).toBeInTheDocument();
-    expect(screen.getByText("出発：出発バス停")).toBeInTheDocument();
-    expect(screen.getByText("到着：到着バス停")).toBeInTheDocument();
+    // エラーメッセージの表示を待機
+    await waitFor(() => {
+      expect(
+        screen.getByText(/権限確認中にエラーが発生しました/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("ルート情報が表示用コンポーネントに正しく渡されること", async () => {
+    render(
+      <RoutePdfExport
+        originStop={mockOriginStop}
+        destinationStop={mockDestinationStop}
+        routes={mockRoutes}
+        type="direct"
+        transfers={0}
+      />
+    );
+
+    // 認証確認後の表示を待機
+    await waitFor(() => {
+      expect(screen.getByText("印刷する")).toBeInTheDocument();
+    });
+
+    // 印刷プレビューは非表示だが、DOMには存在するはず
+    expect(document.body.textContent).toContain(mockOriginStop.stopName);
+    expect(document.body.textContent).toContain(mockDestinationStop.stopName);
+    expect(document.body.textContent).toContain(mockRoutes[0].routeShortName);
   });
 });

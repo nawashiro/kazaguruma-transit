@@ -78,6 +78,10 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
   const [stopToDestPolyline, setStopToDestPolyline] = useState<string | null>(
     null
   );
+  const [originToStopMapUrl, setOriginToStopMapUrl] = useState<string | null>(
+    null
+  );
+  const [stopToDestMapUrl, setStopToDestMapUrl] = useState<string | null>(null);
 
   // 現在の日付を取得
   const today = new Date();
@@ -188,68 +192,107 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
     props.destinationStop,
   ]);
 
-  // 地図画像のURL生成
-  const originToStopMapUrl =
-    props.originLat &&
-    props.originLng &&
-    (props.originStop.stop_lat !== undefined ||
-      props.originStop.lat !== undefined) &&
-    (props.originStop.stop_lon !== undefined ||
-      props.originStop.lng !== undefined)
-      ? originToStopPolyline
-        ? generateStaticMapWithPolylineUrl(
-            props.originLat,
-            props.originLng,
-            Number(props.originStop.stop_lat ?? props.originStop.lat ?? 0),
-            Number(props.originStop.stop_lon ?? props.originStop.lng ?? 0),
-            originToStopPolyline,
-            600, // 幅
-            200 // 高さ
-          )
-        : generateStaticMapWithDirectionsUrl(
-            props.originLat,
-            props.originLng,
-            Number(props.originStop.stop_lat ?? props.originStop.lat ?? 0),
-            Number(props.originStop.stop_lon ?? props.originStop.lng ?? 0),
-            600, // 幅
-            200 // 高さ
-          )
-      : null;
+  // 地図画像URLを取得
+  useEffect(() => {
+    const fetchMaps = async () => {
+      // 出発地→バス停の地図URL取得
+      if (
+        props.originLat &&
+        props.originLng &&
+        (props.originStop.stop_lat !== undefined ||
+          props.originStop.lat !== undefined) &&
+        (props.originStop.stop_lon !== undefined ||
+          props.originStop.lng !== undefined)
+      ) {
+        try {
+          const url = originToStopPolyline
+            ? await generateStaticMapWithPolylineUrl(
+                props.originLat,
+                props.originLng,
+                Number(props.originStop.stop_lat ?? props.originStop.lat ?? 0),
+                Number(props.originStop.stop_lon ?? props.originStop.lng ?? 0),
+                originToStopPolyline,
+                600, // 幅
+                200 // 高さ
+              )
+            : await generateStaticMapWithDirectionsUrl(
+                props.originLat,
+                props.originLng,
+                Number(props.originStop.stop_lat ?? props.originStop.lat ?? 0),
+                Number(props.originStop.stop_lon ?? props.originStop.lng ?? 0),
+                600, // 幅
+                200 // 高さ
+              );
 
-  const stopToDestMapUrl =
-    props.destLat &&
-    props.destLng &&
-    (props.destinationStop.stop_lat !== undefined ||
-      props.destinationStop.lat !== undefined) &&
-    (props.destinationStop.stop_lon !== undefined ||
-      props.destinationStop.lng !== undefined)
-      ? stopToDestPolyline
-        ? generateStaticMapWithPolylineUrl(
-            Number(
-              props.destinationStop.stop_lat ?? props.destinationStop.lat ?? 0
-            ),
-            Number(
-              props.destinationStop.stop_lon ?? props.destinationStop.lng ?? 0
-            ),
-            props.destLat,
-            props.destLng,
-            stopToDestPolyline,
-            600, // 幅
-            200 // 高さ
-          )
-        : generateStaticMapWithDirectionsUrl(
-            Number(
-              props.destinationStop.stop_lat ?? props.destinationStop.lat ?? 0
-            ),
-            Number(
-              props.destinationStop.stop_lon ?? props.destinationStop.lng ?? 0
-            ),
-            props.destLat,
-            props.destLng,
-            600, // 幅
-            200 // 高さ
-          )
-      : null;
+          setOriginToStopMapUrl(url);
+        } catch (error) {
+          logger.error("地図URL取得エラー (出発地→バス停):", error);
+        }
+      }
+
+      // バス停→目的地の地図URL取得
+      if (
+        props.destLat &&
+        props.destLng &&
+        (props.destinationStop.stop_lat !== undefined ||
+          props.destinationStop.lat !== undefined) &&
+        (props.destinationStop.stop_lon !== undefined ||
+          props.destinationStop.lng !== undefined)
+      ) {
+        try {
+          const url = stopToDestPolyline
+            ? await generateStaticMapWithPolylineUrl(
+                Number(
+                  props.destinationStop.stop_lat ??
+                    props.destinationStop.lat ??
+                    0
+                ),
+                Number(
+                  props.destinationStop.stop_lon ??
+                    props.destinationStop.lng ??
+                    0
+                ),
+                props.destLat,
+                props.destLng,
+                stopToDestPolyline,
+                600, // 幅
+                200 // 高さ
+              )
+            : await generateStaticMapWithDirectionsUrl(
+                Number(
+                  props.destinationStop.stop_lat ??
+                    props.destinationStop.lat ??
+                    0
+                ),
+                Number(
+                  props.destinationStop.stop_lon ??
+                    props.destinationStop.lng ??
+                    0
+                ),
+                props.destLat,
+                props.destLng,
+                600, // 幅
+                200 // 高さ
+              );
+
+          setStopToDestMapUrl(url);
+        } catch (error) {
+          logger.error("地図URL取得エラー (バス停→目的地):", error);
+        }
+      }
+    };
+
+    fetchMaps();
+  }, [
+    props.originLat,
+    props.originLng,
+    props.destLat,
+    props.destLng,
+    props.originStop,
+    props.destinationStop,
+    originToStopPolyline,
+    stopToDestPolyline,
+  ]);
 
   // ルートが見つからない場合のレンダリング
   if (props.type === "none") {
@@ -455,36 +498,44 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [isSupporter, setIsSupporter] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // セッション情報を取得
+  // サーバーサイドAPIを使用してPDF出力権限を確認
   useEffect(() => {
-    const fetchSession = async () => {
+    const checkPermission = async () => {
       try {
         setLoading(true);
-        const response = await fetch("/api/auth/session");
+        const response = await fetch("/api/pdf/check-permission");
+
+        if (!response.ok) {
+          throw new Error("権限確認APIエラー");
+        }
+
         const data = await response.json();
 
-        if (data.success && data.data) {
-          setIsLoggedIn(data.data.isLoggedIn);
-          setIsSupporter(data.data.isSupporter || false);
+        if (data.success) {
+          setIsLoggedIn(data.isLoggedIn);
+          setIsSupporter(data.isSupporter);
         } else {
           setIsLoggedIn(false);
           setIsSupporter(false);
+          setError(data.error || "権限確認に失敗しました");
         }
       } catch (error) {
-        logger.log("セッション取得エラー:", error);
+        logger.error("PDF権限確認エラー:", error);
         setIsLoggedIn(false);
         setIsSupporter(false);
+        setError("権限確認中にエラーが発生しました");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSession();
+    checkPermission();
 
     // ログイン状態変更イベントのリスナーを追加
     const handleAuthCompleted = () => {
-      fetchSession();
+      checkPermission();
     };
 
     window.addEventListener("auth-completed", handleAuthCompleted);
@@ -493,7 +544,24 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
     };
   }, []);
 
-  // PDF出力処理
+  // PDF出力前に権限を再確認
+  const verifyPermission = async (): Promise<boolean> => {
+    try {
+      const response = await fetch("/api/pdf/check-permission");
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const data = await response.json();
+      return data.success && data.canPrint;
+    } catch (error) {
+      logger.error("PDF権限再確認エラー:", error);
+      return false;
+    }
+  };
+
+  // PDF出力処理（権限チェック付き）
   const handlePrint = useReactToPrint({
     documentTitle: `乗換案内_${props.originStop.stopName}_${props.destinationStop.stopName}`,
     pageStyle: `
@@ -517,8 +585,24 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
         .header, .footer, head { display: none !important; }
       }
     `,
+    onBeforePrint: async () => {
+      // 印刷前に権限を再確認
+      const hasPermission = await verifyPermission();
+      if (!hasPermission) {
+        // 権限がない場合はエラーをスロー
+        throw new Error("印刷権限がありません");
+      }
+    },
     onPrintError: (errorLocation, error) => {
-      logger.log("PDF出力エラー:", errorLocation, error);
+      logger.error("PDF出力エラー:", errorLocation, error);
+      if (error?.message === "印刷権限がありません") {
+        setError(
+          "現在の権限では印刷できません。サポーター登録を行ってください。"
+        );
+        setIsSupporter(false); // 権限がないため状態を更新
+      } else {
+        setError("PDF出力中にエラーが発生しました");
+      }
     },
     // @ts-ignore - contentRefはreact-to-printの最新バージョンで使用される正しいプロパティ
     contentRef: componentRef,
@@ -539,12 +623,52 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="alert alert-error mt-4">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="stroke-current shrink-0 h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <span>{error}</span>
+        <button onClick={() => setError(null)} className="btn btn-sm">
+          閉じる
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
       {isLoggedIn && isSupporter ? (
         // 支援者の場合はPDF出力ボタンを表示
         <button
-          onClick={() => handlePrint()}
+          onClick={async () => {
+            try {
+              // 印刷前に権限を再確認
+              const hasPermission = await verifyPermission();
+              if (hasPermission) {
+                handlePrint();
+              } else {
+                setError(
+                  "現在の権限では印刷できません。サポーター登録を行ってください。"
+                );
+                setIsSupporter(false); // 権限がないため状態を更新
+              }
+            } catch (error) {
+              logger.error("印刷実行エラー:", error);
+              setError("印刷処理中にエラーが発生しました");
+            }
+          }}
           className="btn btn-primary mt-4 flex items-center"
           aria-label="PDF出力"
         >

@@ -27,49 +27,31 @@ export function generateGoogleMapPointLink(lat: number, lng: number): string {
  * @param height 画像の高さ
  * @returns 静的地図URL
  */
-export function generateStaticMapWithDirectionsUrl(
+export async function generateStaticMapWithDirectionsUrl(
   startLat: number,
   startLng: number,
   endLat: number,
   endLng: number,
   width: number = 600,
   height: number = 200
-): string {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+): Promise<string> {
+  try {
+    // サーバーサイドAPIを呼び出して地図URLを取得
+    const response = await fetch(
+      `/api/maps/static-map?startLat=${startLat}&startLng=${startLng}&endLat=${endLat}&endLng=${endLng}&width=${width}&height=${height}`
+    );
 
-  // 出発地と目的地
-  const origin = `${startLat},${startLng}`;
-  const destination = `${endLat},${endLng}`;
+    if (!response.ok) {
+      throw new Error("Static map API request failed");
+    }
 
-  // マーカーパラメータ (始点と終点にマーカーを表示、グレースケールに合わせた色)
-  const markers = [
-    `color:gray|label:S|${startLat},${startLng}`,
-    `color:black|label:E|${endLat},${endLng}`,
-  ];
-
-  // URLを構築
-  let urlString = "https://maps.googleapis.com/maps/api/staticmap";
-  urlString += `?size=${width}x${height}`;
-
-  // 経路を描画するパス（黒い線で表示）
-  urlString += `&path=weight:5|color:0x000000|${origin}|${destination}`;
-
-  // マーカーを追加
-  markers.forEach((marker) => {
-    urlString += `&markers=${encodeURIComponent(marker)}`;
-  });
-
-  // 徒歩モードを設定
-  urlString += `&mode=walking`;
-
-  // 地図をグレースケールにする
-  urlString += `&style=feature:all|element:all|saturation:-100`;
-
-  // APIキーとスケールを追加
-  urlString += `&key=${apiKey || ""}`;
-  urlString += `&scale=2`; // 高解像度画像のためのスケール
-
-  return urlString;
+    const data = await response.json();
+    return data.url || "";
+  } catch (error) {
+    console.error("Error fetching static map URL:", error);
+    // フォールバック: 空のプレースホルダー画像を返す
+    return `/images/map_placeholder.png`;
+  }
 }
 
 /**
@@ -109,7 +91,7 @@ export async function getDirectionsPolyline(
  * @param width 画像の幅
  * @param height 画像の高さ
  */
-export function generateStaticMapWithPolylineUrl(
+export async function generateStaticMapWithPolylineUrl(
   startLat: number,
   startLng: number,
   endLat: number,
@@ -117,35 +99,24 @@ export function generateStaticMapWithPolylineUrl(
   encodedPolyline: string,
   width: number = 600,
   height: number = 200
-): string {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+): Promise<string> {
+  try {
+    // サーバーサイドAPIを呼び出して地図URLを取得
+    const response = await fetch(
+      `/api/maps/static-map?startLat=${startLat}&startLng=${startLng}&endLat=${endLat}&endLng=${endLng}&polyline=${encodeURIComponent(
+        encodedPolyline
+      )}&width=${width}&height=${height}`
+    );
 
-  // マーカーパラメータ (始点と終点にマーカーを表示、グレースケールに合わせた色)
-  const markers = [
-    `color:gray|label:S|${startLat},${startLng}`,
-    `color:black|label:E|${endLat},${endLng}`,
-  ];
+    if (!response.ok) {
+      throw new Error("Static map API request failed");
+    }
 
-  // URLを構築
-  let urlString = "https://maps.googleapis.com/maps/api/staticmap";
-  urlString += `?size=${width}x${height}`;
-
-  // ポリラインでパスを描画（黒い線で表示）
-  urlString += `&path=weight:5|color:0x000000|enc:${encodeURIComponent(
-    encodedPolyline
-  )}`;
-
-  // マーカーを追加
-  markers.forEach((marker) => {
-    urlString += `&markers=${encodeURIComponent(marker)}`;
-  });
-
-  // 地図をグレースケールにする
-  urlString += `&style=feature:all|element:all|saturation:-100`;
-
-  // APIキーとスケールを追加
-  urlString += `&key=${apiKey || ""}`;
-  urlString += `&scale=2`; // 高解像度画像のためのスケール
-
-  return urlString;
+    const data = await response.json();
+    return data.url || "";
+  } catch (error) {
+    console.error("Error fetching static map URL:", error);
+    // フォールバック: 空のプレースホルダー画像を返す
+    return `/images/map_placeholder.png`;
+  }
 }

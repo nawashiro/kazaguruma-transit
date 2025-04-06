@@ -4,11 +4,16 @@ import React, { useRef, useState, useEffect } from "react";
 import { useReactToPrint } from "react-to-print";
 import { logger } from "../utils/logger";
 import { Departure } from "../types/transit";
+import Link from "next/link";
 import {
   generateStaticMapWithDirectionsUrl,
   generateStaticMapWithPolylineUrl,
   getDirectionsPolyline,
 } from "../utils/maps";
+
+// 環境変数からKo-fiのTierページURLを取得、なければデフォルト値を使用
+const KOFI_TIER_PAGE_URL =
+  process.env.KOFI_TIER_PAGE_URL || "https://ko-fi.com/nawashiro/tiers";
 
 // IntegratedRouteDisplayと同様の型定義を使用
 interface StopInfo {
@@ -447,6 +452,46 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
 // PDF出力機能を提供するメインコンポーネント
 const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
   const componentRef = useRef<HTMLDivElement>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isSupporter, setIsSupporter] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // セッション情報を取得
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch("/api/auth/session");
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          setIsLoggedIn(data.data.isLoggedIn);
+          setIsSupporter(data.data.isSupporter || false);
+        } else {
+          setIsLoggedIn(false);
+          setIsSupporter(false);
+        }
+      } catch (error) {
+        logger.log("セッション取得エラー:", error);
+        setIsLoggedIn(false);
+        setIsSupporter(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSession();
+
+    // ログイン状態変更イベントのリスナーを追加
+    const handleAuthCompleted = () => {
+      fetchSession();
+    };
+
+    window.addEventListener("auth-completed", handleAuthCompleted);
+    return () => {
+      window.removeEventListener("auth-completed", handleAuthCompleted);
+    };
+  }, []);
 
   // PDF出力処理
   const handlePrint = useReactToPrint({
@@ -479,15 +524,78 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
     contentRef: componentRef,
   });
 
+  // サポーターモーダルを開く処理
+  const handleOpenSupporterModal = () => {
+    const event = new CustomEvent("open-supporter-modal");
+    window.dispatchEvent(event);
+  };
+
+  if (loading) {
+    return (
+      <button className="btn btn-primary mt-4 opacity-75" disabled>
+        <span className="loading loading-spinner loading-xs mr-2"></span>
+        読み込み中...
+      </button>
+    );
+  }
+
   return (
     <>
-      <button
-        onClick={() => handlePrint()}
-        className="btn btn-primary mt-4 flex items-center"
-        aria-label="PDF出力"
-      >
-        だれかのために印刷する
-      </button>
+      {isLoggedIn && isSupporter ? (
+        // 支援者の場合はPDF出力ボタンを表示
+        <button
+          onClick={() => handlePrint()}
+          className="btn btn-primary mt-4 flex items-center"
+          aria-label="PDF出力"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 mr-2"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          印刷する
+        </button>
+      ) : (
+        // 非ログインユーザーの場合はKo-fiへのリンクを表示
+        <div className="flex flex-col sm:flex-row items-center gap-2 mt-4">
+          <Link
+            href={KOFI_TIER_PAGE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary flex items-center"
+            aria-label="支援者限定機能"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+            印刷する（支援者限定）
+          </Link>
+
+          <button onClick={handleOpenSupporterModal} className="btn btn-accent">
+            私は支援者です
+          </button>
+        </div>
+      )}
 
       {/* 印刷用コンテンツ（非表示） */}
       <div style={{ display: "none" }}>

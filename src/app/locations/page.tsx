@@ -457,11 +457,23 @@ export default function LocationsPage() {
         </p>
       </header>
 
-      {/* レート制限モーダル */}
-      <RateLimitModal
-        isOpen={isRateLimitModalOpen}
-        onClose={() => setIsRateLimitModalOpen(false)}
-      />
+      {/* イベント情報へのリンクカード */}
+      <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden w-fit">
+        <div className="card-body p-4">
+          <h2 className="card-title">イベントを知る</h2>
+          <p className="text-sm text-gray-600 mb-2">
+            千代田区で開催されるイベント情報はこちら
+          </p>
+          <a
+            href="https://visit-chiyoda.tokyo/app/event"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary w-fit"
+          >
+            千代田区観光協会ウェブサイトへ
+          </a>
+        </div>
+      </div>
 
       <div className="mb-6">
         <div className="card bg-base-100 shadow-lg overflow-hidden">

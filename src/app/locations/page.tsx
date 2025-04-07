@@ -15,6 +15,7 @@ import {
   loadGeoJSON,
   groupLocationsByArea,
   formatAreaName,
+  getAreaNameFromCoordinates,
 } from "../../utils/clientGeoUtils";
 
 // 2点間の距離を計算する関数（ハーバーサイン公式）
@@ -323,90 +324,110 @@ export default function LocationsPage() {
   };
 
   // 施設カードのコンポーネント（再利用のため抽出）
-  const LocationCard = ({ location }: { location: LocationWithDistance }) => (
-    <div className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
-      {location.imageUri && (
-        <figure className="relative h-48 w-full">
-          <Image
-            src={location.imageUri}
-            alt={location.name}
-            fill
-            style={{ objectFit: "cover" }}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          />
-          {location.imageCopylight && (
-            <div className="absolute bottom-0 right-0 bg-black/70 text-white text-xs px-2 py-1">
-              {location.imageCopylight}
-            </div>
+  const LocationCard = ({ location }: { location: LocationWithDistance }) => {
+    const [areaName, setAreaName] = useState<string | null>(null);
+
+    // コンポーネントマウント時に町名を取得
+    useEffect(() => {
+      const fetchAreaName = async () => {
+        try {
+          const geoJSON = await loadGeoJSON();
+          const area = getAreaNameFromCoordinates(
+            location.lat,
+            location.lng,
+            geoJSON
+          );
+          setAreaName(area ? formatAreaName(area) : "不明");
+        } catch (err) {
+          logger.log("町名取得エラー:", err);
+          setAreaName("不明");
+        }
+      };
+
+      fetchAreaName();
+    }, [location.lat, location.lng]);
+
+    return (
+      <div className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
+        {location.imageUri && (
+          <figure className="relative h-48 w-full">
+            <Image
+              src={location.imageUri}
+              alt={location.name}
+              fill
+              style={{ objectFit: "cover" }}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            />
+            {location.imageCopylight && (
+              <div className="absolute bottom-0 right-0 bg-black/70 text-white text-xs px-2 py-1">
+                {location.imageCopylight}
+              </div>
+            )}
+          </figure>
+        )}
+
+        <div className="card-body">
+          <h2 className="card-title">{location.name}</h2>
+
+          {areaName && <p className="text-sm text-gray-500">{areaName}</p>}
+
+          {location.description && (
+            <p className="text-sm mt-1 line-clamp-3">{location.description}</p>
           )}
-        </figure>
-      )}
 
-      <div className="card-body">
-        <h2 className="card-title">{location.name}</h2>
-
-        {location.distance !== undefined && (
-          <p className="text-sm text-gray-500">
-            約{location.distance.toFixed(1)}km
-          </p>
-        )}
-
-        {location.description && (
-          <p className="text-sm mt-1 line-clamp-3">{location.description}</p>
-        )}
-
-        {location.uri && (
-          <a
-            href={location.uri}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="link link-primary text-sm"
-          >
-            ウェブサイトを見る
-          </a>
-        )}
-
-        <div className="card-actions justify-between mt-4">
-          <div className="dropdown dropdown-top">
-            <div tabIndex={0} role="button" className="btn btn-sm">
-              詳細
-            </div>
-            <div
-              tabIndex={0}
-              className="dropdown-content z-[1] p-3 shadow-lg bg-base-200 rounded-box w-52"
+          {location.uri && (
+            <a
+              href={location.uri}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link link-primary text-sm"
             >
-              <p className="text-xs mb-1">座標データ提供:</p>
-              <p className="text-xs mb-2">{location.nodeCopyright}</p>
-              {location.description && location.descriptionCopyright && (
-                <>
-                  <p className="text-xs mb-1">説明文提供:</p>
-                  <p className="text-xs mb-2">
-                    {location.descriptionCopyright}
-                  </p>
-                </>
-              )}
-              <p className="text-xs mb-1">ライセンス:</p>
-              <a
-                href={location.licenceUri}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="link link-primary text-xs"
-              >
-                {location.licence}
-              </a>
-            </div>
-          </div>
+              ウェブサイトを見る
+            </a>
+          )}
 
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => handleGoToLocation(location)}
-          >
-            ここへ行く
-          </button>
+          <div className="card-actions justify-between mt-4">
+            <div className="dropdown dropdown-top">
+              <div tabIndex={0} role="button" className="btn btn-sm">
+                詳細
+              </div>
+              <div
+                tabIndex={0}
+                className="dropdown-content z-[1] p-3 shadow-lg bg-base-200 rounded-box w-52"
+              >
+                <p className="text-xs mb-1">座標データ提供:</p>
+                <p className="text-xs mb-2">{location.nodeCopyright}</p>
+                {location.description && location.descriptionCopyright && (
+                  <>
+                    <p className="text-xs mb-1">説明文提供:</p>
+                    <p className="text-xs mb-2">
+                      {location.descriptionCopyright}
+                    </p>
+                  </>
+                )}
+                <p className="text-xs mb-1">ライセンス:</p>
+                <a
+                  href={location.licenceUri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link link-primary text-xs"
+                >
+                  {location.licence}
+                </a>
+              </div>
+            </div>
+
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => handleGoToLocation(location)}
+            >
+              ここへ行く
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -468,9 +489,17 @@ export default function LocationsPage() {
             href="https://visit-chiyoda.tokyo/app/event"
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn-primary w-fit"
+            className="btn btn-outline w-fit"
           >
             千代田区観光協会ウェブサイトへ
+          </a>
+          <a
+            href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-outline w-fit"
+          >
+            千代田区ウェブサイトへ
           </a>
         </div>
       </div>
@@ -478,7 +507,7 @@ export default function LocationsPage() {
       <div className="mb-6">
         <div className="card bg-base-100 shadow-lg overflow-hidden">
           <div className="card-body p-4">
-            <h2 className="card-title">位置情報を設定</h2>
+            <h2 className="card-title">近いところから表示</h2>
 
             {searchError && (
               <div className="alert alert-error">
@@ -712,6 +741,12 @@ export default function LocationsPage() {
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
+
+      {/* レート制限モーダル */}
+      <RateLimitModal
+        isOpen={isRateLimitModalOpen}
+        onClose={() => setIsRateLimitModalOpen(false)}
+      />
     </div>
   );
 }

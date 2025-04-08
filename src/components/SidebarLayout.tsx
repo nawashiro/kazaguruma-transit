@@ -33,8 +33,34 @@ export default function SidebarLayout({
           </div>
         </div>
         <div className="flex-grow p-4">{children}</div>
-        <footer className="footer px-4 py-2">
-          <div className="justify-self-end">
+        <footer className="flex flex-col md:flex-row px-4 py-2 justify-center md:justify-between">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 md:w-auto">
+            <a
+              href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-gray-500 hover:underline inline-block mx-2"
+            >
+              利用規約
+            </a>
+            <a
+              href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80b2a6d4d045e850407c"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-gray-500 hover:underline inline-block mx-2"
+            >
+              プライバシーポリシー
+            </a>
+            <a
+              href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80d0ba82d66f451b9ff1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-gray-500 hover:underline inline-block mx-2"
+            >
+              クッキーポリシー
+            </a>
+          </div>
+          <div className="mt-2 md:mt-0 flex justify-center md:justify-end">
             <AuthStatus />
           </div>
         </footer>

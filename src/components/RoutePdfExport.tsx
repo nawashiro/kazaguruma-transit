@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { useReactToPrint } from "react-to-print";
 import { logger } from "../utils/logger";
 import { Departure } from "../types/transit";
 import Link from "next/link";
@@ -59,6 +58,7 @@ interface RoutePdfExportProps {
   originLng?: number;
   destLat?: number;
   destLng?: number;
+  selectedDateTime?: string;
 }
 
 // 時刻表示用のフォーマッター関数
@@ -494,11 +494,15 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
 
 // PDF出力機能を提供するメインコンポーネント
 const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
-  const componentRef = useRef<HTMLDivElement>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [isSupporter, setIsSupporter] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [pdfGenerating, setPdfGenerating] = useState<boolean>(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [showErrorDetails, setShowErrorDetails] = useState(false);
+  const [pdfErrorDetails, setPdfErrorDetails] = useState<string | null>(null);
 
   // サーバーサイドAPIを使用してPDF出力権限を確認
   useEffect(() => {
@@ -544,69 +548,78 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
     };
   }, []);
 
-  // PDF出力前に権限を再確認
-  const verifyPermission = async (): Promise<boolean> => {
+  // サーバーサイドPDF生成APIを呼び出す関数
+  const handleGeneratePdf = async () => {
     try {
-      const response = await fetch("/api/pdf/check-permission");
+      setPdfLoading(true);
+      setPdfError(null);
+      setPdfErrorDetails(null);
+
+      if (!props.routes || props.routes.length === 0) {
+        throw new Error("有効な経路情報がありません");
+      }
+
+      // PDFデータを作成するAPIを呼び出す
+      logger.log("PDF生成APIを呼び出します");
+      const response = await fetch("/api/pdf/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          originStop: props.originStop,
+          destinationStop: props.destinationStop,
+          routes: props.routes,
+          type: props.type,
+          transfers: props.transfers,
+          originLat: props.originLat,
+          originLng: props.originLng,
+          destLat: props.destLat,
+          destLng: props.destLng,
+          selectedDateTime: props.selectedDateTime,
+        }),
+      });
 
       if (!response.ok) {
-        return false;
+        // エラーレスポンスのJSONを取得
+        try {
+          const errorData = await response.json();
+          logger.error("PDF生成エラー:", errorData);
+          setPdfError(errorData.error || "PDF生成に失敗しました");
+          setPdfErrorDetails(errorData.details || null);
+        } catch (jsonError) {
+          // JSONとしてパースできない場合はステータステキストを使用
+          setPdfError(`PDF生成に失敗しました (${response.status})`);
+        }
+        return;
       }
 
-      const data = await response.json();
-      return data.success && data.canPrint;
+      // レスポンスがPDFの場合、blobとして取得しダウンロード
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // ダウンロードリンクを作成して自動クリック
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = `乗換案内_${props.originStop.stopName}_${props.destinationStop.stopName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+
+      // クリーンアップ
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (error) {
-      logger.error("PDF権限再確認エラー:", error);
-      return false;
+      logger.error("PDF生成エラー:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "PDF生成中にエラーが発生しました"
+      );
+    } finally {
+      setPdfGenerating(false);
     }
   };
-
-  // PDF出力処理（権限チェック付き）
-  const handlePrint = useReactToPrint({
-    documentTitle: `乗換案内_${props.originStop.stopName}_${props.destinationStop.stopName}`,
-    pageStyle: `
-      @page {
-        size: A4;
-        margin: 10mm;
-      }
-      @media print {
-        body {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        .print-content .card {
-          break-inside: avoid;
-          page-break-inside: avoid;
-        }
-        /* ヘッダー・フッターを非表示 */
-        @page { margin: 0; }
-        html { margin: 0; }
-        /* about:srcdoc を非表示 */
-        .header, .footer, head { display: none !important; }
-      }
-    `,
-    onBeforePrint: async () => {
-      // 印刷前に権限を再確認
-      const hasPermission = await verifyPermission();
-      if (!hasPermission) {
-        // 権限がない場合はエラーをスロー
-        throw new Error("印刷権限がありません");
-      }
-    },
-    onPrintError: (errorLocation, error) => {
-      logger.error("PDF出力エラー:", errorLocation, error);
-      if (error?.message === "印刷権限がありません") {
-        setError(
-          "現在の権限では印刷できません。サポーター登録を行ってください。"
-        );
-        setIsSupporter(false); // 権限がないため状態を更新
-      } else {
-        setError("PDF出力中にエラーが発生しました");
-      }
-    },
-    // @ts-ignore - contentRefはreact-to-printの最新バージョンで使用される正しいプロパティ
-    contentRef: componentRef,
-  });
 
   // サポーターモーダルを開く処理
   const handleOpenSupporterModal = () => {
@@ -652,41 +665,30 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
       {isLoggedIn && isSupporter ? (
         // 支援者の場合はPDF出力ボタンを表示
         <button
-          onClick={async () => {
-            try {
-              // 印刷前に権限を再確認
-              const hasPermission = await verifyPermission();
-              if (hasPermission) {
-                handlePrint();
-              } else {
-                setError(
-                  "現在の権限では印刷できません。サポーター登録を行ってください。"
-                );
-                setIsSupporter(false); // 権限がないため状態を更新
-              }
-            } catch (error) {
-              logger.error("印刷実行エラー:", error);
-              setError("印刷処理中にエラーが発生しました");
-            }
-          }}
+          onClick={handleGeneratePdf}
           className="btn btn-primary mt-4 flex items-center"
           aria-label="PDF出力"
+          disabled={pdfGenerating}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 mr-2"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          印刷する
+          {pdfGenerating ? (
+            <span className="loading loading-spinner loading-xs mr-2"></span>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          )}
+          {pdfGenerating ? "生成中..." : "印刷する"}
         </button>
       ) : (
         // 非ログインユーザーの場合はKo-fiへのリンクを表示
@@ -720,13 +722,6 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
           </button>
         </div>
       )}
-
-      {/* 印刷用コンテンツ（非表示） */}
-      <div style={{ display: "none" }}>
-        <div ref={componentRef}>
-          <RoutePdfContent {...props} />
-        </div>
-      </div>
     </>
   );
 };

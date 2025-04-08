@@ -582,6 +582,7 @@ export default function Home() {
                       originLng={selectedOrigin.lng}
                       destLat={selectedDestination.lat}
                       destLng={selectedDestination.lng}
+                      selectedDateTime={selectedDateTime}
                     />
                   </div>
                 )}

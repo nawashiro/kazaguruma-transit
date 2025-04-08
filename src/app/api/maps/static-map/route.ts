@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
     const width = parseInt(searchParams.get("width") || "600");
     const height = parseInt(searchParams.get("height") || "200");
     const encodedPolyline = searchParams.get("polyline") || null;
+    const style = searchParams.get("style") || null;
 
     if (isNaN(startLat) || isNaN(startLng) || isNaN(endLat) || isNaN(endLng)) {
       return NextResponse.json(
@@ -68,12 +69,13 @@ export async function GET(req: NextRequest) {
     let urlString = "https://maps.googleapis.com/maps/api/staticmap";
     urlString += `?size=${width}x${height}`;
 
-    // ポリラインがある場合はそれを使用、なければ直線を描画
+    // 徒歩経路をリクエスト
     if (encodedPolyline) {
       urlString += `&path=weight:5|color:0x000000|enc:${encodeURIComponent(
         encodedPolyline
       )}`;
     } else {
+      // DirectionsAPIがポリラインを提供していない場合は直線を代替として使用
       urlString += `&path=weight:5|color:0x000000|${startLat},${startLng}|${endLat},${endLng}`;
     }
 
@@ -82,8 +84,14 @@ export async function GET(req: NextRequest) {
       urlString += `&markers=${encodeURIComponent(marker)}`;
     });
 
-    // 地図をグレースケールにする
-    urlString += `&style=feature:all|element:all|saturation:-100`;
+    // スタイルを適用
+    if (style === "monochrome") {
+      // モノクロスタイル (詳細な調整でより高コントラストに)
+      urlString += `&style=feature:all|element:geometry|saturation:-100|lightness:20`;
+      urlString += `&style=feature:all|element:labels|visibility:on|saturation:-100`;
+      urlString += `&style=feature:road|element:all|saturation:-100|lightness:40`;
+      urlString += `&style=feature:water|element:all|saturation:-100|lightness:-10`;
+    }
 
     // APIキーとスケールを追加
     urlString += `&key=${apiKey}`;

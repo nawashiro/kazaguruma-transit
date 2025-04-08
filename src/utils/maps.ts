@@ -38,7 +38,7 @@ export async function generateStaticMapWithDirectionsUrl(
   try {
     // サーバーサイドAPIを呼び出して地図URLを取得
     const response = await fetch(
-      `/api/maps/static-map?startLat=${startLat}&startLng=${startLng}&endLat=${endLat}&endLng=${endLng}&width=${width}&height=${height}`
+      `/api/maps/static-map?startLat=${startLat}&startLng=${startLng}&endLat=${endLat}&endLng=${endLng}&width=${width}&height=${height}&style=monochrome`
     );
 
     if (!response.ok) {
@@ -105,7 +105,7 @@ export async function generateStaticMapWithPolylineUrl(
     const response = await fetch(
       `/api/maps/static-map?startLat=${startLat}&startLng=${startLng}&endLat=${endLat}&endLng=${endLng}&polyline=${encodeURIComponent(
         encodedPolyline
-      )}&width=${width}&height=${height}`
+      )}&width=${width}&height=${height}&style=monochrome`
     );
 
     if (!response.ok) {
@@ -116,7 +116,8 @@ export async function generateStaticMapWithPolylineUrl(
     return data.url || "";
   } catch (error) {
     console.error("Error fetching static map URL:", error);
-    // フォールバック: 空のプレースホルダー画像を返す
-    return `/images/map_placeholder.png`;
+    // フォールバック: 絶対URLのプレースホルダー画像を返す
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    return `${baseUrl}/images/map_placeholder.png`;
   }
 }

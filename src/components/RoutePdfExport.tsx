@@ -552,6 +552,7 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
   const handleGeneratePdf = async () => {
     try {
       setPdfLoading(true);
+      setPdfGenerating(true);
       setPdfError(null);
       setPdfErrorDetails(null);
 
@@ -611,12 +612,13 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
       document.body.removeChild(a);
     } catch (error) {
       logger.error("PDF生成エラー:", error);
-      setError(
+      setPdfError(
         error instanceof Error
           ? error.message
           : "PDF生成中にエラーが発生しました"
       );
     } finally {
+      setPdfLoading(false);
       setPdfGenerating(false);
     }
   };
@@ -660,6 +662,47 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
     );
   }
 
+  // PDF生成中のエラー表示
+  if (pdfError) {
+    return (
+      <div className="alert alert-error mt-4">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="stroke-current shrink-0 h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <div className="flex-1">
+          <div className="font-bold">PDF生成エラー</div>
+          <div>{pdfError}</div>
+          {pdfErrorDetails && showErrorDetails && (
+            <div className="text-xs mt-2 border-t pt-2">{pdfErrorDetails}</div>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          {pdfErrorDetails && (
+            <button
+              onClick={() => setShowErrorDetails(!showErrorDetails)}
+              className="btn btn-xs btn-ghost"
+            >
+              {showErrorDetails ? "詳細を隠す" : "詳細を表示"}
+            </button>
+          )}
+          <button onClick={() => setPdfError(null)} className="btn btn-sm">
+            閉じる
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {isLoggedIn && isSupporter ? (
@@ -668,9 +711,9 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
           onClick={handleGeneratePdf}
           className="btn btn-primary mt-4 flex items-center"
           aria-label="PDF出力"
-          disabled={pdfGenerating}
+          disabled={pdfGenerating || pdfLoading}
         >
-          {pdfGenerating ? (
+          {pdfGenerating || pdfLoading ? (
             <span className="loading loading-spinner loading-xs mr-2"></span>
           ) : (
             <svg
@@ -688,7 +731,7 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
               />
             </svg>
           )}
-          {pdfGenerating ? "生成中..." : "印刷する"}
+          {pdfGenerating || pdfLoading ? "生成中..." : "印刷する"}
         </button>
       ) : (
         // 非ログインユーザーの場合はKo-fiへのリンクを表示

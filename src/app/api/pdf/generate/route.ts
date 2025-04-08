@@ -463,7 +463,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
       <div class="card bg-white p-4 border-left-4 my-4" style="border-left: 4px solid #ccc;">
         <div class="flex justify-between items-center mb-2">
           <div class="text-lg font-bold">${data.originStop.stopName}</div>
-          <div class="badge p-3" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.5rem 1rem;">
+          <div class="badge" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
             ${formatTimeDisplay(departureTime)}
           </div>
         </div>
@@ -482,7 +482,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
         
         <div class="flex justify-between items-center">
           <div class="text-lg font-bold">${destinationName}</div>
-          <div class="badge p-3" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.5rem 1rem;">
+          <div class="badge" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
             ${formatTimeDisplay(arrivalTime)}
           </div>
         </div>
@@ -514,7 +514,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
               <div class="text-lg font-bold">${
                 transfer.transferStop.stopName
               }</div>
-              <div class="badge p-3" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.5rem 1rem;">
+              <div class="badge" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
                 ${formatTimeDisplay(
                   transfer.nextRoute.departureTime || transferDepartureTime
                 )}
@@ -541,7 +541,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
               <div class="text-lg font-bold">${
                 data.destinationStop.stopName
               }</div>
-              <div class="badge p-3" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.5rem 1rem;">
+              <div class="badge" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
                 ${formatTimeDisplay(
                   transfer.nextRoute.arrivalTime || finalArrivalTime
                 )}
@@ -620,7 +620,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
         <title>乗換案内</title>
         <meta charset="utf-8">
         <style>
-          body { font-family: sans-serif; padding: 20px; }
+          body { font-family: sans-serif; padding: 0; margin: 0; }
           .container { max-width: 800px; margin: 0 auto; padding: 0 24px; }
           .text-center { text-align: center; }
           .space-y-4 > * + * { margin-top: 1rem; }

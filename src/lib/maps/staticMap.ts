@@ -1,46 +1,37 @@
-import { NextRequest, NextResponse } from "next/server";
-import { appRouterRateLimitMiddleware } from "../../../../lib/api/rate-limit-middleware";
-import { getSessionData } from "../../../../lib/auth/session";
-import { logger } from "../../../../utils/logger";
+"use server";
 
-export interface StaticMapResponse {
+import { logger } from "../../utils/logger";
+
+/**
+ * Static Mapの応答形式
+ */
+export interface StaticMapResult {
   success: boolean;
   url?: string;
   error?: string;
-  limitExceeded?: boolean;
 }
 
-export async function GET(req: NextRequest) {
+/**
+ * 静的地図URLを生成する
+ * サーバーコンポーネントとして実装
+ * APIエンドポイントではなくサーバーアクションとして実装
+ */
+export async function generateStaticMapUrl(
+  startLat: number,
+  startLng: number,
+  endLat: number,
+  endLng: number,
+  width: number = 600,
+  height: number = 200,
+  encodedPolyline: string | null = null,
+  style: string | null = "monochrome"
+): Promise<StaticMapResult> {
   try {
-    // セッションから認証・支援者情報を取得
-    const session = await getSessionData(req);
-
-    // 非支援者の場合はレート制限を適用
-    if (!session.isLoggedIn || !session.isSupporter) {
-      const limitResponse = await appRouterRateLimitMiddleware(req);
-      if (limitResponse) {
-        return limitResponse;
-      }
-    }
-
-    const { searchParams } = new URL(req.url);
-    const startLat = parseFloat(searchParams.get("startLat") || "");
-    const startLng = parseFloat(searchParams.get("startLng") || "");
-    const endLat = parseFloat(searchParams.get("endLat") || "");
-    const endLng = parseFloat(searchParams.get("endLng") || "");
-    const width = parseInt(searchParams.get("width") || "600");
-    const height = parseInt(searchParams.get("height") || "200");
-    const encodedPolyline = searchParams.get("polyline") || null;
-    const style = searchParams.get("style") || null;
-
     if (isNaN(startLat) || isNaN(startLng) || isNaN(endLat) || isNaN(endLng)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "有効な座標パラメータが必要です",
-        } as StaticMapResponse,
-        { status: 400 }
-      );
+      return {
+        success: false,
+        error: "有効な座標パラメータが必要です",
+      };
     }
 
     // APIキー取得（サーバーサイドのみ）
@@ -50,13 +41,10 @@ export async function GET(req: NextRequest) {
       "";
     if (!apiKey) {
       logger.error("Google Maps API key is missing");
-      return NextResponse.json(
-        {
-          success: false,
-          error: "APIキーが設定されていません",
-        } as StaticMapResponse,
-        { status: 500 }
-      );
+      return {
+        success: false,
+        error: "APIキーが設定されていません",
+      };
     }
 
     // マーカーパラメータ (始点と終点にマーカーを表示、グレースケールに合わせた色)
@@ -97,18 +85,15 @@ export async function GET(req: NextRequest) {
     urlString += `&key=${apiKey}`;
     urlString += `&scale=2`; // 高解像度画像のためのスケール
 
-    return NextResponse.json({
+    return {
       success: true,
       url: urlString,
-    });
+    };
   } catch (error) {
-    logger.error("Static Map API error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: "静的地図URL生成中にエラーが発生しました",
-      } as StaticMapResponse,
-      { status: 500 }
-    );
+    logger.error("Static Map generator error:", error);
+    return {
+      success: false,
+      error: "静的地図URL生成中にエラーが発生しました",
+    };
   }
 }

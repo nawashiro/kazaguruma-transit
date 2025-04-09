@@ -381,21 +381,7 @@ export class TransitService {
     // 乗り換え経路を一度のクエリで検索する最適化SQLクエリ
     const sql = isDeparture
       ? `
-      WITH origin_stop AS (
-        SELECT stop_id, stop_name, stop_lat, stop_lon,
-               (((stop_lat - ?) * (stop_lat - ?)) + ((stop_lon - ?) * (stop_lon - ?))) AS distance
-        FROM stops 
-        ORDER BY distance ASC
-        LIMIT 1
-      ),
-      destination_stop AS (
-        SELECT stop_id, stop_name, stop_lat, stop_lon,
-               (((stop_lat - ?) * (stop_lat - ?)) + ((stop_lon - ?) * (stop_lon - ?))) AS distance
-        FROM stops
-        ORDER BY distance ASC
-        LIMIT 1
-      ),
-      valid_services AS (
+      WITH valid_services AS (
         SELECT service_id FROM calendar 
         WHERE 
           (
@@ -410,16 +396,22 @@ export class TransitService {
           AND start_date <= strftime('%Y%m%d', ?)
           AND end_date >= strftime('%Y%m%d', ?)
       ),
+      origin_stop AS (
+        SELECT stop_id, stop_name, stop_lat, stop_lon FROM stops WHERE stop_id = ?
+      ),
+      dest_stop AS (
+        SELECT stop_id, stop_name, stop_lat, stop_lon FROM stops WHERE stop_id = ?
+      ),
       transfer_stops AS (
         SELECT 
           s.stop_id, s.stop_name, s.stop_lat, s.stop_lon,
           (((s.stop_lat - (SELECT stop_lat FROM origin_stop)) * (s.stop_lat - (SELECT stop_lat FROM origin_stop))) + 
            ((s.stop_lon - (SELECT stop_lon FROM origin_stop)) * (s.stop_lon - (SELECT stop_lon FROM origin_stop)))) AS from_origin_distance,
-          (((s.stop_lat - (SELECT stop_lat FROM destination_stop)) * (s.stop_lat - (SELECT stop_lat FROM destination_stop))) + 
-           ((s.stop_lon - (SELECT stop_lon FROM destination_stop)) * (s.stop_lon - (SELECT stop_lon FROM destination_stop)))) AS to_dest_distance
+          (((s.stop_lat - (SELECT stop_lat FROM dest_stop)) * (s.stop_lat - (SELECT stop_lat FROM dest_stop))) + 
+           ((s.stop_lon - (SELECT stop_lon FROM dest_stop)) * (s.stop_lon - (SELECT stop_lon FROM dest_stop)))) AS to_dest_distance
         FROM stops s
         WHERE s.stop_id != (SELECT stop_id FROM origin_stop)
-          AND s.stop_id != (SELECT stop_id FROM destination_stop)
+          AND s.stop_id != (SELECT stop_id FROM dest_stop)
         ORDER BY (from_origin_distance + to_dest_distance) ASC
         LIMIT 10
       ),
@@ -436,13 +428,14 @@ export class TransitService {
           r2.route_color as second_route_color, r2.route_text_color as second_route_text_color,
           ABS(julianday(st4.arrival_time) - julianday(?)) as arrival_time_diff
         FROM transfer_stops ts
-        CROSS JOIN destination_stop d
+        CROSS JOIN dest_stop d
         JOIN stop_times st4 ON d.stop_id = st4.stop_id
         JOIN trips t2 ON st4.trip_id = t2.trip_id
         JOIN routes r2 ON t2.route_id = r2.route_id
         JOIN stop_times st3 ON t2.trip_id = st3.trip_id AND ts.stop_id = st3.stop_id
         JOIN valid_services vs ON t2.service_id = vs.service_id
         WHERE st3.stop_sequence < st4.stop_sequence
+          AND st4.arrival_time <= ?
         ORDER BY arrival_time_diff ASC
         LIMIT 20
       ),
@@ -490,29 +483,21 @@ export class TransitService {
           AND end_date >= strftime('%Y%m%d', ?)
       ),
       origin_stop AS (
-        SELECT stop_id, stop_name, stop_lat, stop_lon,
-               (((stop_lat - ?) * (stop_lat - ?)) + ((stop_lon - ?) * (stop_lon - ?))) AS distance
-        FROM stops 
-        ORDER BY distance ASC
-        LIMIT 1
+        SELECT stop_id, stop_name, stop_lat, stop_lon FROM stops WHERE stop_id = ?
       ),
-      destination_stop AS (
-        SELECT stop_id, stop_name, stop_lat, stop_lon,
-               (((stop_lat - ?) * (stop_lat - ?)) + ((stop_lon - ?) * (stop_lon - ?))) AS distance
-        FROM stops
-        ORDER BY distance ASC
-        LIMIT 1
+      dest_stop AS (
+        SELECT stop_id, stop_name, stop_lat, stop_lon FROM stops WHERE stop_id = ?
       ),
       transfer_stops AS (
         SELECT 
           s.stop_id, s.stop_name, s.stop_lat, s.stop_lon,
           (((s.stop_lat - (SELECT stop_lat FROM origin_stop)) * (s.stop_lat - (SELECT stop_lat FROM origin_stop))) + 
            ((s.stop_lon - (SELECT stop_lon FROM origin_stop)) * (s.stop_lon - (SELECT stop_lon FROM origin_stop)))) AS from_origin_distance,
-          (((s.stop_lat - (SELECT stop_lat FROM destination_stop)) * (s.stop_lat - (SELECT stop_lat FROM destination_stop))) + 
-           ((s.stop_lon - (SELECT stop_lon FROM destination_stop)) * (s.stop_lon - (SELECT stop_lon FROM destination_stop)))) AS to_dest_distance
+          (((s.stop_lat - (SELECT stop_lat FROM dest_stop)) * (s.stop_lat - (SELECT stop_lat FROM dest_stop))) + 
+           ((s.stop_lon - (SELECT stop_lon FROM dest_stop)) * (s.stop_lon - (SELECT stop_lon FROM dest_stop)))) AS to_dest_distance
         FROM stops s
         WHERE s.stop_id != (SELECT stop_id FROM origin_stop)
-          AND s.stop_id != (SELECT stop_id FROM destination_stop)
+          AND s.stop_id != (SELECT stop_id FROM dest_stop)
         ORDER BY (from_origin_distance + to_dest_distance) ASC
         LIMIT 10
       ),
@@ -529,13 +514,14 @@ export class TransitService {
           r2.route_color as second_route_color, r2.route_text_color as second_route_text_color,
           ABS(julianday(st4.arrival_time) - julianday(?)) as arrival_time_diff
         FROM transfer_stops ts
-        CROSS JOIN destination_stop d
+        CROSS JOIN dest_stop d
         JOIN stop_times st4 ON d.stop_id = st4.stop_id
         JOIN trips t2 ON st4.trip_id = t2.trip_id
         JOIN routes r2 ON t2.route_id = r2.route_id
         JOIN stop_times st3 ON t2.trip_id = st3.trip_id AND ts.stop_id = st3.stop_id
         JOIN valid_services vs ON t2.service_id = vs.service_id
         WHERE st3.stop_sequence < st4.stop_sequence
+          AND st4.arrival_time <= ?
         ORDER BY arrival_time_diff ASC
         LIMIT 20
       ),
@@ -567,6 +553,46 @@ export class TransitService {
       SELECT * FROM first_leg_arrival
     `;
 
+    const params = isDeparture
+      ? [
+          // valid_services用の日付パラメータ
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          // 出発停留所と目的地停留所のID
+          origin.stop_id,
+          destination.stop_id,
+          // arrival_time_diff計算用の時刻文字列
+          timeStr,
+          // WHERE条件
+          timeStr,
+        ]
+      : [
+          // valid_services用の日付パラメータ
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          dateStr,
+          // 出発停留所と目的地停留所のID
+          origin.stop_id,
+          destination.stop_id,
+          // arrival_time_diff計算用の時刻文字列
+          timeStr,
+          // WHERE条件
+          timeStr,
+        ];
+
     try {
       // this.dbを初期化
       await this.initDb();
@@ -576,59 +602,6 @@ export class TransitService {
       }
 
       console.log(`[TransitService] 乗り換え経路検索SQLを実行中...`);
-
-      // バインドパラメータの準備
-      const params = isDeparture
-        ? [
-            // origin_stop WHERE部分
-            origin.lat,
-            origin.lat,
-            origin.lng,
-            origin.lng,
-            // destination_stop WHERE部分
-            destination.lat,
-            destination.lat,
-            destination.lng,
-            destination.lng,
-            // valid_services WHERE部分（曜日判定）
-            dateStr,
-            dateStr,
-            dateStr,
-            dateStr,
-            dateStr,
-            dateStr,
-            dateStr,
-            // valid_services WHERE部分（日付範囲判定）
-            dateStr,
-            dateStr,
-            // first_leg WHERE部分（出発時刻制限）
-            timeStr,
-          ]
-        : [
-            // valid_services WHERE部分（曜日判定）
-            dateStr,
-            dateStr,
-            dateStr,
-            dateStr,
-            dateStr,
-            dateStr,
-            dateStr,
-            // valid_services WHERE部分（日付範囲判定）
-            dateStr,
-            dateStr,
-            // origin_stop WHERE部分
-            origin.lat,
-            origin.lat,
-            origin.lng,
-            origin.lng,
-            // destination_stop WHERE部分
-            destination.lat,
-            destination.lat,
-            destination.lng,
-            destination.lng,
-            // arrival_time_diff計算用の時刻文字列
-            timeStr,
-          ];
 
       try {
         // better-sqlite3の同期APIを使用
@@ -1058,7 +1031,8 @@ export class TransitService {
         ds.stop_id as dest_stop_id, ds.stop_name as dest_stop_name,
         ds.stop_lat as dest_stop_lat, ds.stop_lon as dest_stop_lon,
         (julianday(dest_st.arrival_time) - julianday(origin_st.departure_time)) * 24 * 60 as duration_minutes,
-        0 as origin_distance, 0 as dest_distance
+        0 as origin_distance, 0 as dest_distance,
+        ABS(julianday(dest_st.arrival_time) - julianday(?)) as arrival_time_diff
       FROM stop_times origin_st
       JOIN stop_times dest_st ON origin_st.trip_id = dest_st.trip_id
       JOIN trips t ON origin_st.trip_id = t.trip_id
@@ -1105,7 +1079,8 @@ export class TransitService {
         ds.stop_id as dest_stop_id, ds.stop_name as dest_stop_name,
         ds.stop_lat as dest_stop_lat, ds.stop_lon as dest_stop_lon,
         (julianday(dest_st.arrival_time) - julianday(origin_st.departure_time)) * 24 * 60 as duration_minutes,
-        0 as origin_distance, 0 as dest_distance
+        0 as origin_distance, 0 as dest_distance,
+        ABS(julianday(dest_st.arrival_time) - julianday(?)) as arrival_time_diff
       FROM stop_times origin_st
       JOIN stop_times dest_st ON origin_st.trip_id = dest_st.trip_id
       JOIN trips t ON origin_st.trip_id = t.trip_id
@@ -1117,7 +1092,7 @@ export class TransitService {
         AND dest_st.stop_id = ?
         AND origin_st.stop_sequence < dest_st.stop_sequence
         AND dest_st.arrival_time <= ?
-      ORDER BY dest_st.arrival_time DESC
+      ORDER BY arrival_time_diff ASC, dest_st.arrival_time DESC
       LIMIT 20
       `;
 
@@ -1136,6 +1111,8 @@ export class TransitService {
           // 出発停留所と目的地停留所のID
           origin.stop_id,
           destination.stop_id,
+          // time_diff計算用の時刻文字列
+          timeStr,
           // WHERE条件
           origin.stop_id,
           destination.stop_id,
@@ -1160,6 +1137,7 @@ export class TransitService {
           // WHERE条件
           origin.stop_id,
           destination.stop_id,
+          timeStr,
         ];
 
     try {

@@ -66,6 +66,28 @@ jest.mock("react-to-print", () => ({
   useReactToPrint: jest.fn().mockImplementation(() => jest.fn()),
 }));
 
+// window.URL.createObjectURLのモック
+const mockCreateObjectURL = jest.fn();
+const mockRevokeObjectURL = jest.fn();
+
+beforeAll(() => {
+  // window.URLのモックを設定
+  Object.defineProperty(window, "URL", {
+    value: {
+      createObjectURL: mockCreateObjectURL,
+      revokeObjectURL: mockRevokeObjectURL,
+    },
+    writable: true,
+  });
+});
+
+beforeEach(() => {
+  // 各テストの前にモックをリセット
+  mockCreateObjectURL.mockReset();
+  mockRevokeObjectURL.mockReset();
+  mockCreateObjectURL.mockReturnValue("blob:mock-url");
+});
+
 describe("RoutePdfExport", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -132,14 +154,31 @@ describe("RoutePdfExport", () => {
     // 認証確認後の表示を待機
     await waitFor(() => {
       expect(screen.getByText(/印刷する（支援者限定）/i)).toBeInTheDocument();
-      expect(screen.getByText(/支援者登録/i)).toBeInTheDocument();
+      expect(screen.getByText(/私は支援者です/i)).toBeInTheDocument();
     });
   });
 
   it("PDFボタンをクリックするとPDF出力処理が呼ばれること", async () => {
-    // モックハンドラー
-    const mockPrintHandler = jest.fn();
-    (useReactToPrint as jest.Mock).mockImplementation(() => mockPrintHandler);
+    // APIレスポンスのモック
+    (global.fetch as jest.Mock).mockImplementation((url) => {
+      if (url === "/api/pdf/check-permission") {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockSupporterResponse),
+        });
+      }
+      if (url === "/api/pdf/generate") {
+        return Promise.resolve({
+          ok: true,
+          blob: () =>
+            Promise.resolve(new Blob(["test"], { type: "application/pdf" })),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      });
+    });
 
     render(
       <RoutePdfExport
@@ -153,15 +192,14 @@ describe("RoutePdfExport", () => {
 
     // 認証確認後の表示を待機
     await waitFor(() => {
-      expect(screen.getByText("印刷する")).toBeInTheDocument();
+      const button = screen.getByText("印刷する");
+      expect(button).toBeInTheDocument();
+      fireEvent.click(button);
     });
 
-    const button = screen.getByText("印刷する");
-    fireEvent.click(button);
-
-    // Promiseを解決するために少し待機
+    // PDFダウンロードリンクが作成されることを確認
     await waitFor(() => {
-      expect(mockPrintHandler).toHaveBeenCalled();
+      expect(mockCreateObjectURL).toHaveBeenCalled();
     });
   });
 
@@ -204,7 +242,21 @@ describe("RoutePdfExport", () => {
   });
 
   it("ルート情報が表示用コンポーネントに正しく渡されること", async () => {
-    render(
+    // APIレスポンスのモック
+    (global.fetch as jest.Mock).mockImplementation((url) => {
+      if (url === "/api/pdf/check-permission") {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockSupporterResponse),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      });
+    });
+
+    const { container } = render(
       <RoutePdfExport
         originStop={mockOriginStop}
         destinationStop={mockDestinationStop}
@@ -219,9 +271,11 @@ describe("RoutePdfExport", () => {
       expect(screen.getByText("印刷する")).toBeInTheDocument();
     });
 
-    // 印刷プレビューは非表示だが、DOMには存在するはず
-    expect(document.body.textContent).toContain(mockOriginStop.stopName);
-    expect(document.body.textContent).toContain(mockDestinationStop.stopName);
-    expect(document.body.textContent).toContain(mockRoutes[0].routeShortName);
+    // プレビューコンポーネントの内容を確認
+    const pdfContent = container.querySelector('[data-testid="pdf-content"]');
+    expect(pdfContent).toBeInTheDocument();
+    expect(pdfContent?.textContent).toContain(mockOriginStop.stopName);
+    expect(pdfContent?.textContent).toContain(mockDestinationStop.stopName);
+    expect(pdfContent?.textContent).toContain(mockRoutes[0].routeShortName);
   });
 });

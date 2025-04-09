@@ -53,7 +53,7 @@ describe("KofiApiClient", () => {
       const result = await kofiClient.checkMembership("test@example.com");
 
       expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining("/membership/test%40example.com/Basic"),
+        expect.stringContaining("/membership/test%40example.com/coffee"),
         expect.objectContaining({
           headers: expect.objectContaining({
             "X-API-Key": "test-api-key",

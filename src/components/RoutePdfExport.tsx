@@ -319,9 +319,19 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
   }
 
   return (
-    <div className="bg-white space-y-4 p-8 px-24">
+    <div data-testid="pdf-content" className="bg-white space-y-4 p-8 px-24">
       <div className="text-center">
         <p className="mt-2 text-lg">{formattedDate}</p>
+        <h1 className="text-2xl font-bold mt-4">乗換案内</h1>
+        <p className="mt-2">
+          {props.originStop.stopName} → {props.destinationStop.stopName}
+        </p>
+        {props.routes.map((route, index) => (
+          <div key={index} className="mt-4">
+            <p className="font-bold">{route.routeShortName}</p>
+            <p>{route.routeName}</p>
+          </div>
+        ))}
       </div>
 
       {/* 出発地から停留所への地図 */}
@@ -503,6 +513,7 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [showErrorDetails, setShowErrorDetails] = useState(false);
   const [pdfErrorDetails, setPdfErrorDetails] = useState<string | null>(null);
+  const pdfRef = useRef<HTMLDivElement>(null);
 
   // サーバーサイドAPIを使用してPDF出力権限を確認
   useEffect(() => {
@@ -705,6 +716,11 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
 
   return (
     <>
+      <div style={{ display: "none" }}>
+        <div ref={pdfRef}>
+          <RoutePdfContent {...props} />
+        </div>
+      </div>
       {isLoggedIn && isSupporter ? (
         // 支援者の場合はPDF出力ボタンを表示
         <button

@@ -21,8 +21,8 @@ import { DateTime } from "luxon";
 import { loadConfig, saveConfig, TransitConfig } from "../config/config";
 
 // インポート処理のロック状態を追跡する変数
-let isImporting = false;
-let importPromise: Promise<any> | null = null;
+const isImporting = false;
+const importPromise: Promise<void> | null = null;
 
 /**
  * 交通データの取得と管理を担当するマネージャークラス

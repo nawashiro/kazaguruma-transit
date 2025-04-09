@@ -65,6 +65,11 @@ interface IntegratedRouteDisplayProps {
   destLng?: number;
 }
 
+interface RouteError {
+  message: string;
+  code?: string;
+}
+
 const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
   originStop,
   destinationStop,
@@ -103,7 +108,9 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
       return `${arrivalHours.toString().padStart(2, "0")}:${arrivalMinutes
         .toString()
         .padStart(2, "0")}`;
-    } catch (e) {
+    } catch (error: unknown) {
+      const routeError = error as RouteError;
+      logger.error("ルート表示エラー:", routeError.message);
       return "時刻不明";
     }
   };

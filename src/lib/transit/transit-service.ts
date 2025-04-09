@@ -67,8 +67,6 @@ export class TransitService {
         fs.mkdirSync(dbDir, { recursive: true });
       }
 
-      const dbExists = fs.existsSync(dbPath);
-
       // GTFSライブラリの最新仕様に合わせて修正
       // skipImportパラメータはopenDb関数内部で処理されるため、
       // 手動でskipImportを制御する必要はありません

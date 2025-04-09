@@ -4,7 +4,6 @@ import Home from "../page";
 
 // モックのfetch API
 global.fetch = jest.fn();
-const mockFetch = global.fetch as jest.Mock;
 
 jest.mock("../../components/OriginSelector", () => {
   return function MockOriginSelector({ onOriginSelected }: any) {
@@ -89,6 +88,18 @@ jest.mock("../../components/DateTimeSelector", () => {
     );
   };
 });
+
+interface MockResponse {
+  json: () => Promise<any>;
+  ok: boolean;
+  status: number;
+}
+
+const mockResponse: MockResponse = {
+  json: async () => ({ routes: [] }),
+  ok: true,
+  status: 200,
+};
 
 describe("Home", () => {
   beforeEach(() => {

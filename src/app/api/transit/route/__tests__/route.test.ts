@@ -1,26 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as gtfs from "gtfs";
+import { jest } from "@jest/globals";
 
 // SQLiteManagerをモック
 jest.mock("../../../../../lib/db/sqlite-manager", () => ({
   sqliteManager: {
-    init: jest.fn().mockResolvedValue(undefined),
-    getRateLimitByIp: jest.fn().mockResolvedValue(null),
-    incrementRateLimit: jest.fn().mockResolvedValue(undefined),
+    init: jest.fn().mockResolvedValue(undefined as never),
+    getRateLimitByIp: jest.fn().mockResolvedValue(null as never),
+    incrementRateLimit: jest.fn().mockResolvedValue(undefined as never),
   },
 }));
 
 // モジュールをモック
 jest.mock("next/server", () => {
-  const originalModule = jest.requireActual("next/server");
+  const originalModule = jest.requireActual("next/server") as Record<
+    string,
+    unknown
+  >;
   return {
     __esModule: true,
     ...originalModule,
     NextResponse: {
-      ...originalModule.NextResponse,
-      json: jest.fn().mockImplementation((body, options) => {
+      ...(originalModule.NextResponse as Record<string, unknown>),
+      json: jest.fn().mockImplementation((body: unknown, options?: unknown) => {
+        const status = (options as { status?: number })?.status || 200;
         return {
-          status: options?.status || 200,
+          status,
           json: async () => body,
         };
       }),
@@ -30,14 +35,14 @@ jest.mock("next/server", () => {
 
 // レート制限ミドルウェアをモック
 jest.mock("../../../../../lib/api/rate-limit-middleware", () => ({
-  appRouterRateLimitMiddleware: jest.fn().mockResolvedValue(undefined),
+  appRouterRateLimitMiddleware: jest.fn().mockResolvedValue(undefined as never),
 }));
 
 // GTFSモジュールのモック化
 jest.mock("gtfs", () => ({
-  openDb: jest.fn().mockResolvedValue(undefined),
-  closeDb: jest.fn().mockResolvedValue(undefined),
-  importGtfs: jest.fn().mockResolvedValue(undefined),
+  openDb: jest.fn().mockResolvedValue(undefined as never),
+  closeDb: jest.fn().mockResolvedValue(undefined as never),
+  importGtfs: jest.fn().mockResolvedValue(undefined as never),
   getStops: jest.fn(),
   getStoptimes: jest.fn(),
   getTrips: jest.fn(),
@@ -111,44 +116,48 @@ describe("経路検索API", () => {
 
   test("GET APIは非推奨であることを示すエラーを返す", async () => {
     // バス停検索のモック
-    (gtfs.getStops as jest.Mock).mockImplementation((query) => {
-      if (!query || Object.keys(query).length === 0) {
+    (gtfs.getStops as jest.Mock).mockImplementation((query: unknown) => {
+      const q = query as { stop_id?: string };
+      if (!q || Object.keys(q).length === 0) {
         return [mockOriginStop, mockDestStop];
-      } else if (query.stop_id === "stop1") {
+      } else if (q.stop_id === "stop1") {
         return [mockOriginStop];
-      } else if (query.stop_id === "stop2") {
+      } else if (q.stop_id === "stop2") {
         return [mockDestStop];
       }
       return [];
     });
 
     // 停車時刻、トリップ、ルートのモック
-    (gtfs.getStoptimes as jest.Mock).mockImplementation((query) => {
-      if (query.stop_id === "stop1") {
+    (gtfs.getStoptimes as jest.Mock).mockImplementation((query: unknown) => {
+      const q = query as { stop_id?: string; trip_id?: string };
+      if (q.stop_id === "stop1") {
         return [mockStoptimes[0]];
-      } else if (query.stop_id === "stop2") {
+      } else if (q.stop_id === "stop2") {
         return [mockStoptimes[1]];
-      } else if (query.trip_id === "trip1") {
-        if (query.stop_id === "stop1") {
+      } else if (q.trip_id === "trip1") {
+        if (q.stop_id === "stop1") {
           return [mockStoptimes[0]];
-        } else if (query.stop_id === "stop2") {
+        } else if (q.stop_id === "stop2") {
           return [mockStoptimes[1]];
         }
       }
       return [];
     });
 
-    (gtfs.getTrips as jest.Mock).mockImplementation((query) => {
-      if (!query) return mockTrips;
-      if (query.trip_id && query.trip_id.includes("trip1")) {
+    (gtfs.getTrips as jest.Mock).mockImplementation((query: unknown) => {
+      const q = query as { trip_id?: string };
+      if (!q) return mockTrips;
+      if (q.trip_id && q.trip_id.includes("trip1")) {
         return [mockTrips[0]];
       }
       return [];
     });
 
-    (gtfs.getRoutes as jest.Mock).mockImplementation((query) => {
-      if (!query) return mockRoutes;
-      if (query.route_id && query.route_id.includes("route1")) {
+    (gtfs.getRoutes as jest.Mock).mockImplementation((query: unknown) => {
+      const q = query as { route_id?: string };
+      if (!q) return mockRoutes;
+      if (q.route_id && q.route_id.includes("route1")) {
         return mockRoutes;
       }
       return [];

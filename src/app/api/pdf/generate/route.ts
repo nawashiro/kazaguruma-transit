@@ -53,6 +53,11 @@ interface GeneratePdfRequest {
   selectedDateTime?: string;
 }
 
+interface PdfGenerationError {
+  message: string;
+  code?: string;
+}
+
 export async function POST(req: NextRequest) {
   let browser: any = null;
 
@@ -184,18 +189,10 @@ export async function POST(req: NextRequest) {
           "Cache-Control": "no-cache",
         },
       });
-    } catch (puppeteerError) {
-      logger.error("Puppeteerエラー詳細:", puppeteerError);
-      if (browser) {
-        try {
-          await browser.close();
-          browser = null;
-          logger.log("エラー後のブラウザクリーンアップ完了");
-        } catch (closeError) {
-          logger.error("エラー後のブラウザ終了エラー:", closeError);
-        }
-      }
-      throw puppeteerError; // 外側のcatchブロックで処理するために再スロー
+    } catch (error: unknown) {
+      const pdfError = error as PdfGenerationError;
+      logger.error("PDF生成エラー:", pdfError.message);
+      return NextResponse.json({ error: pdfError.message }, { status: 500 });
     }
   } catch (error) {
     logger.error("PDF生成エラー:", error);

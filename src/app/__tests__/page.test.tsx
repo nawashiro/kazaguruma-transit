@@ -47,26 +47,6 @@ jest.mock("../../components/DestinationSelector", () => {
   };
 });
 
-// TransitFormのモックを試みる
-try {
-  jest.mock("../../components/TransitForm", () => {
-    return function MockTransitForm({ onSubmit }: any) {
-      return (
-        <div data-testid="transit-form">
-          <button
-            data-testid="submit-transit-form"
-            onClick={() => onSubmit({ stopId: "stop1", routeId: "route1" })}
-          >
-            検索
-          </button>
-        </div>
-      );
-    };
-  });
-} catch (error) {
-  console.warn("TransitFormのモックをスキップします:", error);
-}
-
 // DateTimeSelectorのモック
 jest.mock("../../components/DateTimeSelector", () => {
   return function MockDateTimeSelector({ initialStopId, onSubmit }: any) {

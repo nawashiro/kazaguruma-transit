@@ -27,6 +27,16 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
               場所をさがす
             </Link>
           </li>
+          <li>
+            <a
+              href={process.env.NEXT_PUBLIC_KOFI_TIER_PAGE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={toggleSidebar}
+            >
+              Ko-fiでサポートする
+            </a>
+          </li>
         </ul>
       </div>
     </div>

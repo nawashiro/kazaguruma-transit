@@ -309,8 +309,9 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
         <head>
           <title>乗換案内</title>
           <meta charset="utf-8">
+          <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
           <style>
-            body { font-family: sans-serif; padding: 20px; }
+            body { font-family: 'Noto Sans JP', sans-serif; padding: 20px; }
             .container { max-width: 800px; margin: 0 auto; }
             .text-center { text-align: center; }
             .space-y-4 > * + * { margin-top: 1rem; }
@@ -599,8 +600,9 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
       <head>
         <title>乗換案内</title>
         <meta charset="utf-8">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
-          body { font-family: sans-serif; padding: 0; margin: 0; }
+          body { font-family: 'Noto Sans JP', sans-serif; padding: 0; margin: 0; }
           .container { max-width: 800px; margin: 0 auto; padding: 0 24px; }
           .text-center { text-align: center; }
           .space-y-4 > * + * { margin-top: 1rem; }

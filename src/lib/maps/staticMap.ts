@@ -84,6 +84,8 @@ export async function generateStaticMapUrl(
     // APIキーとスケールを追加
     urlString += `&key=${apiKey}`;
     urlString += `&scale=2`; // 高解像度画像のためのスケール
+    urlString += `&language=ja`; // 日本語を指定
+    urlString += `&region=jp`; // 日本地域を指定
 
     return {
       success: true,

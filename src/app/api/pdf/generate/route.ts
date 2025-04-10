@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionData } from "../../../../lib/auth/session";
 import { logger } from "../../../../utils/logger";
 import puppeteer from "puppeteer";
+import type { Browser, PDFOptions } from "puppeteer";
 import {
   Client,
   TravelMode,
@@ -64,7 +65,7 @@ interface PdfGenerationError {
 }
 
 export async function POST(req: NextRequest) {
-  let browser: any = null;
+  let browser: Browser | null = null;
 
   try {
     logger.log("PDF生成API開始");
@@ -159,7 +160,7 @@ export async function POST(req: NextRequest) {
 
       // PDFオプションを設定
       logger.log("PDF生成開始");
-      const pdfOptions: any = {
+      const pdfOptions: PDFOptions = {
         format: "a4",
         printBackground: true,
         margin: {
@@ -209,13 +210,10 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     logger.error("PDF生成エラー:", error);
 
-    // エラーメッセージを整形（ログには詳細を残す）
-    const errorMessage =
-      error instanceof Error ? error.message : "不明なエラー";
-    const errorStack =
-      error instanceof Error ? error.stack : "スタックトレースなし";
-
-    logger.error("エラースタック:", errorStack);
+    // エラー情報はログにのみ記録し、クライアントには送信しない
+    if (error instanceof Error) {
+      logger.error("エラースタック:", error.stack);
+    }
 
     // クライアントには詳細情報を送信しない
     return NextResponse.json(

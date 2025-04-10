@@ -118,7 +118,7 @@ ${code}
             <h1 style="color: #333;">風ぐるま乗換案内非公式 ログイン認証コード</h1>
             <p>
               以下の認証コードを使用してログインしてください。<br>
-              このコードは15分間有効です。
+              このコードは10分間有効です。
             </p>
             <div style="background-color: #f5f5f5; padding: 10px; font-size: 24px; text-align: center; letter-spacing: 5px; margin: 20px 0; border-radius: 5px;">
               <strong>${otp}</strong>

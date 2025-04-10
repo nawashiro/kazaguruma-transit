@@ -134,9 +134,6 @@ export default function BeginnersGuide() {
                 Nawashiroは、労働災害で障害を負い、ふつうの仕事をすることができません。貯金を取り崩して生活しています。
               </p>
               <p className="text-base">
-                このサービスには運用費がかかります。私の生活の負担にならないために、支援をお願いしています。
-              </p>
-              <p className="text-base">
                 継続的な支援があれば、活動を続けることができるかもしれません。
               </p>
               <p className="text-base">

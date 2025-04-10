@@ -72,7 +72,6 @@ export default function SidebarLayout({
           className="drawer-overlay"
         ></label>
         <Sidebar
-          isOpen={true}
           toggleSidebar={() => {
             const checkbox = document.getElementById(
               "my-drawer"

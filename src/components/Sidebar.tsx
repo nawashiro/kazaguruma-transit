@@ -51,7 +51,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
           </li>
           <li>
             <a
-              href={process.env.NEXT_PUBLIC_KOFI_TIER_PAGE_URL}
+              href="https://ko-fi.com/nawashiro/tiers"
               target="_blank"
               rel="noopener noreferrer"
               onClick={toggleSidebar}

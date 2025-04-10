@@ -12,7 +12,6 @@ import { TransitFormData, Location } from "../types/transit";
 import KofiSupportCard from "../components/KofiSupportCard";
 import { logger } from "../utils/logger";
 import RateLimitModal from "../components/RateLimitModal";
-import SupporterRegistrationModal from "../components/SupporterRegistrationModal";
 
 interface JourneySegment {
   from: string;
@@ -121,23 +120,6 @@ export default function Home() {
   const [selectedDateTime, setSelectedDateTime] = useState<string>("");
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
   const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
-  const [isSupporterModalOpen, setIsSupporterModalOpen] = useState(false);
-
-  // カスタムイベントリスナーを追加
-  useEffect(() => {
-    const handleOpenSupporterModal = () => {
-      setIsSupporterModalOpen(true);
-    };
-
-    window.addEventListener("open-supporter-modal", handleOpenSupporterModal);
-
-    return () => {
-      window.removeEventListener(
-        "open-supporter-modal",
-        handleOpenSupporterModal
-      );
-    };
-  }, []);
 
   // URLパラメータから目的地情報を読み取る
   useEffect(() => {
@@ -604,11 +586,6 @@ export default function Home() {
       <RateLimitModal
         isOpen={isRateLimitModalOpen}
         onClose={() => setIsRateLimitModalOpen(false)}
-      />
-
-      <SupporterRegistrationModal
-        isOpen={isSupporterModalOpen}
-        onClose={() => setIsSupporterModalOpen(false)}
       />
     </div>
   );

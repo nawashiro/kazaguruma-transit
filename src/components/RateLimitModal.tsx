@@ -39,6 +39,17 @@ export default function RateLimitModal({
     }, 1000);
   };
 
+  // 支援者モーダルを開く処理
+  const handleOpenSupporterModal = () => {
+    // モーダルを閉じる
+    onClose();
+    // 少し待ってからサポーターモーダルを開くイベントを発火
+    setTimeout(() => {
+      const event = new CustomEvent("open-supporter-modal");
+      window.dispatchEvent(event);
+    }, 100);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -77,7 +88,7 @@ export default function RateLimitModal({
                   支援します
                 </a>
                 <button
-                  onClick={() => setIsRegistering(true)}
+                  onClick={handleOpenSupporterModal}
                   className="btn btn-primary"
                 >
                   私は支援者です

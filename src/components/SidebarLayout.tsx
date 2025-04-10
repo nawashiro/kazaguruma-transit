@@ -1,13 +1,33 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import AuthStatus from "./AuthStatus";
 import Sidebar from "./Sidebar";
+import SupporterRegistrationModal from "./SupporterRegistrationModal";
 
 export default function SidebarLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [isSupporterModalOpen, setIsSupporterModalOpen] = useState(false);
+
+  // カスタムイベントリスナーを追加
+  useEffect(() => {
+    const handleOpenSupporterModal = () => {
+      setIsSupporterModalOpen(true);
+    };
+
+    window.addEventListener("open-supporter-modal", handleOpenSupporterModal);
+
+    return () => {
+      window.removeEventListener(
+        "open-supporter-modal",
+        handleOpenSupporterModal
+      );
+    };
+  }, []);
+
   return (
     <div className="drawer lg:drawer-open">
       <input id="my-drawer" type="checkbox" className="drawer-toggle" />
@@ -80,6 +100,12 @@ export default function SidebarLayout({
           }}
         />
       </div>
+
+      {/* 支援者登録モーダル */}
+      <SupporterRegistrationModal
+        isOpen={isSupporterModalOpen}
+        onClose={() => setIsSupporterModalOpen(false)}
+      />
     </div>
   );
 }

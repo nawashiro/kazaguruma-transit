@@ -511,8 +511,6 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
   const [pdfGenerating, setPdfGenerating] = useState<boolean>(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
-  const [showErrorDetails, setShowErrorDetails] = useState(false);
-  const [pdfErrorDetails, setPdfErrorDetails] = useState<string | null>(null);
   const pdfRef = useRef<HTMLDivElement>(null);
 
   // サーバーサイドAPIを使用してPDF出力権限を確認
@@ -565,7 +563,6 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
       setPdfLoading(true);
       setPdfGenerating(true);
       setPdfError(null);
-      setPdfErrorDetails(null);
 
       if (!props.routes || props.routes.length === 0) {
         throw new Error("有効な経路情報がありません");
@@ -598,7 +595,6 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
           const errorData = await response.json();
           logger.error("PDF生成エラー:", errorData);
           setPdfError(errorData.error || "PDF生成に失敗しました");
-          setPdfErrorDetails(errorData.details || null);
         } catch {
           // JSONとしてパースできない場合はステータステキストを使用
           setPdfError(`PDF生成に失敗しました (${response.status})`);
@@ -693,23 +689,10 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
         <div className="flex-1">
           <div className="font-bold">PDF生成エラー</div>
           <div>{pdfError}</div>
-          {pdfErrorDetails && showErrorDetails && (
-            <div className="text-xs mt-2 border-t pt-2">{pdfErrorDetails}</div>
-          )}
         </div>
-        <div className="flex flex-col gap-2">
-          {pdfErrorDetails && (
-            <button
-              onClick={() => setShowErrorDetails(!showErrorDetails)}
-              className="btn btn-xs btn-ghost"
-            >
-              {showErrorDetails ? "詳細を隠す" : "詳細を表示"}
-            </button>
-          )}
-          <button onClick={() => setPdfError(null)} className="btn btn-sm">
-            閉じる
-          </button>
-        </div>
+        <button onClick={() => setPdfError(null)} className="btn btn-sm">
+          閉じる
+        </button>
       </div>
     );
   }

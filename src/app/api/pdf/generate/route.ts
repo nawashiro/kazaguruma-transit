@@ -197,12 +197,19 @@ export async function POST(req: NextRequest) {
     } catch (error: unknown) {
       const pdfError = error as PdfGenerationError;
       logger.error("PDF生成エラー:", pdfError.message);
-      return NextResponse.json({ error: pdfError.message }, { status: 500 });
+      // 詳細エラー情報は送信せず、一般的なエラーメッセージのみ返す
+      return NextResponse.json(
+        {
+          success: false,
+          error: "PDF生成に失敗しました。時間をおいて再度お試しください。",
+        },
+        { status: 500 }
+      );
     }
   } catch (error) {
     logger.error("PDF生成エラー:", error);
 
-    // エラーメッセージを整形
+    // エラーメッセージを整形（ログには詳細を残す）
     const errorMessage =
       error instanceof Error ? error.message : "不明なエラー";
     const errorStack =
@@ -210,11 +217,12 @@ export async function POST(req: NextRequest) {
 
     logger.error("エラースタック:", errorStack);
 
+    // クライアントには詳細情報を送信しない
     return NextResponse.json(
       {
         success: false,
-        error: "PDF生成中にエラーが発生しました",
-        details: errorMessage,
+        error:
+          "PDF生成中にエラーが発生しました。時間をおいて再度お試しください。",
       },
       { status: 500 }
     );

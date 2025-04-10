@@ -17,13 +17,23 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
             </Link>
           </li>
           <li>
+            <Link href="/locations" onClick={toggleSidebar}>
+              場所をさがす
+            </Link>
+          </li>
+          <li>
             <Link href="/beginners-guide" onClick={toggleSidebar}>
               はじめての方へ
             </Link>
           </li>
           <li>
-            <Link href="/locations" onClick={toggleSidebar}>
-              場所をさがす
+            <Link href="/usage" onClick={toggleSidebar}>
+              使い方
+            </Link>
+          </li>
+          <li>
+            <Link href="/license" onClick={toggleSidebar}>
+              データライセンス
             </Link>
           </li>
           <li>

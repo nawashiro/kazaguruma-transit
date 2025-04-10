@@ -62,7 +62,7 @@ export class MailtrapService {
       const mailOptions = {
         from: this.sender,
         to: email,
-        subject: "【風ぐるま乗換案内】確認コード",
+        subject: "【風ぐるま乗換案内非公式】確認コード",
         text: `
 風ぐるま乗換案内をご利用いただきありがとうございます。
 
@@ -75,8 +75,8 @@ ${code}
         `,
         html: `
 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-  <h2 style="color: #3b82f6;">風ぐるま乗換案内</h2>
-  <p>風ぐるま乗換案内をご利用いただきありがとうございます。</p>
+  <h2 style="color: #3b82f6;">風ぐるま乗換案内非公式</h2>
+  <p>風ぐるま乗換案内非公式をご利用いただきありがとうございます。</p>
   <p>以下の確認コードを入力して、支援者認証を完了してください：</p>
   <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
     <span style="font-size: 24px; font-weight: bold; letter-spacing: 3px;">${code}</span>
@@ -89,7 +89,7 @@ ${code}
       };
 
       // 送信処理
-      const info = await this.transporter.sendMail(mailOptions);
+      await this.transporter.sendMail(mailOptions);
       logger.log(`[MailtrapService] メール送信成功: ${email}`);
       return true;
     } catch (error) {
@@ -97,6 +97,50 @@ ${code}
       if (error instanceof Error) {
         logger.error(`[MailtrapService] エラーメッセージ: ${error.message}`);
       }
+      return false;
+    }
+  }
+
+  /**
+   * 特定のユーザーにワンタイムパスワードをメール送信
+   * @param email メールアドレス
+   * @param otp ワンタイムパスワード
+   */
+  async sendOtp(email: string, otp: string): Promise<boolean> {
+    try {
+      // メールオプション設定
+      const mailOptions = {
+        from: this.sender,
+        to: email,
+        subject: "【風ぐるま乗換案内非公式】ログイン認証コード",
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #333;">風ぐるま乗換案内非公式 ログイン認証コード</h1>
+            <p>
+              以下の認証コードを使用してログインしてください。<br>
+              このコードは15分間有効です。
+            </p>
+            <div style="background-color: #f5f5f5; padding: 10px; font-size: 24px; text-align: center; letter-spacing: 5px; margin: 20px 0; border-radius: 5px;">
+              <strong>${otp}</strong>
+            </div>
+            <p>
+              このメールに心当たりがない場合は無視してください。<br>
+              ※このメールは送信専用のため、返信はできません。<br>
+              ※このサービスは非公式のもので、千代田区とは関係ありません
+            </p>
+            <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; font-size: 12px; color: #999;">
+              <p>風ぐるま乗換案内非公式</p>
+            </div>
+          </div>
+        `,
+      };
+
+      // 送信処理
+      await this.transporter.sendMail(mailOptions);
+      logger.log(`[MailtrapService] OTPメール送信成功: ${email}`);
+      return true;
+    } catch {
+      logger.error(`OTPメール送信失敗 - ${email}`);
       return false;
     }
   }

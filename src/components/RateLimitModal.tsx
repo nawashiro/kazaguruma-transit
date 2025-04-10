@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import SupporterRegistration from "./SupporterRegistration";
-import AuthStatus from "./AuthStatus";
 
 interface RateLimitModalProps {
   isOpen: boolean;

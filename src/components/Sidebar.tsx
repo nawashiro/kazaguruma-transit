@@ -3,11 +3,10 @@
 import Link from "next/link";
 
 interface SidebarProps {
-  isOpen: boolean;
   toggleSidebar: () => void;
 }
 
-export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
+export default function Sidebar({ toggleSidebar }: SidebarProps) {
   return (
     <div className="h-full bg-base-200 w-80 border-r">
       <div className="p-4">

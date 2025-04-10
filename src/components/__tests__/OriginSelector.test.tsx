@@ -1,7 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import OriginSelector from "../OriginSelector";
-import { Location } from "../../types/transit";
 
 // モックのgeolocation API
 const mockGeolocation = {

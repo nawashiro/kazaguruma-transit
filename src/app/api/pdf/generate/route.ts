@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionData } from "../../../../lib/auth/session";
 import { logger } from "../../../../utils/logger";
 import puppeteer from "puppeteer";
+import {
+  Client,
+  TravelMode,
+  Language,
+} from "@googlemaps/google-maps-services-js";
 
 interface GeneratePdfRequest {
   originStop: {
@@ -273,7 +278,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
       return `${arrivalHours.toString().padStart(2, "0")}:${arrivalMinutes
         .toString()
         .padStart(2, "0")}`;
-    } catch (e) {
+    } catch {
       return "時刻不明";
     }
   };
@@ -335,33 +340,6 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
   // メインのルート情報表示HTML
   let routesHtml = "";
 
-  // 地図URLの取得関数（サーバーサイドレンダリング用に関数を定義）
-  const getDirectionsMapUrl = (
-    startLat: number,
-    startLng: number,
-    endLat: number,
-    endLng: number,
-    width: number,
-    height: number
-  ) => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
-    // モノクロスタイルを適用
-    let url = `https://maps.googleapis.com/maps/api/staticmap?size=${width}x${height}`;
-    url += `&markers=color:gray|label:S|${startLat},${startLng}`;
-    url += `&markers=color:black|label:E|${endLat},${endLng}`;
-    url += `&path=weight:5|color:0x000000|${startLat},${startLng}|${endLat},${endLng}`;
-
-    // モノクロスタイルを適用
-    url += `&style=feature:all|element:geometry|saturation:-100|lightness:20`;
-    url += `&style=feature:all|element:labels|visibility:on|saturation:-100`;
-    url += `&style=feature:road|element:all|saturation:-100|lightness:40`;
-    url += `&style=feature:water|element:all|saturation:-100|lightness:-10`;
-
-    url += `&key=${apiKey}`;
-    url += `&scale=2`; // 高解像度画像のためのスケール
-    return url;
-  };
-
   // DirectionsAPI用のポリラインを取得する関数を追加
   const fetchDirectionsPolyline = async (
     startLat: number,
@@ -371,18 +349,17 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
   ) => {
     try {
       // サーバーサイドでの直接APIコール
-      const client =
-        new (require("@googlemaps/google-maps-services-js").Client)({});
+      const client = new Client({});
       const response = await client.directions({
         params: {
           origin: `${startLat},${startLng}`,
           destination: `${endLat},${endLng}`,
-          mode: "walking", // 徒歩モード
+          mode: TravelMode.walking,
           key:
             process.env.GOOGLE_MAPS_API_KEY ||
             process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
             "",
-          language: "ja",
+          language: Language.ja,
           region: "jp",
         },
         timeout: 5000, // 5秒タイムアウト
@@ -440,7 +417,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
     return url;
   };
 
-  data.routes.forEach((route, index) => {
+  data.routes.forEach((route) => {
     // 各ルートの時刻を計算
     const departureTime =
       route.departureTime ||
@@ -496,7 +473,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
         </div>
       `;
 
-      route.transfers.forEach((transfer, tIndex) => {
+      route.transfers.forEach((transfer) => {
         // 乗換後の時刻を計算
         const transferWaitTime = 15;
         const transferDepartureTime = getArrivalTime(

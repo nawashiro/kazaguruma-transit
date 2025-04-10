@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { clearSession } from "../../../../lib/auth/session";
 import { logger } from "../../../../utils/logger";
 
 /**
  * ログアウトAPI - セッションを破棄してユーザーをログアウトさせる
  */
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     // CSRFトークン検証を追加するとより安全になります
     // const { csrfToken } = await req.json();

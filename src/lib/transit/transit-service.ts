@@ -646,7 +646,7 @@ export class TransitService {
         `[TransitService] バス停検索：${query.name || "位置情報から"}`
       );
 
-      const { location, name, radius = 1 } = query;
+      const { location, name } = query;
       let sql = "";
       let params: any[] = [];
 

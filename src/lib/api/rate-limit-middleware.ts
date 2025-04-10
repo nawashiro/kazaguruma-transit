@@ -2,9 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { NextRequest, NextResponse } from "next/server";
 import { sqliteManager } from "../db/sqlite-manager";
 import { logger } from "../../utils/logger";
-import { authService } from "../auth/auth-service";
 import { getSessionData } from "../auth/session";
-import { IncomingMessage } from "http";
 
 // 設定
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1時間
@@ -31,49 +29,6 @@ function getClientIp(req: NextApiRequest | NextRequest): string {
     }
   }
   return "0.0.0.0";
-}
-
-/**
- * クライアントリクエストからメールアドレスを取得する
- */
-function getEmailFromRequest(req: NextApiRequest | NextRequest): string | null {
-  // APIリクエストからメールアドレスを取得
-  if ("body" in req && req.body) {
-    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    if (body && typeof body === "object" && "email" in body) {
-      return body.email;
-    }
-  }
-
-  // クエリパラメータからメールアドレスを取得
-  if (
-    "query" in req &&
-    req.query &&
-    typeof req.query === "object" &&
-    "email" in req.query
-  ) {
-    return req.query.email as string;
-  }
-
-  // NextRequest の場合
-  if ("nextUrl" in req && req.nextUrl) {
-    const email = req.nextUrl.searchParams.get("email");
-    if (email) {
-      return email;
-    }
-  }
-
-  // Cookieからメールアドレスを取得
-  if ("cookies" in req && req.cookies) {
-    if (typeof req.cookies.get === "function") {
-      const cookie = req.cookies.get("supporter_email");
-      if (cookie && typeof cookie === "object" && "value" in cookie) {
-        return cookie.value;
-      }
-    }
-  }
-
-  return null;
 }
 
 /**

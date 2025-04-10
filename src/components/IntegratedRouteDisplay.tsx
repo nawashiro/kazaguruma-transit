@@ -5,15 +5,6 @@ import { Departure } from "../types/transit";
 import { generateGoogleMapDirectionLink } from "../utils/maps";
 import { logger } from "../utils/logger";
 
-// page.tsxで使用している型定義に合わせる
-interface StopInfo {
-  stop_id: string;
-  stop_name: string;
-  distance?: number;
-  stop_lat?: number;
-  stop_lon?: number;
-}
-
 interface RouteInfo {
   routeId: string;
   routeName: string;
@@ -56,9 +47,9 @@ interface IntegratedRouteDisplayProps {
   };
   routes: RouteInfo[];
   type: "direct" | "transfer" | "none";
-  transfers: number;
+  _transfers?: number; // 未使用のためアンダースコア接頭辞を追加
   departures?: Departure[];
-  message?: string;
+  _message?: string; // 未使用のためアンダースコア接頭辞を追加
   originLat?: number;
   originLng?: number;
   destLat?: number;
@@ -75,8 +66,6 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
   destinationStop,
   routes,
   type,
-  transfers,
-  message,
   originLat,
   originLng,
   destLat,
@@ -172,7 +161,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
             </div>
           )}
 
-          {routes.map((route, index) => {
+          {routes.map((route) => {
             // 各ルートの時刻を計算
             const departureTime =
               route.departureTime ||
@@ -258,7 +247,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                       </div>
                     </div>
 
-                    {route.transfers.map((transfer, tIndex) => {
+                    {route.transfers.map((transfer) => {
                       // 乗換後の時刻を計算
                       const transferWaitTime = 15; // 乗換待ち時間（分）
                       const transferDepartureTime = getArrivalTime(
@@ -272,7 +261,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
 
                       return (
                         <div
-                          key={tIndex}
+                          key={transfer.transferStop.stopId}
                           className="card bg-base-100 shadow-sm mb-4 border-l-4 border-indigo-400"
                         >
                           <div className="card-body p-4">

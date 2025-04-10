@@ -1,4 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { describe, expect, test } from "@jest/globals";
+import { NextRequest } from "next/server";
+import { GET } from "../../route";
+import "isomorphic-fetch";
 import * as gtfs from "gtfs";
 import { jest } from "@jest/globals";
 
@@ -53,9 +56,6 @@ jest.mock("gtfs", () => ({
 beforeEach(() => {
   jest.clearAllMocks();
 });
-
-// API Routeをインポート
-const { GET } = require("../../route");
 
 describe("経路検索API", () => {
   // モックのバス停データ

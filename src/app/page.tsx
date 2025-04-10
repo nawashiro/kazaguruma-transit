@@ -324,15 +324,6 @@ export default function Home() {
             destinationStop,
           });
 
-          // 乗り換え情報がある場合は乗り換え地点の緯度経度も取得
-          let transferLocation = null;
-          if (bestJourney.transferInfo && bestJourney.transferInfo.location) {
-            transferLocation = {
-              lat: bestJourney.transferInfo.location.lat,
-              lng: bestJourney.transferInfo.location.lng,
-            };
-          }
-
           // 経路タイプと乗り換え回数
           const type = bestJourney.transfers > 0 ? "transfer" : "direct";
           const transfers = bestJourney.transfers || 0;
@@ -561,8 +552,8 @@ export default function Home() {
                   destinationStop={routeInfo.destinationStop}
                   routes={routeInfo.routes}
                   type={routeInfo.type}
-                  transfers={routeInfo.transfers}
-                  message={routeInfo.message}
+                  _transfers={routeInfo.transfers}
+                  _message={routeInfo.message}
                   originLat={selectedOrigin.lat}
                   originLng={selectedOrigin.lng}
                   destLat={selectedDestination.lat}

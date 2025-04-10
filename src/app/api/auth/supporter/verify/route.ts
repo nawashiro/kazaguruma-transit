@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
       try {
         // カウンター削除はエラーを無視（非クリティカル）
         await rateLimiter.resetRateLimit(clientIp, actionType);
-      } catch (e) {
+      } catch {
         // 無視
       }
 

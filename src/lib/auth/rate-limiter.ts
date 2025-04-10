@@ -247,7 +247,16 @@ export class RateLimiter {
   /**
    * 指定されたIPアドレスとアクションタイプのレート制限情報を取得
    */
-  private async getRateLimitInfo(ip: string, actionType: string): Promise<any> {
+  private async getRateLimitInfo(
+    ip: string,
+    actionType: string
+  ): Promise<{
+    ip: string;
+    action_type: string;
+    count: number;
+    first_attempt: number;
+    last_attempt: number;
+  } | null> {
     try {
       return await sqliteManager.getQuery(
         `SELECT * FROM auth_rate_limits WHERE ip = ? AND action_type = ?`,

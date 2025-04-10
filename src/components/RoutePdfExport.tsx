@@ -116,7 +116,7 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
       return `${arrivalHours.toString().padStart(2, "0")}:${arrivalMinutes
         .toString()
         .padStart(2, "0")}`;
-    } catch (e) {
+    } catch {
       return "時刻不明";
     }
   };
@@ -326,8 +326,8 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
         <p className="mt-2">
           {props.originStop.stopName} → {props.destinationStop.stopName}
         </p>
-        {props.routes.map((route, index) => (
-          <div key={index} className="mt-4">
+        {props.routes.map((route) => (
+          <div key={route.routeId} className="mt-4">
             <p className="font-bold">{route.routeShortName}</p>
             <p>{route.routeName}</p>
           </div>
@@ -346,7 +346,7 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
         </div>
       )}
 
-      {props.routes.map((route, index) => {
+      {props.routes.map((route) => {
         // 各ルートの時刻を計算
         const departureTime =
           route.departureTime ||
@@ -409,7 +409,7 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
                   </div>
                 </div>
 
-                {route.transfers.map((transfer, tIndex) => {
+                {route.transfers.map((transfer) => {
                   // 乗換後の時刻を計算
                   const transferWaitTime = 15;
                   const transferDepartureTime = getArrivalTime(
@@ -423,7 +423,7 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
 
                   return (
                     <div
-                      key={tIndex}
+                      key={transfer.transferStop.stopId}
                       className="card bg-base-100 shadow-sm mb-4 border-l-4 border-gray-400"
                     >
                       <div className="card-body p-4">
@@ -599,7 +599,7 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
           logger.error("PDF生成エラー:", errorData);
           setPdfError(errorData.error || "PDF生成に失敗しました");
           setPdfErrorDetails(errorData.details || null);
-        } catch (jsonError) {
+        } catch {
           // JSONとしてパースできない場合はステータステキストを使用
           setPdfError(`PDF生成に失敗しました (${response.status})`);
         }

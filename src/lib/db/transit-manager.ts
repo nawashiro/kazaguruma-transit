@@ -1,11 +1,11 @@
 import {
   importGtfs,
+  openDb,
+  closeDb,
   getStops,
   getRoutes,
   getTrips,
   getStoptimes,
-  openDb,
-  closeDb,
 } from "gtfs";
 import { Database } from "./database";
 import {
@@ -17,12 +17,7 @@ import {
   GTFSRoute,
   GTFSStop,
 } from "../../types/transit";
-import { DateTime } from "luxon";
-import { loadConfig, saveConfig, TransitConfig } from "../config/config";
-
-// インポート処理のロック状態を追跡する変数
-const isImporting = false;
-const importPromise: Promise<void> | null = null;
+import { loadConfig, TransitConfig } from "../config/config";
 
 /**
  * 交通データの取得と管理を担当するマネージャークラス
@@ -190,38 +185,14 @@ export class TransitManager {
     return this.db.withConnection(async () => {
       // 日付が指定されていない場合は現在時刻を使用
       const now = targetDate || this.getCurrentTime();
-      const nowTime = DateTime.fromJSDate(now);
 
-      // 曜日を取得（1 = 月曜日、7 = 日曜日）
-      const dayOfWeek = nowTime.weekday;
-
-      // GTFSの曜日フィールド名を決定
-      let serviceField: string;
-      if (dayOfWeek === 6) {
-        serviceField = "saturday";
-      } else if (dayOfWeek === 7) {
-        serviceField = "sunday";
-      } else {
-        serviceField = "monday";
-      }
-
-      // 時刻をGTFS形式に変換（HH:MM:SS）
-      const hours = nowTime.hour;
-      const minutes = nowTime.minute;
-      const seconds = nowTime.second;
-      const timeStr = `${hours.toString().padStart(2, "0")}:${minutes
-        .toString()
-        .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-
-      // GTFSからデータを取得して整形
-      const departuresFromGtfs = await this.gtfsGetDepartures(
+      // データベースから出発時刻を取得
+      return await this.gtfsGetDepartures(
         stopId,
         routeId || null,
         now,
         isDeparture
       );
-
-      return departuresFromGtfs;
     });
   }
 
@@ -235,12 +206,12 @@ export class TransitManager {
     isDeparture: boolean = true
   ): Promise<Departure[]> {
     const now = date;
-    const nowTime = DateTime.fromJSDate(now);
 
     // 時刻のフィルター用の文字列
-    const timeStr = `${nowTime.hour
+    const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now
+      .getMinutes()
       .toString()
-      .padStart(2, "0")}:${nowTime.minute.toString().padStart(2, "0")}:00`;
+      .padStart(2, "0")}:00`;
 
     // GTFSからstoptimesを取得
     // クエリパラメータを構築
@@ -270,7 +241,7 @@ export class TransitManager {
     })) as GTFSTrip[];
 
     // 曜日を取得
-    const dayOfWeek = nowTime.weekday; // 1 = 月曜日, 7 = 日曜日
+    const dayOfWeek = now.getDay(); // 0 = 日曜日, 6 = 土曜日
 
     // 現在の曜日に対応するtrip_idのフィルタリング
     // 日曜、平日などservice_idの命名規則に基づくフィルタリング
@@ -278,7 +249,7 @@ export class TransitManager {
       const serviceId = trip.service_id;
 
       // serviceIdが「日祝」の場合、日曜日のみ有効
-      if (serviceId === "日祝" && dayOfWeek === 7) {
+      if (serviceId === "日祝" && dayOfWeek === 0) {
         return true;
       }
 
@@ -288,7 +259,7 @@ export class TransitManager {
       }
 
       // serviceIdが「除日曜」の場合、月曜～土曜のみ有効
-      if (serviceId === "除日曜" && dayOfWeek !== 7) {
+      if (serviceId === "除日曜" && dayOfWeek !== 0) {
         return true;
       }
 

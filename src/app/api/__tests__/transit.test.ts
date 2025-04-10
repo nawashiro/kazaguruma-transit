@@ -1,12 +1,17 @@
+import { describe, expect, it, jest } from "@jest/globals";
 import { GET } from "../transit/route";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import * as gtfs from "gtfs";
+import "isomorphic-fetch";
 
 // SQLiteManagerをモック
 jest.mock("../../../lib/db/sqlite-manager", () => ({
   sqliteManager: {
+    // @ts-expect-error - mockResolvedValueの型定義が不足しているため
     init: jest.fn().mockResolvedValue(undefined),
+    // @ts-expect-error - mockResolvedValueの型定義が不足しているため
     getRateLimitByIp: jest.fn().mockResolvedValue(null),
+    // @ts-expect-error - mockResolvedValueの型定義が不足しているため
     incrementRateLimit: jest.fn().mockResolvedValue(undefined),
   },
 }));
@@ -83,7 +88,7 @@ beforeEach(() => {
     .spyOn(Date, "now")
     .mockImplementation(() => new Date(2023, 0, 1, 0, 0).getTime());
 
-  (gtfs.getStops as jest.Mock).mockImplementation((params) => {
+  (gtfs.getStops as jest.Mock).mockImplementation((params: any) => {
     if (params?.stop_id) {
       return Promise.resolve(
         mockStops.filter((stop) => stop.stop_id === params.stop_id)
@@ -92,7 +97,7 @@ beforeEach(() => {
     return Promise.resolve(mockStops);
   });
 
-  (gtfs.getRoutes as jest.Mock).mockImplementation((params) => {
+  (gtfs.getRoutes as jest.Mock).mockImplementation((params: any) => {
     if (params?.route_id) {
       return Promise.resolve(
         mockRoutes.filter((route) => route.route_id === params.route_id)
@@ -101,7 +106,7 @@ beforeEach(() => {
     return Promise.resolve(mockRoutes);
   });
 
-  (gtfs.getTrips as jest.Mock).mockImplementation((params) => {
+  (gtfs.getTrips as jest.Mock).mockImplementation((params: any) => {
     // trip_idに基づいてモックデータをフィルタリング
     const tripId = params?.trip_id;
     if (tripId) {
@@ -111,7 +116,7 @@ beforeEach(() => {
     }
     return Promise.resolve(mockTrips);
   });
-  (gtfs.getStoptimes as jest.Mock).mockImplementation((params) => {
+  (gtfs.getStoptimes as jest.Mock).mockImplementation((params: any) => {
     // stop_idに基づいてモックデータをフィルタリング
     const stopId = params?.stop_id;
     if (stopId) {
@@ -121,7 +126,9 @@ beforeEach(() => {
     }
     return Promise.resolve(mockStoptimes);
   });
+  // @ts-expect-error mockResolvedValueの型定義が不足しているため、型エラーが発生します
   (gtfs.openDb as jest.Mock).mockResolvedValue(undefined);
+  // @ts-expect-error mockResolvedValueの型定義が不足しているため、型エラーが発生します
   (gtfs.closeDb as jest.Mock).mockResolvedValue(undefined);
 });
 

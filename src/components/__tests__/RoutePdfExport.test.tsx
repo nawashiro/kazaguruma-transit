@@ -1,7 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import RoutePdfExport from "../RoutePdfExport";
-import { useReactToPrint } from "react-to-print";
 
 // モックデータ
 const mockOriginStop = {

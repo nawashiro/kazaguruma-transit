@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   describe,
   test,
@@ -23,6 +22,7 @@ jest.mock("fs", () => ({
   existsSync: jest.fn().mockReturnValue(true),
   mkdirSync: jest.fn(),
   writeFileSync: jest.fn(),
+  // @ts-expect-error - コールバック型が問題になる場合の対応
   unlink: jest.fn((path, callback) => callback(null)),
 }));
 
@@ -42,11 +42,15 @@ describe("Database", () => {
     db = Database.getInstance();
 
     // モック関数の設定
+    // @ts-expect-error - モック関数の型定義問題を回避するための対応
     gtfs.openDb.mockResolvedValue({ mockDbHandle: true });
+    // @ts-expect-error - モック関数の型定義問題を回避するための対応
     gtfs.closeDb.mockResolvedValue(undefined);
+    // @ts-expect-error - モック関数の型定義問題を回避するための対応
     gtfs.getStops.mockResolvedValue([
       { stop_id: "stop1", stop_name: "Test Stop" },
     ]);
+    // @ts-expect-error - モック関数の型定義問題を回避するための対応
     gtfs.getRoutes.mockResolvedValue([
       { route_id: "route1", route_short_name: "Test Route" },
     ]);
@@ -86,6 +90,7 @@ describe("Database", () => {
   });
 
   test("withConnection が正常に動作すること", async () => {
+    // @ts-expect-error - モック関数の型定義問題を回避するための対応
     const mockCallback = jest.fn().mockResolvedValue("result");
 
     const result = await db.withConnection(mockCallback);

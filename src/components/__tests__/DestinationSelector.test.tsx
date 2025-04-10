@@ -1,7 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DestinationSelector from "../DestinationSelector";
-import { Location } from "../../types/transit";
 
 // LocationSuggestionsコンポーネントをモック
 jest.mock("../LocationSuggestions", () => {

@@ -413,56 +413,58 @@ export class TransitService {
         ORDER BY (from_origin_distance + to_dest_distance) ASC
         LIMIT 10
       ),
-      second_leg_arrival AS (
+      first_leg_departure AS (
         SELECT 
+          o.stop_id as origin_stop_id, o.stop_name as origin_stop_name,
+          o.stop_lat as origin_stop_lat, o.stop_lon as origin_stop_lon,
           ts.stop_id as transfer_stop_id, ts.stop_name as transfer_stop_name,
           ts.stop_lat as transfer_stop_lat, ts.stop_lon as transfer_stop_lon,
-          d.stop_id as dest_stop_id, d.stop_name as dest_stop_name,
-          st3.departure_time as transfer_departure,
-          st4.arrival_time as dest_arrival,
-          (julianday(st4.arrival_time) - julianday(st3.departure_time)) * 24 * 60 AS second_leg_duration,
-          t2.trip_id as second_leg_trip, t2.route_id as second_leg_route_id,
-          r2.route_short_name as second_route_short_name, r2.route_long_name as second_route_long_name,
-          r2.route_color as second_route_color, r2.route_text_color as second_route_text_color,
-          ABS(julianday(st4.arrival_time) - julianday(?)) as arrival_time_diff
-        FROM transfer_stops ts
-        CROSS JOIN dest_stop d
-        JOIN stop_times st4 ON d.stop_id = st4.stop_id
-        JOIN trips t2 ON st4.trip_id = t2.trip_id
-        JOIN routes r2 ON t2.route_id = r2.route_id
-        JOIN stop_times st3 ON t2.trip_id = st3.trip_id AND ts.stop_id = st3.stop_id
-        JOIN valid_services vs ON t2.service_id = vs.service_id
-        WHERE st3.stop_sequence < st4.stop_sequence
-          AND st4.arrival_time <= ?
-        ORDER BY arrival_time_diff ASC
-        LIMIT 20
-      ),
-      first_leg_arrival AS (
-        SELECT 
-          sl.*,
-          o.stop_id as origin_stop_id, o.stop_name as origin_stop_name,
           st1.departure_time as origin_departure,
           st2.arrival_time as transfer_arrival,
           (julianday(st2.arrival_time) - julianday(st1.departure_time)) * 24 * 60 AS first_leg_duration,
           t.trip_id as first_leg_trip, t.route_id as first_leg_route_id,
           r.route_short_name as first_route_short_name, r.route_long_name as first_route_long_name,
           r.route_color as first_route_color, r.route_text_color as first_route_text_color,
-          (julianday(sl.dest_arrival) - julianday(st1.departure_time)) * 24 * 60 AS total_duration,
-          (julianday(sl.transfer_departure) - julianday(st2.arrival_time)) * 24 * 60 AS transfer_wait_time
-        FROM second_leg_arrival sl
-        CROSS JOIN origin_stop o
+          ABS(julianday(st1.departure_time) - julianday(?)) as departure_time_diff
+        FROM origin_stop o
+        CROSS JOIN transfer_stops ts
         JOIN stop_times st1 ON o.stop_id = st1.stop_id
         JOIN trips t ON st1.trip_id = t.trip_id
         JOIN routes r ON t.route_id = r.route_id
-        JOIN stop_times st2 ON t.trip_id = st2.trip_id AND sl.transfer_stop_id = st2.stop_id
+        JOIN stop_times st2 ON t.trip_id = st2.trip_id AND ts.stop_id = st2.stop_id
         JOIN valid_services vs ON t.service_id = vs.service_id
-        WHERE st2.arrival_time < sl.transfer_departure
-          AND st2.stop_sequence > st1.stop_sequence
-          AND (julianday(sl.transfer_departure) - julianday(st2.arrival_time)) * 24 * 60 BETWEEN 3 AND 60 -- 乗り換え待機時間を3分〜60分に制限
-        ORDER BY sl.arrival_time_diff ASC, total_duration ASC
+        WHERE st1.stop_sequence < st2.stop_sequence
+          AND st1.departure_time >= ? 
+        ORDER BY st1.departure_time ASC
+        LIMIT 20
+      ),
+      complete_journey AS (
+        SELECT 
+          fl.*,
+          d.stop_id as dest_stop_id, d.stop_name as dest_stop_name,
+          d.stop_lat as dest_stop_lat, d.stop_lon as dest_stop_lon,
+          st3.departure_time as transfer_departure,
+          st4.arrival_time as dest_arrival,
+          (julianday(st4.arrival_time) - julianday(st3.departure_time)) * 24 * 60 AS second_leg_duration,
+          t2.trip_id as second_leg_trip, t2.route_id as second_leg_route_id,
+          r2.route_short_name as second_route_short_name, r2.route_long_name as second_route_long_name,
+          r2.route_color as second_route_color, r2.route_text_color as second_route_text_color,
+          (julianday(st4.arrival_time) - julianday(fl.origin_departure)) * 24 * 60 AS total_duration,
+          (julianday(st3.departure_time) - julianday(fl.transfer_arrival)) * 24 * 60 AS transfer_wait_time
+        FROM first_leg_departure fl
+        CROSS JOIN dest_stop d
+        JOIN stop_times st3 ON fl.transfer_stop_id = st3.stop_id
+        JOIN trips t2 ON st3.trip_id = t2.trip_id
+        JOIN routes r2 ON t2.route_id = r2.route_id
+        JOIN stop_times st4 ON t2.trip_id = st4.trip_id AND d.stop_id = st4.stop_id
+        JOIN valid_services vs ON t2.service_id = vs.service_id
+        WHERE st3.stop_sequence < st4.stop_sequence
+          AND st3.departure_time > fl.transfer_arrival
+          AND (julianday(st3.departure_time) - julianday(fl.transfer_arrival)) * 24 * 60 BETWEEN 3 AND 60 -- 乗り換え待機時間を3分〜60分に制限
+        ORDER BY fl.departure_time_diff ASC, total_duration ASC
         LIMIT 5
       )
-      SELECT * FROM first_leg_arrival
+      SELECT * FROM complete_journey
     `
       : `
       WITH valid_services AS (
@@ -504,6 +506,7 @@ export class TransitService {
           ts.stop_id as transfer_stop_id, ts.stop_name as transfer_stop_name,
           ts.stop_lat as transfer_stop_lat, ts.stop_lon as transfer_stop_lon,
           d.stop_id as dest_stop_id, d.stop_name as dest_stop_name,
+          d.stop_lat as dest_stop_lat, d.stop_lon as dest_stop_lon,
           st3.departure_time as transfer_departure,
           st4.arrival_time as dest_arrival,
           (julianday(st4.arrival_time) - julianday(st3.departure_time)) * 24 * 60 AS second_leg_duration,
@@ -527,6 +530,7 @@ export class TransitService {
         SELECT 
           sl.*,
           o.stop_id as origin_stop_id, o.stop_name as origin_stop_name,
+          o.stop_lat as origin_stop_lat, o.stop_lon as origin_stop_lon,
           st1.departure_time as origin_departure,
           st2.arrival_time as transfer_arrival,
           (julianday(st2.arrival_time) - julianday(st1.departure_time)) * 24 * 60 AS first_leg_duration,
@@ -566,9 +570,9 @@ export class TransitService {
           // 出発停留所と目的地停留所のID
           origin.stop_id,
           destination.stop_id,
-          // arrival_time_diff計算用の時刻文字列
+          // departure_time_diff計算用の時刻文字列
           timeStr,
-          // WHERE条件
+          // WHERE条件（origin_departure用）
           timeStr,
         ]
       : [
@@ -587,7 +591,7 @@ export class TransitService {
           destination.stop_id,
           // arrival_time_diff計算用の時刻文字列
           timeStr,
-          // WHERE条件
+          // WHERE条件（dest_arrival用）
           timeStr,
         ];
 

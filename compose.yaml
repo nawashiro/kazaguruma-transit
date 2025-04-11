@@ -3,6 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    volumes:
+      - ./.gtfs:/app/.gtfs
+      - temp-data:/app/.temp
     ports:
       - "3000:3000"
     env_file:
@@ -25,3 +28,7 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  temp-data:
+    driver: local

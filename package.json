@@ -4,19 +4,21 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
+    "dev": "node scripts/setup-db-directories.js && next dev --turbopack",
+    "build": "node scripts/setup-db-directories.js && next build",
+    "start": "node scripts/setup-db-directories.js && next start",
     "lint": "next lint",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test-import": "node scripts/test-import.js"
+    "test": "node scripts/setup-db-directories.js && jest",
+    "test:watch": "node scripts/setup-db-directories.js && jest --watch",
+    "test-import": "node scripts/setup-db-directories.js && node scripts/test-import.js",
+    "setup-db": "node scripts/setup-db-directories.js"
   },
   "dependencies": {
     "@googlemaps/google-maps-services-js": "^3.4.1",
     "@heroicons/react": "^2.2.0",
     "@react-pdf/renderer": "^4.3.0",
     "@types/luxon": "^3.4.2",
+    "better-sqlite3": "^11.9.1",
     "daisyui": "^5.0.9",
     "gtfs": "^4.17.0",
     "iron-session": "^8.0.4",

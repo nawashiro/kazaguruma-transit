@@ -56,7 +56,23 @@ ENV PUPPETEER_ARGS='--no-sandbox --disable-setuid-sandbox'
 COPY package*.json ./
 RUN npm install
 
+# アプリケーションファイルをコピー
 COPY . .
+
+# 必要なディレクトリを作成
+RUN mkdir -p .temp/gtfs
+
+# ビルド実行
 RUN npm run build
+
+# 起動スクリプトを作成
+RUN echo '#!/bin/bash\n\
+echo "GTFSデータディレクトリを準備中..."\n\
+mkdir -p /app/.temp/gtfs\n\
+node /app/scripts/setup-db-directories.js\n\
+echo "アプリケーションを起動します..."\n\
+exec npm start\n\
+' > /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
+
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["/app/docker-entrypoint.sh"]

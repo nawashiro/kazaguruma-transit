@@ -16,6 +16,13 @@ export interface SupporterRecord {
   verifiedAt?: number | null;
 }
 
+// Prismaの型定義
+type RateLimitSelect = Prisma.RateLimitGetPayload<{
+  select: { ip: true; count: true; last_access: true };
+}>;
+
+type SupporterSelect = Prisma.SupporterGetPayload<{}>;
+
 /**
  * Prismaを使用してデータベースアクセスを一元管理するクラス
  */
@@ -70,14 +77,16 @@ class DataManager {
       }
 
       try {
-        const result = await prisma.rateLimit.findUnique({
+        const query = {
           where: { ip },
           select: {
             ip: true,
             count: true,
             last_access: true,
           },
-        });
+        } satisfies Prisma.RateLimitFindUniqueArgs;
+
+        const result = await prisma.rateLimit.findUnique(query);
 
         if (!result) return null;
 
@@ -122,21 +131,25 @@ class DataManager {
       const existing = await this.getRateLimitByIp(ip);
 
       if (existing) {
-        await prisma.rateLimit.update({
+        const updateQuery = {
           where: { ip },
           data: {
             count: { increment: 1 },
             last_access: BigInt(now),
           },
-        });
+        } satisfies Prisma.RateLimitUpdateArgs;
+
+        await prisma.rateLimit.update(updateQuery);
       } else {
-        await prisma.rateLimit.create({
+        const createQuery = {
           data: {
             ip,
             count: 1,
             last_access: BigInt(now),
           },
-        });
+        } satisfies Prisma.RateLimitCreateArgs;
+
+        await prisma.rateLimit.create(createQuery);
       }
     } catch (error) {
       logger.error("[DataManager] レート制限更新エラー:", error);
@@ -153,7 +166,7 @@ class DataManager {
         await this.init();
       }
 
-      await prisma.rateLimit.upsert({
+      const upsertQuery = {
         where: { ip },
         update: {
           count: 0,
@@ -164,7 +177,9 @@ class DataManager {
           count: 0,
           last_access: BigInt(Date.now()),
         },
-      });
+      } satisfies Prisma.RateLimitUpsertArgs;
+
+      await prisma.rateLimit.upsert(upsertQuery);
     } catch (error) {
       logger.error("[DataManager] レート制限リセットエラー:", error);
       throw error;
@@ -182,13 +197,15 @@ class DataManager {
 
       const expiryTimestamp = Date.now() - expiryMs;
 
-      await prisma.rateLimit.deleteMany({
+      const deleteQuery = {
         where: {
           last_access: {
             lt: BigInt(expiryTimestamp),
           },
         },
-      });
+      } satisfies Prisma.RateLimitDeleteManyArgs;
+
+      await prisma.rateLimit.deleteMany(deleteQuery);
     } catch (error) {
       logger.error("[DataManager] レート制限クリーンアップエラー:", error);
       throw error;
@@ -204,9 +221,11 @@ class DataManager {
         await this.init();
       }
 
-      const supporter = await prisma.supporter.findUnique({
+      const query = {
         where: { email },
-      });
+      } satisfies Prisma.SupporterFindUniqueArgs;
+
+      const supporter = await prisma.supporter.findUnique(query);
 
       if (!supporter) return null;
 
@@ -238,9 +257,11 @@ class DataManager {
         await this.init();
       }
 
-      const supporter = await prisma.supporter.findFirst({
+      const query = {
         where: { verification_code: code },
-      });
+      } satisfies Prisma.SupporterFindFirstArgs;
+
+      const supporter = await prisma.supporter.findFirst(query);
 
       if (!supporter) return null;
 
@@ -277,43 +298,42 @@ class DataManager {
 
       const existingSupporter = await this.getSupporterByEmail(supporter.email);
 
-      const data: any = {
+      const data = {
         email: supporter.email,
-      };
-
-      // verificationCodeが存在する場合のみデータに追加
-      if (supporter.verificationCode !== undefined) {
-        data.verification_code = supporter.verificationCode;
-      }
-
-      // codeExpiresが存在する場合のみデータに追加
-      if (supporter.codeExpires !== undefined) {
-        data.code_expires =
-          supporter.codeExpires !== null ? BigInt(supporter.codeExpires) : null;
-      }
-
-      // verifiedが存在する場合のみデータに追加
-      if (supporter.verified !== undefined) {
-        data.verified = supporter.verified;
-      }
-
-      // verifiedAtが存在する場合のみデータに追加
-      if (supporter.verifiedAt !== undefined) {
-        data.verified_at =
-          supporter.verifiedAt !== null ? BigInt(supporter.verifiedAt) : null;
-      }
+        // 他のフィールドはオプショナルに設定
+        ...(supporter.verificationCode !== undefined && {
+          verification_code: supporter.verificationCode,
+        }),
+        ...(supporter.codeExpires !== undefined && {
+          code_expires:
+            supporter.codeExpires !== null
+              ? BigInt(supporter.codeExpires)
+              : null,
+        }),
+        ...(supporter.verified !== undefined && {
+          verified: supporter.verified,
+        }),
+        ...(supporter.verifiedAt !== undefined && {
+          verified_at:
+            supporter.verifiedAt !== null ? BigInt(supporter.verifiedAt) : null,
+        }),
+      } satisfies Prisma.SupporterCreateInput;
 
       if (existingSupporter) {
         // 既存のレコードを更新
-        await prisma.supporter.update({
+        const updateQuery = {
           where: { email: supporter.email },
-          data,
-        });
+          data: data,
+        } satisfies Prisma.SupporterUpdateArgs;
+
+        await prisma.supporter.update(updateQuery);
       } else {
         // 新しいレコードを作成
-        await prisma.supporter.create({
-          data,
-        });
+        const createQuery = {
+          data: data,
+        } satisfies Prisma.SupporterCreateArgs;
+
+        await prisma.supporter.create(createQuery);
       }
     } catch (error) {
       logger.error("[DataManager] 支援者情報の作成/更新エラー:", error);
@@ -353,7 +373,7 @@ class DataManager {
       }
 
       // 支援者を確認済みに更新
-      await prisma.supporter.update({
+      const updateQuery = {
         where: { email },
         data: {
           verified: true,
@@ -362,7 +382,9 @@ class DataManager {
           verification_code: null,
           code_expires: null,
         },
-      });
+      } satisfies Prisma.SupporterUpdateArgs;
+
+      await prisma.supporter.update(updateQuery);
 
       return true;
     } catch (error) {
@@ -380,10 +402,12 @@ class DataManager {
         await this.init();
       }
 
-      const supporter = await prisma.supporter.findUnique({
+      const query = {
         where: { email },
         select: { verified: true },
-      });
+      } satisfies Prisma.SupporterFindUniqueArgs;
+
+      const supporter = await prisma.supporter.findUnique(query);
 
       return supporter?.verified === true;
     } catch (error) {
@@ -409,18 +433,20 @@ class DataManager {
       const now = Date.now();
 
       // 既存のレコードを検索
-      const record = await prisma.authRateLimit.findUnique({
+      const findQuery = {
         where: {
           ip_action_type: {
             ip,
             action_type: actionType,
           },
         },
-      });
+      } satisfies Prisma.AuthRateLimitFindUniqueArgs;
+
+      const record = await prisma.authRateLimit.findUnique(findQuery);
 
       if (record) {
         // 既存レコードを更新
-        const updatedRecord = await prisma.authRateLimit.update({
+        const updateQuery = {
           where: {
             ip_action_type: {
               ip,
@@ -431,7 +457,9 @@ class DataManager {
             count: record.count + 1,
             last_attempt: BigInt(now),
           },
-        });
+        } satisfies Prisma.AuthRateLimitUpdateArgs;
+
+        const updatedRecord = await prisma.authRateLimit.update(updateQuery);
 
         const attemptsLeft = Math.max(0, maxAttempts - updatedRecord.count);
         return {
@@ -440,7 +468,7 @@ class DataManager {
         };
       } else {
         // 新規レコードを作成
-        await prisma.authRateLimit.create({
+        const createQuery = {
           data: {
             ip,
             action_type: actionType,
@@ -448,7 +476,9 @@ class DataManager {
             first_attempt: BigInt(now),
             last_attempt: BigInt(now),
           },
-        });
+        } satisfies Prisma.AuthRateLimitCreateArgs;
+
+        await prisma.authRateLimit.create(createQuery);
 
         return {
           allowed: true,

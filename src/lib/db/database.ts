@@ -1,8 +1,15 @@
 import fs from "fs";
 import path from "path";
 import { loadConfig, TransitConfig } from "../config/config";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { logger } from "../../utils/logger";
+
+// Prismaトランザクション用の型定義
+type TransactionClient = Omit<
+  PrismaClient,
+  "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
+>;
 
 /**
  * データベース接続を管理するシングルトンクラス
@@ -98,7 +105,7 @@ export class Database {
   /**
    * Prismaクライアントを取得する
    */
-  public getPrismaClient() {
+  public getPrismaClient(): PrismaClient {
     return prisma;
   }
 
@@ -128,7 +135,12 @@ export class Database {
         logger.log(
           `[DB:${this.connectionId}] stopsテーブルにクエリを実行します`
         );
-        const stopsCount = await prisma.stop.count();
+
+        const stopsQuery = {
+          where: {},
+        } satisfies Prisma.StopCountArgs;
+
+        const stopsCount = await prisma.stop.count(stopsQuery);
         logger.log(
           `[DB:${this.connectionId}] stopsテーブルのクエリ結果: ${stopsCount}件`
         );
@@ -136,7 +148,12 @@ export class Database {
         logger.log(
           `[DB:${this.connectionId}] routesテーブルにクエリを実行します`
         );
-        const routesCount = await prisma.route.count();
+
+        const routesQuery = {
+          where: {},
+        } satisfies Prisma.RouteCountArgs;
+
+        const routesCount = await prisma.route.count(routesQuery);
         logger.log(
           `[DB:${this.connectionId}] routesテーブルのクエリ結果: ${routesCount}件`
         );
@@ -201,7 +218,7 @@ export class Database {
    * @returns コールバック関数の実行結果
    */
   public async withTransaction<T>(
-    callback: (tx: typeof prisma) => Promise<T>
+    callback: (tx: TransactionClient) => Promise<T>
   ): Promise<T> {
     try {
       // 接続を確保
@@ -209,9 +226,11 @@ export class Database {
       logger.log(`[DB:${this.connectionId}] トランザクションを開始します`);
 
       // Prismaのトランザクション内でコールバックを実行
-      const result = await prisma.$transaction(async (tx: typeof prisma) => {
-        return await callback(tx);
-      });
+      const result = await prisma.$transaction(
+        async (tx: TransactionClient) => {
+          return await callback(tx);
+        }
+      );
 
       logger.log(`[DB:${this.connectionId}] トランザクションが完了しました`);
       return result;

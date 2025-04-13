@@ -1,47 +1,28 @@
 import { importGtfs } from "gtfs";
 import { Database } from "./database";
-import { Stop, Departure } from "../../types/transit";
+import { Stop as AppStop, Departure } from "../../types/transit";
 import { loadConfig, TransitConfig } from "../config/config";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { logger } from "../../utils/logger";
 import fs from "fs";
 import path from "path";
 
-// Prisma生成の型定義を使用
-type PrismaStop = {
-  id: string;
-  name: string | null;
-  code: string | null;
-  lat: number;
-  lon: number;
-  stop_times?: any[];
-};
+// Prismaが生成した型定義
+type PrismaStop = Prisma.StopGetPayload<{ include: { stop_times: true } }>;
+type PrismaRoute = Prisma.RouteGetPayload<{ include: { trips: true } }>;
+type PrismaStopTime = Prisma.StopTimeGetPayload<{
+  include: {
+    trip: {
+      include: {
+        route: true;
+      };
+    };
+    stop: true;
+  };
+}>;
+type PrismaTrip = Prisma.TripGetPayload<{ include: { route: true } }>;
 
-type PrismaRoute = {
-  id: string;
-  short_name: string | null;
-  long_name: string | null;
-  color: string | null;
-  text_color: string | null;
-  trips?: any[];
-};
-
-type PrismaStopTime = {
-  id: string;
-  departure_time: string | null;
-  arrival_time: string | null;
-  trip: PrismaTrip & { route: PrismaRoute };
-  stop: PrismaStop;
-};
-
-type PrismaTrip = {
-  id: string;
-  headsign: string | null;
-  service_id: string;
-  route: PrismaRoute;
-};
-
-// 出力用のDeparture型を追加
+// 出力用の型定義
 type FormattedDeparture = {
   trip_id: string;
   route_id: string;
@@ -260,10 +241,9 @@ export class TransitManager {
           },
           stop: true,
         },
-        orderBy: {
-          departure_time: isDeparture ? "asc" : undefined,
-          arrival_time: !isDeparture ? "asc" : undefined,
-        },
+        orderBy: isDeparture
+          ? { departure_time: "asc" }
+          : { arrival_time: "asc" },
       });
 
       if (!stopTimes || stopTimes.length === 0) {
@@ -273,9 +253,9 @@ export class TransitManager {
       const timeField = isDeparture ? "departure_time" : "arrival_time";
 
       // 時刻をパースして結果を整形
-      const departures = stopTimes
-        .filter((st: PrismaStopTime) => st[timeField])
-        .map((stopTime: PrismaStopTime) => {
+      const formattedDepartures = stopTimes
+        .filter((st) => st[timeField])
+        .map((stopTime) => {
           const timeStr = stopTime[timeField] as string;
           const trip = stopTime.trip;
           const route = trip.route;
@@ -302,12 +282,25 @@ export class TransitManager {
             text_color: route.text_color ? `#${route.text_color}` : "#FFFFFF",
           } as FormattedDeparture;
         })
-        .filter((d: FormattedDeparture) => d !== null);
+        .filter((d) => d !== null);
+
+      // Departure型に変換
+      const departures: Departure[] = formattedDepartures.map((fd) => ({
+        routeId: fd.route_id,
+        routeName: fd.route_name,
+        stopId: fd.stop_id,
+        stopName: fd.stop_name,
+        tripId: fd.trip_id,
+        time: fd.formatted_time,
+        timeUntilDeparture: fd.time_until,
+        msUntilDeparture: fd.ms_until_departure,
+        headsign: fd.headsign,
+        scheduledTime: fd.departure_time,
+      }));
 
       // 時刻でソート
       return departures.sort(
-        (a: FormattedDeparture, b: FormattedDeparture) =>
-          a.ms_until_departure - b.ms_until_departure
+        (a, b) => (a.msUntilDeparture || 0) - (b.msUntilDeparture || 0)
       );
     } catch (error) {
       logger.error("出発時刻の取得中にエラーが発生しました:", error);
@@ -377,8 +370,15 @@ export class TransitManager {
     lat: number,
     lng: number
   ): Promise<{
-    stops: Stop[];
-    nearestStop: (PrismaStop & { distance: number }) | null;
+    stops: AppStop[];
+    nearestStop: {
+      id: string;
+      name: string;
+      code: string | null;
+      lat: number;
+      lon: number;
+      distance: number;
+    } | null;
   }> {
     return this.db.withConnection(async () => {
       try {
@@ -394,7 +394,7 @@ export class TransitManager {
         });
 
         // ユーザーの現在地から各バス停までの距離を計算
-        const stopsWithDistance = stops.map((stop: PrismaStop) => {
+        const stopsWithDistance = stops.map((stop) => {
           const distance = this.calculateDistance(lat, lng, stop.lat, stop.lon);
 
           return {
@@ -404,25 +404,18 @@ export class TransitManager {
         });
 
         // 距離でソート
-        stopsWithDistance.sort(
-          (
-            a: PrismaStop & { distance: number },
-            b: PrismaStop & { distance: number }
-          ) => a.distance - b.distance
-        );
+        stopsWithDistance.sort((a, b) => a.distance - b.distance);
 
         // 最も近いバス停
         const nearestStop =
           stopsWithDistance.length > 0 ? stopsWithDistance[0] : null;
 
         // UIで使用するStopオブジェクト形式に変換
-        const formattedStops = stopsWithDistance.map(
-          (stop: PrismaStop & { distance: number }) => ({
-            id: stop.id,
-            name: stop.name || "名称不明",
-            code: stop.code || undefined,
-          })
-        );
+        const formattedStops = stopsWithDistance.map((stop) => ({
+          id: stop.id,
+          name: stop.name || "名称不明",
+          code: stop.code || undefined,
+        }));
 
         return {
           stops: formattedStops,
@@ -476,10 +469,12 @@ export class TransitManager {
   ): Promise<{ lat: number; lon: number } | null> {
     return this.db.withConnection(async () => {
       try {
-        const stop = await this.prisma.stop.findUnique({
+        const query = {
           where: { id: stopId },
           select: { lat: true, lon: true },
-        });
+        } satisfies Prisma.Args<typeof this.prisma.stop, "findUnique">;
+
+        const stop = await this.prisma.stop.findUnique(query);
 
         if (!stop) {
           return null;
@@ -510,10 +505,6 @@ export class TransitManager {
 
       // 曜日を取得（0=日曜, 1=月曜, ..., 6=土曜）
       const dayOfWeek = targetDate.getDay();
-
-      interface CalendarServiceRecord {
-        service_id: string;
-      }
 
       // calendar.txtのデータで日付範囲内かつ曜日が一致するサービスID
       const calendarServices = await this.prisma.calendar.findMany({
@@ -551,9 +542,7 @@ export class TransitManager {
       });
 
       // calendarから基本の有効なサービスIDを取得
-      let validServiceIds = calendarServices.map(
-        (cs: CalendarServiceRecord) => cs.service_id
-      );
+      let validServiceIds = calendarServices.map((cs) => cs.service_id);
 
       // カレンダー例外を適用
       for (const cd of calendarDates) {
@@ -582,10 +571,10 @@ export class TransitManager {
    * トランザクション内でコールバック関数を実行
    */
   public async withCustomQuery<T>(
-    callback: (client: typeof this.prisma) => Promise<T>
+    callback: (client: PrismaClient) => Promise<T>
   ): Promise<T> {
     return this.db.withTransaction(async (tx) => {
-      return await callback(tx);
+      return await callback(tx as PrismaClient);
     });
   }
 }

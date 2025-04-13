@@ -307,11 +307,6 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
           <p>別の交通手段をご検討ください</p>
         </div>
         <div className="text-center text-xs space-y-2">
-          <img
-            src="/chiyoda_line_qr.png"
-            alt="千代田区公式LINE"
-            className="w-24 h-24 mx-auto"
-          />
           <p>千代田区公式LINEで最新の運行情報を確認できます</p>
         </div>
       </div>
@@ -491,11 +486,6 @@ const RoutePdfContent: React.FC<RoutePdfExportProps> = (props) => {
       )}
 
       <div className="text-center text-xs space-y-2">
-        <img
-          src="/chiyoda_line_qr.png"
-          alt="千代田区公式LINE"
-          className="w-24 h-24 mx-auto"
-        />
         <p>千代田区公式LINEで最新の運行情報を確認できます</p>
       </div>
     </div>

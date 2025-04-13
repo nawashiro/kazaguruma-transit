@@ -16,13 +16,6 @@ export interface SupporterRecord {
   verifiedAt?: number | null;
 }
 
-// Prismaの型定義
-type RateLimitSelect = Prisma.RateLimitGetPayload<{
-  select: { ip: true; count: true; last_access: true };
-}>;
-
-type SupporterSelect = Prisma.SupporterGetPayload<{}>;
-
 /**
  * Prismaを使用してデータベースアクセスを一元管理するクラス
  */

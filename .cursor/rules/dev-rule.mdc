@@ -11,7 +11,7 @@ alwaysApply: true
 クライアントのスタイリングはdaisyuiを使用します。
 transitライブラリやgtfsライブラリを使用しています。ここに関わる処理を書くときは必ずインターネットからドキュメントを参照してください。
 npm run devする前に既存のnodeをkillすることを忘れないでください。
-コマンドラインはWindows PowerShellを使用しています。PowerShellでは&&を使用できません。また、文字化けが発生します。
+&&はPowershellの制約で使えません。コマンドは一つずつ実行してください。また、マルチバイト文字は文字化けが発生しますが、仕様です。
 console.logは使用せずに、logger.logを使用します。
 
 ## 報告

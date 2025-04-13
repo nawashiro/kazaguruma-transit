@@ -10,17 +10,6 @@ import path from "path";
 // Prismaが生成した型定義
 type PrismaStop = Prisma.StopGetPayload<{ include: { stop_times: true } }>;
 type PrismaRoute = Prisma.RouteGetPayload<{ include: { trips: true } }>;
-type PrismaStopTime = Prisma.StopTimeGetPayload<{
-  include: {
-    trip: {
-      include: {
-        route: true;
-      };
-    };
-    stop: true;
-  };
-}>;
-type PrismaTrip = Prisma.TripGetPayload<{ include: { route: true } }>;
 
 // 出力用の型定義
 type FormattedDeparture = {
@@ -223,7 +212,7 @@ export class TransitManager {
       }
 
       // 時刻データを取得（Prismaを使用）
-      const stopTimes = await this.prisma.stopTime.findMany({
+      const query = {
         where: {
           stop_id: stop_id || undefined,
           trip: {
@@ -242,9 +231,11 @@ export class TransitManager {
           stop: true,
         },
         orderBy: isDeparture
-          ? { departure_time: "asc" }
-          : { arrival_time: "asc" },
-      });
+          ? { departure_time: "asc" as const }
+          : { arrival_time: "asc" as const },
+      } satisfies Prisma.Args<typeof this.prisma.stopTime, "findMany">;
+
+      const stopTimes = await this.prisma.stopTime.findMany(query);
 
       if (!stopTimes || stopTimes.length === 0) {
         return [];
@@ -312,6 +303,10 @@ export class TransitManager {
    * 時刻文字列（HH:MM:SS）からDateオブジェクトを生成
    */
   private getTimeAsDate(timeStr: string, baseDate: Date = new Date()): Date {
+    if (!timeStr) {
+      return new Date();
+    }
+
     // HH:MM:SSを解析
     const [hours, minutes, seconds] = timeStr.split(":").map(Number);
 
@@ -383,7 +378,7 @@ export class TransitManager {
     return this.db.withConnection(async () => {
       try {
         // すべてのバス停を取得
-        const stops = await this.prisma.stop.findMany({
+        const query = {
           select: {
             id: true,
             name: true,
@@ -391,7 +386,9 @@ export class TransitManager {
             lat: true,
             lon: true,
           },
-        });
+        } satisfies Prisma.Args<typeof this.prisma.stop, "findMany">;
+
+        const stops = await this.prisma.stop.findMany(query);
 
         // ユーザーの現在地から各バス停までの距離を計算
         const stopsWithDistance = stops.map((stop) => {
@@ -507,7 +504,7 @@ export class TransitManager {
       const dayOfWeek = targetDate.getDay();
 
       // calendar.txtのデータで日付範囲内かつ曜日が一致するサービスID
-      const calendarServices = await this.prisma.calendar.findMany({
+      const calendarQuery = {
         where: {
           start_date: {
             lte: formattedDate,
@@ -528,10 +525,14 @@ export class TransitManager {
         select: {
           service_id: true,
         },
-      });
+      } satisfies Prisma.Args<typeof this.prisma.calendar, "findMany">;
+
+      const calendarServices = await this.prisma.calendar.findMany(
+        calendarQuery
+      );
 
       // calendar_dates.txtの例外データを取得
-      const calendarDates = await this.prisma.calendarDate.findMany({
+      const calendarDatesQuery = {
         where: {
           date: formattedDate,
         },
@@ -539,7 +540,11 @@ export class TransitManager {
           service_id: true,
           exception_type: true,
         },
-      });
+      } satisfies Prisma.Args<typeof this.prisma.calendarDate, "findMany">;
+
+      const calendarDates = await this.prisma.calendarDate.findMany(
+        calendarDatesQuery
+      );
 
       // calendarから基本の有効なサービスIDを取得
       let validServiceIds = calendarServices.map((cs) => cs.service_id);

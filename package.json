@@ -4,18 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node scripts/setup-db-directories.js && next dev --turbopack",
-    "build": "node scripts/setup-db-directories.js && next build",
-    "start": "node scripts/setup-db-directories.js && next start",
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
     "lint": "next lint",
-    "test": "node scripts/setup-db-directories.js && jest",
-    "test:watch": "node scripts/setup-db-directories.js && jest --watch",
-    "test-import": "node scripts/setup-db-directories.js && node scripts/test-import.js",
-    "setup-db": "node scripts/setup-db-directories.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "import-gtfs": "node scripts/setup-db-directories.js && tsx scripts/import-gtfs.ts"
+    "import-gtfs": "tsx scripts/import-gtfs.ts"
   },
   "dependencies": {
     "@googlemaps/google-maps-services-js": "^3.4.1",
@@ -23,7 +21,6 @@
     "@prisma/client": "^6.6.0",
     "@react-pdf/renderer": "^4.3.0",
     "@types/luxon": "^3.4.2",
-    "better-sqlite3": "^11.9.1",
     "daisyui": "^5.0.9",
     "gtfs": "^4.17.0",
     "iron-session": "^8.0.4",
@@ -40,8 +37,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-to-print": "^3.0.5",
-    "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7",
     "transit-departures-widget": "^2.5.4"
   },
   "devDependencies": {

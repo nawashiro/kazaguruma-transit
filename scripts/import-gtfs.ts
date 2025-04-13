@@ -17,7 +17,18 @@ async function importGtfsData() {
     const config = loadConfig();
     console.log(`設定を読み込みました: ${JSON.stringify(config, null, 2)}`);
 
-    // ディレクトリが存在することを確認
+    // 必要なディレクトリを作成
+    const dirs = [path.join(process.cwd(), ".temp")];
+
+    // 各ディレクトリの存在を確認し、なければ作成
+    for (const dir of dirs) {
+      if (!fs.existsSync(dir)) {
+        console.log(`ディレクトリを作成: ${dir}`);
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    }
+
+    // データベースディレクトリが存在することを確認
     const dbDir = path.dirname(config.sqlitePath);
     if (!fs.existsSync(dbDir)) {
       console.log(`データベースディレクトリを作成します: ${dbDir}`);

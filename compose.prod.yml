@@ -2,10 +2,10 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     volumes:
       - ./.gtfs:/app/.gtfs
-      - temp-data:/app/.temp
+      - ./.temp:/app/.temp
     ports:
       - "3000:3000"
     env_file:

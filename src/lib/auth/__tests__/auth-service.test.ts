@@ -17,7 +17,7 @@ jest.mock("../mailtrap-client", () => ({
   },
 }));
 
-jest.mock("../../db/sqlite-manager", () => ({
+jest.mock("../../db/data-manager", () => ({
   dataManager: {
     isVerifiedSupporter: jest.fn(),
     createOrUpdateSupporter: jest.fn(),

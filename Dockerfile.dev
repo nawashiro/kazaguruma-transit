@@ -64,13 +64,12 @@ COPY package*.json ./
 RUN npm install
 
 # 必要なディレクトリを作成
-RUN mkdir -p .temp/gtfs
+RUN mkdir -p .temp
 
 # 開発用の起動スクリプトを作成
 RUN echo '#!/bin/bash\n\
-echo "GTFSデータディレクトリを準備中..."\n\
-mkdir -p /app/.temp/gtfs\n\
-node /app/scripts/setup-db-directories.js\n\
+echo "データディレクトリを準備中..."\n\
+mkdir -p /app/.temp\n\
 echo "開発サーバーを起動します..."\n\
 exec npm run dev\n\
 ' > /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh

@@ -18,14 +18,10 @@ async function importGtfsData() {
     console.log(`設定を読み込みました: ${JSON.stringify(config, null, 2)}`);
 
     // 必要なディレクトリを作成
-    const dirs = [path.join(process.cwd(), ".temp")];
-
-    // 各ディレクトリの存在を確認し、なければ作成
-    for (const dir of dirs) {
-      if (!fs.existsSync(dir)) {
-        console.log(`ディレクトリを作成: ${dir}`);
-        fs.mkdirSync(dir, { recursive: true });
-      }
+    const tempDir = path.join(process.cwd(), ".temp");
+    if (!fs.existsSync(tempDir)) {
+      console.log(`ディレクトリを作成: ${tempDir}`);
+      fs.mkdirSync(tempDir, { recursive: true });
     }
 
     // データベースディレクトリが存在することを確認

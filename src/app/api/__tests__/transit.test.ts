@@ -4,9 +4,9 @@ import { NextRequest } from "next/server";
 import * as gtfs from "gtfs";
 import "isomorphic-fetch";
 
-// SQLiteManagerをモック
-jest.mock("../../../lib/db/sqlite-manager", () => ({
-  sqliteManager: {
+// DataManagerをモック
+jest.mock("../../../lib/db/data-manager", () => ({
+  dataManager: {
     // @ts-expect-error - mockResolvedValueの型定義が不足しているため
     init: jest.fn().mockResolvedValue(undefined),
     // @ts-expect-error - mockResolvedValueの型定義が不足しているため

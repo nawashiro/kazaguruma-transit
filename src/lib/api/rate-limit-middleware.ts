@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { NextRequest, NextResponse } from "next/server";
-import { sqliteManager } from "../db/sqlite-manager";
+import { dataManager } from "../db/data-manager";
 import { logger } from "../../utils/logger";
 import { getSessionData } from "../auth/session";
 
@@ -50,15 +50,15 @@ export async function appRouterRateLimitMiddleware(
     }
 
     // レート制限を適用
-    await sqliteManager.init(); // 初期化されていることを確認
-    const rateLimitInfo = await sqliteManager.getRateLimitByIp(ip);
+    await dataManager.init(); // 初期化されていることを確認
+    const rateLimitInfo = await dataManager.getRateLimitByIp(ip);
 
     const now = Date.now();
     if (rateLimitInfo) {
       // 前回のアクセスから一定時間経過していたらリセット
       if (now - rateLimitInfo.lastAccess > RATE_LIMIT_WINDOW_MS) {
-        await sqliteManager.resetRateLimit(ip);
-        await sqliteManager.incrementRateLimit(ip);
+        await dataManager.resetRateLimit(ip);
+        await dataManager.incrementRateLimit(ip);
         return undefined;
       }
 
@@ -75,11 +75,11 @@ export async function appRouterRateLimitMiddleware(
       }
 
       // 制限内の場合はカウントを増やして続行
-      await sqliteManager.incrementRateLimit(ip);
+      await dataManager.incrementRateLimit(ip);
       return undefined;
     } else {
       // 初めてのアクセス
-      await sqliteManager.incrementRateLimit(ip);
+      await dataManager.incrementRateLimit(ip);
       return undefined;
     }
   } catch (error) {
@@ -130,15 +130,15 @@ export async function apiRateLimitMiddleware(
     }
 
     // レート制限を適用
-    await sqliteManager.init(); // 初期化されていることを確認
-    const rateLimitInfo = await sqliteManager.getRateLimitByIp(ip);
+    await dataManager.init(); // 初期化されていることを確認
+    const rateLimitInfo = await dataManager.getRateLimitByIp(ip);
 
     const now = Date.now();
     if (rateLimitInfo) {
       // 前回のアクセスから一定時間経過していたらリセット
       if (now - rateLimitInfo.lastAccess > RATE_LIMIT_WINDOW_MS) {
-        await sqliteManager.resetRateLimit(ip);
-        await sqliteManager.incrementRateLimit(ip);
+        await dataManager.resetRateLimit(ip);
+        await dataManager.incrementRateLimit(ip);
         return next();
       }
 
@@ -152,11 +152,11 @@ export async function apiRateLimitMiddleware(
       }
 
       // 制限内の場合はカウントを増やして続行
-      await sqliteManager.incrementRateLimit(ip);
+      await dataManager.incrementRateLimit(ip);
       return next();
     } else {
       // 初めてのアクセス
-      await sqliteManager.incrementRateLimit(ip);
+      await dataManager.incrementRateLimit(ip);
       return next();
     }
   } catch (error) {

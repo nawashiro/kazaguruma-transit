@@ -1,4 +1,4 @@
-import { sqliteManager } from "../db/sqlite-manager";
+import { dataManager } from "../db/data-manager";
 import { logger } from "../../utils/logger";
 
 // レート制限の種類と設定
@@ -13,19 +13,6 @@ const RATE_LIMIT_SETTINGS = {
   },
   // 必要に応じて他のタイプを追加
 };
-
-// レート制限に必要なテーブル作成のためのSchema定義
-export const RATE_LIMIT_SCHEMA = `
-  CREATE TABLE IF NOT EXISTS auth_rate_limits (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ip TEXT NOT NULL,
-    action_type TEXT NOT NULL,
-    count INTEGER DEFAULT 1,
-    first_attempt BIGINT NOT NULL,
-    last_attempt BIGINT NOT NULL,
-    UNIQUE(ip, action_type)
-  )
-`;
 
 // メモリ内キャッシュ型定義
 interface RateLimitCacheEntry {
@@ -162,18 +149,32 @@ export class RateLimiter {
 
         if (rateLimit) {
           // 既存のレコードを更新
-          await sqliteManager.runQuery(
-            `UPDATE auth_rate_limits 
-             SET count = count + 1, last_attempt = ? 
-             WHERE ip = ? AND action_type = ?`,
-            [now, ip, actionType]
+          await dataManager.runQuery(
+            dataManager.getPrismaClient().authRateLimit.update({
+              where: {
+                ip_action_type: {
+                  ip,
+                  action_type: actionType,
+                },
+              },
+              data: {
+                count: { increment: 1 },
+                last_attempt: BigInt(now),
+              },
+            })
           );
         } else {
           // 新しいレコードを作成
-          await sqliteManager.runQuery(
-            `INSERT INTO auth_rate_limits (ip, action_type, count, first_attempt, last_attempt) 
-             VALUES (?, ?, 1, ?, ?)`,
-            [ip, actionType, now, now]
+          await dataManager.runQuery(
+            dataManager.getPrismaClient().authRateLimit.create({
+              data: {
+                ip,
+                action_type: actionType,
+                count: 1,
+                first_attempt: BigInt(now),
+                last_attempt: BigInt(now),
+              },
+            })
           );
         }
 
@@ -258,10 +259,35 @@ export class RateLimiter {
     last_attempt: number;
   } | null> {
     try {
-      return await sqliteManager.getQuery(
-        `SELECT * FROM auth_rate_limits WHERE ip = ? AND action_type = ?`,
-        [ip, actionType]
+      const result = await dataManager.getQuery(
+        dataManager.getPrismaClient().authRateLimit.findUnique({
+          where: {
+            ip_action_type: {
+              ip,
+              action_type: actionType,
+            },
+          },
+        })
       );
+
+      if (!result) return null;
+
+      // 型アサーションでオブジェクトにアクセス
+      const record = result as {
+        ip: string;
+        action_type: string;
+        count: number;
+        first_attempt: bigint;
+        last_attempt: bigint;
+      };
+
+      return {
+        ip: record.ip,
+        action_type: record.action_type,
+        count: record.count,
+        first_attempt: Number(record.first_attempt),
+        last_attempt: Number(record.last_attempt),
+      };
     } catch (error) {
       logger.error(
         `[RateLimiter] レート情報取得エラー: ${ip}, ${actionType}`,
@@ -299,11 +325,20 @@ export class RateLimiter {
 
     while (retryCount < maxRetries) {
       try {
-        await sqliteManager.runQuery(
-          `UPDATE auth_rate_limits 
-           SET count = 1, first_attempt = ?, last_attempt = ? 
-           WHERE ip = ? AND action_type = ?`,
-          [now, now, ip, actionType]
+        await dataManager.runQuery(
+          dataManager.getPrismaClient().authRateLimit.update({
+            where: {
+              ip_action_type: {
+                ip,
+                action_type: actionType,
+              },
+            },
+            data: {
+              count: 1,
+              first_attempt: BigInt(now),
+              last_attempt: BigInt(now),
+            },
+          })
         );
         return; // 成功したら終了
       } catch (error) {
@@ -339,9 +374,14 @@ export class RateLimiter {
       );
 
       // 最大ウィンドウ時間より古いレコードを削除
-      await sqliteManager.runQuery(
-        `DELETE FROM auth_rate_limits WHERE last_attempt < ?`,
-        [now - maxWindowMs]
+      await dataManager.runQuery(
+        dataManager.getPrismaClient().authRateLimit.deleteMany({
+          where: {
+            last_attempt: {
+              lt: BigInt(now - maxWindowMs),
+            },
+          },
+        })
       );
 
       // メモリキャッシュもクリーンアップ

@@ -1,7 +1,7 @@
 import { authService } from "../auth-service";
 import { kofiApiClient } from "../kofi-client";
 import { mailtrapService } from "../mailtrap-client";
-import { sqliteManager } from "../../db/sqlite-manager";
+import { dataManager } from "../../db/data-manager";
 
 // モックの設定
 jest.mock("../kofi-client", () => ({
@@ -18,7 +18,7 @@ jest.mock("../mailtrap-client", () => ({
 }));
 
 jest.mock("../../db/sqlite-manager", () => ({
-  sqliteManager: {
+  dataManager: {
     isVerifiedSupporter: jest.fn(),
     createOrUpdateSupporter: jest.fn(),
     verifySupporter: jest.fn(),
@@ -52,7 +52,7 @@ describe("AuthService", () => {
     test("確認コードを生成して送信する", async () => {
       // モックの設定
       (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(true);
-      (sqliteManager.createOrUpdateSupporter as jest.Mock).mockResolvedValue(
+      (dataManager.createOrUpdateSupporter as jest.Mock).mockResolvedValue(
         true
       );
       (mailtrapService.sendVerificationCode as jest.Mock).mockResolvedValue(
@@ -66,7 +66,7 @@ describe("AuthService", () => {
       expect(kofiApiClient.isActiveMember).toHaveBeenCalledWith(
         "test@example.com"
       );
-      expect(sqliteManager.createOrUpdateSupporter).toHaveBeenCalled();
+      expect(dataManager.createOrUpdateSupporter).toHaveBeenCalled();
       expect(mailtrapService.sendVerificationCode).toHaveBeenCalled();
       expect(result).toEqual({
         success: true,
@@ -77,7 +77,7 @@ describe("AuthService", () => {
     test("メール送信に失敗した場合", async () => {
       // モックの設定
       (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(true);
-      (sqliteManager.createOrUpdateSupporter as jest.Mock).mockResolvedValue(
+      (dataManager.createOrUpdateSupporter as jest.Mock).mockResolvedValue(
         true
       );
       (mailtrapService.sendVerificationCode as jest.Mock).mockResolvedValue(
@@ -98,7 +98,7 @@ describe("AuthService", () => {
   describe("verifySupporterCode", () => {
     test("確認コードが正しい場合は成功を返す", async () => {
       // モックの設定
-      (sqliteManager.verifySupporter as jest.Mock).mockResolvedValue(true);
+      (dataManager.verifySupporter as jest.Mock).mockResolvedValue(true);
       (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(true);
 
       const result = await authService.verifySupporterCode(
@@ -106,7 +106,7 @@ describe("AuthService", () => {
         "123456"
       );
 
-      expect(sqliteManager.verifySupporter).toHaveBeenCalledWith(
+      expect(dataManager.verifySupporter).toHaveBeenCalledWith(
         "test@example.com",
         "123456"
       );
@@ -120,7 +120,7 @@ describe("AuthService", () => {
 
     test("確認コードが間違っている場合は失敗を返す", async () => {
       // モックの設定
-      (sqliteManager.verifySupporter as jest.Mock).mockResolvedValue(false);
+      (dataManager.verifySupporter as jest.Mock).mockResolvedValue(false);
 
       const result = await authService.verifySupporterCode(
         "test@example.com",
@@ -135,7 +135,7 @@ describe("AuthService", () => {
 
     test("Ko-fiでの支援が確認できない場合でも確認コードが正しければ成功を返す", async () => {
       // モックの設定
-      (sqliteManager.verifySupporter as jest.Mock).mockResolvedValue(true);
+      (dataManager.verifySupporter as jest.Mock).mockResolvedValue(true);
       (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(false);
 
       const result = await authService.verifySupporterCode(
@@ -155,12 +155,12 @@ describe("AuthService", () => {
   describe("checkSupporterStatus", () => {
     test("Ko-fiとローカルDBの両方で認証済みの場合は支援者と判定", async () => {
       // モックの設定
-      (sqliteManager.isVerifiedSupporter as jest.Mock).mockResolvedValue(true);
+      (dataManager.isVerifiedSupporter as jest.Mock).mockResolvedValue(true);
       (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(true);
 
       const result = await authService.checkSupporterStatus("test@example.com");
 
-      expect(sqliteManager.isVerifiedSupporter).toHaveBeenCalledWith(
+      expect(dataManager.isVerifiedSupporter).toHaveBeenCalledWith(
         "test@example.com"
       );
       expect(kofiApiClient.isActiveMember).toHaveBeenCalledWith(
@@ -176,7 +176,7 @@ describe("AuthService", () => {
 
     test("Ko-fiでの支援がない場合はリダイレクトURLを返す", async () => {
       // モックの設定
-      (sqliteManager.isVerifiedSupporter as jest.Mock).mockResolvedValue(true);
+      (dataManager.isVerifiedSupporter as jest.Mock).mockResolvedValue(true);
       (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(false);
 
       const result = await authService.checkSupporterStatus("test@example.com");
@@ -192,7 +192,7 @@ describe("AuthService", () => {
 
     test("メール認証が未完了の場合はその旨のメッセージを返す", async () => {
       // モックの設定
-      (sqliteManager.isVerifiedSupporter as jest.Mock).mockResolvedValue(false);
+      (dataManager.isVerifiedSupporter as jest.Mock).mockResolvedValue(false);
       (kofiApiClient.isActiveMember as jest.Mock).mockResolvedValue(true);
 
       const result = await authService.checkSupporterStatus("test@example.com");

@@ -41,13 +41,6 @@ type PrismaTrip = {
   route: PrismaRoute;
 };
 
-type PrismaDeparture = {
-  stopTime: PrismaStopTime;
-  trip: PrismaTrip & { route: PrismaRoute };
-  route: PrismaRoute;
-  stop: PrismaStop;
-};
-
 // 出力用のDeparture型を追加
 type FormattedDeparture = {
   trip_id: string;
@@ -520,11 +513,6 @@ export class TransitManager {
 
       interface CalendarServiceRecord {
         service_id: string;
-      }
-
-      interface CalendarDateRecord {
-        service_id: string;
-        exception_type: number;
       }
 
       // calendar.txtのデータで日付範囲内かつ曜日が一致するサービスID

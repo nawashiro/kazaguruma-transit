@@ -24,11 +24,55 @@ async function importGtfsData() {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
+    // GTFSファイルの存在確認
+    const gtfsPath = config.agencies[0]?.path;
+    if (!gtfsPath) {
+      console.error("エラー: GTFSデータファイルのパスが設定されていません。");
+      return;
+    }
+
+    const gtfsFilePath = path.join(process.cwd(), gtfsPath);
+    if (!fs.existsSync(gtfsFilePath)) {
+      console.error(
+        `エラー: GTFSデータファイルが見つかりません: ${gtfsFilePath}`
+      );
+      console.error(
+        `${path.dirname(
+          gtfsFilePath
+        )}ディレクトリに必要なGTFSデータファイルを配置してください。`
+      );
+      return;
+    }
+
     // データベースディレクトリが存在することを確認
     const dbDir = path.dirname(config.sqlitePath);
     if (!fs.existsSync(dbDir)) {
       console.log(`データベースディレクトリを作成します: ${dbDir}`);
       fs.mkdirSync(dbDir, { recursive: true });
+    }
+
+    // データベースファイルが既に存在する場合のチェック
+    const dbPath = path.join(process.cwd(), config.sqlitePath);
+    if (fs.existsSync(dbPath)) {
+      console.log(`既存のデータベースファイルを確認: ${dbPath}`);
+
+      try {
+        // 既存のデータをチェック
+        const existingCount = await prisma.agency.count();
+        if (existingCount > 0) {
+          console.log(
+            `データベースには既に${existingCount}件のエージェンシーデータが存在します。`
+          );
+          console.log(
+            "既存のデータを使用します。再インポートが必要な場合は、データベースファイルを削除してください。"
+          );
+          return;
+        }
+      } catch (error) {
+        console.log(
+          "データベースへの接続に失敗しました。データを再インポートします。"
+        );
+      }
     }
 
     // importGtfsを使用してデータをインポート

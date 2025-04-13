@@ -4,8 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "npx tsx scripts/import-gtfs.ts",
     "dev": "next dev --turbopack",
+    "prebuild": "npx tsx scripts/import-gtfs.ts",
     "build": "next build",
+    "prestart": "npx tsx scripts/import-gtfs.ts",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",

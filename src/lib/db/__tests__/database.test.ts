@@ -9,7 +9,6 @@ import {
   afterEach,
   jest,
 } from "@jest/globals";
-import * as gtfs from "gtfs";
 
 // GTFSモジュールの関数をモック
 jest.mock("gtfs");

@@ -62,6 +62,9 @@ COPY . .
 # 必要なディレクトリを作成
 RUN mkdir -p .temp
 
+# Prismaクライアントを生成
+RUN npx prisma generate
+
 # ビルド実行
 RUN npm run build
 

@@ -198,16 +198,8 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                     {/* ルート情報 */}
                     <div className="flex items-center my-3">
                       <div className="badge badge-primary mr-2">
-                        {route.routeShortName}
+                        {route.routeName}
                       </div>
-                      {route.routeLongName && (
-                        <div className="flex-1">{route.routeLongName}</div>
-                      )}
-                      {route.stopCount && (
-                        <div className="text-xs text-gray-500 ml-2">
-                          {`${route.stopCount}駅`}
-                        </div>
-                      )}
                     </div>
 
                     {/* 到着バス停と時刻（乗換がない場合は最終目的地） */}
@@ -283,18 +275,8 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                             {/* 次のルート情報 */}
                             <div className="flex items-center my-3">
                               <div className="badge badge-primary mr-2">
-                                {transfer.nextRoute.routeShortName}
+                                {transfer.nextRoute.routeName}
                               </div>
-                              {transfer.nextRoute.routeLongName && (
-                                <div className="flex-1">
-                                  {transfer.nextRoute.routeLongName}
-                                </div>
-                              )}
-                              {transfer.nextRoute.stopCount && (
-                                <div className="text-xs text-gray-500 ml-2">
-                                  {`${transfer.nextRoute.stopCount}駅`}
-                                </div>
-                              )}
                             </div>
 
                             {/* 最終到着駅と時刻 */}

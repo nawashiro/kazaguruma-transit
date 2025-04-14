@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "prisma generate && prisma db push && npm run import-gtfs && next dev --turbopack",
+    "dev": "prisma generate && next dev --turbopack",
     "build": "prisma generate && prisma db push && npm run import-gtfs && next build",
     "start": "next start",
     "lint": "next lint",

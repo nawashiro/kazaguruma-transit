@@ -29,8 +29,8 @@ model Agency {
 model Route {
   id              String   @id @map("route_id")
   agency_id       String
-  short_name      String   @map("route_short_name")
-  long_name       String   @map("route_long_name")
+  short_name      String?  @map("route_short_name")
+  long_name       String?  @map("route_long_name")
   desc            String?  @map("route_desc")
   type            Int      @map("route_type")
   url             String?  @map("route_url")

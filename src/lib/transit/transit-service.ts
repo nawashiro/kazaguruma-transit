@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { prisma } from "../db/prisma";
+import { Prisma } from "@prisma/client";
 import {
   TransitQuery,
   RouteQuery,
@@ -10,6 +11,28 @@ import {
 } from "@/types/transit-api";
 import { loadConfig, TransitConfig } from "../config/config";
 import { logger } from "../../utils/logger";
+
+// タイプエイリアス定義
+type PrismaStop = Prisma.StopGetPayload<{
+  select: {
+    id: true;
+    name: true;
+    lat: true;
+    lon: true;
+  };
+}>;
+
+type PrismaStopTime = Prisma.StopTimeGetPayload<{
+  include: {
+    trip: {
+      select: {
+        id: true;
+        route_id: true;
+        headsign: true;
+      };
+    };
+  };
+}>;
 
 /**
  * 統合トランジットサービスクラス
@@ -201,6 +224,9 @@ export class TransitService {
         // 直行便があれば結果に追加
         if (directResults.success && directResults.data.journeys?.length > 0) {
           allRoutes = [...directResults.data.journeys];
+          logger.log(
+            `[TransitService] 直行便が見つかりました: ${allRoutes.length}件`
+          );
         }
 
         // 乗り換えが必要な場合も検索
@@ -217,6 +243,9 @@ export class TransitService {
           transferResults.data.journeys?.length > 0
         ) {
           allRoutes = [...allRoutes, ...transferResults.data.journeys];
+          logger.log(
+            `[TransitService] 乗換経路が見つかりました: ${transferResults.data.journeys.length}件、合計 ${allRoutes.length}件`
+          );
         }
 
         // ルートが見つからなかった場合
@@ -353,7 +382,7 @@ export class TransitService {
   }
 
   /**
-   * 乗り換えが必要な経路を検索する
+   * 乗り換えを含む経路を検索
    */
   private async findRouteWithTransfer(
     origin: any,
@@ -361,18 +390,37 @@ export class TransitService {
     time?: string,
     isDeparture: boolean = true
   ): Promise<TransitResponse> {
-    const timeStr = this.formatTime(time ? new Date(time) : new Date());
-    const dateStr = time
-      ? new Date(time).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0];
-
-    logger.log(
-      `[TransitService] 乗り換え経路検索: ${
-        isDeparture ? "出発" : "到着"
-      }時刻 = ${timeStr}`
-    );
-
     try {
+      logger.log(
+        `[TransitService] 乗り換え検索を開始: ${origin.stop_id} → ${destination.stop_id}`
+      );
+
+      // 直線距離を計算（km単位）
+      const directDistance = this.calculateDistance(
+        origin.lat,
+        origin.lng,
+        destination.lat,
+        destination.lng
+      );
+
+      // 直線距離が500m未満の場合、乗り換え検索をスキップ
+      if (directDistance < 0.5) {
+        logger.log(
+          `[TransitService] 目的地までの距離が近すぎるため乗り換え検索をスキップします (${directDistance.toFixed(
+            2
+          )}km)`
+        );
+        return {
+          success: true,
+          data: { journeys: [], stops: [] },
+        };
+      }
+
+      const timeStr = this.formatTime(time ? new Date(time) : new Date());
+      const dateStr = time
+        ? new Date(time).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0];
+
       const requestedDate = new Date(dateStr);
       const dayOfWeek = requestedDate.getDay();
       const formattedDate = requestedDate
@@ -380,7 +428,7 @@ export class TransitService {
         .slice(0, 10)
         .replace(/-/g, "");
 
-      // 有効なserviceを取得
+      // 有効なサービスを取得
       const validServices = await prisma.calendar.findMany({
         where: {
           start_date: {
@@ -408,37 +456,79 @@ export class TransitService {
         (s: { service_id: string }) => s.service_id
       );
 
-      // 出発と目的地のバス停情報を取得
-      const originStop = await prisma.stop.findUnique({
-        where: { id: origin.stop_id },
-        select: {
-          id: true,
-          name: true,
-          lat: true,
-          lon: true,
-        },
-      });
-
-      const destStop = await prisma.stop.findUnique({
-        where: { id: destination.stop_id },
-        select: {
-          id: true,
-          name: true,
-          lat: true,
-          lon: true,
-        },
-      });
-
-      if (!originStop || !destStop) {
-        throw new Error("出発地または目的地のバス停情報が見つかりません");
+      if (serviceIds.length === 0) {
+        logger.log("[TransitService] 本日の有効なサービスが見つかりません");
+        return {
+          success: true,
+          data: { journeys: [], stops: [] },
+        };
       }
 
-      // 乗り換え候補バス停を探す（距離ベース）
-      const transferStops = await prisma.stop.findMany({
+      // ルート情報を取得（null問題を避けるため先に取得）
+      const routes = await prisma.route.findMany({
+        select: {
+          id: true,
+          short_name: true,
+          long_name: true,
+          color: true,
+          text_color: true,
+        },
+      });
+
+      // ルート情報のマップを作成
+      const routeMap = new Map();
+      routes.forEach((route) => {
+        routeMap.set(route.id, {
+          id: route.id,
+          short_name: route.short_name || "",
+          long_name: route.long_name || "",
+          color: route.color,
+          text_color: route.text_color,
+        });
+      });
+
+      // 乗り換え候補を絞り込むための矩形領域を作成
+      const EXPANSION_FACTOR = 1.2; // 拡張係数（バス停が矩形外にある場合を考慮）
+
+      // 矩形領域の座標を計算
+      const minLat =
+        Math.min(origin.lat, destination.lat) -
+        Math.abs(origin.lat - destination.lat) * (EXPANSION_FACTOR - 1);
+      const maxLat =
+        Math.max(origin.lat, destination.lat) +
+        Math.abs(origin.lat - destination.lat) * (EXPANSION_FACTOR - 1);
+      const minLng =
+        Math.min(origin.lng, destination.lng) -
+        Math.abs(origin.lng - destination.lng) * (EXPANSION_FACTOR - 1);
+      const maxLng =
+        Math.max(origin.lng, destination.lng) +
+        Math.abs(origin.lng - destination.lng) * (EXPANSION_FACTOR - 1);
+
+      logger.log(
+        `[TransitService] 検索範囲: lat(${minLat.toFixed(6)}-${maxLat.toFixed(
+          6
+        )}), lng(${minLng.toFixed(6)}-${maxLng.toFixed(6)})`
+      );
+
+      // 乗り換え候補のバス停を取得（矩形領域内のもののみ）
+      const transferCandidates = await prisma.stop.findMany({
         where: {
-          id: {
-            notIn: [origin.stop_id, destination.stop_id],
+          lat: {
+            gte: minLat,
+            lte: maxLat,
           },
+          lon: {
+            gte: minLng,
+            lte: maxLng,
+          },
+          NOT: [
+            {
+              id: origin.stop_id,
+            },
+            {
+              id: destination.stop_id,
+            },
+          ],
         },
         select: {
           id: true,
@@ -448,107 +538,240 @@ export class TransitService {
         },
       });
 
-      // 乗り換え候補バス停に距離計算フィールドを追加
-      const stopsWithDistance = transferStops.map(
-        (stop: {
-          id: string;
-          name: string | null;
-          lat: number;
-          lon: number;
-        }) => {
-          // 距離を計算（単純な平方ユークリッド距離）
-          const distance =
-            Math.pow(stop.lat - originStop.lat, 2) +
-            Math.pow(stop.lon - originStop.lon, 2);
+      if (transferCandidates.length === 0) {
+        logger.log(
+          "[TransitService] 乗り換え候補のバス停が見つかりませんでした"
+        );
+        return {
+          success: true,
+          data: { journeys: [], stops: [] },
+        };
+      }
 
-          return {
-            ...stop,
-            distance,
-          };
-        }
+      logger.log(
+        `[TransitService] 乗り換え候補バス停数: ${transferCandidates.length}`
       );
 
-      // 距離でソート
-      stopsWithDistance.sort(
-        (a: { distance: number }, b: { distance: number }) =>
-          a.distance - b.distance
+      // 方向ベクトルを計算（出発地から目的地への方向）
+      const directionVector = {
+        lat: destination.lat - origin.lat,
+        lng: destination.lng - origin.lng,
+      };
+
+      // 方向ベクトルの長さ（直線距離）
+      const vectorLength = Math.sqrt(
+        directionVector.lat * directionVector.lat +
+          directionVector.lng * directionVector.lng
       );
 
-      logger.log(`[TransitService] 乗り換え経路検索中...`);
+      // 方向ベクトルを正規化（単位ベクトル化）
+      const normalizedDirection = {
+        lat: directionVector.lat / vectorLength,
+        lng: directionVector.lng / vectorLength,
+      };
 
-      // better-sqlite3の代わりにPrismaを使用
-      // SQLを直接実行する代わりに構造化クエリを使用
-      // 以下、SQL相当の処理をPrismaに置き換え（簡略化）
-
-      // 結果格納配列
-      const results = [];
-
-      for (const transferStop of stopsWithDistance) {
-        // Prismaでの乗り換え経路検索（簡略化）
-        // 実際の実装ではより複雑なクエリが必要
-        const journeys = await this.findTransferJourneys(
-          originStop,
-          transferStop,
-          destStop,
-          serviceIds,
-          timeStr,
-          isDeparture
+      // 各乗り換え候補について、方向スコアと距離を計算
+      const scoredCandidates = transferCandidates.map((stop) => {
+        // 出発地からの距離（km）
+        const distanceFromOrigin = this.calculateDistance(
+          origin.lat,
+          origin.lng,
+          stop.lat,
+          stop.lon
         );
 
-        results.push(...journeys);
+        // 目的地までの距離（km）
+        const distanceToDestination = this.calculateDistance(
+          stop.lat,
+          stop.lon,
+          destination.lat,
+          destination.lng
+        );
+
+        // バス停から見た方向ベクトル（出発地からバス停への方向）
+        const stopVector = {
+          lat: stop.lat - origin.lat,
+          lng: stop.lon - origin.lng,
+        };
+
+        // stopVectorの長さを計算
+        const stopVectorLength = Math.sqrt(
+          stopVector.lat * stopVector.lat + stopVector.lng * stopVector.lng
+        );
+
+        // 方向スコアを計算（内積を使用：-1から1の範囲、1が完全に同じ方向）
+        let directionScore = 0;
+        if (stopVectorLength > 0) {
+          // stopVectorを正規化
+          const normalizedStopVector = {
+            lat: stopVector.lat / stopVectorLength,
+            lng: stopVector.lng / stopVectorLength,
+          };
+
+          // 内積を計算
+          directionScore =
+            normalizedDirection.lat * normalizedStopVector.lat +
+            normalizedDirection.lng * normalizedStopVector.lng;
+        }
+
+        // 総合スコアを計算（方向スコアと距離の組み合わせ）
+        const combinedScore =
+          directionScore * (1 / (distanceFromOrigin + distanceToDestination));
+
+        return {
+          ...stop,
+          distanceFromOrigin,
+          distanceToDestination,
+          totalDistance: distanceFromOrigin + distanceToDestination,
+          directionScore,
+          combinedScore,
+          // 経路長の比率（総距離 / 直線距離）- 小さいほど効率的
+          distanceRatio:
+            (distanceFromOrigin + distanceToDestination) / directDistance,
+        };
+      });
+
+      // 条件による絞り込み
+      // 1. 方向スコアが0.5以上（進行方向に概ね一致）
+      // 2. 距離比率が1.8以下（直線距離の1.8倍以内の経路）
+      const MAX_DISTANCE_RATIO = 1.8;
+      const MIN_DIRECTION_SCORE = 0.5;
+
+      const filteredCandidates = scoredCandidates
+        .filter(
+          (stop) =>
+            stop.directionScore >= MIN_DIRECTION_SCORE &&
+            stop.distanceRatio <= MAX_DISTANCE_RATIO
+        )
+        .sort((a, b) => b.combinedScore - a.combinedScore) // スコアの降順
+        .slice(0, 5); // 最大5件に制限
+
+      if (filteredCandidates.length === 0) {
+        logger.log(
+          "[TransitService] 条件を満たす乗り換え候補が見つかりませんでした"
+        );
+        return {
+          success: true,
+          data: { journeys: [], stops: [] },
+        };
       }
 
-      // 結果をフォーマットして返す
-      return this.formatRouteResults(results, true);
-    } catch (dbError) {
-      logger.error("[TransitService] 乗り換え経路検索エラー:", dbError);
+      logger.log(
+        `[TransitService] 絞り込み後の乗り換え候補数: ${filteredCandidates.length}`
+      );
+
+      // 各乗り換え候補について乗り換え経路を検索
+      const journeys = await this.findTransferJourneysWithCandidates(
+        origin,
+        destination,
+        filteredCandidates,
+        timeStr,
+        serviceIds,
+        routeMap,
+        isDeparture
+      );
+
+      return this.formatRouteResults(journeys, true);
+    } catch (error) {
+      logger.error("[TransitService] 乗り換え検索エラー:", error);
       return {
         success: false,
-        error: "乗り換え経路の検索に失敗しました",
+        error:
+          error instanceof Error
+            ? error.message
+            : "乗り換え検索中にエラーが発生しました",
         data: { journeys: [], stops: [] },
       };
     }
   }
 
   /**
-   * 指定された乗り換えバス停を経由する経路を検索
+   * 最適化された乗り換え経路検索処理
+   * 事前に取得したデータを再利用し、クエリ数を削減
    */
-  private async findTransferJourneys(
+  private async findTransferJourneysOptimized(
     originStop: any,
     transferStop: any,
     destStop: any,
-    serviceIds: string[],
+    originStopTimes: any[],
+    tripMap: Map<string, any>,
     timeStr: string,
     isDeparture: boolean = true
   ): Promise<any[]> {
     const journeys = [];
+    const MAX_RESULTS = 3;
+    const MAX_TRANSFER_WAIT_MINUTES = 45;
+    const MIN_TRANSFER_WAIT_MINUTES = 3;
 
     try {
       if (isDeparture) {
-        // まず有効なtrip情報を取得
-        const validTrips = await prisma.trip.findMany({
+        // 使用するtrip_idのリスト
+        const relevantTripIds = originStopTimes.map((st) => st.trip_id);
+        if (relevantTripIds.length === 0) return [];
+
+        // 乗り換えバス停と目的地のストップタイムを一度に取得（バッチ処理）
+        // これにより個別クエリの数を大幅に削減
+        const allTransferStopTimes = await prisma.stopTime.findMany({
           where: {
-            service_id: {
-              in: serviceIds,
+            stop_id: transferStop.id,
+            trip_id: {
+              in: relevantTripIds,
+            },
+            stop_sequence: {
+              gt: 0, // 任意の正の値
             },
           },
-          include: {
-            route: true,
+          select: {
+            trip_id: true,
+            arrival_time: true,
+            departure_time: true,
+            stop_sequence: true,
           },
+          orderBy: [{ trip_id: "asc" }, { stop_sequence: "asc" }],
         });
 
-        const tripIds = validTrips.map((trip) => trip.id);
+        // 出発地→乗り換え地点の経路マップを構築
+        const originToTransferMap = new Map();
+        for (const transferTime of allTransferStopTimes) {
+          if (!transferTime.arrival_time) continue;
 
-        // 出発時刻指定の場合
-        // 1. 出発地から乗り換えバス停への経路を検索
-        const firstLegStopTimes = await prisma.stopTime.findMany({
+          // まだそのトリップが登録されていなければ追加
+          if (!originToTransferMap.has(transferTime.trip_id)) {
+            originToTransferMap.set(transferTime.trip_id, transferTime);
+          }
+        }
+
+        // 乗り換え地点から目的地への乗り継ぎ候補を取得
+        // 全てのtrip_idを対象に目的地のstop_timesを取得
+        const allDestinationStopTimes = await prisma.stopTime.findMany({
           where: {
-            stop_id: originStop.id,
-            departure_time: {
-              gte: timeStr,
-            },
+            stop_id: destStop.id,
             trip_id: {
-              in: tripIds,
+              in: Array.from(tripMap.keys()),
+              notIn: relevantTripIds, // 最初の足と同じトリップは除外
+            },
+          },
+          select: {
+            trip_id: true,
+            arrival_time: true,
+            stop_sequence: true,
+          },
+          orderBy: [{ arrival_time: "asc" }],
+        });
+
+        // 乗り換え地点→目的地の経路マップを構築
+        const transferToDestMap = new Map();
+        for (const destTime of allDestinationStopTimes) {
+          if (!destTime.arrival_time) continue;
+          transferToDestMap.set(destTime.trip_id, destTime);
+        }
+
+        // 乗り換え地点での接続を見つける
+        const transferConnections = await prisma.stopTime.findMany({
+          where: {
+            stop_id: transferStop.id,
+            trip_id: {
+              in: Array.from(transferToDestMap.keys()),
             },
           },
           select: {
@@ -556,99 +779,80 @@ export class TransitService {
             departure_time: true,
             stop_sequence: true,
           },
-          orderBy: {
-            departure_time: "asc",
-          },
-          take: 20,
+          orderBy: [{ departure_time: "asc" }],
         });
 
-        // 各最初の経路について処理
-        for (const firstLegST of firstLegStopTimes) {
-          if (!firstLegST.departure_time) continue;
+        // 接続情報をマップに整理
+        const connectionMap = new Map();
+        for (const conn of transferConnections) {
+          if (!conn.departure_time) continue;
+          if (!connectionMap.has(conn.trip_id)) {
+            connectionMap.set(conn.trip_id, conn);
+          }
+        }
 
-          const firstLegTrip = validTrips.find(
-            (t) => t.id === firstLegST.trip_id
-          );
-          if (!firstLegTrip) continue;
+        // 各出発便について乗り換え経路を検索
+        for (const originST of originStopTimes) {
+          if (!originST.departure_time) continue;
 
-          // 乗り換えバス停への到着時刻を検索
-          const transferArrival = await prisma.stopTime.findFirst({
-            where: {
-              trip_id: firstLegST.trip_id,
-              stop_id: transferStop.id,
-              stop_sequence: {
-                gt: firstLegST.stop_sequence,
-              },
-            },
-            select: {
-              arrival_time: true,
-            },
-          });
+          const originTrip = tripMap.get(originST.trip_id);
+          if (!originTrip) continue;
 
+          // この出発便から乗り換え地点への到着を取得
+          const transferArrival = originToTransferMap.get(originST.trip_id);
           if (!transferArrival || !transferArrival.arrival_time) continue;
 
-          // 乗り換えバス停から目的地への経路を検索
-          const secondLegStopTimes = await prisma.stopTime.findMany({
-            where: {
-              stop_id: transferStop.id,
-              departure_time: {
-                gt: transferArrival.arrival_time,
-              },
-              trip_id: {
-                in: tripIds,
-              },
-            },
-            select: {
-              trip_id: true,
-              departure_time: true,
-              stop_sequence: true,
-            },
-            orderBy: {
-              departure_time: "asc",
-            },
-            take: 10,
-          });
+          // この出発便のシーケンスが乗り換えのシーケンスより前かチェック
+          if (originST.stop_sequence >= transferArrival.stop_sequence) continue;
 
-          // 各二番目の経路について処理
-          for (const secondLegST of secondLegStopTimes) {
-            if (!secondLegST.departure_time) continue;
-
-            const secondLegTrip = validTrips.find(
-              (t) => t.id === secondLegST.trip_id
-            );
-            if (!secondLegTrip) continue;
-
-            // 目的地への到着時刻を検索
-            const destArrival = await prisma.stopTime.findFirst({
-              where: {
-                trip_id: secondLegST.trip_id,
-                stop_id: destStop.id,
-                stop_sequence: {
-                  gt: secondLegST.stop_sequence,
-                },
-              },
-              select: {
-                arrival_time: true,
-              },
-            });
-
-            if (!destArrival || !destArrival.arrival_time) continue;
-
-            // 乗り換え時間を計算（分）
+          // 有効な乗り換え接続を探す
+          let validConnections = [];
+          for (const [connTripId, conn] of connectionMap.entries()) {
+            // 乗り換え時間を計算
             const transferWaitMinutes = this.calculateTimeDiffMinutes(
               transferArrival.arrival_time,
-              secondLegST.departure_time
+              conn.departure_time
             );
 
-            // 待ち時間が3〜60分の範囲内のみ使用
-            if (transferWaitMinutes < 3 || transferWaitMinutes > 60) continue;
+            // 待ち時間が妥当な範囲内か確認
+            if (
+              transferWaitMinutes < MIN_TRANSFER_WAIT_MINUTES ||
+              transferWaitMinutes > MAX_TRANSFER_WAIT_MINUTES
+            )
+              continue;
+
+            // 同じ路線での乗り換えを避ける
+            const secondLegTrip = tripMap.get(conn.trip_id);
+            if (!secondLegTrip) continue;
+            if (originTrip.route_id === secondLegTrip.route_id) continue;
+
+            // この乗り換えで目的地に到着できるか確認
+            const destArrival = transferToDestMap.get(conn.trip_id);
+            if (!destArrival || !destArrival.arrival_time) continue;
+
+            // 乗り換え地点のシーケンスと目的地のシーケンスを確認
+            if (conn.stop_sequence >= destArrival.stop_sequence) continue;
 
             // 総所要時間を計算
             const totalDurationMinutes = this.calculateTimeDiffMinutes(
-              firstLegST.departure_time,
+              originST.departure_time,
               destArrival.arrival_time
             );
 
+            validConnections.push({
+              secondLegTrip,
+              departure: conn.departure_time,
+              arrival: destArrival.arrival_time,
+              waitTime: transferWaitMinutes,
+              totalDuration: totalDurationMinutes,
+            });
+
+            // 十分な接続が見つかったら早期終了
+            if (validConnections.length >= MAX_RESULTS) break;
+          }
+
+          // 有効な接続それぞれについて経路を構築
+          for (const conn of validConnections) {
             // 経路情報を構築
             journeys.push({
               legs: [
@@ -665,25 +869,27 @@ export class TransitService {
                     lat: transferStop.lat,
                     lng: transferStop.lon,
                   },
-                  departure_time: firstLegST.departure_time,
-                  arrival_time: transferArrival.arrival_time,
-                  trip_id: firstLegST.trip_id,
+                  departure_time: this.formatTimeString(
+                    originST.departure_time
+                  ),
+                  arrival_time: this.formatTimeString(conn.arrival),
+                  trip_id: originST.trip_id,
                   route: {
-                    id: firstLegTrip.route.id,
+                    id: originTrip.route.id,
                     name:
-                      firstLegTrip.route.short_name ||
-                      firstLegTrip.route.long_name ||
+                      originTrip.route.short_name ||
+                      originTrip.route.long_name ||
                       "名称不明",
-                    short_name: firstLegTrip.route.short_name || "",
-                    long_name: firstLegTrip.route.long_name || "",
-                    color: firstLegTrip.route.color
-                      ? `#${firstLegTrip.route.color}`
+                    short_name: originTrip.route.short_name,
+                    long_name: originTrip.route.long_name,
+                    color: originTrip.route.color
+                      ? `#${originTrip.route.color}`
                       : "#000000",
-                    text_color: firstLegTrip.route.text_color
-                      ? `#${firstLegTrip.route.text_color}`
+                    text_color: originTrip.route.text_color
+                      ? `#${originTrip.route.text_color}`
                       : "#FFFFFF",
                   },
-                  headsign: firstLegTrip.headsign || "不明",
+                  headsign: originTrip.headsign || "不明",
                 },
                 {
                   origin: {
@@ -698,31 +904,31 @@ export class TransitService {
                     lat: destStop.lat,
                     lng: destStop.lon,
                   },
-                  departure_time: secondLegST.departure_time,
-                  arrival_time: destArrival.arrival_time,
-                  trip_id: secondLegST.trip_id,
+                  departure_time: this.formatTimeString(conn.departure),
+                  arrival_time: this.formatTimeString(conn.arrival),
+                  trip_id: conn.secondLegTrip.id,
                   route: {
-                    id: secondLegTrip.route.id,
+                    id: conn.secondLegTrip.route.id,
                     name:
-                      secondLegTrip.route.short_name ||
-                      secondLegTrip.route.long_name ||
+                      conn.secondLegTrip.route.short_name ||
+                      conn.secondLegTrip.route.long_name ||
                       "名称不明",
-                    short_name: secondLegTrip.route.short_name || "",
-                    long_name: secondLegTrip.route.long_name || "",
-                    color: secondLegTrip.route.color
-                      ? `#${secondLegTrip.route.color}`
+                    short_name: conn.secondLegTrip.route.short_name,
+                    long_name: conn.secondLegTrip.route.long_name,
+                    color: conn.secondLegTrip.route.color
+                      ? `#${conn.secondLegTrip.route.color}`
                       : "#000000",
-                    text_color: secondLegTrip.route.text_color
-                      ? `#${secondLegTrip.route.text_color}`
+                    text_color: conn.secondLegTrip.route.text_color
+                      ? `#${conn.secondLegTrip.route.text_color}`
                       : "#FFFFFF",
                   },
-                  headsign: secondLegTrip.headsign || "不明",
+                  headsign: conn.secondLegTrip.headsign || "不明",
                 },
               ],
-              departure_time: firstLegST.departure_time,
-              arrival_time: destArrival.arrival_time,
-              duration: totalDurationMinutes,
-              transfer_time: transferWaitMinutes,
+              departure_time: this.formatTimeString(originST.departure_time),
+              arrival_time: this.formatTimeString(conn.arrival),
+              duration: conn.totalDuration,
+              transfer_time: conn.waitTime,
               stops: [
                 {
                   id: originStop.id,
@@ -743,21 +949,58 @@ export class TransitService {
                   lng: destStop.lon,
                 },
               ],
+              // formatRouteResults で使用されるフィールドを追加
+              origin_stop_id: originStop.id,
+              origin_stop_name: originStop.name || "名称不明",
+              origin_stop_lat: originStop.lat,
+              origin_stop_lon: originStop.lon,
+              origin_distance: 0,
+              destination_stop_id: destStop.id,
+              destination_stop_name: destStop.name || "名称不明",
+              destination_stop_lat: destStop.lat,
+              destination_stop_lon: destStop.lon,
+              destination_distance: 0,
             });
 
-            // 最大5件に制限
-            if (journeys.length >= 5) break;
+            // 最大結果数に達したら早期終了
+            if (journeys.length >= MAX_RESULTS) break;
           }
 
-          if (journeys.length >= 5) break;
+          if (journeys.length >= MAX_RESULTS) break;
         }
       } else {
         // 到着時刻指定の場合の処理（仕組みは同様だが逆順）
         // 実装は省略
       }
     } catch (error) {
-      logger.error("[TransitService] 乗り換え経路検索でエラー:", error);
+      logger.error(
+        "[TransitService] 最適化された乗り換え経路検索でエラー:",
+        error
+      );
     }
+
+    // 時間順にソート
+    journeys.sort((a, b) => {
+      if (isDeparture) {
+        return (
+          new Date(
+            `2000-01-01T${this.formatTimeString(a.departure_time)}`
+          ).getTime() -
+          new Date(
+            `2000-01-01T${this.formatTimeString(b.departure_time)}`
+          ).getTime()
+        );
+      } else {
+        return (
+          new Date(
+            `2000-01-01T${this.formatTimeString(b.arrival_time)}`
+          ).getTime() -
+          new Date(
+            `2000-01-01T${this.formatTimeString(a.arrival_time)}`
+          ).getTime()
+        );
+      }
+    });
 
     return journeys;
   }
@@ -960,7 +1203,6 @@ export class TransitService {
           service_id: true,
         },
       });
-
       const serviceIds = validServices.map(
         (s: { service_id: string }) => s.service_id
       );
@@ -998,9 +1240,7 @@ export class TransitService {
             },
           },
         },
-        orderBy: {
-          departure_time: "asc",
-        },
+        orderBy: [{ departure_time: "asc" }],
         take: 30,
       });
 
@@ -1045,129 +1285,254 @@ export class TransitService {
   }
 
   /**
-   * 経路検索結果をフォーマットする
+   * 経路検索結果をフォーマット
    */
   private formatRouteResults(
-    results: any[],
-    isTransfer: boolean
+    journeys: any[],
+    hasTransfer: boolean
   ): TransitResponse {
-    if (isTransfer) {
-      // 乗り換え経路のフォーマット
+    if (journeys.length === 0) {
       return {
         success: true,
-        data: {
-          journeys: results.map((route: any) => ({
-            departure: route.origin_departure,
-            arrival: route.dest_arrival,
-            duration: Math.round(route.total_duration),
-            transfers: 1,
-            from: route.origin_stop_name,
-            to: route.dest_stop_name,
-            route: `${
-              route.first_route_short_name || route.first_route_long_name
-            } → ${
-              route.second_route_short_name || route.second_route_long_name
-            }`,
-            color: route.first_route_color
-              ? `#${route.first_route_color}`
-              : "#000000",
-            textColor: route.first_route_text_color
-              ? `#${route.first_route_text_color}`
-              : "#FFFFFF",
-            segments: [
+        data: { journeys: [], stops: [] },
+      };
+    }
+
+    logger.log(
+      `[TransitService] 経路検索結果のフォーマット: ${
+        journeys.length
+      }件の経路、${hasTransfer ? "乗換あり" : "直行便"}`
+    );
+
+    try {
+      // 出発地と目的地の情報を取得
+      const originStop = {
+        id: journeys[0].origin_stop_id,
+        name: journeys[0].origin_stop_name,
+        distance: journeys[0].origin_distance || 0,
+        lat: parseFloat(journeys[0].origin_stop_lat),
+        lng: parseFloat(journeys[0].origin_stop_lon),
+      };
+
+      const destStop = {
+        id: journeys[0].destination_stop_id,
+        name: journeys[0].destination_stop_name,
+        distance: journeys[0].destination_distance || 0,
+        lat: parseFloat(journeys[0].destination_stop_lat),
+        lng: parseFloat(journeys[0].destination_stop_lon),
+      };
+
+      // 停留所リスト
+      let stops = [originStop, destStop];
+
+      // 乗り換え停留所を追加
+      const transferStops = journeys
+        .filter((j) => j.transfer_stop_id)
+        .map((j) => ({
+          id: j.transfer_stop_id,
+          name: j.transfer_stop_name,
+          distance: j.transfer_distance || 0,
+          lat: parseFloat(j.transfer_stop_lat),
+          lng: parseFloat(j.transfer_stop_lon),
+        }));
+
+      if (transferStops.length > 0) {
+        stops = stops.concat(transferStops);
+      }
+
+      // 重複停留所を削除
+      const uniqueStops = stops.filter(
+        (stop, index, self) => index === self.findIndex((s) => s.id === stop.id)
+      );
+
+      // 経路情報をフォーマット
+      const formattedJourneys = journeys.map((journey) => {
+        // 直行便の場合
+        if (!hasTransfer || !journey.transfer_stop_id) {
+          const formatted = {
+            type: "direct",
+            // クライアント側で使用される属性
+            from: journey.origin_stop_name,
+            to: journey.destination_stop_name,
+            route: journey.route_name,
+            color: journey.route_color || "808080",
+            textColor: journey.route_text_color || "FFFFFF",
+            departure: this.formatTimeString(journey.departure_time),
+            arrival: this.formatTimeString(journey.arrival_time),
+            duration: journey.duration,
+            transfers: 0,
+            // レンダリングに必要な詳細情報
+            legs: [
               {
-                from: route.origin_stop_name,
-                to: route.transfer_stop_name,
-                departure: route.origin_departure,
-                arrival: route.transfer_arrival,
-                duration: Math.round(route.first_leg_duration),
-                route:
-                  route.first_route_short_name || route.first_route_long_name,
-                color: route.first_route_color
-                  ? `#${route.first_route_color}`
-                  : "#000000",
-                textColor: route.first_route_text_color
-                  ? `#${route.first_route_text_color}`
-                  : "#FFFFFF",
-              },
-              {
-                from: route.transfer_stop_name,
-                to: route.dest_stop_name,
-                departure: route.transfer_departure,
-                arrival: route.dest_arrival,
-                duration: Math.round(route.second_leg_duration),
-                route:
-                  route.second_route_short_name || route.second_route_long_name,
-                color: route.second_route_color
-                  ? `#${route.second_route_color}`
-                  : "#000000",
-                textColor: route.second_route_text_color
-                  ? `#${route.second_route_text_color}`
-                  : "#FFFFFF",
+                origin: {
+                  id: journey.origin_stop_id,
+                  name: journey.origin_stop_name,
+                  lat: parseFloat(journey.origin_stop_lat),
+                  lng: parseFloat(journey.origin_stop_lon),
+                },
+                destination: {
+                  id: journey.destination_stop_id,
+                  name: journey.destination_stop_name,
+                  lat: parseFloat(journey.destination_stop_lat),
+                  lng: parseFloat(journey.destination_stop_lon),
+                },
+                departureTime: this.formatTimeString(journey.departure_time),
+                arrivalTime: this.formatTimeString(journey.arrival_time),
+                duration: journey.duration,
+                routeId: journey.route_id,
+                routeName: journey.route_name,
+                routeShortName: journey.route_short_name || journey.route_name,
+                routeLongName: journey.route_long_name || "",
+                routeColor: journey.route_color || "808080",
+                routeTextColor: journey.route_text_color || "FFFFFF",
+                tripHeadsign: journey.trip_headsign || "",
               },
             ],
-            transferInfo: {
-              stop: route.transfer_stop_name,
-              waitTime: Math.round(route.transfer_wait_time),
-              location: {
-                lat: parseFloat(route.transfer_stop_lat),
-                lng: parseFloat(route.transfer_stop_lon),
+          };
+          logger.log(
+            `[TransitService] 直行便経路フォーマット: ${JSON.stringify(
+              formatted
+            )}`
+          );
+          return formatted;
+        }
+
+        // 乗り換え経路の場合
+        const transferInfo = {
+          stop: journey.transfer_stop_name,
+          waitTime: journey.transfer_wait_time || 0,
+          location: {
+            lat: parseFloat(journey.transfer_stop_lat),
+            lng: parseFloat(journey.transfer_stop_lon),
+          },
+        };
+
+        const segments = [
+          {
+            from: journey.origin_stop_name,
+            to: journey.transfer_stop_name,
+            departure: this.formatTimeString(journey.first_leg_departure_time),
+            arrival: this.formatTimeString(journey.first_leg_arrival_time),
+            duration: journey.first_leg_duration,
+            route: journey.first_leg_route_name,
+            color: journey.first_leg_route_color || "808080",
+            textColor: journey.first_leg_route_text_color || "FFFFFF",
+          },
+          {
+            from: journey.transfer_stop_name,
+            to: journey.destination_stop_name,
+            departure: this.formatTimeString(journey.second_leg_departure_time),
+            arrival: this.formatTimeString(journey.second_leg_arrival_time),
+            duration: journey.second_leg_duration,
+            route: journey.second_leg_route_name,
+            color: journey.second_leg_route_color || "808080",
+            textColor: journey.second_leg_route_text_color || "FFFFFF",
+          },
+        ];
+
+        const formatted = {
+          type: "transfer",
+          // クライアント側で使用される属性
+          from: journey.origin_stop_name,
+          to: journey.destination_stop_name,
+          departure: this.formatTimeString(journey.first_leg_departure_time),
+          arrival: this.formatTimeString(journey.second_leg_arrival_time),
+          duration: journey.total_duration,
+          transfers: 1,
+          segments,
+          transferInfo,
+          // レンダリングに必要な詳細情報
+          legs: [
+            {
+              origin: {
+                id: journey.origin_stop_id,
+                name: journey.origin_stop_name,
+                lat: parseFloat(journey.origin_stop_lat),
+                lng: parseFloat(journey.origin_stop_lon),
               },
+              destination: {
+                id: journey.transfer_stop_id,
+                name: journey.transfer_stop_name,
+                lat: parseFloat(journey.transfer_stop_lat),
+                lng: parseFloat(journey.transfer_stop_lon),
+              },
+              departureTime: this.formatTimeString(
+                journey.first_leg_departure_time
+              ),
+              arrivalTime: this.formatTimeString(
+                journey.first_leg_arrival_time
+              ),
+              duration: journey.first_leg_duration,
+              routeId: journey.first_leg_route_id,
+              routeName: journey.first_leg_route_name,
+              routeShortName: journey.first_leg_route_short_name,
+              routeLongName: journey.first_leg_route_long_name,
+              routeColor: journey.first_leg_route_color || "808080",
+              routeTextColor: journey.first_leg_route_text_color || "FFFFFF",
+              tripHeadsign: journey.first_leg_trip_headsign || "",
             },
-          })),
-          stops: [
             {
-              id: results[0].origin_stop_id,
-              name: results[0].origin_stop_name,
-              distance: results[0].origin_distance,
-              lat: parseFloat(results[0].origin_stop_lat),
-              lng: parseFloat(results[0].origin_stop_lon),
-            },
-            {
-              id: results[0].dest_stop_id,
-              name: results[0].dest_stop_name,
-              distance: results[0].dest_distance,
-              lat: parseFloat(results[0].dest_stop_lat),
-              lng: parseFloat(results[0].dest_stop_lon),
+              origin: {
+                id: journey.transfer_stop_id,
+                name: journey.transfer_stop_name,
+                lat: parseFloat(journey.transfer_stop_lat),
+                lng: parseFloat(journey.transfer_stop_lon),
+              },
+              destination: {
+                id: journey.destination_stop_id,
+                name: journey.destination_stop_name,
+                lat: parseFloat(journey.destination_stop_lat),
+                lng: parseFloat(journey.destination_stop_lon),
+              },
+              departureTime: this.formatTimeString(
+                journey.second_leg_departure_time
+              ),
+              arrivalTime: this.formatTimeString(
+                journey.second_leg_arrival_time
+              ),
+              duration: journey.second_leg_duration,
+              routeId: journey.second_leg_route_id,
+              routeName: journey.second_leg_route_name,
+              routeShortName: journey.second_leg_route_short_name,
+              routeLongName: journey.second_leg_route_long_name,
+              routeColor: journey.second_leg_route_color || "808080",
+              routeTextColor: journey.second_leg_route_text_color || "FFFFFF",
+              tripHeadsign: journey.second_leg_trip_headsign || "",
             },
           ],
-        },
-      };
-    } else {
-      // 直接経路のフォーマット
+        };
+
+        logger.log(
+          `[TransitService] 乗換経路フォーマット: ${JSON.stringify(formatted)}`
+        );
+        return formatted;
+      });
+
+      logger.log(
+        `[TransitService] ${formattedJourneys.length}件の経路をフォーマットしました`
+      );
+      for (let i = 0; i < formattedJourneys.length; i++) {
+        const j = formattedJourneys[i];
+        logger.log(
+          `[TransitService] 経路${i + 1}: タイプ=${j.type}, 出発=${
+            j.departure
+          }, 到着=${j.arrival}, 所要時間=${j.duration}分`
+        );
+      }
+
       return {
         success: true,
         data: {
-          journeys: results.map((route: any) => ({
-            departure: route.departure_time,
-            arrival: route.arrival_time,
-            duration: Math.round(route.duration_minutes),
-            transfers: 0,
-            route: route.route_short_name || route.route_long_name,
-            from: route.origin_stop_name,
-            to: route.dest_stop_name,
-            color: route.route_color ? `#${route.route_color}` : "#000000",
-            textColor: route.route_text_color
-              ? `#${route.route_text_color}`
-              : "#FFFFFF",
-          })),
-          stops: [
-            {
-              id: results[0].origin_stop_id,
-              name: results[0].origin_stop_name,
-              distance: results[0].origin_distance,
-              lat: parseFloat(results[0].origin_stop_lat),
-              lng: parseFloat(results[0].origin_stop_lon),
-            },
-            {
-              id: results[0].dest_stop_id,
-              name: results[0].dest_stop_name,
-              distance: results[0].dest_distance,
-              lat: parseFloat(results[0].dest_stop_lat),
-              lng: parseFloat(results[0].dest_stop_lon),
-            },
-          ],
+          journeys: formattedJourneys,
+          stops: uniqueStops,
         },
+      };
+    } catch (error) {
+      logger.error("[TransitService] 経路結果フォーマットエラー:", error);
+      return {
+        success: false,
+        error: "経路結果のフォーマット中にエラーが発生しました",
+        data: { journeys: [], stops: [] },
       };
     }
   }
@@ -1182,30 +1547,24 @@ export class TransitService {
     return `${hours}:${minutes}:00`;
   }
 
+  /**
+   * 直行便の経路を検索
+   */
   private async findDirectRoute(
     origin: any,
     destination: any,
     time?: string,
     isDeparture: boolean = true
   ): Promise<TransitResponse> {
-    const timeStr = this.formatTime(time ? new Date(time) : new Date());
-    const dateStr = time
-      ? new Date(time).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0];
-
-    logger.log(
-      `[TransitService] 直行経路検索: ${
-        isDeparture ? "出発" : "到着"
-      }時刻 = ${timeStr}`
-    );
-
     try {
-      // this.dbを初期化
-      await this.initDb();
+      logger.log(
+        `[TransitService] 直行便検索を開始: ${origin.stop_id} → ${destination.stop_id}`
+      );
 
-      if (!this.isDbInitialized) {
-        throw new Error("データベース接続が初期化されていません");
-      }
+      const timeStr = this.formatTime(time ? new Date(time) : new Date());
+      const dateStr = time
+        ? new Date(time).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0];
 
       const requestedDate = new Date(dateStr);
       const dayOfWeek = requestedDate.getDay();
@@ -1214,7 +1573,7 @@ export class TransitService {
         .slice(0, 10)
         .replace(/-/g, "");
 
-      // 有効なサービスIDを取得
+      // 有効なサービスを取得
       const validServices = await prisma.calendar.findMany({
         where: {
           start_date: {
@@ -1242,145 +1601,333 @@ export class TransitService {
         (s: { service_id: string }) => s.service_id
       );
 
-      // 出発バス停情報を取得
-      const originStop = await prisma.stop.findUnique({
-        where: { id: origin.stop_id },
-        select: {
-          id: true,
-          name: true,
-          lat: true,
-          lon: true,
-        },
-      });
-
-      // 目的地バス停情報を取得
-      const destStop = await prisma.stop.findUnique({
-        where: { id: destination.stop_id },
-        select: {
-          id: true,
-          name: true,
-          lat: true,
-          lon: true,
-        },
-      });
-
-      if (!originStop || !destStop) {
-        throw new Error("バス停情報が見つかりません");
+      if (serviceIds.length === 0) {
+        logger.log("[TransitService] 本日の有効なサービスが見つかりません");
+        return {
+          success: true,
+          data: { journeys: [], stops: [] },
+        };
       }
 
-      // 最終結果を格納する配列
-      const results = [];
+      // ルート情報を取得
+      const validRoutes = await prisma.route.findMany({
+        select: {
+          id: true,
+          short_name: true,
+          long_name: true,
+          color: true,
+          text_color: true,
+        },
+      });
 
-      // 出発時刻指定の場合
-      if (isDeparture) {
-        // まずtrip情報を取得して、その後にstop_timeを取得するように修正
-        const validTrips = await prisma.trip.findMany({
-          where: {
-            service_id: {
-              in: serviceIds,
-            },
-          },
-          include: {
-            route: true,
-          },
-          take: 100, // 十分な数を取得
+      // ルート情報のマップを作成
+      const routeMap = new Map();
+      validRoutes.forEach((route) => {
+        routeMap.set(route.id, {
+          id: route.id,
+          short_name: route.short_name || "",
+          long_name: route.long_name || "",
+          color: route.color,
+          text_color: route.text_color,
         });
+      });
 
-        const tripIds = validTrips.map((trip) => trip.id);
+      try {
+        const results = await this.findDirectRouteBetweenStops(
+          origin.stop_id,
+          destination.stop_id,
+          timeStr,
+          serviceIds,
+          routeMap,
+          isDeparture
+        );
 
-        // 出発地の停留所時刻を取得
-        const originStopTimes = await prisma.stopTime.findMany({
-          where: {
-            stop_id: origin.stop_id,
-            departure_time: {
-              gte: timeStr,
+        // 検索結果を整形
+        if (results.length === 0) {
+          return {
+            success: true,
+            data: {
+              journeys: [],
+              stops: [
+                {
+                  id: origin.stop_id,
+                  name: origin.stop_name,
+                  distance: 0,
+                  lat: parseFloat(origin.lat),
+                  lng: parseFloat(origin.lng),
+                },
+                {
+                  id: destination.stop_id,
+                  name: destination.stop_name,
+                  distance: 0,
+                  lat: parseFloat(destination.lat),
+                  lng: parseFloat(destination.lng),
+                },
+              ],
             },
-            trip_id: {
-              in: tripIds,
-            },
-          },
-          orderBy: {
-            departure_time: "asc",
-          },
-          take: 50, // 十分な数を取得
-        });
-
-        // 各出発時刻に対して目的地の到着時刻を検索
-        for (const originStopTime of originStopTimes) {
-          // trip情報を取得
-          const trip = validTrips.find((t) => t.id === originStopTime.trip_id);
-          if (!trip) continue;
-
-          // 目的地停留所の時刻を検索
-          const destStopTime = await prisma.stopTime.findFirst({
-            where: {
-              trip_id: originStopTime.trip_id,
-              stop_id: destination.stop_id,
-              stop_sequence: {
-                gt: originStopTime.stop_sequence,
-              },
-            },
-          });
-
-          if (
-            !destStopTime ||
-            !destStopTime.arrival_time ||
-            !originStopTime.departure_time
-          )
-            continue;
-
-          // 所要時間を計算（分単位）
-          const durationMinutes = this.calculateTimeDiffMinutes(
-            originStopTime.departure_time,
-            destStopTime.arrival_time
-          );
-
-          // ルート情報
-          const route = trip.route;
-
-          results.push({
-            departure_time: originStopTime.departure_time,
-            arrival_time: destStopTime.arrival_time,
-            duration_minutes: durationMinutes,
-            route_id: route.id,
-            route_short_name: route.short_name,
-            route_long_name: route.long_name,
-            route_color: route.color,
-            route_text_color: route.text_color,
-            trip_headsign: trip.headsign,
-            direction_id: trip.direction_id,
-            origin_stop_id: origin.stop_id,
-            origin_stop_name: originStop.name || "名称不明",
-            origin_stop_lat: originStop.lat,
-            origin_stop_lon: originStop.lon,
-            dest_stop_id: destination.stop_id,
-            dest_stop_name: destStop.name || "名称不明",
-            dest_stop_lat: destStop.lat,
-            dest_stop_lon: destStop.lon,
-            origin_distance: 0, // 簡略化
-            dest_distance: 0, // 簡略化
-          });
+          };
         }
-      } else {
-        // 到着時刻指定の場合の処理（仕組みは同様だが逆順）
-        // 実装は省略
-      }
 
-      return {
-        success: true,
-        data: {
-          journeys: results,
-        },
-      };
+        // 経路情報を追加
+        const journeys = results.map((result) => ({
+          ...result,
+          origin_stop_id: origin.stop_id,
+          origin_stop_name: origin.stop_name,
+          origin_stop_lat: origin.lat,
+          origin_stop_lon: origin.lng,
+          origin_distance: 0,
+          destination_stop_id: destination.stop_id,
+          destination_stop_name: destination.stop_name,
+          destination_stop_lat: destination.lat,
+          destination_stop_lon: destination.lng,
+          destination_distance: 0,
+        }));
+
+        // 結果をフォーマットして返す
+        return this.formatRouteResults(journeys, false);
+      } catch (queryError) {
+        logger.error("[TransitService] 直行便検索クエリエラー:", queryError);
+        return {
+          success: false,
+          error: "経路検索中にエラーが発生しました",
+          data: { journeys: [], stops: [] },
+        };
+      }
     } catch (error) {
-      logger.error("[TransitService] 直行経路検索エラー:", error);
+      logger.error("[TransitService] 経路検索エラー:", error);
       return {
         success: false,
         error:
-          error instanceof Error ? error.message : "直行経路検索に失敗しました",
-        data: { journeys: [] },
+          error instanceof Error
+            ? error.message
+            : "経路検索中にエラーが発生しました",
+        data: { journeys: [], stops: [] },
       };
     }
+  }
+
+  /**
+   * 乗り換え候補を使用して経路を検索
+   * @param origin 出発地
+   * @param destination 目的地
+   * @param transferCandidates 乗り換え候補バス停
+   * @param timeStr 時刻文字列
+   * @param serviceIds 有効なサービスID
+   * @param routeMap ルート情報のマップ
+   * @param isDeparture 出発時刻指定かどうか
+   */
+  private async findTransferJourneysWithCandidates(
+    origin: any,
+    destination: any,
+    transferCandidates: any[],
+    timeStr: string,
+    serviceIds: string[],
+    routeMap: Map<string, any>,
+    isDeparture: boolean = true
+  ): Promise<any[]> {
+    const journeys: any[] = [];
+    const MAX_TRANSFER_CANDIDATES = 3;
+    const MAX_RESULTS_PER_CANDIDATE = 2;
+
+    try {
+      // 乗り換え候補数を制限
+      const limitedCandidates = transferCandidates.slice(
+        0,
+        MAX_TRANSFER_CANDIDATES
+      );
+
+      for (const transferStop of limitedCandidates) {
+        // 1. 最初の区間: 出発地→乗り換え地点のルートを検索
+        const firstLegResults = await this.findDirectRouteBetweenStops(
+          origin.stop_id,
+          transferStop.stop_id,
+          timeStr,
+          serviceIds,
+          routeMap,
+          isDeparture
+        );
+
+        if (firstLegResults.length === 0) continue;
+
+        for (const firstLeg of firstLegResults.slice(
+          0,
+          MAX_RESULTS_PER_CANDIDATE
+        )) {
+          // 2. 乗り換え待ち時間を考慮した次の出発時刻
+          const transferDepartureTime = this.calculateTransferDepartureTime(
+            firstLeg.arrival_time,
+            3 // 最低乗り換え時間（分）
+          );
+
+          // 3. 二区間目: 乗り換え地点→目的地のルートを検索
+          const secondLegResults = await this.findDirectRouteBetweenStops(
+            transferStop.stop_id,
+            destination.stop_id,
+            transferDepartureTime,
+            serviceIds,
+            routeMap,
+            true // 乗り換え後は必ず出発時刻指定
+          );
+
+          if (secondLegResults.length === 0) continue;
+
+          for (const secondLeg of secondLegResults.slice(
+            0,
+            MAX_RESULTS_PER_CANDIDATE
+          )) {
+            // 同じ路線での乗り換えを避ける
+            if (firstLeg.route_id === secondLeg.route_id) continue;
+
+            // 乗り換え待ち時間を計算（分）
+            const transferWaitMinutes = this.calculateTimeDiffMinutes(
+              firstLeg.arrival_time,
+              secondLeg.departure_time
+            );
+
+            // 乗り換え待ち時間が長すぎる場合はスキップ
+            if (transferWaitMinutes > 45) continue;
+
+            // 総所要時間を計算
+            const totalDurationMinutes = this.calculateTimeDiffMinutes(
+              firstLeg.departure_time,
+              secondLeg.arrival_time
+            );
+
+            // 結果を追加
+            journeys.push({
+              legs: [
+                {
+                  origin: {
+                    id: origin.stop_id,
+                    name: origin.stop_name,
+                    lat: origin.lat,
+                    lng: origin.lng,
+                  },
+                  destination: {
+                    id: transferStop.stop_id,
+                    name: transferStop.stop_name,
+                    lat: transferStop.lat,
+                    lng: transferStop.lon,
+                  },
+                  departure_time: this.formatTimeString(
+                    firstLeg.departure_time
+                  ),
+                  arrival_time: this.formatTimeString(firstLeg.arrival_time),
+                  trip_id: firstLeg.trip_id,
+                  route: {
+                    id: firstLeg.route_id,
+                    name: firstLeg.route_name,
+                    short_name: firstLeg.route_short_name,
+                    long_name: firstLeg.route_long_name,
+                    color: firstLeg.route_color
+                      ? `#${firstLeg.route_color}`
+                      : "#000000",
+                    text_color: firstLeg.route_text_color
+                      ? `#${firstLeg.route_text_color}`
+                      : "#FFFFFF",
+                  },
+                  headsign: firstLeg.trip_headsign || "不明",
+                },
+                {
+                  origin: {
+                    id: transferStop.stop_id,
+                    name: transferStop.stop_name,
+                    lat: transferStop.lat,
+                    lng: transferStop.lon,
+                  },
+                  destination: {
+                    id: destination.stop_id,
+                    name: destination.stop_name,
+                    lat: destination.lat,
+                    lng: destination.lng,
+                  },
+                  departure_time: this.formatTimeString(
+                    secondLeg.departure_time
+                  ),
+                  arrival_time: this.formatTimeString(secondLeg.arrival_time),
+                  trip_id: secondLeg.trip_id,
+                  route: {
+                    id: secondLeg.route_id,
+                    name: secondLeg.route_name,
+                    short_name: secondLeg.route_short_name,
+                    long_name: secondLeg.route_long_name,
+                    color: secondLeg.route_color
+                      ? `#${secondLeg.route_color}`
+                      : "#000000",
+                    text_color: secondLeg.route_text_color
+                      ? `#${secondLeg.route_text_color}`
+                      : "#FFFFFF",
+                  },
+                  headsign: secondLeg.trip_headsign || "不明",
+                },
+              ],
+              departure_time: this.formatTimeString(firstLeg.departure_time),
+              arrival_time: this.formatTimeString(secondLeg.arrival_time),
+              duration: totalDurationMinutes,
+              transfer_time: transferWaitMinutes,
+              stops: [
+                {
+                  id: origin.stop_id,
+                  name: origin.stop_name,
+                  lat: origin.lat,
+                  lng: origin.lng,
+                },
+                {
+                  id: transferStop.stop_id,
+                  name: transferStop.stop_name,
+                  lat: transferStop.lat,
+                  lng: transferStop.lon,
+                },
+                {
+                  id: destination.stop_id,
+                  name: destination.stop_name,
+                  lat: destination.lat,
+                  lng: destination.lng,
+                },
+              ],
+              // formatRouteResults で使用されるフィールド
+              origin_stop_id: origin.stop_id,
+              origin_stop_name: origin.stop_name,
+              origin_stop_lat: origin.lat,
+              origin_stop_lon: origin.lng,
+              origin_distance: 0,
+              destination_stop_id: destination.stop_id,
+              destination_stop_name: destination.stop_name,
+              destination_stop_lat: destination.lat,
+              destination_stop_lon: destination.lng,
+              destination_distance: 0,
+            });
+          }
+        }
+      }
+
+      // 時間順にソート
+      journeys.sort((a, b) => {
+        if (isDeparture) {
+          return (
+            new Date(
+              `2000-01-01T${this.formatTimeString(a.departure_time)}`
+            ).getTime() -
+            new Date(
+              `2000-01-01T${this.formatTimeString(b.departure_time)}`
+            ).getTime()
+          );
+        } else {
+          return (
+            new Date(
+              `2000-01-01T${this.formatTimeString(b.arrival_time)}`
+            ).getTime() -
+            new Date(
+              `2000-01-01T${this.formatTimeString(a.arrival_time)}`
+            ).getTime()
+          );
+        }
+      });
+    } catch (error) {
+      logger.error("[TransitService] 乗り換え経路検索でエラー:", error);
+    }
+
+    return journeys;
   }
 
   /**
@@ -1388,7 +1935,7 @@ export class TransitService {
    */
   private async findNearestStop(lat: number, lng: number): Promise<any> {
     try {
-      // this.dbを初期化
+      // DBを初期化
       await this.initDb();
 
       if (!this.isDbInitialized) {
@@ -1441,20 +1988,303 @@ export class TransitService {
     }
   }
 
-  private calculateDistance(stop1: any, stop2: any): number {
-    if (
-      !stop1 ||
-      !stop2 ||
-      !stop1.lat ||
-      !stop1.lon ||
-      !stop2.lat ||
-      !stop2.lon
-    ) {
-      return 0;
+  /**
+   * 距離を計算
+   */
+  private calculateDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number {
+    const R = 6371; // 地球の半径（キロメートル）
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+    return distance;
+  }
+
+  /**
+   * 乗り換え後の出発時刻を計算
+   * @param arrivalTime 到着時刻
+   * @param minTransferMinutes 最小乗り換え時間（分）
+   */
+  private calculateTransferDepartureTime(
+    arrivalTime: string,
+    minTransferMinutes: number
+  ): string {
+    if (!arrivalTime) return "";
+
+    const [hours, minutes, seconds] = arrivalTime.split(":").map(Number);
+
+    // 分を加算
+    let newMinutes = minutes + minTransferMinutes;
+    let newHours = hours;
+
+    // 繰り上げ処理
+    if (newMinutes >= 60) {
+      newHours += Math.floor(newMinutes / 60);
+      newMinutes %= 60;
     }
 
-    const dx = stop1.lat - stop2.lat;
-    const dy = stop1.lon - stop2.lon;
-    return Math.sqrt(dx * dx + dy * dy) * 111.32; // 1度の緯度が約111.32km
+    return `${newHours.toString().padStart(2, "0")}:${newMinutes
+      .toString()
+      .padStart(2, "0")}:${
+      seconds ? seconds.toString().padStart(2, "0") : "00"
+    }`;
+  }
+
+  /**
+   * 2つのバス停間の直行便を検索
+   */
+  private async findDirectRouteBetweenStops(
+    fromStopId: string,
+    toStopId: string,
+    timeStr: string,
+    serviceIds: string[],
+    routeMap: Map<string, any>,
+    isDeparture: boolean = true
+  ): Promise<any[]> {
+    const results: any[] = [];
+
+    try {
+      if (isDeparture) {
+        // 出発地の時刻表を取得
+        const originStopTimes = await prisma.stopTime.findMany({
+          where: {
+            stop_id: fromStopId,
+            departure_time: {
+              gte: timeStr,
+            },
+            trip: {
+              service_id: {
+                in: serviceIds,
+              },
+            },
+          },
+          include: {
+            trip: {
+              select: {
+                id: true,
+                route_id: true,
+                headsign: true,
+              },
+            },
+          },
+          orderBy: [{ departure_time: "asc" }],
+          take: 20,
+        });
+
+        // 有効なトリップIDのリスト
+        const validTripIds = originStopTimes
+          .filter((st) => st.trip !== null)
+          .map((st) => st.trip_id);
+
+        if (validTripIds.length === 0) return [];
+
+        // 目的地のストップタイムを取得
+        const destinationStopTimes = await prisma.stopTime.findMany({
+          where: {
+            stop_id: toStopId,
+            trip_id: {
+              in: validTripIds,
+            },
+          },
+          orderBy: [{ trip_id: "asc" }, { stop_sequence: "asc" }],
+        });
+
+        // 目的地のストップタイムをトリップIDでマッピング
+        const destStopTimeMap = new Map();
+        for (const dst of destinationStopTimes) {
+          if (!dst.arrival_time) continue;
+          destStopTimeMap.set(dst.trip_id, dst);
+        }
+
+        // 出発便と目的地への到着を結合して結果を構築
+        for (const originST of originStopTimes) {
+          if (!originST.departure_time || !originST.trip) continue;
+
+          const destST = destStopTimeMap.get(originST.trip_id);
+          if (!destST || !destST.arrival_time) continue;
+
+          // 出発地のシーケンスが目的地より小さい場合のみ有効
+          if (originST.stop_sequence >= destST.stop_sequence) continue;
+
+          const route = routeMap.get(originST.trip.route_id);
+          if (!route) continue;
+
+          // 所要時間を計算
+          const durationMinutes = this.calculateTimeDiffMinutes(
+            originST.departure_time,
+            destST.arrival_time
+          );
+
+          // 結果に追加
+          results.push({
+            trip_id: originST.trip_id,
+            trip_headsign: originST.trip.headsign || "",
+            route_id: originST.trip.route_id,
+            route_name: route.short_name || route.long_name || "名称不明",
+            route_short_name: route.short_name || "",
+            route_long_name: route.long_name || "",
+            route_color: route.color || "808080",
+            route_text_color: route.text_color || "FFFFFF",
+            departure_time: this.formatTimeString(originST.departure_time),
+            arrival_time: this.formatTimeString(destST.arrival_time),
+            duration: durationMinutes,
+          });
+
+          logger.log(
+            `[TransitService] 直行便発見: ${
+              route.short_name || route.long_name
+            } - 出発=${this.formatTimeString(
+              originST.departure_time
+            )}, 到着=${this.formatTimeString(
+              destST.arrival_time
+            )}, シーケンス=${originST.stop_sequence}->${
+              destST.stop_sequence
+            }, route_name=${route.short_name || route.long_name || "名称不明"}`
+          );
+
+          // 十分な結果が見つかったら終了
+          if (results.length >= 3) break;
+        }
+      } else {
+        // 到着時刻指定の場合
+        const destinationStopTimes = await prisma.stopTime.findMany({
+          where: {
+            stop_id: toStopId,
+            arrival_time: {
+              lte: timeStr,
+            },
+            trip: {
+              service_id: {
+                in: serviceIds,
+              },
+            },
+          },
+          include: {
+            trip: {
+              select: {
+                id: true,
+                route_id: true,
+                headsign: true,
+              },
+            },
+          },
+          orderBy: [{ arrival_time: "desc" }],
+          take: 20,
+        });
+
+        // 有効なトリップIDのリスト
+        const validTripIds = destinationStopTimes
+          .filter((st) => st.trip !== null)
+          .map((st) => st.trip_id);
+
+        if (validTripIds.length === 0) return [];
+
+        // 出発地のストップタイムを取得
+        const originStopTimes = await prisma.stopTime.findMany({
+          where: {
+            stop_id: fromStopId,
+            trip_id: {
+              in: validTripIds,
+            },
+          },
+          orderBy: [{ trip_id: "asc" }, { stop_sequence: "asc" }],
+        });
+
+        // 出発地のストップタイムをトリップIDでマッピング
+        const originStopTimeMap = new Map();
+        for (const ost of originStopTimes) {
+          if (!ost.departure_time) continue;
+          originStopTimeMap.set(ost.trip_id, ost);
+        }
+
+        // 目的地への便と出発地からの出発を結合して結果を構築
+        for (const destST of destinationStopTimes) {
+          if (!destST.arrival_time || !destST.trip) continue;
+
+          const originST = originStopTimeMap.get(destST.trip_id);
+          if (!originST || !originST.departure_time) continue;
+
+          // 出発地のシーケンスが目的地より小さい場合のみ有効
+          if (originST.stop_sequence >= destST.stop_sequence) {
+            logger.log(
+              `[TransitService] シーケンスチェック失敗: 出発(${originST.stop_sequence}) >= 目的地(${destST.stop_sequence}), trip_id=${destST.trip_id}`
+            );
+            continue;
+          }
+
+          const route = routeMap.get(destST.trip.route_id);
+          if (!route) continue;
+
+          // 所要時間を計算
+          const durationMinutes = this.calculateTimeDiffMinutes(
+            originST.departure_time,
+            destST.arrival_time
+          );
+
+          // 結果に追加
+          results.push({
+            trip_id: destST.trip_id,
+            trip_headsign: destST.trip.headsign || "",
+            route_id: destST.trip.route_id,
+            route_name: route.short_name || route.long_name || "名称不明",
+            route_short_name: route.short_name || "",
+            route_long_name: route.long_name || "",
+            route_color: route.color || "808080",
+            route_text_color: route.text_color || "FFFFFF",
+            departure_time: this.formatTimeString(originST.departure_time),
+            arrival_time: this.formatTimeString(destST.arrival_time),
+            duration: durationMinutes,
+          });
+
+          logger.log(
+            `[TransitService] 直行便発見: ${
+              route.short_name || route.long_name
+            } - 出発=${this.formatTimeString(
+              originST.departure_time
+            )}, 到着=${this.formatTimeString(
+              destST.arrival_time
+            )}, シーケンス=${originST.stop_sequence}->${
+              destST.stop_sequence
+            }, route_name=${route.short_name || route.long_name || "名称不明"}`
+          );
+
+          // 十分な結果が見つかったら終了
+          if (results.length >= 3) break;
+        }
+      }
+
+      return results;
+    } catch (error) {
+      logger.error("[TransitService] 直行便検索エラー:", error);
+      return [];
+    }
+  }
+
+  /**
+   * 時刻文字列をHH:MM形式に標準化する
+   */
+  private formatTimeString(timeStr: string | null | undefined): string {
+    if (!timeStr) return "時刻不明";
+
+    // HH:MM:SS形式から秒を削除
+    const match = timeStr.match(/^(\d{2}:\d{2}):\d{2}$/);
+    if (match) return match[1];
+
+    // すでにHH:MM形式の場合はそのまま返す
+    if (timeStr.match(/^\d{2}:\d{2}$/)) return timeStr;
+
+    // その他の形式は元の値を返す
+    return timeStr;
   }
 }

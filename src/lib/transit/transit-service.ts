@@ -1795,6 +1795,60 @@ export class TransitService {
 
             // 結果を追加
             journeys.push({
+              // formatRouteResults で使用されるフィールド
+              origin_stop_id: origin.stop_id,
+              origin_stop_name: origin.stop_name,
+              origin_stop_lat: origin.lat,
+              origin_stop_lon: origin.lng,
+              origin_distance: 0,
+
+              transfer_stop_id: transferStop.id,
+              transfer_stop_name: transferStop.name,
+              transfer_stop_lat: transferStop.lat,
+              transfer_stop_lon: transferStop.lon,
+              transfer_distance: 0,
+              transfer_wait_time: transferWaitMinutes,
+
+              destination_stop_id: destination.stop_id,
+              destination_stop_name: destination.stop_name,
+              destination_stop_lat: destination.lat,
+              destination_stop_lon: destination.lng,
+              destination_distance: 0,
+
+              // 最初の区間の情報
+              first_leg_departure_time: firstLeg.departure_time,
+              first_leg_arrival_time: firstLeg.arrival_time,
+              first_leg_duration: this.calculateTimeDiffMinutes(
+                firstLeg.departure_time,
+                firstLeg.arrival_time
+              ),
+              first_leg_route_id: firstLeg.route_id,
+              first_leg_route_name: firstLeg.route_name,
+              first_leg_route_short_name: firstLeg.route_short_name,
+              first_leg_route_long_name: firstLeg.route_long_name,
+              first_leg_route_color: firstLeg.route_color,
+              first_leg_route_text_color: firstLeg.route_text_color,
+              first_leg_trip_headsign: firstLeg.trip_headsign,
+
+              // 二区間目の情報
+              second_leg_departure_time: secondLeg.departure_time,
+              second_leg_arrival_time: secondLeg.arrival_time,
+              second_leg_duration: this.calculateTimeDiffMinutes(
+                secondLeg.departure_time,
+                secondLeg.arrival_time
+              ),
+              second_leg_route_id: secondLeg.route_id,
+              second_leg_route_name: secondLeg.route_name,
+              second_leg_route_short_name: secondLeg.route_short_name,
+              second_leg_route_long_name: secondLeg.route_long_name,
+              second_leg_route_color: secondLeg.route_color,
+              second_leg_route_text_color: secondLeg.route_text_color,
+              second_leg_trip_headsign: secondLeg.trip_headsign,
+
+              // 合計時間
+              total_duration: totalDurationMinutes,
+
+              // 以下は後方互換性のために残します
               legs: [
                 {
                   origin: {
@@ -1804,8 +1858,8 @@ export class TransitService {
                     lng: origin.lng,
                   },
                   destination: {
-                    id: transferStop.stop_id,
-                    name: transferStop.stop_name,
+                    id: transferStop.id,
+                    name: transferStop.name,
                     lat: transferStop.lat,
                     lng: transferStop.lon,
                   },
@@ -1830,8 +1884,8 @@ export class TransitService {
                 },
                 {
                   origin: {
-                    id: transferStop.stop_id,
-                    name: transferStop.stop_name,
+                    id: transferStop.id,
+                    name: transferStop.name,
                     lat: transferStop.lat,
                     lng: transferStop.lon,
                   },
@@ -1861,8 +1915,6 @@ export class TransitService {
                   headsign: secondLeg.trip_headsign || "不明",
                 },
               ],
-              departure_time: this.formatTimeString(firstLeg.departure_time),
-              arrival_time: this.formatTimeString(secondLeg.arrival_time),
               duration: totalDurationMinutes,
               transfer_time: transferWaitMinutes,
               stops: [
@@ -1873,8 +1925,8 @@ export class TransitService {
                   lng: origin.lng,
                 },
                 {
-                  id: transferStop.stop_id,
-                  name: transferStop.stop_name,
+                  id: transferStop.id,
+                  name: transferStop.name,
                   lat: transferStop.lat,
                   lng: transferStop.lon,
                 },
@@ -1885,17 +1937,6 @@ export class TransitService {
                   lng: destination.lng,
                 },
               ],
-              // formatRouteResults で使用されるフィールド
-              origin_stop_id: origin.stop_id,
-              origin_stop_name: origin.stop_name,
-              origin_stop_lat: origin.lat,
-              origin_stop_lon: origin.lng,
-              origin_distance: 0,
-              destination_stop_id: destination.stop_id,
-              destination_stop_name: destination.stop_name,
-              destination_stop_lat: destination.lat,
-              destination_stop_lon: destination.lng,
-              destination_distance: 0,
             });
           }
         }
@@ -1906,19 +1947,27 @@ export class TransitService {
         if (isDeparture) {
           return (
             new Date(
-              `2000-01-01T${this.formatTimeString(a.departure_time)}`
+              `2000-01-01T${this.formatTimeString(
+                a.first_leg_departure_time || a.departure_time
+              )}`
             ).getTime() -
             new Date(
-              `2000-01-01T${this.formatTimeString(b.departure_time)}`
+              `2000-01-01T${this.formatTimeString(
+                b.first_leg_departure_time || b.departure_time
+              )}`
             ).getTime()
           );
         } else {
           return (
             new Date(
-              `2000-01-01T${this.formatTimeString(b.arrival_time)}`
+              `2000-01-01T${this.formatTimeString(
+                b.second_leg_arrival_time || b.arrival_time
+              )}`
             ).getTime() -
             new Date(
-              `2000-01-01T${this.formatTimeString(a.arrival_time)}`
+              `2000-01-01T${this.formatTimeString(
+                a.second_leg_arrival_time || a.arrival_time
+              )}`
             ).getTime()
           );
         }
@@ -1927,6 +1976,9 @@ export class TransitService {
       logger.error("[TransitService] 乗り換え経路検索でエラー:", error);
     }
 
+    logger.log(
+      `[TransitService] 乗換経路フォーマット: ${JSON.stringify(journeys)}`
+    );
     return journeys;
   }
 

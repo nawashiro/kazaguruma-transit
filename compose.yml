@@ -8,12 +8,8 @@ services:
     env_file:
       - .env.local
     volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
       - ./.gtfs:/app/.gtfs
       - ./prisma/.temp:/app/prisma/.temp
-      - /app/node_modules/.prisma
     environment:
       - NODE_ENV=development
       - DEBUG=true

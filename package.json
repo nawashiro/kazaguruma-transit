@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "prisma generate && prisma db push && next dev --turbopack",
-    "build": "prisma generate && prisma db push && next build",
+    "dev": "prisma generate && prisma db push && npm run import-gtfs && next dev --turbopack",
+    "build": "prisma generate && prisma db push && npm run import-gtfs && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
@@ -36,7 +36,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-to-print": "^3.0.5",
-    "transit-departures-widget": "^2.5.4"
+    "transit-departures-widget": "^2.5.4",
+    "tsx": "^4.19.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -59,22 +59,14 @@ RUN npm install
 # アプリケーションファイルをコピー
 COPY . .
 
-# 必要なディレクトリを作成
-RUN mkdir -p .temp
-
-# Prismaクライアントを生成
-RUN npx prisma generate
-
 # ビルド実行
 RUN npm run build
 
-# 起動スクリプトを作成
-RUN echo '#!/bin/bash\n\
-echo "データディレクトリを準備中..."\n\
-mkdir -p /app/.temp\n\
-echo "アプリケーションを起動します..."\n\
-exec npm start\n\
-' > /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
+# 本番環境の環境変数
+ENV NODE_ENV=production
+ENV DEBUG=false
+
+# 開発依存関係を削除（オプション）
+RUN npm prune --production
 
 EXPOSE 3000
-CMD ["/app/docker-entrypoint.sh"]

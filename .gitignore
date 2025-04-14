@@ -42,7 +42,7 @@ yarn-error.log*
 next-env.d.ts
 
 # temp
-.temp/
+prisma/.temp/
 .docs/
 
 ## transit

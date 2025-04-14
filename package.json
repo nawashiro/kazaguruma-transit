@@ -4,11 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "npx tsx scripts/import-gtfs.ts",
-    "dev": "next dev --turbopack",
-    "prebuild": "npx tsx scripts/import-gtfs.ts",
-    "build": "next build",
-    "prestart": "npx tsx scripts/import-gtfs.ts",
+    "dev": "prisma generate && prisma db push && next dev --turbopack",
+    "build": "prisma generate && prisma db push && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
@@ -35,7 +32,6 @@
     "next-iron-session": "^4.2.0",
     "nodemailer": "^6.10.0",
     "pdf-lib": "^1.17.1",
-    "prisma": "^6.6.0",
     "puppeteer": "^24.6.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -58,6 +54,7 @@
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "jest-fetch-mock": "^3.0.3",
+    "prisma": "^6.6.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

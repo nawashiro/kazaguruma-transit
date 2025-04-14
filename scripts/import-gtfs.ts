@@ -18,7 +18,7 @@ async function importGtfsData() {
     console.log(`設定を読み込みました: ${JSON.stringify(config, null, 2)}`);
 
     // 必要なディレクトリを作成
-    const tempDir = path.join(process.cwd(), ".temp");
+    const tempDir = path.join(process.cwd(), "prisma", ".temp");
     if (!fs.existsSync(tempDir)) {
       console.log(`ディレクトリを作成: ${tempDir}`);
       fs.mkdirSync(tempDir, { recursive: true });

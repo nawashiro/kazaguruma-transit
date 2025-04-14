@@ -55,10 +55,6 @@ RUN wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-
 # Puppeteerのサンドボックス回避設定
 ENV PUPPETEER_ARGS='--no-sandbox --disable-setuid-sandbox'
 
-# 開発用の環境変数
-ENV NODE_ENV=development
-ENV DEBUG=true
-
 # パッケージのインストール
 COPY package*.json ./
 RUN npm install
@@ -66,22 +62,8 @@ RUN npm install
 # アプリケーションファイルをコピー
 COPY . .
 
-# 必要なディレクトリを作成
-RUN mkdir -p .temp
-
-# Prismaクライアントを生成
-RUN npx prisma generate
-
-# ビルド実行
-RUN npm run build
-
-# 開発用の起動スクリプトを作成
-RUN echo '#!/bin/bash\n\
-echo "データディレクトリを準備中..."\n\
-mkdir -p /app/.temp\n\
-echo "アプリケーションを起動します..."\n\
-exec npm start\n\
-' > /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
+# 開発用の環境変数
+ENV NODE_ENV=development
+ENV DEBUG=true
 
 EXPOSE 3000
-CMD ["/app/docker-entrypoint.sh"] 

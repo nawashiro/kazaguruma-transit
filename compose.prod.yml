@@ -5,7 +5,8 @@ services:
       dockerfile: Dockerfile.prod
     volumes:
       - ./.gtfs:/app/.gtfs
-      - ./.temp:/app/.temp
+      - ./prisma/.temp:/app/prisma/.temp
+      - /app/node_modules/.prisma
     ports:
       - "3000:3000"
     env_file:

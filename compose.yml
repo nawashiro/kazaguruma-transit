@@ -12,7 +12,8 @@ services:
       - /app/node_modules
       - /app/.next
       - ./.gtfs:/app/.gtfs
-      - ./.temp:/app/.temp
+      - ./prisma/.temp:/app/prisma/.temp
+      - /app/node_modules/.prisma
     environment:
       - NODE_ENV=development
       - DEBUG=true

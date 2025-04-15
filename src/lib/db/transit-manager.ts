@@ -1,15 +1,13 @@
 import {
   importGtfs,
+  openDb,
+  closeDb,
   getStops,
   getRoutes,
   getTrips,
   getStoptimes,
-  openDb,
-  closeDb,
 } from "gtfs";
 import { Database } from "./database";
-import fs from "fs";
-import path from "path";
 import {
   Stop,
   Route,
@@ -19,17 +17,7 @@ import {
   GTFSRoute,
   GTFSStop,
 } from "../../types/transit";
-import { DateTime } from "luxon";
-
-// GTFSデータを保存するための一時ディレクトリ
-const GTFS_TEMP_DIR = ".temp";
-
-// configファイルのパス
-const CONFIG_PATH = path.join(process.cwd(), "transit-config.json");
-
-// インポート処理のロック状態を追跡する変数
-let isImporting = false;
-let importPromise: Promise<any> | null = null;
+import { loadConfig, TransitConfig } from "../config/config";
 
 /**
  * 交通データの取得と管理を担当するマネージャークラス
@@ -37,7 +25,7 @@ let importPromise: Promise<any> | null = null;
 export class TransitManager {
   private static instance: TransitManager;
   private db: Database;
-  private config: any = null;
+  private config: TransitConfig;
 
   /**
    * プライベートコンストラクタでシングルトンパターンを実現
@@ -46,7 +34,7 @@ export class TransitManager {
     this.db = Database.getInstance();
 
     try {
-      this.config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+      this.config = loadConfig();
       console.log("設定ファイルを読み込みました");
     } catch (error) {
       console.error("設定ファイルの読み込みに失敗しました:", error);
@@ -83,22 +71,33 @@ export class TransitManager {
           // 既存のデータベース接続を閉じる
           await this.db.closeConnection();
 
-          // 設定ファイルのskipImportを元に戻す
-          if (this.config.skipImport === false) {
-            this.config.skipImport = true;
-            fs.writeFileSync(CONFIG_PATH, JSON.stringify(this.config, null, 2));
-            console.log("skipImportをtrueに戻しました");
-          }
-
           // 新しいインポートを開始
           console.log("GTFSデータをインポート中...");
 
-          // GTFSインポートコマンドを実行（このprojectではimportコマンドはないため、適切なものに置き換える）
-          // ここでは例として、openDb()を呼んでインポートが再実行されることを期待する
-          await openDb(this.config);
-          await closeDb();
+          // 直接importGtfsを呼び出す
+          try {
+            // 設定ファイルをそのまま使用
+            const importConfig = this.config;
 
-          console.log("GTFSデータのインポートが完了しました");
+            console.log("使用する設定:", JSON.stringify(importConfig, null, 2));
+
+            const result = await importGtfs(importConfig);
+            console.log("インポート結果:", result);
+          } catch (importError) {
+            console.error("importGtfs中にエラーが発生しました:", importError);
+            // エラーがあっても処理を続行
+          }
+
+          // バックアップとしてopenDbとcloseDbを実行
+          try {
+            console.log("バックアップとしてopenDbを実行");
+            const dbHandle = await openDb(this.config);
+            console.log("openDb完了、closeDbを実行");
+            await closeDb(dbHandle);
+            console.log("closeDb完了");
+          } catch (dbError) {
+            console.error("データベース操作中にエラーが発生:", dbError);
+          }
 
           // データベース接続を再確立
           await this.db.ensureConnection();
@@ -186,38 +185,14 @@ export class TransitManager {
     return this.db.withConnection(async () => {
       // 日付が指定されていない場合は現在時刻を使用
       const now = targetDate || this.getCurrentTime();
-      const nowTime = DateTime.fromJSDate(now);
 
-      // 曜日を取得（1 = 月曜日、7 = 日曜日）
-      const dayOfWeek = nowTime.weekday;
-
-      // GTFSの曜日フィールド名を決定
-      let serviceField: string;
-      if (dayOfWeek === 6) {
-        serviceField = "saturday";
-      } else if (dayOfWeek === 7) {
-        serviceField = "sunday";
-      } else {
-        serviceField = "monday";
-      }
-
-      // 時刻をGTFS形式に変換（HH:MM:SS）
-      const hours = nowTime.hour;
-      const minutes = nowTime.minute;
-      const seconds = nowTime.second;
-      const timeStr = `${hours.toString().padStart(2, "0")}:${minutes
-        .toString()
-        .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-
-      // GTFSからデータを取得して整形
-      const departuresFromGtfs = await this.gtfsGetDepartures(
+      // データベースから出発時刻を取得
+      return await this.gtfsGetDepartures(
         stopId,
         routeId || null,
         now,
         isDeparture
       );
-
-      return departuresFromGtfs;
     });
   }
 
@@ -231,12 +206,12 @@ export class TransitManager {
     isDeparture: boolean = true
   ): Promise<Departure[]> {
     const now = date;
-    const nowTime = DateTime.fromJSDate(now);
 
     // 時刻のフィルター用の文字列
-    const timeStr = `${nowTime.hour
+    const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now
+      .getMinutes()
       .toString()
-      .padStart(2, "0")}:${nowTime.minute.toString().padStart(2, "0")}:00`;
+      .padStart(2, "0")}:00`;
 
     // GTFSからstoptimesを取得
     // クエリパラメータを構築
@@ -266,7 +241,7 @@ export class TransitManager {
     })) as GTFSTrip[];
 
     // 曜日を取得
-    const dayOfWeek = nowTime.weekday; // 1 = 月曜日, 7 = 日曜日
+    const dayOfWeek = now.getDay(); // 0 = 日曜日, 6 = 土曜日
 
     // 現在の曜日に対応するtrip_idのフィルタリング
     // 日曜、平日などservice_idの命名規則に基づくフィルタリング
@@ -274,7 +249,7 @@ export class TransitManager {
       const serviceId = trip.service_id;
 
       // serviceIdが「日祝」の場合、日曜日のみ有効
-      if (serviceId === "日祝" && dayOfWeek === 7) {
+      if (serviceId === "日祝" && dayOfWeek === 0) {
         return true;
       }
 
@@ -284,7 +259,7 @@ export class TransitManager {
       }
 
       // serviceIdが「除日曜」の場合、月曜～土曜のみ有効
-      if (serviceId === "除日曜" && dayOfWeek !== 7) {
+      if (serviceId === "除日曜" && dayOfWeek !== 0) {
         return true;
       }
 

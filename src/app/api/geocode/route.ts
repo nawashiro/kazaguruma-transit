@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Client } from "@googlemaps/google-maps-services-js";
+import { appRouterRateLimitMiddleware } from "../../../lib/api/rate-limit-middleware";
+import { logger } from "../../../utils/logger";
 
 export interface GeocodeResponse {
   success: boolean;
@@ -11,10 +13,23 @@ export interface GeocodeResponse {
     };
   };
   error?: string;
+  limitExceeded?: boolean;
+}
+
+export interface GeocodeResult {
+  lat: number;
+  lng: number;
+  formattedAddress: string;
 }
 
 export async function GET(req: NextRequest) {
   try {
+    // レート制限を適用
+    const limitResponse = await appRouterRateLimitMiddleware(req);
+    if (limitResponse) {
+      return limitResponse;
+    }
+
     const { searchParams } = new URL(req.url);
     const address = searchParams.get("address");
 
@@ -43,7 +58,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (response.data.status !== "OK") {
-      console.error("Geocoding API error:", response.data.status);
+      logger.error("Geocoding API error:", response.data.status);
       return NextResponse.json(
         {
           success: false,
@@ -63,19 +78,18 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const result = response.data.results[0];
-    const location = {
+    const results: GeocodeResult[] = response.data.results.map((result) => ({
       lat: result.geometry.location.lat,
       lng: result.geometry.location.lng,
-      address: result.formatted_address,
-    };
+      formattedAddress: result.formatted_address,
+    }));
 
     return NextResponse.json({
       success: true,
-      data: { location },
-    } as GeocodeResponse);
+      results,
+    });
   } catch (error) {
-    console.error("Geocoding error:", error);
+    logger.error("Geocoding error:", error);
     return NextResponse.json(
       {
         success: false,

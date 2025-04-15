@@ -1,9 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { openDb, closeDb, getStops, getRoutes } from "gtfs";
-
-// configファイルのパス
-const CONFIG_PATH = path.join(process.cwd(), "transit-config.json");
+import { loadConfig, TransitConfig } from "../config/config";
 
 /**
  * データベース接続とトランザクションを管理するシングルトンクラス
@@ -11,7 +9,7 @@ const CONFIG_PATH = path.join(process.cwd(), "transit-config.json");
 export class Database {
   private static instance: Database;
   private isDbOpen: boolean = false;
-  private config: any = null;
+  private config: TransitConfig;
   private connectionId: string;
   private dbHandle: any = null; // SQLiteデータベースハンドル
 
@@ -23,7 +21,7 @@ export class Database {
     console.log(`[DB:${this.connectionId}] データベースインスタンスを作成`);
 
     try {
-      this.config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+      this.config = loadConfig();
       console.log(
         `[DB:${this.connectionId}] 設定ファイルを読み込みました: ${this.config.sqlitePath}`
       );
@@ -78,7 +76,7 @@ export class Database {
     if (this.isDbOpen) {
       try {
         console.log(`[DB:${this.connectionId}] データベース接続を閉じます`);
-        await closeDb();
+        await closeDb(this.dbHandle);
         this.isDbOpen = false;
         this.dbHandle = null;
         console.log(

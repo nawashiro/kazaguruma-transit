@@ -2,9 +2,19 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Home from "../page";
 
+// モックデータの定義
+const mockData = {
+  success: true,
+  routes: [],
+};
+
 // モックのfetch API
-global.fetch = jest.fn();
-const mockFetch = global.fetch as jest.Mock;
+global.fetch = jest.fn().mockImplementation(() => {
+  return Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve(mockData),
+  });
+});
 
 jest.mock("../../components/OriginSelector", () => {
   return function MockOriginSelector({ onOriginSelected }: any) {
@@ -47,26 +57,6 @@ jest.mock("../../components/DestinationSelector", () => {
     );
   };
 });
-
-// TransitFormのモックを試みる
-try {
-  jest.mock("../../components/TransitForm", () => {
-    return function MockTransitForm({ onSubmit }: any) {
-      return (
-        <div data-testid="transit-form">
-          <button
-            data-testid="submit-transit-form"
-            onClick={() => onSubmit({ stopId: "stop1", routeId: "route1" })}
-          >
-            検索
-          </button>
-        </div>
-      );
-    };
-  });
-} catch (error) {
-  console.warn("TransitFormのモックをスキップします:", error);
-}
 
 // DateTimeSelectorのモック
 jest.mock("../../components/DateTimeSelector", () => {

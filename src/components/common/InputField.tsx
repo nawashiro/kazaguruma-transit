@@ -10,6 +10,7 @@ interface InputFieldProps {
   disabled?: boolean;
   testId?: string;
   type?: string;
+  required?: boolean;
 }
 
 export default function InputField({
@@ -20,6 +21,7 @@ export default function InputField({
   disabled = false,
   testId,
   type = "text",
+  required = false,
 }: InputFieldProps) {
   return (
     <div className="form-control">
@@ -30,12 +32,13 @@ export default function InputField({
       )}
       <input
         type={type}
-        className="input input-bordered w-full bg-base-100 border border-base-200 rounded-md focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200"
+        className="input w-full"
         placeholder={placeholder}
         value={value}
         onChange={onChange}
         disabled={disabled}
         data-testid={testId}
+        required={required}
       />
     </div>
   );

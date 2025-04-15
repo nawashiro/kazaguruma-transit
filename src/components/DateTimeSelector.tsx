@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { TransitFormData } from "../types/transit";
+import { logger } from "../utils/logger";
 
 interface DateTimeSelectorProps {
   initialStopId?: string;
@@ -71,41 +72,28 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
     }
   };
 
-  const toggleTimeType = (newValue: boolean) => {
-    console.log(`時間タイプを切り替え: ${newValue ? "出発" : "到着"}`);
-    setIsDeparture(newValue); // ローカルステートを更新
-
-    // 親コンポーネントに通知
-    const formData = {
-      stopId: initialStopId,
-      dateTime: dateTime,
-      isDeparture: newValue,
-    };
-
-    if (onSubmit) {
-      onSubmit(formData);
-    }
-
+  const handleTimeTypeChange = (newValue: boolean) => {
+    setIsDeparture(newValue);
+    logger.log(`時間タイプを切り替え: ${newValue ? "出発" : "到着"}`);
     if (onDateTimeSelected) {
-      onDateTimeSelected(formData);
+      onDateTimeSelected({
+        dateTime,
+        isDeparture: newValue,
+      });
     }
   };
 
   const inputId = isDeparture ? "departure-time" : "arrival-time";
 
   return (
-    <div className="w-full">
-      <div className="mb-4">
-        {/* カスタムデザインのトグルを実装 */}
-        <div className="flex rounded-lg overflow-hidden mb-4">
+    <div>
+      <div className="space-y-4">
+        {/* DaisyUIのjoinコンポーネントを使用 */}
+        <div className="join">
           <button
             type="button"
-            className={`flex-1 py-3 px-4 font-medium transition-colors duration-200 ${
-              isDeparture
-                ? "bg-gray-300 text-gray-800"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-            onClick={() => toggleTimeType(true)}
+            className={`join-item btn ${isDeparture ? "btn-active" : ""}`}
+            onClick={() => handleTimeTypeChange(true)}
             data-testid="departure-tab"
             disabled={disabled}
           >
@@ -113,12 +101,8 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
           </button>
           <button
             type="button"
-            className={`flex-1 py-3 px-4 font-medium transition-colors duration-200 ${
-              !isDeparture
-                ? "bg-gray-300 text-gray-800"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-            onClick={() => toggleTimeType(false)}
+            className={`join-item btn ${!isDeparture ? "btn-active" : ""}`}
+            onClick={() => handleTimeTypeChange(false)}
             data-testid="arrival-tab"
             disabled={disabled}
           >
@@ -126,10 +110,10 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
           </button>
         </div>
 
-        <div className="form-control w-full">
+        <div className="form-control space-x-2">
           <label htmlFor={inputId} className="label">
             <span
-              className="label-text font-medium"
+              className="label-text"
               data-testid={isDeparture ? "departure-label" : "arrival-label"}
             >
               {isDeparture ? "出発日時" : "到着日時"}
@@ -142,7 +126,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             value={dateTime}
             onChange={(e) => handleChange(e.target.value, isDeparture)}
             required
-            className="input input-bordered w-full"
+            className="input input-bordered"
             data-testid={isDeparture ? "departure-input" : "arrival-input"}
             disabled={disabled}
           />

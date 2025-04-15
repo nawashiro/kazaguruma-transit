@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DateTimeSelector from "../components/DateTimeSelector";
 import OriginSelector from "../components/OriginSelector";
 import DestinationSelector from "../components/DestinationSelector";
 import IntegratedRouteDisplay from "../components/IntegratedRouteDisplay";
+import RoutePdfExport from "../components/RoutePdfExport";
 import Button from "../components/common/Button";
 import ResetButton from "../components/common/ResetButton";
 import { TransitFormData, Location } from "../types/transit";
 import KofiSupportCard from "../components/KofiSupportCard";
+import { logger } from "../utils/logger";
+import RateLimitModal from "../components/RateLimitModal";
 
 interface JourneySegment {
   from: string;
@@ -60,6 +63,7 @@ interface ApiResponse {
   success: boolean;
   data?: RouteResponseData;
   error?: string;
+  limitExceeded?: boolean;
 }
 
 // 旧APIのレスポンス型を新APIに変換するための型
@@ -115,6 +119,39 @@ export default function Home() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [selectedDateTime, setSelectedDateTime] = useState<string>("");
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
+  const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
+
+  // URLパラメータから目的地情報を読み取る
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const destinationParam = params.get("destination");
+
+      if (destinationParam) {
+        try {
+          const destinationObj = JSON.parse(
+            decodeURIComponent(destinationParam)
+          );
+          if (
+            destinationObj &&
+            destinationObj.lat &&
+            destinationObj.lng &&
+            destinationObj.address
+          ) {
+            setSelectedDestination(destinationObj);
+            // URLからパラメータを削除（ブラウザ履歴に残さない）
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname
+            );
+          }
+        } catch (err) {
+          console.error("目的地情報の解析に失敗しました:", err);
+        }
+      }
+    }
+  }, []);
 
   const handleOriginSelected = (location: Location) => {
     setSelectedOrigin(location);
@@ -136,7 +173,7 @@ export default function Home() {
     setIsDeparture(
       formData.isDeparture !== undefined ? formData.isDeparture : true
     );
-    console.log("時刻設定が変更されました:", {
+    logger.log("時刻設定が変更されました:", {
       dateTime: formData.dateTime,
       isDeparture: formData.isDeparture,
       newIsDeparture:
@@ -169,7 +206,7 @@ export default function Home() {
         isDeparture: isDeparture,
       };
 
-      console.log("APIリクエスト送信:", {
+      logger.log("APIリクエスト送信:", {
         type: routeQuery.type,
         origin: `${routeQuery.origin.lat}, ${routeQuery.origin.lng}`,
         destination: `${routeQuery.destination.lat}, ${routeQuery.destination.lng}`,
@@ -187,7 +224,14 @@ export default function Home() {
       });
 
       const apiResponse: ApiResponse = await response.json();
-      console.log("経路検索結果:", apiResponse);
+      logger.log("経路検索結果:", apiResponse);
+
+      // レート制限に達した場合
+      if (response.status === 429 && apiResponse.limitExceeded) {
+        setIsRateLimitModalOpen(true);
+        setRouteLoading(false);
+        return;
+      }
 
       if (response.ok && apiResponse.success) {
         const data = apiResponse.data;
@@ -195,8 +239,8 @@ export default function Home() {
         if (data?.journeys && data.journeys.length > 0) {
           // ベストな経路は既にAPIから最適な順に返されているので最初のものを使用
           const bestJourney = data.journeys[0];
-          console.log("選択された経路:", bestJourney);
-          console.log("APIから返された停留所情報:", data.stops);
+          logger.log("選択された経路:", bestJourney);
+          logger.log("APIから返された停留所情報:", data.stops);
 
           // 最寄りバス停情報（APIのレスポンスからstopsを探す）
           const originStopInfo = data.stops.find(
@@ -206,7 +250,7 @@ export default function Home() {
             (s) => s.name === bestJourney.to
           );
 
-          console.log("最寄りバス停情報:", {
+          logger.log("最寄りバス停情報:", {
             originStopInfo,
             destStopInfo,
             allStops: data.stops,
@@ -257,19 +301,10 @@ export default function Home() {
                 : selectedDestination.lng,
           };
 
-          console.log("使用されるバス停オブジェクト:", {
+          logger.log("使用されるバス停オブジェクト:", {
             originStop,
             destinationStop,
           });
-
-          // 乗り換え情報がある場合は乗り換え地点の緯度経度も取得
-          let transferLocation = null;
-          if (bestJourney.transferInfo && bestJourney.transferInfo.location) {
-            transferLocation = {
-              lat: bestJourney.transferInfo.location.lat,
-              lng: bestJourney.transferInfo.location.lng,
-            };
-          }
 
           // 経路タイプと乗り換え回数
           const type = bestJourney.transfers > 0 ? "transfer" : "direct";
@@ -348,14 +383,14 @@ export default function Home() {
             destinationStop,
           });
 
-          console.log("出発地→バス停の情報:", {
+          logger.log("出発地→バス停の情報:", {
             originLat: selectedOrigin.lat,
             originLng: selectedOrigin.lng,
             stopLat: originStop.stop_lat,
             stopLon: originStop.stop_lon,
           });
 
-          console.log("バス停→目的地の情報:", {
+          logger.log("バス停→目的地の情報:", {
             stopLat: destinationStop.stop_lat,
             stopLon: destinationStop.stop_lon,
             destLat: selectedDestination.lat,
@@ -385,7 +420,7 @@ export default function Home() {
         setError(apiResponse.error || "経路検索に失敗しました");
       }
     } catch (err) {
-      console.error("経路検索リクエストエラー:", err);
+      logger.error("経路検索リクエストエラー:", err);
       setError(
         err instanceof Error ? err.message : "予期せぬエラーが発生しました"
       );
@@ -405,61 +440,67 @@ export default function Home() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <header className="text-center my-8">
+    <div className="container p-4">
+      <header className="text-center my-4">
         <h1 className="text-3xl font-bold text-primary">風ぐるま乗換案内</h1>
         <p className="mt-2 text-lg">千代田区福祉交通の乗換案内サービス</p>
       </header>
 
       <KofiSupportCard />
 
-      <div className="max-w-md mx-auto">
+      <div className="max-w-md mx-auto space-y-4">
         {!selectedDestination ? (
           <DestinationSelector
             onDestinationSelected={handleDestinationSelected}
           />
         ) : !selectedOrigin ? (
           <>
-            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-              <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
-              <p data-testid="selected-destination">
-                {selectedDestination.address ||
-                  `緯度: ${selectedDestination.lat.toFixed(
-                    6
-                  )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
-              </p>
+            <div className="card bg-base-200/70 shadow-md">
+              <div className="card-body">
+                <h2 className="card-title">選択された目的地</h2>
+                <p data-testid="selected-destination">
+                  {selectedDestination.address ||
+                    `緯度: ${selectedDestination.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
+                </p>
+              </div>
             </div>
             <OriginSelector onOriginSelected={handleOriginSelected} />
-            <ResetButton onReset={resetSearch} className="mt-4" />
+            <ResetButton onReset={resetSearch} />
           </>
         ) : !searchPerformed ? (
           <>
-            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-              <h2 className="text-xl font-bold mb-2">選択された目的地</h2>
-              <p data-testid="selected-destination">
-                {selectedDestination.address ||
-                  `緯度: ${selectedDestination.lat.toFixed(
-                    6
-                  )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
-              </p>
+            <div className="card bg-base-200/70 shadow-md">
+              <div className="card-body">
+                <h2 className="card-title">選択された目的地</h2>
+                <p data-testid="selected-destination">
+                  {selectedDestination.address ||
+                    `緯度: ${selectedDestination.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
+                </p>
+              </div>
             </div>
 
-            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-              <h2 className="text-xl font-bold mb-2">選択された出発地</h2>
-              <p data-testid="selected-origin">
-                {selectedOrigin.address ||
-                  `緯度: ${selectedOrigin.lat.toFixed(
-                    6
-                  )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
-              </p>
+            <div className="card bg-base-200/70 shadow-md">
+              <div className="card-body">
+                <h2 className="card-title">選択された出発地</h2>
+                <p data-testid="selected-origin">
+                  {selectedOrigin.address ||
+                    `緯度: ${selectedOrigin.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
+                </p>
+              </div>
             </div>
 
-            <div className="bg-base-200 p-4 rounded-lg shadow-md mb-4">
-              <h2 className="text-xl font-bold mb-2">日時の選択</h2>
-              <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
+            <div className="card bg-base-200/70 shadow-md">
+              <div className="card-body">
+                <h2 className="card-title">日時の選択</h2>
+                <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
 
-              <div className="flex flex-col gap-2 mt-4">
-                <div className="flex justify-center">
+                <div className="card-actions justify-center">
                   <Button
                     onClick={handleSearch}
                     disabled={!selectedDateTime}
@@ -471,18 +512,20 @@ export default function Home() {
               </div>
             </div>
 
-            <ResetButton onReset={resetSearch} className="mt-4" />
+            <ResetButton onReset={resetSearch} />
           </>
         ) : (
           <>
-            <ResetButton onReset={resetSearch} className="mb-4" />
+            <ResetButton onReset={resetSearch} />
 
             {error ? (
-              <div className="alert alert-error mb-4">{error}</div>
+              <div className="alert alert-error">{error}</div>
             ) : routeLoading ? (
-              <div className="text-center py-8">
-                <span className="loading loading-spinner loading-lg"></span>
-                <p className="mt-2">経路を検索中...</p>
+              <div className="card">
+                <div className="card-body items-center text-center">
+                  <span className="loading loading-spinner loading-lg"></span>
+                  <p>経路を検索中...</p>
+                </div>
               </div>
             ) : routeInfo ? (
               <div>
@@ -491,22 +534,59 @@ export default function Home() {
                   destinationStop={routeInfo.destinationStop}
                   routes={routeInfo.routes}
                   type={routeInfo.type}
-                  transfers={routeInfo.transfers}
-                  message={routeInfo.message}
+                  _transfers={routeInfo.transfers}
+                  _message={routeInfo.message}
                   originLat={selectedOrigin.lat}
                   originLng={selectedOrigin.lng}
                   destLat={selectedDestination.lat}
                   destLng={selectedDestination.lng}
                 />
+
+                {/* PDF出力ボタンを追加 */}
+                {routeInfo.type !== "none" && (
+                  <div className="mt-4 flex justify-center">
+                    <RoutePdfExport
+                      originStop={routeInfo.originStop}
+                      destinationStop={routeInfo.destinationStop}
+                      routes={routeInfo.routes}
+                      type={routeInfo.type}
+                      transfers={routeInfo.transfers}
+                      originLat={selectedOrigin.lat}
+                      originLng={selectedOrigin.lng}
+                      destLat={selectedDestination.lat}
+                      destLng={selectedDestination.lng}
+                      selectedDateTime={selectedDateTime}
+                    />
+                  </div>
+                )}
               </div>
             ) : null}
           </>
         )}
+        <div className="card bg-base-200/70 shadow-md">
+          <div className="card-body text-center text-xs">
+            <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
+            <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>
+            <p>
+              <a
+                href="https://lin.ee/CgIBOSd"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link link-primary"
+              >
+                千代田区公式LINE
+              </a>
+              で最新の運行情報を確認できます
+            </p>
+          </div>
+        </div>
       </div>
 
-      <footer className="text-center mt-8 text-sm text-gray-500">
-        <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
-      </footer>
+      {/* レート制限モーダル */}
+      <RateLimitModal
+        isOpen={isRateLimitModalOpen}
+        onClose={() => setIsRateLimitModalOpen(false)}
+      />
     </div>
   );
 }

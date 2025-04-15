@@ -3,15 +3,7 @@
 import React from "react";
 import { Departure } from "../types/transit";
 import { generateGoogleMapDirectionLink } from "../utils/maps";
-
-// page.tsxで使用している型定義に合わせる
-interface StopInfo {
-  stop_id: string;
-  stop_name: string;
-  distance?: number;
-  stop_lat?: number;
-  stop_lon?: number;
-}
+import { logger } from "../utils/logger";
 
 interface RouteInfo {
   routeId: string;
@@ -55,13 +47,18 @@ interface IntegratedRouteDisplayProps {
   };
   routes: RouteInfo[];
   type: "direct" | "transfer" | "none";
-  transfers: number;
+  _transfers?: number; // 未使用のためアンダースコア接頭辞を追加
   departures?: Departure[];
-  message?: string;
+  _message?: string; // 未使用のためアンダースコア接頭辞を追加
   originLat?: number;
   originLng?: number;
   destLat?: number;
   destLng?: number;
+}
+
+interface RouteError {
+  message: string;
+  code?: string;
 }
 
 const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
@@ -69,8 +66,6 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
   destinationStop,
   routes,
   type,
-  transfers,
-  message,
   originLat,
   originLng,
   destLat,
@@ -102,7 +97,9 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
       return `${arrivalHours.toString().padStart(2, "0")}:${arrivalMinutes
         .toString()
         .padStart(2, "0")}`;
-    } catch (e) {
+    } catch (error: unknown) {
+      const routeError = error as RouteError;
+      logger.error("ルート表示エラー:", routeError.message);
       return "時刻不明";
     }
   };
@@ -145,9 +142,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
         <div className="text-center">
           <h3 className="text-xl font-bold mb-2">ルートが見つかりません</h3>
           <p>この2つの地点を結ぶルートが見つかりませんでした</p>
-          <p className="mt-2">
-            最寄りのバス停まで歩くか、別の交通手段をご検討ください
-          </p>
+          <p className="mt-2">別の交通手段をご検討ください</p>
         </div>
       ) : (
         // ルートが見つかった場合
@@ -159,31 +154,23 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 href={originToStopMapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-sm btn-outline btn-primary underline"
+                className="link link-primary text-sm"
               >
                 出発地 → {originStop.stopName} Googleマップ
               </a>
             </div>
           )}
 
-          {routes.map((route, index) => {
+          {routes.map((route) => {
             // 各ルートの時刻を計算
             const departureTime =
               route.departureTime ||
               getDepartureTime(originStop.stopId, route.routeId || "");
 
-            console.log(
-              "表示する出発時刻:",
-              route.departureTime,
-              departureTime
-            );
-
             const firstSegmentDuration = type === "direct" ? 45 : 30; // 直通か乗換かで所要時間を調整
             const arrivalTime =
               route.arrivalTime ||
               getArrivalTime(departureTime, firstSegmentDuration);
-
-            console.log("表示する到着時刻:", route.arrivalTime, arrivalTime);
 
             // 時刻表示のためのフォーマッター
             const formatTimeDisplay = (time: string) => {
@@ -196,7 +183,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
             return (
               <div key={route.routeId} className="mb-6">
                 {/* 最初のセグメント */}
-                <div className="card bg-base-100 shadow-sm mb-4 border-l-4 border-yellow-400">
+                <div className="card bg-base-100 shadow-sm mb-4 border-l-4 border-indigo-400">
                   <div className="card-body p-4">
                     {/* 出発バス停と時刻 */}
                     <div className="flex justify-between items-center mb-2">
@@ -209,7 +196,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                     </div>
 
                     {/* ルート情報 */}
-                    <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
+                    <div className="flex items-center my-3">
                       <div className="badge badge-primary mr-2">
                         {route.routeShortName}
                       </div>
@@ -255,12 +242,12 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 {route.transfers && route.transfers.length > 0 && (
                   <>
                     <div className="text-center my-4">
-                      <div className="inline-block bg-yellow-100 px-4 py-2 rounded-full font-bold text-yellow-800 border border-yellow-300 shadow-sm">
+                      <div className="inline-block bg-blue-100 px-4 py-2 rounded-full font-bold text-blue-800 border border-blue-300 shadow-sm">
                         ここで乗り換え
                       </div>
                     </div>
 
-                    {route.transfers.map((transfer, tIndex) => {
+                    {route.transfers.map((transfer) => {
                       // 乗換後の時刻を計算
                       const transferWaitTime = 15; // 乗換待ち時間（分）
                       const transferDepartureTime = getArrivalTime(
@@ -274,8 +261,8 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
 
                       return (
                         <div
-                          key={tIndex}
-                          className="card bg-base-100 shadow-sm mb-4 border-l-4 border-yellow-400"
+                          key={transfer.transferStop.stopId}
+                          className="card bg-base-100 shadow-sm mb-4 border-l-4 border-indigo-400"
                         >
                           <div className="card-body p-4">
                             {/* 乗換駅出発時刻 */}
@@ -294,7 +281,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                             </div>
 
                             {/* 次のルート情報 */}
-                            <div className="flex items-center my-3 border-l-4 pl-2 border-primary">
+                            <div className="flex items-center my-3">
                               <div className="badge badge-primary mr-2">
                                 {transfer.nextRoute.routeShortName}
                               </div>
@@ -341,7 +328,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 href={stopToDestinationMapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-sm btn-outline btn-primary underline"
+                className="link link-primary text-sm"
               >
                 {destinationStop.stopName} → 目的地 Googleマップ
               </a>

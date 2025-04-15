@@ -5,6 +5,7 @@ import DateTimeSelector from "../DateTimeSelector";
 describe("DateTimeSelector", () => {
   const mockStopId = "stop1";
   const mockOnSubmit = jest.fn();
+  const mockOnDateTimeSelected = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -36,14 +37,18 @@ describe("DateTimeSelector", () => {
 
   it("出発/到着切り替えが機能し、到着日時入力フィールドに切り替わること", async () => {
     render(
-      <DateTimeSelector initialStopId={mockStopId} onSubmit={mockOnSubmit} />
+      <DateTimeSelector
+        initialStopId={mockStopId}
+        onSubmit={mockOnSubmit}
+        onDateTimeSelected={mockOnDateTimeSelected}
+      />
     );
 
     // デフォルトでは出発日時が表示されていることを確認
     expect(screen.getByTestId("departure-label")).toHaveTextContent("出発日時");
 
     // モックがコンポーネント初期化時に呼ばれたことをリセット
-    mockOnSubmit.mockClear();
+    mockOnDateTimeSelected.mockClear();
 
     // 到着タブをクリック
     const arrivalTab = screen.getByTestId("arrival-tab");
@@ -55,8 +60,8 @@ describe("DateTimeSelector", () => {
       expect(screen.getByTestId("arrival-input")).toBeInTheDocument();
     });
 
-    // タブ切り替え時にonSubmitが呼ばれ、isDepartureがfalseになることを確認
-    expect(mockOnSubmit).toHaveBeenCalledWith(
+    // タブ切り替え時にonDateTimeSelectedが呼ばれ、isDepartureがfalseになることを確認
+    expect(mockOnDateTimeSelected).toHaveBeenCalledWith(
       expect.objectContaining({
         isDeparture: false,
       })

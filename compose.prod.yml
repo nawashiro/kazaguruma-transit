@@ -13,6 +13,7 @@ services:
     environment:
       - NODE_ENV=production
     restart: unless-stopped
+    command: ["npm", "run", "start"]
     networks:
       - app-network
 

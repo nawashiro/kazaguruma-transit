@@ -35,7 +35,7 @@ docker compose up --build
 
 ```powershell
 # 本番用コンテナのビルドと起動
-docker compose -f compose.prod.yml up --build
+docker compose -f compose.prod.yml up --build -d
 ```
 
 ## ファイル構成

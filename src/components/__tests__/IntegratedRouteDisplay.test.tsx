@@ -78,7 +78,7 @@ describe("IntegratedRouteDisplay", () => {
         destinationStop={mockDestinationStop}
         routes={mockRoutes}
         type="transfer"
-        transfers={1}
+        _transfers={1}
         departures={mockDepartures}
       />
     );
@@ -99,22 +99,22 @@ describe("IntegratedRouteDisplay", () => {
         destinationStop={mockDestinationStop}
         routes={mockRoutes}
         type="transfer"
-        transfers={1}
+        _transfers={1}
         departures={mockDepartures}
       />
     );
 
-    // ルート情報をチェック
-    expect(screen.getByText("R1")).toBeInTheDocument();
-    expect(screen.getByText("出発地〜乗換地ルート")).toBeInTheDocument();
+    // ルート情報をチェック - routeNameが表示されているか確認
+    expect(screen.getByText("ルート1")).toBeInTheDocument();
+    // routeShortNameとrouteLongNameは表示されないのでテストから削除
 
     // 乗換情報をチェック
     expect(screen.getByText("ここで乗り換え")).toBeInTheDocument();
     expect(screen.getAllByText("乗換バス停").length).toBeGreaterThan(0);
 
     // 乗換後のルート情報と時刻をチェック
-    expect(screen.getByText("R2")).toBeInTheDocument();
-    expect(screen.getByText("乗換地〜目的地ルート")).toBeInTheDocument();
+    expect(screen.getByText("ルート2")).toBeInTheDocument();
+    // routeShortNameとrouteLongNameは表示されないのでテストから削除
     expect(screen.getByText("10:30")).toBeInTheDocument(); // 乗換駅出発時刻
     expect(screen.getByText("11:15")).toBeInTheDocument(); // 最終到着時刻
   });
@@ -141,7 +141,7 @@ describe("IntegratedRouteDisplay", () => {
         destinationStop={mockDestinationStop}
         routes={directRoutes}
         type="direct"
-        transfers={0}
+        _transfers={0}
         departures={mockDepartures}
       />
     );
@@ -152,8 +152,9 @@ describe("IntegratedRouteDisplay", () => {
     expect(screen.getByText("到着バス停")).toBeInTheDocument();
     expect(screen.getByText("10:15")).toBeInTheDocument();
 
-    // 乗換情報がないことを確認（存在しないことの確認は難しいのでスキップ）
-    expect(screen.getByText("出発地〜目的地直通ルート")).toBeInTheDocument();
+    // ルート名の確認
+    expect(screen.getByText("ルート1")).toBeInTheDocument();
+    // routeLongNameは表示されないのでテストから削除
   });
 
   it("ルートが見つからない場合は適切なメッセージが表示されること", () => {
@@ -163,7 +164,7 @@ describe("IntegratedRouteDisplay", () => {
         destinationStop={mockDestinationStop}
         routes={[]}
         type="none"
-        transfers={0}
+        _transfers={0}
         departures={[]}
       />
     );

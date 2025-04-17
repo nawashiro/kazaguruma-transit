@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    volumes:
+      - ./.gtfs:/app/.gtfs
+      - ./prisma/.temp:/app/prisma/.temp
+    environment:
+      - NODE_ENV=development
+      - DEBUG=true
+    command: npm run dev
+    stdin_open: true
+    tty: true

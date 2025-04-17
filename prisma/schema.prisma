@@ -1,0 +1,152 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:.temp/data.db"
+}
+
+// GTFSデータモデル
+model Agency {
+  id              String   @id @map("agency_id")
+  name            String   @map("agency_name")
+  url             String   @map("agency_url")
+  timezone        String   @map("agency_timezone")
+  lang            String?  @map("agency_lang")
+  phone           String?  @map("agency_phone")
+  fare_url        String?  @map("agency_fare_url")
+  email           String?  @map("agency_email")
+  routes          Route[]
+  
+  @@map("agency")
+}
+
+model Route {
+  id              String   @id @map("route_id")
+  agency_id       String
+  short_name      String?  @map("route_short_name")
+  long_name       String?  @map("route_long_name")
+  desc            String?  @map("route_desc")
+  type            Int      @map("route_type")
+  url             String?  @map("route_url")
+  color           String?  @map("route_color")
+  text_color      String?  @map("route_text_color")
+  sort_order      Int?     @map("route_sort_order")
+  agency          Agency   @relation(fields: [agency_id], references: [id])
+  trips           Trip[]
+  
+  @@map("routes")
+}
+
+model Stop {
+  id              String        @id @map("stop_id")
+  code            String?       @map("stop_code")
+  name            String        @map("stop_name")
+  desc            String?       @map("stop_desc")
+  lat             Float         @map("stop_lat")
+  lon             Float         @map("stop_lon")
+  zone_id         String?
+  url             String?       @map("stop_url")
+  location_type   Int?
+  parent_station  String?
+  timezone        String?
+  wheelchair_boarding Int?
+  stop_times      StopTime[]
+  
+  @@map("stops")
+}
+
+model Trip {
+  id              String        @id @map("trip_id") 
+  route_id        String
+  service_id      String
+  headsign        String?       @map("trip_headsign")
+  short_name      String?       @map("trip_short_name")
+  direction_id    Int?
+  block_id        String?
+  shape_id        String?
+  wheelchair_accessible Int?
+  bikes_allowed   Int?
+  route           Route         @relation(fields: [route_id], references: [id])
+  stop_times      StopTime[]
+  
+  @@map("trips")
+}
+
+model Calendar {
+  service_id      String   @id
+  monday          Int
+  tuesday         Int
+  wednesday       Int
+  thursday        Int
+  friday          Int
+  saturday        Int
+  sunday          Int
+  start_date      String
+  end_date        String
+  
+  @@map("calendar")
+}
+
+model CalendarDate {
+  service_id      String
+  date            String
+  exception_type  Int
+  
+  @@id([service_id, date])
+  @@map("calendar_dates")
+}
+
+model StopTime {
+  trip_id         String
+  stop_id         String
+  arrival_time    String?
+  departure_time  String?
+  stop_sequence   Int
+  stop_headsign   String?
+  pickup_type     Int?
+  drop_off_type   Int?
+  shape_dist_traveled Float?
+  timepoint       Int?
+  trip            Trip    @relation(fields: [trip_id], references: [id])
+  stop            Stop    @relation(fields: [stop_id], references: [id])
+  
+  @@id([trip_id, stop_id, stop_sequence])
+  @@map("stop_times")
+}
+
+// アプリケーション固有のデータモデル
+model RateLimit {
+  ip              String   @id
+  count           Int
+  last_access     BigInt   @map("last_access")
+  
+  @@map("rate_limits")
+}
+
+model AuthRateLimit {
+  id              Int      @id @default(autoincrement())
+  ip              String
+  action_type     String
+  count           Int      @default(1)
+  first_attempt   BigInt
+  last_attempt    BigInt
+  
+  @@unique([ip, action_type])
+  @@map("auth_rate_limits")
+}
+
+model Supporter {
+  email           String   @id
+  verification_code String?
+  code_expires    BigInt?
+  verified        Boolean  @default(false)
+  verified_at     BigInt?
+  
+  @@map("supporters")
+} 

@@ -1,23 +1,31 @@
-import {
-  importGtfs,
-  openDb,
-  closeDb,
-  getStops,
-  getRoutes,
-  getTrips,
-  getStoptimes,
-} from "gtfs";
+import { importGtfs } from "gtfs";
 import { Database } from "./database";
-import {
-  Stop,
-  Route,
-  Departure,
-  GTFSStopTime,
-  GTFSTrip,
-  GTFSRoute,
-  GTFSStop,
-} from "../../types/transit";
+import { Stop as AppStop, Departure } from "../../types/transit";
 import { loadConfig, TransitConfig } from "../config/config";
+import { PrismaClient, Prisma } from "@prisma/client";
+import { logger } from "../../utils/logger";
+import fs from "fs";
+import path from "path";
+
+// Prismaが生成した型定義
+type PrismaStop = Prisma.StopGetPayload<{ include: { stop_times: true } }>;
+type PrismaRoute = Prisma.RouteGetPayload<{ include: { trips: true } }>;
+
+// 出力用の型定義
+type FormattedDeparture = {
+  trip_id: string;
+  route_id: string;
+  stop_id: string;
+  route_name: string;
+  stop_name: string;
+  departure_time: string;
+  formatted_time: string;
+  time_until: string;
+  ms_until_departure: number;
+  headsign: string;
+  color: string;
+  text_color: string;
+};
 
 /**
  * 交通データの取得と管理を担当するマネージャークラス
@@ -26,18 +34,22 @@ export class TransitManager {
   private static instance: TransitManager;
   private db: Database;
   private config: TransitConfig;
+  private prisma: PrismaClient;
+  private dataDir: string;
 
   /**
    * プライベートコンストラクタでシングルトンパターンを実現
    */
   private constructor() {
     this.db = Database.getInstance();
+    this.prisma = new PrismaClient();
+    this.dataDir = path.join(process.cwd(), "data", "gtfs");
 
     try {
       this.config = loadConfig();
-      console.log("設定ファイルを読み込みました");
+      logger.log("設定ファイルを読み込みました");
     } catch (error) {
-      console.error("設定ファイルの読み込みに失敗しました:", error);
+      logger.error("設定ファイルの読み込みに失敗しました:", error);
       throw new Error("TransitManager の初期化に失敗しました");
     }
   }
@@ -57,46 +69,44 @@ export class TransitManager {
    */
   public async prepareGTFSData(): Promise<boolean> {
     try {
-      console.log("GTFS データ準備を開始");
+      logger.log("GTFS データ準備を開始");
 
       // データベースの整合性をチェック
       const isValid = await this.db.checkIntegrity();
-      console.log(`データベース整合性チェック結果: ${isValid}`);
+      logger.log(`データベース整合性チェック結果: ${isValid}`);
 
       // データベースが有効でなければインポートを実行
       if (!isValid || this.config.skipImport === false) {
-        console.log("GTFSデータのインポートを実行します");
+        logger.log("GTFSデータのインポートを実行します");
 
         try {
           // 既存のデータベース接続を閉じる
           await this.db.closeConnection();
 
           // 新しいインポートを開始
-          console.log("GTFSデータをインポート中...");
+          logger.log("GTFSデータをインポート中...");
+
+          // ディレクトリの存在確認
+          const dbDir = path.dirname(
+            path.join(process.cwd(), this.config.sqlitePath)
+          );
+          if (!fs.existsSync(dbDir)) {
+            logger.log(`データベースディレクトリを作成します: ${dbDir}`);
+            fs.mkdirSync(dbDir, { recursive: true });
+          }
 
           // 直接importGtfsを呼び出す
           try {
             // 設定ファイルをそのまま使用
             const importConfig = this.config;
 
-            console.log("使用する設定:", JSON.stringify(importConfig, null, 2));
+            logger.log("使用する設定:", JSON.stringify(importConfig, null, 2));
 
             const result = await importGtfs(importConfig);
-            console.log("インポート結果:", result);
+            logger.log("インポート結果:", result);
           } catch (importError) {
-            console.error("importGtfs中にエラーが発生しました:", importError);
+            logger.error("importGtfs中にエラーが発生しました:", importError);
             // エラーがあっても処理を続行
-          }
-
-          // バックアップとしてopenDbとcloseDbを実行
-          try {
-            console.log("バックアップとしてopenDbを実行");
-            const dbHandle = await openDb(this.config);
-            console.log("openDb完了、closeDbを実行");
-            await closeDb(dbHandle);
-            console.log("closeDb完了");
-          } catch (dbError) {
-            console.error("データベース操作中にエラーが発生:", dbError);
           }
 
           // データベース接続を再確立
@@ -104,12 +114,10 @@ export class TransitManager {
 
           // インポート後に再度整合性をチェック
           const isValidAfterImport = await this.db.checkIntegrity();
-          console.log(
-            `インポート後のデータベース整合性: ${isValidAfterImport}`
-          );
+          logger.log(`インポート後のデータベース整合性: ${isValidAfterImport}`);
 
           if (!isValidAfterImport) {
-            console.error(
+            logger.error(
               "インポート後もデータベースの整合性が確保できませんでした"
             );
             return false;
@@ -117,7 +125,7 @@ export class TransitManager {
 
           return true;
         } catch (error) {
-          console.error(
+          logger.error(
             "GTFSデータのインポート中にエラーが発生しました:",
             error
           );
@@ -125,10 +133,10 @@ export class TransitManager {
         }
       }
 
-      console.log("既存のGTFSデータを使用します");
+      logger.log("既存のGTFSデータを使用します");
       return true;
     } catch (error) {
-      console.error("GTFSデータ準備中にエラーが発生しました:", error);
+      logger.error("GTFSデータ準備中にエラーが発生しました:", error);
       return false;
     }
   }
@@ -136,33 +144,22 @@ export class TransitManager {
   /**
    * すべてのバス停を取得する
    */
-  public async getStops(): Promise<Stop[]> {
-    return this.db.withConnection(async () => {
-      const stopsFromGtfs = (await getStops()) as unknown as GTFSStop[];
-      return stopsFromGtfs.map((stop) => ({
-        id: stop.stop_id,
-        name: stop.stop_name || "名称不明",
-        code: stop.stop_code,
-      }));
+  public async getStops(): Promise<PrismaStop[]> {
+    return await this.prisma.stop.findMany({
+      include: {
+        stop_times: true,
+      },
     });
   }
 
   /**
    * すべての路線を取得する
    */
-  public async getRoutes(): Promise<Route[]> {
-    return this.db.withConnection(async () => {
-      const routesFromGtfs = (await getRoutes()) as GTFSRoute[];
-      return routesFromGtfs.map((route) => ({
-        id: route.route_id,
-        name: route.route_short_name || route.route_long_name || "",
-        shortName: route.route_short_name || "",
-        longName: route.route_long_name || "",
-        color: route.route_color ? `#${route.route_color}` : "#000000",
-        textColor: route.route_text_color
-          ? `#${route.route_text_color}`
-          : "#FFFFFF",
-      }));
+  public async getRoutes(): Promise<PrismaRoute[]> {
+    return await this.prisma.route.findMany({
+      include: {
+        trips: true,
+      },
     });
   }
 
@@ -205,244 +202,234 @@ export class TransitManager {
     date: Date = new Date(),
     isDeparture: boolean = true
   ): Promise<Departure[]> {
-    const now = date;
+    try {
+      // 指定された日付に有効なservice_idのリストを取得
+      const serviceIds = await this.getValidServiceIds(date);
 
-    // 時刻のフィルター用の文字列
-    const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")}:00`;
+      if (serviceIds.length === 0) {
+        logger.warn("有効なサービスIDが見つかりませんでした");
+        return [];
+      }
 
-    // GTFSからstoptimesを取得
-    // クエリパラメータを構築
-    // 曜日による直接フィルタリングを行わずに全てのstoptimesを取得
-    const stoptimeQuery: any = {
-      stop_id: stop_id || undefined,
-    };
+      // 時刻データを取得（Prismaを使用）
+      const query = {
+        where: {
+          stop_id: stop_id || undefined,
+          trip: {
+            service_id: {
+              in: serviceIds,
+            },
+            route_id: route_id || undefined,
+          },
+        },
+        include: {
+          trip: {
+            include: {
+              route: true,
+            },
+          },
+          stop: true,
+        },
+        orderBy: isDeparture
+          ? { departure_time: "asc" as const }
+          : { arrival_time: "asc" as const },
+      } satisfies Prisma.Args<typeof this.prisma.stopTime, "findMany">;
 
-    // 出発/到着時刻フィルターを追加
-    if (isDeparture) {
-      // $gteなどのオペレータは使用せず、SQL文字列として直接比較する形に変更
-      stoptimeQuery.departure_time = `>= '${timeStr}'`;
-    } else {
-      // $gteなどのオペレータは使用せず、SQL文字列として直接比較する形に変更
-      stoptimeQuery.arrival_time = `>= '${timeStr}'`;
-    }
+      const stopTimes = await this.prisma.stopTime.findMany(query);
 
-    const stoptimes = (await getStoptimes(stoptimeQuery)) as GTFSStopTime[];
+      if (!stopTimes || stopTimes.length === 0) {
+        return [];
+      }
 
-    if (!stoptimes || stoptimes.length === 0) {
+      const timeField = isDeparture ? "departure_time" : "arrival_time";
+
+      // 時刻をパースして結果を整形
+      const formattedDepartures = stopTimes
+        .filter((st) => st[timeField])
+        .map((stopTime) => {
+          const timeStr = stopTime[timeField] as string;
+          const trip = stopTime.trip;
+          const route = trip.route;
+          const stop = stopTime.stop;
+
+          // 時刻文字列からDateオブジェクトを作成
+          const departureDate = this.getTimeAsDate(timeStr, date);
+
+          // 現在時刻との差分（ミリ秒）
+          const msUntilDeparture = departureDate.getTime() - Date.now();
+
+          return {
+            trip_id: trip.id,
+            route_id: route.id,
+            stop_id: stop.id,
+            route_name: route.short_name || route.long_name || "",
+            stop_name: stop.name || "",
+            departure_time: timeStr,
+            formatted_time: this.formatTime(departureDate),
+            time_until: this.formatTimeUntilDeparture(msUntilDeparture),
+            ms_until_departure: msUntilDeparture,
+            headsign: trip.headsign || "",
+            color: route.color ? `#${route.color}` : "#000000",
+            text_color: route.text_color ? `#${route.text_color}` : "#FFFFFF",
+          } as FormattedDeparture;
+        })
+        .filter((d) => d !== null);
+
+      // Departure型に変換
+      const departures: Departure[] = formattedDepartures.map((fd) => ({
+        routeId: fd.route_id,
+        routeName: fd.route_name,
+        stopId: fd.stop_id,
+        stopName: fd.stop_name,
+        tripId: fd.trip_id,
+        time: fd.formatted_time,
+        timeUntilDeparture: fd.time_until,
+        msUntilDeparture: fd.ms_until_departure,
+        headsign: fd.headsign,
+        scheduledTime: fd.departure_time,
+      }));
+
+      // 時刻でソート
+      return departures.sort(
+        (a, b) => (a.msUntilDeparture || 0) - (b.msUntilDeparture || 0)
+      );
+    } catch (error) {
+      logger.error("出発時刻の取得中にエラーが発生しました:", error);
       return [];
     }
-
-    // トリップIDからルートIDを取得するためのマップを作成
-    const trips = (await getTrips({
-      trip_id: stoptimes.map((st) => st.trip_id),
-    })) as GTFSTrip[];
-
-    // 曜日を取得
-    const dayOfWeek = now.getDay(); // 0 = 日曜日, 6 = 土曜日
-
-    // 現在の曜日に対応するtrip_idのフィルタリング
-    // 日曜、平日などservice_idの命名規則に基づくフィルタリング
-    const validTrips = trips.filter((trip) => {
-      const serviceId = trip.service_id;
-
-      // serviceIdが「日祝」の場合、日曜日のみ有効
-      if (serviceId === "日祝" && dayOfWeek === 0) {
-        return true;
-      }
-
-      // serviceIdが「除月火」の場合、水曜～日曜のみ有効
-      if (serviceId === "除月火" && dayOfWeek >= 3) {
-        return true;
-      }
-
-      // serviceIdが「除日曜」の場合、月曜～土曜のみ有効
-      if (serviceId === "除日曜" && dayOfWeek !== 0) {
-        return true;
-      }
-
-      return false;
-    });
-
-    const validTripIds = new Set(validTrips.map((trip) => trip.trip_id));
-
-    const tripRouteMap = new Map<string, string>();
-    trips.forEach((trip) => {
-      if (trip.trip_id) {
-        tripRouteMap.set(trip.trip_id, trip.route_id);
-      }
-    });
-
-    // 必要なルート情報を取得
-    const routesData = (await getRoutes({
-      route_id: [...new Set(trips.map((trip) => trip.route_id))],
-    })) as GTFSRoute[];
-
-    const routeMap = new Map<string, GTFSRoute>();
-    routesData.forEach((route) => {
-      routeMap.set(route.route_id, route);
-    });
-
-    // 時間を適切にパースする関数
-    const getTimeAsDate = (timeStr: string) => {
-      const [hours, minutes, seconds] = timeStr.split(":").map(Number);
-      const date = new Date(now);
-      date.setHours(hours, minutes, seconds, 0);
-      return date;
-    };
-
-    // 時間を表示用にフォーマットする関数
-    const formatTime = (date: Date): string => {
-      return `${date.getHours().toString().padStart(2, "0")}:${date
-        .getMinutes()
-        .toString()
-        .padStart(2, "0")}`;
-    };
-
-    // 出発までの時間をフォーマットする関数
-    const formatTimeUntilDeparture = (msUntilDeparture: number): string => {
-      if (msUntilDeparture < 0) return "出発済み";
-
-      const minutes = Math.floor(msUntilDeparture / 60000);
-      if (minutes < 1) return "間もなく";
-      if (minutes < 60) return `${minutes}分`;
-
-      const hours = Math.floor(minutes / 60);
-      const remainingMinutes = minutes % 60;
-      return `${hours}時間${
-        remainingMinutes > 0 ? `${remainingMinutes}分` : ""
-      }`;
-    };
-
-    // stoptimesを処理して出発情報を作成
-    const departures: Departure[] = stoptimes
-      .map((stoptime: GTFSStopTime) => {
-        // 有効なtrip_idのみを処理
-        if (!stoptime.trip_id || !validTripIds.has(stoptime.trip_id)) {
-          return null;
-        }
-
-        // 対応するトリップを使ってルートIDを取得
-        const tripRouteId = stoptime.trip_id
-          ? tripRouteMap.get(stoptime.trip_id)
-          : undefined;
-
-        // ルートIDでフィルタリング
-        if (route_id && tripRouteId !== route_id) {
-          return null;
-        }
-
-        // 必要な情報が欠けている場合はスキップ
-        if (!stoptime.departure_time) return null;
-
-        // 日付オブジェクトに変換
-        const departureTime = getTimeAsDate(stoptime.departure_time);
-
-        // 出発までの時間を計算
-        const msUntilDeparture = departureTime.getTime() - now.getTime();
-
-        // 次の24時間以内の出発のみを対象とする
-        if (
-          msUntilDeparture < -10 * 60 * 1000 ||
-          msUntilDeparture > 24 * 60 * 60 * 1000
-        ) {
-          return null;
-        }
-
-        // 対応するルートの情報を取得
-        const route = tripRouteId ? routeMap.get(tripRouteId) : undefined;
-
-        return {
-          stopId: stoptime.stop_id || "",
-          tripId: stoptime.trip_id || "",
-          routeId: tripRouteId || "",
-          routeName: route
-            ? route.route_short_name || route.route_long_name || "不明"
-            : "不明",
-          time: formatTime(departureTime),
-          timeUntilDeparture: formatTimeUntilDeparture(msUntilDeparture),
-          msUntilDeparture: msUntilDeparture,
-          headsign: stoptime.stop_headsign || "",
-        } as Departure;
-      })
-      .filter((departure): departure is Departure => departure !== null);
-
-    // 出発時刻でソート
-    departures.sort(
-      (a, b) => (a.msUntilDeparture || 0) - (b.msUntilDeparture || 0)
-    );
-
-    return departures;
   }
 
   /**
-   * 経度・緯度から最寄りのバス停を取得する
+   * 時刻文字列（HH:MM:SS）からDateオブジェクトを生成
+   */
+  private getTimeAsDate(timeStr: string, baseDate: Date = new Date()): Date {
+    if (!timeStr) {
+      return new Date();
+    }
+
+    // HH:MM:SSを解析
+    const [hours, minutes, seconds] = timeStr.split(":").map(Number);
+
+    // 基準日に時刻を設定したDateオブジェクトを作成
+    const date = new Date(baseDate);
+    date.setHours(hours % 24); // 24時以降は翌日として処理
+    date.setMinutes(minutes);
+    date.setSeconds(seconds || 0);
+
+    // 24時以降の場合は日付を進める
+    if (hours >= 24) {
+      date.setDate(date.getDate() + Math.floor(hours / 24));
+    }
+
+    return date;
+  }
+
+  /**
+   * Dateオブジェクトから時刻文字列（HH:MM）を生成
+   */
+  private formatTime(date: Date): string {
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    return `${hours}:${minutes}`;
+  }
+
+  /**
+   * 出発までの残り時間を人間が読みやすい形式（例: "5分", "1時間20分"）で返す
+   */
+  private formatTimeUntilDeparture(msUntilDeparture: number): string {
+    // 過去の場合は「発車済み」と表示
+    if (msUntilDeparture < 0) {
+      return "発車済み";
+    }
+
+    // 分に変換
+    const minutes = Math.floor(msUntilDeparture / (1000 * 60));
+
+    if (minutes < 60) {
+      // 1時間未満
+      return `${minutes}分`;
+    } else {
+      // 1時間以上
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      return remainingMinutes > 0
+        ? `${hours}時間${remainingMinutes}分`
+        : `${hours}時間`;
+    }
+  }
+
+  /**
+   * 現在地から最も近いバス停を取得する
    */
   public async getNearestStops(
     lat: number,
     lng: number
   ): Promise<{
-    stops: Stop[];
-    nearestStop: any | null;
+    stops: AppStop[];
+    nearestStop: {
+      id: string;
+      name: string;
+      code: string | null;
+      lat: number;
+      lon: number;
+      distance: number;
+    } | null;
   }> {
     return this.db.withConnection(async () => {
-      // GTFSからすべてのバス停を取得
-      const stopsFromGTFS = (await getStops()) as unknown as GTFSStop[];
+      try {
+        // すべてのバス停を取得
+        const query = {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            lat: true,
+            lon: true,
+          },
+        } satisfies Prisma.Args<typeof this.prisma.stop, "findMany">;
 
-      if (!stopsFromGTFS || stopsFromGTFS.length === 0) {
-        return { stops: [], nearestStop: null };
-      }
+        const stops = await this.prisma.stop.findMany(query);
 
-      // バス停の座標が正しいかチェックして、距離を計算
-      const stopsWithDistance = stopsFromGTFS
-        .filter(
-          (stop) =>
-            stop.stop_lat !== undefined &&
-            stop.stop_lon !== undefined &&
-            !isNaN(parseFloat(stop.stop_lat)) &&
-            !isNaN(parseFloat(stop.stop_lon))
-        )
-        .map((stop) => {
-          const stopLat = parseFloat(stop.stop_lat);
-          const stopLon = parseFloat(stop.stop_lon);
-          const distance = this.calculateDistance(lat, lng, stopLat, stopLon);
-          return { ...stop, distance };
+        // ユーザーの現在地から各バス停までの距離を計算
+        const stopsWithDistance = stops.map((stop) => {
+          const distance = this.calculateDistance(lat, lng, stop.lat, stop.lon);
+
+          return {
+            ...stop,
+            distance,
+          };
         });
 
-      // 距離でソート
-      stopsWithDistance.sort((a, b) => a.distance - b.distance);
+        // 距離でソート
+        stopsWithDistance.sort((a, b) => a.distance - b.distance);
 
-      // フロントエンド用のStop型に変換
-      const stops: Stop[] = stopsWithDistance.map((stop) => ({
-        id: stop.stop_id,
-        name: stop.stop_name || "名称不明",
-        code: stop.stop_code || undefined,
-      }));
+        // 最も近いバス停
+        const nearestStop =
+          stopsWithDistance.length > 0 ? stopsWithDistance[0] : null;
 
-      // 最寄りのバス停（距離が最も近いもの）
-      const nearestStop =
-        stopsWithDistance.length > 0 ? stopsWithDistance[0] : null;
+        // UIで使用するStopオブジェクト形式に変換
+        const formattedStops = stopsWithDistance.map((stop) => ({
+          id: stop.id,
+          name: stop.name || "名称不明",
+          code: stop.code || undefined,
+        }));
 
-      return {
-        stops,
-        nearestStop: nearestStop
-          ? {
-              stop_id: nearestStop.stop_id,
-              stop_name: nearestStop.stop_name,
-              stop_code: nearestStop.stop_code,
-              stop_lat: nearestStop.stop_lat,
-              stop_lon: nearestStop.stop_lon,
-              distance: nearestStop.distance,
-            }
-          : null,
-      };
+        return {
+          stops: formattedStops,
+          nearestStop,
+        };
+      } catch (error) {
+        logger.error("最寄りバス停の取得中にエラーが発生しました:", error);
+        return {
+          stops: [],
+          nearestStop: null,
+        };
+      }
     });
   }
 
   /**
-   * ヘルシン距離計算関数（2点間の距離をキロメートル単位で計算）
+   * ハバーサイン公式を使用して2点間の距離をキロメートル単位で計算
    */
   private calculateDistance(
     lat1: number,
@@ -460,157 +447,139 @@ export class TransitManager {
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    const distance = R * c;
+    return distance;
   }
 
   /**
-   * 角度をラジアンに変換
+   * 度からラジアンに変換
    */
   private toRadians(degrees: number): number {
     return (degrees * Math.PI) / 180;
   }
 
   /**
-   * 特定のバス停のロケーション情報を取得する
+   * バス停IDから位置情報を取得
    */
   public async getStopLocation(
     stopId: string
   ): Promise<{ lat: number; lon: number } | null> {
     return this.db.withConnection(async () => {
-      console.log(`バス停位置情報を取得します: stopId=${stopId}`);
       try {
-        const stopsFromGtfs = (await getStops({
-          stop_id: stopId,
-        })) as unknown as GTFSStop[];
+        const query = {
+          where: { id: stopId },
+          select: { lat: true, lon: true },
+        } satisfies Prisma.Args<typeof this.prisma.stop, "findUnique">;
 
-        if (!stopsFromGtfs || stopsFromGtfs.length === 0) {
-          console.log(`バス停が見つかりません: stopId=${stopId}`);
+        const stop = await this.prisma.stop.findUnique(query);
+
+        if (!stop) {
           return null;
         }
 
-        const stop = stopsFromGtfs[0];
-
-        if (!stop.stop_lat || !stop.stop_lon) {
-          console.log(`バス停の位置情報がありません: stopId=${stopId}`);
-          return null;
-        }
-
-        const lat =
-          typeof stop.stop_lat === "string"
-            ? parseFloat(stop.stop_lat)
-            : stop.stop_lat;
-        const lon =
-          typeof stop.stop_lon === "string"
-            ? parseFloat(stop.stop_lon)
-            : stop.stop_lon;
-
-        if (isNaN(lat) || isNaN(lon)) {
-          console.log(
-            `バス停の位置情報が無効です: stopId=${stopId}, lat=${stop.stop_lat}, lon=${stop.stop_lon}`
-          );
-          return null;
-        }
-
-        return { lat, lon };
+        return {
+          lat: stop.lat,
+          lon: stop.lon,
+        };
       } catch (error) {
-        console.error(
-          `バス停位置情報の取得中にエラーが発生しました: stopId=${stopId}`,
-          error
-        );
+        logger.error("バス停位置情報の取得中にエラーが発生しました:", error);
         return null;
       }
     });
   }
 
   /**
-   * 日付に基づいて有効なサービスIDを取得する
+   * 指定された日付に有効なGTFSサービスIDのリストを取得する
+   * calendar.txtとcalendar_dates.txtの両方を考慮する
    */
   public async getValidServiceIds(targetDate: Date): Promise<string[]> {
-    return this.db.withConnection(async () => {
-      try {
-        console.log(
-          `日付に基づく有効なサービスIDを取得: ${targetDate
-            .toISOString()
-            .slice(0, 10)}`
-        );
+    try {
+      // 日付をYYYYMMDD形式に変換
+      const formattedDate = targetDate
+        .toISOString()
+        .slice(0, 10)
+        .replace(/-/g, "");
 
-        // GTFSの日付形式 (YYYYMMDD)
-        const formattedDate = targetDate
-          .toISOString()
-          .slice(0, 10)
-          .replace(/-/g, "");
+      // 曜日を取得（0=日曜, 1=月曜, ..., 6=土曜）
+      const dayOfWeek = targetDate.getDay();
 
-        // 曜日を取得 (0 = 日曜日, 1 = 月曜日, ...)
-        const dayOfWeek = targetDate.getDay();
+      // calendar.txtのデータで日付範囲内かつ曜日が一致するサービスID
+      const calendarQuery = {
+        where: {
+          start_date: {
+            lte: formattedDate,
+          },
+          end_date: {
+            gte: formattedDate,
+          },
+          OR: [
+            { sunday: dayOfWeek === 0 ? 1 : 0 },
+            { monday: dayOfWeek === 1 ? 1 : 0 },
+            { tuesday: dayOfWeek === 2 ? 1 : 0 },
+            { wednesday: dayOfWeek === 3 ? 1 : 0 },
+            { thursday: dayOfWeek === 4 ? 1 : 0 },
+            { friday: dayOfWeek === 5 ? 1 : 0 },
+            { saturday: dayOfWeek === 6 ? 1 : 0 },
+          ],
+        },
+        select: {
+          service_id: true,
+        },
+      } satisfies Prisma.Args<typeof this.prisma.calendar, "findMany">;
 
-        // GTFSカレンダーの曜日カラム名
-        const dayColumns = [
-          "sunday",
-          "monday",
-          "tuesday",
-          "wednesday",
-          "thursday",
-          "friday",
-          "saturday",
-        ];
+      const calendarServices = await this.prisma.calendar.findMany(
+        calendarQuery
+      );
 
-        // 対応する曜日カラムを選択
-        const dayColumn = dayColumns[dayOfWeek];
+      // calendar_dates.txtの例外データを取得
+      const calendarDatesQuery = {
+        where: {
+          date: formattedDate,
+        },
+        select: {
+          service_id: true,
+          exception_type: true,
+        },
+      } satisfies Prisma.Args<typeof this.prisma.calendarDate, "findMany">;
 
-        // SQLクエリの実行
-        return await this.withCustomSQLQuery((db) => {
-          const serviceIdQuery = `
-            SELECT service_id FROM calendar 
-            WHERE ${dayColumn} = 1 
-            AND start_date <= '${formattedDate}' 
-            AND end_date >= '${formattedDate}'
-          `;
+      const calendarDates = await this.prisma.calendarDate.findMany(
+        calendarDatesQuery
+      );
 
-          try {
-            const serviceRows = db.prepare(serviceIdQuery).all();
-            const serviceIds = serviceRows.map(
-              (row: { service_id: string }) => row.service_id
-            );
+      // calendarから基本の有効なサービスIDを取得
+      let validServiceIds = calendarServices.map((cs) => cs.service_id);
 
-            console.log(`取得したサービスID: ${serviceIds.length}件`);
-            return serviceIds;
-          } catch (err) {
-            console.error("service_id取得エラー:", err);
-            return [];
+      // カレンダー例外を適用
+      for (const cd of calendarDates) {
+        if (cd.exception_type === 1) {
+          // 例外タイプ1: サービス追加
+          if (!validServiceIds.includes(cd.service_id)) {
+            validServiceIds.push(cd.service_id);
           }
-        });
-      } catch (error) {
-        console.error("サービスID取得中にエラーが発生しました:", error);
-        return [];
+        } else if (cd.exception_type === 2) {
+          // 例外タイプ2: サービス削除
+          validServiceIds = validServiceIds.filter(
+            (id: string) => id !== cd.service_id
+          );
+        }
       }
-    });
+
+      return validServiceIds;
+    } catch (error) {
+      logger.error("有効なサービスIDの取得中にエラーが発生しました:", error);
+      return [];
+    }
   }
 
   /**
-   * カスタムSQLクエリを実行するためのユーティリティメソッド
-   * データベース接続の一貫性を保ちつつ、低レベルなSQLクエリを実行できる
+   * カスタムクエリを実行するためのメソッド
+   * トランザクション内でコールバック関数を実行
    */
-  public async withCustomSQLQuery<T>(
-    callback: (db: any) => Promise<T>
+  public async withCustomQuery<T>(
+    callback: (client: PrismaClient) => Promise<T>
   ): Promise<T> {
-    try {
-      console.log("カスタムSQLクエリの実行を開始します");
-
-      // データベースハンドルを取得
-      const dbHandle = await this.db.getDbHandle();
-
-      if (!dbHandle) {
-        throw new Error("データベースハンドルが取得できませんでした");
-      }
-
-      // コールバックにデータベースハンドルを渡してカスタムクエリを実行
-      const result = await callback(dbHandle);
-      console.log("カスタムSQLクエリの実行が完了しました");
-
-      return result;
-    } catch (error) {
-      console.error("カスタムSQLクエリの実行中にエラーが発生しました:", error);
-      throw error;
-    }
+    return this.db.withTransaction(async (tx) => {
+      return await callback(tx as PrismaClient);
+    });
   }
 }

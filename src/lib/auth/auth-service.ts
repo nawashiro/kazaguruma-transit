@@ -1,4 +1,4 @@
-import { sqliteManager } from "../db/sqlite-manager";
+import { dataManager } from "../db/data-manager";
 import { mailtrapService } from "./mailtrap-client";
 import { kofiApiClient } from "./kofi-client";
 import { logger } from "../../utils/logger";
@@ -50,7 +50,7 @@ export class AuthService {
       const codeExpires = Date.now() + VERIFICATION_CODE_EXPIRY;
 
       // 支援者データを登録/更新
-      await sqliteManager.createOrUpdateSupporter({
+      await dataManager.createOrUpdateSupporter({
         email,
         verificationCode: code,
         codeExpires,
@@ -98,7 +98,7 @@ export class AuthService {
   }> {
     try {
       // コードの検証
-      const isValid = await sqliteManager.verifySupporter(email, code);
+      const isValid = await dataManager.verifySupporter(email, code);
 
       if (isValid) {
         // Ko-fiでの支援状態も確認
@@ -138,7 +138,7 @@ export class AuthService {
   }> {
     try {
       // ローカルDBで認証済みかを確認
-      const isVerified = await sqliteManager.isVerifiedSupporter(email);
+      const isVerified = await dataManager.isVerifiedSupporter(email);
 
       // Ko-fiでアクティブな支援者かを確認
       const isKofiMember = await kofiApiClient.isActiveMember(email);

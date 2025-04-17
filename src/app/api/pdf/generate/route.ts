@@ -301,6 +301,28 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
   const qrCodeUrl = `${baseUrl}/images/chiyoda_line_qr.png`;
   const mapPlaceholderUrl = `${baseUrl}/images/map_placeholder.png`;
 
+  // 画像の存在確認関数
+  const checkImageExists = async (url: string): Promise<boolean> => {
+    try {
+      const response = await fetch(url, { method: "HEAD" });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  };
+
+  // 画像URLを取得する関数
+  const getImageUrl = async (
+    url: string,
+    fallbackUrl: string
+  ): Promise<string> => {
+    const exists = await checkImageExists(url);
+    return exists ? url : fallbackUrl;
+  };
+
+  // 画像URLを取得
+  const finalQrCodeUrl = await getImageUrl(qrCodeUrl, mapPlaceholderUrl);
+
   // ルートがない場合の表示
   if (data.type === "none") {
     return `
@@ -334,7 +356,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
               <p>別の交通手段をご検討ください</p>
             </div>
             <div class="text-center text-xs space-y-2">
-              <img src="${qrCodeUrl}" alt="千代田区公式LINE" class="w-24 mx-auto"
+              <img src="${finalQrCodeUrl}" alt="千代田区公式LINE" class="w-24 mx-auto"
                 onerror="this.onerror=null; this.src='${mapPlaceholderUrl}';">
               <p>千代田区公式LINEで最新の運行情報を確認できます</p>
             </div>
@@ -640,11 +662,6 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
           
           ${stopToDestMapHtml}
           
-          <div class="text-center text-xs space-y-2">
-            <img src="${qrCodeUrl}" alt="千代田区公式LINE" class="w-24 mx-auto"
-              onerror="this.onerror=null; this.src='${mapPlaceholderUrl}';">
-            <p>千代田区公式LINEで最新の運行情報を確認できます</p>
-          </div>
         </div>
       </body>
     </html>

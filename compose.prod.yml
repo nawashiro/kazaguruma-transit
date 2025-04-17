@@ -2,10 +2,10 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     volumes:
       - ./.gtfs:/app/.gtfs
-      - temp-data:/app/.temp
+      - ./prisma/.temp:/app/prisma/.temp
     ports:
       - "3000:3000"
     env_file:
@@ -13,6 +13,7 @@ services:
     environment:
       - NODE_ENV=production
     restart: unless-stopped
+    command: ["npm", "run", "start"]
     networks:
       - app-network
 

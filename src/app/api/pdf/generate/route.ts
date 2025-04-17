@@ -662,11 +662,6 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
           
           ${stopToDestMapHtml}
           
-          <div class="text-center text-xs space-y-2">
-            <img src="${finalQrCodeUrl}" alt="千代田区公式LINE" class="w-24 mx-auto"
-              onerror="this.onerror=null; this.src='${mapPlaceholderUrl}';">
-            <p>千代田区公式LINEで最新の運行情報を確認できます</p>
-          </div>
         </div>
       </body>
     </html>

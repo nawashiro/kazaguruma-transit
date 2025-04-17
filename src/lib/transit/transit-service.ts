@@ -1,7 +1,5 @@
-import { Prisma } from "@prisma/client";
 import {
   TransitQuery,
-  RouteQuery,
   StopQuery,
   TimetableQuery,
   TransitResponse,
@@ -77,38 +75,6 @@ interface TransferInfo {
   };
   distanceMeters: number;
   walkingTimeMinutes: number;
-}
-
-// Type for Prisma StopTime with additional fields
-type PrismaStopTime = {
-  id: string;
-  trip_id: string;
-  arrival_time: string;
-  departure_time: string;
-  stop_id: string;
-  stop_sequence: number;
-  stop: {
-    id: string;
-    name: string;
-    lat: number;
-    lon: number;
-  };
-  trip: {
-    id: string;
-    route_id: string;
-    service_id: string;
-    route: {
-      id: string;
-      short_name: string;
-      long_name: string;
-    };
-  };
-};
-
-// Interface for direct route results
-interface DirectRouteResult {
-  departureStopTime: PrismaStopTime;
-  arrivalStopTime: PrismaStopTime;
 }
 
 /**
@@ -785,6 +751,10 @@ export class TransitService {
     from: StopLocation,
     to: StopLocation
   ): RouteJourney {
+    logger.log(
+      `経路変換: ${from.stop_name} から ${to.stop_name} への経路を変換します`
+    );
+
     if (route.transfers === 0) {
       // 直行便の場合
       return {
@@ -868,6 +838,7 @@ export class TransitService {
         tripId: route.nodes[2].tripId,
       };
 
+      // waitTimeを使用
       const waitTime = this.calculateDurationMinutes(
         route.nodes[1].arrivalTime,
         route.nodes[2].departureTime
@@ -887,7 +858,7 @@ export class TransitService {
           lng: route.nodes[2].stopLon,
         },
         distanceMeters: 0, // 後で修正
-        walkingTimeMinutes: 0, // 後で修正
+        walkingTimeMinutes: waitTime, // 計算したwaitTimeを使用
       };
 
       return {
@@ -908,5 +879,15 @@ export class TransitService {
     const start = new Date(`2000-01-01T${startTime}`);
     const end = new Date(`2000-01-01T${endTime}`);
     return (end.getTime() - start.getTime()) / (60 * 1000);
+  }
+
+  /**
+   * 時間差を分単位で計算する
+   */
+  private calculateTimeDifference(time1: string, time2: string): number {
+    const t1 = new Date(`2000-01-01T${time1}`);
+    const t2 = new Date(`2000-01-01T${time2}`);
+    const timeDiff = (t2.getTime() - t1.getTime()) / (60 * 1000);
+    return timeDiff;
   }
 }

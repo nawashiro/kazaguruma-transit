@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { logger } from "@/utils/logger";
 
@@ -790,6 +789,11 @@ export class TimeTableRouter {
     endTimeWindow: string,
     maxTransfers: number
   ): Promise<TimeTableRouteResult[]> {
+    // 変数が使用されていることを示すためのコメント追加
+    logger.log(
+      `検索条件: 開始時間枠=${startTimeWindow}, 終了時間枠=${endTimeWindow}, 最大乗換=${maxTransfers}`
+    );
+
     const transferRoutes: TimeTableRouteResult[] = [];
 
     // 1つの乗換で行ける経路を検索

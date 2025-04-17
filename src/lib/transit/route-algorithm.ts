@@ -151,109 +151,542 @@ export class TimeTableRouter {
    * 時刻表ベースの最適経路を検索
    * @param originStopId 出発停留所ID
    * @param destStopId 目的地停留所ID
-   * @param departureTime 出発時刻
+   * @param time 時刻
+   * @param isDeparture 出発時刻指定の場合はtrue、到着時刻指定の場合はfalse
    * @param maxTransfers 最大乗換回数
    * @param timeWindowMinutes 検索時間枠（分）
    */
   public async findOptimalRoute(
     originStopId: string,
     destStopId: string,
-    departureTime: Date,
+    time: Date,
+    isDeparture: boolean = true,
     maxTransfers: number = 2,
     timeWindowMinutes: number = 180
   ): Promise<TimeTableRouteResult[]> {
     try {
       logger.log(
-        `[TimeTableRouter] 経路検索開始: ${originStopId} → ${destStopId}, 出発時刻=${this.formatTime(
-          departureTime
-        )}`
+        `[TimeTableRouter] 経路検索開始: ${originStopId} → ${destStopId}, ${
+          isDeparture ? "出発" : "到着"
+        }時刻=${this.formatTime(time)}`
       );
 
       // 有効なサービスIDを取得
-      const activeServiceIds = await this.getActiveServiceIds(departureTime);
+      const activeServiceIds = await this.getActiveServiceIds(time);
       if (activeServiceIds.length === 0) {
         logger.log("[TimeTableRouter] 有効なサービスIDが見つかりません");
         return [];
       }
 
-      const formattedDepartureTime = this.formatTime(departureTime);
-      const endTimeWindow = this.addMinutesToTime(
-        formattedDepartureTime,
-        timeWindowMinutes
-      );
+      const formattedTime = this.formatTime(time);
 
-      // 出発停留所から出発する停留所時刻を取得
-      const originStopTimes = await prisma.stopTime.findMany({
-        where: {
-          stop_id: originStopId,
-          departure_time: {
-            gte: formattedDepartureTime,
-            lte: endTimeWindow,
-          },
-          trip: {
-            service_id: {
-              in: activeServiceIds,
-            },
-          },
-        },
-        include: {
-          trip: {
-            include: {
-              route: true,
-              stop_times: {
-                orderBy: {
-                  stop_sequence: "asc",
-                },
-              },
-            },
-          },
-          stop: {
-            select: {
-              id: true,
-              name: true,
-              lat: true,
-              lon: true,
-            },
-          },
-        },
-        orderBy: {
-          departure_time: "asc",
-        },
-      });
-
-      if (originStopTimes.length === 0) {
-        logger.log("[TimeTableRouter] 出発停留所の時刻が見つかりません");
-        return [];
-      }
-
-      // 検索結果を格納する配列
-      const results: TimeTableRouteResult[] = [];
-
-      // 直行便を検索
-      const directRoutes = await this.findDirectRoutes(
-        originStopTimes,
-        destStopId
-      );
-      results.push(...directRoutes);
-
-      // 乗換が必要な経路を検索（最大乗換回数まで）
-      if (maxTransfers >= 1) {
-        const transferRoutes = await this.findRoutesWithTransfer(
-          originStopTimes,
+      if (isDeparture) {
+        // 出発時刻指定の場合: 指定時刻以降に出発するルートを検索
+        return await this.findRoutesFromDepartureTime(
+          originStopId,
           destStopId,
+          formattedTime,
           activeServiceIds,
-          formattedDepartureTime,
-          endTimeWindow,
-          maxTransfers
+          maxTransfers,
+          timeWindowMinutes
         );
-        results.push(...transferRoutes);
+      } else {
+        // 到着時刻指定の場合: 指定時刻以前に到着するルートを検索
+        return await this.findRoutesToArrivalTime(
+          originStopId,
+          destStopId,
+          formattedTime,
+          activeServiceIds,
+          maxTransfers,
+          timeWindowMinutes
+        );
       }
-
-      // 総所要時間でソート
-      return results.sort((a, b) => a.totalDuration - b.totalDuration);
     } catch (error) {
       logger.error("[TimeTableRouter] 経路検索エラー:", error);
       return [];
+    }
+  }
+
+  /**
+   * 出発時刻を基準に経路を検索
+   */
+  private async findRoutesFromDepartureTime(
+    originStopId: string,
+    destStopId: string,
+    departureTime: string,
+    activeServiceIds: string[],
+    maxTransfers: number,
+    timeWindowMinutes: number
+  ): Promise<TimeTableRouteResult[]> {
+    const endTimeWindow = this.addMinutesToTime(
+      departureTime,
+      timeWindowMinutes
+    );
+
+    // 出発停留所から出発する停留所時刻を取得
+    const originStopTimes = await prisma.stopTime.findMany({
+      where: {
+        stop_id: originStopId,
+        departure_time: {
+          gte: departureTime,
+          lte: endTimeWindow,
+        },
+        trip: {
+          service_id: {
+            in: activeServiceIds,
+          },
+        },
+      },
+      include: {
+        trip: {
+          include: {
+            route: true,
+            stop_times: {
+              orderBy: {
+                stop_sequence: "asc",
+              },
+            },
+          },
+        },
+        stop: {
+          select: {
+            id: true,
+            name: true,
+            lat: true,
+            lon: true,
+          },
+        },
+      },
+      orderBy: {
+        departure_time: "asc",
+      },
+    });
+
+    if (originStopTimes.length === 0) {
+      logger.log("[TimeTableRouter] 出発停留所の時刻が見つかりません");
+      return [];
+    }
+
+    // 検索結果を格納する配列
+    const results: TimeTableRouteResult[] = [];
+
+    // 直行便を検索
+    const directRoutes = await this.findDirectRoutes(
+      originStopTimes,
+      destStopId
+    );
+    results.push(...directRoutes);
+
+    // 乗換が必要な経路を検索（最大乗換回数まで）
+    if (maxTransfers >= 1) {
+      const transferRoutes = await this.findRoutesWithTransfer(
+        originStopTimes,
+        destStopId,
+        activeServiceIds,
+        departureTime,
+        endTimeWindow,
+        maxTransfers
+      );
+      results.push(...transferRoutes);
+    }
+
+    // 総所要時間でソート
+    return results.sort((a, b) => a.totalDuration - b.totalDuration);
+  }
+
+  /**
+   * 到着時刻を基準に経路を検索
+   */
+  private async findRoutesToArrivalTime(
+    originStopId: string,
+    destStopId: string,
+    arrivalTime: string,
+    activeServiceIds: string[],
+    maxTransfers: number,
+    timeWindowMinutes: number
+  ): Promise<TimeTableRouteResult[]> {
+    // 到着時刻から逆算して検索ウィンドウを設定
+    const startTimeWindow = this.addMinutesToTime(
+      arrivalTime,
+      -timeWindowMinutes
+    );
+
+    // 目的地に到着する停留所時刻を取得
+    const destStopTimes = await prisma.stopTime.findMany({
+      where: {
+        stop_id: destStopId,
+        arrival_time: {
+          gte: startTimeWindow,
+          lte: arrivalTime,
+        },
+        trip: {
+          service_id: {
+            in: activeServiceIds,
+          },
+        },
+      },
+      include: {
+        trip: {
+          include: {
+            route: true,
+            stop_times: {
+              orderBy: {
+                stop_sequence: "asc",
+              },
+            },
+          },
+        },
+        stop: {
+          select: {
+            id: true,
+            name: true,
+            lat: true,
+            lon: true,
+          },
+        },
+      },
+      orderBy: {
+        arrival_time: "desc", // 到着時刻の降順で取得
+      },
+    });
+
+    if (destStopTimes.length === 0) {
+      logger.log("[TimeTableRouter] 目的地への到着時刻が見つかりません");
+      return [];
+    }
+
+    // 検索結果を格納する配列
+    const results: TimeTableRouteResult[] = [];
+
+    // 目的地停留所時刻から直行便を検索
+    for (const destST of destStopTimes) {
+      // 同じトリップで出発する停留所時刻を検索
+      const originSTs = destST.trip.stop_times.filter(
+        (st) =>
+          st.stop_id === originStopId && st.stop_sequence < destST.stop_sequence
+      );
+
+      for (const originST of originSTs) {
+        // 直行便が見つかった
+        const originStop = await prisma.stop.findUnique({
+          where: { id: originST.stop_id },
+          select: {
+            id: true,
+            name: true,
+            lat: true,
+            lon: true,
+          },
+        });
+
+        const destStop = await prisma.stop.findUnique({
+          where: { id: destST.stop_id },
+          select: {
+            id: true,
+            name: true,
+            lat: true,
+            lon: true,
+          },
+        });
+
+        // nullチェックを追加
+        const departureTime = originST.departure_time;
+        const arrivalTime = destST.arrival_time;
+
+        // nullの場合はスキップ
+        if (!departureTime || !arrivalTime) {
+          continue;
+        }
+
+        const nodes: TimeTableNode[] = [
+          {
+            stopId: originST.stop_id,
+            stopName: originStop?.name || "",
+            tripId: originST.trip_id,
+            routeId: destST.trip.route_id,
+            routeName:
+              destST.trip.route.short_name ||
+              destST.trip.route.long_name ||
+              destST.trip.route_id,
+            arrivalTime: originST.arrival_time || departureTime,
+            departureTime,
+            stopSequence: originST.stop_sequence,
+            stopLat: originStop?.lat || 0,
+            stopLon: originStop?.lon || 0,
+          },
+          {
+            stopId: destST.stop_id,
+            stopName: destStop?.name || "",
+            tripId: destST.trip_id,
+            routeId: destST.trip.route_id,
+            routeName:
+              destST.trip.route.short_name ||
+              destST.trip.route.long_name ||
+              destST.trip.route_id,
+            arrivalTime,
+            departureTime: destST.departure_time || arrivalTime,
+            stopSequence: destST.stop_sequence,
+            stopLat: destStop?.lat || 0,
+            stopLon: destStop?.lon || 0,
+          },
+        ];
+
+        const totalDuration = this.calculateTimeDifference(
+          departureTime,
+          arrivalTime
+        );
+
+        results.push({
+          nodes,
+          transfers: 0,
+          totalDuration,
+          departure: departureTime,
+          arrival: arrivalTime,
+        });
+      }
+    }
+
+    // 乗り換えが必要な経路を検索（到着時刻指定のケース）
+    if (maxTransfers >= 1) {
+      await this.findTransferRoutesForArrivalTime(
+        originStopId,
+        destStopTimes,
+        activeServiceIds,
+        startTimeWindow,
+        arrivalTime,
+        results
+      );
+    }
+
+    // 到着時刻に最も近い順にソート
+    return results.sort((a, b) => {
+      // 到着時刻の降順（指定時刻に近い順）
+      const arrivalTimeA = new Date(`2000-01-01T${a.arrival}`).getTime();
+      const arrivalTimeB = new Date(`2000-01-01T${b.arrival}`).getTime();
+      return arrivalTimeB - arrivalTimeA;
+    });
+  }
+
+  /**
+   * 到着時刻指定時の乗換ルートを検索
+   */
+  private async findTransferRoutesForArrivalTime(
+    originStopId: string,
+    destStopTimes: any[],
+    activeServiceIds: string[],
+    startTimeWindow: string,
+    arrivalTime: string,
+    results: TimeTableRouteResult[]
+  ): Promise<void> {
+    // 各目的地停留所時刻について、乗換ポイントとなる停留所を検索
+    for (const destST of destStopTimes) {
+      // 最終区間の出発停留所（=乗換地点）を特定
+      const transferStopIds = destST.trip.stop_times
+        .filter((st: any) => st.stop_sequence < destST.stop_sequence)
+        .map((st: any) => st.stop_id);
+
+      // 各乗換地点について処理
+      for (const transferStopId of transferStopIds) {
+        // 乗換地点に到着する停留所時刻を検索（出発前の便）
+        const transferStopTimes = await prisma.stopTime.findMany({
+          where: {
+            stop_id: transferStopId,
+            arrival_time: {
+              gte: startTimeWindow,
+              // 乗換地点での最小待ち時間（1分）を確保
+              lt: this.addMinutesToTime(
+                destST.trip.stop_times.find(
+                  (st: any) => st.stop_id === transferStopId
+                )?.departure_time || "",
+                -1
+              ),
+            },
+            trip: {
+              service_id: {
+                in: activeServiceIds,
+              },
+              // 同じトリップIDは除外（乗換として扱わない）
+              NOT: {
+                id: destST.trip_id,
+              },
+            },
+          },
+          include: {
+            trip: {
+              include: {
+                route: true,
+                stop_times: {
+                  orderBy: {
+                    stop_sequence: "asc",
+                  },
+                },
+              },
+            },
+            stop: {
+              select: {
+                id: true,
+                name: true,
+                lat: true,
+                lon: true,
+              },
+            },
+          },
+          orderBy: {
+            arrival_time: "desc",
+          },
+          take: 10, // 候補数を制限
+        });
+
+        for (const transferArrivalST of transferStopTimes) {
+          // 乗換先のトリップから発車する停留所時刻を取得
+          const transferDep = destST.trip.stop_times.find(
+            (st: any) => st.stop_id === transferStopId
+          );
+
+          if (!transferDep) continue;
+
+          // 第1区間のトリップで出発停留所から乗換地点へ向かう停留所時刻を検索
+          for (const originRoute of transferArrivalST.trip.stop_times) {
+            if (
+              originRoute.stop_id === originStopId &&
+              originRoute.stop_sequence < transferArrivalST.stop_sequence
+            ) {
+              // 乗換経路が見つかった
+              const originStop = await prisma.stop.findUnique({
+                where: { id: originRoute.stop_id },
+                select: {
+                  id: true,
+                  name: true,
+                  lat: true,
+                  lon: true,
+                },
+              });
+
+              const transferStop = await prisma.stop.findUnique({
+                where: { id: transferStopId },
+                select: {
+                  id: true,
+                  name: true,
+                  lat: true,
+                  lon: true,
+                },
+              });
+
+              const destStop = await prisma.stop.findUnique({
+                where: { id: destST.stop_id },
+                select: {
+                  id: true,
+                  name: true,
+                  lat: true,
+                  lon: true,
+                },
+              });
+
+              // null値チェック
+              if (
+                !originRoute.departure_time ||
+                !transferArrivalST.arrival_time ||
+                !transferDep.departure_time ||
+                !destST.arrival_time
+              ) {
+                continue;
+              }
+
+              const nodes: TimeTableNode[] = [
+                {
+                  stopId: originRoute.stop_id,
+                  stopName: originStop?.name || "",
+                  tripId: transferArrivalST.trip_id,
+                  routeId: transferArrivalST.trip.route_id,
+                  routeName:
+                    transferArrivalST.trip.route.short_name ||
+                    transferArrivalST.trip.route.long_name ||
+                    transferArrivalST.trip.route_id,
+                  arrivalTime:
+                    originRoute.arrival_time || originRoute.departure_time,
+                  departureTime: originRoute.departure_time,
+                  stopSequence: originRoute.stop_sequence,
+                  stopLat: originStop?.lat || 0,
+                  stopLon: originStop?.lon || 0,
+                },
+                {
+                  stopId: transferStopId,
+                  stopName: transferStop?.name || "",
+                  tripId: transferArrivalST.trip_id,
+                  routeId: transferArrivalST.trip.route_id,
+                  routeName:
+                    transferArrivalST.trip.route.short_name ||
+                    transferArrivalST.trip.route.long_name ||
+                    transferArrivalST.trip.route_id,
+                  arrivalTime: transferArrivalST.arrival_time,
+                  departureTime:
+                    transferArrivalST.departure_time ||
+                    transferArrivalST.arrival_time,
+                  stopSequence: transferArrivalST.stop_sequence,
+                  stopLat: transferStop?.lat || 0,
+                  stopLon: transferStop?.lon || 0,
+                },
+                {
+                  stopId: transferStopId,
+                  stopName: transferStop?.name || "",
+                  tripId: destST.trip_id,
+                  routeId: destST.trip.route_id,
+                  routeName:
+                    destST.trip.route.short_name ||
+                    destST.trip.route.long_name ||
+                    destST.trip.route_id,
+                  arrivalTime:
+                    transferDep.arrival_time || transferDep.departure_time,
+                  departureTime: transferDep.departure_time,
+                  stopSequence: transferDep.stop_sequence,
+                  stopLat: transferStop?.lat || 0,
+                  stopLon: transferStop?.lon || 0,
+                },
+                {
+                  stopId: destST.stop_id,
+                  stopName: destStop?.name || "",
+                  tripId: destST.trip_id,
+                  routeId: destST.trip.route_id,
+                  routeName:
+                    destST.trip.route.short_name ||
+                    destST.trip.route.long_name ||
+                    destST.trip.route_id,
+                  arrivalTime: destST.arrival_time,
+                  departureTime: destST.departure_time || destST.arrival_time,
+                  stopSequence: destST.stop_sequence,
+                  stopLat: destStop?.lat || 0,
+                  stopLon: destStop?.lon || 0,
+                },
+              ];
+
+              const waitTime = this.calculateTimeDifference(
+                transferArrivalST.arrival_time,
+                transferDep.departure_time
+              );
+
+              const firstLegDuration = this.calculateTimeDifference(
+                originRoute.departure_time,
+                transferArrivalST.arrival_time
+              );
+
+              const secondLegDuration = this.calculateTimeDifference(
+                transferDep.departure_time,
+                destST.arrival_time
+              );
+
+              const totalDuration =
+                firstLegDuration + waitTime + secondLegDuration;
+
+              results.push({
+                nodes,
+                transfers: 1,
+                totalDuration,
+                departure: originRoute.departure_time,
+                arrival: destST.arrival_time,
+              });
+            }
+          }
+        }
+      }
     }
   }
 

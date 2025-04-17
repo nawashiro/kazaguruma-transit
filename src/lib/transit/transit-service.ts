@@ -612,6 +612,7 @@ export class TransitService {
           from.stop_id,
           to.stop_id,
           departureTime,
+          isDeparture,
           2,
           180
         );
@@ -626,25 +627,45 @@ export class TransitService {
         const transferRoutes = routes.filter((route) => route.transfers > 0);
 
         // 経路選択ロジック
-        // 直行便が存在する場合は指定時刻以降の最初の直行便を選択
-        // 直行便がない場合は指定時刻以降の最初の乗換ありのルートを選択
+        // 直行便が存在する場合は優先
+        // 到着時刻指定と出発時刻指定で異なるソート方法を使用
         let selectedRoute;
 
         if (directRoutes.length > 0) {
-          // 直行便が存在する場合は出発時刻順に並べて最初のものを選択
-          directRoutes.sort((a, b) => {
-            const timeA = new Date(`2000-01-01T${a.departure}`).getTime();
-            const timeB = new Date(`2000-01-01T${b.departure}`).getTime();
-            return timeA - timeB;
-          });
+          // 直行便が存在する場合
+          if (isDeparture) {
+            // 出発時刻指定の場合：出発時刻順に並べて最初のものを選択
+            directRoutes.sort((a, b) => {
+              const timeA = new Date(`2000-01-01T${a.departure}`).getTime();
+              const timeB = new Date(`2000-01-01T${b.departure}`).getTime();
+              return timeA - timeB;
+            });
+          } else {
+            // 到着時刻指定の場合：到着時刻の降順（指定時刻に近い順）
+            directRoutes.sort((a, b) => {
+              const timeA = new Date(`2000-01-01T${a.arrival}`).getTime();
+              const timeB = new Date(`2000-01-01T${b.arrival}`).getTime();
+              return timeB - timeA;
+            });
+          }
           selectedRoute = directRoutes[0];
         } else if (transferRoutes.length > 0) {
-          // 直行便がない場合は出発時刻順に並べて最初のものを選択
-          transferRoutes.sort((a, b) => {
-            const timeA = new Date(`2000-01-01T${a.departure}`).getTime();
-            const timeB = new Date(`2000-01-01T${b.departure}`).getTime();
-            return timeA - timeB;
-          });
+          // 乗換ありの場合
+          if (isDeparture) {
+            // 出発時刻指定の場合：出発時刻順に並べて最初のものを選択
+            transferRoutes.sort((a, b) => {
+              const timeA = new Date(`2000-01-01T${a.departure}`).getTime();
+              const timeB = new Date(`2000-01-01T${b.departure}`).getTime();
+              return timeA - timeB;
+            });
+          } else {
+            // 到着時刻指定の場合：到着時刻の降順（指定時刻に近い順）
+            transferRoutes.sort((a, b) => {
+              const timeA = new Date(`2000-01-01T${a.arrival}`).getTime();
+              const timeB = new Date(`2000-01-01T${b.arrival}`).getTime();
+              return timeB - timeA;
+            });
+          }
           selectedRoute = transferRoutes[0];
         } else {
           return { journeys: [], stops: [] };

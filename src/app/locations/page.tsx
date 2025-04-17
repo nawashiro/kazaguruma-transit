@@ -351,16 +351,15 @@ export default function LocationsPage() {
       <div className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
         {location.imageUri && (
           <figure className="relative h-48 w-full">
-            <Image
+            <img
               src={location.imageUri}
               alt={location.name}
-              fill
               style={{ objectFit: "cover" }}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
-            {location.imageCopylight && (
+            {location.imageCopyright && (
               <div className="absolute bottom-0 right-0 bg-black/70 text-white text-xs px-2 py-1">
-                {location.imageCopylight}
+                {location.imageCopyright}
               </div>
             )}
           </figure>

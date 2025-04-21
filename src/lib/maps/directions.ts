@@ -43,10 +43,7 @@ export async function getDirectionsPolyline(
         origin: `${startLat},${startLng}`,
         destination: `${endLat},${endLng}`,
         mode: TravelMode.walking, // 徒歩モード
-        key:
-          process.env.GOOGLE_MAPS_API_KEY ||
-          process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
-          "",
+        key: process.env.GOOGLE_MAPS_API_KEY || "",
         language: Language.ja,
         region: "jp",
       },

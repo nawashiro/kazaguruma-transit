@@ -14,7 +14,7 @@ npm install
 
 ```
 # Google Maps API Key（ジオコーディングAPIを有効化したキー）
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=あなたのGoogleMapsAPIキー
+GOOGLE_MAPS_API_KEY=あなたのGoogleMapsAPIキー
 ```
 
 ## 開発サーバーの起動

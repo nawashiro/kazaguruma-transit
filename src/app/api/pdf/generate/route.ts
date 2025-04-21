@@ -384,10 +384,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
           origin: `${startLat},${startLng}`,
           destination: `${endLat},${endLng}`,
           mode: TravelMode.walking,
-          key:
-            process.env.GOOGLE_MAPS_API_KEY ||
-            process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
-            "",
+          key: process.env.GOOGLE_MAPS_API_KEY || "",
           language: Language.ja,
           region: "jp",
         },
@@ -419,7 +416,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
       endLat,
       endLng
     );
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY || "";
 
     // 基本的なURL構築
     let url = `https://maps.googleapis.com/maps/api/staticmap?size=${width}x${height}`;
@@ -473,14 +470,8 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
         
         <div class="flex items-center my-3">
           <div class="badge mr-2" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
-            ${route.routeShortName}
+            ${route.routeName}
           </div>
-          <div style="flex: 1;">${route.routeLongName || ""}</div>
-          ${
-            route.stopCount
-              ? `<div class="text-xs text-gray-500 ml-2">${route.stopCount}駅</div>`
-              : ""
-          }
         </div>
         
         <div class="flex justify-between items-center">
@@ -526,18 +517,8 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
             
             <div class="flex items-center my-3">
               <div class="badge mr-2" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
-                ${transfer.nextRoute.routeShortName}
+                ${transfer.nextRoute.routeName}
               </div>
-              ${
-                transfer.nextRoute.routeLongName
-                  ? `<div style="flex: 1;">${transfer.nextRoute.routeLongName}</div>`
-                  : ""
-              }
-              ${
-                transfer.nextRoute.stopCount
-                  ? `<div class="text-xs text-gray-500 ml-2">${transfer.nextRoute.stopCount}駅</div>`
-                  : ""
-              }
             </div>
             
             <div class="flex justify-between items-center">

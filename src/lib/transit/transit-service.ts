@@ -374,6 +374,8 @@ export class TransitService {
     stop_lon: number;
   } | null> {
     try {
+      logger.log("[findNearestStop] 入力座標:", { lat, lng });
+
       // すべてのバス停を取得
       const stops = await prisma.stop.findMany({
         select: {
@@ -385,6 +387,7 @@ export class TransitService {
       });
 
       if (stops.length === 0) {
+        logger.log("[findNearestStop] バス停データが見つかりません");
         return null;
       }
 
@@ -407,6 +410,14 @@ export class TransitService {
       const nearest = stopsWithDistance.sort(
         (a, b) => a.distance - b.distance
       )[0];
+
+      logger.log("[findNearestStop] 最寄りバス停:", {
+        stop_id: nearest.stop_id,
+        stop_name: nearest.stop_name,
+        stop_lat: nearest.stop_lat,
+        stop_lon: nearest.stop_lon,
+        inputCoords: { lat, lng },
+      });
 
       return {
         stop_id: nearest.stop_id,
@@ -548,8 +559,28 @@ export class TransitService {
       );
 
       if (!originStop || !destStop) {
+        logger.error("[searchRoute] 最寄りバス停が見つかりません");
         return { journeys: [], stops: [] };
       }
+
+      logger.log("[searchRoute] 座標データ詳細:", {
+        origin: {
+          user_lat: origin.lat,
+          user_lng: origin.lng,
+          stop_id: originStop.stop_id,
+          stop_name: originStop.stop_name,
+          stop_lat: originStop.stop_lat,
+          stop_lon: originStop.stop_lon,
+        },
+        destination: {
+          user_lat: destination.lat,
+          user_lng: destination.lng,
+          stop_id: destStop.stop_id,
+          stop_name: destStop.stop_name,
+          stop_lat: destStop.stop_lat,
+          stop_lon: destStop.stop_lon,
+        },
+      });
 
       const from: StopLocation = {
         ...origin,
@@ -562,6 +593,11 @@ export class TransitService {
         stop_id: destStop.stop_id,
         stop_name: destStop.stop_name,
       };
+
+      logger.log("[searchRoute] StopLocation変換後:", {
+        from,
+        to,
+      });
 
       // 同じバス停の場合はエラー
       if (from.stop_id === to.stop_id) {
@@ -643,13 +679,40 @@ export class TransitService {
             id: from.stop_id,
             name: from.stop_name,
             distance: 0,
+            lat: originStop.stop_lat,
+            lng: originStop.stop_lon,
           },
           {
             id: to.stop_id,
             name: to.stop_name,
             distance: 0,
+            lat: destStop.stop_lat,
+            lng: destStop.stop_lon,
           },
         ];
+
+        logger.log(
+          "[searchRoute] 初期stops配列:",
+          JSON.stringify(stops, null, 2)
+        );
+        logger.log("[searchRoute] 実際の座標情報:", {
+          originStop: {
+            id: from.stop_id,
+            name: from.stop_name,
+            stop_lat: originStop.stop_lat,
+            stop_lon: originStop.stop_lon,
+            user_lat: from.lat,
+            user_lng: from.lng,
+          },
+          destinationStop: {
+            id: to.stop_id,
+            name: to.stop_name,
+            stop_lat: destStop.stop_lat,
+            stop_lon: destStop.stop_lon,
+            user_lat: to.lat,
+            user_lng: to.lng,
+          },
+        });
 
         // 乗換停留所がある場合は追加
         if (selectedRoute.transfers > 0 && selectedRoute.nodes.length > 2) {
@@ -672,6 +735,15 @@ export class TransitService {
               id: transferStop.id,
               name: transferStop.name,
               distance: 0,
+              lat: transferStop.lat,
+              lng: transferStop.lon,
+            });
+
+            logger.log("[searchRoute] 乗換バス停情報:", {
+              id: transferStop.id,
+              name: transferStop.name,
+              lat: transferStop.lat,
+              lon: transferStop.lon,
             });
           }
         }
@@ -729,10 +801,23 @@ export class TransitService {
         };
 
         // 選択したルートを変換して返す
-        return {
+        const result = {
           journeys: [transformToJourney(selectedRoute)],
           stops,
         };
+
+        logger.log("[searchRoute] APIレスポンスデータ:", {
+          journeys: result.journeys.length,
+          stops: result.stops.map((stop) => ({
+            id: stop.id,
+            name: stop.name,
+            distance: stop.distance,
+            lat: stop.lat,
+            lng: stop.lng,
+          })),
+        });
+
+        return result;
       } catch (error) {
         logger.error("[TransitService] 経路検索クエリエラー:", error);
         throw error;

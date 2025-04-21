@@ -35,10 +35,7 @@ export async function generateStaticMapUrl(
     }
 
     // APIキー取得（サーバーサイドのみ）
-    const apiKey =
-      process.env.GOOGLE_MAPS_API_KEY ||
-      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
-      "";
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY || "";
     if (!apiKey) {
       logger.error("Google Maps API key is missing");
       return {

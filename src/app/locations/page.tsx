@@ -349,18 +349,13 @@ export default function LocationsPage() {
     return (
       <div className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
         {location.imageUri && (
-          <figure className="relative h-48 w-full">
+          <figure className="relative h-48 w-full overflow-hidden">
             <img
               src={location.imageUri}
               alt={location.name}
-              style={{ objectFit: "cover" }}
+              className="object-cover h-48 w-full"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
-            {location.imageCopyright && (
-              <div className="absolute bottom-0 right-0 bg-black/70 text-white text-xs px-2 py-1">
-                {location.imageCopyright}
-              </div>
-            )}
           </figure>
         )}
 
@@ -395,6 +390,12 @@ export default function LocationsPage() {
               >
                 <p className="text-xs mb-1">座標データ提供:</p>
                 <p className="text-xs mb-2">{location.nodeCopyright}</p>
+                {location.imageCopyright && (
+                  <>
+                    <p className="text-xs mb-1">画像提供:</p>
+                    <p className="text-xs mb-2">{location.imageCopyright}</p>
+                  </>
+                )}
                 {location.description && location.descriptionCopyright && (
                   <>
                     <p className="text-xs mb-1">説明文提供:</p>
@@ -468,37 +469,112 @@ export default function LocationsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <header className="text-center my-4">
-        <h1 className="text-3xl font-bold">場所をさがす</h1>
-        <p className="mt-2 text-xl">
-          位置とカテゴリから千代田区のスポットをさがす
-        </p>
-      </header>
-
-      {/* イベント情報へのリンクカード */}
-      <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden w-fit">
-        <div className="card-body p-4">
-          <h2 className="card-title">イベントを知る</h2>
-          <p className="text-sm text-gray-600 mb-2">
-            千代田区で開催されるイベント情報はこちら
+    <>
+      <div className="container mx-auto px-4 py-8">
+        <header className="text-center my-4">
+          <h1 className="text-3xl font-bold">場所をさがす</h1>
+          <p className="mt-2 text-xl">
+            位置とカテゴリから千代田区のスポットをさがす
           </p>
-          <a
-            href="https://visit-chiyoda.tokyo/app/event"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-outline w-fit"
-          >
-            千代田区観光協会ウェブサイトへ
-          </a>
-          <a
-            href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-outline w-fit"
-          >
-            千代田区ウェブサイトへ
-          </a>
+        </header>
+      </div>
+
+      <div className="w-screen nd:!mx-0 -mx-4 md:mx-0 carousel md:carousel-none md:w-full md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
+        {/* お悩みハンドブックへのリンクカード */}
+        <div id="slide1" className="carousel-item inline p-4 md:p-0">
+          <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
+            <div className="card-body p-4">
+              <h2 className="card-title">悩みがあるけど、どうしたらいい？</h2>
+              <p className="text-sm text-gray-600 mb-2">
+                支援が欲しいけど、なにがあるのかわからない。
+                <br />
+                あてはまる悩みにチェックをつけると、 <br />
+                役立つ支援がわかります。
+              </p>
+              <a
+                href="https://compass.graffer.jp/handbook/landing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-outline w-fit h-fit py-2"
+              >
+                お悩みハンドブックウェブサイトへ
+              </a>
+            </div>
+          </div>
+          <div className="flex justify-between md:hidden">
+            <a href="#slide3" className="btn btn-circle btn-primary">
+              ❮
+            </a>
+            <a href="#slide2" className="btn btn-circle btn-primary">
+              ❯
+            </a>
+          </div>
+        </div>
+        {/* せかいビバークへのリンクカード */}
+        <div id="slide2" className="carousel-item inline p-4 md:p-0">
+          <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
+            <div className="card-body p-4">
+              <h2 className="card-title">今夜、安心して泊まれる場所がない</h2>
+              <p className="text-sm text-gray-600 mb-2">
+                帰る家はありますか？
+                <br />
+                あったとして、安心できる場所ですか？
+                <br />
+                こちらから緊急お助けパックを受け取ってください。
+              </p>
+              <a
+                href="https://sekaibivouac.jp/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-outline w-fit h-fit py-2"
+              >
+                せかいビバークウェブサイトへ
+              </a>
+            </div>
+          </div>
+          <div className="flex justify-between md:hidden">
+            <a href="#slide1" className="btn btn-circle btn-primary">
+              ❮
+            </a>
+            <a href="#slide3" className="btn btn-circle btn-primary">
+              ❯
+            </a>
+          </div>
+        </div>
+        {/* イベント情報へのリンクカード */}
+        <div id="slide3" className="carousel-item inline p-4 md:p-0">
+          <div className="carousel-item card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
+            <div className="card-body p-4">
+              <h2 className="card-title">イベントを知る</h2>
+              <p className="text-sm text-gray-600 mb-2">
+                千代田区で開催されるイベント情報はこちら。
+              </p>
+              <a
+                href="https://visit-chiyoda.tokyo/app/event"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-outline w-fit h-fit py-2"
+              >
+                千代田区観光協会ウェブサイトへ
+              </a>
+              <a
+                href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-outline w-fit h-fit py-2"
+              >
+                千代田区ウェブサイトへ
+              </a>
+            </div>
+          </div>
+          <div className="flex justify-between md:hidden">
+            <a href="#slide2" className="btn btn-circle btn-primary">
+              ❮
+            </a>
+            <a href="#slide1" className="btn btn-circle btn-primary">
+              ❯
+            </a>
+          </div>
         </div>
       </div>
 
@@ -616,12 +692,12 @@ export default function LocationsPage() {
               <button
                 key={category.category}
                 className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium
-                  ${
-                    activeCategory === category.category
-                      ? "btn-primary border-primary text-primary-content"
-                      : "btn-outline hover:border-primary/50 hover:bg-primary/5"
-                  }
-                `}
+                ${
+                  activeCategory === category.category
+                    ? "btn-primary border-primary text-primary-content"
+                    : "btn-outline hover:border-primary/50 hover:bg-primary/5"
+                }
+              `}
                 onClick={() => toggleCategory(category.category)}
               >
                 {category.category}
@@ -709,18 +785,6 @@ export default function LocationsPage() {
             </a>
             からお知らせください。
           </p>
-          <p>
-            町名データは
-            <a
-              href="https://github.com/nawashiro/chiyoda_city_town_geojson"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link link-primary"
-            >
-              千代田区町名geojson
-            </a>
-            から取得しています。
-          </p>
         </div>
       </div>
 
@@ -745,6 +809,6 @@ export default function LocationsPage() {
         isOpen={isRateLimitModalOpen}
         onClose={() => setIsRateLimitModalOpen(false)}
       />
-    </div>
+    </>
   );
 }

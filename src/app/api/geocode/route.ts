@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     const response = await client.geocode({
       params: {
         address: address,
-        key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+        key: process.env.GOOGLE_MAPS_API_KEY || "",
         language: "ja",
         region: "jp",
       },

@@ -384,10 +384,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
           origin: `${startLat},${startLng}`,
           destination: `${endLat},${endLng}`,
           mode: TravelMode.walking,
-          key:
-            process.env.GOOGLE_MAPS_API_KEY ||
-            process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
-            "",
+          key: process.env.GOOGLE_MAPS_API_KEY || "",
           language: Language.ja,
           region: "jp",
         },
@@ -419,7 +416,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
       endLat,
       endLng
     );
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY || "";
 
     // 基本的なURL構築
     let url = `https://maps.googleapis.com/maps/api/staticmap?size=${width}x${height}`;

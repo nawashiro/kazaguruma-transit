@@ -679,11 +679,15 @@ export class TransitService {
             id: from.stop_id,
             name: from.stop_name,
             distance: 0,
+            lat: originStop.stop_lat,
+            lng: originStop.stop_lon,
           },
           {
             id: to.stop_id,
             name: to.stop_name,
             distance: 0,
+            lat: destStop.stop_lat,
+            lng: destStop.stop_lon,
           },
         ];
 
@@ -731,6 +735,8 @@ export class TransitService {
               id: transferStop.id,
               name: transferStop.name,
               distance: 0,
+              lat: transferStop.lat,
+              lng: transferStop.lon,
             });
 
             logger.log("[searchRoute] 乗換バス停情報:", {
@@ -806,6 +812,8 @@ export class TransitService {
             id: stop.id,
             name: stop.name,
             distance: stop.distance,
+            lat: stop.lat,
+            lng: stop.lng,
           })),
         });
 

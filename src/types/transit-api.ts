@@ -113,6 +113,8 @@ export interface NearbyStop {
   id: string;
   name: string;
   distance: number;
+  lat?: number;
+  lng?: number;
 }
 
 /**

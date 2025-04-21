@@ -261,44 +261,24 @@ export default function Home() {
             stopId: originStopInfo?.id || "unknown",
             stopName: bestJourney.from,
             distance: originStopInfo?.distance || 0,
-            stop_lat:
-              originStopInfo?.lat !== undefined
-                ? originStopInfo.lat
-                : selectedOrigin.lat,
-            stop_lon:
-              originStopInfo?.lng !== undefined
-                ? originStopInfo.lng
-                : selectedOrigin.lng,
-            lat:
-              originStopInfo?.lat !== undefined
-                ? originStopInfo.lat
-                : selectedOrigin.lat,
-            lng:
-              originStopInfo?.lng !== undefined
-                ? originStopInfo.lng
-                : selectedOrigin.lng,
+            // バス停の座標情報
+            stop_lat: originStopInfo?.lat || 0,
+            stop_lon: originStopInfo?.lng || 0,
+            // ユーザーが選択した実際の出発地点
+            lat: selectedOrigin.lat,
+            lng: selectedOrigin.lng,
           };
 
           const destinationStop = {
             stopId: destStopInfo?.id || "unknown",
             stopName: bestJourney.to,
             distance: destStopInfo?.distance || 0,
-            stop_lat:
-              destStopInfo?.lat !== undefined
-                ? destStopInfo.lat
-                : selectedDestination.lat,
-            stop_lon:
-              destStopInfo?.lng !== undefined
-                ? destStopInfo.lng
-                : selectedDestination.lng,
-            lat:
-              destStopInfo?.lat !== undefined
-                ? destStopInfo.lat
-                : selectedDestination.lat,
-            lng:
-              destStopInfo?.lng !== undefined
-                ? destStopInfo.lng
-                : selectedDestination.lng,
+            // バス停の座標情報
+            stop_lat: destStopInfo?.lat || 0,
+            stop_lon: destStopInfo?.lng || 0,
+            // ユーザーが選択した実際の目的地点
+            lat: selectedDestination.lat,
+            lng: selectedDestination.lng,
           };
 
           logger.log("使用されるバス停オブジェクト:", {

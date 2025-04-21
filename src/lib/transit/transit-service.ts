@@ -563,14 +563,6 @@ export class TransitService {
         stop_name: destStop.stop_name,
       };
 
-      // 出発・到着バス停の情報をログ出力
-      logger.log(
-        `[TransitService] 出発バス停: ID=${from.stop_id}, 名称=${from.stop_name}, 緯度=${from.lat}, 経度=${from.lng}`
-      );
-      logger.log(
-        `[TransitService] 到着バス停: ID=${to.stop_id}, 名称=${to.stop_name}, 緯度=${to.lat}, 経度=${to.lng}`
-      );
-
       // 同じバス停の場合はエラー
       if (from.stop_id === to.stop_id) {
         return { journeys: [], stops: [] };

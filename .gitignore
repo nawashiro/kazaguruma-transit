@@ -45,7 +45,11 @@ next-env.d.ts
 prisma/.temp/
 .docs/
 
-## transit
+# transit
 transit-config.json
 
+# gtfs
 .gtfs/
+
+# log
+app.log

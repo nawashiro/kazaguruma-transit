@@ -510,7 +510,7 @@ export default function LocationsPage() {
             </a>
           </div>
         </div>
-        {/* せかいビバーグへのリンクカード */}
+        {/* せかいビバークへのリンクカード */}
         <div id="slide2" className="carousel-item inline p-4 md:p-0">
           <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
             <div className="card-body p-4">
@@ -528,7 +528,7 @@ export default function LocationsPage() {
                 rel="noopener noreferrer"
                 className="btn btn-outline w-fit h-fit py-2"
               >
-                せかいビバーグウェブサイトへ
+                せかいビバークウェブサイトへ
               </a>
             </div>
           </div>

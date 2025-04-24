@@ -60,7 +60,7 @@ const KofiSupportCard: React.FC = () => {
         <div className="md:flex">
           <figure className="md:w-1/3 h-48 md:h-auto relative">
             <Image
-              src="/ko-fi-image.jpg"
+              src="/images/ko-fi-image.jpg"
               alt="Ko-fi支援"
               fill
               style={{ objectFit: "cover" }}

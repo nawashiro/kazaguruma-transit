@@ -36,34 +36,3 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 }
-
-/**
- * GET: /api/transit
- * 後方互換性のために残しておくが、将来的には廃止
- */
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  try {
-    // レート制限を適用
-    const limitResponse = await appRouterRateLimitMiddleware(request);
-    if (limitResponse) {
-      return limitResponse;
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: "GET APIは非推奨です。POST /api/transitを使用してください。",
-      } as TransitResponse,
-      { status: 400 }
-    );
-  } catch (error) {
-    logger.error("GET APIエラー:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: "サーバーエラーが発生しました",
-      } as TransitResponse,
-      { status: 500 }
-    );
-  }
-}

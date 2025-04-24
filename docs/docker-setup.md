@@ -81,4 +81,4 @@ docker compose -f compose.prod.yml up --build -d
 1. 開発時は`docker compose up --build`で開発環境を起動
 2. コードを編集すると自動的に変更が反映
 3. テストを実行しながら開発を進める
-4. 本番デプロイ時は`docker compose -f compose.prod.yml up --build`で本番環境を構築
+4. 本番デプロイ時は`docker compose -f compose.prod.yml up --build -d`で本番環境を構築

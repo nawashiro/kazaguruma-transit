@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { initGA, sendPageview } from "./ga4";
+import ReactGA from "react-ga4";
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "";
 
@@ -15,7 +15,7 @@ export const useGA = () => {
 
   useEffect(() => {
     // GA4の初期化（アプリケーション起動時に一度だけ実行）
-    initGA(GA_MEASUREMENT_ID);
+    ReactGA.initialize(GA_MEASUREMENT_ID);
   }, []);
 
   useEffect(() => {
@@ -26,6 +26,6 @@ export const useGA = () => {
     const path = queryString ? `${pathname}?${queryString}` : pathname;
 
     // ページビューイベントを送信
-    sendPageview(path);
+    ReactGA.send({ hitType: "pageview", page: path });
   }, [pathname, searchParams]);
 };

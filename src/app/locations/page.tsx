@@ -478,102 +478,112 @@ export default function LocationsPage() {
           </p>
         </header>
       </div>
-
-      <div className="w-screen nd:!mx-0 -mx-4 md:mx-0 carousel md:carousel-none md:w-full md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
-        {/* お悩みハンドブックへのリンクカード */}
-        <div id="slide1" className="carousel-item inline p-4 md:p-0">
-          <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
-            <div className="card-body p-4">
-              <h2 className="card-title">悩みがあるけど、どうしたらいい？</h2>
-              <p className="text-sm text-gray-600 mb-2">
-                支援が欲しいけど、なにがあるのかわからない。
-                <br />
-                あてはまる悩みにチェックをつけると、 <br />
-                役立つ支援がわかります。
-              </p>
-              <a
-                href="https://compass.graffer.jp/handbook/landing"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2"
-              >
-                お悩みハンドブックウェブサイトへ
+      <div className="md:flex md:justify-center">
+        <div className="w-screen md:w-100 -mx-4 carousel">
+          {/* お悩みハンドブックへのリンクカード */}
+          <div
+            id="slide1"
+            className="carousel-item inline p-4 w-[calc(100%-2rem)]"
+          >
+            <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
+              <div className="card-body p-4">
+                <h2 className="card-title">悩みがあるけど、どうしたらいい？</h2>
+                <p className="text-sm text-gray-600 mb-2">
+                  支援が欲しいけど、なにがあるのかわからない。
+                  <br />
+                  あてはまる悩みにチェックをつけると、 <br />
+                  役立つ支援がわかります。
+                </p>
+                <a
+                  href="https://compass.graffer.jp/handbook/landing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-outline w-fit h-fit py-2"
+                >
+                  お悩みハンドブックウェブサイトへ
+                </a>
+              </div>
+            </div>
+            <div className="flex justify-between">
+              <a href="#slide3" className="btn btn-circle btn-primary">
+                ❮
+              </a>
+              <a href="#slide2" className="btn btn-circle btn-primary">
+                ❯
               </a>
             </div>
           </div>
-          <div className="flex justify-between md:hidden">
-            <a href="#slide3" className="btn btn-circle btn-primary">
-              ❮
-            </a>
-            <a href="#slide2" className="btn btn-circle btn-primary">
-              ❯
-            </a>
-          </div>
-        </div>
-        {/* せかいビバークへのリンクカード */}
-        <div id="slide2" className="carousel-item inline p-4 md:p-0">
-          <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
-            <div className="card-body p-4">
-              <h2 className="card-title">今夜、安心して泊まれる場所がない</h2>
-              <p className="text-sm text-gray-600 mb-2">
-                帰る家はありますか？
-                <br />
-                あったとして、安心できる場所ですか？
-                <br />
-                こちらから緊急お助けパックを受け取ってください。
-              </p>
-              <a
-                href="https://sekaibivouac.jp/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2"
-              >
-                せかいビバークウェブサイトへ
+          {/* せかいビバークへのリンクカード */}
+          <div
+            id="slide2"
+            className="carousel-item inline p-4 w-[calc(100%-2rem)]"
+          >
+            <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
+              <div className="card-body p-4">
+                <h2 className="card-title">今夜、安心して泊まれる場所がない</h2>
+                <p className="text-sm text-gray-600 mb-2">
+                  帰る家はありますか？
+                  <br />
+                  あったとして、安心できる場所ですか？
+                  <br />
+                  こちらから緊急お助けパックを受け取ってください。
+                </p>
+                <a
+                  href="https://sekaibivouac.jp/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-outline w-fit h-fit py-2"
+                >
+                  せかいビバークウェブサイトへ
+                </a>
+              </div>
+            </div>
+            <div className="flex justify-between">
+              <a href="#slide1" className="btn btn-circle btn-primary">
+                ❮
+              </a>
+              <a href="#slide3" className="btn btn-circle btn-primary">
+                ❯
               </a>
             </div>
           </div>
-          <div className="flex justify-between md:hidden">
-            <a href="#slide1" className="btn btn-circle btn-primary">
-              ❮
-            </a>
-            <a href="#slide3" className="btn btn-circle btn-primary">
-              ❯
-            </a>
-          </div>
-        </div>
-        {/* イベント情報へのリンクカード */}
-        <div id="slide3" className="carousel-item inline p-4 md:p-0">
-          <div className="carousel-item card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
-            <div className="card-body p-4">
-              <h2 className="card-title">イベントを知る</h2>
-              <p className="text-sm text-gray-600 mb-2">
-                千代田区で開催されるイベント情報はこちら。
-              </p>
-              <a
-                href="https://visit-chiyoda.tokyo/app/event"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2"
-              >
-                千代田区観光協会ウェブサイトへ
+          {/* イベント情報へのリンクカード */}
+          <div
+            id="slide3"
+            className="carousel-item inline p-4 w-[calc(100%-2rem)]"
+          >
+            <div className="carousel-item card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
+              <div className="card-body p-4">
+                <h2 className="card-title">イベントを知る</h2>
+                <p className="text-sm text-gray-600 mb-2">
+                  千代田区で開催されるイベント情報はこちら。
+                </p>
+                <a
+                  href="https://visit-chiyoda.tokyo/app/event"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-outline w-fit h-fit py-2"
+                >
+                  千代田区観光協会ウェブサイトへ
+                </a>
+                <a
+                  href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-outline w-fit h-fit py-2"
+                >
+                  千代田区ウェブサイトへ
+                </a>
+              </div>
+            </div>
+            <div className="flex justify-between">
+              <a href="#slide2" className="btn btn-circle btn-primary">
+                ❮
               </a>
-              <a
-                href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2"
-              >
-                千代田区ウェブサイトへ
+              <a href="#slide1" className="btn btn-circle btn-primary">
+                ❯
               </a>
             </div>
-          </div>
-          <div className="flex justify-between md:hidden">
-            <a href="#slide2" className="btn btn-circle btn-primary">
-              ❮
-            </a>
-            <a href="#slide1" className="btn btn-circle btn-primary">
-              ❯
-            </a>
           </div>
         </div>
       </div>
@@ -785,6 +795,7 @@ export default function LocationsPage() {
             </a>
             からお知らせください。
           </p>
+          <p>写真のご提供も歓迎しています。</p>
         </div>
       </div>
 

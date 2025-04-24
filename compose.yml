@@ -13,6 +13,6 @@ services:
     environment:
       - NODE_ENV=development
       - DEBUG=true
-    command: npm run dev
+    command: ["npm", "run", "start"]
     stdin_open: true
     tty: true

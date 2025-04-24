@@ -2,6 +2,22 @@ import { prisma } from "../db/prisma";
 import { logger } from "@/utils/logger";
 
 /**
+ * 経路探索アルゴリズムのパラメータ設定
+ */
+export const ROUTE_PARAMS = {
+  // 検索時間枠のデフォルト値（分）
+  DEFAULT_TIME_WINDOW: 180,
+  // 最大乗換回数のデフォルト値
+  DEFAULT_MAX_TRANSFERS: 2,
+  // 乗換時の最小待ち時間（分）
+  MIN_TRANSFER_WAIT: 1,
+  // 乗換時の最大待ち時間（分）
+  MAX_TRANSFER_WAIT: 15,
+  // 乗換候補数の制限
+  MAX_TRANSFER_CANDIDATES: 10,
+};
+
+/**
  * 時刻表ベースのダイクストラアルゴリズムで使用するノード
  */
 interface TimeTableNode {
@@ -160,8 +176,8 @@ export class TimeTableRouter {
     destStopId: string,
     time: Date,
     isDeparture: boolean = true,
-    maxTransfers: number = 2,
-    timeWindowMinutes: number = 180
+    maxTransfers: number = ROUTE_PARAMS.DEFAULT_MAX_TRANSFERS,
+    timeWindowMinutes: number = ROUTE_PARAMS.DEFAULT_TIME_WINDOW
   ): Promise<TimeTableRouteResult[]> {
     try {
       logger.log(
@@ -496,7 +512,7 @@ export class TimeTableRouter {
                 destST.trip.stop_times.find(
                   (st: any) => st.stop_id === transferStopId
                 )?.departure_time || "",
-                -1
+                -ROUTE_PARAMS.MIN_TRANSFER_WAIT
               ),
             },
             trip: {
@@ -532,7 +548,7 @@ export class TimeTableRouter {
           orderBy: {
             arrival_time: "desc",
           },
-          take: 10, // 候補数を制限
+          take: ROUTE_PARAMS.MAX_TRANSFER_CANDIDATES, // 候補数を制限
         });
 
         for (const transferArrivalST of transferStopTimes) {
@@ -814,8 +830,14 @@ export class TimeTableRouter {
             stop_id: transferST.stop_id,
             departure_time: {
               // 到着から最低1分後、最大120分後に出発する便
-              gt: this.addMinutesToTime(transferArrivalTime, 1),
-              lte: this.addMinutesToTime(transferArrivalTime, 120),
+              gt: this.addMinutesToTime(
+                transferArrivalTime,
+                ROUTE_PARAMS.MIN_TRANSFER_WAIT
+              ),
+              lte: this.addMinutesToTime(
+                transferArrivalTime,
+                ROUTE_PARAMS.MAX_TRANSFER_WAIT
+              ),
             },
             trip: {
               service_id: {
@@ -850,7 +872,7 @@ export class TimeTableRouter {
           orderBy: {
             departure_time: "asc",
           },
-          take: 10, // 候補数を制限
+          take: ROUTE_PARAMS.MAX_TRANSFER_CANDIDATES, // 候補数を制限
         });
 
         for (const transferDep of transferDepartures) {

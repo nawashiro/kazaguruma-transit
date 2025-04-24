@@ -46,7 +46,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
           <li>
             <Link href="/license" onClick={toggleSidebar}>
               <DocumentTextIcon className="h-6 w-6" />
-              データライセンス
+              ライセンス
             </Link>
           </li>
           <li>

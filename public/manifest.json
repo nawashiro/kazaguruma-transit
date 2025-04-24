@@ -1,0 +1,30 @@
+{
+  "name": "風ぐるま乗換案内【非公式】",
+  "short_name": "風ぐるま乗換",
+  "description": "千代田区の地域福祉交通「風ぐるま」の乗換案内サービス",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "lang": "ja-JP",
+  "dir": "ltr",
+  "orientation": "portrait",
+  "categories": ["travel", "transportation"]
+}

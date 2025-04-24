@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import SidebarLayout from "../components/SidebarLayout";
+import GoogleAnalytics from "../components/GoogleAnalytics";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "風ぐるま乗換案内",
-  description: "千代田区福祉交通の乗換案内サービス",
+  title: "風ぐるま乗換案内【非公式】",
+  description: "有志による千代田区福祉交通の乗換案内サービス",
 };
 
 export default function RootLayout({
@@ -26,6 +27,7 @@ export default function RootLayout({
   return (
     <html lang="ja" data-theme="light">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <GoogleAnalytics />
         <SidebarLayout>{children}</SidebarLayout>
       </body>
     </html>

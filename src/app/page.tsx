@@ -12,6 +12,7 @@ import { TransitFormData, Location } from "../types/transit";
 import KofiSupportCard from "../components/KofiSupportCard";
 import { logger } from "../utils/logger";
 import RateLimitModal from "../components/RateLimitModal";
+import FirstVisitGuideModal from "../components/common/FirstVisitGuideModal";
 
 interface JourneySegment {
   from: string;
@@ -426,9 +427,14 @@ export default function Home() {
         <p className="mt-2 text-lg">千代田区福祉交通の乗換案内サービス</p>
       </header>
 
+      {/* 初回訪問ガイドモーダル */}
+      <FirstVisitGuideModal />
+
       <KofiSupportCard />
 
       <div className="max-w-md mx-auto space-y-4">
+        {/* 初心者ガイドボタン - 検索フォームの前に表示 */}
+
         {!selectedDestination ? (
           <DestinationSelector
             onDestinationSelected={handleDestinationSelected}

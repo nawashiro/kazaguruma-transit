@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import FirstVisitGuideModal from "../FirstVisitGuideModal";
 import { isFirstVisit } from "../../../utils/visitTracker";
 import { logger } from "../../../utils/logger";
+import * as nextNavigation from "next/navigation";
 
 // モジュールのモック
 jest.mock("../../../utils/visitTracker", () => ({
@@ -136,10 +138,15 @@ describe("FirstVisitGuideModal", () => {
     // 初回訪問としてモック
     (isFirstVisit as jest.Mock).mockReturnValue(true);
 
-    const mockRouter = { push: jest.fn() };
-    jest
-      .spyOn(require("next/navigation"), "useRouter")
-      .mockReturnValue(mockRouter);
+    const mockRouter = {
+      push: jest.fn(),
+      back: jest.fn(),
+      forward: jest.fn(),
+      refresh: jest.fn(),
+      replace: jest.fn(),
+      prefetch: jest.fn(),
+    };
+    jest.spyOn(nextNavigation, "useRouter").mockReturnValue(mockRouter);
 
     render(<FirstVisitGuideModal />);
 

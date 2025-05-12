@@ -1,8 +1,8 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+/* eslint-disable react/display-name */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Home from "../page";
-import GuideButton from "../../components/common/GuideButton";
-import FirstVisitGuideModal from "../../components/common/FirstVisitGuideModal";
 
 // モックデータの定義
 const mockData = {

@@ -9,7 +9,6 @@ import RoutePdfExport from "../components/RoutePdfExport";
 import Button from "../components/common/Button";
 import ResetButton from "../components/common/ResetButton";
 import { TransitFormData, Location } from "../types/transit";
-import KofiSupportCard from "../components/KofiSupportCard";
 import { logger } from "../utils/logger";
 import RateLimitModal from "../components/RateLimitModal";
 import FirstVisitGuideModal from "../components/common/FirstVisitGuideModal";
@@ -429,8 +428,6 @@ export default function Home() {
 
       {/* 初回訪問ガイドモーダル */}
       <FirstVisitGuideModal />
-
-      <KofiSupportCard />
 
       <div className="max-w-md mx-auto space-y-4">
         {/* 初心者ガイドボタン - 検索フォームの前に表示 */}

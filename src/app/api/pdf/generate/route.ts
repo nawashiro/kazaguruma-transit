@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionData } from "../../../../lib/auth/session";
 import { logger } from "../../../../utils/logger";
 import puppeteer from "puppeteer";
 import type { Browser, PDFOptions } from "puppeteer";
@@ -8,6 +7,19 @@ import {
   TravelMode,
   Language,
 } from "@googlemaps/google-maps-services-js";
+
+// NextRouteを拡張するための型定義
+interface NextRouteInfo {
+  routeId: string;
+  routeName: string;
+  routeShortName: string;
+  routeLongName: string;
+  routeColor: string;
+  routeTextColor: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  stopCount?: number;
+}
 
 interface GeneratePdfRequest {
   originStop: {
@@ -45,12 +57,19 @@ interface GeneratePdfRequest {
         stopLat: number;
         stopLon: number;
       };
-      nextRoute: any;
+      nextRoute: NextRouteInfo;
     }>;
   }>;
   type: "direct" | "transfer" | "none";
   transfers: number;
-  departures?: Array<any>;
+  departures?: Array<{
+    route_id: string;
+    trip_id: string;
+    departure_time: string;
+    stop_id: string;
+    stop_name: string;
+    sequence: number;
+  }>;
   message?: string;
   originLat?: number;
   originLng?: number;
@@ -69,22 +88,6 @@ export async function POST(req: NextRequest) {
 
   try {
     logger.log("PDF生成API開始");
-
-    // セッションから認証・支援者情報を取得
-    const session = await getSessionData(req);
-    const isLoggedIn = session.isLoggedIn;
-    const isSupporter = session.isSupporter || false;
-
-    logger.log(`認証情報: ログイン=${isLoggedIn}, サポーター=${isSupporter}`);
-
-    // 権限チェック
-    if (!isLoggedIn || !isSupporter) {
-      logger.log("権限エラー: サポーター権限なし");
-      return NextResponse.json(
-        { success: false, error: "この機能を使用する権限がありません" },
-        { status: 403 }
-      );
-    }
 
     // リクエストボディを取得
     let requestData: GeneratePdfRequest;

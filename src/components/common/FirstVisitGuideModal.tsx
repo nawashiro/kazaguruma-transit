@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { isFirstVisit } from "../../utils/visitTracker";
 import { logger } from "../../utils/logger";
+import { sendEvent } from "@/lib/analytics/useGA";
 
 /**
  * 初回訪問ガイドモーダル
@@ -33,12 +34,11 @@ const FirstVisitGuideModal = () => {
     logger.log("初回訪問ポップアップからガイドページへ移動します");
 
     // Googleアナリティクスイベント送信
-    if (typeof window !== "undefined" && (window as any).gtag) {
-      (window as any).gtag("event", "guide_popup_click", {
-        event_category: "engagement",
-        event_label: "beginners_guide_popup_navigation",
-      });
-    }
+    sendEvent(
+      "engagement",
+      "guide_popup_click",
+      "beginners_guide_popup_navigation"
+    );
 
     router.push("/beginners-guide");
   };
@@ -50,12 +50,11 @@ const FirstVisitGuideModal = () => {
     logger.log("初回訪問ポップアップが閉じられました");
 
     // Googleアナリティクスイベント送信
-    if (typeof window !== "undefined" && (window as any).gtag) {
-      (window as any).gtag("event", "guide_popup_close", {
-        event_category: "engagement",
-        event_label: "beginners_guide_popup_dismissed",
-      });
-    }
+    sendEvent(
+      "engagement",
+      "guide_popup_close",
+      "beginners_guide_popup_dismissed"
+    );
   };
 
   if (!isOpen) return null;

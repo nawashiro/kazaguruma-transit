@@ -7,8 +7,8 @@ export const TRANSIT_PARAMS = {
   DEFAULT_SEARCH_RADIUS: 500,
 
   // 歩行速度（時速キロメートル）
-  // 3.6km/h は後期高齢者の一般的な歩行速度
-  WALKING_SPEED_KM_H: 3.6,
+  // 3.5km/h は後期高齢者の一般的な歩行速度
+  WALKING_SPEED_KM_H: 3,
 
   // 歩行時間計算のために分速に変換（km/分）
   get WALKING_SPEED_KM_MIN(): number {

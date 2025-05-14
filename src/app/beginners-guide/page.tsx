@@ -11,12 +11,17 @@ export default function BeginnersGuide() {
       <div className="max-w-md mx-auto mb-6 card bg-base-100 shadow-sm">
         <div className="card-body">
           <h2 className="card-title text-xl">目次</h2>
-          <ul className="menu bg-base-100 p-0">
+          <ul className="menu bg-base-100 p-0 text-base">
             <li>
               <a href="#what-is">風ぐるまってなに？</a>
             </li>
             <li>
               <a href="#how-to-ride">乗りかた</a>
+            </li>
+            <li>
+              <a href="#how-to-ride-with-wheelchair">
+                車いすやベビーカーのかたへ
+              </a>
             </li>
             <li>
               <a href="#about-site">このサイトはなに？</a>
@@ -63,11 +68,11 @@ export default function BeginnersGuide() {
             <div className="space-y-4">
               <p className="text-base">
                 <strong>料金：</strong>
-                基本料金は100円です。ほとんどの人はこの料金で利用できます。
+                前払いで100円です。ほとんどの人はこの料金で利用できます。
               </p>
               <p className="text-base">
                 <strong>支払方法：</strong>交通系ICカード（Suica、PASMO
-                など）が使えます。もちろん現金でも支払いできます。
+                など）が使えます。現金でも支払いできます。両替はできません。
               </p>
               <p className="text-base">
                 <strong>定期券：</strong>
@@ -81,7 +86,38 @@ export default function BeginnersGuide() {
                   rel="noopener noreferrer"
                   className="link link-primary"
                 >
-                  千代田区公式ウェブサイト
+                  「風ぐるま」料金・乗車券（千代田区公式サイト）
+                </a>
+                をご覧ください。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="how-to-ride-with-wheelchair"
+          className="card bg-base-200/70 shadow-md"
+        >
+          <div className="card-body">
+            <h2 className="card-title text-xl">車いすやベビーカーのかたへ</h2>
+            <div className="space-y-4">
+              <p className="text-base">
+                <strong>スロープ板：</strong>
+                スロープ板が常備されています。歩道から直接乗車が可能です。見つけると運転手のかたが対応してくれます。声かけがしにくい利用者のかたでも大丈夫です。
+              </p>
+              <p className="text-base">
+                <strong>ベビーカー：</strong>
+                ベビーカーは原則としてたたまずに利用することができます。
+              </p>
+              <p className="text-base">
+                その他、詳しい情報については
+                <a
+                  href="https://www.city.chiyoda.lg.jp/koho/kenko/koresha/gaishutsu/shin-kazaguruma/qa.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link link-primary"
+                >
+                  千代田区公式FAQ
                 </a>
                 をご覧ください。
               </p>
@@ -124,12 +160,7 @@ export default function BeginnersGuide() {
           <div className="card-body">
             <h2 className="card-title text-xl">お金をとるの？</h2>
             <div className="space-y-4">
-              <p className="text-base">
-                無料でも使えます。ただし、一時間に10リクエストまでです。
-              </p>
-              <p className="text-base">
-                継続的な支援者は、無制限に利用することができます。
-              </p>
+              <p className="text-base">原則として無料で使うことができます。</p>
               <p className="text-base">
                 Nawashiroは、労働災害で障害を負い、ふつうの仕事をすることができません。貯金を取り崩して生活しています。
               </p>

@@ -93,7 +93,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
               onClick={toggleSidebar}
             >
               <HeartIcon className="h-6 w-6" />
-              Ko-fiでサポートする
+              開発者を支援する
             </a>
           </li>
         </ul>

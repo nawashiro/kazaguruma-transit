@@ -78,6 +78,8 @@ export interface Journey {
   textColor?: string;
   segments?: RouteSegment[];
   transferInfo?: TransferInfo;
+  walkingDistanceKm?: number; // 徒歩距離（キロメートル）
+  walkingTimeMinutes?: number; // 徒歩時間（分）
 }
 
 /**

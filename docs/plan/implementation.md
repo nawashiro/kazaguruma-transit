@@ -147,7 +147,7 @@ private async searchRoute(
       time,
       isDeparture = true,
       preference = 'minTime',
-      searchRadius = 600 // デフォルト600m
+      searchRadius = 500 // デフォルト500m
     } = query;
 
     logger.log(
@@ -292,7 +292,7 @@ private async searchRoute(
 private async findNearbyStops(
   lat: number,
   lng: number,
-  radiusKm: number = 0.6 // デフォルト600メートル
+  radiusKm: number = 0.5 // デフォルト500メートル
 ): Promise<NearbyStop[]> {
   try {
     logger.log(`[findNearbyStops] 検索条件: 座標(${lat}, ${lng}), 半径${radiusKm}km`);
@@ -341,7 +341,7 @@ private async findNearbyStops(
 }
 
 /**
- * 2点間の距離をキロメートル単位で計算（ハバーサイン公式）
+ * 2点間の距離をキロメートル単位で計算（ハバーサイン公式）※既存の実装アリ
  */
 private calculateDistance(
   lat1: number,
@@ -370,6 +370,8 @@ private toRadians(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
 ```
+
+ここでは定数をハードコードしていますが、実際には一か所にまとめて定義する必要があります。これらはいち実装例に過ぎないことを留意してください。
 
 ## 6. テスト計画
 

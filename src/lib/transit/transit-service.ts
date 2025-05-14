@@ -584,13 +584,15 @@ export class TransitService {
       });
 
       const from: StopLocation = {
-        ...origin,
+        lat: originStop.stop_lat,
+        lng: originStop.stop_lon,
         stop_id: originStop.stop_id,
         stop_name: originStop.stop_name,
       };
 
       const to: StopLocation = {
-        ...destination,
+        lat: destStop.stop_lat,
+        lng: destStop.stop_lon,
         stop_id: destStop.stop_id,
         stop_name: destStop.stop_name,
       };
@@ -609,6 +611,8 @@ export class TransitService {
       const conventionalResult = await this.findConventionalRoute(
         from,
         to,
+        origin,
+        destination,
         time,
         isDeparture
       );
@@ -641,6 +645,8 @@ export class TransitService {
   private async findConventionalRoute(
     from: StopLocation,
     to: StopLocation,
+    origin: { lat: number; lng: number },
+    destination: { lat: number; lng: number },
     time?: string,
     isDeparture: boolean = true
   ): Promise<{ journeys: Journey[]; stops: NearbyStop[] }> {
@@ -715,6 +721,15 @@ export class TransitService {
 
       // 使用する停留所のリストを作成
       const stops: NearbyStop[] = [
+        // ユーザーの出発地点（出発地点の表示用）
+        {
+          id: "user_origin",
+          name: "出発地点",
+          distance: 0,
+          lat: origin.lat,
+          lng: origin.lng,
+        },
+        // 出発地点の最寄りバス停
         {
           id: from.stop_id,
           name: from.stop_name,
@@ -722,6 +737,7 @@ export class TransitService {
           lat: parseFloat(from.lat.toString()),
           lng: parseFloat(from.lng.toString()),
         },
+        // 目的地点の最寄りバス停
         {
           id: to.stop_id,
           name: to.stop_name,
@@ -729,10 +745,15 @@ export class TransitService {
           lat: parseFloat(to.lat.toString()),
           lng: parseFloat(to.lng.toString()),
         },
+        // ユーザーの目的地点（目的地点の表示用）
+        {
+          id: "user_destination",
+          name: "目的地点",
+          distance: 0,
+          lat: destination.lat,
+          lng: destination.lng,
+        },
       ];
-
-      // 乗換停留所がある場合は追加処理は従来通り
-      // ... existing code ...
 
       // 内部のRouteJourneyをAPIのJourney型に変換
       const journey = this.convertTimeTableRouteToJourney(
@@ -945,8 +966,29 @@ export class TransitService {
       // 最適な結果を選択
       const bestResult = allResults[0];
 
-      // 使用したバス停情報を追加
-      const stops: NearbyStop[] = [bestResult.originStop, bestResult.destStop];
+      // ユーザーの実際の出発地と目的地の座標と、使用するバス停情報を追加
+      const stops: NearbyStop[] = [
+        // ユーザーの出発地点（出発地点の表示用）
+        {
+          id: "user_origin",
+          name: "出発地点",
+          distance: 0,
+          lat: origin.lat,
+          lng: origin.lng,
+        },
+        // 出発地点の最寄りバス停
+        bestResult.originStop,
+        // 目的地点の最寄りバス停
+        bestResult.destStop,
+        // ユーザーの目的地点（目的地点の表示用）
+        {
+          id: "user_destination",
+          name: "目的地点",
+          distance: 0,
+          lat: destination.lat,
+          lng: destination.lng,
+        },
+      ];
 
       logger.log(
         `[findRouteWithNearbyStops] 最適経路を発見: ${

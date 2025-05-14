@@ -1,5 +1,6 @@
 /* eslint-disable react/display-name */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Home from "../page";
@@ -97,10 +98,6 @@ jest.mock("../../components/common/ResetButton", () => ({ onReset }: any) => (
   </button>
 ));
 
-jest.mock("../../components/KofiSupportCard", () => () => (
-  <div data-testid="mock-kofi-card" />
-));
-
 jest.mock(
   "../../components/RateLimitModal",
   () =>
@@ -109,12 +106,6 @@ jest.mock(
 );
 
 // 初心者ガイド関連のコンポーネントもモック
-jest.mock("../../components/common/GuideButton", () => () => (
-  <div data-testid="mock-guide-button">
-    風ぐるまの使い方を見る（初心者ガイド）
-  </div>
-));
-
 jest.mock("../../components/common/FirstVisitGuideModal", () => () => (
   <div data-testid="mock-first-visit-modal">初回訪問ガイドモーダル</div>
 ));
@@ -184,30 +175,10 @@ describe("Home", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("初心者ガイドボタンがメインページに表示される", () => {
-    render(<Home />);
-
-    // 初心者ガイドボタンが表示されていることを確認
-    expect(screen.getByTestId("mock-guide-button")).toBeInTheDocument();
-  });
-
   test("初回訪問ガイドモーダルがメインページに含まれている", () => {
     render(<Home />);
 
     // 初回訪問ガイドモーダルが含まれていることを確認
     expect(screen.getByTestId("mock-first-visit-modal")).toBeInTheDocument();
-  });
-
-  test("初心者ガイドボタンが検索フォームの前に配置されている", () => {
-    render(<Home />);
-
-    // DOMの順序を確認
-    const guideButton = screen.getByTestId("mock-guide-button");
-    const destinationSelector = screen.getByTestId("mock-destination-selector");
-
-    // guideButtonのDOM位置がdestinationSelectorよりも前にあることを確認
-    expect(guideButton.compareDocumentPosition(destinationSelector)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING
-    );
   });
 });

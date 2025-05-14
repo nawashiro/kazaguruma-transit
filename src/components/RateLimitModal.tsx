@@ -32,7 +32,7 @@ export default function RateLimitModal({
 
         <div className="py-4">
           <p className="mb-3">
-            1時間あたり20リクエストの制限に達しました。以下のオプションがあります：
+            1時間あたり60リクエストの制限に達しました。以下のオプションがあります：
           </p>
           <ul className="list bg-base-200 w-full rounded-box mb-4">
             <li className="list-row">

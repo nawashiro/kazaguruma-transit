@@ -24,28 +24,8 @@ async function importGtfsData() {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    // GTFSファイルの存在確認
-    const gtfsPath = config.agencies[0]?.path;
-    if (!gtfsPath) {
-      console.error("エラー: GTFSデータファイルのパスが設定されていません。");
-      return;
-    }
-
-    const gtfsFilePath = path.join(process.cwd(), gtfsPath);
-    if (!fs.existsSync(gtfsFilePath)) {
-      console.error(
-        `エラー: GTFSデータファイルが見つかりません: ${gtfsFilePath}`
-      );
-      console.error(
-        `${path.dirname(
-          gtfsFilePath
-        )}ディレクトリに必要なGTFSデータファイルを配置してください。`
-      );
-      return;
-    }
-
     // データベースディレクトリが存在することを確認
-    const dbDir = path.dirname(config.sqlitePath);
+    const dbDir = path.dirname(path.join(process.cwd(), config.sqlitePath));
     if (!fs.existsSync(dbDir)) {
       console.log(`データベースディレクトリを作成します: ${dbDir}`);
       fs.mkdirSync(dbDir, { recursive: true });
@@ -72,6 +52,26 @@ async function importGtfsData() {
         console.log(
           "データベースへの接続に失敗しました。データを再インポートします。"
         );
+      }
+    }
+
+    // GFTSファイルの存在確認（pathが設定されている場合のみ）
+    if (config.agencies.some((agency) => agency.path)) {
+      for (const agency of config.agencies) {
+        if (agency.path) {
+          const gtfsFilePath = path.join(process.cwd(), agency.path);
+          if (!fs.existsSync(gtfsFilePath)) {
+            console.error(
+              `エラー: GTFSデータファイルが見つかりません: ${gtfsFilePath}`
+            );
+            console.error(
+              `${path.dirname(
+                gtfsFilePath
+              )}ディレクトリに必要なGTFSデータファイルを配置してください。`
+            );
+            return;
+          }
+        }
       }
     }
 

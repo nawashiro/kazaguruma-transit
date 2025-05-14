@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { appRouterRateLimitMiddleware } from "../../../../lib/api/rate-limit-middleware";
 import { logger } from "../../../../utils/logger";
 import puppeteer from "puppeteer";
 import type { Browser, PDFOptions } from "puppeteer";
@@ -87,6 +88,12 @@ export async function POST(req: NextRequest) {
   let browser: Browser | null = null;
 
   try {
+    // レート制限を適用
+    const limitResponse = await appRouterRateLimitMiddleware(req);
+    if (limitResponse) {
+      return limitResponse;
+    }
+
     logger.log("PDF生成API開始");
 
     // リクエストボディを取得

@@ -5,7 +5,7 @@ import { logger } from "../../utils/logger";
 
 // 設定
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1時間
-const RATE_LIMIT_MAX_REQUESTS = 20; // 1時間あたり20リクエスト
+const RATE_LIMIT_MAX_REQUESTS = 60; // 1時間あたり60リクエスト
 
 /**
  * IPアドレスを取得する関数

@@ -127,26 +127,4 @@ model RateLimit {
   last_access     BigInt   @map("last_access")
   
   @@map("rate_limits")
-}
-
-model AuthRateLimit {
-  id              Int      @id @default(autoincrement())
-  ip              String
-  action_type     String
-  count           Int      @default(1)
-  first_attempt   BigInt
-  last_attempt    BigInt
-  
-  @@unique([ip, action_type])
-  @@map("auth_rate_limits")
-}
-
-model Supporter {
-  email           String   @id
-  verification_code String?
-  code_expires    BigInt?
-  verified        Boolean  @default(false)
-  verified_at     BigInt?
-  
-  @@map("supporters")
 } 

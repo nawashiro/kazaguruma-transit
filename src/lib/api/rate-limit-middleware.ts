@@ -2,11 +2,10 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { NextRequest, NextResponse } from "next/server";
 import { dataManager } from "../db/data-manager";
 import { logger } from "../../utils/logger";
-import { getSessionData } from "../auth/session";
 
 // 設定
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1時間
-const RATE_LIMIT_MAX_REQUESTS = 10; // 1時間あたり10リクエスト
+const RATE_LIMIT_MAX_REQUESTS = 60; // 1時間あたり60リクエスト
 
 /**
  * IPアドレスを取得する関数
@@ -40,15 +39,6 @@ export async function appRouterRateLimitMiddleware(
   try {
     const ip = getClientIp(req);
 
-    // セッションから支援者情報を取得
-    const session = await getSessionData(req);
-
-    // セッションから支援者であるかを確認
-    if (session.isLoggedIn && session.isSupporter) {
-      // 認証済み支援者は制限なし
-      return undefined;
-    }
-
     // レート制限を適用
     await dataManager.init(); // 初期化されていることを確認
     const rateLimitInfo = await dataManager.getRateLimitByIp(ip);
@@ -67,7 +57,7 @@ export async function appRouterRateLimitMiddleware(
         return NextResponse.json(
           {
             success: false,
-            error: "レート制限を超えました。支援者登録をご検討ください。",
+            error: "レート制限を超えました。1時間後に再度お試しください。",
             limitExceeded: true,
           },
           { status: 429 }
@@ -109,26 +99,6 @@ export async function apiRateLimitMiddleware(
   try {
     const ip = getClientIp(req);
 
-    // Cookieからセッション情報を取得（Pages Router用の単純化したバージョン）
-    // 本格的な実装では iron-session の withIronSessionApiRoute を使用すること
-    const sessionCookie = req.cookies[sessionOptions.cookieName];
-
-    if (sessionCookie) {
-      try {
-        // 認証済み支援者は制限なし
-        // 注意: 実際のプロダクションコードではsealedからデータを取得するためのユーティリティを使用すべき
-        const sessionData = JSON.parse(
-          Buffer.from(sessionCookie, "base64").toString()
-        );
-        if (sessionData.isLoggedIn && sessionData.isSupporter) {
-          return next();
-        }
-      } catch (e) {
-        logger.error("[RateLimit] セッションCookie解析エラー:", e);
-        // セッション解析エラー時は通常通り制限を適用
-      }
-    }
-
     // レート制限を適用
     await dataManager.init(); // 初期化されていることを確認
     const rateLimitInfo = await dataManager.getRateLimitByIp(ip);
@@ -146,7 +116,7 @@ export async function apiRateLimitMiddleware(
       if (rateLimitInfo.count >= RATE_LIMIT_MAX_REQUESTS) {
         return res.status(429).json({
           success: false,
-          error: "レート制限を超えました。支援者登録をご検討ください。",
+          error: "レート制限を超えました。1時間後に再度お試しください。",
           limitExceeded: true,
         });
       }
@@ -173,13 +143,10 @@ export async function apiRateLimitMiddleware(
 /**
  * API Routeのハンドラをラップしてレート制限を適用するユーティリティ
  */
-export function withRateLimit(handler: any) {
+export function withRateLimit(
+  handler: (req: NextApiRequest, res: NextApiResponse) => Promise<void> | void
+) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     await apiRateLimitMiddleware(req, res, () => handler(req, res));
   };
 }
-
-// セッション関連の設定（簡易版）
-const sessionOptions = {
-  cookieName: "chiyoda_transit_session",
-};

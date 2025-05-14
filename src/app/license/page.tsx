@@ -28,7 +28,7 @@ export default function Usage() {
         <section className="card bg-base-200/70 shadow-md">
           <div className="card-body">
             <h2 className="card-title text-xl">千代田区主要施設座標データ</h2>
-            <p>
+            <p className="text-base">
               東京都千代田区内の主要な施設の座標をまとめた json データです。
             </p>
             <ul>
@@ -58,7 +58,7 @@ export default function Usage() {
         <section className="card bg-base-200/70 shadow-md">
           <div className="card-body">
             <h2 className="card-title text-xl">千代田区町名 geojson</h2>
-            <p>
+            <p className="text-base">
               千代田区の町名までを含む geojson
               データです。丁目以降を含みません。
             </p>
@@ -91,8 +91,9 @@ export default function Usage() {
             <h2 className="card-title text-xl">
               千代田区地域福祉交通「風ぐるま」GTFSデータ
             </h2>
-            <p>2025年4月1日以降のデータを独自に書き込んでいます。</p>
-            <p>データソースとライセンスは以下の通りです。</p>
+            <p className="text-base">
+              データソースとライセンスは以下の通りです。
+            </p>
             <ul>
               <li>
                 <a

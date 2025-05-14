@@ -516,7 +516,10 @@ export default function Home() {
                     </span>
                   </label>
                   <p className="text-xs text-gray-500 mt-1">
-                    オンにすると最速の経路を優先して検索します
+                    オンにすると最速の経路を検索します。
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    オフにすると歩きを最小限にします。
                   </p>
                 </div>
 

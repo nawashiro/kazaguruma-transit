@@ -81,6 +81,7 @@ export interface Journey {
   transferInfo?: TransferInfo;
   walkingDistanceKm?: number; // 徒歩距離（キロメートル）
   walkingTimeMinutes?: number; // 徒歩時間（分）
+  userRequestedDepartureTime?: string; // ユーザーが指定した出発時刻
 }
 
 /**

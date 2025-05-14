@@ -518,6 +518,13 @@ export class TransitService {
    */
   public async findRoute(query: ApiRouteQuery): Promise<TransitResponse> {
     try {
+      logger.log(
+        `[TransitService] 経路検索API: 出発地(${query.origin.lat}, ${
+          query.origin.lng
+        }), 目的地(${query.destination.lat}, ${query.destination.lng}), ${
+          query.isDeparture ? "出発" : "到着"
+        }時刻=${query.time}, はやさ優先=${query.prioritizeSpeed || false}`
+      );
       const result = await this.searchRoute(query);
       return {
         success: true,
@@ -544,12 +551,20 @@ export class TransitService {
     query: ApiRouteQuery
   ): Promise<{ journeys: Journey[]; stops: NearbyStop[] }> {
     try {
-      const { origin, destination, time, isDeparture = true } = query;
+      const {
+        origin,
+        destination,
+        time,
+        isDeparture = true,
+        prioritizeSpeed = false,
+      } = query;
 
       logger.log(
         `[TransitService] 経路検索: ${origin.lat},${origin.lng} → ${
           destination.lat
-        },${destination.lng}, ${isDeparture ? "出発" : "到着"}時刻 = ${time}`
+        },${destination.lng}, ${
+          isDeparture ? "出発" : "到着"
+        }時刻 = ${time}, はやさ優先 = ${prioritizeSpeed}`
       );
 
       // 最寄りのバス停を特定
@@ -605,6 +620,19 @@ export class TransitService {
       // 同じバス停の場合はエラー
       if (from.stop_id === to.stop_id) {
         return { journeys: [], stops: [] };
+      }
+
+      // はやさ優先の場合、直接近隣バス停を使用した検索を実施
+      if (prioritizeSpeed) {
+        logger.log(
+          "[searchRoute] はやさ優先モードが有効: 直接近隣バス停を使用した検索を開始します"
+        );
+        return await this.findRouteWithNearbyStops(
+          origin,
+          destination,
+          time,
+          isDeparture
+        );
       }
 
       // 従来のアルゴリズムで経路検索

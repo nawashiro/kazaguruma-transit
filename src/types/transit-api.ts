@@ -18,6 +18,7 @@ export interface RouteQuery {
   };
   time?: string; // ISO8601形式の日時文字列
   isDeparture?: boolean; // trueの場合は出発時刻、falseの場合は到着時刻
+  prioritizeSpeed?: boolean; // はやさ優先オプション、trueの場合は周辺バス停も含めた検索を最初から行う
 }
 
 /**

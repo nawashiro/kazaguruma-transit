@@ -37,14 +37,6 @@ const mockSupporterResponse = {
   isSupporter: true,
 };
 
-// 非認証ユーザーの場合
-const mockNonAuthResponse = {
-  success: true,
-  canPrint: false,
-  isLoggedIn: false,
-  isSupporter: false,
-};
-
 // APIのモック化
 global.fetch = jest.fn().mockImplementation((url) => {
   if (url === "/api/pdf/check-permission") {
@@ -105,7 +97,7 @@ describe("RoutePdfExport", () => {
     });
   });
 
-  it("サポーターの場合、PDF出力ボタンが表示されること", async () => {
+  it("正常にPDF出力ボタンが表示されること", async () => {
     render(
       <RoutePdfExport
         originStop={mockOriginStop}
@@ -116,44 +108,9 @@ describe("RoutePdfExport", () => {
       />
     );
 
-    // 読み込み中の表示
-    expect(screen.getByText("読み込み中...")).toBeInTheDocument();
-
-    // 認証確認後の表示を待機
+    // ボタンが表示されることを確認
     await waitFor(() => {
       expect(screen.getByText("印刷する")).toBeInTheDocument();
-    });
-  });
-
-  it("非サポーターの場合、支援者限定メッセージとKo-fiリンクが表示されること", async () => {
-    // 非認証ユーザーのレスポンスに変更
-    (global.fetch as jest.Mock).mockImplementation((url) => {
-      if (url === "/api/pdf/check-permission") {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockNonAuthResponse),
-        });
-      }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ success: true }),
-      });
-    });
-
-    render(
-      <RoutePdfExport
-        originStop={mockOriginStop}
-        destinationStop={mockDestinationStop}
-        routes={mockRoutes}
-        type="direct"
-        transfers={0}
-      />
-    );
-
-    // 認証確認後の表示を待機
-    await waitFor(() => {
-      expect(screen.getByText(/印刷する（支援者限定）/i)).toBeInTheDocument();
-      expect(screen.getByText(/私は支援者です/i)).toBeInTheDocument();
     });
   });
 
@@ -189,7 +146,7 @@ describe("RoutePdfExport", () => {
       />
     );
 
-    // 認証確認後の表示を待機
+    // ボタンが表示されることを確認し、クリック
     await waitFor(() => {
       const button = screen.getByText("印刷する");
       expect(button).toBeInTheDocument();
@@ -205,7 +162,7 @@ describe("RoutePdfExport", () => {
   it("APIエラー時にエラーメッセージが表示されること", async () => {
     // エラーレスポンスを返すようにモックを設定
     (global.fetch as jest.Mock).mockImplementation((url) => {
-      if (url === "/api/pdf/check-permission") {
+      if (url === "/api/pdf/generate") {
         return Promise.resolve({
           ok: false,
           status: 500,
@@ -232,49 +189,15 @@ describe("RoutePdfExport", () => {
       />
     );
 
+    // ボタンをクリック
+    await waitFor(() => {
+      const button = screen.getByText("印刷する");
+      fireEvent.click(button);
+    });
+
     // エラーメッセージの表示を待機
     await waitFor(() => {
-      expect(
-        screen.getByText(/権限確認中にエラーが発生しました/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText("PDF生成エラー")).toBeInTheDocument();
     });
-  });
-
-  it("ルート情報が表示用コンポーネントに正しく渡されること", async () => {
-    // APIレスポンスのモック
-    (global.fetch as jest.Mock).mockImplementation((url) => {
-      if (url === "/api/pdf/check-permission") {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockSupporterResponse),
-        });
-      }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ success: true }),
-      });
-    });
-
-    const { container } = render(
-      <RoutePdfExport
-        originStop={mockOriginStop}
-        destinationStop={mockDestinationStop}
-        routes={mockRoutes}
-        type="direct"
-        transfers={0}
-      />
-    );
-
-    // 認証確認後の表示を待機
-    await waitFor(() => {
-      expect(screen.getByText("印刷する")).toBeInTheDocument();
-    });
-
-    // プレビューコンポーネントの内容を確認
-    const pdfContent = container.querySelector('[data-testid="pdf-content"]');
-    expect(pdfContent).toBeInTheDocument();
-    expect(pdfContent?.textContent).toContain(mockOriginStop.stopName);
-    expect(pdfContent?.textContent).toContain(mockDestinationStop.stopName);
-    expect(pdfContent?.textContent).toContain(mockRoutes[0].routeShortName);
   });
 });

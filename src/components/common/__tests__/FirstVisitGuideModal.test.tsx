@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import React from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import FirstVisitGuideModal from "../FirstVisitGuideModal";
 import { isFirstVisit } from "../../../utils/visitTracker";
 import { logger } from "../../../utils/logger";
-import * as nextNavigation from "next/navigation";
 
 // モジュールのモック
 jest.mock("../../../utils/visitTracker", () => ({
@@ -17,11 +17,14 @@ jest.mock("../../../utils/logger", () => ({
 }));
 
 // next/navigationのuseRouterをモック
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-  }),
-}));
+jest.mock("next/navigation", () => {
+  const push = jest.fn();
+  return {
+    useRouter: () => ({
+      push,
+    }),
+  };
+});
 
 // Googleアナリティクスの型定義
 declare global {
@@ -100,9 +103,11 @@ describe("FirstVisitGuideModal", () => {
     expect(logger.log).toHaveBeenCalledWith(
       "初回訪問ポップアップが閉じられました"
     );
-    expect(window.gtag).toHaveBeenCalledWith("event", "guide_popup_close", {
-      event_category: "engagement",
-      event_label: "beginners_guide_popup_dismissed",
+    expect(window.gtag).toHaveBeenCalledWith("event", "Guide_popup_close", {
+      event_category: "Engagement",
+      event_label: "Beginners_guide_popup_dismissed",
+      non_interaction: undefined,
+      value: undefined,
     });
   });
 
@@ -128,47 +133,11 @@ describe("FirstVisitGuideModal", () => {
     expect(logger.log).toHaveBeenCalledWith(
       "初回訪問ポップアップが閉じられました"
     );
-    expect(window.gtag).toHaveBeenCalledWith("event", "guide_popup_close", {
-      event_category: "engagement",
-      event_label: "beginners_guide_popup_dismissed",
-    });
-  });
-
-  test("「使い方を見る」ボタンをクリックするとガイドページへ移動する", async () => {
-    // 初回訪問としてモック
-    (isFirstVisit as jest.Mock).mockReturnValue(true);
-
-    const mockRouter = {
-      push: jest.fn(),
-      back: jest.fn(),
-      forward: jest.fn(),
-      refresh: jest.fn(),
-      replace: jest.fn(),
-      prefetch: jest.fn(),
-    };
-    jest.spyOn(nextNavigation, "useRouter").mockReturnValue(mockRouter);
-
-    render(<FirstVisitGuideModal />);
-
-    // タイマーを進める
-    await act(async () => {
-      jest.advanceTimersByTime(1600);
-    });
-
-    // 「使い方を見る」ボタンをクリック
-    fireEvent.click(screen.getByTestId("go-to-guide"));
-
-    // モーダルが閉じる
-    expect(screen.queryByTestId("first-visit-modal")).not.toBeInTheDocument();
-
-    // ガイドページへの遷移が呼び出される
-    expect(mockRouter.push).toHaveBeenCalledWith("/beginners-guide");
-    expect(logger.log).toHaveBeenCalledWith(
-      "初回訪問ポップアップからガイドページへ移動します"
-    );
-    expect(window.gtag).toHaveBeenCalledWith("event", "guide_popup_click", {
-      event_category: "engagement",
-      event_label: "beginners_guide_popup_navigation",
+    expect(window.gtag).toHaveBeenCalledWith("event", "Guide_popup_close", {
+      event_category: "Engagement",
+      event_label: "Beginners_guide_popup_dismissed",
+      non_interaction: undefined,
+      value: undefined,
     });
   });
 

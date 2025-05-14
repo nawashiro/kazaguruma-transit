@@ -120,12 +120,19 @@ export default function Home() {
   const [selectedDateTime, setSelectedDateTime] = useState<string>("");
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
   const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
+  const [prioritizeSpeed, setPrioritizeSpeed] = useState<boolean>(false);
 
   // URLパラメータから目的地情報を読み取る
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const destinationParam = params.get("destination");
+
+      // ローカルストレージから「はやさ優先」設定を読み込む
+      const savedPrioritizeSpeed = localStorage.getItem("prioritizeSpeed");
+      if (savedPrioritizeSpeed) {
+        setPrioritizeSpeed(savedPrioritizeSpeed === "true");
+      }
 
       if (destinationParam) {
         try {
@@ -181,6 +188,15 @@ export default function Home() {
     });
   };
 
+  const handlePrioritizeSpeedChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const newValue = event.target.checked;
+    setPrioritizeSpeed(newValue);
+    // ローカルストレージに設定を保存
+    localStorage.setItem("prioritizeSpeed", newValue.toString());
+  };
+
   const handleSearch = async () => {
     if (!selectedOrigin || !selectedDestination || !selectedDateTime) {
       return;
@@ -203,7 +219,8 @@ export default function Home() {
           lng: selectedDestination.lng,
         },
         time: selectedDateTime,
-        isDeparture: isDeparture,
+        isDeparture,
+        prioritizeSpeed, // はやさ優先オプション
       };
 
       logger.log("APIリクエスト送信:", {
@@ -212,7 +229,8 @@ export default function Home() {
         destination: `${routeQuery.destination.lat}, ${routeQuery.destination.lng}`,
         time: routeQuery.time,
         isDeparture: routeQuery.isDeparture,
-        timeType: isDeparture ? "出発時刻" : "到着時刻",
+        prioritizeSpeed: routeQuery.prioritizeSpeed,
+        timeType: routeQuery.isDeparture ? "出発時刻" : "到着時刻",
       });
 
       const response = await fetch("/api/transit", {
@@ -482,6 +500,28 @@ export default function Home() {
               <div className="card-body">
                 <h2 className="card-title">日時の選択</h2>
                 <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
+
+                {/* はやさ優先スイッチ */}
+                <div className="form-control mt-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <span className="label-text">はやさ優先</span>
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-primary"
+                      checked={prioritizeSpeed}
+                      onChange={handlePrioritizeSpeedChange}
+                    />
+                    <span className="label-text">
+                      {prioritizeSpeed ? "ON" : "OFF"}
+                    </span>
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">
+                    オンにすると最速の経路を検索します。
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    オフにすると歩きを最小限にします。
+                  </p>
+                </div>
 
                 <div className="card-actions justify-center">
                   <Button

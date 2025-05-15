@@ -22,10 +22,21 @@ export default function RateLimitModal({
 
   return (
     <div className="modal modal-open" onClick={handleBackdropClick}>
-      <div className="modal-box max-w-md">
+      <div
+        className="modal-box max-w-md"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rate-limit-title"
+      >
         <div className="flex justify-between items-start">
-          <h3 className="font-bold text-lg">リクエスト制限に達しました</h3>
-          <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost">
+          <h3 id="rate-limit-title" className="font-bold text-lg">
+            リクエスト制限に達しました
+          </h3>
+          <button
+            onClick={onClose}
+            className="btn btn-sm btn-circle btn-ghost"
+            aria-label="閉じる"
+          >
             ✕
           </button>
         </div>
@@ -40,7 +51,11 @@ export default function RateLimitModal({
             </li>
           </ul>
           <div className="flex flex-col gap-2">
-            <button onClick={onClose} className="btn btn-primary">
+            <button
+              onClick={onClose}
+              className="btn btn-primary"
+              aria-label="モーダルを閉じる"
+            >
               閉じる
             </button>
           </div>

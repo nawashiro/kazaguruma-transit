@@ -49,3 +49,6 @@ prisma/.temp/
 transit-config.json
 
 .gtfs/
+
+# cursor
+mcp.json

@@ -39,7 +39,7 @@ export default function DestinationSelector({
         searchAddress = `千代田区 ${searchAddress}`;
       }
 
-      // 実際のGoogle Maps Geocoding APIを呼び出し
+      // Google Maps Geocoding APIを呼び出し
       const response = await fetch(
         `/api/geocode?address=${encodeURIComponent(searchAddress)}`
       );
@@ -65,12 +65,18 @@ export default function DestinationSelector({
         };
 
         onDestinationSelected(location);
+        logger.log(`目的地選択: ${location.address}`);
       } else {
-        throw new Error("住所が見つかりませんでした");
+        // よりわかりやすいエラーメッセージを提供
+        setError(
+          "入力された住所が見つかりませんでした。住所をより具体的に入力するか、一般的な場所名を試してください。"
+        );
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "予期せぬエラーが発生しました"
+        err instanceof Error
+          ? err.message
+          : "予期せぬエラーが発生しました。ネットワーク接続を確認して、再度お試しください。"
       );
     } finally {
       setLoading(false);
@@ -83,15 +89,9 @@ export default function DestinationSelector({
 
   return (
     <>
-      <div className="ard bg-base-200 shadow-lg mb-6">
+      <div className="card bg-base-200 shadow-lg mb-6">
         <div className="card-body">
           <h2 className="card-title">目的地を選択してください</h2>
-
-          {error && (
-            <div className="alert alert-error" data-testid="error-message">
-              <span>{error}</span>
-            </div>
-          )}
 
           <LocationSuggestions onLocationSelected={handleLocationSelected} />
 
@@ -103,7 +103,9 @@ export default function DestinationSelector({
               onChange={(e) => setAddress(e.target.value)}
               disabled={loading}
               testId="address-input"
-              required
+              required={false}
+              error={error || undefined}
+              description="千代田区内の住所や場所名を入力してください。自動的に「千代田区」が先頭に追加されます。"
             />
 
             <div className="card-actions justify-center">
@@ -112,6 +114,7 @@ export default function DestinationSelector({
                 disabled={loading}
                 loading={loading}
                 testId="search-button"
+                aria-label="目的地を検索"
               >
                 検索
               </Button>

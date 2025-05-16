@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useId } from "react";
 import { TransitFormData } from "../types/transit";
 import { logger } from "../utils/logger";
 
@@ -19,6 +19,11 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
 }) => {
   const [dateTime, setDateTime] = useState<string>("");
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
+  const uniqueId = useId();
+  const inputId = isDeparture
+    ? `departure-time-${uniqueId}`
+    : `arrival-time-${uniqueId}`;
+  const groupId = `time-type-group-${uniqueId}`;
 
   // 初期値設定
   useEffect(() => {
@@ -83,19 +88,22 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
     }
   };
 
-  const inputId = isDeparture ? "departure-time" : "arrival-time";
-
   return (
     <div>
       <div className="space-y-4">
-        {/* DaisyUIのjoinコンポーネントを使用 */}
-        <div className="join">
+        {/* 出発/到着の切り替えボタングループ */}
+        <div role="radiogroup" aria-labelledby={groupId} className="join">
+          <span id={groupId} className="sr-only">
+            時間タイプ
+          </span>
           <button
             type="button"
             className={`join-item btn ${isDeparture ? "btn-active" : ""}`}
             onClick={() => handleTimeTypeChange(true)}
             data-testid="departure-tab"
             disabled={disabled}
+            aria-pressed={isDeparture}
+            aria-label="出発時間を指定"
           >
             出発
           </button>
@@ -105,6 +113,8 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             onClick={() => handleTimeTypeChange(false)}
             data-testid="arrival-tab"
             disabled={disabled}
+            aria-pressed={!isDeparture}
+            aria-label="到着時間を指定"
           >
             到着
           </button>
@@ -129,6 +139,10 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             className="input input-bordered"
             data-testid={isDeparture ? "departure-input" : "arrival-input"}
             disabled={disabled}
+            aria-required="true"
+            aria-label={`${
+              isDeparture ? "出発" : "到着"
+            }する日時を指定してください`}
           />
         </div>
       </div>

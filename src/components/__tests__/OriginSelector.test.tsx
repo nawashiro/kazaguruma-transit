@@ -191,4 +191,36 @@ describe("OriginSelector", () => {
     ).toBeInTheDocument();
     expect(mockOnOriginSelected).not.toHaveBeenCalled();
   });
+
+  it("アクセシビリティ：フォーム要素が正しくラベル付けされている", () => {
+    render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
+
+    // 見出しがaria-labelledbyで関連付けられていることを確認
+    const container = screen
+      .getByText("次に出発地を選択してください")
+      .closest("div");
+    expect(container).toHaveAttribute("aria-labelledby", expect.any(String));
+
+    // 入力フィールドがaria-labelledbyで適切にラベル付けされていることを確認
+    const addressInput = screen.getByTestId("address-input");
+    expect(addressInput).toHaveAttribute("aria-labelledby", expect.any(String));
+    expect(addressInput).toHaveAttribute("aria-required", "true");
+
+    // 入力フィールドの説明文が存在することを確認
+    expect(addressInput).toHaveAttribute(
+      "aria-describedby",
+      expect.any(String)
+    );
+
+    // ボタングループがrole="group"属性を持っていることを確認
+    const buttonGroup = screen.getByRole("group", { name: "検索オプション" });
+    expect(buttonGroup).toBeInTheDocument();
+
+    // ボタンがアクセシブルであることを確認（aria-labelの有無ではなく内容自体をテスト）
+    const searchButton = screen.getByText("この住所で検索");
+    expect(searchButton).toBeInTheDocument();
+
+    const gpsButton = screen.getByText("現在地を使用");
+    expect(gpsButton).toBeInTheDocument();
+  });
 });

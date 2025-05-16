@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useId } from "react";
 import { Location } from "../types/transit";
 import InputField from "./common/InputField";
 import Button from "./common/Button";
@@ -18,6 +18,8 @@ export default function OriginSelector({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
+  const uniqueId = useId();
+  const headingId = `origin-heading-${uniqueId}`;
 
   const handleAddressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +40,7 @@ export default function OriginSelector({
         searchAddress = `千代田区 ${searchAddress}`;
       }
 
-      // 実際のGoogle Maps Geocoding APIを呼び出し
+      // Google Maps Geocoding APIを呼び出し
       const response = await fetch(
         `/api/geocode?address=${encodeURIComponent(searchAddress)}`
       );
@@ -62,12 +64,18 @@ export default function OriginSelector({
           address: firstResult.formattedAddress,
         };
         onOriginSelected(location);
+        logger.log(`出発地選択: ${location.address}`);
       } else {
-        throw new Error("住所が見つかりませんでした");
+        // よりわかりやすいエラーメッセージを提供
+        setError(
+          "入力された住所が見つかりませんでした。住所をより具体的に入力するか、一般的な場所名を試してください。"
+        );
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "予期せぬエラーが発生しました"
+        err instanceof Error
+          ? err.message
+          : "予期せぬエラーが発生しました。ネットワーク接続を確認して、再度お試しください。"
       );
     } finally {
       setLoading(false);
@@ -131,14 +139,13 @@ export default function OriginSelector({
 
   return (
     <>
-      <div className="card bg-base-200/70 p-4 shadow-md">
-        <h2 className="text-xl font-bold mb-4">次に出発地を選択してください</h2>
-
-        {error && (
-          <div className="alert alert-error mb-4" data-testid="error-message">
-            <span>{error}</span>
-          </div>
-        )}
+      <div
+        className="card bg-base-200/70 p-4 shadow-md"
+        aria-labelledby={headingId}
+      >
+        <h2 id={headingId} className="text-xl font-bold mb-4">
+          次に出発地を選択してください
+        </h2>
 
         <form onSubmit={handleAddressSubmit} className="space-y-4">
           <InputField
@@ -148,16 +155,23 @@ export default function OriginSelector({
             onChange={(e) => setAddress(e.target.value)}
             disabled={loading}
             testId="address-input"
-            required
+            required={true}
+            error={error || undefined}
+            description="千代田区内の住所や場所名を入力してください。自動的に「千代田区」が先頭に追加されます。"
           />
 
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+          <div
+            className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2"
+            role="group"
+            aria-label="検索オプション"
+          >
             <Button
               type="submit"
               disabled={loading}
               loading={loading}
               className="flex-1"
               testId="search-button"
+              aria-label="この住所で経路を検索"
             >
               この住所で検索
             </Button>
@@ -169,6 +183,7 @@ export default function OriginSelector({
               loading={loading}
               className="flex-1"
               testId="gps-button"
+              aria-label="現在地を使用して経路を検索"
             >
               現在地を使用
             </Button>

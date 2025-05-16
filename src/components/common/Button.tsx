@@ -11,6 +11,7 @@ interface ButtonProps {
   fullWidth?: boolean;
   secondary?: boolean;
   testId?: string;
+  "aria-label"?: string;
   children: React.ReactNode;
 }
 
@@ -23,6 +24,7 @@ export default function Button({
   fullWidth = false,
   secondary = false,
   testId,
+  "aria-label": ariaLabel,
   children,
 }: ButtonProps) {
   const baseClasses = secondary
@@ -31,14 +33,16 @@ export default function Button({
   const widthClass = fullWidth ? "w-full" : "";
   const disabledClass =
     disabled || loading ? "opacity-70 cursor-not-allowed" : "";
+  const accessibilityClass = "min-h-[44px] min-w-[44px]";
 
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
-      className={`${baseClasses} ${widthClass} ${disabledClass} ${className}`}
+      className={`${baseClasses} ${widthClass} ${disabledClass} ${accessibilityClass} ${className}`}
       data-testid={testId}
+      aria-label={ariaLabel}
     >
       {loading ? <span className="loading loading-spinner"></span> : children}
     </button>

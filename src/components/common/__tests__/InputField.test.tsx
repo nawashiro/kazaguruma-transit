@@ -130,4 +130,18 @@ describe("InputField", () => {
     const input = screen.getByTestId("test-input");
     expect(input).toBeDisabled();
   });
+
+  it("アクセシビリティのためのタッチターゲットサイズが確保されていること", () => {
+    render(
+      <InputField
+        label="テストラベル"
+        value=""
+        onChange={mockOnChange}
+        testId="test-input"
+      />
+    );
+
+    const input = screen.getByTestId("test-input");
+    expect(input).toHaveClass("min-h-[44px]");
+  });
 });

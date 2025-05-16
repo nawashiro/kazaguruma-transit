@@ -201,9 +201,8 @@ describe("OriginSelector", () => {
       .closest("div");
     expect(container).toHaveAttribute("aria-labelledby", expect.any(String));
 
-    // 入力フィールドがaria-labelledbyで適切にラベル付けされていることを確認
+    // 入力フィールドの確認
     const addressInput = screen.getByTestId("address-input");
-    expect(addressInput).toHaveAttribute("aria-labelledby", expect.any(String));
     expect(addressInput).toHaveAttribute("aria-required", "true");
 
     // 入力フィールドの説明文が存在することを確認
@@ -212,15 +211,30 @@ describe("OriginSelector", () => {
       expect.any(String)
     );
 
-    // ボタングループがrole="group"属性を持っていることを確認
-    const buttonGroup = screen.getByRole("group", { name: "検索オプション" });
-    expect(buttonGroup).toBeInTheDocument();
+    // フィールドセットとレジェンドの確認
+    const fieldset = screen.getByRole("group");
+    expect(fieldset).toBeInTheDocument();
+    expect(fieldset).toHaveAttribute("aria-describedby", expect.any(String));
 
-    // ボタンがアクセシブルであることを確認（aria-labelの有無ではなく内容自体をテスト）
+    // レジェンドの内容確認（スクリーンリーダー用の非表示レジェンド）
+    const legendId = fieldset.getAttribute("aria-describedby");
+    const legend = document.getElementById(legendId || "");
+    expect(legend).toHaveClass("sr-only");
+    expect(legend).toHaveTextContent("検索オプション");
+
+    // ボタンがアクセシブルであることを確認
     const searchButton = screen.getByText("この住所で検索");
     expect(searchButton).toBeInTheDocument();
+    expect(searchButton).toHaveAttribute(
+      "aria-label",
+      "指定した住所で経路を検索"
+    );
 
     const gpsButton = screen.getByText("現在地を使用");
     expect(gpsButton).toBeInTheDocument();
+    expect(gpsButton).toHaveAttribute(
+      "aria-label",
+      "現在地を使用して経路を検索"
+    );
   });
 });

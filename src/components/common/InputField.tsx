@@ -47,10 +47,12 @@ export default function InputField({
         onChange={onChange}
         placeholder={placeholder}
         disabled={disabled}
+        required={required}
         className={`input input-bordered w-full min-h-[44px] ${
           hasError ? "input-error" : ""
         }`}
         aria-invalid={hasError}
+        aria-required={required ? "true" : undefined}
         aria-describedby={descriptionId}
         data-testid={testId}
       />

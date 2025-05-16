@@ -101,7 +101,7 @@ describe("DateTimeSelector", () => {
     // 隠れたラベルテキストが存在することを確認
     const labelId = radiogroup.getAttribute("aria-labelledby");
     const label = document.getElementById(labelId || "");
-    expect(label).toHaveTextContent("時間タイプ");
+    expect(label).toHaveTextContent("時間タイプを選択");
   });
 
   it("アクセシビリティ：出発/到着ボタンが適切なaria属性を持つこと", () => {
@@ -135,7 +135,7 @@ describe("DateTimeSelector", () => {
     expect(dateTimeInput).toHaveAttribute("aria-required", "true");
     expect(dateTimeInput).toHaveAttribute(
       "aria-label",
-      "出発する日時を指定してください"
+      "いつ出発するか指定してください"
     );
 
     // 到着時間に切り替えた場合のaria属性確認
@@ -146,7 +146,7 @@ describe("DateTimeSelector", () => {
     expect(arrivalInput).toHaveAttribute("aria-required", "true");
     expect(arrivalInput).toHaveAttribute(
       "aria-label",
-      "到着する日時を指定してください"
+      "いつ到着するか指定してください"
     );
   });
 

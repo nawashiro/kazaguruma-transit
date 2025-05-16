@@ -58,6 +58,22 @@ describe("InputField", () => {
     expect(screen.getByText("*")).toBeInTheDocument();
   });
 
+  it("必須フィールドにaria-required属性が設定されること", () => {
+    render(
+      <InputField
+        label="テストラベル"
+        value=""
+        onChange={mockOnChange}
+        required={true}
+        testId="test-input"
+      />
+    );
+
+    const input = screen.getByTestId("test-input");
+    expect(input).toHaveAttribute("aria-required", "true");
+    expect(input).toHaveAttribute("required");
+  });
+
   it("プレースホルダーが表示されること", () => {
     render(
       <InputField

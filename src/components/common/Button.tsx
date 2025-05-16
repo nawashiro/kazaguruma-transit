@@ -1,5 +1,6 @@
 "use client";
 
+import { logger } from "@/utils/logger";
 import React from "react";
 
 interface ButtonProps {
@@ -12,6 +13,11 @@ interface ButtonProps {
   secondary?: boolean;
   testId?: string;
   "aria-label"?: string;
+  "aria-pressed"?: boolean;
+  "aria-expanded"?: boolean;
+  "aria-controls"?: string;
+  "aria-describedby"?: string;
+  iconOnly?: boolean;
   children: React.ReactNode;
 }
 
@@ -25,6 +31,11 @@ export default function Button({
   secondary = false,
   testId,
   "aria-label": ariaLabel,
+  "aria-pressed": ariaPressed,
+  "aria-expanded": ariaExpanded,
+  "aria-controls": ariaControls,
+  "aria-describedby": ariaDescribedby,
+  iconOnly = false,
   children,
 }: ButtonProps) {
   const baseClasses = secondary
@@ -35,6 +46,11 @@ export default function Button({
     disabled || loading ? "opacity-70 cursor-not-allowed" : "";
   const accessibilityClass = "min-h-[44px] min-w-[44px]";
 
+  // アイコンのみボタンの場合、aria-labelが必須
+  if (iconOnly && !ariaLabel) {
+    logger.warn("アイコンのみのボタンにはaria-label属性が必要です");
+  }
+
   return (
     <button
       type={type}
@@ -43,8 +59,20 @@ export default function Button({
       className={`${baseClasses} ${widthClass} ${disabledClass} ${accessibilityClass} ${className}`}
       data-testid={testId}
       aria-label={ariaLabel}
+      aria-pressed={ariaPressed}
+      aria-expanded={ariaExpanded}
+      aria-controls={ariaControls}
+      aria-describedby={ariaDescribedby}
+      aria-busy={loading ? "true" : undefined}
     >
-      {loading ? <span className="loading loading-spinner"></span> : children}
+      {loading ? (
+        <>
+          <span className="loading loading-spinner" aria-hidden="true"></span>
+          <span className="sr-only">読み込み中...</span>
+        </>
+      ) : (
+        children
+      )}
     </button>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { isFirstVisit } from "../../utils/visitTracker";
 import { logger } from "../../utils/logger";
@@ -12,6 +12,14 @@ import { sendEvent } from "@/lib/analytics/useGA";
 const FirstVisitGuideModal = () => {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // モーダルを開いたとき、閉じるボタンにフォーカスを移動
+  useEffect(() => {
+    if (isOpen && closeButtonRef.current) {
+      closeButtonRef.current.focus();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     // ページロード後に初回訪問かどうかを確認し、タイマーで少し遅らせて表示
@@ -24,8 +32,19 @@ const FirstVisitGuideModal = () => {
       }
     }, 1500); // 1.5秒後に表示して急すぎる印象を避ける
 
-    return () => clearTimeout(timer);
-  }, []);
+    // ESCキーでモーダルを閉じる
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        handleClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
 
   const handleGoToGuide = () => {
     setIsOpen(false);
@@ -69,12 +88,14 @@ const FirstVisitGuideModal = () => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
+        aria-describedby="modal-description"
       >
         <div className="flex items-center justify-between">
           <h2 id="modal-title" className="text-lg font-semibold">
             風ぐるまは初めてですか？
           </h2>
           <button
+            ref={closeButtonRef}
             className="text-gray-500 hover:text-gray-700"
             onClick={handleClose}
             aria-label="閉じる"
@@ -84,6 +105,7 @@ const FirstVisitGuideModal = () => {
               className="h-5 w-5"
               viewBox="0 0 20 20"
               fill="currentColor"
+              aria-hidden="true"
             >
               <path
                 fillRule="evenodd"
@@ -93,7 +115,9 @@ const FirstVisitGuideModal = () => {
             </svg>
           </button>
         </div>
-        <p className="my-2">風ぐるまの使い方や基本情報を確認してみませんか？</p>
+        <p id="modal-description" className="my-2">
+          風ぐるまの使い方や基本情報を確認してみませんか？
+        </p>
         <div className="flex gap-2 justify-end mt-3">
           <button
             className="btn btn-sm btn-outline"

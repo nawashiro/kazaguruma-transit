@@ -5,6 +5,8 @@
   --background: #f8f9fa;
   --foreground: #171717;
   --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  --focus-color: #0056b3;
+  --focus-color-light: rgba(0, 86, 179, 0.3);
 }
 
 @theme inline {
@@ -50,15 +52,65 @@ body {
 
 /* フォーカス状態の視覚的強調（キーボードナビゲーション対応） */
 :focus-visible {
-  outline: 3px solid #0056b3 !important;
+  outline: 3px solid var(--focus-color) !important;
   outline-offset: 2px;
+  box-shadow: 0 0 0 3px var(--focus-color-light) !important;
+  border-radius: 3px;
+  transition: outline 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* インタラクティブ要素のフォーカス状態改善 */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-width: 3px;
+  outline-style: solid;
+  outline-color: var(--focus-color) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px var(--focus-color-light) !important;
+}
+
+/* タブ・アコーディオン・メニュー項目のフォーカス強調 */
+.tab:focus-visible,
+.collapse-title:focus-visible,
+.menu li a:focus-visible {
+  background-color: var(--focus-color-light);
+  color: var(--foreground);
+  font-weight: 500;
 }
 
 /* 高コントラストモード対応 */
 @media (forced-colors: active) {
+  :focus-visible {
+    outline: 3px solid SelectedItem !important;
+    outline-offset: 3px;
+  }
+
   .btn,
   .card,
   .badge {
     border: 2px solid currentColor;
+  }
+
+  /* ハイコントラストモードでボタンやリンクをさらに強調 */
+  a,
+  button,
+  input[type="button"],
+  input[type="submit"],
+  .btn {
+    forced-color-adjust: none;
+    background-color: ButtonFace;
+    color: ButtonText;
+  }
+
+  a:focus,
+  button:focus,
+  input[type="button"]:focus,
+  input[type="submit"]:focus,
+  .btn:focus {
+    outline: 3px solid SelectedItem;
+    color: SelectedItemText;
   }
 }

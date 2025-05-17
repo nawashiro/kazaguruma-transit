@@ -502,7 +502,12 @@ export default function Home() {
                 <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
 
                 {/* はやさ優先スイッチ */}
-                <div className="form-control mt-4">
+                <div className="form-control mt-4 space-y-2">
+                  <p className="text-sm text-gray-500 mt-1">
+                    早く到着したい場合はオンにしてください。
+                    <br />
+                    歩きを最小限にしたい場合はオフにしてください。
+                  </p>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <span className="label-text">はやさ優先</span>
                     <input
@@ -515,12 +520,6 @@ export default function Home() {
                       {prioritizeSpeed ? "ON" : "OFF"}
                     </span>
                   </label>
-                  <p className="text-xs text-gray-500 mt-1">
-                    オンにすると最速の経路を検索します。
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    オフにすると歩きを最小限にします。
-                  </p>
                 </div>
 
                 <div className="card-actions justify-center">

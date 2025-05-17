@@ -129,7 +129,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
         <div className="form-control">
           <label htmlFor={inputId} className="label">
             <span
-              className="label-text font-medium"
+              className="label-text font-medium mr-2"
               data-testid={isDeparture ? "departure-label" : "arrival-label"}
             >
               {labelText}

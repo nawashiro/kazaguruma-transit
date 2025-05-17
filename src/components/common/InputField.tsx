@@ -49,6 +49,14 @@ export default function InputField({
           {required && <span className="text-red-500 ml-1">*</span>}
         </span>
       </label>
+      {description && (
+        <div
+          id={descriptionId}
+          className="text-sm text-gray-600 mt-1 leading-relaxed"
+        >
+          {description}
+        </div>
+      )}
       <input
         id={inputId}
         type={type}
@@ -69,14 +77,6 @@ export default function InputField({
         aria-describedby={ariaDescribedby}
         data-testid={testId}
       />
-      {description && (
-        <div
-          id={descriptionId}
-          className="text-sm text-gray-600 mt-1 leading-relaxed"
-        >
-          {description}
-        </div>
-      )}
       {hasError && (
         <div
           id={errorId}

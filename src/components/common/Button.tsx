@@ -1,7 +1,7 @@
 "use client";
 
 import { logger } from "@/utils/logger";
-import React from "react";
+import React, { useId } from "react";
 
 interface ButtonProps {
   type?: "button" | "submit" | "reset";
@@ -38,13 +38,23 @@ export default function Button({
   iconOnly = false,
   children,
 }: ButtonProps) {
+  // アクセシビリティのためのIDを生成
+  const buttonId = useId();
+
+  // 高コントラストのカラーパレットを使用
   const baseClasses = secondary
-    ? "btn bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 px-6 py-2 rounded-lg shadow-sm transition-all duration-200"
+    ? "btn bg-white text-gray-700 hover:bg-gray-100 border border-gray-500 px-6 py-2 rounded-lg shadow-sm transition-all duration-200"
     : "btn bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 px-6 py-2 rounded-lg shadow-md transition-all duration-200";
   const widthClass = fullWidth ? "w-full" : "";
   const disabledClass =
     disabled || loading ? "opacity-70 cursor-not-allowed" : "";
-  const accessibilityClass = "min-h-[44px] min-w-[44px]";
+
+  // アクセシビリティのためのサイズ確保
+  // モバイルでのタッチターゲットサイズを確保（WCAG 2.5.5）
+  const accessibilityClass = "min-h-[44px] min-w-[44px] text-base";
+
+  // テキストサイズの変更時も対応できるようにrem単位を使用
+  const textClass = "text-base leading-relaxed font-medium";
 
   // アイコンのみボタンの場合、aria-labelが必須
   if (iconOnly && !ariaLabel) {
@@ -53,10 +63,11 @@ export default function Button({
 
   return (
     <button
+      id={buttonId}
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
-      className={`${baseClasses} ${widthClass} ${disabledClass} ${accessibilityClass} ${className}`}
+      className={`${baseClasses} ${widthClass} ${disabledClass} ${accessibilityClass} ${textClass} ${className}`}
       data-testid={testId}
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
@@ -64,6 +75,11 @@ export default function Button({
       aria-controls={ariaControls}
       aria-describedby={ariaDescribedby}
       aria-busy={loading ? "true" : undefined}
+      // フォーカス表示を明確にするための高コントラストアウトライン
+      style={{
+        outline: "none",
+        boxShadow: "none",
+      }}
     >
       {loading ? (
         <>

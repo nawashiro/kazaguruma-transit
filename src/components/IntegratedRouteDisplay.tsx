@@ -190,7 +190,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                       <div className="flex-1">
                         <div className="font-bold">{originStop.stopName}</div>
                       </div>
-                      <div className="badge badge-primary text-lg p-3">
+                      <div className="badge badge-secondary text-lg p-3">
                         {formatTimeDisplay(departureTime)}
                       </div>
                     </div>
@@ -264,7 +264,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                                   {transfer.transferStop.stopName}
                                 </div>
                               </div>
-                              <div className="badge badge-primary text-lg p-3">
+                              <div className="badge badge-secondary text-lg p-3">
                                 {formatTimeDisplay(
                                   transfer.nextRoute.departureTime ||
                                     transferDepartureTime
@@ -311,6 +311,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="link link-primary text-sm"
+                aria-label={`${destinationStop.stopName}から目的地へのルートをGoogleマップで確認`}
               >
                 {destinationStop.stopName} → 目的地 Googleマップ
               </a>

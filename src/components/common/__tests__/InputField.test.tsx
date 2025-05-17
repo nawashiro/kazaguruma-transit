@@ -103,9 +103,18 @@ describe("InputField", () => {
     // エラーメッセージが表示されることを確認
     expect(screen.getByText("エラーメッセージ")).toBeInTheDocument();
 
+    // エラーアイコンが表示されることを確認
+    const errorIcon = screen.getByText("⚠️");
+    expect(errorIcon).toBeInTheDocument();
+    expect(errorIcon).toHaveAttribute("aria-hidden", "true");
+
     // aria-invalid属性が設定されていることを確認
     const input = screen.getByTestId("test-input");
     expect(input).toHaveAttribute("aria-invalid", "true");
+
+    // エラーメッセージにrole="alert"が設定されていることを確認
+    const errorMessage = screen.getByRole("alert");
+    expect(errorMessage).toHaveTextContent("⚠️エラーメッセージ");
   });
 
   it("説明テキストが表示され、適切にaria-describedbyが設定されること", () => {
@@ -132,6 +141,32 @@ describe("InputField", () => {
     expect(descriptionElement.id).toBe(descriptionId);
   });
 
+  it("説明テキストとエラーの両方がある場合、aria-describedbyが両方を参照すること", () => {
+    render(
+      <InputField
+        label="テストラベル"
+        value=""
+        onChange={mockOnChange}
+        description="入力の説明テキスト"
+        error="エラーメッセージ"
+        testId="test-input"
+      />
+    );
+
+    const input = screen.getByTestId("test-input");
+    const describedBy = input.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+
+    const describedByIds = describedBy?.split(" ") || [];
+    expect(describedByIds.length).toBe(2);
+
+    const descriptionElement = screen.getByText("入力の説明テキスト");
+    const errorElement = screen.getByText(/エラーメッセージ/);
+
+    expect(describedByIds).toContain(descriptionElement.id);
+    expect(describedByIds).toContain(errorElement.id);
+  });
+
   it("無効状態が適切に表示されること", () => {
     render(
       <InputField
@@ -145,6 +180,8 @@ describe("InputField", () => {
 
     const input = screen.getByTestId("test-input");
     expect(input).toBeDisabled();
+    expect(input).toHaveClass("opacity-70");
+    expect(input).toHaveClass("cursor-not-allowed");
   });
 
   it("アクセシビリティのためのタッチターゲットサイズが確保されていること", () => {
@@ -159,5 +196,50 @@ describe("InputField", () => {
 
     const input = screen.getByTestId("test-input");
     expect(input).toHaveClass("min-h-[44px]");
+  });
+
+  it("テキストサイズ変更に適したクラスが適用されていること", () => {
+    render(
+      <InputField
+        label="テストラベル"
+        value=""
+        onChange={mockOnChange}
+        testId="test-input"
+      />
+    );
+
+    const input = screen.getByTestId("test-input");
+    expect(input).toHaveClass("text-base");
+    expect(input).toHaveClass("leading-relaxed");
+  });
+
+  it("name属性が正しく設定されること", () => {
+    render(
+      <InputField
+        label="テストラベル"
+        value=""
+        onChange={mockOnChange}
+        name="test-name"
+        testId="test-input"
+      />
+    );
+
+    const input = screen.getByTestId("test-input");
+    expect(input).toHaveAttribute("name", "test-name");
+  });
+
+  it("maxLength属性が正しく設定されること", () => {
+    render(
+      <InputField
+        label="テストラベル"
+        value=""
+        onChange={mockOnChange}
+        maxLength={50}
+        testId="test-input"
+      />
+    );
+
+    const input = screen.getByTestId("test-input");
+    expect(input).toHaveAttribute("maxLength", "50");
   });
 });

@@ -1,6 +1,17 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Button from "../Button";
+import { logger } from "@/utils/logger";
+
+// loggerをモック
+jest.mock("@/utils/logger", () => ({
+  logger: {
+    warn: jest.fn(),
+    log: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+  },
+}));
 
 describe("Button", () => {
   const mockOnClick = jest.fn();
@@ -47,7 +58,7 @@ describe("Button", () => {
     );
 
     const button = screen.getByTestId("test-button");
-    // セカンダリボタンは白背景と灰色のテキストを使用
+    // セカンダリボタンは白背景と暗めのテキスト色を使用
     expect(button).toHaveClass("bg-white");
     expect(button).toHaveClass("text-gray-700");
   });
@@ -65,6 +76,11 @@ describe("Button", () => {
       .querySelector(".loading.loading-spinner");
     expect(spinner).toBeInTheDocument();
     expect(button).toBeDisabled();
+
+    // ローディング状態のアクセシビリティ
+    expect(button).toHaveAttribute("aria-busy", "true");
+    // スクリーンリーダー用のテキストが存在する
+    expect(screen.getByText("読み込み中...")).toBeInTheDocument();
   });
 
   it("フルワイドスタイルが適用されること", () => {
@@ -114,5 +130,69 @@ describe("Button", () => {
     const button = screen.getByTestId("test-button");
     expect(button).toHaveClass("min-h-[44px]");
     expect(button).toHaveClass("min-w-[44px]");
+  });
+
+  it("プライマリボタンが適切なコントラスト色を使用していること", () => {
+    render(
+      <Button onClick={mockOnClick} testId="test-button">
+        プライマリボタン
+      </Button>
+    );
+
+    const button = screen.getByTestId("test-button");
+    expect(button).toHaveClass("bg-gradient-to-r");
+    expect(button).toHaveClass("from-blue-500");
+    expect(button).toHaveClass("to-indigo-500");
+    expect(button).toHaveClass("text-white");
+  });
+
+  it("一意のIDが各ボタンに割り当てられていること", () => {
+    render(
+      <Button onClick={mockOnClick} testId="test-button">
+        ボタン
+      </Button>
+    );
+
+    const button = screen.getByTestId("test-button");
+    expect(button.id).toBeTruthy();
+  });
+
+  it("アイコンのみのボタンで警告が発生すること", () => {
+    render(
+      <Button onClick={mockOnClick} iconOnly testId="test-button">
+        <span>🔍</span>
+      </Button>
+    );
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      "アイコンのみのボタンにはaria-label属性が必要です"
+    );
+  });
+
+  it("アイコンのみのボタンにaria-labelが設定されていれば警告が発生しないこと", () => {
+    render(
+      <Button
+        onClick={mockOnClick}
+        iconOnly
+        aria-label="検索"
+        testId="test-button"
+      >
+        <span>🔍</span>
+      </Button>
+    );
+
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("テキストサイズ変更用のクラスが適用されていること", () => {
+    render(
+      <Button onClick={mockOnClick} testId="test-button">
+        ボタン
+      </Button>
+    );
+
+    const button = screen.getByTestId("test-button");
+    expect(button).toHaveClass("text-base");
+    expect(button).toHaveClass("leading-relaxed");
   });
 });

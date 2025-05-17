@@ -30,3 +30,35 @@ body {
     );
   background-attachment: fixed;
 }
+
+/* アクセシビリティ対応のためのユーティリティクラス */
+.text-resizable {
+  /* フォントサイズをrem単位で指定（ルート要素に相対的） */
+  font-size: 1rem;
+  /* 最小サイズと最大サイズを設定（200%拡大対応） */
+  font-size: clamp(1rem, 2vw, 2rem);
+}
+
+/* コンテナの横スクロール防止 */
+.responsive-container {
+  max-width: 100%;
+  overflow-x: hidden;
+  /* 必要に応じてワードラップを設定 */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* フォーカス状態の視覚的強調（キーボードナビゲーション対応） */
+:focus-visible {
+  outline: 3px solid #0056b3 !important;
+  outline-offset: 2px;
+}
+
+/* 高コントラストモード対応 */
+@media (forced-colors: active) {
+  .btn,
+  .card,
+  .badge {
+    border: 2px solid currentColor;
+  }
+}

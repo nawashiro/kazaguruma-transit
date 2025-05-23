@@ -7,7 +7,7 @@ export default function Usage() {
         <h1 className="text-3xl font-bold">ライセンス</h1>
       </header>
 
-      <div className="max-w-md mx-auto space-y-4">
+      <main className="max-w-md mx-auto space-y-4">
         <section className="card bg-base-200/70 shadow-md">
           <div className="card-body">
             <h2 className="card-title text-xl">本ソフトウェア</h2>
@@ -118,7 +118,7 @@ export default function Usage() {
             </ul>
           </div>
         </section>
-      </div>
+      </main>
     </div>
   );
 }

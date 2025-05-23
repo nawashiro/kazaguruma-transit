@@ -20,83 +20,76 @@ interface SidebarProps {
 
 export default function Sidebar({ toggleSidebar }: SidebarProps) {
   return (
-    <div className="h-full bg-base-200 w-80 border-r">
-      <div className="p-4 space-y-4">
-        <div className="collapse collapse-arrow border border-base-600">
-          <input
-            type="radio"
-            name="my-accordion-2"
-            defaultChecked
-            aria-label="サイトの機能を開く"
-          />
-          <div className="collapse-title flex space-x-2 items-center">
-            <RocketLaunchIcon className="h-6 w-6 text-primary" />
-            <p className="font-semibold">使う</p>
-          </div>
-          <div className="collapse-content">
-            <ul className="menu bg-base-200 w-full text-xl">
+    <aside className="h-full bg-base-200 w-80 border-r">
+      <ul className="menu p-4 space-y-4 w-full text-base">
+        <li>
+          <details open>
+            <summary className="group">
+              <span>
+                <RocketLaunchIcon className="h-6 w-6" />
+              </span>
+              <p className="font-semibold">使う</p>
+            </summary>
+            <ul className="menu w-full text-base">
               <li>
                 <Link
                   href="/"
-                  onClick={toggleSidebar}
                   aria-label="ホームページに移動"
+                  onClick={toggleSidebar}
                 >
-                  <HomeIcon className="h-6 w-6 text-primary" />
+                  <HomeIcon className="h-6 w-6" />
                   ホーム
                 </Link>
               </li>
               <li>
                 <Link
                   href="/locations"
-                  onClick={toggleSidebar}
                   aria-label="場所を探すページに移動"
+                  onClick={toggleSidebar}
                 >
-                  <MapPinIcon className="h-6 w-6 text-primary" />
+                  <MapPinIcon className="h-6 w-6" />
                   場所をさがす
                 </Link>
               </li>
             </ul>
-          </div>
-        </div>
-        <div className="collapse collapse-arrow border border-base-600">
-          <input
-            type="radio"
-            name="my-accordion-2"
-            aria-label="使い方やサイト情報を開く"
-          />
-          <div className="collapse-title flex space-x-2 items-center">
-            <InformationCircleIcon className="h-6 w-6 text-primary" />
-            <p className="font-semibold">使い方やサイト情報</p>
-          </div>
-          <div className="collapse-content">
-            <ul className="menu bg-base-200 w-full text-xl">
+          </details>
+        </li>
+        <li>
+          <details open>
+            <summary className="group">
+              <span>
+                <InformationCircleIcon className="h-6 w-6" />
+              </span>
+              <p className="font-semibold">使い方やサイト情報</p>
+            </summary>
+            <ul className="menu w-full text-base">
               <li>
                 <Link
                   href="/beginners-guide"
-                  onClick={toggleSidebar}
                   aria-label="はじめての方へのガイドページに移動"
+                  onClick={toggleSidebar}
                 >
-                  <QuestionMarkCircleIcon className="h-6 w-6 text-primary" />
+                  <QuestionMarkCircleIcon className="h-6 w-6" />
                   はじめての方へ
                 </Link>
               </li>
               <li>
                 <Link
                   href="/usage"
-                  onClick={toggleSidebar}
                   aria-label="使い方ページに移動"
+                  onClick={toggleSidebar}
                 >
-                  <BookOpenIcon className="h-6 w-6 text-primary" />
+                  <BookOpenIcon className="h-6 w-6" />
                   使い方
                 </Link>
               </li>
               <li>
                 <Link
                   href="/license"
-                  onClick={toggleSidebar}
                   aria-label="ライセンス情報ページに移動"
+                  onClick={toggleSidebar}
                 >
-                  <DocumentTextIcon className="h-6 w-6 text-primary" />
+                  <DocumentTextIcon className="h-6 w-6" />
                   ライセンス
                 </Link>
               </li>
@@ -105,24 +98,22 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
                   href="https://halved-hamster-4a1.notion.site/1df78db44c3d80979856c735893403d4"
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={toggleSidebar}
-                  aria-label="更新情報ページを新しいタブで開く"
                 >
-                  <ArrowPathIcon className="h-6 w-6 text-primary" />
+                  <ArrowPathIcon className="h-6 w-6" />
                   更新情報
                 </a>
               </li>
             </ul>
-          </div>
-        </div>
-        <ul className="menu bg-base-200 w-full text-xl">
+          </details>
+        </li>
+        <ul className="menu w-full text-xl">
           <li>
             <Link
               href="/site-map"
-              onClick={toggleSidebar}
               aria-label="サイトマップページに移動"
+              onClick={toggleSidebar}
             >
-              <MapIcon className="h-6 w-6 text-primary" />
+              <MapIcon className="h-6 w-6" />
               サイトマップ
             </Link>
           </li>
@@ -132,14 +123,13 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={toggleSidebar}
-              aria-label="開発者を支援するページを新しいタブで開く"
             >
               <HeartIcon className="h-6 w-6 text-secondary" />
               開発者を支援する
             </a>
           </li>
         </ul>
-      </div>
-    </div>
+      </ul>
+    </aside>
   );
 }

@@ -447,7 +447,7 @@ export default function Home() {
       {/* 初回訪問ガイドモーダル */}
       <FirstVisitGuideModal />
 
-      <div className="max-w-md mx-auto space-y-4">
+      <main className="max-w-md mx-auto space-y-4">
         {/* 初心者ガイドボタン - 検索フォームの前に表示 */}
 
         {!selectedDestination ? (
@@ -602,7 +602,7 @@ export default function Home() {
             </p>
           </div>
         </div>
-      </div>
+      </main>
 
       {/* レート制限モーダル */}
       <RateLimitModal

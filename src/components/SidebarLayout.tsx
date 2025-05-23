@@ -9,28 +9,46 @@ export default function SidebarLayout({
 }) {
   return (
     <div className="drawer lg:drawer-open">
-      <input id="my-drawer" type="checkbox" className="drawer-toggle" />
+      <input id="drawer" type="checkbox" className="drawer-toggle" />
+      <div className="drawer-side z-40">
+        <label
+          htmlFor="drawer"
+          aria-label="close sidebar"
+          className="drawer-overlay"
+        ></label>
+        <Sidebar
+          toggleSidebar={() => {
+            const checkbox = document.getElementById(
+              "drawer"
+            ) as HTMLInputElement;
+            if (checkbox) checkbox.checked = false;
+          }}
+        />
+      </div>
       <div className="drawer-content flex flex-col">
-        <div className="navbar bg-base-100 lg:hidden">
-          <div className="flex-none">
-            <label htmlFor="my-drawer" className="btn btn-ghost gap-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                className="inline-block w-6 h-6 stroke-current"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h16M4 18h16"
-                ></path>
-              </svg>
-              メニュー
-            </label>
-          </div>
-        </div>
+        <span>
+          <label
+            htmlFor="drawer"
+            className="btn btn-ghost drawer-button lg:hidden"
+            role="button"
+            aria-label="メニューを開く"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              className="inline-block w-6 h-6 stroke-current"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4 6h16M4 12h16M4 18h16"
+              ></path>
+            </svg>
+            メニュー
+          </label>
+        </span>
         <div className="flex-grow p-4">{children}</div>
         <footer className="flex flex-col md:flex-row px-4 py-2 justify-center md:justify-between">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 md:w-auto">
@@ -60,21 +78,6 @@ export default function SidebarLayout({
             </a>
           </div>
         </footer>
-      </div>
-      <div className="drawer-side">
-        <label
-          htmlFor="my-drawer"
-          aria-label="close sidebar"
-          className="drawer-overlay"
-        ></label>
-        <Sidebar
-          toggleSidebar={() => {
-            const checkbox = document.getElementById(
-              "my-drawer"
-            ) as HTMLInputElement;
-            if (checkbox) checkbox.checked = false;
-          }}
-        />
       </div>
     </div>
   );

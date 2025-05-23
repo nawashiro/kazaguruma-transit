@@ -10,6 +10,7 @@ import {
 } from "../../utils/addressLoader";
 import { logger } from "../../utils/logger";
 import RateLimitModal from "../../components/RateLimitModal";
+import LocationDetailModal from "../../components/LocationDetailModal";
 import {
   loadGeoJSON,
   groupLocationsByArea,
@@ -75,6 +76,14 @@ export default function LocationsPage() {
     [areaName: string]: LocationWithDistance[];
   }>({});
   const [geoJsonLoading, setGeoJsonLoading] = useState(false);
+
+  // モーダル表示のための状態
+  const [selectedLocation, setSelectedLocation] =
+    useState<LocationWithDistance | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLocationAreaName, setSelectedLocationAreaName] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     async function fetchLocationData() {
@@ -322,6 +331,32 @@ export default function LocationsPage() {
     return groups;
   };
 
+  // モーダルを開く関数
+  const openLocationModal = async (location: LocationWithDistance) => {
+    setSelectedLocation(location);
+
+    // 町名を取得
+    try {
+      const geoJSON = await loadGeoJSON();
+      const area = getAreaNameFromCoordinates(
+        location.lat,
+        location.lng,
+        geoJSON
+      );
+      setSelectedLocationAreaName(area ? formatAreaName(area) : "不明");
+    } catch (err) {
+      logger.log("町名取得エラー:", err);
+      setSelectedLocationAreaName("不明");
+    }
+
+    setIsModalOpen(true);
+  };
+
+  // モーダルを閉じる関数
+  const closeLocationModal = () => {
+    setIsModalOpen(false);
+  };
+
   // 施設カードのコンポーネント（再利用のため抽出）
   const LocationCard = ({ location }: { location: LocationWithDistance }) => {
     const [areaName, setAreaName] = useState<string | null>(null);
@@ -347,7 +382,11 @@ export default function LocationsPage() {
     }, [location.lat, location.lng]);
 
     return (
-      <div className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
+      <button
+        className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow text-left w-full border-none"
+        onClick={() => openLocationModal(location)}
+        aria-label={`${location.name}の詳細を表示`}
+      >
         {location.imageUri && (
           <figure className="relative h-48 w-full overflow-hidden">
             <img
@@ -367,64 +406,8 @@ export default function LocationsPage() {
           {location.description && (
             <p className="text-sm mt-1 line-clamp-3">{location.description}</p>
           )}
-
-          {location.uri && (
-            <a
-              href={location.uri}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link link-primary text-sm"
-            >
-              ウェブサイトを見る
-            </a>
-          )}
-
-          <div className="card-actions justify-between mt-4">
-            <div className="dropdown dropdown-top">
-              <div tabIndex={0} role="button" className="btn btn-sm">
-                詳細
-              </div>
-              <div
-                tabIndex={0}
-                className="dropdown-content z-[1] p-3 shadow-lg bg-base-200 rounded-box w-52"
-              >
-                <p className="text-xs mb-1">座標データ提供:</p>
-                <p className="text-xs mb-2">{location.nodeCopyright}</p>
-                {location.imageCopyright && (
-                  <>
-                    <p className="text-xs mb-1">画像提供:</p>
-                    <p className="text-xs mb-2">{location.imageCopyright}</p>
-                  </>
-                )}
-                {location.description && location.descriptionCopyright && (
-                  <>
-                    <p className="text-xs mb-1">説明文提供:</p>
-                    <p className="text-xs mb-2">
-                      {location.descriptionCopyright}
-                    </p>
-                  </>
-                )}
-                <p className="text-xs mb-1">ライセンス:</p>
-                <a
-                  href={location.licenceUri}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="link link-primary text-xs"
-                >
-                  {location.licence}
-                </a>
-              </div>
-            </div>
-
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => handleGoToLocation(location)}
-            >
-              ここへ行く
-            </button>
-          </div>
         </div>
-      </div>
+      </button>
     );
   };
 
@@ -629,7 +612,9 @@ export default function LocationsPage() {
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                       {locations.map((location) => (
-                        <LocationCard key={location.id} location={location} />
+                        <div key={location.id} className="contents">
+                          <LocationCard location={location} />
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -649,7 +634,9 @@ export default function LocationsPage() {
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                       {locations.map((location) => (
-                        <LocationCard key={location.id} location={location} />
+                        <div key={location.id} className="contents">
+                          <LocationCard location={location} />
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -815,6 +802,15 @@ export default function LocationsPage() {
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
+
+      {/* モーダルコンポーネント */}
+      <LocationDetailModal
+        location={selectedLocation}
+        isOpen={isModalOpen}
+        onClose={closeLocationModal}
+        onGoToLocation={handleGoToLocation}
+        areaName={selectedLocationAreaName}
+      />
 
       {/* レート制限モーダル */}
       <RateLimitModal

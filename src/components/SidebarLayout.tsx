@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import Sidebar from "./Sidebar";
 
 export default function SidebarLayout({
@@ -8,69 +7,18 @@ export default function SidebarLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const checkboxRef = useRef<HTMLInputElement>(null);
-
-  // ESCキーでサイドバーを閉じる機能
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && checkboxRef.current?.checked) {
-        checkboxRef.current.checked = false;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-
-  const toggleSidebar = () => {
-    if (checkboxRef.current) {
-      checkboxRef.current.checked = !checkboxRef.current.checked;
-    }
-  };
-
-  const closeSidebar = () => {
-    if (checkboxRef.current) {
-      checkboxRef.current.checked = false;
-    }
-  };
-
-  const handleMenuKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      toggleSidebar();
-    }
-  };
-
   return (
     <div className="drawer lg:drawer-open">
-      <input
-        id="my-drawer"
-        type="checkbox"
-        className="drawer-toggle"
-        ref={checkboxRef}
-        aria-hidden="true"
-      />
+      <input id="my-drawer" type="checkbox" className="drawer-toggle" />
       <div className="drawer-content flex flex-col">
         <div className="navbar bg-base-100 lg:hidden">
           <div className="flex-none">
-            <label
-              htmlFor="my-drawer"
-              className="btn btn-ghost gap-2"
-              tabIndex={0}
-              role="button"
-              onKeyDown={handleMenuKeyDown}
-              aria-label="メニューを開く"
-              aria-expanded={checkboxRef.current?.checked || false}
-              aria-controls="sidebar-menu"
-            >
+            <label htmlFor="my-drawer" className="btn btn-ghost gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
                 className="inline-block w-6 h-6 stroke-current"
-                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -116,17 +64,17 @@ export default function SidebarLayout({
       <div className="drawer-side">
         <label
           htmlFor="my-drawer"
-          aria-label="メニューを閉じる"
+          aria-label="close sidebar"
           className="drawer-overlay"
-          role="button"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              closeSidebar();
-            }
-          }}
         ></label>
-        <Sidebar toggleSidebar={closeSidebar} />
+        <Sidebar
+          toggleSidebar={() => {
+            const checkbox = document.getElementById(
+              "my-drawer"
+            ) as HTMLInputElement;
+            if (checkbox) checkbox.checked = false;
+          }}
+        />
       </div>
     </div>
   );

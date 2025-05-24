@@ -27,19 +27,19 @@ describe("RateLimitModal", () => {
   test("閉じるボタンをクリックするとonClose関数が呼ばれること", () => {
     render(<RateLimitModal isOpen={true} onClose={mockOnClose} />);
 
-    const closeButton = screen.getByRole("button", { name: "閉じる" });
+    // 閉じるテキストボタンをクリック
+    const closeButton = screen.getByTestId("primary-close-btn");
     fireEvent.click(closeButton);
 
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
-  test("「閉じる」ボタンをクリックするとonClose関数が呼ばれること", () => {
+  test("XボタンをクリックするとonClose関数が呼ばれること", () => {
     render(<RateLimitModal isOpen={true} onClose={mockOnClose} />);
 
-    const closeButton = screen.getByRole("button", {
-      name: "モーダルを閉じる",
-    });
-    fireEvent.click(closeButton);
+    // Xボタンをクリック
+    const xButton = screen.getByTestId("x-close-btn");
+    fireEvent.click(xButton);
 
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });

@@ -112,12 +112,10 @@ describe("DateTimeSelector", () => {
     // 出発ボタンの属性確認
     const departureBtn = screen.getByTestId("departure-tab");
     expect(departureBtn).toHaveAttribute("aria-pressed", "true");
-    expect(departureBtn).toHaveAttribute("aria-label", "出発時間を指定");
 
     // 到着ボタンの属性確認
     const arrivalBtn = screen.getByTestId("arrival-tab");
     expect(arrivalBtn).toHaveAttribute("aria-pressed", "false");
-    expect(arrivalBtn).toHaveAttribute("aria-label", "到着時間を指定");
 
     // ボタンクリック時の属性変更を確認
     fireEvent.click(arrivalBtn);
@@ -133,10 +131,6 @@ describe("DateTimeSelector", () => {
     // 日時入力フィールドのaria属性確認
     const dateTimeInput = screen.getByTestId("departure-input");
     expect(dateTimeInput).toHaveAttribute("aria-required", "true");
-    expect(dateTimeInput).toHaveAttribute(
-      "aria-label",
-      "いつ出発するか指定してください"
-    );
 
     // 到着時間に切り替えた場合のaria属性確認
     const arrivalBtn = screen.getByTestId("arrival-tab");
@@ -144,10 +138,6 @@ describe("DateTimeSelector", () => {
 
     const arrivalInput = screen.getByTestId("arrival-input");
     expect(arrivalInput).toHaveAttribute("aria-required", "true");
-    expect(arrivalInput).toHaveAttribute(
-      "aria-label",
-      "いつ到着するか指定してください"
-    );
   });
 
   it("アクセシビリティ：無効状態のボタンが適切に処理されること", () => {

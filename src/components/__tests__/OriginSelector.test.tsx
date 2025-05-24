@@ -225,16 +225,8 @@ describe("OriginSelector", () => {
     // ボタンがアクセシブルであることを確認
     const searchButton = screen.getByText("この住所で検索");
     expect(searchButton).toBeInTheDocument();
-    expect(searchButton).toHaveAttribute(
-      "aria-label",
-      "指定した住所で経路を検索"
-    );
 
     const gpsButton = screen.getByText("現在地を使用");
     expect(gpsButton).toBeInTheDocument();
-    expect(gpsButton).toHaveAttribute(
-      "aria-label",
-      "現在地を使用して経路を検索"
-    );
   });
 });

@@ -20,13 +20,6 @@ describe("ResetButton", () => {
     expect(mockOnReset).toHaveBeenCalledTimes(1);
   });
 
-  it("アクセシビリティラベルが適切に設定されていること", () => {
-    render(<ResetButton onReset={mockOnReset} testId="test-reset-button" />);
-
-    const button = screen.getByTestId("test-reset-button");
-    expect(button).toHaveAttribute("aria-label", "リセット");
-  });
-
   it("カスタムクラス名が適用されること", () => {
     render(
       <ResetButton

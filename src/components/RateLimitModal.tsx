@@ -61,6 +61,7 @@ export default function RateLimitModal({
             onClick={onClose}
             className="btn btn-sm btn-circle btn-ghost"
             aria-label="閉じる"
+            data-testid="x-close-btn"
           >
             ✕
           </button>
@@ -76,7 +77,11 @@ export default function RateLimitModal({
             </li>
           </ul>
           <div className="flex flex-col gap-2">
-            <button onClick={onClose} className="btn btn-primary">
+            <button
+              onClick={onClose}
+              className="btn btn-primary"
+              data-testid="primary-close-btn"
+            >
               閉じる
             </button>
           </div>

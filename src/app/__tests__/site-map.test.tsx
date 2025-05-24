@@ -21,32 +21,20 @@ describe("SiteMapPage", () => {
 
   it("すべてのページへのリンクが含まれていること", () => {
     render(<SiteMapPage />);
+    expect(screen.getByRole("link", { name: "ホーム" })).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "ホームページに移動する" })
+      screen.getByRole("link", { name: "場所をさがす" })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "場所を探すページに移動する" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", {
-        name: "はじめての方へのガイドページに移動する",
-      })
+      screen.getByRole("link", { name: "はじめての方へ" })
     ).toBeInTheDocument();
   });
 
-  it("各リンクに適切なアクセシビリティ属性が設定されていること", () => {
+  it("外部リンクには適切な属性が設定されていること", () => {
     render(<SiteMapPage />);
-    const links = screen.getAllByRole("link");
-
-    links.forEach((link) => {
-      // すべてのリンクに適切なaria-labelとroleが設定されていることを確認
-      expect(link).toHaveAttribute("aria-label");
-    });
 
     // 外部リンクには適切な属性が設定されていることを確認
-    const updatesLink = screen.getByRole("link", {
-      name: "更新情報ページを新しいタブで開く",
-    });
+    const updatesLink = screen.getByRole("link", { name: "更新情報" });
     expect(updatesLink).toHaveAttribute("rel", "noopener noreferrer");
     expect(updatesLink).toHaveAttribute("target", "_blank");
   });

@@ -645,7 +645,7 @@ export default function LocationsPage() {
       )}
 
       <div className="md:flex md:justify-center">
-        <div className="w-screen md:w-100 -mx-4 carousel">
+        <div className="w-[calc(100vw-2rem)] md:w-100 -mx-4 carousel">
           {/* お悩みハンドブックへのリンクカード */}
           <div
             id="slide1"

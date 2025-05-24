@@ -5,6 +5,7 @@ import { Location } from "../types/transit";
 import LocationSuggestions from "./LocationSuggestions";
 import InputField from "./common/InputField";
 import Button from "./common/Button";
+import Card from "./common/Card";
 import { logger } from "../utils/logger";
 import RateLimitModal from "./RateLimitModal";
 
@@ -89,38 +90,34 @@ export default function DestinationSelector({
 
   return (
     <>
-      <div className="card bg-base-200 shadow-lg mb-6">
-        <div className="card-body">
-          <h2 className="card-title">目的地を選択してください</h2>
+      <Card title="目的地を選択してください" className="mb-6">
+        <LocationSuggestions onLocationSelected={handleLocationSelected} />
 
-          <LocationSuggestions onLocationSelected={handleLocationSelected} />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <InputField
+            label="目的地の住所や場所"
+            placeholder="神田駿河台"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            disabled={loading}
+            testId="address-input"
+            required={false}
+            error={error || undefined}
+            description="千代田区内の住所や場所名を入力してください。自動的に「千代田区」が先頭に追加されます。"
+          />
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <InputField
-              label="目的地の住所や場所"
-              placeholder="神田駿河台"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
+          <div className="card-actions justify-center">
+            <Button
+              type="submit"
               disabled={loading}
-              testId="address-input"
-              required={false}
-              error={error || undefined}
-              description="千代田区内の住所や場所名を入力してください。自動的に「千代田区」が先頭に追加されます。"
-            />
-
-            <div className="card-actions justify-center">
-              <Button
-                type="submit"
-                disabled={loading}
-                loading={loading}
-                testId="search-button"
-              >
-                検索
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
+              loading={loading}
+              testId="search-button"
+            >
+              検索
+            </Button>
+          </div>
+        </form>
+      </Card>
 
       {/* レート制限モーダル */}
       <RateLimitModal

@@ -8,6 +8,7 @@ import {
   loadAddressData,
   convertToLocation,
 } from "../utils/addressLoader";
+import Card from "./common/Card";
 
 interface LocationSuggestionsProps {
   onLocationSelected: (location: Location) => void;
@@ -57,148 +58,143 @@ export default function LocationSuggestions({
 
   if (loading) {
     return (
-      <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden">
-        <div className="card-body items-center text-center">
-          <div
-            className="flex items-center justify-center"
-            aria-live="polite"
-            aria-busy="true"
-          >
-            <span
-              className="loading loading-spinner loading-lg text-primary"
-              aria-hidden="true"
-            ></span>
-            <p className="ml-3 text-lg font-medium">
-              施設データを読み込み中...
-            </p>
-          </div>
+      <Card
+        className="mb-6 overflow-hidden"
+        variant="default"
+        bodyClassName="items-center text-center"
+      >
+        <div
+          className="flex items-center justify-center"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <span
+            className="loading loading-spinner loading-lg text-primary"
+            aria-hidden="true"
+          ></span>
+          <p className="ml-3 text-lg font-medium">施設データを読み込み中...</p>
         </div>
-      </div>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden">
-        <div className="card-body">
-          <div className="alert alert-error" role="alert" aria-live="assertive">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current shrink-0 h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{error}</span>
-          </div>
+      <Card className="mb-6 overflow-hidden" variant="default">
+        <div className="alert alert-error" role="alert" aria-live="assertive">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>{error}</span>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div
-      className="card bg-base-100 shadow-lg mb-6 overflow-hidden"
-      aria-labelledby={sectionId}
+    <Card
+      className="mb-6 overflow-hidden"
+      variant="default"
+      title="よく利用される施設から選択"
+      bodyClassName="p-4"
+      testId={sectionId}
     >
-      <div className="card-body p-4">
-        <h2 className="card-title" id={sectionId}>
-          よく利用される施設から選択
-        </h2>
+      <div
+        className="flex flex-row flex-wrap gap-2 mb-4"
+        role="tablist"
+        id={categoryListId}
+        aria-label="施設カテゴリ"
+      >
+        {categories.map((category) => {
+          const isActive = activeCategory === category.category;
+          const categoryId = `category-${category.category.replace(
+            /\s+/g,
+            "-"
+          )}`;
+          const controlsId = isActive ? locationListId : undefined;
 
-        <div
-          className="flex flex-row flex-wrap gap-2 mb-4"
-          role="tablist"
-          id={categoryListId}
-          aria-label="施設カテゴリ"
-        >
-          {categories.map((category) => {
-            const isActive = activeCategory === category.category;
-            const categoryId = `category-${category.category.replace(
-              /\s+/g,
-              "-"
-            )}`;
-            const controlsId = isActive ? locationListId : undefined;
-
-            return (
-              <button
-                key={category.category}
-                id={categoryId}
-                className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium
-                  ${
-                    isActive
-                      ? "btn-primary border-primary text-primary-content"
-                      : "btn-outline hover:border-primary/50 hover:bg-primary/5"
-                  }
-                `}
-                onClick={() => toggleCategory(category.category)}
-                role="tab"
-                aria-selected={isActive}
-                aria-controls={controlsId}
-                aria-label={`${category.category}カテゴリを${
-                  isActive ? "閉じる" : "開く"
-                }`}
-              >
-                {category.category}
-              </button>
-            );
-          })}
-        </div>
-
-        {activeCategory && (
-          <div
-            className="bg-base-200 rounded-box p-3 animate-fadeIn max-h-64 overflow-y-auto"
-            role="tabpanel"
-            aria-labelledby={`category-${activeCategory.replace(/\s+/g, "-")}`}
-          >
-            <ul
-              className="menu w-full"
-              id={locationListId}
-              aria-label={`${activeCategory}の施設一覧`}
+          return (
+            <button
+              key={category.category}
+              id={categoryId}
+              className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium
+                ${
+                  isActive
+                    ? "btn-primary border-primary text-primary-content"
+                    : "btn-outline hover:border-primary/50 hover:bg-primary/5"
+                }
+              `}
+              onClick={() => toggleCategory(category.category)}
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={controlsId}
+              aria-label={`${category.category}カテゴリを${
+                isActive ? "閉じる" : "開く"
+              }`}
             >
-              {categories
-                .find((c) => c.category === activeCategory)!
-                .locations.map((location) => (
-                  <li key={location.name}>
-                    <button onClick={() => handleLocationSelect(location)}>
-                      <div className="flex items-center w-full overflow-hidden">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 mr-2 flex-shrink-0"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          aria-hidden="true"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                        </svg>
-                        <span className="truncate">{location.name}</span>
-                      </div>
-                    </button>
-                  </li>
-                ))}
-            </ul>
-          </div>
-        )}
+              {category.category}
+            </button>
+          );
+        })}
       </div>
+
+      {activeCategory && (
+        <div
+          className="bg-base-200 rounded-box p-3 animate-fadeIn max-h-64 overflow-y-auto"
+          role="tabpanel"
+          aria-labelledby={`category-${activeCategory.replace(/\s+/g, "-")}`}
+        >
+          <ul
+            className="menu w-full"
+            id={locationListId}
+            aria-label={`${activeCategory}の施設一覧`}
+          >
+            {categories
+              .find((c) => c.category === activeCategory)!
+              .locations.map((location) => (
+                <li key={location.name}>
+                  <button onClick={() => handleLocationSelect(location)}>
+                    <div className="flex items-center w-full overflow-hidden">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 mr-2 flex-shrink-0"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                      </svg>
+                      <span className="truncate">{location.name}</span>
+                    </div>
+                  </button>
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
 
       <style jsx>{`
         @keyframes fadeIn {
@@ -215,6 +211,6 @@ export default function LocationSuggestions({
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
-    </div>
+    </Card>
   );
 }

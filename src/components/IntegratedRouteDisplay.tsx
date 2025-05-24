@@ -4,6 +4,7 @@ import React from "react";
 import { Departure } from "../types/transit";
 import { generateGoogleMapDirectionLink } from "../utils/maps";
 import { logger } from "../utils/logger";
+import Card from "./common/Card";
 
 interface RouteInfo {
   routeId: string;
@@ -136,7 +137,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
       : undefined;
 
   return (
-    <div className="bg-base-200 p-4 rounded-lg shadow-md">
+    <Card variant="default" className="rounded-lg" bodyClassName="p-4">
       {type === "none" ? (
         // ルートが見つからない場合の表示
         <div className="text-center">
@@ -183,52 +184,54 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
             return (
               <div key={route.routeId} className="mb-6">
                 {/* 最初のセグメント */}
-                <div className="card bg-base-100 shadow-sm mb-4 border-l-4 border-indigo-400">
-                  <div className="card-body p-4">
-                    {/* 出発バス停と時刻 */}
-                    <div className="flex justify-between items-center mb-2">
+                <Card
+                  className="mb-4 border-l-4 border-indigo-400"
+                  variant="default"
+                  bodyClassName="p-4"
+                >
+                  {/* 出発バス停と時刻 */}
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex-1">
+                      <div className="font-bold">{originStop.stopName}</div>
+                    </div>
+                    <div className="badge badge-secondary text-lg p-3">
+                      {formatTimeDisplay(departureTime)}
+                    </div>
+                  </div>
+
+                  {/* ルート情報 */}
+                  <div className="flex items-center my-3">
+                    <div className="badge badge-primary mr-2">
+                      {route.routeName}
+                    </div>
+                  </div>
+
+                  {/* 到着バス停と時刻（乗換がない場合は最終目的地） */}
+                  {!route.transfers || route.transfers.length === 0 ? (
+                    <div className="flex justify-between items-center">
                       <div className="flex-1">
-                        <div className="font-bold">{originStop.stopName}</div>
+                        <div className="font-bold">
+                          {destinationStop.stopName}
+                        </div>
                       </div>
                       <div className="badge badge-secondary text-lg p-3">
-                        {formatTimeDisplay(departureTime)}
+                        {formatTimeDisplay(arrivalTime)}
                       </div>
                     </div>
-
-                    {/* ルート情報 */}
-                    <div className="flex items-center my-3">
-                      <div className="badge badge-primary mr-2">
-                        {route.routeName}
+                  ) : (
+                    // 乗換がある場合は乗換駅を表示
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <div className="font-bold">
+                          {route.transfers[0].transferStop.stopName}
+                        </div>
+                      </div>
+                      <div className="badge badge-secondary text-lg p-3">
+                        {formatTimeDisplay(arrivalTime)}
                       </div>
                     </div>
-
-                    {/* 到着バス停と時刻（乗換がない場合は最終目的地） */}
-                    {!route.transfers || route.transfers.length === 0 ? (
-                      <div className="flex justify-between items-center">
-                        <div className="flex-1">
-                          <div className="font-bold">
-                            {destinationStop.stopName}
-                          </div>
-                        </div>
-                        <div className="badge badge-secondary text-lg p-3">
-                          {formatTimeDisplay(arrivalTime)}
-                        </div>
-                      </div>
-                    ) : (
-                      // 乗換がある場合は乗換駅を表示
-                      <div className="flex justify-between items-center">
-                        <div className="flex-1">
-                          <div className="font-bold">
-                            {route.transfers[0].transferStop.stopName}
-                          </div>
-                        </div>
-                        <div className="badge badge-secondary text-lg p-3">
-                          {formatTimeDisplay(arrivalTime)}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  )}
+                </Card>
 
                 {/* 乗換情報（ある場合） */}
                 {route.transfers && route.transfers.length > 0 && (
@@ -252,49 +255,49 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                       ); // 乗換後の所要時間
 
                       return (
-                        <div
+                        <Card
                           key={transfer.transferStop.stopId}
-                          className="card bg-base-100 shadow-sm mb-4 border-l-4 border-indigo-400"
+                          className="mb-4 border-l-4 border-indigo-400"
+                          variant="default"
+                          bodyClassName="p-4"
                         >
-                          <div className="card-body p-4">
-                            {/* 乗換駅出発時刻 */}
-                            <div className="flex justify-between items-center mb-2">
-                              <div className="flex-1">
-                                <div className="font-bold">
-                                  {transfer.transferStop.stopName}
-                                </div>
-                              </div>
-                              <div className="badge badge-secondary text-lg p-3">
-                                {formatTimeDisplay(
-                                  transfer.nextRoute.departureTime ||
-                                    transferDepartureTime
-                                )}
+                          {/* 乗換駅出発時刻 */}
+                          <div className="flex justify-between items-center mb-2">
+                            <div className="flex-1">
+                              <div className="font-bold">
+                                {transfer.transferStop.stopName}
                               </div>
                             </div>
-
-                            {/* 次のルート情報 */}
-                            <div className="flex items-center my-3">
-                              <div className="badge badge-primary mr-2">
-                                {transfer.nextRoute.routeName}
-                              </div>
-                            </div>
-
-                            {/* 最終到着駅と時刻 */}
-                            <div className="flex justify-between items-center">
-                              <div className="flex-1">
-                                <div className="font-bold">
-                                  {destinationStop.stopName}
-                                </div>
-                              </div>
-                              <div className="badge badge-secondary text-lg p-3">
-                                {formatTimeDisplay(
-                                  transfer.nextRoute.arrivalTime ||
-                                    finalArrivalTime
-                                )}
-                              </div>
+                            <div className="badge badge-secondary text-lg p-3">
+                              {formatTimeDisplay(
+                                transfer.nextRoute.departureTime ||
+                                  transferDepartureTime
+                              )}
                             </div>
                           </div>
-                        </div>
+
+                          {/* 次のルート情報 */}
+                          <div className="flex items-center my-3">
+                            <div className="badge badge-primary mr-2">
+                              {transfer.nextRoute.routeName}
+                            </div>
+                          </div>
+
+                          {/* 最終到着駅と時刻 */}
+                          <div className="flex justify-between items-center">
+                            <div className="flex-1">
+                              <div className="font-bold">
+                                {destinationStop.stopName}
+                              </div>
+                            </div>
+                            <div className="badge badge-secondary text-lg p-3">
+                              {formatTimeDisplay(
+                                transfer.nextRoute.arrivalTime ||
+                                  finalArrivalTime
+                              )}
+                            </div>
+                          </div>
+                        </Card>
                       );
                     })}
                   </>
@@ -318,7 +321,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 };
 

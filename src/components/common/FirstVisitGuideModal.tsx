@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { isFirstVisit } from "../../utils/visitTracker";
 import { logger } from "../../utils/logger";
@@ -21,32 +21,21 @@ const FirstVisitGuideModal = () => {
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    // ページロード後に初回訪問かどうかを確認し、タイマーで少し遅らせて表示
-    const timer = setTimeout(() => {
-      const firstVisit = isFirstVisit();
-      setIsOpen(firstVisit);
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
 
-      if (firstVisit) {
-        logger.log("初回訪問ポップアップが表示されました");
-      }
-    }, 1500); // 1.5秒後に表示して急すぎる印象を避ける
+    // イベント記録
+    logger.log("初回訪問ポップアップが閉じられました");
 
-    // ESCキーでモーダルを閉じる
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        handleClose();
-      }
-    };
+    // Googleアナリティクスイベント送信
+    sendEvent(
+      "engagement",
+      "guide_popup_close",
+      "beginners_guide_popup_dismissed"
+    );
+  }, []);
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
-
-  const handleGoToGuide = () => {
+  const handleGoToGuide = useCallback(() => {
     setIsOpen(false);
 
     // イベント記録
@@ -60,21 +49,37 @@ const FirstVisitGuideModal = () => {
     );
 
     router.push("/beginners-guide");
-  };
+  }, [router]);
 
-  const handleClose = () => {
-    setIsOpen(false);
+  useEffect(() => {
+    // ページロード後に初回訪問かどうかを確認し、タイマーで少し遅らせて表示
+    const timer = setTimeout(() => {
+      const firstVisit = isFirstVisit();
+      setIsOpen(firstVisit);
 
-    // イベント記録
-    logger.log("初回訪問ポップアップが閉じられました");
+      if (firstVisit) {
+        logger.log("初回訪問ポップアップが表示されました");
+      }
+    }, 1500); // 1.5秒後に表示して急すぎる印象を避ける
 
-    // Googleアナリティクスイベント送信
-    sendEvent(
-      "engagement",
-      "guide_popup_close",
-      "beginners_guide_popup_dismissed"
-    );
-  };
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []); // 空の依存配列に修正して、マウント時のみ実行されるように
+
+  // ESCキーでモーダルを閉じる機能
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        handleClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, handleClose]); // isOpenとhandleCloseが変わるたびにリスナーを更新
 
   if (!isOpen) return null;
 

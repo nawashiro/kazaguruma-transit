@@ -30,15 +30,15 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
               </span>
               <p className="font-semibold">使う</p>
             </summary>
-            <ul className="menu w-full text-base">
+            <ul role="menu" className="menu w-full text-base">
               <li>
-                <Link href="/" onClick={toggleSidebar}>
+                <Link role="menuitem" href="/" onClick={toggleSidebar}>
                   <HomeIcon className="h-6 w-6" />
                   ホーム
                 </Link>
               </li>
               <li>
-                <Link href="/locations" onClick={toggleSidebar}>
+                <Link role="menuitem" href="/locations" onClick={toggleSidebar}>
                   <MapPinIcon className="h-6 w-6" />
                   場所をさがす
                 </Link>
@@ -54,21 +54,25 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
               </span>
               <p className="font-semibold">使い方やサイト情報</p>
             </summary>
-            <ul className="menu w-full text-base">
+            <ul role="menu" className="menu w-full text-base">
               <li>
-                <Link href="/beginners-guide" onClick={toggleSidebar}>
+                <Link
+                  role="menuitem"
+                  href="/beginners-guide"
+                  onClick={toggleSidebar}
+                >
                   <QuestionMarkCircleIcon className="h-6 w-6" />
                   はじめての方へ
                 </Link>
               </li>
               <li>
-                <Link href="/usage" onClick={toggleSidebar}>
+                <Link role="menuitem" href="/usage" onClick={toggleSidebar}>
                   <BookOpenIcon className="h-6 w-6" />
                   使い方
                 </Link>
               </li>
               <li>
-                <Link href="/license" onClick={toggleSidebar}>
+                <Link role="menuitem" href="/license" onClick={toggleSidebar}>
                   <DocumentTextIcon className="h-6 w-6" />
                   ライセンス
                 </Link>
@@ -78,6 +82,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
                   href="https://halved-hamster-4a1.notion.site/1df78db44c3d80979856c735893403d4"
                   target="_blank"
                   rel="noopener noreferrer"
+                  role="menuitem"
                 >
                   <ArrowPathIcon className="h-6 w-6" />
                   更新情報
@@ -86,9 +91,9 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
             </ul>
           </details>
         </li>
-        <ul className="menu w-full text-xl">
+        <ul role="menu" className="menu w-full text-xl">
           <li>
-            <Link href="/site-map" onClick={toggleSidebar}>
+            <Link role="menuitem" href="/site-map" onClick={toggleSidebar}>
               <MapIcon className="h-6 w-6" />
               サイトマップ
             </Link>
@@ -99,6 +104,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={toggleSidebar}
+              role="menuitem"
             >
               <HeartIcon className="h-6 w-6 text-secondary" />
               開発者を支援する

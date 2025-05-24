@@ -17,6 +17,8 @@ import {
   formatAreaName,
   getAreaNameFromCoordinates,
 } from "../../utils/clientGeoUtils";
+import Card from "@/components/common/Card";
+import CarouselCard from "@/components/common/CarouselCard";
 
 // 2点間の距離を計算する関数（ハーバーサイン公式）
 const calculateDistance = (
@@ -401,7 +403,7 @@ export default function LocationsPage() {
         <div className="card-body">
           <h2 className="card-title">{location.name}</h2>
 
-          {areaName && <p className="text-sm text-gray-500">{areaName}</p>}
+          {areaName && <p className="text-sm">{areaName}</p>}
 
           {location.description && (
             <p className="text-sm mt-1 line-clamp-3">{location.description}</p>
@@ -463,133 +465,123 @@ export default function LocationsPage() {
       </div>
 
       <div className="mb-6">
-        <div className="card bg-base-100 shadow-lg overflow-hidden">
-          <div className="card-body p-4">
-            <h2 className="card-title">近いところから表示</h2>
+        <Card title="近いところから表示">
+          {searchError && (
+            <div className="alert alert-error">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="stroke-current shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>{searchError}</span>
+            </div>
+          )}
 
-            {searchError && (
-              <div className="alert alert-error">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="stroke-current shrink-0 h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span>{searchError}</span>
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-4 mb-4">
-              <div>
-                <button
-                  className="btn btn-outline w-full sm:w-auto"
-                  onClick={sortByDistance}
-                  disabled={positionLoading}
-                >
-                  {positionLoading ? (
-                    <>
-                      <span className="loading loading-spinner loading-xs"></span>
-                      位置情報取得中...
-                    </>
-                  ) : (
-                    "現在地を取得"
-                  )}
-                </button>
-                <p className="text-xs text-gray-500 mt-1">モバイル端末向け</p>
-              </div>
-
-              <div className="divider divider-horizontal sm:flex hidden">
-                または
-              </div>
-              <div className="divider sm:hidden">または</div>
-
-              <div className="flex-1">
-                <form
-                  onSubmit={handleAddressSearch}
-                  className="flex flex-col sm:flex-row gap-2"
-                >
-                  <div className="form-control flex-1">
-                    <input
-                      type="text"
-                      placeholder="住所を入力（例：神田駿河台）"
-                      className="input input-bordered w-full"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      disabled={searchLoading}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={searchLoading}
-                  >
-                    {searchLoading ? (
-                      <span className="loading loading-spinner loading-xs"></span>
-                    ) : (
-                      "検索"
-                    )}
-                  </button>
-                </form>
-                <p className="text-xs text-gray-500 mt-1">
-                  PC向け / 任意の場所から選びたい
-                </p>
-              </div>
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <div>
+              <p className="text-xs mb-1">モバイル端末向け</p>
+              <button
+                className="btn btn-outline w-full sm:w-auto"
+                onClick={sortByDistance}
+                disabled={positionLoading}
+              >
+                {positionLoading ? (
+                  <>
+                    <span className="loading loading-spinner loading-xs"></span>
+                    位置情報取得中...
+                  </>
+                ) : (
+                  "現在地を取得"
+                )}
+              </button>
             </div>
 
-            {currentPosition && (
-              <div className="alert alert-success">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="stroke-current shrink-0 h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            <div className="divider divider-horizontal sm:flex hidden">
+              または
+            </div>
+            <div className="divider sm:hidden">または</div>
+
+            <div className="flex-1">
+              <p className="text-xs mb-1">PC向け / 任意の場所から選びたい</p>
+              <form
+                onSubmit={handleAddressSearch}
+                className="flex flex-col sm:flex-row gap-2"
+              >
+                <div className="form-control flex-1">
+                  <input
+                    type="text"
+                    placeholder="住所を入力（例：神田駿河台）"
+                    className="input input-bordered w-full"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    disabled={searchLoading}
                   />
-                </svg>
-                <span>
-                  位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます
-                </span>
-              </div>
-            )}
+                </div>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={searchLoading}
+                >
+                  {searchLoading ? (
+                    <span className="loading loading-spinner loading-xs"></span>
+                  ) : (
+                    "検索"
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
+
+          {currentPosition && (
+            <div className="alert alert-success">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="stroke-current shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>
+                位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます
+              </span>
+            </div>
+          )}
+        </Card>
       </div>
 
-      <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden">
-        <div className="card-body p-4">
-          <h2 className="card-title">カテゴリを選択</h2>
-
-          <div className="flex flex-row flex-wrap gap-2 mb-4">
-            {categories.map((category) => (
-              <button
-                key={category.category}
-                className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium
+      <Card title="カテゴリを選択">
+        <div className="flex flex-row flex-wrap gap-2 mb-4">
+          {categories.map((category) => (
+            <button
+              key={category.category}
+              className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium
                 ${
                   activeCategory === category.category
                     ? "btn-primary border-primary text-primary-content"
                     : "btn-outline hover:border-primary/50 hover:bg-primary/5"
                 }
               `}
-                onClick={() => toggleCategory(category.category)}
-              >
-                {category.category}
-              </button>
-            ))}
-          </div>
+              onClick={() => toggleCategory(category.category)}
+            >
+              {category.category}
+            </button>
+          ))}
         </div>
-      </div>
+      </Card>
 
       {activeCategory && (
         <div className="animate-fadeIn mb-6">
@@ -645,145 +637,111 @@ export default function LocationsPage() {
       )}
 
       <div className="md:flex md:justify-center">
-        <div className="w-[calc(100vw-2rem)] md:w-100 -mx-4 carousel">
+        <div className="carousel w-full md:max-w-3xl">
           {/* お悩みハンドブックへのリンクカード */}
-          <div
+          <CarouselCard
             id="slide1"
-            className="carousel-item inline p-4 w-[calc(100%-2rem)]"
+            title="悩みがあるけど、どうしたらいい？"
+            prevSlideId="slide3"
+            nextSlideId="slide2"
           >
-            <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
-              <div className="card-body p-4">
-                <h2 className="card-title">悩みがあるけど、どうしたらいい？</h2>
-                <p className="text-sm text-gray-600 mb-2">
-                  支援が欲しいけど、なにがあるのかわからない。
-                  <br />
-                  あてはまる悩みにチェックをつけると、 <br />
-                  役立つ支援がわかります。
-                </p>
-                <a
-                  href="https://compass.graffer.jp/handbook/landing"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-outline w-fit h-fit py-2"
-                >
-                  お悩みハンドブックウェブサイトへ
-                </a>
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <a href="#slide3" className="btn btn-circle btn-primary">
-                ❮
-              </a>
-              <a href="#slide2" className="btn btn-circle btn-primary">
-                ❯
-              </a>
-            </div>
-          </div>
+            <p className="text-sm text-base-content/80 mb-2">
+              支援が欲しいけど、なにがあるのかわからない。
+              <br />
+              あてはまる悩みにチェックをつけると、 <br />
+              役立つ支援がわかります。
+            </p>
+            <a
+              href="https://compass.graffer.jp/handbook/landing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline w-fit h-fit py-2"
+            >
+              お悩みハンドブックウェブサイトへ
+            </a>
+          </CarouselCard>
+
           {/* せかいビバークへのリンクカード */}
-          <div
+          <CarouselCard
             id="slide2"
-            className="carousel-item inline p-4 w-[calc(100%-2rem)]"
+            title="今夜、安心して泊まれる場所がない"
+            prevSlideId="slide1"
+            nextSlideId="slide3"
           >
-            <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
-              <div className="card-body p-4">
-                <h2 className="card-title">今夜、安心して泊まれる場所がない</h2>
-                <p className="text-sm text-gray-600 mb-2">
-                  帰る家はありますか？
-                  <br />
-                  あったとして、安心できる場所ですか？
-                  <br />
-                  こちらから緊急お助けパックを受け取ってください。
-                </p>
-                <a
-                  href="https://sekaibivouac.jp/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-outline w-fit h-fit py-2"
-                >
-                  せかいビバークウェブサイトへ
-                </a>
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <a href="#slide1" className="btn btn-circle btn-primary">
-                ❮
-              </a>
-              <a href="#slide3" className="btn btn-circle btn-primary">
-                ❯
-              </a>
-            </div>
-          </div>
+            <p className="text-sm text-base-content/80 mb-2">
+              帰る家はありますか？
+              <br />
+              あったとして、安心できる場所ですか？
+              <br />
+              こちらから緊急お助けパックを受け取ってください。
+            </p>
+            <a
+              href="https://sekaibivouac.jp/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline w-fit h-fit py-2"
+            >
+              せかいビバークウェブサイトへ
+            </a>
+          </CarouselCard>
+
           {/* イベント情報へのリンクカード */}
-          <div
+          <CarouselCard
             id="slide3"
-            className="carousel-item inline p-4 w-[calc(100%-2rem)]"
+            title="イベントを知る"
+            prevSlideId="slide2"
+            nextSlideId="slide1"
           >
-            <div className="carousel-item card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
-              <div className="card-body p-4">
-                <h2 className="card-title">イベントを知る</h2>
-                <p className="text-sm text-gray-600 mb-2">
-                  千代田区で開催されるイベント情報はこちら。
-                </p>
-                <a
-                  href="https://visit-chiyoda.tokyo/app/event"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-outline w-fit h-fit py-2"
-                >
-                  千代田区観光協会ウェブサイトへ
-                </a>
-                <a
-                  href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-outline w-fit h-fit py-2"
-                >
-                  千代田区ウェブサイトへ
-                </a>
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <a href="#slide2" className="btn btn-circle btn-primary">
-                ❮
-              </a>
-              <a href="#slide1" className="btn btn-circle btn-primary">
-                ❯
-              </a>
-            </div>
-          </div>
+            <p className="text-sm text-base-content/80 mb-2">
+              千代田区で開催されるイベント情報はこちら。
+            </p>
+            <a
+              href="https://visit-chiyoda.tokyo/app/event"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline w-fit h-fit py-2"
+            >
+              千代田区観光協会ウェブサイトへ
+            </a>
+            <a
+              href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline w-fit h-fit py-2"
+            >
+              千代田区ウェブサイトへ
+            </a>
+          </CarouselCard>
         </div>
       </div>
 
-      <div className="card bg-base-100 shadow-lg overflow-hidden">
-        <div className="card-body p-4">
-          <h2 className="card-title">データ提供元</h2>
-          <p>
-            この場所データは
-            <a
-              href="https://github.com/nawashiro/chiyoda_city_main_facilities"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link link-primary"
-            >
-              千代田区主要施設座標データ
-            </a>
-            による「風ぐるまの停留所から徒歩圏内（600m以内）であることがわかっている場所」を使用しています。
-          </p>
-          <p>
-            誤りが含まれていたり、古いデータが残っていたり、新たに加えてほしい場所があるときは、直接プルリクエストを送るか、
-            <a
-              href="https://docs.google.com/forms/d/e/1FAIpQLSeZ1eufe_2aZkRWQwr-RuCceUYUMJ7WmSfUr1ZsX5QTDRqFKQ/viewform?usp=header"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link link-primary"
-            >
-              こちらのフォーム
-            </a>
-            からお知らせください。
-          </p>
-          <p>写真のご提供も歓迎しています。</p>
-        </div>
-      </div>
+      <Card title="データ提供元">
+        <p>
+          この場所データは
+          <a
+            href="https://github.com/nawashiro/chiyoda_city_main_facilities"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="link link-primary"
+          >
+            千代田区主要施設座標データ
+          </a>
+          による「風ぐるまの停留所から徒歩圏内（600m以内）であることがわかっている場所」を使用しています。
+        </p>
+        <p>
+          誤りが含まれていたり、古いデータが残っていたり、新たに加えてほしい場所があるときは、直接プルリクエストを送るか、
+          <a
+            href="https://docs.google.com/forms/d/e/1FAIpQLSeZ1eufe_2aZkRWQwr-RuCceUYUMJ7WmSfUr1ZsX5QTDRqFKQ/viewform?usp=header"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="link link-primary"
+          >
+            こちらのフォーム
+          </a>
+          からお知らせください。
+        </p>
+        <p>写真のご提供も歓迎しています。</p>
+      </Card>
 
       <style jsx>{`
         @keyframes fadeIn {

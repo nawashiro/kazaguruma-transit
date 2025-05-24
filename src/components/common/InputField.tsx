@@ -52,7 +52,7 @@ export default function InputField({
       {description && (
         <div
           id={descriptionId}
-          className="text-sm text-gray-600 mt-1 leading-relaxed"
+          className="text-sm text-base-content/70 mt-1 leading-relaxed"
         >
           {description}
         </div>
@@ -70,7 +70,7 @@ export default function InputField({
         className={`input input-bordered w-full min-h-[44px] text-base leading-relaxed ${
           hasError
             ? "input-error border-2 border-error"
-            : "border border-gray-300 hover:border-gray-400"
+            : "border border-base-300 hover:border-base-content/50"
         } ${disabled ? "opacity-70 cursor-not-allowed" : ""}`}
         aria-invalid={hasError ? "true" : undefined}
         aria-required={required ? "true" : undefined}

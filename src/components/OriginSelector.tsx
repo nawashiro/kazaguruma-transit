@@ -172,7 +172,6 @@ export default function OriginSelector({
                 loading={loading}
                 className="flex-1"
                 testId="search-button"
-                aria-label="指定した住所で経路を検索"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

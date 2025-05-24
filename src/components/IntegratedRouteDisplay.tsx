@@ -311,7 +311,6 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="link link-primary text-sm"
-                aria-label={`${destinationStop.stopName}から目的地へのルートをGoogleマップで確認`}
               >
                 {destinationStop.stopName} → 目的地 Googleマップ
               </a>

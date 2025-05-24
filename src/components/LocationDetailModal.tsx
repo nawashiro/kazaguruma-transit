@@ -148,7 +148,6 @@ export default function LocationDetailModal({
               target="_blank"
               rel="noopener noreferrer"
               className="link link-primary"
-              aria-label={`${location.name}のウェブサイトを開く（新しいタブで開きます）`}
             >
               ウェブサイトを見る
             </a>
@@ -176,7 +175,6 @@ export default function LocationDetailModal({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="link link-primary ml-1"
-                aria-label={`ライセンス情報を開く（新しいタブで開きます）`}
               >
                 {location.licence}
               </a>

@@ -31,7 +31,6 @@ export default function SiteMapPage() {
             <Link
               href="/"
               className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
-              aria-label="ホームページに移動する"
             >
               ホーム
             </Link>
@@ -42,7 +41,6 @@ export default function SiteMapPage() {
             <Link
               href="/locations"
               className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
-              aria-label="場所を探すページに移動する"
             >
               場所をさがす
             </Link>
@@ -63,7 +61,6 @@ export default function SiteMapPage() {
             <Link
               href="/beginners-guide"
               className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
-              aria-label="はじめての方へのガイドページに移動する"
             >
               はじめての方へ
             </Link>
@@ -76,7 +73,6 @@ export default function SiteMapPage() {
             <Link
               href="/usage"
               className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
-              aria-label="使い方ページに移動する"
             >
               使い方
             </Link>
@@ -96,7 +92,6 @@ export default function SiteMapPage() {
             <Link
               href="/license"
               className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
-              aria-label="ライセンス情報ページに移動する"
             >
               ライセンス
             </Link>
@@ -111,7 +106,6 @@ export default function SiteMapPage() {
               target="_blank"
               rel="noopener noreferrer"
               className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
-              aria-label="更新情報ページを新しいタブで開く"
             >
               更新情報
             </a>
@@ -122,7 +116,6 @@ export default function SiteMapPage() {
             <Link
               href="/site-map"
               className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
-              aria-label="現在表示しているサイトマップページ"
             >
               サイトマップ
             </Link>
@@ -148,7 +141,6 @@ export default function SiteMapPage() {
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary underline hover:no-underline"
-            aria-label="フィードバックフォームを新しいタブで開く"
           >
             こちらのフォーム
           </a>

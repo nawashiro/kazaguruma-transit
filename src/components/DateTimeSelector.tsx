@@ -107,7 +107,6 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             aria-pressed={isDeparture}
             aria-checked={isDeparture}
             role="radio"
-            aria-label="出発時間を指定"
           >
             出発
           </button>
@@ -120,7 +119,6 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             aria-pressed={!isDeparture}
             aria-checked={!isDeparture}
             role="radio"
-            aria-label="到着時間を指定"
           >
             到着
           </button>

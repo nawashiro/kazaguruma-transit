@@ -13,7 +13,7 @@ export default function SidebarLayout({
       <div className="drawer-side z-40">
         <label
           htmlFor="drawer"
-          aria-label="close sidebar"
+          aria-label="メニューを閉じる"
           className="drawer-overlay"
         ></label>
         <Sidebar
@@ -31,7 +31,6 @@ export default function SidebarLayout({
             htmlFor="drawer"
             className="btn btn-ghost drawer-button lg:hidden"
             role="button"
-            aria-label="メニューを開く"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

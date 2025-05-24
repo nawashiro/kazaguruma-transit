@@ -19,7 +19,7 @@ export default function ResetButton({
 }: ResetButtonProps) {
   return (
     <div className={`flex justify-center ${className}`}>
-      <Button onClick={onReset} secondary testId={testId} aria-label="リセット">
+      <Button onClick={onReset} secondary testId={testId}>
         検索条件をリセット
       </Button>
     </div>

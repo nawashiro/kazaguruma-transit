@@ -114,7 +114,6 @@ export default function DestinationSelector({
                 disabled={loading}
                 loading={loading}
                 testId="search-button"
-                aria-label="目的地を検索"
               >
                 検索
               </Button>

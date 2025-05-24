@@ -32,21 +32,13 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
             </summary>
             <ul className="menu w-full text-base">
               <li>
-                <Link
-                  href="/"
-                  aria-label="ホームページに移動"
-                  onClick={toggleSidebar}
-                >
+                <Link href="/" onClick={toggleSidebar}>
                   <HomeIcon className="h-6 w-6" />
                   ホーム
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/locations"
-                  aria-label="場所を探すページに移動"
-                  onClick={toggleSidebar}
-                >
+                <Link href="/locations" onClick={toggleSidebar}>
                   <MapPinIcon className="h-6 w-6" />
                   場所をさがす
                 </Link>
@@ -64,31 +56,19 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
             </summary>
             <ul className="menu w-full text-base">
               <li>
-                <Link
-                  href="/beginners-guide"
-                  aria-label="はじめての方へのガイドページに移動"
-                  onClick={toggleSidebar}
-                >
+                <Link href="/beginners-guide" onClick={toggleSidebar}>
                   <QuestionMarkCircleIcon className="h-6 w-6" />
                   はじめての方へ
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/usage"
-                  aria-label="使い方ページに移動"
-                  onClick={toggleSidebar}
-                >
+                <Link href="/usage" onClick={toggleSidebar}>
                   <BookOpenIcon className="h-6 w-6" />
                   使い方
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/license"
-                  aria-label="ライセンス情報ページに移動"
-                  onClick={toggleSidebar}
-                >
+                <Link href="/license" onClick={toggleSidebar}>
                   <DocumentTextIcon className="h-6 w-6" />
                   ライセンス
                 </Link>
@@ -108,11 +88,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
         </li>
         <ul className="menu w-full text-xl">
           <li>
-            <Link
-              href="/site-map"
-              aria-label="サイトマップページに移動"
-              onClick={toggleSidebar}
-            >
+            <Link href="/site-map" onClick={toggleSidebar}>
               <MapIcon className="h-6 w-6" />
               サイトマップ
             </Link>

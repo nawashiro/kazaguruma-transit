@@ -188,7 +188,6 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
       <button
         onClick={handleGeneratePdf}
         className="btn btn-primary mt-4 flex items-center"
-        aria-label="PDF出力"
         disabled={pdfGenerating || pdfLoading}
       >
         {pdfGenerating || pdfLoading ? (

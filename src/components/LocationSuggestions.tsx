@@ -167,10 +167,7 @@ export default function LocationSuggestions({
                 .find((c) => c.category === activeCategory)!
                 .locations.map((location) => (
                   <li key={location.name}>
-                    <button
-                      onClick={() => handleLocationSelect(location)}
-                      aria-label={`${location.name}を出発地に設定する`}
-                    >
+                    <button onClick={() => handleLocationSelect(location)}>
                       <div className="flex items-center w-full overflow-hidden">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"

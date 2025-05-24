@@ -383,7 +383,7 @@ export default function LocationsPage() {
 
     return (
       <button
-        className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow text-left w-full border-none"
+        className="card cursor-pointer bg-base-100 shadow-md hover:shadow-lg transition-shadow text-left w-full border-none"
         onClick={() => openLocationModal(location)}
         aria-label={`${location.name}の詳細を表示`}
       >
@@ -634,9 +634,7 @@ export default function LocationsPage() {
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                       {locations.map((location) => (
-                        <div key={location.id} className="contents">
-                          <LocationCard location={location} />
-                        </div>
+                        <LocationCard key={location.id} location={location} />
                       ))}
                     </div>
                   </div>

@@ -76,11 +76,7 @@ export default function RateLimitModal({
             </li>
           </ul>
           <div className="flex flex-col gap-2">
-            <button
-              onClick={onClose}
-              className="btn btn-primary"
-              aria-label="モーダルを閉じる"
-            >
+            <button onClick={onClose} className="btn btn-primary">
               閉じる
             </button>
           </div>

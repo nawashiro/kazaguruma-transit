@@ -20,7 +20,6 @@ export default function OriginSelector({
   const [loading, setLoading] = useState(false);
   const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
   const uniqueId = useId();
-  const headingId = `origin-heading-${uniqueId}`;
   const buttonGroupId = `origin-actions-${uniqueId}`;
 
   const handleAddressSubmit = async (e: React.FormEvent) => {
@@ -141,96 +140,85 @@ export default function OriginSelector({
 
   return (
     <>
-      <Card
-        variant="default"
-        className="bg-base-200/70 p-4"
-        bodyClassName=""
-        testId="origin-selector-card"
-      >
-        <div aria-labelledby={headingId}>
-          <h2 id={headingId} className="text-xl font-bold mb-4">
-            次に出発地を選択してください
-          </h2>
+      <Card testId="origin-selector-card" title="次に出発地を選択してください">
+        <form onSubmit={handleAddressSubmit} className="space-y-4">
+          <InputField
+            label="住所や場所"
+            placeholder="千代田区役所"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            disabled={loading}
+            testId="address-input"
+            required={true}
+            error={error || undefined}
+            description="千代田区内の住所や場所名を入力してください。自動的に「千代田区」が先頭に追加されます。"
+          />
 
-          <form onSubmit={handleAddressSubmit} className="space-y-4">
-            <InputField
-              label="住所や場所"
-              placeholder="千代田区役所"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              disabled={loading}
-              testId="address-input"
-              required={true}
-              error={error || undefined}
-              description="千代田区内の住所や場所名を入力してください。自動的に「千代田区」が先頭に追加されます。"
-            />
-
-            <fieldset aria-describedby={buttonGroupId}>
-              <legend id={buttonGroupId} className="sr-only">
-                検索オプション
-              </legend>
-              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  loading={loading}
-                  className="flex-1"
-                  testId="search-button"
+          <fieldset aria-describedby={buttonGroupId}>
+            <legend id={buttonGroupId} className="sr-only">
+              検索オプション
+            </legend>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+              <Button
+                type="submit"
+                disabled={loading}
+                loading={loading}
+                className="flex-1"
+                testId="search-button"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                  この住所で検索
-                </Button>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                この住所で検索
+              </Button>
 
-                <Button
-                  type="button"
-                  onClick={handleUseCurrentLocation}
-                  disabled={loading}
-                  loading={loading}
-                  className="flex-1"
-                  testId="gps-button"
-                  aria-label="現在地を使用して経路を検索"
+              <Button
+                type="button"
+                onClick={handleUseCurrentLocation}
+                disabled={loading}
+                loading={loading}
+                className="flex-1"
+                testId="gps-button"
+                aria-label="現在地を使用して経路を検索"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                  現在地を使用
-                </Button>
-              </div>
-            </fieldset>
-          </form>
-        </div>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                現在地を使用
+              </Button>
+            </div>
+          </fieldset>
+        </form>
       </Card>
 
       {/* レート制限モーダル */}

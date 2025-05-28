@@ -448,130 +448,130 @@ export default function Home() {
       {/* 初回訪問ガイドモーダル */}
       <FirstVisitGuideModal />
 
-      <main className="max-w-md mx-auto space-y-4">
-        {/* 初心者ガイドボタン - 検索フォームの前に表示 */}
-
-        {!selectedDestination ? (
-          <DestinationSelector
-            onDestinationSelected={handleDestinationSelected}
-          />
-        ) : !selectedOrigin ? (
-          <>
-            <Card title="選択された目的地">
-              <p data-testid="selected-destination">
-                {selectedDestination.address ||
-                  `緯度: ${selectedDestination.lat.toFixed(
-                    6
-                  )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
-              </p>
-            </Card>
-            <OriginSelector onOriginSelected={handleOriginSelected} />
-            <ResetButton onReset={resetSearch} />
-          </>
-        ) : !searchPerformed ? (
-          <>
-            <Card title="選択された目的地">
-              <p data-testid="selected-destination">
-                {selectedDestination.address ||
-                  `緯度: ${selectedDestination.lat.toFixed(
-                    6
-                  )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
-              </p>
-            </Card>
-
-            <Card title="選択された出発地">
-              <p data-testid="selected-origin">
-                {selectedOrigin.address ||
-                  `緯度: ${selectedOrigin.lat.toFixed(
-                    6
-                  )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
-              </p>
-            </Card>
-
-            <Card title="日時の選択">
-              <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
-
-              {/* はやさ優先スイッチ */}
-              <div className="form-control mt-4 space-y-2">
-                <p className="text-sm text-gray-500 mt-1">
-                  早く到着したい場合はオンにしてください。
-                  <br />
-                  歩きを最小限にしたい場合はオフにしてください。
+      <main className="space-y-4 max-w-md mx-auto">
+        <div aria-live="polite" className="space-y-4">
+          {!selectedDestination ? (
+            <DestinationSelector
+              onDestinationSelected={handleDestinationSelected}
+            />
+          ) : !selectedOrigin ? (
+            <>
+              <Card title="選択された目的地">
+                <p data-testid="selected-destination">
+                  {selectedDestination.address ||
+                    `緯度: ${selectedDestination.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
                 </p>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="label-text">はやさ優先</span>
-                  <input
-                    type="checkbox"
-                    className="toggle toggle-primary"
-                    checked={prioritizeSpeed}
-                    onChange={handlePrioritizeSpeedChange}
-                  />
-                  <span className="label-text">
-                    {prioritizeSpeed ? "ON" : "OFF"}
-                  </span>
-                </label>
-              </div>
-
-              <div className="card-actions justify-center">
-                <Button
-                  onClick={handleSearch}
-                  disabled={!selectedDateTime}
-                  testId="search-route"
-                >
-                  検索
-                </Button>
-              </div>
-            </Card>
-
-            <ResetButton onReset={resetSearch} />
-          </>
-        ) : (
-          <>
-            <ResetButton onReset={resetSearch} />
-
-            {error ? (
-              <div className="alert alert-error">{error}</div>
-            ) : routeLoading ? (
-              <Card bodyClassName="items-center text-center">
-                <span className="loading loading-spinner loading-lg"></span>
-                <p>経路を検索中...</p>
               </Card>
-            ) : routeInfo ? (
-              <div>
-                <IntegratedRouteDisplay
-                  originStop={routeInfo.originStop}
-                  destinationStop={routeInfo.destinationStop}
-                  routes={routeInfo.routes}
-                  type={routeInfo.type}
-                  _transfers={routeInfo.transfers}
-                  _message={routeInfo.message}
-                  originLat={selectedOrigin.lat}
-                  originLng={selectedOrigin.lng}
-                  destLat={selectedDestination.lat}
-                  destLng={selectedDestination.lng}
-                />
+              <OriginSelector onOriginSelected={handleOriginSelected} />
+              <ResetButton onReset={resetSearch} />
+            </>
+          ) : !searchPerformed ? (
+            <>
+              <Card title="選択された目的地">
+                <p data-testid="selected-destination">
+                  {selectedDestination.address ||
+                    `緯度: ${selectedDestination.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
+                </p>
+              </Card>
 
-                {/* PDF出力ボタンを追加 */}
-                {routeInfo.type !== "none" && (
-                  <div className="mt-4 flex justify-center">
-                    <RoutePdfExport
-                      originStop={routeInfo.originStop}
-                      destinationStop={routeInfo.destinationStop}
-                      routes={routeInfo.routes}
-                      type={routeInfo.type}
-                      transfers={routeInfo.transfers}
-                      originLat={selectedOrigin.lat}
-                      originLng={selectedOrigin.lng}
-                      destLat={selectedDestination.lat}
-                      destLng={selectedDestination.lng}
-                      selectedDateTime={selectedDateTime}
+              <Card title="選択された出発地">
+                <p data-testid="selected-origin">
+                  {selectedOrigin.address ||
+                    `緯度: ${selectedOrigin.lat.toFixed(
+                      6
+                    )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
+                </p>
+              </Card>
+
+              <Card title="日時の選択">
+                <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
+
+                {/* はやさ優先スイッチ */}
+                <div className="form-control mt-4 space-y-2">
+                  <p className="text-sm text-gray-500 mt-1">
+                    早く到着したい場合はオンにしてください。
+                    <br />
+                    歩きを最小限にしたい場合はオフにしてください。
+                  </p>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <span className="label-text">はやさ優先</span>
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-primary"
+                      checked={prioritizeSpeed}
+                      onChange={handlePrioritizeSpeedChange}
                     />
-                  </div>
-                )}
-              </div>
-            ) : null}
-          </>
-        )}
+                    <span className="label-text">
+                      {prioritizeSpeed ? "ON" : "OFF"}
+                    </span>
+                  </label>
+                </div>
+
+                <div className="card-actions justify-center">
+                  <Button
+                    onClick={handleSearch}
+                    disabled={!selectedDateTime}
+                    testId="search-route"
+                  >
+                    検索
+                  </Button>
+                </div>
+              </Card>
+
+              <ResetButton onReset={resetSearch} />
+            </>
+          ) : (
+            <>
+              <ResetButton onReset={resetSearch} />
+
+              {error ? (
+                <div className="alert alert-error">{error}</div>
+              ) : routeLoading ? (
+                <Card bodyClassName="items-center text-center">
+                  <span className="loading loading-spinner loading-lg"></span>
+                  <p>経路を検索中...</p>
+                </Card>
+              ) : routeInfo ? (
+                <div>
+                  <IntegratedRouteDisplay
+                    originStop={routeInfo.originStop}
+                    destinationStop={routeInfo.destinationStop}
+                    routes={routeInfo.routes}
+                    type={routeInfo.type}
+                    _transfers={routeInfo.transfers}
+                    _message={routeInfo.message}
+                    originLat={selectedOrigin.lat}
+                    originLng={selectedOrigin.lng}
+                    destLat={selectedDestination.lat}
+                    destLng={selectedDestination.lng}
+                  />
+
+                  {/* PDF出力ボタンを追加 */}
+                  {routeInfo.type !== "none" && (
+                    <div className="mt-4 flex justify-center">
+                      <RoutePdfExport
+                        originStop={routeInfo.originStop}
+                        destinationStop={routeInfo.destinationStop}
+                        routes={routeInfo.routes}
+                        type={routeInfo.type}
+                        transfers={routeInfo.transfers}
+                        originLat={selectedOrigin.lat}
+                        originLng={selectedOrigin.lng}
+                        destLat={selectedDestination.lat}
+                        destLng={selectedDestination.lng}
+                        selectedDateTime={selectedDateTime}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
         <Card bodyClassName="text-center text-xs">
           <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
           <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>

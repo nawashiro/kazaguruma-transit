@@ -93,6 +93,8 @@ export default function DestinationSelector({
       <Card title="目的地を選択してください" className="mb-6">
         <LocationSuggestions onLocationSelected={handleLocationSelected} />
 
+        <div className="divider">または</div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <InputField
             label="目的地の住所や場所"

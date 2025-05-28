@@ -53,11 +53,11 @@ export default function Card({
   cardClasses += ` ${className}`;
 
   return (
-    <div className={`shadow-sm ${cardClasses}`} data-testid={testId}>
+    <section className={`shadow-sm ${cardClasses}`} data-testid={testId}>
       <div className={`card-body ${bodyClassName}`}>
         {title && <h2 className={`card-title ${titleClassName}`}>{title}</h2>}
         {children}
       </div>
-    </div>
+    </section>
   );
 }

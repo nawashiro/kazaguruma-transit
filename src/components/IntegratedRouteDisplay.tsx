@@ -5,6 +5,7 @@ import { Departure } from "../types/transit";
 import { generateGoogleMapDirectionLink } from "../utils/maps";
 import { logger } from "../utils/logger";
 import Card from "./common/Card";
+import StopTimeDisplay from "./StopTimeDisplay";
 
 interface RouteInfo {
   routeId: string;
@@ -190,14 +191,11 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                   bodyClassName="p-4"
                 >
                   {/* 出発バス停と時刻 */}
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex-1">
-                      <div className="font-bold">{originStop.stopName}</div>
-                    </div>
-                    <div className="badge badge-secondary text-lg p-3">
-                      {formatTimeDisplay(departureTime)}
-                    </div>
-                  </div>
+                  <StopTimeDisplay
+                    stopName={originStop.stopName}
+                    time={formatTimeDisplay(departureTime)}
+                    dateTime={departureTime}
+                  />
 
                   {/* ルート情報 */}
                   <div className="flex items-center my-3">
@@ -208,28 +206,20 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
 
                   {/* 到着バス停と時刻（乗換がない場合は最終目的地） */}
                   {!route.transfers || route.transfers.length === 0 ? (
-                    <div className="flex justify-between items-center">
-                      <div className="flex-1">
-                        <div className="font-bold">
-                          {destinationStop.stopName}
-                        </div>
-                      </div>
-                      <div className="badge badge-secondary text-lg p-3">
-                        {formatTimeDisplay(arrivalTime)}
-                      </div>
-                    </div>
+                    <StopTimeDisplay
+                      stopName={destinationStop.stopName}
+                      time={formatTimeDisplay(arrivalTime)}
+                      dateTime={arrivalTime}
+                      className=""
+                    />
                   ) : (
                     // 乗換がある場合は乗換駅を表示
-                    <div className="flex justify-between items-center">
-                      <div className="flex-1">
-                        <div className="font-bold">
-                          {route.transfers[0].transferStop.stopName}
-                        </div>
-                      </div>
-                      <div className="badge badge-secondary text-lg p-3">
-                        {formatTimeDisplay(arrivalTime)}
-                      </div>
-                    </div>
+                    <StopTimeDisplay
+                      stopName={route.transfers[0].transferStop.stopName}
+                      time={formatTimeDisplay(arrivalTime)}
+                      dateTime={arrivalTime}
+                      className=""
+                    />
                   )}
                 </Card>
 
@@ -262,19 +252,14 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                           bodyClassName="p-4"
                         >
                           {/* 乗換駅出発時刻 */}
-                          <div className="flex justify-between items-center mb-2">
-                            <div className="flex-1">
-                              <div className="font-bold">
-                                {transfer.transferStop.stopName}
-                              </div>
-                            </div>
-                            <div className="badge badge-secondary text-lg p-3">
-                              {formatTimeDisplay(
-                                transfer.nextRoute.departureTime ||
-                                  transferDepartureTime
-                              )}
-                            </div>
-                          </div>
+                          <StopTimeDisplay
+                            stopName={transfer.transferStop.stopName}
+                            time={formatTimeDisplay(
+                              transfer.nextRoute.departureTime ||
+                                transferDepartureTime
+                            )}
+                            dateTime={transferDepartureTime}
+                          />
 
                           {/* 次のルート情報 */}
                           <div className="flex items-center my-3">
@@ -284,19 +269,14 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                           </div>
 
                           {/* 最終到着駅と時刻 */}
-                          <div className="flex justify-between items-center">
-                            <div className="flex-1">
-                              <div className="font-bold">
-                                {destinationStop.stopName}
-                              </div>
-                            </div>
-                            <div className="badge badge-secondary text-lg p-3">
-                              {formatTimeDisplay(
-                                transfer.nextRoute.arrivalTime ||
-                                  finalArrivalTime
-                              )}
-                            </div>
-                          </div>
+                          <StopTimeDisplay
+                            stopName={destinationStop.stopName}
+                            time={formatTimeDisplay(
+                              transfer.nextRoute.arrivalTime || finalArrivalTime
+                            )}
+                            dateTime={finalArrivalTime}
+                            className=""
+                          />
                         </Card>
                       );
                     })}

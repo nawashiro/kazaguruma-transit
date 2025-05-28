@@ -58,23 +58,17 @@ export default function LocationSuggestions({
 
   if (loading) {
     return (
-      <Card
-        className="mb-6 overflow-hidden"
-        variant="default"
-        bodyClassName="items-center text-center"
+      <div
+        className="flex items-center justify-center"
+        aria-live="polite"
+        aria-busy="true"
       >
-        <div
-          className="flex items-center justify-center"
-          aria-live="polite"
-          aria-busy="true"
-        >
-          <span
-            className="loading loading-spinner loading-lg text-primary"
-            aria-hidden="true"
-          ></span>
-          <p className="ml-3 text-lg font-medium">施設データを読み込み中...</p>
-        </div>
-      </Card>
+        <span
+          className="loading loading-spinner loading-lg text-primary"
+          aria-hidden="true"
+        ></span>
+        <p className="ml-3 text-lg font-medium">施設データを読み込み中...</p>
+      </div>
     );
   }
 
@@ -103,15 +97,15 @@ export default function LocationSuggestions({
   }
 
   return (
-    <Card
-      className="mb-6 overflow-hidden"
-      variant="default"
-      title="よく利用される施設から選択"
-      bodyClassName="p-4"
-      testId={sectionId}
-    >
+    <div data-testid={sectionId}>
+      <label
+        htmlFor={categoryListId}
+        className="label label-text font-medium text-foreground"
+      >
+        よく利用される施設から選択
+      </label>
       <div
-        className="flex flex-row flex-wrap gap-2 mb-4"
+        className="flex flex-row flex-wrap gap-2 mb-4 mt-2"
         role="tablist"
         id={categoryListId}
         aria-label="施設カテゴリ"
@@ -211,6 +205,6 @@ export default function LocationSuggestions({
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
-    </Card>
+    </div>
   );
 }

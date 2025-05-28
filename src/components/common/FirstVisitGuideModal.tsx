@@ -89,7 +89,7 @@ const FirstVisitGuideModal = () => {
       data-testid="first-visit-modal"
     >
       <div
-        className="rounded-lg p-4 shadow-lg max-w-3xl mx-auto border border-primary/20"
+        className="rounded-lg p-4 shadow-lg max-w-3xl mx-auto border border-primary/20 bg-base-100"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
@@ -101,7 +101,6 @@ const FirstVisitGuideModal = () => {
           </h2>
           <button
             ref={closeButtonRef}
-            className="/60 hover:"
             onClick={handleClose}
             aria-label="閉じる"
           >

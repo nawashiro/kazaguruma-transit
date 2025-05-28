@@ -100,7 +100,9 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
           </label>
           <button
             type="button"
-            className={`join-item btn ${isDeparture ? "btn-active" : ""}`}
+            className={`join-item btn ${
+              isDeparture ? "btn-active btn-primary" : ""
+            }`}
             onClick={() => handleTimeTypeChange(true)}
             data-testid="departure-tab"
             disabled={disabled}
@@ -112,7 +114,9 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
           </button>
           <button
             type="button"
-            className={`join-item btn ${!isDeparture ? "btn-active" : ""}`}
+            className={`join-item btn ${
+              !isDeparture ? "btn-active btn-primary" : ""
+            }`}
             onClick={() => handleTimeTypeChange(false)}
             data-testid="arrival-tab"
             disabled={disabled}

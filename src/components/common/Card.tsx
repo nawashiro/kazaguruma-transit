@@ -11,6 +11,7 @@ export interface CardProps {
   testId?: string;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   variant?: "default" | "primary" | "secondary" | "accent" | "neutral";
+  id?: string;
 }
 
 /**
@@ -26,6 +27,7 @@ export default function Card({
   testId,
   size,
   variant = "default",
+  id = "",
 }: CardProps) {
   // ベースとなるカードのクラス
   let cardClasses = "card";
@@ -53,7 +55,11 @@ export default function Card({
   cardClasses += ` ${className}`;
 
   return (
-    <section className={`shadow-sm ${cardClasses}`} data-testid={testId}>
+    <section
+      className={`shadow-sm ${cardClasses}`}
+      data-testid={testId}
+      id={id}
+    >
       <div className={`card-body ${bodyClassName}`}>
         {title && <h2 className={`card-title ${titleClassName}`}>{title}</h2>}
         {children}

@@ -209,7 +209,6 @@ describe("InputField", () => {
     );
 
     const input = screen.getByTestId("test-input");
-    expect(input).toHaveClass("");
     expect(input).toHaveClass("leading-relaxed");
   });
 

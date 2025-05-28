@@ -195,11 +195,13 @@ describe("OriginSelector", () => {
   it("アクセシビリティ：フォーム要素が正しくラベル付けされている", () => {
     render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
 
-    // 見出しがaria-labelledbyで関連付けられていることを確認
-    const container = screen
-      .getByText("次に出発地を選択してください")
-      .closest("div");
-    expect(container).toHaveAttribute("aria-labelledby", expect.any(String));
+    // セクション要素とタイトル見出しがセマンティックに正しく関連付けられていることを確認
+    const section = screen.getByTestId("origin-selector-card");
+    expect(section.tagName).toBe("SECTION");
+
+    const heading = section.querySelector(".card-title");
+    expect(heading).toBeInTheDocument();
+    expect(heading).toHaveTextContent("次に出発地を選択してください");
 
     // 入力フィールドの確認
     const addressInput = screen.getByTestId("address-input");

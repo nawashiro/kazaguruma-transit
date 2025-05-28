@@ -165,7 +165,6 @@ describe("Button", () => {
     );
 
     const button = screen.getByTestId("test-button");
-    expect(button).toHaveClass("");
     expect(button).toHaveClass("leading-relaxed");
   });
 });

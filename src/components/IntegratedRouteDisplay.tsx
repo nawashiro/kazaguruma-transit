@@ -142,9 +142,9 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
       {type === "none" ? (
         // ルートが見つからない場合の表示
         <div className="text-center">
-          <h3 className="text-xl font-bold mb-2">ルートが見つかりません</h3>
+          <h3 className="text-xl font-bold mb-2 ">ルートが見つかりません</h3>
           <p>この2つの地点を結ぶルートが見つかりませんでした</p>
-          <p className="mt-2">別の交通手段をご検討ください</p>
+          <p className="mt-2 ">別の交通手段をご検討ください</p>
         </div>
       ) : (
         // ルートが見つかった場合
@@ -210,7 +210,6 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                       stopName={destinationStop.stopName}
                       time={formatTimeDisplay(arrivalTime)}
                       dateTime={arrivalTime}
-                      className=""
                     />
                   ) : (
                     // 乗換がある場合は乗換駅を表示
@@ -218,7 +217,6 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                       stopName={route.transfers[0].transferStop.stopName}
                       time={formatTimeDisplay(arrivalTime)}
                       dateTime={arrivalTime}
-                      className=""
                     />
                   )}
                 </Card>
@@ -275,7 +273,6 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                               transfer.nextRoute.arrivalTime || finalArrivalTime
                             )}
                             dateTime={finalArrivalTime}
-                            className=""
                           />
                         </Card>
                       );

@@ -101,7 +101,7 @@ const FirstVisitGuideModal = () => {
           </h2>
           <button
             ref={closeButtonRef}
-            className="text-base-content/60 hover:text-base-content"
+            className="/60 hover:"
             onClick={handleClose}
             aria-label="閉じる"
           >

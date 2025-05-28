@@ -50,10 +50,7 @@ export default function InputField({
         </span>
       </label>
       {description && (
-        <div
-          id={descriptionId}
-          className="text-sm text-base-content/70 mt-1 leading-relaxed"
-        >
+        <div id={descriptionId} className="text-sm /70 mt-1 leading-relaxed">
           {description}
         </div>
       )}
@@ -67,7 +64,7 @@ export default function InputField({
         required={required}
         name={name}
         maxLength={maxLength}
-        className={`input input-bordered w-full min-h-[44px] text-base leading-relaxed ${
+        className={`input input-bordered w-full min-h-[44px]  leading-relaxed ${
           hasError
             ? "input-error border-2 border-error"
             : "border border-base-300 hover:border-base-content/50"

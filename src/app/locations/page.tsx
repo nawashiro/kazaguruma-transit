@@ -401,14 +401,12 @@ export default function LocationsPage() {
         )}
 
         <div className="card-body text-left">
-          <h2 className="card-title">{location.name}</h2>
+          <h2 className="card-title ">{location.name}</h2>
 
-          {areaName && (
-            <p className="text-sm text-base-content/60">{areaName}</p>
-          )}
+          {areaName && <p className="text-sm /60">{areaName}</p>}
 
           {location.description && (
-            <p className="text-sm mt-1 line-clamp-3">{location.description}</p>
+            <p className="text-sm mt-1 line-clamp-3 ">{location.description}</p>
           )}
         </div>
       </button>
@@ -419,7 +417,7 @@ export default function LocationsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <header className="text-center my-4">
-          <h1 className="text-3xl font-bold">場所をさがす</h1>
+          <h1 className="text-3xl font-bold ">場所をさがす</h1>
         </header>
         <div className="flex items-center justify-center py-12">
           <span className="loading loading-spinner loading-lg text-primary"></span>
@@ -433,7 +431,7 @@ export default function LocationsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <header className="text-center my-4">
-          <h1 className="text-3xl font-bold">場所をさがす</h1>
+          <h1 className="text-3xl font-bold ">場所をさがす</h1>
         </header>
         <div className="alert alert-error max-w-lg mx-auto">
           <svg
@@ -458,8 +456,8 @@ export default function LocationsPage() {
   return (
     <>
       <header className="text-center my-4">
-        <h1 className="text-3xl font-bold">場所をさがす</h1>
-        <p className="mt-2 text-xl">
+        <h1 className="text-3xl font-bold ">場所をさがす</h1>
+        <p className="mt-2 text-xl ">
           位置とカテゴリから千代田区のスポットをさがす
         </p>
       </header>
@@ -602,7 +600,7 @@ export default function LocationsPage() {
                   .sort(([a], [b]) => Number(a) - Number(b))
                   .map(([distance, locations]) => (
                     <div key={distance}>
-                      <h2 className="text-lg font-semibold my-3 pb-1 border-b border-base-300">
+                      <h2 className="text-lg font-semibold my-3 pb-1 border-b border-base-300 ">
                         {distance}キロ離れています
                       </h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
@@ -624,7 +622,7 @@ export default function LocationsPage() {
                   )
                   .map(([areaName, locations]) => (
                     <div key={areaName}>
-                      <h2 className="text-lg font-semibold my-3 pb-1 border-b border-base-300">
+                      <h2 className="text-lg font-semibold my-3 pb-1 border-b border-base-300 ">
                         {areaName}
                       </h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
@@ -648,11 +646,10 @@ export default function LocationsPage() {
               prevSlideId="slide3"
               nextSlideId="slide2"
             >
-              <p className="text-sm text-base-content/80 mb-2">
+              <p className="text-sm /80 mb-2">
                 支援が欲しいけど、なにがあるのかわからない。
                 <br />
-                あてはまる悩みにチェックをつけると、 <br />
-                役立つ支援がわかります。
+                あてはまる悩みにチェックをつけると、役立つ支援がわかります。
               </p>
               <a
                 href="https://compass.graffer.jp/handbook/landing"
@@ -671,7 +668,7 @@ export default function LocationsPage() {
               prevSlideId="slide1"
               nextSlideId="slide3"
             >
-              <p className="text-sm text-base-content/80 mb-2">
+              <p className="text-sm /80 mb-2">
                 帰る家はありますか？
                 <br />
                 あったとして、安心できる場所ですか？
@@ -695,7 +692,7 @@ export default function LocationsPage() {
               prevSlideId="slide2"
               nextSlideId="slide1"
             >
-              <p className="text-sm text-base-content/80 mb-2">
+              <p className="text-sm /80 mb-2">
                 千代田区で開催されるイベント情報はこちら。
               </p>
               <a

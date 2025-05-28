@@ -53,7 +53,7 @@ export default function RateLimitModal({
         aria-describedby="rate-limit-description"
       >
         <div className="flex justify-between items-start">
-          <h3 id="rate-limit-title" className="font-bold text-lg">
+          <h3 id="rate-limit-title" className="font-bold text-lg ">
             リクエスト制限に達しました
           </h3>
           <button
@@ -68,11 +68,11 @@ export default function RateLimitModal({
         </div>
 
         <div className="py-4">
-          <p id="rate-limit-description" className="mb-3">
+          <p id="rate-limit-description" className="mb-3 ">
             1時間あたり60リクエストの制限に達しました。以下のオプションがあります：
           </p>
-          <ul className="list bg-base-200 w-full rounded-box mb-4" role="list">
-            <li className="list-row">
+          <ul className="list bg-base-100 w-full rounded-box mb-4" role="list">
+            <li className="list-row ">
               1時間待ってから再試行してください（残り時間はブラウザを閉じても継続します）
             </li>
           </ul>

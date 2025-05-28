@@ -45,7 +45,7 @@ export default function Card({
   } else if (variant === "neutral") {
     cardClasses += " bg-neutral text-neutral-content";
   } else {
-    // デフォルトは bg-base-200/70
+    // デフォルトは bg-base-100
     cardClasses += " bg-base-100";
   }
 

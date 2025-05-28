@@ -50,10 +50,8 @@ export default function LocationDetailModal({
         </form>
 
         {/* タイトルと画像 */}
-        <h3 className="font-bold text-xl mb-2">{location.name}</h3>
-        {areaName && (
-          <p className="text-sm text-base-content/60 mb-2">{areaName}</p>
-        )}
+        <h3 className="font-bold text-xl mb-2 ">{location.name}</h3>
+        {areaName && <p className="text-sm /60 mb-2">{areaName}</p>}
 
         {location.imageUri && (
           <figure className="relative h-64 w-full overflow-hidden mb-4">
@@ -68,8 +66,8 @@ export default function LocationDetailModal({
         {/* 説明文（全文表示） */}
         {location.description && (
           <div className="mt-4">
-            <h4 className="font-semibold text-lg mb-2">説明</h4>
-            <p className="text-sm">{location.description}</p>
+            <h4 className="font-semibold text-lg mb-2 ">説明</h4>
+            <p className="text-sm ">{location.description}</p>
           </div>
         )}
 
@@ -88,20 +86,20 @@ export default function LocationDetailModal({
         )}
 
         {/* 著作権情報 */}
-        <div className="mt-6 bg-base-200 p-3 rounded-lg">
-          <h4 className="font-semibold text-sm mb-2">提供情報</h4>
+        <div className="mt-6 bg-base-100 p-3 rounded-lg">
+          <h4 className="font-semibold text-sm mb-2 ">提供情報</h4>
           <div className="text-xs space-y-2">
-            <p>座標データ提供: {location.nodeCopyright}</p>
+            <p className="/90">座標データ提供: {location.nodeCopyright}</p>
 
             {location.imageCopyright && (
-              <p>画像提供: {location.imageCopyright}</p>
+              <p className="/90">画像提供: {location.imageCopyright}</p>
             )}
 
             {location.description && location.descriptionCopyright && (
-              <p>説明文提供: {location.descriptionCopyright}</p>
+              <p className="/90">説明文提供: {location.descriptionCopyright}</p>
             )}
 
-            <div>
+            <div className="/90">
               ライセンス:
               <a
                 href={location.licenceUri}

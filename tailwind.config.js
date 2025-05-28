@@ -20,6 +20,31 @@ export default {
   },
   plugins: [require("daisyui")],
   daisyui: {
-    themes: ["light"],
+    themes: [
+      {
+        light: {
+          primary: "#167bff",
+          "primary-content": "#ffffff",
+          secondary: "#f000b8",
+          accent: "#37cdbe",
+          neutral: "#2b3440",
+          "base-100": "#ffffff",
+          "base-200": "#f9fafb",
+          "base-300": "#d1d5db",
+          "base-content": "#1f2937",
+        },
+        dark: {
+          primary: "#167bff",
+          "primary-content": "#ffffff",
+          secondary: "#f000b8",
+          accent: "#37cdbe",
+          neutral: "#2b3440",
+          "base-100": "#1f2937",
+          "base-200": "#111827",
+          "base-300": "#374151",
+          "base-content": "#f9fafb",
+        },
+      },
+    ],
   },
 };

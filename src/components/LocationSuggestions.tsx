@@ -145,7 +145,7 @@ export default function LocationSuggestions({
 
       {activeCategory && (
         <div
-          className="bg-base-200 rounded-box p-3 animate-fadeIn max-h-64 overflow-y-auto"
+          className="bg-base-100 rounded-box p-3 animate-fadeIn max-h-64 overflow-y-auto"
           role="tabpanel"
           aria-labelledby={`category-${activeCategory.replace(/\s+/g, "-")}`}
         >

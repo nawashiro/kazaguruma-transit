@@ -13,15 +13,14 @@ import {
   MapPinIcon,
 } from "@heroicons/react/24/outline";
 import { HeartIcon } from "@heroicons/react/24/solid";
-
 interface SidebarProps {
   toggleSidebar: () => void;
 }
 
 export default function Sidebar({ toggleSidebar }: SidebarProps) {
   return (
-    <aside className="h-full bg-base-200 w-80 border-r">
-      <ul className="menu p-4 space-y-4 w-full text-base">
+    <aside className="h-full w-80 border-r bg-base-300">
+      <ul className="menu p-4 space-y-4 w-full ">
         <li>
           <details open>
             <summary className="group">
@@ -30,7 +29,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
               </span>
               <p className="font-semibold">使う</p>
             </summary>
-            <ul role="menu" className="menu w-full text-base">
+            <ul role="menu" className="menu w-full ">
               <li>
                 <Link role="menuitem" href="/" onClick={toggleSidebar}>
                   <HomeIcon className="h-6 w-6" />
@@ -54,7 +53,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
               </span>
               <p className="font-semibold">使い方やサイト情報</p>
             </summary>
-            <ul role="menu" className="menu w-full text-base">
+            <ul role="menu" className="menu w-full ">
               <li>
                 <Link
                   role="menuitem"
@@ -91,7 +90,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
             </ul>
           </details>
         </li>
-        <ul role="menu" className="menu w-full text-xl">
+        <ul role="menu" className="menu w-full ">
           <li>
             <Link role="menuitem" href="/site-map" onClick={toggleSidebar}>
               <MapIcon className="h-6 w-6" />

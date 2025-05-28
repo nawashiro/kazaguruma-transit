@@ -8,12 +8,12 @@ export default function Usage() {
       </header>
 
       <main className="max-w-md mx-auto space-y-4">
-        <section className="card bg-base-200/70 shadow-md">
+        <section className="card bg-base-100 shadow-md">
           <div className="card-body">
             <h2 className="card-title text-xl">本ソフトウェア</h2>
             <div className="space-y-4">
-              <p className="text-base">© Nawashiro</p>
-              <p className="text-base">これはOSSではありません。</p>
+              <p>© Nawashiro</p>
+              <p>これはOSSではありません。</p>
               <a
                 href="https://nawashiro.dev"
                 className="link link-primary"
@@ -25,10 +25,10 @@ export default function Usage() {
             </div>
           </div>
         </section>
-        <section className="card bg-base-200/70 shadow-md">
+        <section className="card bg-base-100 shadow-md">
           <div className="card-body">
             <h2 className="card-title text-xl">千代田区主要施設座標データ</h2>
-            <p className="text-base">
+            <p>
               東京都千代田区内の主要な施設の座標をまとめた json データです。
             </p>
             <ul>
@@ -55,10 +55,10 @@ export default function Usage() {
             </ul>
           </div>
         </section>
-        <section className="card bg-base-200/70 shadow-md">
+        <section className="card bg-base-100 shadow-md">
           <div className="card-body">
             <h2 className="card-title text-xl">千代田区町名 geojson</h2>
-            <p className="text-base">
+            <p>
               千代田区の町名までを含む geojson
               データです。丁目以降を含みません。
             </p>
@@ -86,14 +86,12 @@ export default function Usage() {
             </ul>
           </div>
         </section>
-        <section className="card bg-base-200/70 shadow-md">
+        <section className="card bg-base-100 shadow-md">
           <div className="card-body">
             <h2 className="card-title text-xl">
               千代田区地域福祉交通「風ぐるま」GTFSデータ
             </h2>
-            <p className="text-base">
-              データソースとライセンスは以下の通りです。
-            </p>
+            <p>データソースとライセンスは以下の通りです。</p>
             <ul>
               <li>
                 <a

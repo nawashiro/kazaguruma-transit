@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useId } from "react";
 import { Location } from "../types/transit";
 import InputField from "./common/InputField";
 import Button from "./common/Button";
+import Card from "./common/Card";
 import { logger } from "../utils/logger";
 import RateLimitModal from "./RateLimitModal";
 
@@ -18,6 +19,8 @@ export default function OriginSelector({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
+  const uniqueId = useId();
+  const buttonGroupId = `origin-actions-${uniqueId}`;
 
   const handleAddressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +41,7 @@ export default function OriginSelector({
         searchAddress = `千代田区 ${searchAddress}`;
       }
 
-      // 実際のGoogle Maps Geocoding APIを呼び出し
+      // Google Maps Geocoding APIを呼び出し
       const response = await fetch(
         `/api/geocode?address=${encodeURIComponent(searchAddress)}`
       );
@@ -62,12 +65,18 @@ export default function OriginSelector({
           address: firstResult.formattedAddress,
         };
         onOriginSelected(location);
+        logger.log(`出発地選択: ${location.address}`);
       } else {
-        throw new Error("住所が見つかりませんでした");
+        // よりわかりやすいエラーメッセージを提供
+        setError(
+          "入力された住所が見つかりませんでした。住所をより具体的に入力するか、一般的な場所名を試してください。"
+        );
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "予期せぬエラーが発生しました"
+        err instanceof Error
+          ? err.message
+          : "予期せぬエラーが発生しました。ネットワーク接続を確認して、再度お試しください。"
       );
     } finally {
       setLoading(false);
@@ -131,15 +140,7 @@ export default function OriginSelector({
 
   return (
     <>
-      <div className="card bg-base-200/70 p-4 shadow-md">
-        <h2 className="text-xl font-bold mb-4">次に出発地を選択してください</h2>
-
-        {error && (
-          <div className="alert alert-error mb-4" data-testid="error-message">
-            <span>{error}</span>
-          </div>
-        )}
-
+      <Card testId="origin-selector-card" title="次に出発地を選択してください">
         <form onSubmit={handleAddressSubmit} className="space-y-4">
           <InputField
             label="住所や場所"
@@ -148,33 +149,77 @@ export default function OriginSelector({
             onChange={(e) => setAddress(e.target.value)}
             disabled={loading}
             testId="address-input"
-            required
+            required={true}
+            error={error || undefined}
+            description="千代田区内の住所や場所名を入力してください。自動的に「千代田区」が先頭に追加されます。"
           />
 
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-            <Button
-              type="submit"
-              disabled={loading}
-              loading={loading}
-              className="flex-1"
-              testId="search-button"
-            >
-              この住所で検索
-            </Button>
+          <fieldset aria-describedby={buttonGroupId}>
+            <legend id={buttonGroupId} className="sr-only">
+              検索オプション
+            </legend>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+              <Button
+                type="submit"
+                disabled={loading}
+                loading={loading}
+                className="flex-1"
+                testId="search-button"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                この住所で検索
+              </Button>
 
-            <Button
-              type="button"
-              onClick={handleUseCurrentLocation}
-              disabled={loading}
-              loading={loading}
-              className="flex-1"
-              testId="gps-button"
-            >
-              現在地を使用
-            </Button>
-          </div>
+              <Button
+                type="button"
+                onClick={handleUseCurrentLocation}
+                disabled={loading}
+                loading={loading}
+                className="flex-1"
+                testId="gps-button"
+                aria-label="現在地を使用して経路を検索"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                現在地を使用
+              </Button>
+            </div>
+          </fieldset>
         </form>
-      </div>
+      </Card>
 
       {/* レート制限モーダル */}
       <RateLimitModal

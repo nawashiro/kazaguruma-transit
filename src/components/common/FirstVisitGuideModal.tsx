@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { isFirstVisit } from "../../utils/visitTracker";
 import { logger } from "../../utils/logger";
@@ -12,22 +12,30 @@ import { sendEvent } from "@/lib/analytics/useGA";
 const FirstVisitGuideModal = () => {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
+  // モーダルを開いたとき、閉じるボタンにフォーカスを移動
   useEffect(() => {
-    // ページロード後に初回訪問かどうかを確認し、タイマーで少し遅らせて表示
-    const timer = setTimeout(() => {
-      const firstVisit = isFirstVisit();
-      setIsOpen(firstVisit);
+    if (isOpen && closeButtonRef.current) {
+      closeButtonRef.current.focus();
+    }
+  }, [isOpen]);
 
-      if (firstVisit) {
-        logger.log("初回訪問ポップアップが表示されました");
-      }
-    }, 1500); // 1.5秒後に表示して急すぎる印象を避ける
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
 
-    return () => clearTimeout(timer);
+    // イベント記録
+    logger.log("初回訪問ポップアップが閉じられました");
+
+    // Googleアナリティクスイベント送信
+    sendEvent(
+      "engagement",
+      "guide_popup_close",
+      "beginners_guide_popup_dismissed"
+    );
   }, []);
 
-  const handleGoToGuide = () => {
+  const handleGoToGuide = useCallback(() => {
     setIsOpen(false);
 
     // イベント記録
@@ -41,21 +49,37 @@ const FirstVisitGuideModal = () => {
     );
 
     router.push("/beginners-guide");
-  };
+  }, [router]);
 
-  const handleClose = () => {
-    setIsOpen(false);
+  useEffect(() => {
+    // ページロード後に初回訪問かどうかを確認し、タイマーで少し遅らせて表示
+    const timer = setTimeout(() => {
+      const firstVisit = isFirstVisit();
+      setIsOpen(firstVisit);
 
-    // イベント記録
-    logger.log("初回訪問ポップアップが閉じられました");
+      if (firstVisit) {
+        logger.log("初回訪問ポップアップが表示されました");
+      }
+    }, 1500); // 1.5秒後に表示して急すぎる印象を避ける
 
-    // Googleアナリティクスイベント送信
-    sendEvent(
-      "engagement",
-      "guide_popup_close",
-      "beginners_guide_popup_dismissed"
-    );
-  };
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []); // 空の依存配列に修正して、マウント時のみ実行されるように
+
+  // ESCキーでモーダルを閉じる機能
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        handleClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, handleClose]); // isOpenとhandleCloseが変わるたびにリスナーを更新
 
   if (!isOpen) return null;
 
@@ -65,17 +89,18 @@ const FirstVisitGuideModal = () => {
       data-testid="first-visit-modal"
     >
       <div
-        className="bg-white rounded-lg p-4 shadow-lg max-w-3xl mx-auto border border-primary/20"
+        className="rounded-lg p-4 shadow-lg max-w-3xl mx-auto border border-primary/20 bg-base-100"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
+        aria-describedby="modal-description"
       >
         <div className="flex items-center justify-between">
           <h2 id="modal-title" className="text-lg font-semibold">
             風ぐるまは初めてですか？
           </h2>
           <button
-            className="text-gray-500 hover:text-gray-700"
+            ref={closeButtonRef}
             onClick={handleClose}
             aria-label="閉じる"
           >
@@ -84,6 +109,7 @@ const FirstVisitGuideModal = () => {
               className="h-5 w-5"
               viewBox="0 0 20 20"
               fill="currentColor"
+              aria-hidden="true"
             >
               <path
                 fillRule="evenodd"
@@ -93,7 +119,9 @@ const FirstVisitGuideModal = () => {
             </svg>
           </button>
         </div>
-        <p className="my-2">風ぐるまの使い方や基本情報を確認してみませんか？</p>
+        <p id="modal-description" className="my-2">
+          風ぐるまの使い方や基本情報を確認してみませんか？
+        </p>
         <div className="flex gap-2 justify-end mt-3">
           <button
             className="btn btn-sm btn-outline"

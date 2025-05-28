@@ -10,12 +10,15 @@ import {
 } from "../../utils/addressLoader";
 import { logger } from "../../utils/logger";
 import RateLimitModal from "../../components/RateLimitModal";
+import LocationDetailModal from "../../components/LocationDetailModal";
 import {
   loadGeoJSON,
   groupLocationsByArea,
   formatAreaName,
   getAreaNameFromCoordinates,
 } from "../../utils/clientGeoUtils";
+import Card from "@/components/common/Card";
+import CarouselCard from "@/components/common/CarouselCard";
 
 // 2点間の距離を計算する関数（ハーバーサイン公式）
 const calculateDistance = (
@@ -75,6 +78,14 @@ export default function LocationsPage() {
     [areaName: string]: LocationWithDistance[];
   }>({});
   const [geoJsonLoading, setGeoJsonLoading] = useState(false);
+
+  // モーダル表示のための状態
+  const [selectedLocation, setSelectedLocation] =
+    useState<LocationWithDistance | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLocationAreaName, setSelectedLocationAreaName] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     async function fetchLocationData() {
@@ -322,6 +333,32 @@ export default function LocationsPage() {
     return groups;
   };
 
+  // モーダルを開く関数
+  const openLocationModal = async (location: LocationWithDistance) => {
+    setSelectedLocation(location);
+
+    // 町名を取得
+    try {
+      const geoJSON = await loadGeoJSON();
+      const area = getAreaNameFromCoordinates(
+        location.lat,
+        location.lng,
+        geoJSON
+      );
+      setSelectedLocationAreaName(area ? formatAreaName(area) : "不明");
+    } catch (err) {
+      logger.log("町名取得エラー:", err);
+      setSelectedLocationAreaName("不明");
+    }
+
+    setIsModalOpen(true);
+  };
+
+  // モーダルを閉じる関数
+  const closeLocationModal = () => {
+    setIsModalOpen(false);
+  };
+
   // 施設カードのコンポーネント（再利用のため抽出）
   const LocationCard = ({ location }: { location: LocationWithDistance }) => {
     const [areaName, setAreaName] = useState<string | null>(null);
@@ -347,9 +384,13 @@ export default function LocationsPage() {
     }, [location.lat, location.lng]);
 
     return (
-      <div className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
+      <button
+        onClick={() => openLocationModal(location)}
+        aria-label={`${location.name}の詳細を表示`}
+        className="card cursor-pointer bg-base-100 shadow-sm hover:shadow-lg transition-all w-full h-fit"
+      >
         {location.imageUri && (
-          <figure className="relative h-48 w-full overflow-hidden">
+          <figure className="relative">
             <img
               src={location.imageUri}
               alt={location.name}
@@ -359,72 +400,16 @@ export default function LocationsPage() {
           </figure>
         )}
 
-        <div className="card-body">
-          <h2 className="card-title">{location.name}</h2>
+        <div className="card-body text-left">
+          <h2 className="card-title ">{location.name}</h2>
 
-          {areaName && <p className="text-sm text-gray-500">{areaName}</p>}
+          {areaName && <p className="text-sm /60">{areaName}</p>}
 
           {location.description && (
-            <p className="text-sm mt-1 line-clamp-3">{location.description}</p>
+            <p className="text-sm mt-1 line-clamp-3 ">{location.description}</p>
           )}
-
-          {location.uri && (
-            <a
-              href={location.uri}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link link-primary text-sm"
-            >
-              ウェブサイトを見る
-            </a>
-          )}
-
-          <div className="card-actions justify-between mt-4">
-            <div className="dropdown dropdown-top">
-              <div tabIndex={0} role="button" className="btn btn-sm">
-                詳細
-              </div>
-              <div
-                tabIndex={0}
-                className="dropdown-content z-[1] p-3 shadow-lg bg-base-200 rounded-box w-52"
-              >
-                <p className="text-xs mb-1">座標データ提供:</p>
-                <p className="text-xs mb-2">{location.nodeCopyright}</p>
-                {location.imageCopyright && (
-                  <>
-                    <p className="text-xs mb-1">画像提供:</p>
-                    <p className="text-xs mb-2">{location.imageCopyright}</p>
-                  </>
-                )}
-                {location.description && location.descriptionCopyright && (
-                  <>
-                    <p className="text-xs mb-1">説明文提供:</p>
-                    <p className="text-xs mb-2">
-                      {location.descriptionCopyright}
-                    </p>
-                  </>
-                )}
-                <p className="text-xs mb-1">ライセンス:</p>
-                <a
-                  href={location.licenceUri}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="link link-primary text-xs"
-                >
-                  {location.licence}
-                </a>
-              </div>
-            </div>
-
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => handleGoToLocation(location)}
-            >
-              ここへ行く
-            </button>
-          </div>
         </div>
-      </div>
+      </button>
     );
   };
 
@@ -432,7 +417,7 @@ export default function LocationsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <header className="text-center my-4">
-          <h1 className="text-3xl font-bold">場所をさがす</h1>
+          <h1 className="text-3xl font-bold ">場所をさがす</h1>
         </header>
         <div className="flex items-center justify-center py-12">
           <span className="loading loading-spinner loading-lg text-primary"></span>
@@ -446,7 +431,7 @@ export default function LocationsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <header className="text-center my-4">
-          <h1 className="text-3xl font-bold">場所をさがす</h1>
+          <h1 className="text-3xl font-bold ">場所をさがす</h1>
         </header>
         <div className="alert alert-error max-w-lg mx-auto">
           <svg
@@ -470,234 +455,113 @@ export default function LocationsPage() {
 
   return (
     <>
-      <div className="container mx-auto px-4 py-8">
-        <header className="text-center my-4">
-          <h1 className="text-3xl font-bold">場所をさがす</h1>
-          <p className="mt-2 text-xl">
-            位置とカテゴリから千代田区のスポットをさがす
-          </p>
-        </header>
-      </div>
-      <div className="md:flex md:justify-center">
-        <div className="w-screen md:w-100 -mx-4 carousel">
-          {/* お悩みハンドブックへのリンクカード */}
-          <div
-            id="slide1"
-            className="carousel-item inline p-4 w-[calc(100%-2rem)]"
-          >
-            <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
-              <div className="card-body p-4">
-                <h2 className="card-title">悩みがあるけど、どうしたらいい？</h2>
-                <p className="text-sm text-gray-600 mb-2">
-                  支援が欲しいけど、なにがあるのかわからない。
-                  <br />
-                  あてはまる悩みにチェックをつけると、 <br />
-                  役立つ支援がわかります。
-                </p>
-                <a
-                  href="https://compass.graffer.jp/handbook/landing"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-outline w-fit h-fit py-2"
-                >
-                  お悩みハンドブックウェブサイトへ
-                </a>
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <a href="#slide3" className="btn btn-circle btn-primary">
-                ❮
-              </a>
-              <a href="#slide2" className="btn btn-circle btn-primary">
-                ❯
-              </a>
-            </div>
-          </div>
-          {/* せかいビバークへのリンクカード */}
-          <div
-            id="slide2"
-            className="carousel-item inline p-4 w-[calc(100%-2rem)]"
-          >
-            <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
-              <div className="card-body p-4">
-                <h2 className="card-title">今夜、安心して泊まれる場所がない</h2>
-                <p className="text-sm text-gray-600 mb-2">
-                  帰る家はありますか？
-                  <br />
-                  あったとして、安心できる場所ですか？
-                  <br />
-                  こちらから緊急お助けパックを受け取ってください。
-                </p>
-                <a
-                  href="https://sekaibivouac.jp/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-outline w-fit h-fit py-2"
-                >
-                  せかいビバークウェブサイトへ
-                </a>
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <a href="#slide1" className="btn btn-circle btn-primary">
-                ❮
-              </a>
-              <a href="#slide3" className="btn btn-circle btn-primary">
-                ❯
-              </a>
-            </div>
-          </div>
-          {/* イベント情報へのリンクカード */}
-          <div
-            id="slide3"
-            className="carousel-item inline p-4 w-[calc(100%-2rem)]"
-          >
-            <div className="carousel-item card bg-base-100 shadow-lg mb-6 overflow-hidden w-[calc(100vw-2rem)] md:max-w-full">
-              <div className="card-body p-4">
-                <h2 className="card-title">イベントを知る</h2>
-                <p className="text-sm text-gray-600 mb-2">
-                  千代田区で開催されるイベント情報はこちら。
-                </p>
-                <a
-                  href="https://visit-chiyoda.tokyo/app/event"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-outline w-fit h-fit py-2"
-                >
-                  千代田区観光協会ウェブサイトへ
-                </a>
-                <a
-                  href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-outline w-fit h-fit py-2"
-                >
-                  千代田区ウェブサイトへ
-                </a>
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <a href="#slide2" className="btn btn-circle btn-primary">
-                ❮
-              </a>
-              <a href="#slide1" className="btn btn-circle btn-primary">
-                ❯
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
+      <header className="text-center my-4">
+        <h1 className="text-3xl font-bold ">場所をさがす</h1>
+        <p className="mt-2 text-xl ">
+          位置とカテゴリから千代田区のスポットをさがす
+        </p>
+      </header>
 
-      <div className="mb-6">
-        <div className="card bg-base-100 shadow-lg overflow-hidden">
-          <div className="card-body p-4">
-            <h2 className="card-title">近いところから表示</h2>
+      <main className="space-y-4">
+        <Card title="近いところから表示">
+          {searchError && (
+            <div className="alert alert-error">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="stroke-current shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>{searchError}</span>
+            </div>
+          )}
 
-            {searchError && (
-              <div className="alert alert-error">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="stroke-current shrink-0 h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <div>
+              <p className="text-xs mb-1">モバイル端末向け</p>
+              <button
+                className="btn btn-outline w-full sm:w-auto"
+                onClick={sortByDistance}
+                disabled={positionLoading}
+              >
+                {positionLoading ? (
+                  <>
+                    <span className="loading loading-spinner loading-xs"></span>
+                    位置情報取得中...
+                  </>
+                ) : (
+                  "現在地を取得"
+                )}
+              </button>
+            </div>
+
+            <div className="divider divider-horizontal sm:flex hidden">
+              または
+            </div>
+            <div className="divider sm:hidden">または</div>
+
+            <div className="flex-1">
+              <p className="text-xs mb-1">PC向け / 任意の場所から選びたい</p>
+              <form
+                onSubmit={handleAddressSearch}
+                className="flex flex-col sm:flex-row gap-2"
+              >
+                <div className="form-control flex-1">
+                  <input
+                    type="text"
+                    placeholder="住所を入力（例：神田駿河台）"
+                    className="input input-bordered w-full"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    disabled={searchLoading}
                   />
-                </svg>
-                <span>{searchError}</span>
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-4 mb-4">
-              <div>
+                </div>
                 <button
-                  className="btn btn-outline w-full sm:w-auto"
-                  onClick={sortByDistance}
-                  disabled={positionLoading}
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={searchLoading}
                 >
-                  {positionLoading ? (
-                    <>
-                      <span className="loading loading-spinner loading-xs"></span>
-                      位置情報取得中...
-                    </>
+                  {searchLoading ? (
+                    <span className="loading loading-spinner loading-xs"></span>
                   ) : (
-                    "現在地を取得"
+                    "検索"
                   )}
                 </button>
-                <p className="text-xs text-gray-500 mt-1">モバイル端末向け</p>
-              </div>
-
-              <div className="divider divider-horizontal sm:flex hidden">
-                または
-              </div>
-              <div className="divider sm:hidden">または</div>
-
-              <div className="flex-1">
-                <form
-                  onSubmit={handleAddressSearch}
-                  className="flex flex-col sm:flex-row gap-2"
-                >
-                  <div className="form-control flex-1">
-                    <input
-                      type="text"
-                      placeholder="住所を入力（例：神田駿河台）"
-                      className="input input-bordered w-full"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      disabled={searchLoading}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={searchLoading}
-                  >
-                    {searchLoading ? (
-                      <span className="loading loading-spinner loading-xs"></span>
-                    ) : (
-                      "検索"
-                    )}
-                  </button>
-                </form>
-                <p className="text-xs text-gray-500 mt-1">
-                  PC向け / 任意の場所から選びたい
-                </p>
-              </div>
+              </form>
             </div>
-
-            {currentPosition && (
-              <div className="alert alert-success">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="stroke-current shrink-0 h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span>
-                  位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます
-                </span>
-              </div>
-            )}
           </div>
-        </div>
-      </div>
 
-      <div className="card bg-base-100 shadow-lg mb-6 overflow-hidden">
-        <div className="card-body p-4">
-          <h2 className="card-title">カテゴリを選択</h2>
+          {currentPosition && (
+            <div className="alert alert-success">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="stroke-current shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>
+                位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます
+              </span>
+            </div>
+          )}
+        </Card>
 
-          <div className="flex flex-row flex-wrap gap-2 mb-4">
+        <Card title="カテゴリを選択">
+          <div className="flex flex-row flex-wrap gap-2 mb-4" role="tablist">
             {categories.map((category) => (
               <button
                 key={category.category}
@@ -709,68 +573,149 @@ export default function LocationsPage() {
                 }
               `}
                 onClick={() => toggleCategory(category.category)}
+                role="tab"
+                aria-label={`${category.category}カテゴリを${
+                  activeCategory === category.category ? "閉じる" : "開く"
+                }`}
               >
                 {category.category}
               </button>
             ))}
           </div>
-        </div>
-      </div>
+        </Card>
 
-      {activeCategory && (
-        <div className="animate-fadeIn mb-6">
-          {geoJsonLoading && (
-            <div className="flex items-center justify-center py-4">
-              <span className="loading loading-spinner loading-md text-primary"></span>
-              <p className="ml-3">施設を町村ごとに分類中...</p>
-            </div>
-          )}
+        {activeCategory && (
+          <div className="animate-fadeIn mb-6">
+            {geoJsonLoading && (
+              <div className="flex items-center justify-center py-4">
+                <span className="loading loading-spinner loading-md text-primary"></span>
+                <p className="ml-3">施設を町村ごとに分類中...</p>
+              </div>
+            )}
 
-          {sortedByDistance ? (
-            // 位置情報に基づいてソートされた表示
-            <div>
-              {Object.entries(groupLocationsByDistance(locationsSorted))
-                .sort(([a], [b]) => Number(a) - Number(b))
-                .map(([distance, locations]) => (
-                  <div key={distance}>
-                    <h2 className="text-lg font-semibold my-3 pb-1 border-b border-base-300">
-                      {distance}キロ離れています
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                      {locations.map((location) => (
-                        <LocationCard key={location.id} location={location} />
-                      ))}
+            {sortedByDistance ? (
+              // 位置情報に基づいてソートされた表示
+              <div>
+                {Object.entries(groupLocationsByDistance(locationsSorted))
+                  .sort(([a], [b]) => Number(a) - Number(b))
+                  .map(([distance, locations]) => (
+                    <div key={distance}>
+                      <h2 className="text-lg font-semibold my-3 pb-1 border-b border-base-300 ">
+                        {distance}キロ離れています
+                      </h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                        {locations.map((location) => (
+                          <div key={location.id} className="contents">
+                            <LocationCard location={location} />
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-            </div>
-          ) : (
-            // 町村ごとに分類した表示
-            <div>
-              {Object.entries(locationsByArea)
-                .sort(([areaNameA], [areaNameB]) =>
-                  areaNameA.localeCompare(areaNameB)
-                )
-                .map(([areaName, locations]) => (
-                  <div key={areaName}>
-                    <h2 className="text-lg font-semibold my-3 pb-1 border-b border-base-300">
-                      {areaName}
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                      {locations.map((location) => (
-                        <LocationCard key={location.id} location={location} />
-                      ))}
+                  ))}
+              </div>
+            ) : (
+              // 町村ごとに分類した表示
+              <div>
+                {Object.entries(locationsByArea)
+                  .sort(([areaNameA], [areaNameB]) =>
+                    areaNameA.localeCompare(areaNameB)
+                  )
+                  .map(([areaName, locations]) => (
+                    <div key={areaName}>
+                      <h2 className="text-lg font-semibold my-3 pb-1 border-b border-base-300 ">
+                        {areaName}
+                      </h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                        {locations.map((location) => (
+                          <LocationCard key={location.id} location={location} />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-            </div>
-          )}
-        </div>
-      )}
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
 
-      <div className="card bg-base-100 shadow-lg overflow-hidden">
-        <div className="card-body p-4">
-          <h2 className="card-title">データ提供元</h2>
+        <div className="md:flex md:justify-center">
+          <div className="carousel w-full md:max-w-3xl">
+            {/* お悩みハンドブックへのリンクカード */}
+            <CarouselCard
+              id="slide1"
+              title="悩みがあるけど、どうしたらいい？"
+              prevSlideId="slide3"
+              nextSlideId="slide2"
+            >
+              <p className="text-sm /80 mb-2">
+                支援が欲しいけど、なにがあるのかわからない。
+                <br />
+                あてはまる悩みにチェックをつけると、役立つ支援がわかります。
+              </p>
+              <a
+                href="https://compass.graffer.jp/handbook/landing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-outline w-fit h-fit py-2"
+              >
+                お悩みハンドブックウェブサイトへ
+              </a>
+            </CarouselCard>
+
+            {/* せかいビバークへのリンクカード */}
+            <CarouselCard
+              id="slide2"
+              title="今夜、安心して泊まれる場所がない"
+              prevSlideId="slide1"
+              nextSlideId="slide3"
+            >
+              <p className="text-sm /80 mb-2">
+                帰る家はありますか？
+                <br />
+                あったとして、安心できる場所ですか？
+                <br />
+                こちらから緊急お助けパックを受け取ってください。
+              </p>
+              <a
+                href="https://sekaibivouac.jp/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-outline w-fit h-fit py-2"
+              >
+                せかいビバークウェブサイトへ
+              </a>
+            </CarouselCard>
+
+            {/* イベント情報へのリンクカード */}
+            <CarouselCard
+              id="slide3"
+              title="イベントを知る"
+              prevSlideId="slide2"
+              nextSlideId="slide1"
+            >
+              <p className="text-sm /80 mb-2">
+                千代田区で開催されるイベント情報はこちら。
+              </p>
+              <a
+                href="https://visit-chiyoda.tokyo/app/event"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-outline w-fit h-fit py-2"
+              >
+                千代田区観光協会ウェブサイトへ
+              </a>
+              <a
+                href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-outline w-fit h-fit py-2"
+              >
+                千代田区ウェブサイトへ
+              </a>
+            </CarouselCard>
+          </div>
+        </div>
+
+        <Card title="データ提供元">
           <p>
             この場所データは
             <a
@@ -796,8 +741,8 @@ export default function LocationsPage() {
             からお知らせください。
           </p>
           <p>写真のご提供も歓迎しています。</p>
-        </div>
-      </div>
+        </Card>
+      </main>
 
       <style jsx>{`
         @keyframes fadeIn {
@@ -814,6 +759,15 @@ export default function LocationsPage() {
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
+
+      {/* モーダルコンポーネント */}
+      <LocationDetailModal
+        location={selectedLocation}
+        isOpen={isModalOpen}
+        onClose={closeLocationModal}
+        onGoToLocation={handleGoToLocation}
+        areaName={selectedLocationAreaName}
+      />
 
       {/* レート制限モーダル */}
       <RateLimitModal

@@ -8,6 +8,7 @@ import IntegratedRouteDisplay from "../components/IntegratedRouteDisplay";
 import RoutePdfExport from "../components/RoutePdfExport";
 import Button from "../components/common/Button";
 import ResetButton from "../components/common/ResetButton";
+import Card from "../components/common/Card";
 import { TransitFormData, Location } from "../types/transit";
 import { logger } from "../utils/logger";
 import RateLimitModal from "../components/RateLimitModal";
@@ -447,62 +448,55 @@ export default function Home() {
       {/* 初回訪問ガイドモーダル */}
       <FirstVisitGuideModal />
 
-      <div className="max-w-md mx-auto space-y-4">
-        {/* 初心者ガイドボタン - 検索フォームの前に表示 */}
-
-        {!selectedDestination ? (
-          <DestinationSelector
-            onDestinationSelected={handleDestinationSelected}
-          />
-        ) : !selectedOrigin ? (
-          <>
-            <div className="card bg-base-200/70 shadow-md">
-              <div className="card-body">
-                <h2 className="card-title">選択された目的地</h2>
+      <main className="space-y-4 max-w-md mx-auto">
+        <div aria-live="polite" className="space-y-4">
+          {!selectedDestination ? (
+            <DestinationSelector
+              onDestinationSelected={handleDestinationSelected}
+            />
+          ) : !selectedOrigin ? (
+            <>
+              <Card title="選択された目的地">
                 <p data-testid="selected-destination">
                   {selectedDestination.address ||
                     `緯度: ${selectedDestination.lat.toFixed(
                       6
                     )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
                 </p>
-              </div>
-            </div>
-            <OriginSelector onOriginSelected={handleOriginSelected} />
-            <ResetButton onReset={resetSearch} />
-          </>
-        ) : !searchPerformed ? (
-          <>
-            <div className="card bg-base-200/70 shadow-md">
-              <div className="card-body">
-                <h2 className="card-title">選択された目的地</h2>
+              </Card>
+              <OriginSelector onOriginSelected={handleOriginSelected} />
+              <ResetButton onReset={resetSearch} />
+            </>
+          ) : !searchPerformed ? (
+            <>
+              <Card title="選択された目的地">
                 <p data-testid="selected-destination">
                   {selectedDestination.address ||
                     `緯度: ${selectedDestination.lat.toFixed(
                       6
                     )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
                 </p>
-              </div>
-            </div>
+              </Card>
 
-            <div className="card bg-base-200/70 shadow-md">
-              <div className="card-body">
-                <h2 className="card-title">選択された出発地</h2>
+              <Card title="選択された出発地">
                 <p data-testid="selected-origin">
                   {selectedOrigin.address ||
                     `緯度: ${selectedOrigin.lat.toFixed(
                       6
                     )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
                 </p>
-              </div>
-            </div>
+              </Card>
 
-            <div className="card bg-base-200/70 shadow-md">
-              <div className="card-body">
-                <h2 className="card-title">日時の選択</h2>
+              <Card title="日時の選択">
                 <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
 
                 {/* はやさ優先スイッチ */}
-                <div className="form-control mt-4">
+                <div className="form-control mt-4 space-y-2">
+                  <p className="text-sm /60 mt-1">
+                    早く到着したい場合はオンにしてください。
+                    <br />
+                    歩きを最小限にしたい場合はオフにしてください。
+                  </p>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <span className="label-text">はやさ優先</span>
                     <input
@@ -515,12 +509,6 @@ export default function Home() {
                       {prioritizeSpeed ? "ON" : "OFF"}
                     </span>
                   </label>
-                  <p className="text-xs text-gray-500 mt-1">
-                    オンにすると最速の経路を検索します。
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    オフにすると歩きを最小限にします。
-                  </p>
                 </div>
 
                 <div className="card-actions justify-center">
@@ -532,78 +520,74 @@ export default function Home() {
                     検索
                   </Button>
                 </div>
-              </div>
-            </div>
+              </Card>
 
-            <ResetButton onReset={resetSearch} />
-          </>
-        ) : (
-          <>
-            <ResetButton onReset={resetSearch} />
+              <ResetButton onReset={resetSearch} />
+            </>
+          ) : (
+            <>
+              <ResetButton onReset={resetSearch} />
 
-            {error ? (
-              <div className="alert alert-error">{error}</div>
-            ) : routeLoading ? (
-              <div className="card">
-                <div className="card-body items-center text-center">
+              {error ? (
+                <div className="alert alert-error">{error}</div>
+              ) : routeLoading ? (
+                <Card bodyClassName="items-center text-center">
                   <span className="loading loading-spinner loading-lg"></span>
                   <p>経路を検索中...</p>
-                </div>
-              </div>
-            ) : routeInfo ? (
-              <div>
-                <IntegratedRouteDisplay
-                  originStop={routeInfo.originStop}
-                  destinationStop={routeInfo.destinationStop}
-                  routes={routeInfo.routes}
-                  type={routeInfo.type}
-                  _transfers={routeInfo.transfers}
-                  _message={routeInfo.message}
-                  originLat={selectedOrigin.lat}
-                  originLng={selectedOrigin.lng}
-                  destLat={selectedDestination.lat}
-                  destLng={selectedDestination.lng}
-                />
+                </Card>
+              ) : routeInfo ? (
+                <div>
+                  <IntegratedRouteDisplay
+                    originStop={routeInfo.originStop}
+                    destinationStop={routeInfo.destinationStop}
+                    routes={routeInfo.routes}
+                    type={routeInfo.type}
+                    _transfers={routeInfo.transfers}
+                    _message={routeInfo.message}
+                    originLat={selectedOrigin.lat}
+                    originLng={selectedOrigin.lng}
+                    destLat={selectedDestination.lat}
+                    destLng={selectedDestination.lng}
+                  />
 
-                {/* PDF出力ボタンを追加 */}
-                {routeInfo.type !== "none" && (
-                  <div className="mt-4 flex justify-center">
-                    <RoutePdfExport
-                      originStop={routeInfo.originStop}
-                      destinationStop={routeInfo.destinationStop}
-                      routes={routeInfo.routes}
-                      type={routeInfo.type}
-                      transfers={routeInfo.transfers}
-                      originLat={selectedOrigin.lat}
-                      originLng={selectedOrigin.lng}
-                      destLat={selectedDestination.lat}
-                      destLng={selectedDestination.lng}
-                      selectedDateTime={selectedDateTime}
-                    />
-                  </div>
-                )}
-              </div>
-            ) : null}
-          </>
-        )}
-        <div className="card bg-base-200/70 shadow-md">
-          <div className="card-body text-center text-xs">
-            <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
-            <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>
-            <p>
-              <a
-                href="https://lin.ee/CgIBOSd"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="link link-primary"
-              >
-                千代田区公式LINE
-              </a>
-              で最新の運行情報を確認できます
-            </p>
-          </div>
+                  {/* PDF出力ボタンを追加 */}
+                  {routeInfo.type !== "none" && (
+                    <div className="mt-4 flex justify-center">
+                      <RoutePdfExport
+                        originStop={routeInfo.originStop}
+                        destinationStop={routeInfo.destinationStop}
+                        routes={routeInfo.routes}
+                        type={routeInfo.type}
+                        transfers={routeInfo.transfers}
+                        originLat={selectedOrigin.lat}
+                        originLng={selectedOrigin.lng}
+                        destLat={selectedDestination.lat}
+                        destLng={selectedDestination.lng}
+                        selectedDateTime={selectedDateTime}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
-      </div>
+        <Card bodyClassName="text-center text-xs">
+          <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
+          <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>
+          <p>
+            <a
+              href="https://lin.ee/CgIBOSd"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link link-primary"
+            >
+              千代田区公式LINE
+            </a>
+            で最新の運行情報を確認できます
+          </p>
+        </Card>
+      </main>
 
       {/* レート制限モーダル */}
       <RateLimitModal

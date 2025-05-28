@@ -1,6 +1,8 @@
 "use client";
 
 import Sidebar from "./Sidebar";
+import ThemeToggle from "./ThemeToggle";
+import SkipToContent from "./common/SkipToContent";
 
 export default function SidebarLayout({
   children,
@@ -9,11 +11,31 @@ export default function SidebarLayout({
 }) {
   return (
     <div className="drawer lg:drawer-open">
-      <input id="my-drawer" type="checkbox" className="drawer-toggle" />
+      <SkipToContent />
+      <input id="drawer" type="checkbox" className="drawer-toggle" />
+      <div className="drawer-side z-40">
+        <label
+          htmlFor="drawer"
+          aria-label="メニューを閉じる"
+          className="drawer-overlay"
+        ></label>
+        <Sidebar
+          toggleSidebar={() => {
+            const checkbox = document.getElementById(
+              "drawer"
+            ) as HTMLInputElement;
+            if (checkbox) checkbox.checked = false;
+          }}
+        />
+      </div>
       <div className="drawer-content flex flex-col">
-        <div className="navbar bg-base-100 lg:hidden">
-          <div className="flex-none">
-            <label htmlFor="my-drawer" className="btn btn-ghost gap-2">
+        <div className="flex items-center justify-between p-2">
+          <span>
+            <label
+              htmlFor="drawer"
+              className="btn btn-ghost drawer-button lg:hidden"
+              role="button"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -29,16 +51,19 @@ export default function SidebarLayout({
               </svg>
               メニュー
             </label>
-          </div>
+          </span>
+          <ThemeToggle />
         </div>
-        <div className="flex-grow p-4">{children}</div>
+        <div id="main-content" className="flex-grow p-4" tabIndex={-1}>
+          {children}
+        </div>
         <footer className="flex flex-col md:flex-row px-4 py-2 justify-center md:justify-between">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 md:w-auto">
             <a
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-gray-500 hover:underline inline-block mx-2"
+              className="text-sm /60 hover:underline inline-block mx-2"
             >
               利用規約
             </a>
@@ -46,7 +71,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80b2a6d4d045e850407c"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-gray-500 hover:underline inline-block mx-2"
+              className="text-sm /60 hover:underline inline-block mx-2"
             >
               プライバシーポリシー
             </a>
@@ -54,27 +79,12 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80d0ba82d66f451b9ff1"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-gray-500 hover:underline inline-block mx-2"
+              className="text-sm /60 hover:underline inline-block mx-2"
             >
               クッキーポリシー
             </a>
           </div>
         </footer>
-      </div>
-      <div className="drawer-side">
-        <label
-          htmlFor="my-drawer"
-          aria-label="close sidebar"
-          className="drawer-overlay"
-        ></label>
-        <Sidebar
-          toggleSidebar={() => {
-            const checkbox = document.getElementById(
-              "my-drawer"
-            ) as HTMLInputElement;
-            if (checkbox) checkbox.checked = false;
-          }}
-        />
       </div>
     </div>
   );

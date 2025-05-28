@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useId } from "react";
 import { TransitFormData } from "../types/transit";
 import { logger } from "../utils/logger";
 
@@ -19,6 +19,13 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
 }) => {
   const [dateTime, setDateTime] = useState<string>("");
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
+  const uniqueId = useId();
+  const inputId = `time-input-${uniqueId}`;
+  const groupId = `time-type-group-${uniqueId}`;
+  const labelText = isDeparture ? "出発日時" : "到着日時";
+  const timeDescription = isDeparture
+    ? "いつ出発するか指定してください"
+    : "いつ到着するか指定してください";
 
   // 初期値設定
   useEffect(() => {
@@ -83,40 +90,49 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
     }
   };
 
-  const inputId = isDeparture ? "departure-time" : "arrival-time";
-
   return (
     <div>
       <div className="space-y-4">
-        {/* DaisyUIのjoinコンポーネントを使用 */}
-        <div className="join">
+        {/* 出発/到着の切り替えボタングループ */}
+        <div role="radiogroup" aria-labelledby={groupId} className="join">
+          <label id={groupId} className="sr-only">
+            時間タイプを選択
+          </label>
           <button
             type="button"
-            className={`join-item btn ${isDeparture ? "btn-active" : ""}`}
+            className={`join-item btn ${
+              isDeparture ? "btn-active btn-primary" : ""
+            }`}
             onClick={() => handleTimeTypeChange(true)}
             data-testid="departure-tab"
             disabled={disabled}
+            aria-checked={isDeparture}
+            role="radio"
           >
             出発
           </button>
           <button
             type="button"
-            className={`join-item btn ${!isDeparture ? "btn-active" : ""}`}
+            className={`join-item btn ${
+              !isDeparture ? "btn-active btn-primary" : ""
+            }`}
             onClick={() => handleTimeTypeChange(false)}
             data-testid="arrival-tab"
             disabled={disabled}
+            aria-checked={!isDeparture}
+            role="radio"
           >
             到着
           </button>
         </div>
 
-        <div className="form-control space-x-2">
+        <div className="form-control">
           <label htmlFor={inputId} className="label">
             <span
-              className="label-text"
+              className="label-text font-medium mr-2"
               data-testid={isDeparture ? "departure-label" : "arrival-label"}
             >
-              {isDeparture ? "出発日時" : "到着日時"}
+              {labelText}
             </span>
           </label>
           <input
@@ -126,10 +142,19 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             value={dateTime}
             onChange={(e) => handleChange(e.target.value, isDeparture)}
             required
-            className="input input-bordered"
+            className="input input-bordered min-h-[44px]"
             data-testid={isDeparture ? "departure-input" : "arrival-input"}
             disabled={disabled}
+            aria-required="true"
+            aria-label={timeDescription}
+            aria-describedby={`${inputId}-description`}
           />
+          <div
+            id={`${inputId}-description`}
+            className="text-sm /60 mt-1 sr-only"
+          >
+            {timeDescription}
+          </div>
         </div>
       </div>
     </div>

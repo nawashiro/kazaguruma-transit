@@ -191,4 +191,44 @@ describe("OriginSelector", () => {
     ).toBeInTheDocument();
     expect(mockOnOriginSelected).not.toHaveBeenCalled();
   });
+
+  it("アクセシビリティ：フォーム要素が正しくラベル付けされている", () => {
+    render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
+
+    // セクション要素とタイトル見出しがセマンティックに正しく関連付けられていることを確認
+    const section = screen.getByTestId("origin-selector-card");
+    expect(section.tagName).toBe("SECTION");
+
+    const heading = section.querySelector(".card-title");
+    expect(heading).toBeInTheDocument();
+    expect(heading).toHaveTextContent("次に出発地を選択してください");
+
+    // 入力フィールドの確認
+    const addressInput = screen.getByTestId("address-input");
+    expect(addressInput).toHaveAttribute("aria-required", "true");
+
+    // 入力フィールドの説明文が存在することを確認
+    expect(addressInput).toHaveAttribute(
+      "aria-describedby",
+      expect.any(String)
+    );
+
+    // フィールドセットとレジェンドの確認
+    const fieldset = screen.getByRole("group");
+    expect(fieldset).toBeInTheDocument();
+    expect(fieldset).toHaveAttribute("aria-describedby", expect.any(String));
+
+    // レジェンドの内容確認（スクリーンリーダー用の非表示レジェンド）
+    const legendId = fieldset.getAttribute("aria-describedby");
+    const legend = document.getElementById(legendId || "");
+    expect(legend).toHaveClass("sr-only");
+    expect(legend).toHaveTextContent("検索オプション");
+
+    // ボタンがアクセシブルであることを確認
+    const searchButton = screen.getByText("この住所で検索");
+    expect(searchButton).toBeInTheDocument();
+
+    const gpsButton = screen.getByText("現在地を使用");
+    expect(gpsButton).toBeInTheDocument();
+  });
 });

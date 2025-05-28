@@ -2,6 +2,7 @@
 
 import Sidebar from "./Sidebar";
 import ThemeToggle from "./ThemeToggle";
+import SkipToContent from "./common/SkipToContent";
 
 export default function SidebarLayout({
   children,
@@ -10,6 +11,7 @@ export default function SidebarLayout({
 }) {
   return (
     <div className="drawer lg:drawer-open">
+      <SkipToContent />
       <input id="drawer" type="checkbox" className="drawer-toggle" />
       <div className="drawer-side z-40">
         <label
@@ -52,7 +54,9 @@ export default function SidebarLayout({
           </span>
           <ThemeToggle />
         </div>
-        <div className="flex-grow p-4">{children}</div>
+        <div id="main-content" className="flex-grow p-4" tabIndex={-1}>
+          {children}
+        </div>
         <footer className="flex flex-col md:flex-row px-4 py-2 justify-center md:justify-between">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 md:w-auto">
             <a

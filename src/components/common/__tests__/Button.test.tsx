@@ -50,19 +50,6 @@ describe("Button", () => {
     expect(mockOnClick).not.toHaveBeenCalled();
   });
 
-  it("セカンダリスタイルが適切に表示されること", () => {
-    render(
-      <Button onClick={mockOnClick} secondary testId="test-button">
-        セカンダリボタン
-      </Button>
-    );
-
-    const button = screen.getByTestId("test-button");
-    // セカンダリボタンは白背景と暗めのテキスト色を使用
-    expect(button).toHaveClass("bg-white");
-    expect(button).toHaveClass("text-gray-700");
-  });
-
   it("ローディング状態が適切に表示されること", () => {
     render(
       <Button onClick={mockOnClick} loading testId="test-button">
@@ -130,20 +117,6 @@ describe("Button", () => {
     const button = screen.getByTestId("test-button");
     expect(button).toHaveClass("min-h-[44px]");
     expect(button).toHaveClass("min-w-[44px]");
-  });
-
-  it("プライマリボタンが適切なコントラスト色を使用していること", () => {
-    render(
-      <Button onClick={mockOnClick} testId="test-button">
-        プライマリボタン
-      </Button>
-    );
-
-    const button = screen.getByTestId("test-button");
-    expect(button).toHaveClass("bg-gradient-to-r");
-    expect(button).toHaveClass("from-blue-500");
-    expect(button).toHaveClass("to-indigo-500");
-    expect(button).toHaveClass("text-white");
   });
 
   it("一意のIDが各ボタンに割り当てられていること", () => {

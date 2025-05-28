@@ -27,25 +27,27 @@ export default function SiteMapPage() {
         </h2>
         <ul className="space-y-3 ml-4">
           <li className="flex items-center">
-            <HomeIcon className="h-5 w-5 mr-2 text-primary" />
+            <HomeIcon className="h-5 w-5 mr-2" />
             <Link
               href="/"
               className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
             >
               ホーム
             </Link>
-            <span className="ml-3 text-gray-600">- 路線検索と乗り換え案内</span>
+            <span className="ml-3 text-base-content/60">
+              路線検索と乗り換え案内
+            </span>
           </li>
           <li className="flex items-center">
-            <MapPinIcon className="h-5 w-5 mr-2 text-primary" />
+            <MapPinIcon className="h-5 w-5 mr-2" />
             <Link
               href="/locations"
               className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
             >
               場所をさがす
             </Link>
-            <span className="ml-3 text-gray-600">
-              - 風ぐるまで行ける施設をカテゴリや距離で検索
+            <span className="ml-3 text-base-content/60">
+              風ぐるまで行ける施設をカテゴリや距離で検索
             </span>
           </li>
         </ul>
@@ -57,27 +59,27 @@ export default function SiteMapPage() {
         </h2>
         <ul className="space-y-3 ml-4">
           <li className="flex items-center">
-            <QuestionMarkCircleIcon className="h-5 w-5 mr-2 text-primary" />
+            <QuestionMarkCircleIcon className="h-5 w-5 mr-2" />
             <Link
               href="/beginners-guide"
               className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
             >
               はじめての方へ
             </Link>
-            <span className="ml-3 text-gray-600">
-              - 風ぐるまの基本情報とサービスの使い方
+            <span className="ml-3 text-base-content/60">
+              風ぐるまの基本情報とサービスの使い方
             </span>
           </li>
           <li className="flex items-center">
-            <BookOpenIcon className="h-5 w-5 mr-2 text-primary" />
+            <BookOpenIcon className="h-5 w-5 mr-2" />
             <Link
               href="/usage"
               className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
             >
               使い方
             </Link>
-            <span className="ml-3 text-gray-600">
-              - 乗換案内の詳しい使用方法
+            <span className="ml-3 text-base-content/60">
+              乗換案内の詳しい使用方法
             </span>
           </li>
         </ul>
@@ -88,19 +90,19 @@ export default function SiteMapPage() {
         </h2>
         <ul className="space-y-3 ml-4">
           <li className="flex items-center">
-            <DocumentTextIcon className="h-5 w-5 mr-2 text-primary" />
+            <DocumentTextIcon className="h-5 w-5 mr-2" />
             <Link
               href="/license"
               className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
             >
               ライセンス
             </Link>
-            <span className="ml-3 text-gray-600">
-              - オープンデータとサービスのライセンス情報
+            <span className="ml-3 text-base-content/60">
+              オープンデータとサービスのライセンス情報
             </span>
           </li>
           <li className="flex items-center">
-            <ArrowPathIcon className="h-5 w-5 mr-2 text-primary" />
+            <ArrowPathIcon className="h-5 w-5 mr-2" />
             <a
               href="https://halved-hamster-4a1.notion.site/1df78db44c3d80979856c735893403d4"
               target="_blank"
@@ -109,17 +111,21 @@ export default function SiteMapPage() {
             >
               更新情報
             </a>
-            <span className="ml-3 text-gray-600">- サービスの更新履歴</span>
+            <span className="ml-3 text-base-content/60">
+              サービスの更新履歴
+            </span>
           </li>
           <li className="flex items-center">
-            <MapIcon className="h-5 w-5 mr-2 text-primary" />
+            <MapIcon className="h-5 w-5 mr-2" />
             <Link
               href="/site-map"
               className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
             >
               サイトマップ
             </Link>
-            <span className="ml-3 text-gray-600">- サイト内のページ一覧</span>
+            <span className="ml-3 text-base-content/60">
+              サイト内のページ一覧
+            </span>
           </li>
         </ul>
       </div>

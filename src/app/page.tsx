@@ -492,7 +492,7 @@ export default function Home() {
 
                 {/* はやさ優先スイッチ */}
                 <div className="form-control mt-4 space-y-2">
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-base-content/60 mt-1">
                     早く到着したい場合はオンにしてください。
                     <br />
                     歩きを最小限にしたい場合はオフにしてください。

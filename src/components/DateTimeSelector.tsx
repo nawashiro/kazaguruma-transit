@@ -149,7 +149,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
           />
           <div
             id={`${inputId}-description`}
-            className="text-sm text-gray-500 mt-1 sr-only"
+            className="text-sm text-base-content/60 mt-1 sr-only"
           >
             {timeDescription}
           </div>

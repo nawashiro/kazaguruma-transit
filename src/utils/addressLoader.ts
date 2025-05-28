@@ -35,7 +35,7 @@ export interface KeyLocationCategory {
 export async function loadAddressData(): Promise<AddressCategory[]> {
   try {
     const response = await fetch(
-      "https://raw.githubusercontent.com/nawashiro/chiyoda_city_main_facilities/refs/heads/main/kazaguruma_json/main_facilities.json"
+      "https://raw.githubusercontent.com/nawashiro/chiyoda_city_main_facilities/refs/heads/main/kazaguruma_json_min/main_facilities.json"
     );
     if (!response.ok) {
       throw new Error("住所データの取得に失敗しました");
@@ -52,7 +52,7 @@ export async function loadAddressData(): Promise<AddressCategory[]> {
 export async function loadKeyLocationsData(): Promise<KeyLocationCategory[]> {
   try {
     const response = await fetch(
-      "https://raw.githubusercontent.com/nawashiro/chiyoda_city_main_facilities/refs/heads/main/kazaguruma_json/key_locations.json"
+      "https://raw.githubusercontent.com/nawashiro/chiyoda_city_main_facilities/refs/heads/main/kazaguruma_json_min/key_locations.json"
     );
     if (!response.ok) {
       throw new Error("主要施設データの取得に失敗しました");

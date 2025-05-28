@@ -3,6 +3,7 @@ import Button from "./Button";
 interface ResetButtonProps {
   onReset: () => void;
   className?: string;
+  testId?: string;
 }
 
 /**
@@ -14,10 +15,11 @@ interface ResetButtonProps {
 export default function ResetButton({
   onReset,
   className = "",
+  testId,
 }: ResetButtonProps) {
   return (
     <div className={`flex justify-center ${className}`}>
-      <Button onClick={onReset} secondary testId="reset-search">
+      <Button onClick={onReset} secondary testId={testId}>
         検索条件をリセット
       </Button>
     </div>

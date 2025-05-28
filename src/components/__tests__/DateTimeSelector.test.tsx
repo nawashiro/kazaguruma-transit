@@ -84,4 +84,79 @@ describe("DateTimeSelector", () => {
       );
     });
   });
+
+  // アクセシビリティに関するテストを追加
+  it("アクセシビリティ：ラジオグループが適切に実装されていること", () => {
+    render(
+      <DateTimeSelector initialStopId={mockStopId} onSubmit={mockOnSubmit} />
+    );
+
+    // ラジオグループのrole属性を検証
+    const radiogroup = screen.getByRole("radiogroup");
+    expect(radiogroup).toBeInTheDocument();
+
+    // ラジオグループにaria-labelledby属性があることを確認
+    expect(radiogroup).toHaveAttribute("aria-labelledby", expect.any(String));
+
+    // 隠れたラベルテキストが存在することを確認
+    const labelId = radiogroup.getAttribute("aria-labelledby");
+    const label = document.getElementById(labelId || "");
+    expect(label).toHaveTextContent("時間タイプを選択");
+  });
+
+  it("アクセシビリティ：出発/到着ボタンが適切なaria属性を持つこと", () => {
+    render(
+      <DateTimeSelector initialStopId={mockStopId} onSubmit={mockOnSubmit} />
+    );
+
+    // 出発ボタンの属性確認
+    const departureBtn = screen.getByTestId("departure-tab");
+    expect(departureBtn).toHaveAttribute("aria-pressed", "true");
+
+    // 到着ボタンの属性確認
+    const arrivalBtn = screen.getByTestId("arrival-tab");
+    expect(arrivalBtn).toHaveAttribute("aria-pressed", "false");
+
+    // ボタンクリック時の属性変更を確認
+    fireEvent.click(arrivalBtn);
+    expect(departureBtn).toHaveAttribute("aria-pressed", "false");
+    expect(arrivalBtn).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("アクセシビリティ：日時入力フィールドが適切なaria属性を持つこと", () => {
+    render(
+      <DateTimeSelector initialStopId={mockStopId} onSubmit={mockOnSubmit} />
+    );
+
+    // 日時入力フィールドのaria属性確認
+    const dateTimeInput = screen.getByTestId("departure-input");
+    expect(dateTimeInput).toHaveAttribute("aria-required", "true");
+
+    // 到着時間に切り替えた場合のaria属性確認
+    const arrivalBtn = screen.getByTestId("arrival-tab");
+    fireEvent.click(arrivalBtn);
+
+    const arrivalInput = screen.getByTestId("arrival-input");
+    expect(arrivalInput).toHaveAttribute("aria-required", "true");
+  });
+
+  it("アクセシビリティ：無効状態のボタンが適切に処理されること", () => {
+    render(
+      <DateTimeSelector
+        initialStopId={mockStopId}
+        onSubmit={mockOnSubmit}
+        disabled={true}
+      />
+    );
+
+    // 無効状態のボタンチェック
+    const departureBtn = screen.getByTestId("departure-tab");
+    const arrivalBtn = screen.getByTestId("arrival-tab");
+    expect(departureBtn).toBeDisabled();
+    expect(arrivalBtn).toBeDisabled();
+
+    // 無効状態の入力フィールドチェック
+    const dateTimeInput = screen.getByTestId("departure-input");
+    expect(dateTimeInput).toBeDisabled();
+  });
 });

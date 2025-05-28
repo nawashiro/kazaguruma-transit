@@ -55,12 +55,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" data-theme="light">
+    <html lang="ja">
       <head>
         <StructuredData />
         <CustomHead />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} bg-base-300`}
+      >
         <GoogleAnalytics />
         <SidebarLayout>{children}</SidebarLayout>
       </body>

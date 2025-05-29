@@ -60,7 +60,7 @@ export default function ThemeToggle({
   return (
     <button
       onClick={toggleTheme}
-      className="btn btn-ghost"
+      className="btn btn-ghost items-center"
       aria-label={
         !isDarkMode ? "ダークモードに切り替え" : "ライトモードに切り替え"
       }

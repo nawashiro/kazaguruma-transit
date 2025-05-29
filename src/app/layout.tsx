@@ -61,7 +61,7 @@ export default function RootLayout({
         <CustomHead />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-base-300`}
+        className={`${geistSans.variable} ${geistMono.variable} bg-base-200`}
       >
         <GoogleAnalytics />
         <SidebarLayout>{children}</SidebarLayout>

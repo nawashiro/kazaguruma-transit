@@ -1,8 +1,9 @@
 @import "tailwindcss";
-@plugin "daisyui";
+@plugin "daisyui" {
+  themes: valentine, dracula;
+}
 
 :root {
-  --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
   --focus-color: #0056b3;
   --focus-color-light: rgba(0, 86, 179, 0.3);
 }
@@ -14,17 +15,6 @@
 
 body {
   font-family: Arial, Helvetica, sans-serif;
-  background-image: radial-gradient(
-      circle at 100% 0%,
-      rgba(99, 102, 241, 0.08) 0%,
-      transparent 25%
-    ),
-    radial-gradient(
-      circle at 0% 100%,
-      rgba(59, 130, 246, 0.08) 0%,
-      transparent 25%
-    );
-  background-attachment: fixed;
 }
 
 /* アクセシビリティ対応のためのユーティリティクラス */

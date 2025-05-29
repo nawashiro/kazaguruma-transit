@@ -105,7 +105,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
               onClick={toggleSidebar}
               role="menuitem"
             >
-              <HeartIcon className="h-6 w-6 text-secondary" />
+              <HeartIcon className="h-6 w-6 text-primary" />
               開発者を支援する
             </a>
           </li>

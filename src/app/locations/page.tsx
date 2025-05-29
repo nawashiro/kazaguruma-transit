@@ -487,7 +487,7 @@ export default function LocationsPage() {
             <div>
               <p className="text-xs mb-1">モバイル端末向け</p>
               <button
-                className="btn btn-outline w-full sm:w-auto"
+                className="btn btn-primary w-full sm:w-auto"
                 onClick={sortByDistance}
                 disabled={positionLoading}
               >
@@ -517,7 +517,7 @@ export default function LocationsPage() {
                   <input
                     type="text"
                     placeholder="住所を入力（例：神田駿河台）"
-                    className="input input-bordered w-full"
+                    className="input outline w-full"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     disabled={searchLoading}

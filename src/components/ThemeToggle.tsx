@@ -3,11 +3,23 @@
 import { useEffect, useState } from "react";
 import { MoonIcon, SunIcon } from "@heroicons/react/24/outline";
 
+interface ThemeToggleProps {
+  lightTheme?: string;
+  darkTheme?: string;
+}
+
+// テーマの定数
+const DEFAULT_LIGHT_THEME = "light";
+const DEFAULT_DARK_THEME = "dark";
+
 /**
  * ダークモードとライトモードを切り替えるトグルボタン
  */
-export default function ThemeToggle() {
-  const [theme, setTheme] = useState<string>("light");
+export default function ThemeToggle({
+  lightTheme = DEFAULT_LIGHT_THEME,
+  darkTheme = DEFAULT_DARK_THEME,
+}: ThemeToggleProps) {
+  const [theme, setTheme] = useState<string>(lightTheme);
 
   // ページロード時にローカルストレージからテーマを取得
   useEffect(() => {
@@ -22,18 +34,18 @@ export default function ThemeToggle() {
           window.matchMedia &&
           window.matchMedia("(prefers-color-scheme: dark)").matches
         ) {
-          setTheme("dark");
-          document.documentElement.setAttribute("data-theme", "dark");
+          setTheme(darkTheme);
+          document.documentElement.setAttribute("data-theme", darkTheme);
         }
       }
     } catch (e) {
       console.error("テーマの読み込みに失敗しました", e);
     }
-  }, []);
+  }, [darkTheme]);
 
   // テーマの切り替え処理
   const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
+    const newTheme = theme === lightTheme ? darkTheme : lightTheme;
     setTheme(newTheme);
     try {
       localStorage.setItem("theme", newTheme);
@@ -43,15 +55,17 @@ export default function ThemeToggle() {
     }
   };
 
+  const isDarkMode = theme === darkTheme;
+
   return (
     <button
       onClick={toggleTheme}
       className="btn btn-ghost"
       aria-label={
-        theme === "light" ? "ダークモードに切り替え" : "ライトモードに切り替え"
+        !isDarkMode ? "ダークモードに切り替え" : "ライトモードに切り替え"
       }
     >
-      {theme === "light" ? (
+      {!isDarkMode ? (
         <span className="flex gap-2">
           <MoonIcon className="h-6 w-6" />
           ダークモード

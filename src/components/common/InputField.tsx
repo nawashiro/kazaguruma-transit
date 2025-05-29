@@ -42,7 +42,7 @@ export default function InputField({
     [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
-    <div className="form-control w-full">
+    <div className="form-control w-full space-y-2">
       <label htmlFor={inputId} className="label">
         <span className="label-text font-medium text-foreground">
           {label}
@@ -50,7 +50,7 @@ export default function InputField({
         </span>
       </label>
       {description && (
-        <div id={descriptionId} className="text-sm /70 mt-1 leading-relaxed">
+        <div id={descriptionId} className="text-sm /70 leading-relaxed">
           {description}
         </div>
       )}
@@ -64,7 +64,7 @@ export default function InputField({
         required={required}
         name={name}
         maxLength={maxLength}
-        className={`input input-bordered w-full min-h-[44px]  leading-relaxed ${
+        className={`input outline w-full min-h-[44px] leading-relaxed ${
           hasError
             ? "input-error border-2 border-error"
             : "border border-base-300 hover:border-base-content/50"
@@ -77,7 +77,7 @@ export default function InputField({
       {hasError && (
         <div
           id={errorId}
-          className="text-error text-sm mt-1 font-medium leading-relaxed"
+          className="text-error text-sm font-medium leading-relaxed"
           role="alert"
         >
           <span className="mr-1" aria-hidden="true">

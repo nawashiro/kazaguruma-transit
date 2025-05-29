@@ -28,7 +28,7 @@ export default function SidebarLayout({
           }}
         />
       </div>
-      <div className="drawer-content flex flex-col">
+      <div className="drawer-content flex flex-col min-h-screen">
         <div className="flex items-center justify-between p-2">
           <span>
             <label
@@ -52,7 +52,7 @@ export default function SidebarLayout({
               メニュー
             </label>
           </span>
-          <ThemeToggle />
+          <ThemeToggle lightTheme="valentine" darkTheme="dracula" />
         </div>
         <div id="main-content" className="flex-grow p-4" tabIndex={-1}>
           {children}

@@ -52,7 +52,7 @@ export default function SidebarLayout({
               メニュー
             </label>
           </span>
-          <ThemeToggle lightThemeName="cupcake" darkThemeName="dark" />
+          <ThemeToggle />
         </div>
         <div id="main-content" className="flex-grow p-4" tabIndex={-1}>
           {children}

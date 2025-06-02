@@ -19,8 +19,8 @@ interface SidebarProps {
 
 export default function Sidebar({ toggleSidebar }: SidebarProps) {
   return (
-    <aside className="h-full w-80 border-r bg-base-300">
-      <ul className="menu p-4 space-y-4 w-full bg-base-300">
+    <aside className="h-full w-80 border-r bg-base-200">
+      <ul className="menu p-4 space-y-4 w-full bg-base-200">
         <li>
           <details open>
             <summary className="group">

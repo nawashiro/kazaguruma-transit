@@ -60,9 +60,7 @@ export default function RootLayout({
         <StructuredData />
         <CustomHead />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-base-300`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <GoogleAnalytics />
         <SidebarLayout>{children}</SidebarLayout>
       </body>

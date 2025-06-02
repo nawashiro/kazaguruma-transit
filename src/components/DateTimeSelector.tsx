@@ -94,13 +94,13 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
     <div>
       <div className="space-y-4">
         {/* 出発/到着の切り替えボタングループ */}
+        <label id={groupId} className="sr-only">
+          時間タイプを選択
+        </label>
         <div role="radiogroup" aria-labelledby={groupId} className="join">
-          <label id={groupId} className="sr-only">
-            時間タイプを選択
-          </label>
           <button
             type="button"
-            className={`join-item btn ${
+            className={`btn join-item ${
               isDeparture ? "btn-active btn-primary" : ""
             }`}
             onClick={() => handleTimeTypeChange(true)}
@@ -113,7 +113,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
           </button>
           <button
             type="button"
-            className={`join-item btn ${
+            className={`btn join-item ${
               !isDeparture ? "btn-active btn-primary" : ""
             }`}
             onClick={() => handleTimeTypeChange(false)}

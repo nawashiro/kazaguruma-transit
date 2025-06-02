@@ -487,7 +487,7 @@ export default function LocationsPage() {
             <div>
               <p className="text-xs mb-1">モバイル端末向け</p>
               <button
-                className="btn btn-outline w-full sm:w-auto"
+                className="btn btn-primary w-full sm:w-auto"
                 onClick={sortByDistance}
                 disabled={positionLoading}
               >
@@ -517,7 +517,7 @@ export default function LocationsPage() {
                   <input
                     type="text"
                     placeholder="住所を入力（例：神田駿河台）"
-                    className="input input-bordered w-full"
+                    className="input outline w-full"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     disabled={searchLoading}
@@ -722,7 +722,7 @@ export default function LocationsPage() {
               href="https://github.com/nawashiro/chiyoda_city_main_facilities"
               target="_blank"
               rel="noopener noreferrer"
-              className="link link-primary"
+              className="link"
             >
               千代田区主要施設座標データ
             </a>
@@ -734,7 +734,7 @@ export default function LocationsPage() {
               href="https://docs.google.com/forms/d/e/1FAIpQLSeZ1eufe_2aZkRWQwr-RuCceUYUMJ7WmSfUr1ZsX5QTDRqFKQ/viewform?usp=header"
               target="_blank"
               rel="noopener noreferrer"
-              className="link link-primary"
+              className="link"
             >
               こちらのフォーム
             </a>

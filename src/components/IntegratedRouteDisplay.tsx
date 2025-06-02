@@ -156,7 +156,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 href={originToStopMapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="link link-primary text-sm"
+                className="link text-sm"
               >
                 出発地 → {originStop.stopName} Googleマップ
               </a>
@@ -186,7 +186,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
               <div key={route.routeId} className="mb-6">
                 {/* 最初のセグメント */}
                 <Card
-                  className="mb-4 border-l-4 border-indigo-400"
+                  className="mb-4 border-l-4 border-primary"
                   variant="default"
                   bodyClassName="p-4"
                 >
@@ -245,7 +245,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                       return (
                         <Card
                           key={transfer.transferStop.stopId}
-                          className="mb-4 border-l-4 border-indigo-400"
+                          className="mb-4 border-l-4 border-primary"
                           variant="default"
                           bodyClassName="p-4"
                         >
@@ -290,7 +290,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 href={stopToDestinationMapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="link link-primary text-sm"
+                className="link text-sm"
               >
                 {destinationStop.stopName} → 目的地 Googleマップ
               </a>

@@ -49,7 +49,7 @@ export default function BeginnersGuide() {
                 href="https://www.city.chiyoda.lg.jp/koho/kenko/koresha/gaishutsu/index.html"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="link link-primary"
+                className="link"
               >
                 地域福祉交通「風ぐるま」・外出支援（千代田区公式サイト）
               </a>
@@ -77,7 +77,7 @@ export default function BeginnersGuide() {
                 href="https://www.city.chiyoda.lg.jp/koho/kenko/koresha/gaishutsu/shin-kazaguruma/ryokin.html"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="link link-primary"
+                className="link"
               >
                 「風ぐるま」料金・乗車券（千代田区公式サイト）
               </a>
@@ -106,7 +106,7 @@ export default function BeginnersGuide() {
                 href="https://www.city.chiyoda.lg.jp/koho/kenko/koresha/gaishutsu/shin-kazaguruma/qa.html"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="link link-primary"
+                className="link"
               >
                 千代田区公式FAQ
               </a>
@@ -153,7 +153,7 @@ export default function BeginnersGuide() {
                 href="https://ko-fi.com/nawashiro/tiers"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="link link-primary"
+                className="link"
               >
                 Ko-fi
               </a>

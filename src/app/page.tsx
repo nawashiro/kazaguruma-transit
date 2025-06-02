@@ -439,9 +439,9 @@ export default function Home() {
   };
 
   return (
-    <div className="container p-4">
-      <header className="text-center my-4">
-        <h1 className="text-3xl font-bold text-primary">風ぐるま乗換案内</h1>
+    <div className="container">
+      <header className="relative text-center mb-8">
+        <h1 className="text-3xl font-bold">風ぐるま乗換案内</h1>
         <p className="mt-2 text-lg">千代田区福祉交通の乗換案内サービス</p>
       </header>
 
@@ -580,7 +580,7 @@ export default function Home() {
               href="https://lin.ee/CgIBOSd"
               target="_blank"
               rel="noopener noreferrer"
-              className="link link-primary"
+              className="link"
             >
               千代田区公式LINE
             </a>

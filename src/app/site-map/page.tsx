@@ -34,7 +34,6 @@ export default function SiteMapPage() {
             >
               ホーム
             </Link>
-            <span className="ml-3 /60">路線検索と乗り換え案内</span>
           </li>
           <li className="flex items-center">
             <MapPinIcon className="h-5 w-5 mr-2" />
@@ -44,9 +43,6 @@ export default function SiteMapPage() {
             >
               場所をさがす
             </Link>
-            <span className="ml-3 /60">
-              風ぐるまで行ける施設をカテゴリや距離で検索
-            </span>
           </li>
         </ul>
       </div>
@@ -64,9 +60,6 @@ export default function SiteMapPage() {
             >
               はじめての方へ
             </Link>
-            <span className="ml-3 /60">
-              風ぐるまの基本情報とサービスの使い方
-            </span>
           </li>
           <li className="flex items-center">
             <BookOpenIcon className="h-5 w-5 mr-2" />
@@ -76,7 +69,6 @@ export default function SiteMapPage() {
             >
               使い方
             </Link>
-            <span className="ml-3 /60">乗換案内の詳しい使用方法</span>
           </li>
         </ul>
       </div>
@@ -93,9 +85,6 @@ export default function SiteMapPage() {
             >
               ライセンス
             </Link>
-            <span className="ml-3 /60">
-              オープンデータとサービスのライセンス情報
-            </span>
           </li>
           <li className="flex items-center">
             <ArrowPathIcon className="h-5 w-5 mr-2" />
@@ -107,7 +96,6 @@ export default function SiteMapPage() {
             >
               更新情報
             </a>
-            <span className="ml-3 /60">サービスの更新履歴</span>
           </li>
           <li className="flex items-center">
             <MapIcon className="h-5 w-5 mr-2" />
@@ -117,7 +105,6 @@ export default function SiteMapPage() {
             >
               サイトマップ
             </Link>
-            <span className="ml-3 /60">サイト内のページ一覧</span>
           </li>
         </ul>
       </div>

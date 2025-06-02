@@ -28,7 +28,7 @@ export default function SidebarLayout({
           }}
         />
       </div>
-      <div className="drawer-content flex flex-col">
+      <div className="drawer-content flex flex-col min-h-screen">
         <div className="flex items-center justify-between p-2">
           <span>
             <label
@@ -63,7 +63,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm /60 hover:underline inline-block mx-2"
+              className="link text-sm /60 hover:underline inline-block mx-2"
             >
               利用規約
             </a>
@@ -71,7 +71,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80b2a6d4d045e850407c"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm /60 hover:underline inline-block mx-2"
+              className="link text-sm /60 hover:underline inline-block mx-2"
             >
               プライバシーポリシー
             </a>
@@ -79,7 +79,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80d0ba82d66f451b9ff1"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm /60 hover:underline inline-block mx-2"
+              className="link text-sm /60 hover:underline inline-block mx-2"
             >
               クッキーポリシー
             </a>

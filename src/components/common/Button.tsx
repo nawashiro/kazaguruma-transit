@@ -42,9 +42,7 @@ export default function Button({
   const buttonId = useId();
 
   // 高コントラストのカラーパレットを使用
-  const baseClasses = secondary
-    ? "btn bg-base-100  hover:bg-base-100 border border-base-300 px-6 py-2 rounded-lg shadow-sm transition-all duration-200"
-    : "btn bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 px-6 py-2 rounded-lg shadow-md transition-all duration-200";
+  const baseClasses = secondary ? "btn btn-secondary" : "btn btn-primary";
   const widthClass = fullWidth ? "w-full" : "";
   const disabledClass =
     disabled || loading ? "opacity-70 cursor-not-allowed" : "";

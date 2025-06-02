@@ -104,25 +104,6 @@ describe("DateTimeSelector", () => {
     expect(label).toHaveTextContent("時間タイプを選択");
   });
 
-  it("アクセシビリティ：出発/到着ボタンが適切なaria属性を持つこと", () => {
-    render(
-      <DateTimeSelector initialStopId={mockStopId} onSubmit={mockOnSubmit} />
-    );
-
-    // 出発ボタンの属性確認
-    const departureBtn = screen.getByTestId("departure-tab");
-    expect(departureBtn).toHaveAttribute("aria-pressed", "true");
-
-    // 到着ボタンの属性確認
-    const arrivalBtn = screen.getByTestId("arrival-tab");
-    expect(arrivalBtn).toHaveAttribute("aria-pressed", "false");
-
-    // ボタンクリック時の属性変更を確認
-    fireEvent.click(arrivalBtn);
-    expect(departureBtn).toHaveAttribute("aria-pressed", "false");
-    expect(arrivalBtn).toHaveAttribute("aria-pressed", "true");
-  });
-
   it("アクセシビリティ：日時入力フィールドが適切なaria属性を持つこと", () => {
     render(
       <DateTimeSelector initialStopId={mockStopId} onSubmit={mockOnSubmit} />

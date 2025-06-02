@@ -722,7 +722,7 @@ export default function LocationsPage() {
               href="https://github.com/nawashiro/chiyoda_city_main_facilities"
               target="_blank"
               rel="noopener noreferrer"
-              className="link link-primary"
+              className="link"
             >
               千代田区主要施設座標データ
             </a>
@@ -734,7 +734,7 @@ export default function LocationsPage() {
               href="https://docs.google.com/forms/d/e/1FAIpQLSeZ1eufe_2aZkRWQwr-RuCceUYUMJ7WmSfUr1ZsX5QTDRqFKQ/viewform?usp=header"
               target="_blank"
               rel="noopener noreferrer"
-              className="link link-primary"
+              className="link"
             >
               こちらのフォーム
             </a>

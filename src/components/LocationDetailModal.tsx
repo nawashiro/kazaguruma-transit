@@ -78,7 +78,7 @@ export default function LocationDetailModal({
               href={location.uri}
               target="_blank"
               rel="noopener noreferrer"
-              className="link link-primary"
+              className="link"
             >
               ウェブサイトを見る
             </a>
@@ -105,7 +105,7 @@ export default function LocationDetailModal({
                 href={location.licenceUri}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="link link-primary ml-1"
+                className="link ml-1"
               >
                 {location.licence}
               </a>

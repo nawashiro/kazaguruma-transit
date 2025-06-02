@@ -52,7 +52,7 @@ export default function SidebarLayout({
               メニュー
             </label>
           </span>
-          <ThemeToggle lightTheme="valentine" darkTheme="dracula" />
+          <ThemeToggle lightThemeName="cupcake" darkThemeName="dark" />
         </div>
         <div id="main-content" className="flex-grow p-4" tabIndex={-1}>
           {children}
@@ -63,7 +63,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm /60 hover:underline inline-block mx-2"
+              className="link text-sm /60 hover:underline inline-block mx-2"
             >
               利用規約
             </a>
@@ -71,7 +71,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80b2a6d4d045e850407c"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm /60 hover:underline inline-block mx-2"
+              className="link text-sm /60 hover:underline inline-block mx-2"
             >
               プライバシーポリシー
             </a>
@@ -79,7 +79,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80d0ba82d66f451b9ff1"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm /60 hover:underline inline-block mx-2"
+              className="link text-sm /60 hover:underline inline-block mx-2"
             >
               クッキーポリシー
             </a>

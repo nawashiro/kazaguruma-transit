@@ -16,7 +16,7 @@ export default function Usage() {
             <p>これはOSSではありません。</p>
             <a
               href="https://nawashiro.dev"
-              className="link link-primary"
+              className="link"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -31,7 +31,7 @@ export default function Usage() {
             <li>
               <a
                 href="https://github.com/nawashiro/chiyoda_city_main_facilities"
-                className="link link-primary"
+                className="link"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -41,7 +41,7 @@ export default function Usage() {
             <li>
               <a
                 href="https://opendatacommons.org/licenses/odbl/"
-                className="link link-primary"
+                className="link"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -59,7 +59,7 @@ export default function Usage() {
             <li>
               <a
                 href="https://github.com/nawashiro/chiyoda_city_town_geojson?tab=readme-ov-file#%E5%8D%83%E4%BB%A3%E7%94%B0%E5%8C%BA%E7%94%BA%E5%90%8D-geojson"
-                className="link link-primary"
+                className="link"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -69,7 +69,7 @@ export default function Usage() {
             <li>
               <a
                 href="https://creativecommons.org/licenses/by-sa/4.0/deed.ja"
-                className="link link-primary"
+                className="link"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -88,7 +88,7 @@ export default function Usage() {
             <li>
               <a
                 href="https://ckan.odpt.org/dataset/hitachi_automobile_transportation_chiyoda_alllines"
-                className="link link-primary"
+                className="link"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -98,7 +98,7 @@ export default function Usage() {
             <li>
               <a
                 href="https://creativecommons.org/licenses/by/4.0/"
-                className="link link-primary"
+                className="link"
                 target="_blank"
                 rel="noopener noreferrer"
               >

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-  themes: valentine, dracula;
+  themes: cupcake, dark;
 }
 
 :root {
@@ -15,6 +15,7 @@
 
 body {
   font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-base-300);
 }
 
 /* アクセシビリティ対応のためのユーティリティクラス */

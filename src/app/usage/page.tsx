@@ -72,7 +72,7 @@ export default function Usage() {
         >
           <div className="space-y-4">
             <p>
-              <Link href="/locations" className="link link-primary">
+              <Link href="/locations" className="link">
                 場所を探す
               </Link>
               から区内のさまざまな場所を探すことができます。
@@ -91,7 +91,7 @@ export default function Usage() {
                 href="https://docs.google.com/forms/d/e/1FAIpQLSeZ1eufe_2aZkRWQwr-RuCceUYUMJ7WmSfUr1ZsX5QTDRqFKQ/viewform?usp=header"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="link link-primary"
+                className="link"
               >
                 こちらのフォーム
               </a>

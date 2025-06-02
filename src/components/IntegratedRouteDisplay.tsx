@@ -156,7 +156,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 href={originToStopMapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="link link-primary text-sm"
+                className="link text-sm"
               >
                 出発地 → {originStop.stopName} Googleマップ
               </a>
@@ -290,7 +290,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 href={stopToDestinationMapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="link link-primary text-sm"
+                className="link text-sm"
               >
                 {destinationStop.stopName} → 目的地 Googleマップ
               </a>

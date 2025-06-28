@@ -4,38 +4,48 @@ import Card from "@/components/common/Card";
 
 export default function BeginnersGuide() {
   return (
-    <div className="container">
+    <div className="container ruby-text">
       <header className="text-center my-4">
         <h1 className="text-3xl font-bold">風ぐるまは初めて？</h1>
         <p className="mt-2 text-xl">ビギナーズガイド</p>
       </header>
       <main className="max-w-md mx-auto space-y-4">
         <Card title="目次">
-          <ul className="menu bg-base-100 p-0 ">
+          <ul className="menu bg-base-100 p-0">
             <li>
-              <a href="#what-is">風ぐるまってなに？</a>
+              <a href="#what-is" className="inline">
+                風ぐるまってなに？
+              </a>
             </li>
             <li>
-              <a href="#how-to-ride">乗りかた</a>
+              <a href="#how-to-ride" className="inline">
+                乗りかた
+              </a>
             </li>
             <li>
-              <a href="#how-to-ride-with-wheelchair">
+              <a href="#how-to-ride-with-wheelchair" className="inline">
                 車いすやベビーカーのかたへ
               </a>
             </li>
             <li>
-              <a href="#about-site">このサイトはなに？</a>
+              <a href="#about-site" className="inline">
+                このサイトはなに？
+              </a>
             </li>
             <li>
-              <a href="#about-me">あなたは誰？</a>
+              <a href="#about-me" className="inline">
+                あなたは誰？
+              </a>
             </li>
             <li>
-              <a href="#payment">お金をとるの？</a>
+              <a href="#payment" className="inline">
+                お金をとるの？
+              </a>
             </li>
           </ul>
         </Card>
 
-        <Card id="what-is" className="shadow-md" title="風ぐるまってなに？">
+        <Card id="what-is" title="風ぐるまってなに？">
           <div className="space-y-4">
             <p>
               千代田区は、区民の外出を支援するためのサービスを提供しています。地域福祉交通「風ぐるま」をはじめ、東京都シルバーパス、車いすの貸し出しなど、様々な支援があります。
@@ -57,7 +67,7 @@ export default function BeginnersGuide() {
           </div>
         </Card>
 
-        <Card id="how-to-ride" className="shadow-md" title="乗りかた">
+        <Card id="how-to-ride" title="乗りかた">
           <div className="space-y-4">
             <p>
               <strong>料金：</strong>
@@ -88,7 +98,6 @@ export default function BeginnersGuide() {
 
         <Card
           id="how-to-ride-with-wheelchair"
-          className="shadow-md"
           title="車いすやベビーカーのかたへ"
         >
           <div className="space-y-4">
@@ -115,7 +124,7 @@ export default function BeginnersGuide() {
           </div>
         </Card>
 
-        <Card id="about-site" className="shadow-md" title="このサイトはなに？">
+        <Card id="about-site" title="このサイトはなに？">
           <div className="space-y-4">
             <p>
               このウェブサイトでは、風ぐるまの乗換案内サービスを提供しています。
@@ -127,7 +136,7 @@ export default function BeginnersGuide() {
           </div>
         </Card>
 
-        <Card id="about-me" className="shadow-md" title="あなたは誰？">
+        <Card id="about-me" title="あなたは誰？">
           <div className="space-y-4">
             <p>
               作者のNawashiroは、ただの一般市民です。このサイトは千代田区の公式サービスではなく、個人的な取り組みとして運営しています。
@@ -138,7 +147,7 @@ export default function BeginnersGuide() {
           </div>
         </Card>
 
-        <Card id="payment" className="shadow-md" title="お金をとるの？">
+        <Card id="payment" title="お金をとるの？">
           <div className="space-y-4">
             <p>原則として無料で使うことができます。</p>
             <p>

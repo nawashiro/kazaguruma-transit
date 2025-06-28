@@ -3,6 +3,7 @@
 import Sidebar from "./Sidebar";
 import ThemeToggle from "./ThemeToggle";
 import SkipToContent from "./common/SkipToContent";
+import Script from "next/script";
 
 export default function SidebarLayout({
   children,
@@ -11,6 +12,19 @@ export default function SidebarLayout({
 }) {
   return (
     <div className="drawer lg:drawer-open">
+      {/* ルビを表示 */}
+      <Script
+        src="https://rubyfuljs.s3.ap-northeast-1.amazonaws.com/rubyful.js"
+        strategy="afterInteractive"
+        onLoad={() => {
+          console.log("Rubyful.js loaded");
+          (window as any).RubyfulJsApp = {
+            refPaths: ["//*[contains(@class,'ruby-text')]"],
+            ...(window as any).RubyfulJsApp,
+          };
+          (window as any).RubyfulJsApp.manualLoadProcess();
+        }}
+      />
       <SkipToContent />
       <input id="drawer" type="checkbox" className="drawer-toggle" />
       <div className="drawer-side z-40">

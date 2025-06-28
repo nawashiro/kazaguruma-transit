@@ -19,7 +19,7 @@ export default function ResetButton({
 }: ResetButtonProps) {
   return (
     <div className={`flex justify-center ${className}`}>
-      <Button onClick={onReset} secondary testId={testId}>
+      <Button onClick={onReset} secondary testId={testId} className="inline">
         検索条件をリセット
       </Button>
     </div>

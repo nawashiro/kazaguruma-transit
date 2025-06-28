@@ -100,7 +100,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
         <div role="radiogroup" aria-labelledby={groupId} className="join">
           <button
             type="button"
-            className={`btn join-item ${
+            className={`btn join-item ruby-text ${
               isDeparture ? "btn-active btn-primary" : ""
             }`}
             onClick={() => handleTimeTypeChange(true)}
@@ -113,7 +113,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
           </button>
           <button
             type="button"
-            className={`btn join-item ${
+            className={`btn join-item ruby-text ${
               !isDeparture ? "btn-active btn-primary" : ""
             }`}
             onClick={() => handleTimeTypeChange(false)}
@@ -127,7 +127,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
         </div>
 
         <div className="form-control">
-          <label htmlFor={inputId} className="label">
+          <label htmlFor={inputId} className="label ruby-text">
             <span
               className="label-text font-medium mr-2"
               data-testid={isDeparture ? "departure-label" : "arrival-label"}

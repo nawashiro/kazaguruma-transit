@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function SiteMapPage() {
   return (
-    <main className="container mx-auto px-4 py-8 max-w-4xl">
+    <main className="container mx-auto px-4 py-8 max-w-4xl ruby-text">
       <h1 className="text-3xl font-bold mb-8 border-b-2 pb-2">サイトマップ</h1>
 
       <div className="mb-10">
@@ -112,7 +112,14 @@ export default function SiteMapPage() {
       <div className="bg-base-100 p-5 rounded-lg shadow-sm mt-8">
         <h2 className="text-xl font-semibold mb-3">このサイトについて</h2>
         <p className="mb-2">
-          風ぐるま乗換案内は、千代田区地域福祉交通「風ぐるま」の非公式乗換案内サービスです。
+          <ruby>
+            風<rt>かざ</rt>
+          </ruby>
+          ぐるま乗換案内は、千代田区地域福祉交通「
+          <ruby>
+            風<rt>かざ</rt>
+          </ruby>
+          ぐるま」の非公式乗換案内サービスです。
           このサイトはアクセシビリティへの配慮を進めており、WCAG
           2.2ガイドラインに準拠することを目指しています。
         </p>

@@ -122,6 +122,7 @@ export default function Home() {
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
   const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
   const [prioritizeSpeed, setPrioritizeSpeed] = useState<boolean>(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // URLパラメータから目的地情報を読み取る
   useEffect(() => {
@@ -159,7 +160,17 @@ export default function Home() {
         }
       }
     }
+    setIsLoaded(true);
   }, []);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    (window as any).RubyfulJsApp = {
+      refPaths: ["//*[contains(@class,'ruby-text')]"],
+      ...(window as any).RubyfulJsApp,
+    };
+    (window as any).RubyfulJsApp.manualLoadProcess();
+  }, [selectedOrigin, selectedDestination, routeInfo]);
 
   const handleOriginSelected = (location: Location) => {
     setSelectedOrigin(location);
@@ -440,8 +451,13 @@ export default function Home() {
 
   return (
     <div className="container">
-      <header className="relative text-center mb-8">
-        <h1 className="text-3xl font-bold">風ぐるま乗換案内</h1>
+      <header className="relative text-center mb-8 ruby-text">
+        <h1 className="text-3xl font-bold">
+          <ruby>
+            風<rt>かざ</rt>
+          </ruby>
+          ぐるま乗換案内
+        </h1>
         <p className="mt-2 text-lg">千代田区福祉交通の乗換案内サービス</p>
       </header>
 
@@ -491,13 +507,13 @@ export default function Home() {
                 <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
 
                 {/* はやさ優先スイッチ */}
-                <div className="form-control mt-4 space-y-2">
+                <div className="form-control mt-4 space-y-2 ruby-text">
                   <p className="text-sm /60 mt-1">
                     早く到着したい場合はオンにしてください。
                     <br />
                     歩きを最小限にしたい場合はオフにしてください。
                   </p>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center space-x-2 cursor-pointer inline-block">
                     <span className="label-text">はやさ優先</span>
                     <input
                       type="checkbox"
@@ -572,7 +588,7 @@ export default function Home() {
             </>
           )}
         </div>
-        <Card bodyClassName="text-center text-xs">
+        <Card bodyClassName="text-center text-xs ruby-text">
           <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
           <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>
           <p>

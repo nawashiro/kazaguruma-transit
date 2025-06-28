@@ -30,7 +30,7 @@ export default function Card({
       id={id}
     >
       <div className={`card-body ${bodyClassName}`}>
-        {title && <h2 className="card-title inline">{title}</h2>}
+        {title && <h2 className="card-title inline ruby-text">{title}</h2>}
         {children}
       </div>
     </section>

@@ -5,22 +5,33 @@ import Card from "@/components/common/Card";
 
 export default function Usage() {
   return (
-    <div className="container">
+    <div className="container ruby-text">
       <header className="text-center my-4">
-        <h1 className="text-3xl font-bold">風ぐるま乗換案内の使いかた</h1>
+        <h1 className="text-3xl font-bold">
+          <ruby>
+            風<rt>かざ</rt>
+          </ruby>
+          ぐるま乗換案内の使いかた
+        </h1>
         <p className="mt-2 text-xl">かんたんに千代田区内を移動するために</p>
       </header>
       <main className="max-w-md mx-auto space-y-4">
         <Card title="目次">
           <ul className="menu bg-base-100 p-0 ">
             <li>
-              <a href="#basic-usage">基本的な使いかた</a>
+              <a href="#basic-usage" className="inline">
+                基本的な使いかた
+              </a>
             </li>
             <li>
-              <a href="#origin-selection">出発地・目的地の選び方</a>
+              <a href="#origin-selection" className="inline">
+                出発地・目的地の選び方
+              </a>
             </li>
             <li>
-              <a href="#destination-selection">風ぐるまで行ける場所の探し方</a>
+              <a href="#destination-selection" className="inline">
+                風ぐるまで行ける場所の探し方
+              </a>
             </li>
           </ul>
         </Card>

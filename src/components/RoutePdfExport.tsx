@@ -208,7 +208,11 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
             />
           </svg>
         )}
-        {pdfGenerating || pdfLoading ? "生成中..." : "印刷する"}
+        {pdfGenerating || pdfLoading ? (
+          <p className="ruby-text">生成中...</p>
+        ) : (
+          <p className="ruby-text">印刷する</p>
+        )}
       </button>
     </>
   );

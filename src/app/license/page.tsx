@@ -4,7 +4,7 @@ import Card from "@/components/common/Card";
 
 export default function Usage() {
   return (
-    <div className="container">
+    <div className="container ruby-text">
       <header className="text-center my-4">
         <h1 className="text-3xl font-bold">ライセンス</h1>
       </header>

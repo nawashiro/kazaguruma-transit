@@ -65,7 +65,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
               <span>
                 <InformationCircleIcon className="h-6 w-6" />
               </span>
-              <p className="font-semibold">
+              <p className="font-semibold whitespace-nowrap">
                 <ruby>
                   使<rt>つか</rt>
                 </ruby>
@@ -133,7 +133,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
                   <span className="inline">
                     <ArrowPathIcon className="h-6 w-6" />
                   </span>
-                  <p>
+                  <p className="whitespace-nowrap">
                     <ruby>
                       更新<rt>こうしん</rt>
                     </ruby>

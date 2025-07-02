@@ -13,6 +13,7 @@ import { TransitFormData, Location } from "../types/transit";
 import { logger } from "../utils/logger";
 import RateLimitModal from "../components/RateLimitModal";
 import FirstVisitGuideModal from "../components/common/FirstVisitGuideModal";
+import { rubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface JourneySegment {
   from: string;
@@ -163,14 +164,7 @@ export default function Home() {
     setIsLoaded(true);
   }, []);
 
-  useEffect(() => {
-    if (!isLoaded) return;
-    (window as any).RubyfulJsApp = {
-      refPaths: ["//*[contains(@class,'ruby-text')]"],
-      ...(window as any).RubyfulJsApp,
-    };
-    (window as any).RubyfulJsApp.manualLoadProcess();
-  }, [selectedOrigin, selectedDestination, routeInfo]);
+  rubyfulRun([selectedOrigin, selectedDestination, routeInfo], isLoaded);
 
   const handleOriginSelected = (location: Location) => {
     setSelectedOrigin(location);

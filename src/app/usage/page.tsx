@@ -24,7 +24,7 @@ export default function Usage() {
               </a>
             </li>
             <li>
-              <a href="#origin-selection" className="inline">
+              <a href="#origin-selection" className="inline whitespace-nowrap">
                 出発地・目的地の選び方
               </a>
             </li>

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Sidebar from "./Sidebar";
 import ThemeToggle from "./ThemeToggle";
 import SkipToContent from "./common/SkipToContent";
 import Script from "next/script";
 import { logger } from "@/utils/logger";
 import { usePathname, useSearchParams } from "next/navigation";
+import { rubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 export default function SidebarLayout({
   children,
@@ -17,14 +18,7 @@ export default function SidebarLayout({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  useEffect(() => {
-    if (!isLoaded) return;
-    (window as any).RubyfulJsApp = {
-      refPaths: ["//*[contains(@class,'ruby-text')]"],
-      ...(window as any).RubyfulJsApp,
-    };
-    (window as any).RubyfulJsApp.manualLoadProcess();
-  }, [pathname, searchParams, isLoaded]);
+  rubyfulRun([pathname, searchParams, isLoaded], isLoaded);
 
   return (
     <div className="drawer lg:drawer-open">
@@ -42,6 +36,10 @@ export default function SidebarLayout({
             background-color: var(--color-base-100);
             color: var(--color-base-content);
             box-shadow: none;
+            border: 1px solid var(--color-base-content);
+          }
+          .rubyfuljs-tooltip, .rubyfuljs-tooltip-close-button {
+            background-color: var(--color-base-100);
             border: 1px solid var(--color-base-content);
           }
           `;

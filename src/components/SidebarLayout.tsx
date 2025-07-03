@@ -1,16 +1,51 @@
 "use client";
 
+import { useState } from "react";
 import Sidebar from "./Sidebar";
 import ThemeToggle from "./ThemeToggle";
 import SkipToContent from "./common/SkipToContent";
+import Script from "next/script";
+import { logger } from "@/utils/logger";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 export default function SidebarLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useRubyfulRun([pathname, searchParams, isLoaded], isLoaded);
+
   return (
     <div className="drawer lg:drawer-open">
+      {/* ルビを表示 */}
+      <Script
+        src="https://rubyfuljs.s3.ap-northeast-1.amazonaws.com/rubyful.js"
+        strategy="afterInteractive"
+        onLoad={() => {
+          logger.log("Rubyful.js loaded");
+          setIsLoaded(true);
+
+          const style = document.createElement("style");
+          style.innerHTML = `
+          button.rubyfuljs-button.is-customized {
+            background-color: var(--color-base-100);
+            color: var(--color-base-content);
+            box-shadow: none;
+            border: 1px solid var(--color-base-content);
+          }
+          .rubyfuljs-tooltip, .rubyfuljs-tooltip-close-button {
+            background-color: var(--color-base-100);
+            border: 1px solid var(--color-base-content);
+          }
+          `;
+          document.body.appendChild(style);
+        }}
+      />
       <SkipToContent />
       <input id="drawer" type="checkbox" className="drawer-toggle" />
       <div className="drawer-side z-40">
@@ -57,7 +92,7 @@ export default function SidebarLayout({
         <div id="main-content" className="flex-grow p-4" tabIndex={-1}>
           {children}
         </div>
-        <footer className="flex flex-col md:flex-row px-4 py-2 justify-center md:justify-between">
+        <footer className="flex flex-col md:flex-row px-4 py-2 justify-center md:justify-between ruby-text">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 md:w-auto">
             <a
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"

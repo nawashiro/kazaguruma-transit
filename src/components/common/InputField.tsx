@@ -44,13 +44,16 @@ export default function InputField({
   return (
     <div className="form-control w-full space-y-2">
       <label htmlFor={inputId} className="label">
-        <span className="label-text font-medium text-foreground">
+        <span className="label-text font-medium text-foreground ruby-text">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </span>
       </label>
       {description && (
-        <div id={descriptionId} className="text-sm /70 leading-relaxed">
+        <div
+          id={descriptionId}
+          className="text-sm /70 leading-relaxed ruby-text"
+        >
           {description}
         </div>
       )}

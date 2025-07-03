@@ -19,6 +19,8 @@ import {
 } from "../../utils/clientGeoUtils";
 import Card from "@/components/common/Card";
 import CarouselCard from "@/components/common/CarouselCard";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import Button from "@/components/common/Button";
 
 // 2点間の距離を計算する関数（ハーバーサイン公式）
 const calculateDistance = (
@@ -322,7 +324,7 @@ export default function LocationsPage() {
     locations.forEach((location) => {
       if (location.distance !== undefined) {
         // 距離を1km単位で丸める
-        const roundedDistance = Math.floor(location.distance);
+        const roundedDistance = Math.round(location.distance);
         if (!groups[roundedDistance]) {
           groups[roundedDistance] = [];
         }
@@ -406,19 +408,34 @@ export default function LocationsPage() {
           {areaName && <p className="text-sm /60">{areaName}</p>}
 
           {location.description && (
-            <p className="text-sm mt-1 line-clamp-3 ">{location.description}</p>
+            <p className="text-sm mt-1 inline ruby-text">
+              {location.description}
+            </p>
           )}
         </div>
       </button>
     );
   };
 
+  useRubyfulRun(
+    [
+      loading,
+      error,
+      currentPosition,
+      searchError,
+      isModalOpen,
+      locationsSorted,
+      sortByDistance,
+    ],
+    !loading
+  );
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <header className="text-center my-4">
+        <div className="text-center my-4">
           <h1 className="text-3xl font-bold ">場所をさがす</h1>
-        </header>
+        </div>
         <div className="flex items-center justify-center py-12">
           <span className="loading loading-spinner loading-lg text-primary"></span>
           <p className="ml-3 text-lg font-medium">施設データを読み込み中...</p>
@@ -455,8 +472,8 @@ export default function LocationsPage() {
 
   return (
     <>
-      <header className="text-center my-4">
-        <h1 className="text-3xl font-bold ">場所をさがす</h1>
+      <header className="text-center my-4 ruby-text">
+        <h1 className="text-3xl font-bold">場所をさがす</h1>
         <p className="mt-2 text-xl ">
           位置とカテゴリから千代田区のスポットをさがす
         </p>
@@ -465,7 +482,7 @@ export default function LocationsPage() {
       <main className="space-y-4">
         <Card title="近いところから表示">
           {searchError && (
-            <div className="alert alert-error">
+            <div className="alert alert-error ruby-text">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="stroke-current shrink-0 h-6 w-6"
@@ -485,21 +502,15 @@ export default function LocationsPage() {
 
           <div className="flex flex-col sm:flex-row gap-4 mb-4">
             <div>
-              <p className="text-xs mb-1">モバイル端末向け</p>
-              <button
-                className="btn btn-primary w-full sm:w-auto"
+              <p className="text-xs mb-1 ruby-text">モバイル端末向け</p>
+              <Button
                 onClick={sortByDistance}
                 disabled={positionLoading}
+                loading={positionLoading}
+                className="w-full md:w-fit"
               >
-                {positionLoading ? (
-                  <>
-                    <span className="loading loading-spinner loading-xs"></span>
-                    位置情報取得中...
-                  </>
-                ) : (
-                  "現在地を取得"
-                )}
-              </button>
+                <p>現在地を取得</p>
+              </Button>
             </div>
 
             <div className="divider divider-horizontal sm:flex hidden">
@@ -508,7 +519,9 @@ export default function LocationsPage() {
             <div className="divider sm:hidden">または</div>
 
             <div className="flex-1">
-              <p className="text-xs mb-1">PC向け / 任意の場所から選びたい</p>
+              <p className="text-xs mb-1 ruby-text">
+                PC向け / 任意の場所から選びたい
+              </p>
               <form
                 onSubmit={handleAddressSearch}
                 className="flex flex-col sm:flex-row gap-2"
@@ -523,23 +536,19 @@ export default function LocationsPage() {
                     disabled={searchLoading}
                   />
                 </div>
-                <button
+                <Button
                   type="submit"
                   className="btn btn-primary"
                   disabled={searchLoading}
                 >
-                  {searchLoading ? (
-                    <span className="loading loading-spinner loading-xs"></span>
-                  ) : (
-                    "検索"
-                  )}
-                </button>
+                  検索
+                </Button>
               </form>
             </div>
           </div>
 
           {currentPosition && (
-            <div className="alert alert-success">
+            <div className="alert alert-success ruby-text">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="stroke-current shrink-0 h-6 w-6"
@@ -565,7 +574,7 @@ export default function LocationsPage() {
             {categories.map((category) => (
               <button
                 key={category.category}
-                className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium
+                className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium ruby-text
                 ${
                   activeCategory === category.category
                     ? "btn-primary border-primary text-primary-content"
@@ -578,7 +587,7 @@ export default function LocationsPage() {
                   activeCategory === category.category ? "閉じる" : "開く"
                 }`}
               >
-                {category.category}
+                <p>{category.category}</p>
               </button>
             ))}
           </div>
@@ -637,7 +646,7 @@ export default function LocationsPage() {
           </div>
         )}
 
-        <div className="md:flex md:justify-center">
+        <div className="md:flex md:justify-center ruby-text">
           <div className="carousel w-full md:max-w-3xl">
             {/* お悩みハンドブックへのリンクカード */}
             <CarouselCard
@@ -657,7 +666,7 @@ export default function LocationsPage() {
                 rel="noopener noreferrer"
                 className="btn btn-outline w-fit h-fit py-2"
               >
-                お悩みハンドブックウェブサイトへ
+                <p>お悩みハンドブックウェブサイトへ</p>
               </a>
             </CarouselCard>
 
@@ -679,9 +688,9 @@ export default function LocationsPage() {
                 href="https://sekaibivouac.jp/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2"
+                className="btn btn-outline w-fit h-fit py-2 inline"
               >
-                せかいビバークウェブサイトへ
+                <p>せかいビバークウェブサイトへ</p>
               </a>
             </CarouselCard>
 
@@ -699,25 +708,25 @@ export default function LocationsPage() {
                 href="https://visit-chiyoda.tokyo/app/event"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2"
+                className="btn btn-outline w-fit h-fit py-2 inline"
               >
-                千代田区観光協会ウェブサイトへ
+                <p>千代田区観光協会ウェブサイトへ</p>
               </a>
               <a
                 href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2"
+                className="btn btn-outline w-fit h-fit py-2 inline"
               >
-                千代田区ウェブサイトへ
+                <p>千代田区ウェブサイトへ</p>
               </a>
             </CarouselCard>
           </div>
         </div>
 
-        <Card title="データ提供元">
+        <Card title="データ提供元" className="ruby-text">
           <p>
-            この場所データは
+            この場所データは、ボランティアがつくった
             <a
               href="https://github.com/nawashiro/chiyoda_city_main_facilities"
               target="_blank"
@@ -761,13 +770,14 @@ export default function LocationsPage() {
       `}</style>
 
       {/* モーダルコンポーネント */}
-      <LocationDetailModal
-        location={selectedLocation}
-        isOpen={isModalOpen}
-        onClose={closeLocationModal}
-        onGoToLocation={handleGoToLocation}
-        areaName={selectedLocationAreaName}
-      />
+      {isModalOpen && (
+        <LocationDetailModal
+          location={selectedLocation}
+          onClose={closeLocationModal}
+          onGoToLocation={handleGoToLocation}
+          areaName={selectedLocationAreaName}
+        />
+      )}
 
       {/* レート制限モーダル */}
       <RateLimitModal

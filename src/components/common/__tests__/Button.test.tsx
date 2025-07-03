@@ -3,16 +3,6 @@ import "@testing-library/jest-dom";
 import Button from "../Button";
 import { logger } from "@/utils/logger";
 
-// loggerをモック
-jest.mock("@/utils/logger", () => ({
-  logger: {
-    warn: jest.fn(),
-    log: jest.fn(),
-    error: jest.fn(),
-    info: jest.fn(),
-  },
-}));
-
 describe("Button", () => {
   const mockOnClick = jest.fn();
 
@@ -58,16 +48,14 @@ describe("Button", () => {
     );
 
     const button = screen.getByTestId("test-button");
-    const spinner = screen
-      .getByTestId("test-button")
-      .querySelector(".loading.loading-spinner");
-    expect(spinner).toBeInTheDocument();
     expect(button).toBeDisabled();
 
     // ローディング状態のアクセシビリティ
     expect(button).toHaveAttribute("aria-busy", "true");
-    // スクリーンリーダー用のテキストが存在する
-    expect(screen.getByText("読み込み中...")).toBeInTheDocument();
+
+    // ローディング状態では視覚的な無効状態のスタイルが適用される
+    expect(button).toHaveClass("opacity-70");
+    expect(button).toHaveClass("cursor-not-allowed");
   });
 
   it("フルワイドスタイルが適用されること", () => {

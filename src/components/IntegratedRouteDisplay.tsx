@@ -138,7 +138,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
       : undefined;
 
   return (
-    <Card variant="default" className="rounded-lg" bodyClassName="p-4">
+    <Card className="rounded-lg" bodyClassName="p-4">
       {type === "none" ? (
         // ルートが見つからない場合の表示
         <div className="text-center">
@@ -187,7 +187,6 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 {/* 最初のセグメント */}
                 <Card
                   className="mb-4 border-l-4 border-primary"
-                  variant="default"
                   bodyClassName="p-4"
                 >
                   {/* 出発バス停と時刻 */}
@@ -246,7 +245,6 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                         <Card
                           key={transfer.transferStop.stopId}
                           className="mb-4 border-l-4 border-primary"
-                          variant="default"
                           bodyClassName="p-4"
                         >
                           {/* 乗換駅出発時刻 */}

@@ -65,7 +65,7 @@ export default function Button({
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
-      className={`${baseClasses} ${widthClass} ${disabledClass} ${accessibilityClass} ${textClass} ${className}`}
+      className={`${baseClasses} ${widthClass} ${disabledClass} ${accessibilityClass} ${textClass} ${className} ruby-text`}
       data-testid={testId}
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
@@ -79,14 +79,7 @@ export default function Button({
         boxShadow: "none",
       }}
     >
-      {loading ? (
-        <>
-          <span className="loading loading-spinner" aria-hidden="true"></span>
-          <span className="sr-only">読み込み中...</span>
-        </>
-      ) : (
-        children
-      )}
+      {children}
     </button>
   );
 }

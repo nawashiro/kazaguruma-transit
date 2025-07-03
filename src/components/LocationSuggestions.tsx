@@ -9,6 +9,7 @@ import {
   convertToLocation,
 } from "../utils/addressLoader";
 import Card from "./common/Card";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface LocationSuggestionsProps {
   onLocationSelected: (location: Location) => void;
@@ -56,6 +57,8 @@ export default function LocationSuggestions({
     }
   };
 
+  useRubyfulRun([loading], !loading);
+
   if (loading) {
     return (
       <div
@@ -74,7 +77,7 @@ export default function LocationSuggestions({
 
   if (error) {
     return (
-      <Card className="mb-6 overflow-hidden" variant="default">
+      <Card className="mb-6 overflow-hidden">
         <div className="alert alert-error" role="alert" aria-live="assertive">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -100,7 +103,7 @@ export default function LocationSuggestions({
     <div data-testid={sectionId}>
       <label
         htmlFor={categoryListId}
-        className="label label-text font-medium text-foreground"
+        className="label label-text font-medium text-foreground ruby-text inline"
       >
         よく利用される施設から選択
       </label>
@@ -122,7 +125,7 @@ export default function LocationSuggestions({
             <button
               key={category.category}
               id={categoryId}
-              className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium
+              className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium ruby-text
                 ${
                   isActive
                     ? "btn-primary border-primary text-primary-content"
@@ -137,7 +140,7 @@ export default function LocationSuggestions({
                 isActive ? "閉じる" : "開く"
               }`}
             >
-              {category.category}
+              <p>{category.category}</p>
             </button>
           );
         })}

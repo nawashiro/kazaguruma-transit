@@ -4,7 +4,7 @@ import Card from "@/components/common/Card";
 
 export default function Usage() {
   return (
-    <div className="container">
+    <div className="container ruby-text">
       <header className="text-center my-4">
         <h1 className="text-3xl font-bold">ライセンス</h1>
       </header>
@@ -106,6 +106,20 @@ export default function Usage() {
               </a>
             </li>
           </ul>
+        </Card>
+
+        <Card className="shadow-md" title="ルビフルボタン">
+          <p>
+            ルビフルボタンは、一般財団法人ルビ財団が提供するものです。これはOSSではありません。
+          </p>
+          <a
+            href="https://rubizaidan.jp/rubyful-button/"
+            className="link"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            ルビ財団ウェブサイト
+          </a>
         </Card>
       </main>
     </div>

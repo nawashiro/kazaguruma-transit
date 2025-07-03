@@ -3,7 +3,6 @@ import { KeyLocation } from "../utils/addressLoader";
 
 interface LocationDetailModalProps {
   location: KeyLocation | null;
-  isOpen: boolean;
   onClose: () => void;
   onGoToLocation: (location: KeyLocation) => void;
   areaName: string | null;
@@ -11,7 +10,6 @@ interface LocationDetailModalProps {
 
 export default function LocationDetailModal({
   location,
-  isOpen,
   onClose,
   onGoToLocation,
   areaName,
@@ -20,12 +18,12 @@ export default function LocationDetailModal({
 
   // モーダルの開閉状態を制御
   useEffect(() => {
-    if (isOpen && location && modalRef.current) {
+    if (location && modalRef.current) {
       modalRef.current.showModal();
     } else if (modalRef.current) {
       modalRef.current.close();
     }
-  }, [isOpen, location]);
+  }, [location]);
 
   // ESCキーでモーダルを閉じる機能はdialog要素に組み込まれているので、追加実装は不要
 
@@ -65,7 +63,7 @@ export default function LocationDetailModal({
 
         {/* 説明文（全文表示） */}
         {location.description && (
-          <div className="mt-4">
+          <div className="mt-4 ruby-text">
             <h4 className="font-semibold text-lg mb-2 ">説明</h4>
             <p className="text-sm ">{location.description}</p>
           </div>
@@ -80,13 +78,17 @@ export default function LocationDetailModal({
               rel="noopener noreferrer"
               className="link"
             >
-              ウェブサイトを見る
+              ウェブサイトを
+              <ruby>
+                見<rt>み</rt>
+              </ruby>
+              る
             </a>
           </div>
         )}
 
         {/* 著作権情報 */}
-        <div className="mt-6 bg-base-100 p-3 rounded-lg">
+        <div className="mt-6 bg-base-100 p-3 rounded-lg ruby-text">
           <h4 className="font-semibold text-sm mb-2 ">提供情報</h4>
           <div className="text-xs space-y-2">
             <p className="/90">座標データ提供: {location.nodeCopyright}</p>
@@ -116,16 +118,25 @@ export default function LocationDetailModal({
         {/* アクションボタン */}
         <div className="modal-action">
           <button
-            className="btn btn-primary"
+            className="btn btn-primary inline"
             onClick={() => {
               onGoToLocation(location);
               onClose();
             }}
           >
-            ここへ行く
+            ここへ
+            <ruby>
+              行<rt>い</rt>
+            </ruby>
+            く
           </button>
           <form method="dialog">
-            <button className="btn">閉じる</button>
+            <button className="btn inline">
+              <ruby>
+                閉<rt>と</rt>
+              </ruby>
+              じる
+            </button>
           </form>
         </div>
       </div>

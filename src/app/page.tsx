@@ -501,14 +501,14 @@ export default function Home() {
                 <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
 
                 {/* はやさ優先スイッチ */}
-                <div className="form-control mt-4 space-y-2 ruby-text">
-                  <p className="text-sm /60 mt-1">
+                <div className="form-control mt-4 space-y-2">
+                  <p className="text-sm /60 mt-1 ruby-text">
                     早く到着したい場合はオンにしてください。
                     <br />
                     歩きを最小限にしたい場合はオフにしてください。
                   </p>
                   <label className="flex items-center space-x-2 cursor-pointer inline-block">
-                    <span className="label-text">はやさ優先</span>
+                    <span className="label-text ruby-text">はやさ優先</span>
                     <input
                       type="checkbox"
                       className="toggle toggle-primary"

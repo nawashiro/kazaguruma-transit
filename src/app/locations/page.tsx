@@ -19,7 +19,7 @@ import {
 } from "../../utils/clientGeoUtils";
 import Card from "@/components/common/Card";
 import CarouselCard from "@/components/common/CarouselCard";
-import { rubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import Button from "@/components/common/Button";
 
 // 2点間の距離を計算する関数（ハーバーサイン公式）
@@ -417,7 +417,7 @@ export default function LocationsPage() {
     );
   };
 
-  rubyfulRun(
+  useRubyfulRun(
     [
       loading,
       error,

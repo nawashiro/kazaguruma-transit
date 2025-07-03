@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { KeyLocation } from "../utils/addressLoader";
-import { rubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface LocationDetailModalProps {
   location: KeyLocation | null;

@@ -26,7 +26,7 @@ const getRubyfulSetting = (): boolean => {
  * @param trigger - 再実行のトリガーとなる依存配列
  * @param isLoaded - Rubyfulライブラリが読み込み完了したかどうか
  */
-export const rubyfulRun = (trigger: any[], isLoaded: boolean) => {
+export const useRubyfulRun = (trigger: any[], isLoaded: boolean) => {
   // ルビ表示の状態管理（初期値はローカルストレージから読み込み）
   const [isRubyVisible, setIsRubyVisible] = useState(() => getRubyfulSetting());
 

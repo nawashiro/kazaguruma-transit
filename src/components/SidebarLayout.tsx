@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Sidebar from "./Sidebar";
 import ThemeToggle from "./ThemeToggle";
 import SkipToContent from "./common/SkipToContent";
@@ -9,19 +9,30 @@ import { logger } from "@/utils/logger";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
+// useSearchParams()を使用する部分を別コンポーネントに分離
+function RubyfulInitializer({ isLoaded }: { isLoaded: boolean }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useRubyfulRun([pathname, searchParams, isLoaded], isLoaded);
+
+  return null;
+}
+
 export default function SidebarLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const [isLoaded, setIsLoaded] = useState(false);
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  useRubyfulRun([pathname, searchParams, isLoaded], isLoaded);
 
   return (
     <div className="drawer lg:drawer-open">
+      {/* Suspenseで囲まれたRubyful初期化 */}
+      <Suspense fallback={null}>
+        <RubyfulInitializer isLoaded={isLoaded} />
+      </Suspense>
+
       {/* ルビを表示 */}
       <Script
         src="https://rubyfuljs.s3.ap-northeast-1.amazonaws.com/rubyful.js"

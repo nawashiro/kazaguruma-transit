@@ -7,9 +7,6 @@ services:
         NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID}
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
         NEXT_PUBLIC_KOFI_TIER_PAGE_URL: ${NEXT_PUBLIC_KOFI_TIER_PAGE_URL}
-    volumes:
-      - ./.gtfs:/app/.gtfs
-      - ./prisma/.temp:/app/prisma/.temp
     ports:
       - "3000:3000"
     env_file:

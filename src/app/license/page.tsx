@@ -107,6 +107,20 @@ export default function Usage() {
             </li>
           </ul>
         </Card>
+
+        <Card className="shadow-md" title="ルビフルボタン">
+          <p>
+            ルビフルボタンは、一般財団法人ルビ財団が提供するものです。これはOSSではありません。
+          </p>
+          <a
+            href="https://rubizaidan.jp/rubyful-button/"
+            className="link"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            ルビ財団ウェブサイト
+          </a>
+        </Card>
       </main>
     </div>
   );

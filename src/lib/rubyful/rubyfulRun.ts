@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { logger } from "@/utils/logger";
+import { useEffect, useState, useCallback } from "react";
 
 /**
  * ローカルストレージからルビ表示設定を読み込む
@@ -29,6 +30,26 @@ export const rubyfulRun = (trigger: any[], isLoaded: boolean) => {
   // ルビ表示の状態管理（初期値はローカルストレージから読み込み）
   const [isRubyVisible, setIsRubyVisible] = useState(() => getRubyfulSetting());
 
+  // ルビ表示切り替えハンドラーをuseCallbackで最適化
+  const handleToggleRuby = useCallback(() => {
+    setIsRubyVisible((prevState) => {
+      const newRubyState = !prevState;
+
+      try {
+        localStorage.setItem("rubyful", newRubyState.toString());
+
+        // Rubyfulライブラリの設定も同時に更新
+        if ((window as any).RubyfulJsApp) {
+          (window as any).RubyfulJsApp.defaultDisplay = newRubyState;
+        }
+      } catch (error) {
+        logger.warn("ローカルストレージの保存に失敗しました:", error);
+      }
+
+      return newRubyState;
+    });
+  }, []);
+
   useEffect(() => {
     // Rubyfulライブラリが未読み込みの場合は処理をスキップ
     if (!isLoaded) return;
@@ -56,22 +77,6 @@ export const rubyfulRun = (trigger: any[], isLoaded: boolean) => {
       // ルビ表示切り替えボタンにイベントリスナーを設定
       const rubyfulButton = document.getElementsByClassName("rubyfuljs-button");
 
-      const handleToggleRuby = () => {
-        const newRubyState = !isRubyVisible;
-        setIsRubyVisible(newRubyState);
-
-        try {
-          localStorage.setItem("rubyful", newRubyState.toString());
-
-          // Rubyfulライブラリの設定も同時に更新
-          if ((window as any).RubyfulJsApp) {
-            (window as any).RubyfulJsApp.defaultDisplay = newRubyState;
-          }
-        } catch (error) {
-          console.warn("ローカルストレージの保存に失敗しました:", error);
-        }
-      };
-
       if (rubyfulButton.length > 0) {
         rubyfulButton[0].addEventListener("click", handleToggleRuby);
 
@@ -83,9 +88,9 @@ export const rubyfulRun = (trigger: any[], isLoaded: boolean) => {
         };
       }
     } catch (error) {
-      console.error("Rubyfulの初期化中にエラーが発生しました:", error);
+      logger.error("Rubyfulの初期化中にエラーが発生しました:", error);
     }
-  }, trigger);
+  }, [...trigger, handleToggleRuby]);
 
   return { isRubyVisible };
 };

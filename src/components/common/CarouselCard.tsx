@@ -30,7 +30,7 @@ export default function CarouselCard({
           className={`card bg-base-100 w-full shadow-sm overflow-hidden ${className}`}
         >
           <div className="card-body">
-            {title && <h2 className="card-title">{title}</h2>}
+            {title && <h2 className="card-title inline">{title}</h2>}
             {children}
 
             <div className="card-actions justify-between mt-4">

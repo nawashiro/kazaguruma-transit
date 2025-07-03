@@ -9,6 +9,7 @@ import {
   convertToLocation,
 } from "../utils/addressLoader";
 import Card from "./common/Card";
+import { rubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface LocationSuggestionsProps {
   onLocationSelected: (location: Location) => void;
@@ -56,6 +57,8 @@ export default function LocationSuggestions({
     }
   };
 
+  rubyfulRun([loading], !loading);
+
   if (loading) {
     return (
       <div
@@ -100,7 +103,7 @@ export default function LocationSuggestions({
     <div data-testid={sectionId}>
       <label
         htmlFor={categoryListId}
-        className="label label-text font-medium text-foreground"
+        className="label label-text font-medium text-foreground ruby-text inline"
       >
         よく利用される施設から選択
       </label>
@@ -137,7 +140,7 @@ export default function LocationSuggestions({
                 isActive ? "閉じる" : "開く"
               }`}
             >
-              {category.category}
+              <p>{category.category}</p>
             </button>
           );
         })}

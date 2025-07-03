@@ -28,7 +28,10 @@ export default function BeginnersGuide() {
               </a>
             </li>
             <li>
-              <a href="#how-to-ride-with-wheelchair" className="inline">
+              <a
+                href="#how-to-ride-with-wheelchair"
+                className="inline whitespace-nowrap"
+              >
                 車いすやベビーカーのかたへ
               </a>
             </li>

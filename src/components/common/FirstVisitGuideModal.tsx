@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { isFirstVisit } from "../../utils/visitTracker";
 import { logger } from "../../utils/logger";
 import { sendEvent } from "@/lib/analytics/useGA";
+import { rubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 /**
  * 初回訪問ガイドモーダル
@@ -81,6 +82,8 @@ const FirstVisitGuideModal = () => {
     };
   }, [isOpen, handleClose]); // isOpenとhandleCloseが変わるたびにリスナーを更新
 
+  rubyfulRun([isOpen], isOpen);
+
   if (!isOpen) return null;
 
   return (
@@ -95,7 +98,7 @@ const FirstVisitGuideModal = () => {
         aria-labelledby="modal-title"
         aria-describedby="modal-description"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between ruby-text">
           <h2 id="modal-title" className="text-lg font-semibold">
             風ぐるまは初めてですか？
           </h2>
@@ -119,7 +122,7 @@ const FirstVisitGuideModal = () => {
             </svg>
           </button>
         </div>
-        <p id="modal-description" className="my-2">
+        <p id="modal-description" className="my-2 ruby-text">
           風ぐるまの使い方や基本情報を確認してみませんか？
         </p>
         <div className="flex gap-2 justify-end mt-3">
@@ -128,14 +131,36 @@ const FirstVisitGuideModal = () => {
             onClick={handleClose}
             data-testid="close-guide-modal"
           >
-            後で見る
+            <p>
+              <ruby>
+                後<rt>あと</rt>
+              </ruby>
+              で
+              <ruby>
+                見<rt>み</rt>
+              </ruby>
+              る
+            </p>
           </button>
           <button
             className="btn btn-sm btn-primary"
             onClick={handleGoToGuide}
             data-testid="go-to-guide"
           >
-            使い方を見る
+            <p>
+              <ruby>
+                使<rt>つか</rt>
+              </ruby>
+              い
+              <ruby>
+                方<rt>かた</rt>
+              </ruby>
+              を
+              <ruby>
+                見<rt>み</rt>
+              </ruby>
+              る
+            </p>
           </button>
         </div>
       </div>

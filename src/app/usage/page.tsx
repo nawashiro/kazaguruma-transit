@@ -33,6 +33,16 @@ export default function Usage() {
                 風ぐるまで行ける場所の探し方
               </a>
             </li>
+            <li>
+              <a href="#install-app" className="inline">
+                インストールしていつでも使えるようにする
+              </a>
+            </li>
+            <li>
+              <a href="#rubyful-button" className="inline">
+                ふりながをつける / 消す
+              </a>
+            </li>
           </ul>
         </Card>
 
@@ -107,6 +117,53 @@ export default function Usage() {
                 こちらのフォーム
               </a>
               からお知らせください。
+            </p>
+          </div>
+        </Card>
+
+        <Card
+          id="install-app"
+          className="shadow-md"
+          title="インストールしていつでも使えるようにする"
+        >
+          <div className="space-y-4">
+            <p>
+              このサービスは、ブラウザで動作するウェブアプリです。ブラウザによっては、インストールしていつでも使えるようにすることができます。
+            </p>
+            <ol className="list-decimal list-inside space-y-2">
+              <li>このページを開いたままブラウザのメニューをタップ</li>
+              <li>「ホーム画面に追加」をタップ</li>
+            </ol>
+          </div>
+        </Card>
+
+        <Card
+          id="rubyful-button"
+          className="shadow-md"
+          title="ふりながをつける / 消す"
+        >
+          <div className="space-y-4">
+            <p>
+              このサイトは、一般財団法人ルビ財団が提供するルビフルボタンを備えています。
+            </p>
+            <p>
+              右下に出ているルビフルボタンを使うと、ふりながをつける /
+              消すことができます。
+            </p>
+            <p>
+              機械的につけているため、誤っている場合があります。また、このウェブサイトのコンテンツと競合してうまく動かないことがあります。そのため、一部の動的なコンテンツや地名に、ふりがなをつけていない場合があります。
+            </p>
+            <p>
+              ルビフルボタンについては、
+              <a
+                href="https://rubizaidan.jp/rubyful-button/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link"
+              >
+                ルビ財団ウェブサイト
+              </a>
+              をご覧ください。
             </p>
           </div>
         </Card>

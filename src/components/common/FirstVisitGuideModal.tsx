@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { isFirstVisit } from "../../utils/visitTracker";
 import { logger } from "../../utils/logger";
 import { sendEvent } from "@/lib/analytics/useGA";
-import { rubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 /**
  * 初回訪問ガイドモーダル
@@ -82,7 +82,7 @@ const FirstVisitGuideModal = () => {
     };
   }, [isOpen, handleClose]); // isOpenとhandleCloseが変わるたびにリスナーを更新
 
-  rubyfulRun([isOpen], isOpen);
+  useRubyfulRun([isOpen], isOpen);
 
   if (!isOpen) return null;
 

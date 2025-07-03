@@ -7,7 +7,7 @@ import SkipToContent from "./common/SkipToContent";
 import Script from "next/script";
 import { logger } from "@/utils/logger";
 import { usePathname, useSearchParams } from "next/navigation";
-import { rubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 export default function SidebarLayout({
   children,
@@ -18,7 +18,7 @@ export default function SidebarLayout({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  rubyfulRun([pathname, searchParams, isLoaded], isLoaded);
+  useRubyfulRun([pathname, searchParams, isLoaded], isLoaded);
 
   return (
     <div className="drawer lg:drawer-open">

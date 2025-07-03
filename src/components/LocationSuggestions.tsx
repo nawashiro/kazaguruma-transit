@@ -9,7 +9,7 @@ import {
   convertToLocation,
 } from "../utils/addressLoader";
 import Card from "./common/Card";
-import { rubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface LocationSuggestionsProps {
   onLocationSelected: (location: Location) => void;
@@ -57,7 +57,7 @@ export default function LocationSuggestions({
     }
   };
 
-  rubyfulRun([loading], !loading);
+  useRubyfulRun([loading], !loading);
 
   if (loading) {
     return (

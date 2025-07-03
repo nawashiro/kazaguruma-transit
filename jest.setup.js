@@ -61,3 +61,20 @@ jest.mock("fs", () => ({
     })
   ),
 }));
+
+// loggerの共通モック設定
+jest.mock("@/utils/logger", () => ({
+  logger: {
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+  },
+}));
+
+// rubyfulRunの共通モック設定
+jest.mock("@/lib/rubyful/rubyfulRun", () => ({
+  useRubyfulRun: jest.fn(() => ({
+    isRubyVisible: true,
+  })),
+}));

@@ -13,12 +13,6 @@ jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
 }));
 
-jest.mock("../../utils/logger", () => ({
-  logger: {
-    log: jest.fn(),
-  },
-}));
-
 jest.mock("@/lib/analytics/useGA", () => ({
   sendEvent: jest.fn(),
 }));

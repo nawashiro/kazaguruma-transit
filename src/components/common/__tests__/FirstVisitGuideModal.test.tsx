@@ -10,12 +10,6 @@ jest.mock("../../../utils/visitTracker", () => ({
   isFirstVisit: jest.fn(),
 }));
 
-jest.mock("../../../utils/logger", () => ({
-  logger: {
-    log: jest.fn(),
-  },
-}));
-
 // next/navigationのuseRouterをモック
 jest.mock("next/navigation", () => {
   const push = jest.fn();

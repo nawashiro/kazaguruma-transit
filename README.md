@@ -1,6 +1,6 @@
 # かざぐるま乗換案内
 
-千代田区福祉交通「かざぐるま」の乗換案内ウェブアプリケーション
+千代田区福祉交通「風ぐるま」の乗換案内ウェブアプリケーション
 
 ## セットアップ
 
@@ -10,18 +10,43 @@ npm install
 
 ## 環境変数の設定
 
-プロジェクトのルートに `.env.local` ファイルを作成し、以下の環境変数を設定してください：
+プロジェクトのルートに環境変数ファイル（開発環境：`.env.local`、本番環境：`.env`）を作成し、以下の環境変数を設定してください：
 
 ```
-# Google Maps API Key（ジオコーディングAPIを有効化したキー）
-GOOGLE_MAPS_API_KEY=あなたのGoogleMapsAPIキー
+# Google Maps API設定
+GOOGLE_MAPS_API_KEY=your_api_key_here
+
+# 支援先のurl
+NEXT_PUBLIC_KOFI_TIER_PAGE_URL=ko_fi_url_here
+
+# アプリケーションのベースURL
+NEXT_PUBLIC_APP_URL=http://example.com
+
+# Cloudflare Tunnelの設定
+CLOUDFLARE_TUNNEL_TOKEN=your_api_key_here
+
+# GoogleAnalytics
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-ID
+```
+
+プロジェクトのルートに`transit-config.json`を作成してください。
+
+```json
+{
+  "sqlitePath": "prisma/.temp/data.db",
+  "agencies": [
+    {
+      "agency_key": "chiyoda",
+      "url": "https://example.com"
+    }
+  ],
+  "verbose": true
+}
 ```
 
 ## 開発サーバーの起動
 
-```bash
-npm run dev
-```
+`docs/manual/docker-setup.md` を参照のこと。
 
 ## テストの実行
 
@@ -29,23 +54,10 @@ npm run dev
 npm test
 ```
 
-## ビルド
-
-```bash
-npm run build
-```
-
-## デプロイ
-
-```bash
-npm run start
-```
-
 ## 主な機能
 
 - 住所や現在地からの乗換案内の検索
 - バス停の出発時刻の表示
-- 路線別フィルタリング
 
 ## 技術スタック
 

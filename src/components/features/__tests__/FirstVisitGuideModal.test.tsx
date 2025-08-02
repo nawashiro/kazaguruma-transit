@@ -1,11 +1,11 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import FirstVisitGuideModal from "../common/FirstVisitGuideModal";
+import FirstVisitGuideModal from "../FirstVisitGuideModal";
 import "@testing-library/jest-dom";
-import { isFirstVisit } from "../../utils/visitTracker";
+import { isFirstVisit } from "@/utils/visitTracker";
 import { useRouter } from "next/navigation";
 
 // モック
-jest.mock("../../utils/visitTracker", () => ({
+jest.mock("@/utils/visitTracker", () => ({
   isFirstVisit: jest.fn(),
 }));
 

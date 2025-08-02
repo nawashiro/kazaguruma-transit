@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Card from "@/components/common/Card";
+import Card from "@/components/ui/Card";
 
 export default function Usage() {
   return (

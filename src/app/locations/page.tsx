@@ -9,18 +9,18 @@ import {
   convertToLocation,
 } from "../../utils/addressLoader";
 import { logger } from "../../utils/logger";
-import RateLimitModal from "../../components/RateLimitModal";
-import LocationDetailModal from "../../components/LocationDetailModal";
+import RateLimitModal from "@/components/features/RateLimitModal";
+import LocationDetailModal from "@/components/features/LocationDetailModal";
 import {
   loadGeoJSON,
   groupLocationsByArea,
   formatAreaName,
   getAreaNameFromCoordinates,
 } from "../../utils/clientGeoUtils";
-import Card from "@/components/common/Card";
-import CarouselCard from "@/components/common/CarouselCard";
+import Card from "@/components/ui/Card";
+import CarouselCard from "@/components/ui/CarouselCard";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
-import Button from "@/components/common/Button";
+import Button from "@/components/ui/Button";
 
 // 2点間の距離を計算する関数（ハーバーサイン公式）
 const calculateDistance = (

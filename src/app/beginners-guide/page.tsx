@@ -1,6 +1,6 @@
 "use client";
 
-import Card from "@/components/common/Card";
+import Card from "@/components/ui/Card";
 
 export default function BeginnersGuide() {
   return (

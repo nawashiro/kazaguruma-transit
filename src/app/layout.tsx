@@ -1,10 +1,10 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import SidebarLayout from "../components/SidebarLayout";
-import GoogleAnalytics from "../components/GoogleAnalytics";
-import StructuredData from "../components/StructuredData";
-import CustomHead from "../components/CustomHead";
+import SidebarLayout from "@/components/layouts/SidebarLayout";
+import GoogleAnalytics from "@/components/layouts/GoogleAnalytics";
+import StructuredData from "@/components/layouts/StructuredData";
+import CustomHead from "@/components/layouts/CustomHead";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

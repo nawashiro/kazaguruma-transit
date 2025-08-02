@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useId } from "react";
-import { TransitFormData } from "../types/transit";
-import { logger } from "../utils/logger";
+import { TransitFormData } from "@/types/core";
+import { logger } from "@/utils/logger";
 
 interface DateTimeSelectorProps {
   initialStopId?: string;
@@ -21,7 +21,6 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
   const uniqueId = useId();
   const inputId = `time-input-${uniqueId}`;
-  const groupId = `time-type-group-${uniqueId}`;
   const labelText = isDeparture ? "出発日時" : "到着日時";
   const timeDescription = isDeparture
     ? "いつ出発するか指定してください"
@@ -93,38 +92,51 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
   return (
     <div>
       <div className="space-y-4">
-        {/* 出発/到着の切り替えボタングループ */}
-        <label id={groupId} className="sr-only">
-          時間タイプを選択
-        </label>
-        <div role="radiogroup" aria-labelledby={groupId} className="join">
-          <button
-            type="button"
-            className={`btn join-item ruby-text ${
-              isDeparture ? "btn-active btn-primary" : ""
-            }`}
-            onClick={() => handleTimeTypeChange(true)}
-            data-testid="departure-tab"
-            disabled={disabled}
-            aria-checked={isDeparture}
-            role="radio"
-          >
-            出発
-          </button>
-          <button
-            type="button"
-            className={`btn join-item ruby-text ${
-              !isDeparture ? "btn-active btn-primary" : ""
-            }`}
-            onClick={() => handleTimeTypeChange(false)}
-            data-testid="arrival-tab"
-            disabled={disabled}
-            aria-checked={!isDeparture}
-            role="radio"
-          >
-            到着
-          </button>
-        </div>
+        {/* 出発/到着の切り替えラジオボタングループ */}
+        <fieldset>
+          <legend className="sr-only">時間タイプを選択</legend>
+          <div className="join">
+            <input
+              type="radio"
+              id={`${uniqueId}-departure`}
+              name={`time-type-${uniqueId}`}
+              checked={isDeparture}
+              onChange={() => handleTimeTypeChange(true)}
+              disabled={disabled}
+              className="sr-only"
+              data-testid="departure-radio"
+            />
+            <label
+              htmlFor={`${uniqueId}-departure`}
+              className={`btn join-item ruby-text ${
+                isDeparture ? "btn-active btn-primary" : ""
+              }`}
+              data-testid="departure-tab"
+            >
+              出発
+            </label>
+
+            <input
+              type="radio"
+              id={`${uniqueId}-arrival`}
+              name={`time-type-${uniqueId}`}
+              checked={!isDeparture}
+              onChange={() => handleTimeTypeChange(false)}
+              disabled={disabled}
+              className="sr-only"
+              data-testid="arrival-radio"
+            />
+            <label
+              htmlFor={`${uniqueId}-arrival`}
+              className={`btn join-item ruby-text ${
+                !isDeparture ? "btn-active btn-primary" : ""
+              }`}
+              data-testid="arrival-tab"
+            >
+              到着
+            </label>
+          </div>
+        </fieldset>
 
         <div className="form-control">
           <label htmlFor={inputId} className="label ruby-text">

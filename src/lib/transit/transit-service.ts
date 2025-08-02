@@ -5,16 +5,16 @@ import {
   TransitResponse,
   RouteSegment as ApiRouteSegment,
   TransferInfo as ApiTransferInfo,
-} from "@/types/transit-api";
+} from "@/types/core";
 import { loadConfig, TransitConfig } from "../config/config";
 import { prisma } from "../db/prisma";
 import { logger } from "@/utils/logger";
 import { TimeTableRouter } from "./route-algorithm";
 import {
-  RouteQuery as ApiRouteQuery,
+  RouteQuery,
   Journey,
   NearbyStop,
-} from "../../types/transit-api";
+} from "@/types/core";
 import { TRANSIT_PARAMS } from "./transit-params";
 
 // StopLocation interface - represents a stop with location information
@@ -516,7 +516,7 @@ export class TransitService {
   /**
    * 経路検索API
    */
-  public async findRoute(query: ApiRouteQuery): Promise<TransitResponse> {
+  public async findRoute(query: RouteQuery): Promise<TransitResponse> {
     try {
       logger.log(
         `[TransitService] 経路検索API: 出発地(${query.origin.lat}, ${
@@ -548,7 +548,7 @@ export class TransitService {
    * 出発地点と目的地点の座標から最適な経路を検索
    */
   private async searchRoute(
-    query: ApiRouteQuery
+    query: RouteQuery
   ): Promise<{ journeys: Journey[]; stops: NearbyStop[] }> {
     try {
       const {

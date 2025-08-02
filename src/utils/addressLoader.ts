@@ -1,4 +1,4 @@
-import { Location } from "../types/transit";
+import { Location } from "@/types/core";
 
 export interface AddressLocation {
   name: string;

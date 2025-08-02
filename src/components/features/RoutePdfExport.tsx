@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { logger } from "../utils/logger";
-import { Departure } from "../types/transit";
+import { logger } from "@/utils/logger";
+import { Departure } from "@/types/core";
 
 // IntegratedRouteDisplayと同様の型定義を使用
 interface StopInfo {

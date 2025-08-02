@@ -1,18 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import DateTimeSelector from "../components/DateTimeSelector";
-import OriginSelector from "../components/OriginSelector";
-import DestinationSelector from "../components/DestinationSelector";
-import IntegratedRouteDisplay from "../components/IntegratedRouteDisplay";
-import RoutePdfExport from "../components/RoutePdfExport";
-import Button from "../components/common/Button";
-import ResetButton from "../components/common/ResetButton";
-import Card from "../components/common/Card";
-import { TransitFormData, Location } from "../types/transit";
-import { logger } from "../utils/logger";
-import RateLimitModal from "../components/RateLimitModal";
-import FirstVisitGuideModal from "../components/common/FirstVisitGuideModal";
+import DateTimeSelector from "@/components/features/DateTimeSelector";
+import OriginSelector from "@/components/features/OriginSelector";
+import DestinationSelector from "@/components/features/DestinationSelector";
+import IntegratedRouteDisplay from "@/components/features/IntegratedRouteDisplay";
+import RoutePdfExport from "@/components/features/RoutePdfExport";
+import Button from "@/components/ui/Button";
+import ResetButton from "@/components/ui/ResetButton";
+import Card from "@/components/ui/Card";
+import { TransitFormData, Location } from "@/types/core";
+import { logger } from "@/utils/logger";
+import RateLimitModal from "@/components/features/RateLimitModal";
+import FirstVisitGuideModal from "@/components/features/FirstVisitGuideModal";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface JourneySegment {

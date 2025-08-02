@@ -76,29 +76,30 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
   // 出発時刻を取得する関数
   const getDepartureTime = (stopId: string, routeId?: string) => {
     return (
-      routes.find((r) => r.routeId === routeId)?.departureTime || "時刻不明"
+      routes.find((route) => route.routeId === routeId)?.departureTime || "時刻不明"
     );
   };
 
   // 到着時刻を計算する関数 (出発時刻 + 所要時間の概算)
-  const getArrivalTime = (
+  const calculateArrivalTime = (
     departureTime: string | undefined,
     durationMinutes: number = 30
   ) => {
-    if (!departureTime || departureTime === "時刻不明") return "時刻不明";
+    if (!departureTime || departureTime === "時刻不明") {
+      return "時刻不明";
+    }
 
     try {
       const [hours, minutes] = departureTime.split(":").map(Number);
-      let arrivalMinutes = minutes + durationMinutes;
-      let arrivalHours = hours + Math.floor(arrivalMinutes / 60);
-      arrivalMinutes = arrivalMinutes % 60;
+      const totalMinutes = minutes + durationMinutes;
+      const additionalHours = Math.floor(totalMinutes / 60);
+      const finalMinutes = totalMinutes % 60;
+      const finalHours = (hours + additionalHours) % 24;
 
-      // 24時間表記に調整
-      arrivalHours = arrivalHours % 24;
-
-      return `${arrivalHours.toString().padStart(2, "0")}:${arrivalMinutes
-        .toString()
-        .padStart(2, "0")}`;
+      const formattedHours = finalHours.toString().padStart(2, "0");
+      const formattedMinutes = finalMinutes.toString().padStart(2, "0");
+      
+      return `${formattedHours}:${formattedMinutes}`;
     } catch (error: unknown) {
       const routeError = error as RouteError;
       logger.error("ルート表示エラー:", routeError.message);
@@ -107,35 +108,23 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
   };
 
   // Googleマップリンクを生成（両方の緯度経度が存在する場合のみ）
-  const originToStopMapLink =
-    originLat &&
-    originLng &&
-    (originStop.stop_lat || originStop.lat) &&
-    (originStop.stop_lon || originStop.lng)
-      ? generateGoogleMapDirectionLink(
-          originLat,
-          originLng,
-          parseFloat((originStop.stop_lat || originStop.lat || 0).toString()),
-          parseFloat((originStop.stop_lon || originStop.lng || 0).toString())
-        )
-      : undefined;
+  const hasOriginCoordinates = Boolean(originLat && originLng);
+  const originStopLatitude = originStop.stop_lat || originStop.lat || 0;
+  const originStopLongitude = originStop.stop_lon || originStop.lng || 0;
+  const hasOriginStopCoordinates = Boolean(originStopLatitude && originStopLongitude);
+  
+  const originToStopMapLink = hasOriginCoordinates && hasOriginStopCoordinates
+    ? generateGoogleMapDirectionLink(originLat!, originLng!, parseFloat(originStopLatitude.toString()), parseFloat(originStopLongitude.toString()))
+    : undefined;
 
-  const stopToDestinationMapLink =
-    destLat &&
-    destLng &&
-    (destinationStop.stop_lat || destinationStop.lat) &&
-    (destinationStop.stop_lon || destinationStop.lng)
-      ? generateGoogleMapDirectionLink(
-          parseFloat(
-            (destinationStop.stop_lat || destinationStop.lat || 0).toString()
-          ),
-          parseFloat(
-            (destinationStop.stop_lon || destinationStop.lng || 0).toString()
-          ),
-          destLat,
-          destLng
-        )
-      : undefined;
+  const hasDestinationCoordinates = Boolean(destLat && destLng);
+  const destinationStopLatitude = destinationStop.stop_lat || destinationStop.lat || 0;
+  const destinationStopLongitude = destinationStop.stop_lon || destinationStop.lng || 0;
+  const hasDestinationStopCoordinates = Boolean(destinationStopLatitude && destinationStopLongitude);
+  
+  const stopToDestinationMapLink = hasDestinationCoordinates && hasDestinationStopCoordinates
+    ? generateGoogleMapDirectionLink(parseFloat(destinationStopLatitude.toString()), parseFloat(destinationStopLongitude.toString()), destLat!, destLng!)
+    : undefined;
 
   return (
     <Card className="rounded-lg" bodyClassName="p-4">
@@ -172,11 +161,13 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
             const firstSegmentDuration = type === "direct" ? 45 : 30; // 直通か乗換かで所要時間を調整
             const arrivalTime =
               route.arrivalTime ||
-              getArrivalTime(departureTime, firstSegmentDuration);
+              calculateArrivalTime(departureTime, firstSegmentDuration);
 
             // 時刻表示のためのフォーマッター
             const formatTimeDisplay = (time: string) => {
-              if (time === "時刻不明") return time;
+              if (time === "時刻不明") {
+                return time;
+              }
               // 秒を省略して表示（例：12:34:56 → 12:34）
               const match = time.match(/^(\d{2}:\d{2}):\d{2}$/);
               return match ? match[1] : time;
@@ -204,24 +195,29 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                   </div>
 
                   {/* 到着バス停と時刻（乗換がない場合は最終目的地） */}
-                  {!route.transfers || route.transfers.length === 0 ? (
-                    <StopTimeDisplay
-                      stopName={destinationStop.stopName}
-                      time={formatTimeDisplay(arrivalTime)}
-                      dateTime={arrivalTime}
-                    />
-                  ) : (
-                    // 乗換がある場合は乗換駅を表示
-                    <StopTimeDisplay
-                      stopName={route.transfers[0].transferStop.stopName}
-                      time={formatTimeDisplay(arrivalTime)}
-                      dateTime={arrivalTime}
-                    />
-                  )}
+                  {(() => {
+                    const hasTransfers = route.transfers && route.transfers.length > 0;
+                    const stopName = hasTransfers 
+                      ? route.transfers![0].transferStop.stopName 
+                      : destinationStop.stopName;
+                    
+                    return (
+                      <StopTimeDisplay
+                        stopName={stopName}
+                        time={formatTimeDisplay(arrivalTime)}
+                        dateTime={arrivalTime}
+                      />
+                    );
+                  })()}
                 </Card>
 
                 {/* 乗換情報（ある場合） */}
-                {route.transfers && route.transfers.length > 0 && (
+                {(() => {
+                  if (!route.transfers || route.transfers.length === 0) {
+                    return null;
+                  }
+                  
+                  return (
                   <>
                     <div className="text-center my-4">
                       <div className="inline-block bg-blue-100 px-4 py-2 rounded-full font-bold text-blue-800 border border-blue-300 shadow-sm">
@@ -232,11 +228,11 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                     {route.transfers.map((transfer) => {
                       // 乗換後の時刻を計算
                       const transferWaitTime = 15; // 乗換待ち時間（分）
-                      const transferDepartureTime = getArrivalTime(
+                      const transferDepartureTime = calculateArrivalTime(
                         arrivalTime,
                         transferWaitTime
                       );
-                      const finalArrivalTime = getArrivalTime(
+                      const finalArrivalTime = calculateArrivalTime(
                         transferDepartureTime,
                         30
                       ); // 乗換後の所要時間
@@ -276,7 +272,8 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                       );
                     })}
                   </>
-                )}
+                  );
+                })()}
               </div>
             );
           })}

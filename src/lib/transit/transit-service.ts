@@ -35,12 +35,11 @@ interface TimeTableRouteResult {
   arrival: string;
 }
 
-// StopLocation interface - represents a stop with location information
 interface StopLocation {
   lat: number;
   lng: number;
-  stop_id: string;
-  stop_name: string;
+  stopId: string;
+  stopName: string;
 }
 
 // 内部で使用するRouteJourney interface - represents a complete journey
@@ -203,88 +202,18 @@ export class TransitService {
       const { location, name, radius = 1 } = query;
 
       if (location) {
-        // 位置情報からの検索
-        // Prismaを使用して位置情報に基づく近いバス停を検索
-        const stops = await prisma.stop.findMany({
-          select: {
-            id: true,
-            name: true,
-            lat: true,
-            lon: true,
-          },
-          orderBy: {
-            // 緯度経度の差の二乗和でソート
-            // SQLiteでは複雑な計算式を直接ソートできないため、JavaScriptで計算
-          },
-          take: 10,
-        });
-
-        // 距離計算をJavaScriptで実施
-        const stopsWithDistance = stops.map((stop) => {
-          const latDiff = stop.lat - location.lat;
-          const lngDiff = stop.lon - location.lng;
-          const distance =
-            Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111.32; // km換算の概算
-
-          return {
-            id: stop.id,
-            name: stop.name,
-            lat: stop.lat,
-            lng: stop.lon,
-            distance,
-          };
-        });
-
-        // 距離でソートして必要な分だけ返す
-        const sortedStops = stopsWithDistance
-          .sort((a, b) => a.distance - b.distance)
-          .filter((stop) => stop.distance <= radius)
-          .slice(0, 10);
-
-        return {
-          success: true,
-          data: {
-            stops: sortedStops,
-          },
-        };
-      } else if (name) {
-        // 名前からの検索
-        const stops = await prisma.stop.findMany({
-          where: {
-            name: {
-              contains: name,
-            },
-          },
-          select: {
-            id: true,
-            name: true,
-            lat: true,
-            lon: true,
-          },
-          orderBy: {
-            name: "asc",
-          },
-          take: 10,
-        });
-
-        return {
-          success: true,
-          data: {
-            stops: stops.map((stop) => ({
-              id: stop.id,
-              name: stop.name,
-              lat: stop.lat,
-              lng: stop.lon,
-            })),
-          },
-        };
-      } else {
-        return {
-          success: false,
-          error: "検索条件が指定されていません",
-          data: { stops: [] },
-        };
+        return await this.findStopsByLocation(location, radius);
       }
+      
+      if (name) {
+        return await this.findStopsByName(name);
+      }
+      
+      return {
+        success: false,
+        error: "検索条件が指定されていません",
+        data: { stops: [] },
+      };
     } catch (error) {
       logger.error("[TransitService] バス停検索エラー:", error);
       return {
@@ -294,6 +223,80 @@ export class TransitService {
         data: { stops: [] },
       };
     }
+  }
+
+  private async findStopsByLocation(
+    location: { lat: number; lng: number },
+    radius: number
+  ): Promise<TransitResponse> {
+    const stops = await prisma.stop.findMany({
+      select: {
+        id: true,
+        name: true,
+        lat: true,
+        lon: true,
+      },
+      take: 10,
+    });
+
+    const stopsWithDistance = stops.map((stop) => {
+      const latitudeDifference = stop.lat - location.lat;
+      const longitudeDifference = stop.lon - location.lng;
+      const distance =
+        Math.sqrt(latitudeDifference * latitudeDifference + longitudeDifference * longitudeDifference) * 111.32;
+
+      return {
+        id: stop.id,
+        name: stop.name,
+        lat: stop.lat,
+        lng: stop.lon,
+        distance,
+      };
+    });
+
+    const sortedStops = stopsWithDistance
+      .sort((firstStop, secondStop) => firstStop.distance - secondStop.distance)
+      .filter((stop) => stop.distance <= radius)
+      .slice(0, 10);
+
+    return {
+      success: true,
+      data: {
+        stops: sortedStops,
+      },
+    };
+  }
+
+  private async findStopsByName(name: string): Promise<TransitResponse> {
+    const stops = await prisma.stop.findMany({
+      where: {
+        name: {
+          contains: name,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        lat: true,
+        lon: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+      take: 10,
+    });
+
+    return {
+      success: true,
+      data: {
+        stops: stops.map((stop) => ({
+          id: stop.id,
+          name: stop.name,
+          lat: stop.lat,
+          lng: stop.lon,
+        })),
+      },
+    };
   }
 
   /**
@@ -387,15 +390,14 @@ export class TransitService {
     lat: number,
     lng: number
   ): Promise<{
-    stop_id: string;
-    stop_name: string;
-    stop_lat: number;
-    stop_lon: number;
+    stopId: string;
+    stopName: string;
+    stopLat: number;
+    stopLon: number;
   } | null> {
     try {
       logger.log("[findNearestStop] 入力座標:", { lat, lng });
 
-      // すべてのバス停を取得
       const stops = await prisma.stop.findMany({
         select: {
           id: true,
@@ -410,44 +412,45 @@ export class TransitService {
         return null;
       }
 
-      // JavaScript側で距離計算と並べ替えを行う
-      const stopsWithDistance = stops.map((stop) => {
-        const latDiff = stop.lat - lat;
-        const lonDiff = stop.lon - lng;
-        const distance = latDiff * latDiff + lonDiff * lonDiff; // 平方距離（並べ替えだけなので平方根は不要）
-
-        return {
-          stop_id: stop.id,
-          stop_name: stop.name,
-          stop_lat: stop.lat,
-          stop_lon: stop.lon,
-          distance,
-        };
-      });
-
-      // 距離でソートして最も近いバス停を返す
-      const nearest = stopsWithDistance.sort(
-        (a, b) => a.distance - b.distance
-      )[0];
+      const nearestStop = this.findClosestStop(stops, lat, lng);
 
       logger.log("[findNearestStop] 最寄りバス停:", {
-        stop_id: nearest.stop_id,
-        stop_name: nearest.stop_name,
-        stop_lat: nearest.stop_lat,
-        stop_lon: nearest.stop_lon,
+        stopId: nearestStop.stopId,
+        stopName: nearestStop.stopName,
+        stopLat: nearestStop.stopLat,
+        stopLon: nearestStop.stopLon,
         inputCoords: { lat, lng },
       });
 
-      return {
-        stop_id: nearest.stop_id,
-        stop_name: nearest.stop_name,
-        stop_lat: nearest.stop_lat,
-        stop_lon: nearest.stop_lon,
-      };
+      return nearestStop;
     } catch (error) {
       logger.error("[TransitService] 最寄りバス停検索エラー:", error);
       return null;
     }
+  }
+
+  private findClosestStop(
+    stops: Array<{ id: string; name: string; lat: number; lon: number }>,
+    targetLat: number,
+    targetLng: number
+  ) {
+    const stopsWithDistance = stops.map((stop) => {
+      const latitudeDifference = stop.lat - targetLat;
+      const longitudeDifference = stop.lon - targetLng;
+      const squaredDistance = latitudeDifference * latitudeDifference + longitudeDifference * longitudeDifference;
+
+      return {
+        stopId: stop.id,
+        stopName: stop.name,
+        stopLat: stop.lat,
+        stopLon: stop.lon,
+        distance: squaredDistance,
+      };
+    });
+
+    return stopsWithDistance.sort(
+      (firstStop, secondStop) => firstStop.distance - secondStop.distance
+    )[0];
   }
 
   /**
@@ -599,35 +602,35 @@ export class TransitService {
 
       logger.log("[searchRoute] 座標データ詳細:", {
         origin: {
-          user_lat: origin.lat,
-          user_lng: origin.lng,
-          stop_id: originStop.stop_id,
-          stop_name: originStop.stop_name,
-          stop_lat: originStop.stop_lat,
-          stop_lon: originStop.stop_lon,
+          userLatitude: origin.lat,
+          userLongitude: origin.lng,
+          stopId: originStop.stopId,
+          stopName: originStop.stopName,
+          stopLatitude: originStop.stopLat,
+          stopLongitude: originStop.stopLon,
         },
         destination: {
-          user_lat: destination.lat,
-          user_lng: destination.lng,
-          stop_id: destStop.stop_id,
-          stop_name: destStop.stop_name,
-          stop_lat: destStop.stop_lat,
-          stop_lon: destStop.stop_lon,
+          userLatitude: destination.lat,
+          userLongitude: destination.lng,
+          stopId: destStop.stopId,
+          stopName: destStop.stopName,
+          stopLatitude: destStop.stopLat,
+          stopLongitude: destStop.stopLon,
         },
       });
 
       const from: StopLocation = {
-        lat: originStop.stop_lat,
-        lng: originStop.stop_lon,
-        stop_id: originStop.stop_id,
-        stop_name: originStop.stop_name,
+        lat: originStop.stopLat,
+        lng: originStop.stopLon,
+        stopId: originStop.stopId,
+        stopName: originStop.stopName,
       };
 
       const to: StopLocation = {
-        lat: destStop.stop_lat,
-        lng: destStop.stop_lon,
-        stop_id: destStop.stop_id,
-        stop_name: destStop.stop_name,
+        lat: destStop.stopLat,
+        lng: destStop.stopLon,
+        stopId: destStop.stopId,
+        stopName: destStop.stopName,
       };
 
       logger.log("[searchRoute] StopLocation変換後:", {
@@ -636,7 +639,7 @@ export class TransitService {
       });
 
       // 同じバス停の場合はエラー
-      if (from.stop_id === to.stop_id) {
+      if (from.stopId === to.stopId) {
         return { journeys: [], stops: [] };
       }
 
@@ -732,8 +735,8 @@ export class TransitService {
 
       // 最大2回の乗換、3時間の時間枠で検索
       const routes = await timeTableRouter.findOptimalRoute(
-        from.stop_id,
-        to.stop_id,
+        from.stopId,
+        to.stopId,
         departureTime,
         isDeparture,
         2,
@@ -752,47 +755,13 @@ export class TransitService {
       // 経路選択ロジック
       // 直行便が存在する場合は優先
       // 到着時刻指定と出発時刻指定で異なるソート方法を使用
-      let selectedRoute;
-
-      if (directRoutes.length > 0) {
-        // 直行便が存在する場合
-        if (isDeparture) {
-          // 出発時刻指定の場合：出発時刻順に並べて最初のものを選択
-          directRoutes.sort((a, b) => {
-            const timeA = new Date(`2000-01-01T${a.departure}`).getTime();
-            const timeB = new Date(`2000-01-01T${b.departure}`).getTime();
-            return timeA - timeB;
-          });
-        } else {
-          // 到着時刻指定の場合：到着時刻の降順（指定時刻に近い順）
-          directRoutes.sort((a, b) => {
-            const timeA = new Date(`2000-01-01T${a.arrival}`).getTime();
-            const timeB = new Date(`2000-01-01T${b.arrival}`).getTime();
-            return timeB - timeA;
-          });
-        }
-        selectedRoute = directRoutes[0];
-      } else if (transferRoutes.length > 0) {
-        // 乗換ありの場合
-        if (isDeparture) {
-          // 出発時刻指定の場合：出発時刻順に並べて最初のものを選択
-          transferRoutes.sort((a, b) => {
-            const timeA = new Date(`2000-01-01T${a.departure}`).getTime();
-            const timeB = new Date(`2000-01-01T${b.departure}`).getTime();
-            return timeA - timeB;
-          });
-        } else {
-          // 到着時刻指定の場合：到着時刻の降順（指定時刻に近い順）
-          transferRoutes.sort((a, b) => {
-            const timeA = new Date(`2000-01-01T${a.arrival}`).getTime();
-            const timeB = new Date(`2000-01-01T${b.arrival}`).getTime();
-            return timeB - timeA;
-          });
-        }
-        selectedRoute = transferRoutes[0];
-      } else {
+      const routesToConsider = directRoutes.length > 0 ? directRoutes : transferRoutes;
+      
+      if (routesToConsider.length === 0) {
         return { journeys: [], stops: [] };
       }
+
+      const selectedRoute = this.selectOptimalRoute(routesToConsider, isDeparture);
 
       // 使用する停留所のリストを作成
       const stops: NearbyStop[] = [
@@ -806,16 +775,16 @@ export class TransitService {
         },
         // 出発地点の最寄りバス停
         {
-          id: from.stop_id,
-          name: from.stop_name,
+          id: from.stopId,
+          name: from.stopName,
           distance: 0,
           lat: parseFloat(from.lat.toString()),
           lng: parseFloat(from.lng.toString()),
         },
         // 目的地点の最寄りバス停
         {
-          id: to.stop_id,
-          name: to.stop_name,
+          id: to.stopId,
+          name: to.stopName,
           distance: 0,
           lat: parseFloat(to.lat.toString()),
           lng: parseFloat(to.lng.toString()),
@@ -873,8 +842,8 @@ export class TransitService {
       }
 
       logger.log(
-        `[findConventionalRoute] 経路発見: ${from.stop_name} → ${
-          to.stop_name
+        `[findConventionalRoute] 経路発見: ${from.stopName} → ${
+          to.stopName
         }, 総徒歩距離: ${totalWalkingDistance.toFixed(
           2
         )}km (出発地→バス停: ${walkToFirstStop.toFixed(
@@ -953,10 +922,10 @@ export class TransitService {
 
       // すべての組み合わせを試す
       for (const originStop of topOriginStops) {
-        // nullチェックを追加
-        if (!originStop.lat || !originStop.lng) continue;
+        if (!originStop.lat || !originStop.lng) {
+          continue;
+        }
 
-        // 出発地点からバス停までの徒歩距離を計算
         const walkToFirstStop = this.calculateDistance(
           origin.lat,
           origin.lng,
@@ -964,46 +933,30 @@ export class TransitService {
           originStop.lng
         );
 
-        // 徒歩時間（分）を計算
-        const walkTimeToFirstStop =
-          walkToFirstStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
+        const walkTimeToFirstStop = walkToFirstStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
 
-        // 出発時刻指定の場合、バス停までの徒歩時間を考慮した時刻を計算
-        let departureTime = userRequestedTime;
-        if (isDeparture) {
-          // バス停までの所要時間を計算し、実際のバス停出発可能時刻を算出
-          const walkTimeMs = Math.ceil(walkTimeToFirstStop) * 60 * 1000; // 分をミリ秒に変換（切り上げ）
-          departureTime = new Date(userRequestedTime.getTime() + walkTimeMs);
-
-          logger.log(
-            `[findRouteWithNearbyStops] バス停到着時間の調整 (${originStop.name}): ` +
-              `出発時刻=${this.formatTime(userRequestedTime)}, ` +
-              `徒歩時間=${Math.ceil(
-                walkTimeToFirstStop
-              )}分, バス停到着時刻=${this.formatTime(departureTime)}`
-          );
-        }
+        const departureTime = isDeparture 
+          ? this.calculateDepartureTimeWithWalk(userRequestedTime, walkTimeToFirstStop, originStop.name)
+          : userRequestedTime;
 
         for (const destStop of topDestStops) {
-          // nullチェックを追加
-          if (!destStop.lat || !destStop.lng) continue;
-
-          // 同じバス停の場合はスキップ
-          if (originStop.id === destStop.id) continue;
+          if (!destStop.lat || !destStop.lng || originStop.id === destStop.id) {
+            continue;
+          }
 
           try {
             const from: StopLocation = {
               lat: originStop.lat,
               lng: originStop.lng,
-              stop_id: originStop.id,
-              stop_name: originStop.name,
+              stopId: originStop.id,
+              stopName: originStop.name,
             };
 
             const to: StopLocation = {
               lat: destStop.lat,
               lng: destStop.lng,
-              stop_id: destStop.id,
-              stop_name: destStop.name,
+              stopId: destStop.id,
+              stopName: destStop.name,
             };
 
             // 経路を検索
@@ -1017,75 +970,27 @@ export class TransitService {
             );
 
             if (routes.length > 0) {
-              // 最も早く到着するルートを選択
-              const selectedRoute = routes.sort((a, b) => {
-                if (isDeparture) {
-                  // 出発時刻指定の場合は到着が早い順
-                  const timeA = new Date(`2000-01-01T${a.arrival}`).getTime();
-                  const timeB = new Date(`2000-01-01T${b.arrival}`).getTime();
-                  return timeA - timeB;
-                } else {
-                  // 到着時刻指定の場合は出発が遅い順
-                  const timeA = new Date(`2000-01-01T${a.departure}`).getTime();
-                  const timeB = new Date(`2000-01-01T${b.departure}`).getTime();
-                  return timeB - timeA;
-                }
-              })[0];
+              const selectedRoute = this.selectOptimalRoute(routes, isDeparture);
 
-              // 最後のバス停から目的地までの徒歩距離
-              const walkFromLastStop = this.calculateDistance(
-                destStop.lat,
-                destStop.lng,
-                destination.lat,
-                destination.lng
-              );
-
-              // 合計徒歩距離
-              const totalWalkingDistance = walkToFirstStop + walkFromLastStop;
-
-              // 徒歩時間（分）
-              const walkTimeFromLastStop =
-                walkFromLastStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
-
-              // 内部のRouteJourneyをAPIのJourney型に変換
-              const journey = this.convertTimeTableRouteToJourney(
+              const routeResult = this.buildRouteResult(
                 selectedRoute,
                 from,
-                to
+                to,
+                walkToFirstStop,
+                walkTimeToFirstStop,
+                destStop,
+                destination,
+                isDeparture,
+                time,
+                userRequestedTime
               );
-
-              // 総所要時間 = バスの所要時間 + 徒歩時間
-              const totalDuration =
-                journey.durationMinutes +
-                walkTimeToFirstStop +
-                walkTimeFromLastStop;
-
-              // Journey型に変換
-              const convertedJourney = this.transformToJourney(
-                journey,
-                from,
-                to
-              );
-
-              // 徒歩情報を追加
-              convertedJourney.walkingDistanceKm = totalWalkingDistance;
-              convertedJourney.walkingTimeMinutes = Math.round(
-                walkTimeToFirstStop + walkTimeFromLastStop
-              );
-              convertedJourney.duration = Math.round(totalDuration); // 総所要時間を更新
-
-              // 出発時刻指定の場合、ユーザーが指定した元の時刻を表示用に設定
-              if (isDeparture && time) {
-                convertedJourney.userRequestedDepartureTime =
-                  this.formatTime(userRequestedTime);
-              }
 
               allResults.push({
-                journey: convertedJourney,
+                journey: routeResult.journey,
                 originStop,
                 destStop,
-                totalWalkingDistance,
-                totalDuration,
+                totalWalkingDistance: routeResult.totalWalkingDistance,
+                totalDuration: routeResult.totalDuration,
               });
             }
           } catch (error) {
@@ -1105,7 +1010,7 @@ export class TransitService {
       }
 
       // 所要時間の少ない順にソート
-      allResults.sort((a, b) => a.totalDuration - b.totalDuration);
+      allResults.sort((firstResult, secondResult) => firstResult.totalDuration - secondResult.totalDuration);
 
       // 最適な結果を選択
       const bestResult = allResults[0];
@@ -1162,8 +1067,8 @@ export class TransitService {
    */
   private transformToJourney(
     journey: RouteJourney,
-    from: StopLocation,
-    to: StopLocation
+    fromStop: StopLocation,
+    toStop: StopLocation
   ): Journey {
     // 内部のRouteSegmentをAPI用のRouteSegmentに変換
     const convertSegments = (segments: RouteSegment[]): ApiRouteSegment[] => {
@@ -1199,8 +1104,8 @@ export class TransitService {
       arrival: journey.arrivalTime,
       duration: journey.durationMinutes,
       transfers: journey.transfers,
-      from: from.stop_name,
-      to: to.stop_name,
+      from: fromStop.stopName,
+      to: toStop.stopName,
       segments: journey.segments
         ? convertSegments(journey.segments)
         : undefined,
@@ -1215,11 +1120,11 @@ export class TransitService {
    */
   private convertTimeTableRouteToJourney(
     route: TimeTableRouteResult,
-    from: StopLocation,
-    to: StopLocation
+    fromStop: StopLocation,
+    toStop: StopLocation
   ): RouteJourney {
     logger.log(
-      `経路変換: ${from.stop_name} から ${to.stop_name} への経路を変換します`
+      `経路変換: ${fromStop.stopName} から ${toStop.stopName} への経路を変換します`
     );
 
     if (route.transfers === 0) {
@@ -1349,6 +1254,83 @@ export class TransitService {
   }
 
   /**
+   * 最適なルートを選択する
+   */
+  private selectOptimalRoute(routes: TimeTableRouteResult[], isDeparture: boolean): TimeTableRouteResult {
+    const sortComparator = (firstRoute: TimeTableRouteResult, secondRoute: TimeTableRouteResult) => {
+      const timeField = isDeparture ? 'departure' : 'arrival';
+      const firstTime = new Date(`2000-01-01T${firstRoute[timeField]}`).getTime();
+      const secondTime = new Date(`2000-01-01T${secondRoute[timeField]}`).getTime();
+      
+      return isDeparture 
+        ? firstTime - secondTime  // 出発時刻指定の場合：昇順
+        : secondTime - firstTime; // 到着時刻指定の場合：降順
+    };
+
+    return routes.sort(sortComparator)[0];
+  }
+
+  /**
+   * 徒歩時間を考慮した出発時刻を計算する
+   */
+  private calculateDepartureTimeWithWalk(userRequestedTime: Date, walkTimeMinutes: number, stopName: string): Date {
+    const walkTimeMs = Math.ceil(walkTimeMinutes) * 60 * 1000;
+    const departureTime = new Date(userRequestedTime.getTime() + walkTimeMs);
+
+    logger.log(
+      `[findRouteWithNearbyStops] バス停到着時間の調整 (${stopName}): ` +
+        `出発時刻=${this.formatTime(userRequestedTime)}, ` +
+        `徒歩時間=${Math.ceil(walkTimeMinutes)}分, バス停到着時刻=${this.formatTime(departureTime)}`
+    );
+
+    return departureTime;
+  }
+
+  /**
+   * ルート結果を構築する
+   */
+  private buildRouteResult(
+    selectedRoute: TimeTableRouteResult,
+    from: StopLocation,
+    to: StopLocation,
+    walkToFirstStop: number,
+    walkTimeToFirstStop: number,
+    destStop: NearbyStop,
+    destination: { lat: number; lng: number },
+    isDeparture: boolean,
+    time?: string,
+    userRequestedTime?: Date
+  ) {
+    const walkFromLastStop = this.calculateDistance(
+      destStop.lat!,
+      destStop.lng!,
+      destination.lat,
+      destination.lng
+    );
+
+    const totalWalkingDistance = walkToFirstStop + walkFromLastStop;
+    const walkTimeFromLastStop = walkFromLastStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
+
+    const journey = this.convertTimeTableRouteToJourney(selectedRoute, from, to);
+    const totalDuration = journey.durationMinutes + walkTimeToFirstStop + walkTimeFromLastStop;
+
+    const convertedJourney = this.transformToJourney(journey, from, to);
+    convertedJourney.walkingDistanceKm = totalWalkingDistance;
+    convertedJourney.walkingTimeMinutes = Math.round(walkTimeToFirstStop + walkTimeFromLastStop);
+    convertedJourney.duration = Math.round(totalDuration);
+
+    if (isDeparture && time && userRequestedTime) {
+      convertedJourney.userRequestedDepartureTime = this.formatTime(userRequestedTime);
+    }
+
+    return {
+      journey: convertedJourney,
+      totalWalkingDistance,
+      totalDuration,
+    };
+  }
+
+  /**
    * 時間差を分単位で計算する
    */
   private calculateTimeDifference(time1: string, time2: string): number {
@@ -1401,7 +1383,7 @@ export class TransitService {
           };
         })
         .filter((stop) => stop.distance <= radiusKm) // 半径内のバス停だけをフィルタリング
-        .sort((a, b) => a.distance - b.distance); // 距離順にソート
+        .sort((firstStop, secondStop) => firstStop.distance - secondStop.distance);
 
       logger.log(
         `[findNearbyStops] ${nearbyStops.length}件のバス停が半径${radiusKm}km内に見つかりました`
@@ -1417,32 +1399,32 @@ export class TransitService {
    * 2点間の距離をキロメートル単位で計算（ハバーサイン公式）
    */
   private calculateDistance(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
+    firstLatitude: number,
+    firstLongitude: number,
+    secondLatitude: number,
+    secondLongitude: number
   ): number {
-    const R = 6371; // 地球の半径（キロメートル）
-    const lat1Rad = this.toRadians(lat1);
-    const lon1Rad = this.toRadians(lon1);
-    const lat2Rad = this.toRadians(lat2);
-    const lon2Rad = this.toRadians(lon2);
+    const EARTH_RADIUS_KM = 6371;
+    const firstLatitudeRad = this.toRadians(firstLatitude);
+    const firstLongitudeRad = this.toRadians(firstLongitude);
+    const secondLatitudeRad = this.toRadians(secondLatitude);
+    const secondLongitudeRad = this.toRadians(secondLongitude);
 
-    const dLat = lat2Rad - lat1Rad;
-    const dLon = lon2Rad - lon1Rad;
+    const latitudeDifference = secondLatitudeRad - firstLatitudeRad;
+    const longitudeDifference = secondLongitudeRad - firstLongitudeRad;
 
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1Rad) *
-        Math.cos(lat2Rad) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
+    const haversineValue =
+      Math.sin(latitudeDifference / 2) * Math.sin(latitudeDifference / 2) +
+      Math.cos(firstLatitudeRad) *
+        Math.cos(secondLatitudeRad) *
+        Math.sin(longitudeDifference / 2) *
+        Math.sin(longitudeDifference / 2);
+    const centralAngle = 2 * Math.atan2(Math.sqrt(haversineValue), Math.sqrt(1 - haversineValue));
+    const distance = EARTH_RADIUS_KM * centralAngle;
 
     // ロギングして結果を確認
     logger.log(
-      `[calculateDistance] 距離計算: (${lat1}, ${lon1}) → (${lat2}, ${lon2}) = ${distance.toFixed(
+      `[calculateDistance] 距離計算: (${firstLatitude}, ${firstLongitude}) → (${secondLatitude}, ${secondLongitude}) = ${distance.toFixed(
         3
       )}km`
     );

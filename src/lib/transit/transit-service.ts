@@ -5,17 +5,35 @@ import {
   TransitResponse,
   RouteSegment as ApiRouteSegment,
   TransferInfo as ApiTransferInfo,
+  RouteQuery,
+  Journey,
+  NearbyStop,
 } from "@/types/core";
 import { loadConfig, TransitConfig } from "../config/config";
 import { prisma } from "../db/prisma";
 import { logger } from "@/utils/logger";
 import { TimeTableRouter } from "./route-algorithm";
-import {
-  RouteQuery,
-  Journey,
-  NearbyStop,
-} from "@/types/core";
 import { TRANSIT_PARAMS } from "./transit-params";
+
+// TimeTableRouteResult interface from route-algorithm.ts
+interface TimeTableRouteResult {
+  nodes: Array<{
+    stopId: string;
+    stopName: string;
+    tripId: string;
+    routeId: string;
+    routeName: string;
+    arrivalTime: string;
+    departureTime: string;
+    stopSequence: number;
+    stopLat: number;
+    stopLon: number;
+  }>;
+  transfers: number;
+  totalDuration: number;
+  departure: string;
+  arrival: string;
+}
 
 // StopLocation interface - represents a stop with location information
 interface StopLocation {
@@ -1196,7 +1214,7 @@ export class TransitService {
    * 時刻表ベースのルート結果をRouteJourney形式に変換
    */
   private convertTimeTableRouteToJourney(
-    route: any,
+    route: TimeTableRouteResult,
     from: StopLocation,
     to: StopLocation
   ): RouteJourney {

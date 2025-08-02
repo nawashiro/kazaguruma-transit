@@ -93,8 +93,8 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
     <div>
       <div className="space-y-4">
         {/* 出発/到着の切り替えラジオボタングループ */}
-        <fieldset>
-          <legend className="sr-only">時間タイプを選択</legend>
+        <fieldset role="radiogroup" aria-labelledby={`legend-${uniqueId}`}>
+          <legend id={`legend-${uniqueId}`} className="sr-only">時間タイプを選択</legend>
           <div className="join">
             <input
               type="radio"

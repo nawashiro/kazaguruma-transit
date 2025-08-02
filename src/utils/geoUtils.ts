@@ -1,20 +1,21 @@
 import fs from "fs";
 import path from "path";
+import { AddressLocation } from "./addressLoader";
 
 interface GeoJSONFeature {
-  type: string;
+  type: 'Feature';
   properties: {
     name: string;
     uri: string;
   };
   geometry: {
-    type: string;
+    type: 'Polygon' | 'MultiPolygon';
     coordinates: number[][][] | number[][][][];
   };
 }
 
 interface GeoJSON {
-  type: string;
+  type: 'FeatureCollection';
   features: GeoJSONFeature[];
 }
 
@@ -114,10 +115,10 @@ export function formatAreaName(name: string): string {
 
 // 町村ごとに場所をグループ化する関数
 export function groupLocationsByArea(
-  locations: any[],
+  locations: AddressLocation[],
   geoJSON: GeoJSON
-): { [areaName: string]: any[] } {
-  const groups: { [areaName: string]: any[] } = {};
+): { [areaName: string]: AddressLocation[] } {
+  const groups: { [areaName: string]: AddressLocation[] } = {};
 
   for (const location of locations) {
     const areaName = getAreaNameFromCoordinates(

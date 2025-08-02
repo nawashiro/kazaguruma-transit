@@ -151,9 +151,9 @@ export type TransitQuery = RouteQuery | StopQuery | TimetableQuery;
 // === APIレスポンス型 ===
 
 // 基本レスポンス
-export interface TransitResponse {
+export interface TransitResponse<T = unknown> {
   success: boolean;
-  data?: any;
+  data?: T;
   error?: string;
 }
 

@@ -109,3 +109,7 @@ The codebase follows Japanese naming conventions and includes extensive Japanese
 ## UI
 
 The UI uses Tailwind + DaisyUI5.
+
+## img
+
+Images may be loaded from an external URL. In this case, Image cannot be used and img is used.

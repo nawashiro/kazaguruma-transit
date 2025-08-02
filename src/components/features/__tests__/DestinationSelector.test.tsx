@@ -4,7 +4,7 @@ import DestinationSelector from "../DestinationSelector";
 
 // LocationSuggestionsコンポーネントをモック
 jest.mock("../LocationSuggestions", () => {
-  return function MockLocationSuggestions({ onLocationSelected }: any) {
+  return function MockLocationSuggestions({ onLocationSelected }: { onLocationSelected: (location: { lat: number; lng: number; address: string }) => void }) {
     return (
       <div data-testid="location-suggestions">
         <button

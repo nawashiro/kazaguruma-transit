@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 import { Departure } from "@/types/core";
 import { generateGoogleMapDirectionLink } from "@/utils/maps";
 import { logger } from "@/utils/logger";
@@ -300,4 +300,4 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
   );
 };
 
-export default IntegratedRouteDisplay;
+export default memo(IntegratedRouteDisplay);

@@ -194,7 +194,7 @@ describe("TransitManager", () => {
     // withConnectionのモックを更新
     // @ts-expect-error - モックオブジェクトの型定義と実際の実装の不一致
     const db = jest.requireMock("../database").Database.getInstance();
-    db.withConnection.mockImplementationOnce(async (callbackFn: any) => {
+    db.withConnection.mockImplementationOnce(async (callbackFn: (db: unknown) => Promise<unknown>) => {
       // コールバックを実行
       if (typeof callbackFn === "function") {
         await callbackFn();
@@ -225,7 +225,7 @@ describe("TransitManager", () => {
     // withConnectionのモックを更新
     // @ts-expect-error - モックオブジェクトの型定義と実際の実装の不一致
     const db = jest.requireMock("../database").Database.getInstance();
-    db.withConnection.mockImplementationOnce(async (callbackFn: any) => {
+    db.withConnection.mockImplementationOnce(async (callbackFn: (db: unknown) => Promise<unknown>) => {
       // コールバックを実行
       if (typeof callbackFn === "function") {
         await callbackFn();
@@ -262,7 +262,7 @@ describe("TransitManager", () => {
     // withConnectionのモックを更新
     // @ts-expect-error - モックオブジェクトの型定義と実際の実装の不一致
     const db = jest.requireMock("../database").Database.getInstance();
-    db.withConnection.mockImplementationOnce(async (callbackFn: any) => {
+    db.withConnection.mockImplementationOnce(async (callbackFn: (db: unknown) => Promise<unknown>) => {
       // コールバックを実行
       if (typeof callbackFn === "function") {
         await callbackFn();
@@ -303,7 +303,7 @@ describe("TransitManager", () => {
     // withConnectionのモックを更新
     // @ts-expect-error - モックオブジェクトの型定義と実際の実装の不一致
     const db = jest.requireMock("../database").Database.getInstance();
-    db.withConnection.mockImplementationOnce(async (callbackFn: any) => {
+    db.withConnection.mockImplementationOnce(async (callbackFn: (db: unknown) => Promise<unknown>) => {
       // コールバックを実行
       if (typeof callbackFn === "function") {
         await callbackFn();

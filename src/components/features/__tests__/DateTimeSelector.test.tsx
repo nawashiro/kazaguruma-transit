@@ -130,11 +130,11 @@ describe("DateTimeSelector", () => {
       />
     );
 
-    // 無効状態のボタンチェック
-    const departureBtn = screen.getByTestId("departure-tab");
-    const arrivalBtn = screen.getByTestId("arrival-tab");
-    expect(departureBtn).toBeDisabled();
-    expect(arrivalBtn).toBeDisabled();
+    // ラジオボタンが無効状態になることを確認
+    const departureRadio = screen.getByTestId("departure-radio");
+    const arrivalRadio = screen.getByTestId("arrival-radio");
+    expect(departureRadio).toBeDisabled();
+    expect(arrivalRadio).toBeDisabled();
 
     // 無効状態の入力フィールドチェック
     const dateTimeInput = screen.getByTestId("departure-input");

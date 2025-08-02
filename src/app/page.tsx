@@ -157,7 +157,7 @@ export default function Home() {
             );
           }
         } catch (err) {
-          console.error("目的地情報の解析に失敗しました:", err);
+          logger.error("目的地情報の解析に失敗しました:", err);
         }
       }
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId } from "react";
+import { useState, useEffect, useId, memo } from "react";
 import { Location } from "@/types/core";
 import {
   AddressCategory,
@@ -8,6 +8,7 @@ import {
   loadAddressData,
   convertToLocation,
 } from "@/utils/addressLoader";
+import { logger } from "@/utils/logger";
 import Card from "@/components/ui/Card";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
@@ -15,7 +16,7 @@ interface LocationSuggestionsProps {
   onLocationSelected: (location: Location) => void;
 }
 
-export default function LocationSuggestions({
+function LocationSuggestions({
   onLocationSelected,
 }: LocationSuggestionsProps) {
   const [categories, setCategories] = useState<AddressCategory[]>([]);
@@ -36,7 +37,7 @@ export default function LocationSuggestions({
         setError(null);
       } catch (err) {
         setError("住所データの読み込みに失敗しました");
-        console.error(err);
+        logger.error(err);
       } finally {
         setLoading(false);
       }
@@ -211,3 +212,5 @@ export default function LocationSuggestions({
     </div>
   );
 }
+
+export default memo(LocationSuggestions);

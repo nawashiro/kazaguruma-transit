@@ -98,7 +98,7 @@ export default function LocationsPage() {
         setError(null);
       } catch (err) {
         setError("施設データの読み込みに失敗しました");
-        console.error(err);
+        logger.error(err);
       } finally {
         setLoading(false);
       }
@@ -220,7 +220,7 @@ export default function LocationsPage() {
           setPositionLoading(false);
         },
         (error) => {
-          console.error("位置情報の取得に失敗しました:", error);
+          logger.error("位置情報の取得に失敗しました:", error);
           setSearchError(
             "位置情報の取得に失敗しました。検索機能で住所を指定してください。"
           );
@@ -397,7 +397,7 @@ export default function LocationsPage() {
               src={location.imageUri}
               alt={location.name}
               className="object-cover h-48 w-full"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              style={{ width: "100%", height: "192px", objectFit: "cover" }}
             />
           </figure>
         )}

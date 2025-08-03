@@ -14,6 +14,8 @@ import { logger } from "@/utils/logger";
 import RateLimitModal from "@/components/features/RateLimitModal";
 import FirstVisitGuideModal from "@/components/features/FirstVisitGuideModal";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import { BusStopDiscussion } from "@/components/discussion/BusStopDiscussion";
+import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 
 interface JourneySegment {
   from: string;
@@ -574,6 +576,19 @@ export default function Home() {
                         destLat={selectedDestination.lat}
                         destLng={selectedDestination.lng}
                         selectedDateTime={selectedDateTime}
+                      />
+                    </div>
+                  )}
+
+                  {/* ディスカッション機能を追加 */}
+                  {isDiscussionsEnabled() && routeInfo.type !== "none" && (
+                    <div className="mt-8">
+                      <BusStopDiscussion
+                        busStops={[
+                          routeInfo.originStop.stopName,
+                          routeInfo.destinationStop.stopName
+                        ].filter((stop, index, arr) => arr.indexOf(stop) === index)}
+                        className="border-t border-gray-200 dark:border-gray-700 pt-8"
                       />
                     </div>
                   )}

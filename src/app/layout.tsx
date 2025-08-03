@@ -5,6 +5,7 @@ import SidebarLayout from "@/components/layouts/SidebarLayout";
 import GoogleAnalytics from "@/components/layouts/GoogleAnalytics";
 import StructuredData from "@/components/layouts/StructuredData";
 import CustomHead from "@/components/layouts/CustomHead";
+import { AuthProvider } from "@/lib/auth/auth-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -62,7 +63,9 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <GoogleAnalytics />
-        <SidebarLayout>{children}</SidebarLayout>
+        <AuthProvider>
+          <SidebarLayout>{children}</SidebarLayout>
+        </AuthProvider>
       </body>
     </html>
   );

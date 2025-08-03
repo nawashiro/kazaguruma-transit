@@ -11,6 +11,8 @@ import {
   RocketLaunchIcon,
   InformationCircleIcon,
   MapPinIcon,
+  ChatBubbleLeftRightIcon,
+  Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 import { HeartIcon } from "@heroicons/react/24/solid";
 interface SidebarProps {
@@ -54,6 +56,14 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
                     </ruby>
                     をさがす
                   </p>
+                </Link>
+              </li>
+              <li>
+                <Link role="menuitem" href="/discussions" onClick={toggleSidebar}>
+                  <span className="inline">
+                    <ChatBubbleLeftRightIcon className="h-6 w-6" />
+                  </span>
+                  <p>ディスカッション</p>
                 </Link>
               </li>
             </ul>
@@ -147,6 +157,14 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
           </details>
         </li>
         <ul role="menu" className="menu w-full ">
+          <li>
+            <Link role="menuitem" href="/settings" onClick={toggleSidebar}>
+              <span className="inline">
+                <Cog6ToothIcon className="h-6 w-6" />
+              </span>
+              <p>設定</p>
+            </Link>
+          </li>
           <li>
             <Link role="menuitem" href="/site-map" onClick={toggleSidebar}>
               <span className="inline">

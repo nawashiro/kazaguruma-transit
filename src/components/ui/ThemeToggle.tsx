@@ -24,7 +24,7 @@ export default function ThemeToggle() {
     // HTML要素のdata-theme属性を設定
     document.documentElement.setAttribute(
       "data-theme",
-      initialIsDark ? "dark" : "light"
+      initialIsDark ? "dark" : "cupcake"
     );
   }, []);
 
@@ -36,7 +36,7 @@ export default function ThemeToggle() {
     // HTML要素のdata-theme属性を更新
     document.documentElement.setAttribute(
       "data-theme",
-      newTheme ? "dark" : "light"
+      newTheme ? "dark" : "cupcake"
     );
 
     // localStorageに設定を保存
@@ -69,7 +69,9 @@ export default function ThemeToggle() {
         checked={isDarkMode}
         onChange={toggleTheme}
         className="toggle theme-controller"
-        aria-label={isDarkMode ? "ライトモードに切り替え" : "ダークモードに切り替え"}
+        aria-label={
+          isDarkMode ? "ライトモードに切り替え" : "ダークモードに切り替え"
+        }
       />
       <svg
         xmlns="http://www.w3.org/2000/svg"

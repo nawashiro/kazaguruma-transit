@@ -49,9 +49,9 @@ const calculateDistance = (
   return R * c; // キロメートル単位の距離
 };
 
-interface LocationWithDistance extends KeyLocation {
+type LocationWithDistance = KeyLocation & {
   distance?: number;
-}
+};
 
 export default function LocationsPage() {
   const [categories, setCategories] = useState<KeyLocationCategory[]>([]);
@@ -124,7 +124,7 @@ export default function LocationsPage() {
             categoryLocations,
             geoJSON
           );
-          setLocationsByArea(groupedLocations);
+          setLocationsByArea(groupedLocations as { [areaName: string]: LocationWithDistance[] });
         }
       } catch (err) {
         logger.log("GeoJSON分類エラー:", err);
@@ -664,7 +664,7 @@ export default function LocationsPage() {
                 href="https://compass.graffer.jp/handbook/landing"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2"
+                className="btn btn-outline w-fit h-fit py-2 rounded-full dark:rounded-sm"
               >
                 <p>お悩みハンドブックウェブサイトへ</p>
               </a>
@@ -688,7 +688,7 @@ export default function LocationsPage() {
                 href="https://sekaibivouac.jp/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline"
+                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>せかいビバークウェブサイトへ</p>
               </a>
@@ -708,7 +708,7 @@ export default function LocationsPage() {
                 href="https://visit-chiyoda.tokyo/app/event"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline"
+                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>千代田区観光協会ウェブサイトへ</p>
               </a>
@@ -716,7 +716,7 @@ export default function LocationsPage() {
                 href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline"
+                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>千代田区ウェブサイトへ</p>
               </a>

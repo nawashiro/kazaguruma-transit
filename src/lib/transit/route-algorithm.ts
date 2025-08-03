@@ -8,8 +8,8 @@ import type { Prisma } from "@prisma/client";
 interface StopTimeData {
   stop_id: string;
   stop_sequence: number;
-  departure_time?: string;
-  arrival_time?: string;
+  departure_time?: string | null;
+  arrival_time?: string | null;
 }
 
 /**
@@ -681,7 +681,7 @@ export class TimeTableRouter {
                     transferArrivalST.trip.route_id,
                   arrivalTime:
                     originRoute.arrival_time || originRoute.departure_time,
-                  departureTime: originRoute.departure_time,
+                  departureTime: originRoute.departure_time || "",
                   stopSequence: originRoute.stop_sequence,
                   stopLat: originStop?.lat || 0,
                   stopLon: originStop?.lon || 0,
@@ -695,7 +695,7 @@ export class TimeTableRouter {
                     transferArrivalST.trip.route.short_name ||
                     transferArrivalST.trip.route.long_name ||
                     transferArrivalST.trip.route_id,
-                  arrivalTime: transferArrivalST.arrival_time,
+                  arrivalTime: transferArrivalST.arrival_time || "",
                   departureTime:
                     transferArrivalST.departure_time ||
                     transferArrivalST.arrival_time,
@@ -714,7 +714,7 @@ export class TimeTableRouter {
                     destST.trip.route_id,
                   arrivalTime:
                     transferDep.arrival_time || transferDep.departure_time,
-                  departureTime: transferDep.departure_time,
+                  departureTime: transferDep.departure_time || "",
                   stopSequence: transferDep.stop_sequence,
                   stopLat: transferStop?.lat || 0,
                   stopLon: transferStop?.lon || 0,
@@ -728,8 +728,8 @@ export class TimeTableRouter {
                     destST.trip.route.short_name ||
                     destST.trip.route.long_name ||
                     destST.trip.route_id,
-                  arrivalTime: destST.arrival_time,
-                  departureTime: destST.departure_time || destST.arrival_time,
+                  arrivalTime: destST.arrival_time || "",
+                  departureTime: destST.departure_time || destST.arrival_time || "",
                   stopSequence: destST.stop_sequence,
                   stopLat: destStop?.lat || 0,
                   stopLon: destStop?.lon || 0,
@@ -737,18 +737,18 @@ export class TimeTableRouter {
               ];
 
               const waitTime = this.calculateTimeDifference(
-                transferArrivalST.arrival_time,
-                transferDep.departure_time
+                transferArrivalST.arrival_time || "",
+                transferDep.departure_time || ""
               );
 
               const firstLegDuration = this.calculateTimeDifference(
-                originRoute.departure_time,
-                transferArrivalST.arrival_time
+                originRoute.departure_time || "",
+                transferArrivalST.arrival_time || ""
               );
 
               const secondLegDuration = this.calculateTimeDifference(
-                transferDep.departure_time,
-                destST.arrival_time
+                transferDep.departure_time || "",
+                destST.arrival_time || ""
               );
 
               const totalDuration =
@@ -816,8 +816,8 @@ export class TimeTableRouter {
               originST.trip.route.short_name ||
               originST.trip.route.long_name ||
               originST.trip.route_id,
-            arrivalTime: originST.arrival_time || originST.departure_time,
-            departureTime: originST.departure_time,
+            arrivalTime: originST.arrival_time || originST.departure_time || "",
+            departureTime: originST.departure_time || "",
             stopSequence: originST.stop_sequence,
             stopLat: originStop?.lat || 0,
             stopLon: originStop?.lon || 0,
@@ -831,8 +831,8 @@ export class TimeTableRouter {
               originST.trip.route.short_name ||
               originST.trip.route.long_name ||
               originST.trip.route_id,
-            arrivalTime: destST.arrival_time,
-            departureTime: destST.departure_time || destST.arrival_time,
+            arrivalTime: destST.arrival_time || "",
+            departureTime: destST.departure_time || destST.arrival_time || "",
             stopSequence: destST.stop_sequence,
             stopLat: destStop?.lat || 0,
             stopLon: destStop?.lon || 0,
@@ -840,16 +840,16 @@ export class TimeTableRouter {
         ];
 
         const totalDuration = this.calculateTimeDifference(
-          originST.departure_time,
-          destST.arrival_time
+          originST.departure_time || "",
+          destST.arrival_time || ""
         );
 
         directRoutes.push({
           nodes,
           transfers: 0,
           totalDuration,
-          departure: originST.departure_time,
-          arrival: destST.arrival_time,
+          departure: originST.departure_time || "",
+          arrival: destST.arrival_time || "",
         });
       }
     }
@@ -894,11 +894,11 @@ export class TimeTableRouter {
             departure_time: {
               // 到着から最低1分後、最大120分後に出発する便
               gt: this.addMinutesToTime(
-                transferArrivalTime,
+                transferArrivalTime || "",
                 ROUTE_PARAMS.MIN_TRANSFER_WAIT
               ),
               lte: this.addMinutesToTime(
-                transferArrivalTime,
+                transferArrivalTime || "",
                 ROUTE_PARAMS.MAX_TRANSFER_WAIT
               ),
             },
@@ -988,8 +988,8 @@ export class TimeTableRouter {
                   originST.trip.route.short_name ||
                   originST.trip.route.long_name ||
                   originST.trip.route_id,
-                arrivalTime: originST.arrival_time || originST.departure_time,
-                departureTime: originST.departure_time,
+                arrivalTime: originST.arrival_time || originST.departure_time || "",
+                departureTime: originST.departure_time || "",
                 stopSequence: originST.stop_sequence,
                 stopLat: originStop?.lat || 0,
                 stopLon: originStop?.lon || 0,
@@ -1003,9 +1003,9 @@ export class TimeTableRouter {
                   originST.trip.route.short_name ||
                   originST.trip.route.long_name ||
                   originST.trip.route_id,
-                arrivalTime: transferST.arrival_time,
+                arrivalTime: transferST.arrival_time || "",
                 departureTime:
-                  transferST.departure_time || transferST.arrival_time,
+                  transferST.departure_time || transferST.arrival_time || "",
                 stopSequence: transferST.stop_sequence,
                 stopLat: transferStop?.lat || 0,
                 stopLon: transferStop?.lon || 0,
@@ -1020,8 +1020,8 @@ export class TimeTableRouter {
                   transferDep.trip.route.long_name ||
                   transferDep.trip.route_id,
                 arrivalTime:
-                  transferDep.arrival_time || transferDep.departure_time,
-                departureTime: transferDep.departure_time,
+                  transferDep.arrival_time || transferDep.departure_time || "",
+                departureTime: transferDep.departure_time || "",
                 stopSequence: transferDep.stop_sequence,
                 stopLat: transferStop?.lat || 0,
                 stopLon: transferStop?.lon || 0,
@@ -1035,8 +1035,8 @@ export class TimeTableRouter {
                   transferDep.trip.route.short_name ||
                   transferDep.trip.route.long_name ||
                   transferDep.trip.route_id,
-                arrivalTime: destST.arrival_time,
-                departureTime: destST.departure_time || destST.arrival_time,
+                arrivalTime: destST.arrival_time || "",
+                departureTime: destST.departure_time || destST.arrival_time || "",
                 stopSequence: destST.stop_sequence,
                 stopLat: destStop?.lat || 0,
                 stopLon: destStop?.lon || 0,
@@ -1065,7 +1065,7 @@ export class TimeTableRouter {
               nodes,
               transfers: 1,
               totalDuration,
-              departure: originST.departure_time,
+              departure: originST.departure_time || "",
               arrival: destST.arrival_time || destST.departure_time || "",
             });
           }

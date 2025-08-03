@@ -113,3 +113,7 @@ The UI uses Tailwind + DaisyUI5.
 ## img
 
 Images may be loaded from an external URL. In this case, Image cannot be used and img is used.
+
+## btn
+
+Rounding by cupcake in daisyui may not work so `rounded-full dark:rounded-sm` is used.

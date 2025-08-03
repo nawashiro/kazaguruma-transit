@@ -263,8 +263,13 @@ export function isAdmin(userPubkey: string | null | undefined, adminPubkey: stri
   return userPubkey === adminPubkey
 }
 
-export function isModerator(userPubkey: string | null | undefined, moderators: string[]): boolean {
-  return userPubkey !== null && userPubkey !== undefined && moderators.includes(userPubkey)
+export function isModerator(userPubkey: string | null | undefined, moderators: string[], adminPubkey?: string): boolean {
+  if (userPubkey === null || userPubkey === undefined) return false
+  
+  // 管理者もモデレーターとみなす
+  if (adminPubkey && userPubkey === adminPubkey) return true
+  
+  return moderators.includes(userPubkey)
 }
 
 export function formatRelativeTime(timestamp: number): string {

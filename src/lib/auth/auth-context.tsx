@@ -106,24 +106,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
         );
       }
 
-      const existingPWK = pwkManager.getCurrentPWK();
-      if (!existingPWK) {
+      // 保存されたクレデンシャルIDを取得
+      const pwk = await pwkManager.directPrfToNostrKey();
+      if (!pwk) {
         throw new Error(
           "保存されたアカウント情報が見つかりません。新しくアカウントを作成してください。"
         );
       }
 
-      const pubkey = existingPWK.pubkey;
+      const pubkey = pwk.pubkey;
 
       setUser({
-        pwk: existingPWK,
+        pwk,
         pubkey,
         isLoggedIn: true,
         profile: null,
       });
 
       await loadProfile(pubkey);
-      localStorage.setItem(PWK_STORAGE_KEY, JSON.stringify(existingPWK));
+      localStorage.setItem(PWK_STORAGE_KEY, JSON.stringify(pwk));
     } catch (error) {
       console.error("Login failed:", error);
       setError(

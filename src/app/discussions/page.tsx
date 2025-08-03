@@ -1,52 +1,59 @@
-'use client'
+"use client";
 
 // Force dynamic rendering to avoid SSR issues with AuthProvider
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useAuth } from '@/lib/auth/auth-context'
-import { isDiscussionsEnabled } from '@/lib/config/discussion-config'
-import { LoginModal } from '@/components/discussion/LoginModal'
-import { AuditTimeline } from '@/components/discussion/AuditTimeline'
-import { AdminCheck } from '@/components/discussion/PermissionGuards'
-import { createNostrService } from '@/lib/nostr/nostr-service'
-import { 
-  parseDiscussionEvent, 
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useAuth } from "@/lib/auth/auth-context";
+import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
+import { LoginModal } from "@/components/discussion/LoginModal";
+import { AuditTimeline } from "@/components/discussion/AuditTimeline";
+import { AdminCheck } from "@/components/discussion/PermissionGuards";
+import { createNostrService } from "@/lib/nostr/nostr-service";
+import {
+  parseDiscussionEvent,
   parseDiscussionRequestEvent,
   createAuditTimeline,
-  formatRelativeTime
-} from '@/lib/nostr/nostr-utils'
-import type { Discussion, DiscussionRequest, DiscussionRequestFormData } from '@/types/discussion'
+  formatRelativeTime,
+} from "@/lib/nostr/nostr-utils";
+import type {
+  Discussion,
+  DiscussionRequest,
+  DiscussionRequestFormData,
+} from "@/types/discussion";
 
-const ADMIN_PUBKEY = process.env.NEXT_PUBLIC_ADMIN_PUBKEY || ''
+const ADMIN_PUBKEY = process.env.NEXT_PUBLIC_ADMIN_PUBKEY || "";
 const RELAYS = [
-  { url: 'wss://relay.damus.io', read: true, write: true },
-  { url: 'wss://relay.nostr.band', read: true, write: true },
-  { url: 'wss://nos.lol', read: true, write: true }
-]
+  { url: "wss://relay.damus.io", read: true, write: true },
+  { url: "wss://relay.nostr.band", read: true, write: true },
+  { url: "wss://nos.lol", read: true, write: true },
+];
 
-const nostrService = createNostrService({ relays: RELAYS, defaultTimeout: 5000 })
+const nostrService = createNostrService({
+  relays: RELAYS,
+  defaultTimeout: 5000,
+});
 
 export default function DiscussionsPage() {
-  const [activeTab, setActiveTab] = useState<'main' | 'audit'>('main')
-  const [discussions, setDiscussions] = useState<Discussion[]>([])
-  const [requests, setRequests] = useState<DiscussionRequest[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
+  const [discussions, setDiscussions] = useState<Discussion[]>([]);
+  const [requests, setRequests] = useState<DiscussionRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [requestForm, setRequestForm] = useState<DiscussionRequestFormData>({
-    title: '',
-    description: ''
-  })
+    title: "",
+    description: "",
+  });
 
-  const { user, signEvent } = useAuth()
+  const { user, signEvent } = useAuth();
 
   useEffect(() => {
     if (isDiscussionsEnabled()) {
-      loadData()
+      loadData();
     }
-  }, [])
+  }, []);
 
   // Check if discussions are enabled and render accordingly
   if (!isDiscussionsEnabled()) {
@@ -57,73 +64,73 @@ export default function DiscussionsPage() {
           <p className="text-gray-600">この機能は現在利用できません。</p>
         </div>
       </div>
-    )
+    );
   }
 
   const loadData = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       const [discussionEvents, requestEvents] = await Promise.all([
         nostrService.getDiscussions(ADMIN_PUBKEY),
-        nostrService.getDiscussionRequests(ADMIN_PUBKEY)
-      ])
+        nostrService.getDiscussionRequests(ADMIN_PUBKEY),
+      ]);
 
       const parsedDiscussions = discussionEvents
         .map(parseDiscussionEvent)
         .filter((d): d is Discussion => d !== null)
-        .sort((a, b) => b.createdAt - a.createdAt)
+        .sort((a, b) => b.createdAt - a.createdAt);
 
       const parsedRequests = requestEvents
         .map(parseDiscussionRequestEvent)
         .filter((r): r is DiscussionRequest => r !== null)
-        .sort((a, b) => b.createdAt - a.createdAt)
+        .sort((a, b) => b.createdAt - a.createdAt);
 
-      setDiscussions(parsedDiscussions)
-      setRequests(parsedRequests)
+      setDiscussions(parsedDiscussions);
+      setRequests(parsedRequests);
     } catch (error) {
-      console.error('Failed to load discussions:', error)
+      console.error("Failed to load discussions:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     if (!user.isLoggedIn) {
-      setShowLoginModal(true)
-      return
+      setShowLoginModal(true);
+      return;
     }
 
     if (!requestForm.title.trim() || !requestForm.description.trim()) {
-      return
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
       const eventTemplate = nostrService.createDiscussionRequestEvent(
         requestForm.title.trim(),
         requestForm.description.trim(),
         ADMIN_PUBKEY
-      )
+      );
 
-      const signedEvent = await signEvent(eventTemplate)
-      const published = await nostrService.publishSignedEvent(signedEvent)
-      
+      const signedEvent = await signEvent(eventTemplate);
+      const published = await nostrService.publishSignedEvent(signedEvent);
+
       if (!published) {
-        throw new Error('Failed to publish request to relays')
+        throw new Error("Failed to publish request to relays");
       }
-      
-      setRequestForm({ title: '', description: '' })
-      await loadData()
-    } catch (error) {
-      console.error('Failed to submit request:', error)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
 
-  const auditItems = createAuditTimeline(discussions, requests, [], [])
+      setRequestForm({ title: "", description: "" });
+      await loadData();
+    } catch (error) {
+      console.error("Failed to submit request:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const auditItems = createAuditTimeline(discussions, requests, [], []);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -135,31 +142,25 @@ export default function DiscussionsPage() {
       </div>
 
       <div className="tabs tabs-lifted mb-6">
-        <button 
-          className={`tab ${activeTab === 'main' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('main')}
+        <button
+          className={`tab ${activeTab === "main" ? "tab-active" : ""}`}
+          onClick={() => setActiveTab("main")}
         >
           ディスカッション一覧
         </button>
-        <button 
-          className={`tab ${activeTab === 'audit' ? 'tab-active' : ''}`}
-          onClick={() => setActiveTab('audit')}
+        <button
+          className={`tab ${activeTab === "audit" ? "tab-active" : ""}`}
+          onClick={() => setActiveTab("audit")}
         >
           監査画面
         </button>
       </div>
 
-      {activeTab === 'main' ? (
+      {activeTab === "main" ? (
         <div className="space-y-6">
-          <AdminCheck
-            adminPubkey={ADMIN_PUBKEY}
-            userPubkey={user.pubkey}
-          >
+          <AdminCheck adminPubkey={ADMIN_PUBKEY} userPubkey={user.pubkey}>
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-              <Link 
-                href="/discussions/manage"
-                className="btn btn-primary"
-              >
+              <Link href="/discussions/manage" className="btn btn-primary">
                 ディスカッション管理
               </Link>
             </div>
@@ -167,8 +168,10 @@ export default function DiscussionsPage() {
 
           <div className="grid lg:grid-cols-2 gap-6">
             <div>
-              <h2 className="text-xl font-semibold mb-4">ディスカッション一覧</h2>
-              
+              <h2 className="text-xl font-semibold mb-4">
+                ディスカッション一覧
+              </h2>
+
               {isLoading ? (
                 <div className="space-y-4">
                   {[...Array(3)].map((_, i) => (
@@ -179,7 +182,7 @@ export default function DiscussionsPage() {
                 </div>
               ) : discussions.length > 0 ? (
                 <div className="space-y-4">
-                  {discussions.map(discussion => (
+                  {discussions.map((discussion) => (
                     <Link
                       key={discussion.id}
                       href={`/discussions/${discussion.dTag}`}
@@ -187,7 +190,9 @@ export default function DiscussionsPage() {
                     >
                       <div className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
                         <div className="card-body p-4">
-                          <h3 className="card-title text-lg">{discussion.title}</h3>
+                          <h3 className="card-title text-lg">
+                            {discussion.title}
+                          </h3>
                           <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                             {discussion.description}
                           </p>
@@ -196,7 +201,7 @@ export default function DiscussionsPage() {
                               {formatRelativeTime(discussion.createdAt)}
                             </span>
                             <span className="badge badge-outline badge-sm">
-                              {discussion.moderators.length} モデレーター
+                              {discussion.moderators.length + 1} モデレーター
                             </span>
                           </div>
                         </div>
@@ -214,8 +219,10 @@ export default function DiscussionsPage() {
             </div>
 
             <div>
-              <h2 className="text-xl font-semibold mb-4">新しいディスカッションをリクエスト</h2>
-              
+              <h2 className="text-xl font-semibold mb-4">
+                新しいディスカッションをリクエスト
+              </h2>
+
               <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="card-body">
                   <form onSubmit={handleRequestSubmit} className="space-y-4">
@@ -227,7 +234,12 @@ export default function DiscussionsPage() {
                         type="text"
                         id="title"
                         value={requestForm.title}
-                        onChange={(e) => setRequestForm(prev => ({ ...prev, title: e.target.value }))}
+                        onChange={(e) =>
+                          setRequestForm((prev) => ({
+                            ...prev,
+                            title: e.target.value,
+                          }))
+                        }
                         className="input input-bordered w-full"
                         placeholder="ディスカッションのタイトル"
                         required
@@ -243,7 +255,12 @@ export default function DiscussionsPage() {
                       <textarea
                         id="description"
                         value={requestForm.description}
-                        onChange={(e) => setRequestForm(prev => ({ ...prev, description: e.target.value }))}
+                        onChange={(e) =>
+                          setRequestForm((prev) => ({
+                            ...prev,
+                            description: e.target.value,
+                          }))
+                        }
                         className="textarea textarea-bordered w-full h-24"
                         placeholder="ディスカッションの目的や内容を説明してください"
                         required
@@ -254,15 +271,23 @@ export default function DiscussionsPage() {
 
                     <button
                       type="submit"
-                      className={`btn btn-primary w-full ${isSubmitting ? 'loading' : ''}`}
-                      disabled={isSubmitting || !requestForm.title.trim() || !requestForm.description.trim()}
+                      className={`btn btn-primary w-full ${
+                        isSubmitting ? "loading" : ""
+                      }`}
+                      disabled={
+                        isSubmitting ||
+                        !requestForm.title.trim() ||
+                        !requestForm.description.trim()
+                      }
                     >
-                      {isSubmitting ? '' : 'リクエストを送信'}
+                      {isSubmitting ? "" : "リクエストを送信"}
                     </button>
                   </form>
 
                   <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-                    <p>管理者による確認後、ディスカッションが作成される場合があります。</p>
+                    <p>
+                      管理者による確認後、ディスカッションが作成される場合があります。
+                    </p>
                   </div>
                 </div>
               </div>
@@ -277,7 +302,10 @@ export default function DiscussionsPage() {
               {isLoading ? (
                 <div className="animate-pulse space-y-4">
                   {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                    <div
+                      key={i}
+                      className="h-16 bg-gray-200 dark:bg-gray-700 rounded"
+                    ></div>
                   ))}
                 </div>
               ) : (
@@ -293,5 +321,5 @@ export default function DiscussionsPage() {
         onClose={() => setShowLoginModal(false)}
       />
     </div>
-  )
+  );
 }

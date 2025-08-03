@@ -26,6 +26,7 @@ export function AdminCheck({
 interface ModeratorCheckProps {
   children: React.ReactNode
   moderators: string[]
+  adminPubkey?: string
   userPubkey?: string | null | undefined
   fallback?: React.ReactNode
 }
@@ -33,10 +34,11 @@ interface ModeratorCheckProps {
 export function ModeratorCheck({ 
   children, 
   moderators, 
+  adminPubkey,
   userPubkey, 
   fallback 
 }: ModeratorCheckProps) {
-  if (!isModerator(userPubkey, moderators)) {
+  if (!isModerator(userPubkey, moderators, adminPubkey)) {
     return <>{fallback || null}</>
   }
 

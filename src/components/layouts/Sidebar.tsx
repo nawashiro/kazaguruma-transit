@@ -59,11 +59,15 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
                 </Link>
               </li>
               <li>
-                <Link role="menuitem" href="/discussions" onClick={toggleSidebar}>
+                <Link
+                  role="menuitem"
+                  href="/discussions"
+                  onClick={toggleSidebar}
+                >
                   <span className="inline">
                     <ChatBubbleLeftRightIcon className="h-6 w-6" />
                   </span>
-                  <p>ディスカッション</p>
+                  <p>意見交換</p>
                 </Link>
               </li>
             </ul>

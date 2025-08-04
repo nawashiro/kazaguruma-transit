@@ -184,10 +184,10 @@ export default function PostApprovalPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">
-            ディスカッションが見つかりません
+            会話が見つかりません
           </h1>
           <Link href="/discussions" className="btn btn-primary">
-            ディスカッション一覧に戻る
+            会話一覧に戻る
           </Link>
         </div>
       </div>
@@ -208,7 +208,7 @@ export default function PostApprovalPage() {
               href={`/discussions/${discussionId}`}
               className="btn btn-ghost btn-sm"
             >
-              ← ディスカッションに戻る
+              ← 会話に戻る
             </Link>
           </div>
           <h1 className="text-3xl font-bold mb-2">投稿承認管理</h1>

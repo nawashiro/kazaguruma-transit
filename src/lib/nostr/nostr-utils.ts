@@ -114,14 +114,10 @@ export function parseDiscussionRequestEvent(event: Event): DiscussionRequest | n
 
   if (!hasDiscussionRequestTag || !adminPubkey) return null
 
-  const lines = event.content.split('\n')
-  const titleLine = lines.find(line => line.startsWith('タイトル:'))
-  const descriptionStart = lines.findIndex(line => line.startsWith('説明:'))
+  // NIP-14に従ってsubjectタグからタイトルを取得
+  const title = event.tags.find(tag => tag[0] === 'subject')?.[1] || ''
   
-  const title = titleLine?.replace('タイトル:', '').trim() || ''
-  const description = descriptionStart >= 0 
-    ? lines.slice(descriptionStart + 1).join('\n').trim()
-    : ''
+  const description = event.content
 
   return {
     id: event.id,
@@ -215,7 +211,7 @@ export function createAuditTimeline(
       timestamp: request.createdAt,
       actorPubkey: request.requesterPubkey,
       targetId: request.adminPubkey,
-      description: `ディスカッション「${request.title}」の作成がリクエストされました`,
+      description: `会話「${request.title}」の作成がリクエストされました`,
       event: request.event
     })
   })
@@ -227,7 +223,7 @@ export function createAuditTimeline(
       timestamp: discussion.createdAt,
       actorPubkey: discussion.authorPubkey,
       targetId: discussion.id,
-      description: `ディスカッション「${discussion.title}」が作成されました`,
+      description: `会話「${discussion.title}」が作成されました`,
       event: discussion.event
     })
   })
@@ -288,7 +284,6 @@ export function formatRelativeTime(timestamp: number): string {
 export function validateDiscussionForm(data: {
   title: string
   description: string
-  dTag: string
 }): string[] {
   const errors: string[] = []
   
@@ -298,12 +293,6 @@ export function validateDiscussionForm(data: {
   
   if (!data.description?.trim()) {
     errors.push('説明は必須です')
-  }
-  
-  if (!data.dTag?.trim()) {
-    errors.push('識別子は必須です')
-  } else if (!/^[a-zA-Z0-9_-]+$/.test(data.dTag)) {
-    errors.push('識別子は英数字、ハイフン、アンダースコアのみ使用できます')
   }
   
   return errors

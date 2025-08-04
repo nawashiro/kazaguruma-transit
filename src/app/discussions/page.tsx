@@ -60,7 +60,7 @@ export default function DiscussionsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">ディスカッション機能</h1>
+          <h1 className="text-2xl font-bold mb-4">意見交換機能</h1>
           <p className="text-gray-600">この機能は現在利用できません。</p>
         </div>
       </div>
@@ -135,7 +135,7 @@ export default function DiscussionsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">ディスカッション</h1>
+        <h1 className="text-3xl font-bold mb-4">意見交換</h1>
         <p className="text-gray-600 dark:text-gray-400">
           風ぐるまの利用体験について意見交換を行う場所です。
         </p>
@@ -146,7 +146,7 @@ export default function DiscussionsPage() {
           className={`tab ${activeTab === "main" ? "tab-active" : ""}`}
           onClick={() => setActiveTab("main")}
         >
-          ディスカッション一覧
+          会話一覧
         </button>
         <button
           className={`tab ${activeTab === "audit" ? "tab-active" : ""}`}
@@ -161,7 +161,7 @@ export default function DiscussionsPage() {
           <AdminCheck adminPubkey={ADMIN_PUBKEY} userPubkey={user.pubkey}>
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
               <Link href="/discussions/manage" className="btn btn-primary">
-                ディスカッション管理
+                会話管理
               </Link>
             </div>
           </AdminCheck>
@@ -169,7 +169,7 @@ export default function DiscussionsPage() {
           <div className="grid lg:grid-cols-2 gap-6">
             <div>
               <h2 className="text-xl font-semibold mb-4">
-                ディスカッション一覧
+                会話一覧
               </h2>
 
               {isLoading ? (
@@ -212,7 +212,7 @@ export default function DiscussionsPage() {
               ) : (
                 <div className="text-center py-8">
                   <p className="text-gray-600 dark:text-gray-400">
-                    ディスカッションがまだありません。
+                    会話がまだありません。
                   </p>
                 </div>
               )}
@@ -220,7 +220,7 @@ export default function DiscussionsPage() {
 
             <div>
               <h2 className="text-xl font-semibold mb-4">
-                新しいディスカッションをリクエスト
+                新しい会話をリクエスト
               </h2>
 
               <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -241,7 +241,7 @@ export default function DiscussionsPage() {
                           }))
                         }
                         className="input input-bordered w-full"
-                        placeholder="ディスカッションのタイトル"
+                        placeholder="会話のタイトル"
                         required
                         disabled={isSubmitting}
                         maxLength={100}
@@ -262,7 +262,7 @@ export default function DiscussionsPage() {
                           }))
                         }
                         className="textarea textarea-bordered w-full h-24"
-                        placeholder="ディスカッションの目的や内容を説明してください"
+                        placeholder="会話の目的や内容を説明してください"
                         required
                         disabled={isSubmitting}
                         maxLength={500}
@@ -286,7 +286,7 @@ export default function DiscussionsPage() {
 
                   <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
                     <p>
-                      管理者による確認後、ディスカッションが作成される場合があります。
+                      管理者による確認後、会話が作成される場合があります。
                     </p>
                   </div>
                 </div>

@@ -45,7 +45,6 @@ export default function DiscussionManagePage() {
   const [createForm, setCreateForm] = useState<DiscussionFormData>({
     title: "",
     description: "",
-    dTag: "",
     moderators: [],
   });
   const [moderatorInput, setModeratorInput] = useState("");
@@ -64,7 +63,7 @@ export default function DiscussionManagePage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">ディスカッション管理</h1>
+          <h1 className="text-2xl font-bold mb-4">会話管理</h1>
           <p className="text-gray-600">この機能は現在利用できません。</p>
         </div>
       </div>
@@ -114,8 +113,7 @@ export default function DiscussionManagePage() {
       const eventTemplate = nostrService.createDiscussionEvent(
         createForm.title.trim(),
         createForm.description.trim(),
-        createForm.moderators,
-        createForm.dTag.trim()
+        createForm.moderators
       );
 
       const signedEvent = await signEvent(eventTemplate);
@@ -128,21 +126,20 @@ export default function DiscussionManagePage() {
       setCreateForm({
         title: "",
         description: "",
-        dTag: "",
         moderators: [],
       });
       setModeratorInput("");
       await loadData();
     } catch (error) {
       console.error("Failed to create discussion:", error);
-      setErrors(["ディスカッションの作成に失敗しました"]);
+      setErrors(["会話の作成に失敗しました"]);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteDiscussion = async (discussionId: string) => {
-    if (!confirm("このディスカッションを削除してもよろしいですか？")) {
+    if (!confirm("この会話を削除してもよろしいですか？")) {
       return;
     }
 
@@ -152,7 +149,12 @@ export default function DiscussionManagePage() {
       if (!discussion) return;
 
       const deleteEvent = nostrService.createDeleteEvent(discussion.event.id);
-      await signEvent(deleteEvent);
+      const signedEvent = await signEvent(deleteEvent);
+      const published = await nostrService.publishSignedEvent(signedEvent);
+
+      if (!published) {
+        throw new Error("Failed to publish delete event to relays");
+      }
 
       await loadData();
     } catch (error) {
@@ -180,19 +182,6 @@ export default function DiscussionManagePage() {
     }));
   };
 
-  const generateDTag = () => {
-    const slug = createForm.title
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .substring(0, 30);
-
-    const timestamp = Date.now().toString().slice(-6);
-    setCreateForm((prev) => ({
-      ...prev,
-      dTag: `${slug}-${timestamp}`,
-    }));
-  };
 
   return (
     <AdminCheck
@@ -204,17 +193,15 @@ export default function DiscussionManagePage() {
         <div className="mb-8">
           <div className="flex items-center gap-4">
             <Link href="/discussions" className="btn btn-ghost btn-sm">
-              ← ディスカッション一覧
+              ← 会話一覧
             </Link>
-            <h1 className="text-3xl font-bold">ディスカッション管理</h1>
+            <h1 className="text-3xl font-bold">会話管理</h1>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
           <div>
-            <h2 className="text-xl font-semibold mb-4">
-              新しいディスカッション作成
-            </h2>
+            <h2 className="text-xl font-semibold mb-4">新しい会話作成</h2>
 
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
@@ -234,7 +221,7 @@ export default function DiscussionManagePage() {
                         }))
                       }
                       className="input input-bordered w-full"
-                      placeholder="ディスカッションのタイトル"
+                      placeholder="会話のタイトル"
                       required
                       disabled={isSubmitting}
                       maxLength={100}
@@ -255,45 +242,13 @@ export default function DiscussionManagePage() {
                         }))
                       }
                       className="textarea textarea-bordered w-full h-24"
-                      placeholder="ディスカッションの目的や内容"
+                      placeholder="会話の目的や内容"
                       required
                       disabled={isSubmitting}
                       maxLength={500}
                     />
                   </div>
 
-                  <div>
-                    <label htmlFor="create-dtag" className="label">
-                      <span className="label-text">識別子 *</span>
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        id="create-dtag"
-                        value={createForm.dTag}
-                        onChange={(e) =>
-                          setCreateForm((prev) => ({
-                            ...prev,
-                            dTag: e.target.value,
-                          }))
-                        }
-                        className="input input-bordered flex-1"
-                        placeholder="英数字-_のみ"
-                        pattern="[a-zA-Z0-9_\-]+"
-                        required
-                        disabled={isSubmitting}
-                        maxLength={50}
-                      />
-                      <button
-                        type="button"
-                        onClick={generateDTag}
-                        className="btn btn-outline"
-                        disabled={isSubmitting || !createForm.title}
-                      >
-                        自動生成
-                      </button>
-                    </div>
-                  </div>
 
                   <div>
                     <label htmlFor="moderator-input" className="label">
@@ -361,7 +316,7 @@ export default function DiscussionManagePage() {
                     }`}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? "" : "ディスカッション作成"}
+                    {isSubmitting ? "" : "会話作成"}
                   </button>
                 </form>
               </div>
@@ -370,51 +325,7 @@ export default function DiscussionManagePage() {
 
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-semibold mb-4">リクエスト一覧</h2>
-
-              {isLoading ? (
-                <div className="space-y-3">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : requests.length > 0 ? (
-                <div className="space-y-3">
-                  {requests.map((request) => (
-                    <div
-                      key={request.id}
-                      className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
-                    >
-                      <div className="card-body p-4">
-                        <h3 className="font-medium">{request.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                          {request.description}
-                        </p>
-                        <div className="flex justify-between items-center mt-2">
-                          <span className="text-xs text-gray-500">
-                            {formatRelativeTime(request.createdAt)}
-                          </span>
-                          <span className="text-xs font-mono">
-                            {request.requesterPubkey.slice(0, 8)}...
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-600 dark:text-gray-400">
-                  リクエストはありません。
-                </p>
-              )}
-            </div>
-
-            <div>
-              <h2 className="text-xl font-semibold mb-4">
-                既存のディスカッション
-              </h2>
+              <h2 className="text-xl font-semibold mb-4">既存の会話</h2>
 
               {isLoading ? (
                 <div className="space-y-3">
@@ -473,7 +384,53 @@ export default function DiscussionManagePage() {
                 </div>
               ) : (
                 <p className="text-gray-600 dark:text-gray-400">
-                  ディスカッションはありません。
+                  会話はありません。
+                </p>
+              )}
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold mb-4">リクエスト一覧</h2>
+
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : requests.length > 0 ? (
+                <div className="space-y-3">
+                  {requests.map((request) => (
+                    <div
+                      key={request.id}
+                      className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                    >
+                      <div className="card-body p-4">
+                        <h3 className="font-medium">{request.title}</h3>
+                        {request.description.split("\n").map((line, index) => (
+                          <p
+                            className="text-sm text-gray-600 dark:text-gray-400"
+                            key={index}
+                          >
+                            {line}
+                          </p>
+                        ))}
+                        <div className="flex justify-between items-center mt-2">
+                          <span className="text-xs text-gray-500">
+                            {formatRelativeTime(request.createdAt)}
+                          </span>
+                          <span className="text-xs font-mono">
+                            {request.requesterPubkey.slice(0, 8)}...
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-600 dark:text-gray-400">
+                  リクエストはありません。
                 </p>
               )}
             </div>

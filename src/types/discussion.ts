@@ -151,7 +151,6 @@ export interface PostFormData {
 export interface DiscussionFormData {
   title: string
   description: string
-  dTag: string
   moderators: string[]
 }
 

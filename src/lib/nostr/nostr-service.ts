@@ -1,5 +1,6 @@
 import { SimplePool, Event, Filter, finalizeEvent } from 'nostr-tools'
 import type { PWKBlob } from 'nosskey-sdk'
+import { v4 as uuidv4 } from 'uuid'
 
 export interface NostrRelayConfig {
   url: string
@@ -175,9 +176,9 @@ export class NostrService {
   createDiscussionEvent(
     title: string,
     description: string,
-    moderators: string[],
-    dTag: string
+    moderators: string[]
   ): Omit<Event, 'id' | 'sig' | 'pubkey'> {
+    const dTag = uuidv4()
     const tags: string[][] = [
       ['d', dTag],
       ['name', title],
@@ -266,9 +267,10 @@ export class NostrService {
       created_at: Math.floor(Date.now() / 1000),
       tags: [
         ['p', adminPubkey],
-        ['t', 'discussion-request']
+        ['t', 'discussion-request'],
+        ['subject', title]
       ],
-      content: `ディスカッション作成リクエスト\n\nタイトル: ${title}\n\n説明: ${description}`
+      content: `${description}`
     }
   }
 

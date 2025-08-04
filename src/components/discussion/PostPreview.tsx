@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Button from '@/components/ui/Button'
 
 interface PostPreviewProps {
   content: string
@@ -44,21 +45,23 @@ export function PostPreview({
       </div>
 
       <div className="flex gap-2">
-        <button
+        <Button
           type="button"
           onClick={onCancel}
-          className="btn btn-outline flex-1"
+          className="flex-1"
+          secondary
           disabled={isLoading}
         >
           編集に戻る
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onConfirm}
-          className={`btn btn-primary flex-1 ${isLoading ? 'loading' : ''}`}
+          className="flex-1"
           disabled={isLoading}
+          loading={isLoading}
         >
           {isLoading ? '' : '投稿する'}
-        </button>
+        </Button>
       </div>
     </div>
   )

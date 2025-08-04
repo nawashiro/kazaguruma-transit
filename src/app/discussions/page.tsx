@@ -17,6 +17,7 @@ import {
   createAuditTimeline,
   formatRelativeTime,
 } from "@/lib/nostr/nostr-utils";
+import Button from "@/components/ui/Button";
 import type {
   Discussion,
   DiscussionRequest,
@@ -141,26 +142,33 @@ export default function DiscussionsPage() {
         </p>
       </div>
 
-      <div className="tabs tabs-lifted mb-6">
-        <button
-          className={`tab ${activeTab === "main" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("main")}
-        >
-          会話一覧
-        </button>
-        <button
-          className={`tab ${activeTab === "audit" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("audit")}
-        >
-          監査画面
-        </button>
+      <div className="join mb-6">
+        <input
+          className="join-item btn"
+          type="radio"
+          name="tab-options"
+          aria-label="会話一覧"
+          checked={activeTab === "main"}
+          onChange={() => setActiveTab("main")}
+        />
+        <input
+          className="join-item btn"
+          type="radio"
+          name="tab-options"
+          aria-label="監査ログ"
+          checked={activeTab === "audit"}
+          onChange={() => setActiveTab("audit")}
+        />
       </div>
 
       {activeTab === "main" ? (
         <div className="space-y-6">
           <AdminCheck adminPubkey={ADMIN_PUBKEY} userPubkey={user.pubkey}>
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-              <Link href="/discussions/manage" className="btn btn-primary">
+              <Link
+                href="/discussions/manage"
+                className="btn btn-primary rounded-full dark:rounded-sm"
+              >
                 会話管理
               </Link>
             </div>
@@ -168,9 +176,7 @@ export default function DiscussionsPage() {
 
           <div className="grid lg:grid-cols-2 gap-6">
             <div>
-              <h2 className="text-xl font-semibold mb-4">
-                会話一覧
-              </h2>
+              <h2 className="text-xl font-semibold mb-4">会話一覧</h2>
 
               {isLoading ? (
                 <div className="space-y-4">
@@ -269,25 +275,23 @@ export default function DiscussionsPage() {
                       />
                     </div>
 
-                    <button
+                    <Button
                       type="submit"
-                      className={`btn btn-primary w-full ${
-                        isSubmitting ? "loading" : ""
-                      }`}
+                      className={isSubmitting ? "loading" : ""}
+                      fullWidth
                       disabled={
                         isSubmitting ||
                         !requestForm.title.trim() ||
                         !requestForm.description.trim()
                       }
+                      loading={isSubmitting}
                     >
-                      {isSubmitting ? "" : "リクエストを送信"}
-                    </button>
+                      <p>{isSubmitting ? "" : "リクエストを送信"}</p>
+                    </Button>
                   </form>
 
                   <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-                    <p>
-                      管理者による確認後、会話が作成される場合があります。
-                    </p>
+                    <p>管理者による確認後、会話が作成される場合があります。</p>
                   </div>
                 </div>
               </div>

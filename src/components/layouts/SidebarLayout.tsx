@@ -79,7 +79,7 @@ export default function SidebarLayout({
           <span>
             <label
               htmlFor="drawer"
-              className="btn btn-ghost drawer-button lg:hidden"
+              className="btn btn-ghost drawer-button lg:hidden rounded-full dark:rounded-sm"
               role="button"
             >
               <svg

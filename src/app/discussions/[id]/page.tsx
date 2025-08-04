@@ -25,6 +25,7 @@ import {
   validatePostForm,
   formatRelativeTime,
 } from "@/lib/nostr/nostr-utils";
+import Button from "@/components/ui/Button";
 import type {
   Discussion,
   DiscussionPost,
@@ -278,9 +279,7 @@ export default function DiscussionDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">
-            会話が見つかりません
-          </h1>
+          <h1 className="text-2xl font-bold mb-4">会話が見つかりません</h1>
           <Link href="/discussions" className="btn btn-primary">
             会話一覧に戻る
           </Link>
@@ -293,7 +292,10 @@ export default function DiscussionDetailPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-4">
-          <Link href="/discussions" className="btn btn-ghost btn-sm">
+          <Link
+            href="/discussions"
+            className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
+          >
             ← 会話一覧
           </Link>
           <ModeratorCheck
@@ -303,7 +305,7 @@ export default function DiscussionDetailPage() {
           >
             <Link
               href={`/discussions/${discussionId}/approve`}
-              className="btn btn-outline btn-sm"
+              className="btn btn-outline btn-sm rounded-full dark:rounded-sm"
             >
               投稿承認管理
             </Link>
@@ -315,19 +317,23 @@ export default function DiscussionDetailPage() {
         </p>
       </div>
 
-      <div className="tabs tabs-lifted mb-6">
-        <button
-          className={`tab ${activeTab === "main" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("main")}
-        >
-          会話
-        </button>
-        <button
-          className={`tab ${activeTab === "audit" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("audit")}
-        >
-          監査画面
-        </button>
+      <div className="join mb-6">
+        <input
+          className="join-item btn"
+          type="radio"
+          name="tab-options"
+          aria-label="会話"
+          checked={activeTab === "main"}
+          onChange={() => setActiveTab("main")}
+        />
+        <input
+          className="join-item btn"
+          type="radio"
+          name="tab-options"
+          aria-label="監査ログ"
+          checked={activeTab === "audit"}
+          onChange={() => setActiveTab("audit")}
+        />
       </div>
 
       {activeTab === "main" ? (
@@ -474,13 +480,13 @@ export default function DiscussionDetailPage() {
                       </div>
                     )}
 
-                    <button
+                    <Button
                       onClick={() => setShowPreview(true)}
-                      className="btn btn-primary w-full"
+                      fullWidth
                       disabled={!postForm.content.trim()}
                     >
                       プレビュー
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   <PostPreview

@@ -8,13 +8,14 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import { LoginModal } from "@/components/discussion/LoginModal";
 import { CreateAccountModal } from "@/components/discussion/CreateAccountModal";
+import Button from "@/components/ui/Button";
 
 export default function SettingsPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const { user, logout, refreshProfile, isLoading, error } = useAuth();
+  const { user, logout, isLoading, error } = useAuth();
 
   // Check if discussions are enabled and render accordingly
   if (!isDiscussionsEnabled()) {
@@ -32,14 +33,6 @@ export default function SettingsPage() {
     setIsLoggingOut(true);
     logout();
     setIsLoggingOut(false);
-  };
-
-  const handleRefreshProfile = async () => {
-    try {
-      await refreshProfile();
-    } catch (error) {
-      console.error("Failed to refresh profile:", error);
-    }
   };
 
   if (isLoading) {
@@ -107,30 +100,11 @@ export default function SettingsPage() {
                 <div className="divider"></div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={handleRefreshProfile}
-                    className="btn btn-outline"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                    プロフィール更新
-                  </button>
-
-                  <button
+                  <Button
                     onClick={handleLogout}
-                    className={`btn btn-error ${isLoggingOut ? "loading" : ""}`}
+                    className="btn-error"
                     disabled={isLoggingOut}
+                    loading={isLoggingOut}
                   >
                     {isLoggingOut ? (
                       ""
@@ -152,7 +126,7 @@ export default function SettingsPage() {
                         ログアウト
                       </>
                     )}
-                  </button>
+                  </Button>
                 </div>
 
                 <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -223,9 +197,8 @@ export default function SettingsPage() {
                 )}
 
                 <div className="flex flex-col gap-3">
-                  <button
+                  <Button
                     onClick={() => setShowLoginModal(true)}
-                    className="btn btn-primary"
                     disabled={isLoading}
                   >
                     <svg
@@ -242,7 +215,7 @@ export default function SettingsPage() {
                       />
                     </svg>
                     ログイン / アカウント作成
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

@@ -183,9 +183,7 @@ export default function PostApprovalPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">
-            会話が見つかりません
-          </h1>
+          <h1 className="text-2xl font-bold mb-4">会話が見つかりません</h1>
           <Link href="/discussions" className="btn btn-primary">
             会話一覧に戻る
           </Link>
@@ -206,7 +204,7 @@ export default function PostApprovalPage() {
           <div className="flex items-center gap-4 mb-4">
             <Link
               href={`/discussions/${discussionId}`}
-              className="btn btn-ghost btn-sm"
+              className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
             >
               ← 会話に戻る
             </Link>
@@ -215,19 +213,23 @@ export default function PostApprovalPage() {
           <p className="text-gray-600 dark:text-gray-400">{discussion.title}</p>
         </div>
 
-        <div className="tabs tabs-lifted mb-6">
-          <button
-            className={`tab ${activeTab === "pending" ? "tab-active" : ""}`}
-            onClick={() => setActiveTab("pending")}
-          >
-            未承認投稿 ({pendingPosts.length})
-          </button>
-          <button
-            className={`tab ${activeTab === "approved" ? "tab-active" : ""}`}
-            onClick={() => setActiveTab("approved")}
-          >
-            承認済み投稿 ({approvedPosts.length})
-          </button>
+        <div className="join mb-6">
+          <input
+            className="join-item btn"
+            type="radio"
+            name="post-status"
+            aria-label={`未承認投稿 (${pendingPosts.length})`}
+            checked={activeTab === "pending"}
+            onChange={() => setActiveTab("pending")}
+          />
+          <input
+            className="join-item btn"
+            type="radio"
+            name="post-status"
+            aria-label={`承認済み投稿 (${approvedPosts.length})`}
+            checked={activeTab === "approved"}
+            onChange={() => setActiveTab("approved")}
+          />
         </div>
 
         {activeTab === "pending" ? (
@@ -298,9 +300,7 @@ export default function PostApprovalPage() {
                           <button
                             onClick={() => handleApprove(post)}
                             disabled={processingPostId === post.id}
-                            className={`btn btn-success btn-sm ${
-                              processingPostId === post.id ? "loading" : ""
-                            }`}
+                            className="btn btn-success rounded-full dark:rounded-sm"
                           >
                             {processingPostId === post.id ? "" : "承認"}
                           </button>
@@ -395,9 +395,7 @@ export default function PostApprovalPage() {
                             <button
                               onClick={() => handleReject(post)}
                               disabled={processingPostId === post.id}
-                              className={`btn btn-error btn-sm ${
-                                processingPostId === post.id ? "loading" : ""
-                              }`}
+                              className="btn btn-error rounded-full dark:rounded-sm"
                             >
                               {processingPostId === post.id ? "" : "承認撤回"}
                             </button>

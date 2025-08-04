@@ -18,6 +18,7 @@ import {
   validateDiscussionForm,
   formatRelativeTime,
 } from "@/lib/nostr/nostr-utils";
+import Button from "@/components/ui/Button";
 import type {
   Discussion,
   DiscussionRequest,
@@ -182,7 +183,6 @@ export default function DiscussionManagePage() {
     }));
   };
 
-
   return (
     <AdminCheck
       adminPubkey={ADMIN_PUBKEY}
@@ -191,12 +191,13 @@ export default function DiscussionManagePage() {
     >
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/discussions" className="btn btn-ghost btn-sm">
-              ← 会話一覧
-            </Link>
-            <h1 className="text-3xl font-bold">会話管理</h1>
-          </div>
+          <Link
+            href="/discussions"
+            className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
+          >
+            ← 会話一覧
+          </Link>
+          <h1 className="text-3xl font-bold">会話管理</h1>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
@@ -249,7 +250,6 @@ export default function DiscussionManagePage() {
                     />
                   </div>
 
-
                   <div>
                     <label htmlFor="moderator-input" className="label">
                       <span className="label-text">モデレーター</span>
@@ -265,14 +265,14 @@ export default function DiscussionManagePage() {
                         pattern="[a-fA-F0-9]{64}"
                         disabled={isSubmitting}
                       />
-                      <button
+                      <Button
                         type="button"
                         onClick={addModerator}
-                        className="btn btn-outline"
+                        secondary
                         disabled={isSubmitting || !moderatorInput.trim()}
                       >
                         追加
-                      </button>
+                      </Button>
                     </div>
 
                     {createForm.moderators.length > 0 && (
@@ -285,14 +285,15 @@ export default function DiscussionManagePage() {
                             <span className="font-mono text-sm flex-1">
                               {mod.slice(0, 8)}...{mod.slice(-8)}
                             </span>
-                            <button
+                            <Button
                               type="button"
                               onClick={() => removeModerator(mod)}
-                              className="btn btn-ghost btn-xs text-error"
+                              className="btn-xs text-error"
+                              secondary
                               disabled={isSubmitting}
                             >
                               削除
-                            </button>
+                            </Button>
                           </div>
                         ))}
                       </div>
@@ -309,15 +310,14 @@ export default function DiscussionManagePage() {
                     </div>
                   )}
 
-                  <button
+                  <Button
                     type="submit"
-                    className={`btn btn-primary w-full ${
-                      isSubmitting ? "loading" : ""
-                    }`}
+                    fullWidth
                     disabled={isSubmitting}
+                    loading={isSubmitting}
                   >
-                    {isSubmitting ? "" : "会話作成"}
-                  </button>
+                    <p>{isSubmitting ? "" : "会話作成"}</p>
+                  </Button>
                 </form>
               </div>
             </div>
@@ -361,7 +361,7 @@ export default function DiscussionManagePage() {
                           <div className="flex gap-2">
                             <Link
                               href={`/discussions/${discussion.dTag}`}
-                              className="btn btn-ghost btn-sm"
+                              className="btn rounded-full dark:rounded-sm"
                             >
                               表示
                             </Link>
@@ -369,9 +369,7 @@ export default function DiscussionManagePage() {
                               onClick={() =>
                                 handleDeleteDiscussion(discussion.id)
                               }
-                              className={`btn btn-error btn-sm ${
-                                deletingId === discussion.id ? "loading" : ""
-                              }`}
+                              className="btn btn-error rounded-full dark:rounded-sm"
                               disabled={deletingId === discussion.id}
                             >
                               {deletingId === discussion.id ? "" : "削除"}

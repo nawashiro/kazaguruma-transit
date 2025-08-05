@@ -9,7 +9,7 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const [mode, setMode] = useState<"login" | "create">("login");
+  const [mode, setMode] = useState<"login" | "create">("create");
   const [username, setUsername] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login, createAccount, error } = useAuth();
@@ -27,7 +27,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       }
       onClose();
       setUsername("");
-      setMode("login");
+      setMode("create");
     } catch (error) {
       console.error(
         `${mode === "login" ? "Login" : "Account creation"} failed:`,
@@ -78,21 +78,25 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         </div>
 
         <div className="mb-4">
-          <div className="tabs tabs-boxed mb-4">
-            <button
-              className={`tab flex-1 ${mode === "login" ? "tab-active" : ""}`}
-              onClick={() => setMode("login")}
+          <div className="join mb-6">
+            <input
+              className="join-item btn"
+              type="radio"
+              name="mode-options"
+              aria-label="新規作成"
+              checked={mode === "create"}
+              onChange={() => setMode("create")}
               disabled={isLoading}
-            >
-              ログイン
-            </button>
-            <button
-              className={`tab flex-1 ${mode === "create" ? "tab-active" : ""}`}
-              onClick={() => setMode("create")}
+            />
+            <input
+              className="join-item btn"
+              type="radio"
+              name="mode-options"
+              aria-label="ログイン"
+              checked={mode === "login"}
+              onChange={() => setMode("login")}
               disabled={isLoading}
-            >
-              新規作成
-            </button>
+            />
           </div>
 
           {mode === "login" ? (

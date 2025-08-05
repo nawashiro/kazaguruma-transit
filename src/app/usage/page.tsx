@@ -19,28 +19,28 @@ export default function Usage() {
         <Card title="目次">
           <ul className="menu bg-base-100 p-0 ">
             <li>
-              <a href="#basic-usage" className="inline">
-                基本的な使いかた
+              <a href="#basic-usage">
+                <span>基本的な使いかた</span>
               </a>
             </li>
             <li>
-              <a href="#origin-selection" className="inline whitespace-nowrap">
-                出発地・目的地の選び方
+              <a href="#origin-selection">
+                <span>出発地・目的地の選び方</span>
               </a>
             </li>
             <li>
-              <a href="#destination-selection" className="inline">
-                風ぐるまで行ける場所の探し方
+              <a href="#destination-selection">
+                <span>風ぐるまで行ける場所の探し方</span>
               </a>
             </li>
             <li>
-              <a href="#install-app" className="inline">
-                インストールしていつでも使えるようにする
+              <a href="#install-app">
+                <span>インストールしていつでも使えるようにする</span>
               </a>
             </li>
             <li>
-              <a href="#rubyful-button" className="inline">
-                ふりながをつける / 消す
+              <a href="#rubyful-button">
+                <span>ふりながをつける / 消す</span>
               </a>
             </li>
           </ul>

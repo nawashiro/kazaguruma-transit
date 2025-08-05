@@ -187,7 +187,7 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
     <>
       <button
         onClick={handleGeneratePdf}
-        className="btn btn-primary mt-4 flex items-center"
+        className="btn btn-primary mt-4 flex items-center rounded-full dark:rounded-sm"
         disabled={pdfGenerating || pdfLoading}
       >
         {pdfGenerating || pdfLoading ? (
@@ -209,9 +209,9 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
           </svg>
         )}
         {pdfGenerating || pdfLoading ? (
-          <p className="ruby-text">生成中...</p>
+          <span className="ruby-text">生成中...</span>
         ) : (
-          <p className="ruby-text">印刷する</p>
+          <span className="ruby-text">印刷する</span>
         )}
       </button>
     </>

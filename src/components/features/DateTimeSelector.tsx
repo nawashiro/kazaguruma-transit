@@ -94,8 +94,19 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
       <div className="space-y-4">
         {/* 出発/到着の切り替えラジオボタングループ */}
         <fieldset role="radiogroup" aria-labelledby={`legend-${uniqueId}`}>
-          <legend id={`legend-${uniqueId}`} className="sr-only">時間タイプを選択</legend>
+          <legend id={`legend-${uniqueId}`} className="sr-only">
+            時間タイプを選択
+          </legend>
           <div className="join">
+            <label
+              htmlFor={`${uniqueId}-departure`}
+              className={`btn join-item ruby-text ${
+                isDeparture ? "btn-active btn-primary" : ""
+              }`}
+              data-testid="departure-tab"
+            >
+              出発
+            </label>{" "}
             <input
               type="radio"
               id={`${uniqueId}-departure`}
@@ -106,16 +117,6 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
               className="sr-only"
               data-testid="departure-radio"
             />
-            <label
-              htmlFor={`${uniqueId}-departure`}
-              className={`btn join-item ruby-text ${
-                isDeparture ? "btn-active btn-primary" : ""
-              }`}
-              data-testid="departure-tab"
-            >
-              出発
-            </label>
-
             <input
               type="radio"
               id={`${uniqueId}-arrival`}

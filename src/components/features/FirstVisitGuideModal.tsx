@@ -98,36 +98,15 @@ const FirstVisitGuideModal = () => {
         aria-labelledby="modal-title"
         aria-describedby="modal-description"
       >
-        <div className="flex items-center justify-between ruby-text">
-          <h2 id="modal-title" className="text-lg font-semibold">
-            風ぐるまは初めてですか？
-          </h2>
-          <button
-            ref={closeButtonRef}
-            onClick={handleClose}
-            aria-label="閉じる"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                fillRule="evenodd"
-                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
-        </div>
+        <h2 id="modal-title" className="text-lg font-semibold ruby-text">
+          風ぐるまは初めてですか？
+        </h2>
         <p id="modal-description" className="my-2 ruby-text">
           風ぐるまの使い方や基本情報を確認してみませんか？
         </p>
         <div className="flex gap-2 justify-end mt-3">
           <button
-            className="btn btn-sm btn-outline"
+            className="btn btn-sm btn-outline rounded-full dark:rounded-sm"
             onClick={handleClose}
             data-testid="close-guide-modal"
           >
@@ -143,7 +122,7 @@ const FirstVisitGuideModal = () => {
             </p>
           </button>
           <button
-            className="btn btn-sm btn-primary"
+            className="btn btn-sm btn-primary rounded-full dark:rounded-sm"
             onClick={handleGoToGuide}
             data-testid="go-to-guide"
           >

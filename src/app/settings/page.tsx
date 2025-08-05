@@ -100,11 +100,10 @@ export default function SettingsPage() {
                 <div className="divider"></div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Button
+                  <button
                     onClick={handleLogout}
-                    className="btn-error"
+                    className="btn btn-error rounded-full dark:rounded-sm"
                     disabled={isLoggingOut}
-                    loading={isLoggingOut}
                   >
                     {isLoggingOut ? (
                       ""
@@ -126,7 +125,7 @@ export default function SettingsPage() {
                         ログアウト
                       </>
                     )}
-                  </Button>
+                  </button>
                 </div>
 
                 <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -147,7 +146,7 @@ export default function SettingsPage() {
                     <div className="text-sm text-blue-800 dark:text-blue-200">
                       <p className="font-medium mb-1">認証について</p>
                       <p>
-                        あなたのアカウントはPasskeyで保護されています。
+                        あなたのアカウントはパスキーで保護されています。
                         ログアウトすると、再度生体認証または端末のPINでのログインが必要になります。
                       </p>
                     </div>
@@ -173,9 +172,6 @@ export default function SettingsPage() {
                   <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                     ログインしていません
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    アカウント設定にアクセスするにはログインまたはアカウント作成が必要です。
-                  </p>
                 </div>
 
                 {error && (
@@ -214,7 +210,7 @@ export default function SettingsPage() {
                         d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
                       />
                     </svg>
-                    ログイン / アカウント作成
+                    <span>ログイン / アカウント作成</span>
                   </Button>
                 </div>
               </div>
@@ -235,7 +231,7 @@ export default function SettingsPage() {
                       あなたの投稿と評価はNostrプロトコルを通じて分散保存されます
                     </li>
                     <li>
-                      認証情報（Passkey）はあなたのデバイスにのみ保存されます
+                      認証情報（パスキー）はあなたのデバイスにのみ保存されます
                     </li>
                     <li>運営者はあなたの秘密鍵にアクセスできません</li>
                     <li>投稿は削除できない場合があります</li>

@@ -300,7 +300,7 @@ export default function DiscussionsPage() {
         </div>
       ) : (
         <div>
-          <h2 className="text-xl font-semibold mb-4">監査画面</h2>
+          <h2 className="text-xl font-semibold mb-4">監査ログ</h2>
           <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="card-body">
               {isLoading ? (

@@ -22,40 +22,24 @@ interface SidebarProps {
 export default function Sidebar({ toggleSidebar }: SidebarProps) {
   return (
     <aside className="h-full w-80 border-r bg-base-200">
-      <ul className="menu p-4 space-y-4 w-full bg-base-200">
+      <ul className="menu p-4 space-y-4 w-full bg-base-200 ruby-text">
         <li>
           <details open>
             <summary className="group">
-              <span>
-                <RocketLaunchIcon className="h-6 w-6" />
-              </span>
-              <p className="font-semibold">
-                <ruby>
-                  使<rt>つか</rt>
-                </ruby>
-                う
-              </p>
+              <RocketLaunchIcon className="h-6 w-6" />
+              <span className="font-semibold">使う</span>
             </summary>
             <ul role="menu" className="menu w-full ">
               <li>
                 <Link role="menuitem" href="/" onClick={toggleSidebar}>
-                  <span className="inline">
-                    <HomeIcon className="h-6 w-6" />
-                  </span>
-                  <p>ホーム</p>
+                  <HomeIcon className="h-6 w-6" />
+                  <span>ホーム</span>
                 </Link>
               </li>
               <li>
                 <Link role="menuitem" href="/locations" onClick={toggleSidebar}>
-                  <span className="inline">
-                    <MapPinIcon className="h-6 w-6" />
-                  </span>
-                  <p>
-                    <ruby>
-                      場所<rt>ばしょ</rt>
-                    </ruby>
-                    をさがす
-                  </p>
+                  <MapPinIcon className="h-6 w-6" />
+                  <span>場所をさがす</span>
                 </Link>
               </li>
               <li>
@@ -64,10 +48,8 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
                   href="/discussions"
                   onClick={toggleSidebar}
                 >
-                  <span className="inline">
-                    <ChatBubbleLeftRightIcon className="h-6 w-6" />
-                  </span>
-                  <p>意見交換</p>
+                  <ChatBubbleLeftRightIcon className="h-6 w-6" />
+                  <span>意見交換</span>
                 </Link>
               </li>
             </ul>
@@ -76,22 +58,10 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
         <li>
           <details open>
             <summary className="group">
-              <span>
-                <InformationCircleIcon className="h-6 w-6" />
+              <InformationCircleIcon className="h-6 w-6" />
+              <span className="font-semibold whitespace-nowrap">
+                使い方やサイト情報
               </span>
-              <p className="font-semibold whitespace-nowrap">
-                <ruby>
-                  使<rt>つか</rt>
-                </ruby>
-                い
-                <ruby>
-                  方<rt>かた</rt>
-                </ruby>
-                やサイト
-                <ruby>
-                  情報<rt>じょうほう</rt>
-                </ruby>
-              </p>
             </summary>
             <ul role="menu" className="menu w-full ">
               <li>
@@ -100,41 +70,26 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
                   href="/beginners-guide"
                   onClick={toggleSidebar}
                 >
-                  <span className="inline">
-                    <QuestionMarkCircleIcon className="h-6 w-6" />
-                  </span>
-                  <p>
+                  <QuestionMarkCircleIcon className="h-6 w-6" />
+                  <span>
                     はじめての
                     <ruby>
                       方<rt>かた</rt>
                     </ruby>
                     へ
-                  </p>
+                  </span>
                 </Link>
               </li>
               <li>
                 <Link role="menuitem" href="/usage" onClick={toggleSidebar}>
-                  <span className="inline">
-                    <BookOpenIcon className="h-6 w-6" />
-                  </span>
-                  <p>
-                    <ruby>
-                      使<rt>つか</rt>
-                    </ruby>
-                    い
-                    <ruby>
-                      方<rt>かた</rt>
-                    </ruby>
-                    へ
-                  </p>
+                  <BookOpenIcon className="h-6 w-6" />
+                  <span>使い方</span>
                 </Link>
               </li>
               <li>
                 <Link role="menuitem" href="/license" onClick={toggleSidebar}>
-                  <span className="inline">
-                    <DocumentTextIcon className="h-6 w-6" />
-                  </span>
-                  <p>ライセンス</p>
+                  <DocumentTextIcon className="h-6 w-6" />
+                  <span>ライセンス</span>
                 </Link>
               </li>
               <li>
@@ -147,14 +102,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
                   <span className="inline">
                     <ArrowPathIcon className="h-6 w-6" />
                   </span>
-                  <p className="whitespace-nowrap">
-                    <ruby>
-                      更新<rt>こうしん</rt>
-                    </ruby>
-                    <ruby>
-                      情報<rt>じょうほう</rt>
-                    </ruby>
-                  </p>
+                  <span>更新情報</span>
                 </a>
               </li>
             </ul>
@@ -163,18 +111,14 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
         <ul role="menu" className="menu w-full ">
           <li>
             <Link role="menuitem" href="/settings" onClick={toggleSidebar}>
-              <span className="inline">
-                <Cog6ToothIcon className="h-6 w-6" />
-              </span>
-              <p>設定</p>
+              <Cog6ToothIcon className="h-6 w-6" />
+              <span>設定</span>
             </Link>
           </li>
           <li>
             <Link role="menuitem" href="/site-map" onClick={toggleSidebar}>
-              <span className="inline">
-                <MapIcon className="h-6 w-6" />
-              </span>
-              <p>サイトマップ</p>
+              <MapIcon className="h-6 w-6" />
+              <span>サイトマップ</span>
             </Link>
           </li>
           <li>
@@ -185,19 +129,8 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
               onClick={toggleSidebar}
               role="menuitem"
             >
-              <span className="inline">
-                <HeartIcon className="h-6 w-6 text-secondary" />
-              </span>
-              <p>
-                <ruby>
-                  開発者<rt>かいはつしゃ</rt>
-                </ruby>
-                を
-                <ruby>
-                  支援<rt>しえん</rt>
-                </ruby>
-                する
-              </p>
+              <HeartIcon className="h-6 w-6 text-error" />
+              <span>開発者を支援する</span>
             </a>
           </li>
         </ul>

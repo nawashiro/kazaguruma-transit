@@ -8,6 +8,7 @@ import {
   DocumentTextIcon,
   ArrowPathIcon,
   MapPinIcon,
+  ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/outline";
 
 export const metadata: Metadata = {
@@ -28,20 +29,20 @@ export default function SiteMapPage() {
         <ul className="space-y-3 ml-4">
           <li className="flex items-center">
             <HomeIcon className="h-5 w-5 mr-2" />
-            <Link
-              href="/"
-              className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
-            >
-              ホーム
+            <Link className="text-lg hover:underline" href="/">
+              <span>ホーム</span>
             </Link>
           </li>
           <li className="flex items-center">
             <MapPinIcon className="h-5 w-5 mr-2" />
-            <Link
-              href="/locations"
-              className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
-            >
-              場所をさがす
+            <Link className="text-lg hover:underline" href="/locations">
+              <span>場所をさがす</span>
+            </Link>
+          </li>
+          <li className="flex items-center">
+            <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
+            <Link className="text-lg hover:underline" href="/discussions">
+              <span>意見交換</span>
             </Link>
           </li>
         </ul>
@@ -54,20 +55,14 @@ export default function SiteMapPage() {
         <ul className="space-y-3 ml-4">
           <li className="flex items-center">
             <QuestionMarkCircleIcon className="h-5 w-5 mr-2" />
-            <Link
-              href="/beginners-guide"
-              className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
-            >
-              はじめての方へ
+            <Link href="/beginners-guide" className="text-lg hover:underline">
+              <span>はじめての方へ</span>
             </Link>
           </li>
           <li className="flex items-center">
             <BookOpenIcon className="h-5 w-5 mr-2" />
-            <Link
-              href="/usage"
-              className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
-            >
-              使い方
+            <Link href="/usage" className="text-lg hover:underline">
+              <span>使い方</span>
             </Link>
           </li>
         </ul>
@@ -79,11 +74,8 @@ export default function SiteMapPage() {
         <ul className="space-y-3 ml-4">
           <li className="flex items-center">
             <DocumentTextIcon className="h-5 w-5 mr-2" />
-            <Link
-              href="/license"
-              className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
-            >
-              ライセンス
+            <Link href="/license" className="text-lg hover:underline">
+              <span>ライセンス</span>
             </Link>
           </li>
           <li className="flex items-center">
@@ -92,18 +84,15 @@ export default function SiteMapPage() {
               href="https://halved-hamster-4a1.notion.site/1df78db44c3d80979856c735893403d4"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
+              className="text-lg hover:underline"
             >
-              更新情報
+              <span>更新情報</span>
             </a>
           </li>
           <li className="flex items-center">
             <MapIcon className="h-5 w-5 mr-2" />
-            <Link
-              href="/site-map"
-              className="text-lg hover:underline focus:ring-2 ring-primary p-1 rounded transition-all"
-            >
-              サイトマップ
+            <Link href="/site-map" className="text-lg hover:underline">
+              <span>サイトマップ</span>
             </Link>
           </li>
         </ul>

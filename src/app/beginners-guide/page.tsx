@@ -18,36 +18,33 @@ export default function BeginnersGuide() {
         <Card title="目次">
           <ul className="menu bg-base-100 p-0">
             <li>
-              <a href="#what-is" className="inline">
-                風ぐるまってなに？
+              <a href="#what-is">
+                <span>風ぐるまってなに？</span>
               </a>
             </li>
             <li>
-              <a href="#how-to-ride" className="inline">
-                乗りかた
+              <a href="#how-to-ride">
+                <span>乗りかた</span>
               </a>
             </li>
             <li>
-              <a
-                href="#how-to-ride-with-wheelchair"
-                className="inline whitespace-nowrap"
-              >
-                車いすやベビーカーのかたへ
+              <a href="#how-to-ride-with-wheelchair">
+                <span>車いすやベビーカーのかたへ</span>
               </a>
             </li>
             <li>
-              <a href="#about-site" className="inline">
-                このサイトはなに？
+              <a href="#about-site">
+                <span>このサイトはなに？</span>
               </a>
             </li>
             <li>
-              <a href="#about-me" className="inline">
-                あなたは誰？
+              <a href="#about-me">
+                <span>あなたは誰？</span>
               </a>
             </li>
             <li>
-              <a href="#payment" className="inline">
-                お金をとるの？
+              <a href="#payment">
+                <span>お金をとるの？</span>
               </a>
             </li>
           </ul>

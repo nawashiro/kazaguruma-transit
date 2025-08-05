@@ -50,7 +50,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pwkManager] = useState(() => new PWKManager());
+  const [pwkManager] = useState(() => {
+    const manager = new PWKManager();
+    // 秘密鍵を300秒間キャッシュする設定
+    manager.setCacheOptions({
+      enabled: true,
+      timeoutMs: 300000, // 300秒 = 5分
+    });
+    return manager;
+  });
   const [nostrService] = useState(() =>
     createNostrService(getNostrServiceConfig())
   );

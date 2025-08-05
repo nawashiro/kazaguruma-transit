@@ -170,12 +170,11 @@ export default function DiscussionDetailPage() {
     () => sortPostsByScore(postsWithStats).slice(0, 10),
     [postsWithStats]
   );
-  const auditItems = useMemo(() => createAuditTimeline(
-    discussion ? [discussion] : [],
-    [],
-    posts,
-    approvals
-  ), [discussion, posts, approvals]);
+  const auditItems = useMemo(
+    () =>
+      createAuditTimeline(discussion ? [discussion] : [], [], posts, approvals),
+    [discussion, posts, approvals]
+  );
 
   // Check if discussions are enabled and render accordingly
   if (!isDiscussionsEnabled()) {
@@ -373,6 +372,16 @@ export default function DiscussionDetailPage() {
         <div className="grid lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             <div>
+              <h2 className="text-xl font-semibold mb-4">投稿を評価</h2>
+              <EvaluationComponent
+                posts={postsWithStats}
+                onEvaluate={handleEvaluate}
+                userEvaluations={userEvaluations}
+                isRandomOrder={true}
+              />
+            </div>
+
+            <div>
               <h2 className="text-xl font-semibold mb-4">高評価投稿</h2>
               {topPosts.length > 0 ? (
                 <div className="space-y-4">
@@ -413,16 +422,6 @@ export default function DiscussionDetailPage() {
                   承認された投稿がまだありません。
                 </p>
               )}
-            </div>
-
-            <div>
-              <h2 className="text-xl font-semibold mb-4">投稿を評価</h2>
-              <EvaluationComponent
-                posts={postsWithStats}
-                onEvaluate={handleEvaluate}
-                userEvaluations={userEvaluations}
-                isRandomOrder={true}
-              />
             </div>
           </div>
 

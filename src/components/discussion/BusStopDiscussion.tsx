@@ -221,7 +221,6 @@ export function BusStopDiscussion({
             onEvaluate={handleEvaluate}
             userEvaluations={userEvaluations}
             isRandomOrder={true}
-            maxDisplayCount={3}
             title="メモを評価"
           />
         </div>

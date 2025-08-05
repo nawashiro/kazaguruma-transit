@@ -18,22 +18,19 @@ export function EvaluationComponent({
   onEvaluate,
   userEvaluations,
   isRandomOrder = false,
-  maxDisplayCount = 10,
   title = "投稿を評価",
 }: EvaluationComponentProps) {
   const [evaluatingPost, setEvaluatingPost] = useState<string | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
 
   const limitedPosts = useMemo(() => {
     const availablePosts = filterUnevaluatedPosts(
       posts.filter((p) => p.approved),
       userEvaluations
     );
-    const displayPosts = isRandomOrder
-      ? shuffleArray(availablePosts)
-      : availablePosts;
-    return displayPosts.slice(0, maxDisplayCount);
-  }, [posts, userEvaluations, isRandomOrder, maxDisplayCount]);
+
+    // 初回のみシャッフル、その後は順序を保持
+    return isRandomOrder ? shuffleArray(availablePosts) : availablePosts;
+  }, [posts.length, userEvaluations.size, isRandomOrder]);
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (evaluatingPost) return;
@@ -41,7 +38,8 @@ export function EvaluationComponent({
     setEvaluatingPost(postId);
     try {
       await onEvaluate(postId, rating);
-      setCurrentIndex((prev) => prev + 1);
+      // filterUnevaluatedPostsが自動的に評価済み投稿を除外するため、
+      // インデックスを手動で進める必要はない
     } catch (error) {
       console.error("Evaluation failed:", error);
     } finally {
@@ -75,8 +73,15 @@ export function EvaluationComponent({
     );
   }
 
-  const currentPost = limitedPosts[currentIndex];
-  const remainingCount = limitedPosts.length - currentIndex;
+  const currentPost = limitedPosts[0];
+  const remainingCount = limitedPosts.length;
+
+  // 全承認済み投稿数と評価済み投稿数からプログレスを計算
+  const allApprovedPosts = posts.filter((p) => p.approved);
+  const totalCount = allApprovedPosts.length;
+  const evaluatedCount = userEvaluations.size;
+  const progressPercentage =
+    totalCount > 0 ? (evaluatedCount / totalCount) * 100 : 0;
 
   if (!currentPost) {
     return (
@@ -190,15 +195,12 @@ export function EvaluationComponent({
         </div>
       </div>
 
-      {remainingCount > 1 && (
-        <div className="progress progress-primary w-full">
-          <div
-            className="progress-value"
-            style={{
-              width: `${((currentIndex + 1) / limitedPosts.length) * 100}%`,
-            }}
-          />
-        </div>
+      {totalCount > 0 && (
+        <progress
+          className="progress progress-primary w-full"
+          value={progressPercentage}
+          max="100"
+        ></progress>
       )}
     </div>
   );

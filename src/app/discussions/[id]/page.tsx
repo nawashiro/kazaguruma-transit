@@ -161,6 +161,22 @@ export default function DiscussionDetailPage() {
     }
   }, [user.pubkey, loadUserEvaluations]);
 
+  const approvedPosts = useMemo(() => posts.filter((p) => p.approved), [posts]);
+  const postsWithStats = useMemo(
+    () => combinePostsWithStats(approvedPosts, evaluations),
+    [approvedPosts, evaluations]
+  );
+  const topPosts = useMemo(
+    () => sortPostsByScore(postsWithStats).slice(0, 10),
+    [postsWithStats]
+  );
+  const auditItems = useMemo(() => createAuditTimeline(
+    discussion ? [discussion] : [],
+    [],
+    posts,
+    approvals
+  ), [discussion, posts, approvals]);
+
   // Check if discussions are enabled and render accordingly
   if (!isDiscussionsEnabled()) {
     return (
@@ -205,7 +221,22 @@ export default function DiscussionDetailPage() {
       setPostForm({ content: "", busStopTag: "" });
       setSelectedRoute("");
       setShowPreview(false);
-      await loadData();
+
+      // Create optimistic post update
+      const newPost = {
+        id: signedEvent.id,
+        content: postForm.content.trim(),
+        authorPubkey: user.pubkey || "",
+        discussionId: discussion.id,
+        busStopTag: postForm.busStopTag || undefined,
+        createdAt: signedEvent.created_at,
+        approved: false,
+        approvedBy: [],
+        approvedAt: undefined,
+        event: signedEvent,
+      };
+
+      setPosts((prev) => [newPost, ...prev]);
     } catch (error) {
       console.error("Failed to submit post:", error);
       setErrors(["投稿の送信に失敗しました"]);
@@ -235,7 +266,7 @@ export default function DiscussionDetailPage() {
       }
 
       setUserEvaluations((prev) => new Set([...prev, postId]));
-      
+
       // Create optimistic evaluation update
       const newEvaluation = {
         id: signedEvent.id,
@@ -244,9 +275,9 @@ export default function DiscussionDetailPage() {
         rating,
         discussionId: discussion.id,
         createdAt: signedEvent.created_at,
-        event: signedEvent
+        event: signedEvent,
       };
-      
+
       setEvaluations((prev) => [...prev, newEvaluation]);
     } catch (error) {
       console.error("Failed to evaluate post:", error);
@@ -257,16 +288,6 @@ export default function DiscussionDetailPage() {
     setSelectedRoute(routeName);
     setPostForm((prev) => ({ ...prev, busStopTag: "" }));
   };
-
-  const approvedPosts = useMemo(() => posts.filter((p) => p.approved), [posts]);
-  const postsWithStats = useMemo(() => combinePostsWithStats(approvedPosts, evaluations), [approvedPosts, evaluations]);
-  const topPosts = useMemo(() => sortPostsByScore(postsWithStats).slice(0, 10), [postsWithStats]);
-  const auditItems = createAuditTimeline(
-    discussion ? [discussion] : [],
-    [],
-    posts,
-    approvals
-  );
 
   if (isLoading) {
     return (
@@ -401,7 +422,6 @@ export default function DiscussionDetailPage() {
                 onEvaluate={handleEvaluate}
                 userEvaluations={userEvaluations}
                 isRandomOrder={true}
-                maxDisplayCount={5}
               />
             </div>
           </div>

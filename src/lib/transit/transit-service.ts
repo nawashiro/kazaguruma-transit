@@ -1438,4 +1438,63 @@ export class TransitService {
   private toRadians(degrees: number): number {
     return degrees * (Math.PI / 180);
   }
+
+  /**
+   * 全てのルートとその停留所を取得
+   */
+  async getAllRoutesWithStops(): Promise<{ route: string; stops: string[] }[]> {
+    try {
+      const routes = await prisma.route.findMany({
+        select: {
+          id: true,
+          short_name: true,
+          long_name: true,
+          trips: {
+            select: {
+              stop_times: {
+                select: {
+                  stop: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+                orderBy: {
+                  stop_sequence: 'asc',
+                },
+              },
+            },
+            take: 1, // 各ルートから1つのトリップのみ取得
+          },
+        },
+        orderBy: {
+          short_name: 'asc',
+        },
+      });
+
+      return routes.map(route => {
+        const routeName = route.short_name || route.long_name || route.id;
+        const firstTrip = route.trips[0];
+        
+        if (!firstTrip) {
+          return { route: routeName, stops: [] };
+        }
+
+        // 重複を除いてバス停名のリストを作成
+        const uniqueStops = new Set<string>();
+        firstTrip.stop_times.forEach(stopTime => {
+          uniqueStops.add(stopTime.stop.name);
+        });
+
+        return {
+          route: routeName,
+          stops: Array.from(uniqueStops),
+        };
+      });
+    } catch (error) {
+      logger.error("[TransitService] ルート・バス停取得エラー:", error);
+      return [];
+    }
+  }
 }

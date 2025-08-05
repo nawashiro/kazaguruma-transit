@@ -46,15 +46,6 @@ const nostrService = createNostrService({
   defaultTimeout: 5000,
 });
 
-const busStops = [
-  {
-    route: "A線",
-    stops: ["千代田区役所", "東日本銀行神田支店", "千代田保健所"],
-  },
-  { route: "B線", stops: ["大手町", "神保町", "九段下"] },
-  { route: "C線", stops: ["秋葉原", "湯島", "上野"] },
-];
-
 export default function DiscussionDetailPage() {
   const params = useParams();
   const discussionId = params.id as string;
@@ -77,6 +68,7 @@ export default function DiscussionDetailPage() {
     busStopTag: "",
   });
   const [errors, setErrors] = useState<string[]>([]);
+  const [busStops, setBusStops] = useState<{ route: string; stops: string[] }[]>([]);
 
   const { user, signEvent } = useAuth();
 
@@ -149,11 +141,30 @@ export default function DiscussionDetailPage() {
     }
   }, [user.pubkey]);
 
+  const loadBusStops = useCallback(async () => {
+    try {
+      const response = await fetch('/api/bus-stops');
+      const result = await response.json();
+      
+      if (result.success) {
+        setBusStops(result.data);
+      } else {
+        console.error("Failed to load bus stops:", result.error);
+        setBusStops([]);
+      }
+    } catch (error) {
+      console.error("Failed to load bus stops:", error);
+      // エラー時はフォールバックとして空配列を設定
+      setBusStops([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (isDiscussionsEnabled()) {
       loadData();
+      loadBusStops();
     }
-  }, [loadData]);
+  }, [loadData, loadBusStops]);
 
   useEffect(() => {
     if (user.pubkey && isDiscussionsEnabled()) {

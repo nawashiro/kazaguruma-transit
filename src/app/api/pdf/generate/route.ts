@@ -77,6 +77,19 @@ interface GeneratePdfRequest {
   destLat?: number;
   destLng?: number;
   selectedDateTime?: string;
+  memoData?: Record<
+    string,
+    {
+      id: string;
+      content: string;
+      busStopTag: string;
+      evaluationStats: {
+        positiveCount: number;
+        negativeCount: number;
+        score: number;
+      };
+    }
+  >;
 }
 
 interface PdfGenerationError {
@@ -306,6 +319,18 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
     return match ? match[1] : time;
   };
 
+  // バス停のメモを取得する関数
+  const getMemoForStop = (stopName: string): string => {
+    if (!data.memoData) return "";
+
+    for (const [busStopName, memo] of Object.entries(data.memoData)) {
+      if (busStopName === stopName) {
+        return `<div class="text-sm text-gray-600 mt-1" style="color: #6b7280; font-size: 0.875rem; margin-top: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${memo.content}</div>`;
+      }
+    }
+    return "";
+  };
+
   // ベースURLの設定 - PDFレンダリング時に使用される公開URL
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const qrCodeUrl = `${baseUrl}/images/chiyoda_line_qr.png`;
@@ -472,7 +497,12 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
     routesHtml += `
       <div class="card bg-white p-4 border-left-4 my-4" style="border-left: 4px solid #ccc;">
         <div class="flex justify-between items-center mb-2">
-          <div class="text-lg font-bold">${data.originStop.stopName}</div>
+          <div class="flex">
+            <div class="text-lg font-bold mr-2">${
+              data.originStop.stopName
+            }</div>
+            ${getMemoForStop(data.originStop.stopName)}
+          </div>
           <div class="badge" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
             ${formatTimeDisplay(departureTime)}
           </div>
@@ -485,7 +515,10 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
         </div>
         
         <div class="flex justify-between items-center">
-          <div class="text-lg font-bold">${destinationName}</div>
+          <div class="flex">
+            <div class="text-lg font-bold mr-2">${destinationName}</div>
+            ${getMemoForStop(destinationName)}
+          </div>
           <div class="badge" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
             ${formatTimeDisplay(arrivalTime)}
           </div>
@@ -515,9 +548,12 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
         routesHtml += `
           <div class="card bg-white p-4 border-left-4 my-4" style="border-left: 4px solid #ccc;">
             <div class="flex justify-between items-center mb-2">
-              <div class="text-lg font-bold">${
-                transfer.transferStop.stopName
-              }</div>
+              <div class="flex">
+                <div class="text-lg font-bold mr-2">${
+                  transfer.transferStop.stopName
+                }</div>
+                ${getMemoForStop(transfer.transferStop.stopName)}
+              </div>
               <div class="badge" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
                 ${formatTimeDisplay(
                   transfer.nextRoute.departureTime || transferDepartureTime
@@ -532,9 +568,12 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
             </div>
             
             <div class="flex justify-between items-center">
-              <div class="text-lg font-bold">${
-                data.destinationStop.stopName
-              }</div>
+              <div class="flex">
+                <div class="text-lg font-bold mr-2">${
+                  data.destinationStop.stopName
+                }</div>
+                ${getMemoForStop(data.destinationStop.stopName)}
+              </div>
               <div class="badge" style="border: 1px solid #ccc; border-radius: 0.5rem; padding: 0.25rem 0.5rem;">
                 ${formatTimeDisplay(
                   transfer.nextRoute.arrivalTime || finalArrivalTime

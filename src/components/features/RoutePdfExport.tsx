@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { logger } from "@/utils/logger";
 import { Departure } from "@/types/core";
+import type { PostWithStats } from "@/types/discussion";
 
 // IntegratedRouteDisplayと同様の型定義を使用
 interface StopInfo {
@@ -49,6 +50,7 @@ interface RoutePdfExportProps {
   destLat?: number;
   destLng?: number;
   selectedDateTime?: string;
+  memoData?: Map<string, PostWithStats>;
 }
 
 // PDF出力機能を提供するメインコンポーネント
@@ -87,6 +89,7 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
           destLat: props.destLat,
           destLng: props.destLng,
           selectedDateTime: props.selectedDateTime,
+          memoData: props.memoData ? Object.fromEntries(props.memoData) : undefined,
         }),
       });
 

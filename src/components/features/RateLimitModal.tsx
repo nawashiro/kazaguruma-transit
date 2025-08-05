@@ -79,7 +79,7 @@ export default function RateLimitModal({
           <div className="flex flex-col gap-2">
             <button
               onClick={onClose}
-              className="btn btn-primary"
+              className="btn btn-primary rounded-full dark:rounded-sm"
               data-testid="primary-close-btn"
             >
               閉じる

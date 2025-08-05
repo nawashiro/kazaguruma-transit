@@ -15,14 +15,12 @@ import {
   parseApprovalEvent,
   parseEvaluationEvent,
   combinePostsWithStats,
-  sortPostsByScore,
   validatePostForm,
 } from "@/lib/nostr/nostr-utils";
 import type {
   DiscussionPost,
   PostApproval,
   PostEvaluation,
-  PostWithStats,
   PostFormData,
 } from "@/types/discussion";
 
@@ -40,9 +38,6 @@ export function BusStopDiscussion({
   const [userEvaluations, setUserEvaluations] = useState<Set<string>>(
     new Set()
   );
-  const [topPostsByStop, setTopPostsByStop] = useState<
-    Map<string, PostWithStats>
-  >(new Map());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -66,7 +61,6 @@ export function BusStopDiscussion({
 
   const loadData = useCallback(async () => {
     if (busStops.length === 0) {
-      setTopPostsByStop(new Map());
       return;
     }
 
@@ -110,27 +104,8 @@ export function BusStopDiscussion({
 
       setPosts(parsedPosts);
       setEvaluations(parsedEvaluations);
-
-      const postsWithStats = combinePostsWithStats(
-        parsedPosts,
-        parsedEvaluations
-      );
-
-      // バス停ごとの最高評価投稿を取得
-      const topPostsMap = new Map<string, PostWithStats>();
-      busStops.forEach((stopName) => {
-        const stopPosts = postsWithStats.filter(
-          (p) => p.busStopTag === stopName
-        );
-        const sortedStopPosts = sortPostsByScore(stopPosts);
-        if (sortedStopPosts.length > 0) {
-          topPostsMap.set(stopName, sortedStopPosts[0]);
-        }
-      });
-      setTopPostsByStop(topPostsMap);
     } catch (error) {
       console.error("Failed to load bus stop discussion:", error);
-      setTopPostsByStop(new Map());
     }
   }, [busStops, config.busStopDiscussionId, nostrService]);
 
@@ -238,50 +213,23 @@ export function BusStopDiscussion({
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Top rated posts display */}
-      {topPostsByStop.size > 0 && (
-        <div className="space-y-3">
-          {Array.from(topPostsByStop.entries()).map(
-            ([busStopName, topPost]) => (
-              <div
-                key={busStopName}
-                className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                    メモ
-                  </span>
-                  <span className="badge badge-primary badge-sm">
-                    {busStopName}
-                  </span>
-                </div>
-                <p className="text-sm text-blue-900 dark:text-blue-100">
-                  {topPost.content}
-                </p>
-              </div>
-            )
-          )}
-        </div>
-      )}
-
       {/* Evaluation component */}
       {postsWithStats.length > 0 && (
         <div>
-          <h3 className="text-lg font-medium mb-4">投稿を評価</h3>
           <EvaluationComponent
             posts={postsWithStats}
             onEvaluate={handleEvaluate}
             userEvaluations={userEvaluations}
             isRandomOrder={true}
             maxDisplayCount={3}
-            title=""
+            title="メモを評価"
           />
         </div>
       )}
 
       {/* Post form */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <h3 className="text-lg font-medium mb-4">バス停での体験を投稿</h3>
+        <h3 className="text-lg font-medium mb-4">バス停メモを投稿</h3>
 
         {!showPreview ? (
           <div className="space-y-4">
@@ -299,7 +247,7 @@ export function BusStopDiscussion({
                   }))
                 }
                 className="textarea textarea-bordered w-full h-24"
-                placeholder="このバス停との体験や意見を投稿してください"
+                placeholder="このバス停での体験など、メモを投稿してください"
                 required
                 disabled={isSubmitting}
                 maxLength={280}

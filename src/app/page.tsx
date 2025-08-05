@@ -14,8 +14,9 @@ import { logger } from "@/utils/logger";
 import RateLimitModal from "@/components/features/RateLimitModal";
 import FirstVisitGuideModal from "@/components/features/FirstVisitGuideModal";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
-import { BusStopDiscussion } from "@/components/discussion/BusStopDiscussion";
+import { BusStopDiscussion, BusStopMemo, getBusStopMemoData } from "@/components/discussion";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
+import type { PostWithStats } from "@/types/discussion";
 
 interface JourneySegment {
   from: string;
@@ -126,6 +127,7 @@ export default function Home() {
   const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
   const [prioritizeSpeed, setPrioritizeSpeed] = useState<boolean>(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [memoData, setMemoData] = useState<Map<string, PostWithStats>>(new Map());
 
   // URLパラメータから目的地情報を読み取る
   useEffect(() => {
@@ -165,6 +167,20 @@ export default function Home() {
     }
     setIsLoaded(true);
   }, []);
+
+  // routeInfoが更新されたときにメモデータを取得
+  useEffect(() => {
+    if (routeInfo && routeInfo.type !== "none" && isDiscussionsEnabled()) {
+      const busStops = [
+        routeInfo.originStop.stopName,
+        routeInfo.destinationStop.stopName
+      ].filter((stop, index, arr) => arr.indexOf(stop) === index);
+
+      getBusStopMemoData(busStops).then(setMemoData);
+    } else {
+      setMemoData(new Map());
+    }
+  }, [routeInfo]);
 
   useRubyfulRun([selectedOrigin, selectedDestination, routeInfo], isLoaded);
 
@@ -562,6 +578,18 @@ export default function Home() {
                     destLng={selectedDestination.lng}
                   />
 
+                  {/* バス停メモを追加 */}
+                  {isDiscussionsEnabled() && routeInfo.type !== "none" && (
+                    <div className="mt-8">
+                      <BusStopMemo
+                        busStops={[
+                          routeInfo.originStop.stopName,
+                          routeInfo.destinationStop.stopName
+                        ].filter((stop, index, arr) => arr.indexOf(stop) === index)}
+                      />
+                    </div>
+                  )}
+
                   {/* PDF出力ボタンを追加 */}
                   {routeInfo.type !== "none" && (
                     <div className="mt-4 flex justify-center">
@@ -576,6 +604,7 @@ export default function Home() {
                         destLat={selectedDestination.lat}
                         destLng={selectedDestination.lng}
                         selectedDateTime={selectedDateTime}
+                        memoData={memoData}
                       />
                     </div>
                   )}

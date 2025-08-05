@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import type { AuditTimelineItem } from "@/types/discussion";
 import { formatRelativeTime, hexToNpub } from "@/lib/nostr/nostr-utils";
 
@@ -10,6 +10,48 @@ interface AuditTimelineProps {
 }
 
 export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
+  const [selectedEvent, setSelectedEvent] = useState<AuditTimelineItem | null>(
+    null
+  );
+
+  const getDetailContent = (item: AuditTimelineItem) => {
+    switch (item.type) {
+      case "discussion-request":
+        // リクエストの場合、contentを表示
+        return item.event.content ? (
+          <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm">
+            <div className="whitespace-pre-wrap">{item.event.content}</div>
+          </div>
+        ) : null;
+
+      case "post-submitted":
+        // 投稿提出の場合、contentを表示
+        return item.event.content ? (
+          <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm">
+            <div className="whitespace-pre-wrap">{item.event.content}</div>
+          </div>
+        ) : null;
+
+      case "post-approved":
+        // 承認の場合、承認された投稿の内容を表示
+        try {
+          const approvedPost = JSON.parse(item.event.content);
+          return (
+            <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm">
+              <div className="whitespace-pre-wrap">
+                {approvedPost.content || "内容なし"}
+              </div>
+            </div>
+          );
+        } catch {
+          return null;
+        }
+
+      default:
+        return null;
+    }
+  };
+
   if (items.length === 0) {
     return (
       <div className="text-center py-8">
@@ -173,39 +215,101 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
   };
 
   return (
-    <ul className="timeline timeline-snap-icon timeline-compact timeline-vertical">
-      {items.map((item, index) => (
-        <li key={item.id}>
-          {index != 0 && <hr />}
+    <>
+      <ul className="timeline timeline-snap-icon timeline-compact timeline-vertical">
+        {items.map((item, index) => (
+          <li key={item.id}>
+            {index != 0 && <hr />}
 
-          <div className="timeline-middle">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center ${getColorByType(
-                item.type
-              )}`}
-            >
-              {getIconByType(item.type)}
+            <div className="timeline-middle">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center ${getColorByType(
+                  item.type
+                )}`}
+              >
+                {getIconByType(item.type)}
+              </div>
+            </div>
+
+            <div className="timeline-start mb-10 pt-2.5">
+              <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                <time>{formatRelativeTime(item.timestamp)}</time>
+              </p>
+              <div className="timeline-box">
+                <div className="join items-start mb-2">
+                  <p className="font-medium">
+                    {profiles[item.actorPubkey]?.name ||
+                      `${hexToNpub(item.actorPubkey).slice(0, 12)}...`}
+                  </p>
+                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                  {item.description}
+                </p>
+                {getDetailContent(item)}
+                <button
+                  onClick={() => setSelectedEvent(item)}
+                  className="btn btn-xs btn-outline rounded-full dark:rounded-sm mt-2"
+                >
+                  技術情報
+                </button>
+              </div>
+            </div>
+
+            {index < items.length - 1 && <hr />}
+          </li>
+        ))}
+      </ul>
+
+      {/* イベントJSONモーダル */}
+      {selectedEvent && (
+        <dialog className="modal modal-open">
+          <div className="modal-box max-w-4xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-lg">技術情報 - Nostrイベント</h3>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="btn btn-sm btn-circle btn-ghost"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <div className="badge badge-primary mb-2">
+                {selectedEvent.type}
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {selectedEvent.description}
+              </p>
+            </div>
+
+            <div className="mockup-code">
+              {JSON.stringify(selectedEvent.event, null, 2)
+                .split("\n")
+                .map((line, idx) => (
+                  <pre data-prefix={idx + 1} key={idx}>
+                    <code className="text-sm">{line}</code>
+                  </pre>
+                ))}
+            </div>
+
+            <div className="modal-action">
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="btn rounded-full dark:rounded-sm"
+              >
+                閉じる
+              </button>
             </div>
           </div>
-
-          <div className="timeline-start mb-10 pt-2.5">
-            <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-              <time>{formatRelativeTime(item.timestamp)}</time>
-            </p>
-            <div className="timeline-box">
-              <p className="font-medium mb-1">
-                {profiles[item.actorPubkey]?.name ||
-                  `${hexToNpub(item.actorPubkey).slice(0, 12)}...`}
-              </p>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                {item.description}
-              </p>
-            </div>
-          </div>
-
-          {index < items.length - 1 && <hr />}
-        </li>
-      ))}
-    </ul>
+          <form
+            className="modal-backdrop"
+            onClick={() => setSelectedEvent(null)}
+          >
+            <button>close</button>
+          </form>
+        </dialog>
+      )}
+    </>
   );
 }

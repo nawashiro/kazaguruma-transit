@@ -264,8 +264,22 @@ export function BusStopDiscussion({
         </div>
       )}
 
-      {/* Post form */}
+      {/* Evaluation component */}
+      {postsWithStats.length > 0 && (
+        <div>
+          <h3 className="text-lg font-medium mb-4">投稿を評価</h3>
+          <EvaluationComponent
+            posts={postsWithStats}
+            onEvaluate={handleEvaluate}
+            userEvaluations={userEvaluations}
+            isRandomOrder={true}
+            maxDisplayCount={3}
+            title=""
+          />
+        </div>
+      )}
 
+      {/* Post form */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
         <h3 className="text-lg font-medium mb-4">バス停での体験を投稿</h3>
 
@@ -285,7 +299,7 @@ export function BusStopDiscussion({
                   }))
                 }
                 className="textarea textarea-bordered w-full h-24"
-                placeholder="このバス停での体験や意見を投稿してください"
+                placeholder="このバス停との体験や意見を投稿してください"
                 required
                 disabled={isSubmitting}
                 maxLength={280}
@@ -350,21 +364,6 @@ export function BusStopDiscussion({
           />
         )}
       </div>
-
-      {/* Evaluation component */}
-      {postsWithStats.length > 0 && (
-        <div>
-          <h3 className="text-lg font-medium mb-4">投稿を評価</h3>
-          <EvaluationComponent
-            posts={postsWithStats}
-            onEvaluate={handleEvaluate}
-            userEvaluations={userEvaluations}
-            isRandomOrder={true}
-            maxDisplayCount={3}
-            title=""
-          />
-        </div>
-      )}
 
       <LoginModal
         isOpen={showLoginModal}

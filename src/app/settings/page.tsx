@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 import React, { useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
+import { hexToNpub } from "@/lib/nostr/nostr-utils";
 import { LoginModal } from "@/components/discussion/LoginModal";
 import { CreateAccountModal } from "@/components/discussion/CreateAccountModal";
 import Button from "@/components/ui/Button";
@@ -14,6 +15,7 @@ export default function SettingsPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const { user, logout, isLoading, error } = useAuth();
 
@@ -33,6 +35,19 @@ export default function SettingsPage() {
     setIsLoggingOut(true);
     logout();
     setIsLoggingOut(false);
+  };
+
+  const handleCopyPubkey = async () => {
+    if (!user.pubkey) return;
+    
+    try {
+      const npubKey = hexToNpub(user.pubkey);
+      await navigator.clipboard.writeText(npubKey);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+    }
   };
 
   if (isLoading) {
@@ -78,10 +93,47 @@ export default function SettingsPage() {
                     <label className="label">
                       <span className="label-text font-medium">公開鍵</span>
                     </label>
-                    <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <span className="font-mono text-xs break-all">
-                        {user.pubkey}
+                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <span className="font-mono text-xs break-all flex-1">
+                        {user.pubkey ? hexToNpub(user.pubkey) : 'N/A'}
                       </span>
+                      {user.pubkey && (
+                        <button
+                          onClick={handleCopyPubkey}
+                          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex-shrink-0"
+                          title="クリップボードにコピー"
+                        >
+                          {isCopied ? (
+                            <svg
+                              className="w-4 h-4 text-green-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          ) : (
+                            <svg
+                              className="w-4 h-4 text-gray-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                              />
+                            </svg>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

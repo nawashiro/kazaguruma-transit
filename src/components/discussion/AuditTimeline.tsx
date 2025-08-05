@@ -2,7 +2,7 @@
 
 import React from "react";
 import type { AuditTimelineItem } from "@/types/discussion";
-import { formatRelativeTime } from "@/lib/nostr/nostr-utils";
+import { formatRelativeTime, hexToNpub } from "@/lib/nostr/nostr-utils";
 
 interface AuditTimelineProps {
   items: AuditTimelineItem[];
@@ -195,7 +195,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
             <div className="timeline-box">
               <p className="font-medium mb-1">
                 {profiles[item.actorPubkey]?.name ||
-                  `${item.actorPubkey.slice(0, 8)}...`}
+                  `${hexToNpub(item.actorPubkey).slice(0, 12)}...`}
               </p>
               <p className="text-sm text-gray-700 dark:text-gray-300">
                 {item.description}

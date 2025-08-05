@@ -16,6 +16,7 @@ import {
   parseDiscussionRequestEvent,
   createAuditTimeline,
   formatRelativeTime,
+  getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import Button from "@/components/ui/Button";
 import type {
@@ -24,7 +25,7 @@ import type {
   DiscussionRequestFormData,
 } from "@/types/discussion";
 
-const ADMIN_PUBKEY = process.env.NEXT_PUBLIC_ADMIN_PUBKEY || "";
+const ADMIN_PUBKEY = getAdminPubkeyHex();
 const RELAYS = [
   { url: "wss://relay.damus.io", read: true, write: true },
   { url: "wss://relay.nostr.band", read: true, write: true },

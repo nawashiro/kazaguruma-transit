@@ -18,6 +18,8 @@ import {
   parsePostEvent,
   parseApprovalEvent,
   formatRelativeTime,
+  hexToNpub,
+  getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import type {
   Discussion,
@@ -25,7 +27,7 @@ import type {
   PostApproval,
 } from "@/types/discussion";
 
-const ADMIN_PUBKEY = process.env.NEXT_PUBLIC_ADMIN_PUBKEY || "";
+const ADMIN_PUBKEY = getAdminPubkeyHex();
 const RELAYS = [
   { url: "wss://relay.damus.io", read: true, write: true },
   { url: "wss://relay.nostr.band", read: true, write: true },
@@ -36,6 +38,7 @@ const nostrService = createNostrService({
   relays: RELAYS,
   defaultTimeout: 5000,
 });
+
 
 export default function PostApprovalPage() {
   const params = useParams();
@@ -292,8 +295,8 @@ export default function PostApprovalPage() {
 
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-mono text-gray-500">
-                          投稿者: {post.authorPubkey.slice(0, 8)}...
-                          {post.authorPubkey.slice(-8)}
+                          投稿者: {hexToNpub(post.authorPubkey).slice(0, 12)}...
+                          {hexToNpub(post.authorPubkey).slice(-8)}
                         </span>
 
                         <div className="flex gap-2">
@@ -380,8 +383,8 @@ export default function PostApprovalPage() {
                         <div className="flex justify-between items-center">
                           <div className="text-xs text-gray-500">
                             <div>
-                              投稿者: {post.authorPubkey.slice(0, 8)}...
-                              {post.authorPubkey.slice(-8)}
+                              投稿者: {hexToNpub(post.authorPubkey).slice(0, 12)}...
+                              {hexToNpub(post.authorPubkey).slice(-8)}
                             </div>
                             <div>承認者: {post.approvedBy?.length || 0}人</div>
                             {post.approvedAt && (

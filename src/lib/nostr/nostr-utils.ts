@@ -1,4 +1,5 @@
 import type { Event } from 'nostr-tools'
+import * as nip19 from 'nostr-tools/nip19'
 import type { 
   Discussion, 
   DiscussionPost, 
@@ -327,4 +328,67 @@ export function sanitizeContent(content: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;')
     .replace(/\//g, '&#x2F;')
+}
+
+// NIP-19 utility functions
+export function hexToNpub(hex: string): string {
+  try {
+    return nip19.npubEncode(hex)
+  } catch (error) {
+    console.error('Failed to encode npub:', error)
+    return hex // fallback to hex
+  }
+}
+
+export function npubToHex(npub: string): string {
+  try {
+    if (npub.startsWith('npub')) {
+      const { type, data } = nip19.decode(npub)
+      if (type === 'npub') {
+        return data as string
+      }
+    }
+    // If it's already hex or invalid, return as-is
+    return npub
+  } catch (error) {
+    console.error('Failed to decode npub:', error)
+    return npub // fallback
+  }
+}
+
+export function isValidNpub(npub: string): boolean {
+  try {
+    if (npub.startsWith('npub')) {
+      const { type } = nip19.decode(npub)
+      return type === 'npub'
+    }
+    // Also accept hex format (64 characters)
+    return /^[a-fA-F0-9]{64}$/.test(npub)
+  } catch {
+    return false
+  }
+}
+
+// Environment variable utilities - assumes env vars are stored as npub
+export function getAdminPubkeyHex(): string {
+  const npubFromEnv = process.env.NEXT_PUBLIC_ADMIN_PUBKEY || ''
+  if (!npubFromEnv) {
+    console.warn('NEXT_PUBLIC_ADMIN_PUBKEY is not set')
+    return ''
+  }
+  return npubToHex(npubFromEnv)
+}
+
+export function getModeratorPubkeysHex(): string[] {
+  const npubsFromEnv = process.env.NEXT_PUBLIC_MODERATORS || ''
+  if (!npubsFromEnv) {
+    return []
+  }
+  
+  // Comma-separated npub values
+  return npubsFromEnv
+    .split(',')
+    .map(npub => npub.trim())
+    .filter(npub => npub.length > 0)
+    .map(npub => npubToHex(npub))
 }

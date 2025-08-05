@@ -17,6 +17,10 @@ import {
   parseDiscussionRequestEvent,
   validateDiscussionForm,
   formatRelativeTime,
+  hexToNpub,
+  npubToHex,
+  isValidNpub,
+  getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import Button from "@/components/ui/Button";
 import type {
@@ -25,7 +29,7 @@ import type {
   DiscussionFormData,
 } from "@/types/discussion";
 
-const ADMIN_PUBKEY = process.env.NEXT_PUBLIC_ADMIN_PUBKEY || "";
+const ADMIN_PUBKEY = getAdminPubkeyHex();
 const RELAYS = [
   { url: "wss://relay.damus.io", read: true, write: true },
   { url: "wss://relay.nostr.band", read: true, write: true },
@@ -36,6 +40,7 @@ const nostrService = createNostrService({
   relays: RELAYS,
   defaultTimeout: 5000,
 });
+
 
 export default function DiscussionManagePage() {
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
@@ -175,12 +180,18 @@ export default function DiscussionManagePage() {
 
   const addModerator = () => {
     const trimmed = moderatorInput.trim();
-    if (trimmed && !createForm.moderators.includes(trimmed)) {
-      setCreateForm((prev) => ({
-        ...prev,
-        moderators: [...prev.moderators, trimmed],
-      }));
-      setModeratorInput("");
+    if (trimmed && isValidNpub(trimmed)) {
+      const hexKey = npubToHex(trimmed);
+      if (!createForm.moderators.includes(hexKey)) {
+        setCreateForm((prev) => ({
+          ...prev,
+          moderators: [...prev.moderators, hexKey],
+        }));
+        setModeratorInput("");
+        setErrors([]);
+      }
+    } else {
+      setErrors(["有効なnpub形式の公開鍵を入力してください"]);
     }
   };
 
@@ -251,12 +262,18 @@ export default function DiscussionManagePage() {
 
   const addEditModerator = () => {
     const trimmed = editModeratorInput.trim();
-    if (trimmed && !editForm.moderators.includes(trimmed)) {
-      setEditForm((prev) => ({
-        ...prev,
-        moderators: [...prev.moderators, trimmed],
-      }));
-      setEditModeratorInput("");
+    if (trimmed && isValidNpub(trimmed)) {
+      const hexKey = npubToHex(trimmed);
+      if (!editForm.moderators.includes(hexKey)) {
+        setEditForm((prev) => ({
+          ...prev,
+          moderators: [...prev.moderators, hexKey],
+        }));
+        setEditModeratorInput("");
+        setEditErrors([]);
+      }
+    } else {
+      setEditErrors(["有効なnpub形式の公開鍵を入力してください"]);
     }
   };
 
@@ -345,8 +362,7 @@ export default function DiscussionManagePage() {
                         value={moderatorInput}
                         onChange={(e) => setModeratorInput(e.target.value)}
                         className="input input-bordered flex-1"
-                        placeholder="公開鍵（64文字）"
-                        pattern="[a-fA-F0-9]{64}"
+                        placeholder="npub形式の公開鍵"
                         disabled={isSubmitting}
                       />
                       <Button
@@ -367,7 +383,7 @@ export default function DiscussionManagePage() {
                             className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded"
                           >
                             <span className="font-mono text-sm flex-1">
-                              {mod.slice(0, 8)}...{mod.slice(-8)}
+                              {hexToNpub(mod).slice(0, 12)}...{hexToNpub(mod).slice(-8)}
                             </span>
                             <button
                               type="button"
@@ -482,8 +498,7 @@ export default function DiscussionManagePage() {
                                     setEditModeratorInput(e.target.value)
                                   }
                                   className="input input-bordered flex-1"
-                                  placeholder="公開鍵（64文字）"
-                                  pattern="[a-fA-F0-9]{64}"
+                                  placeholder="npub形式の公開鍵"
                                   disabled={isSubmitting}
                                 />
                                 <Button
@@ -506,7 +521,7 @@ export default function DiscussionManagePage() {
                                       className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded"
                                     >
                                       <span className="font-mono text-sm flex-1">
-                                        {mod.slice(0, 8)}...{mod.slice(-8)}
+                                        {hexToNpub(mod).slice(0, 12)}...{hexToNpub(mod).slice(-8)}
                                       </span>
                                       <button
                                         type="button"
@@ -637,7 +652,7 @@ export default function DiscussionManagePage() {
                             {formatRelativeTime(request.createdAt)}
                           </span>
                           <span className="text-xs font-mono">
-                            {request.requesterPubkey.slice(0, 8)}...
+                            {hexToNpub(request.requesterPubkey).slice(0, 12)}...
                           </span>
                         </div>
                       </div>

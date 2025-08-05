@@ -123,15 +123,31 @@ export class NostrService {
 
   async getDiscussionPosts(
     discussionId: string,
-    limit: number = 50
+    limit: number = 50,
+    busStopTags?: string[]
   ): Promise<Event[]> {
-    return this.getEvents([
-      {
+    const filters: Filter[] = []
+    
+    if (busStopTags && busStopTags.length > 0) {
+      // バス停ごとに個別のフィルタを作成
+      busStopTags.forEach(busStopTag => {
+        filters.push({
+          kinds: [1111],
+          '#a': [discussionId],
+          '#t': [busStopTag],
+          limit: Math.ceil(limit / busStopTags.length)
+        })
+      })
+    } else {
+      // バス停指定なしの場合は全投稿を取得
+      filters.push({
         kinds: [1111],
         '#a': [discussionId],
         limit
-      }
-    ])
+      })
+    }
+    
+    return this.getEvents(filters)
   }
 
   async getApprovals(
@@ -147,6 +163,25 @@ export class NostrService {
     ])
   }
 
+  async getApprovalsForPosts(
+    postIds: string[],
+    discussionId: string,
+    limit: number = 100
+  ): Promise<Event[]> {
+    if (postIds.length === 0) {
+      return []
+    }
+
+    return this.getEvents([
+      {
+        kinds: [4550],
+        '#a': [discussionId],
+        '#e': postIds,
+        limit
+      }
+    ])
+  }
+
   async getEvaluations(
     pubkey: string,
     discussionId?: string
@@ -154,6 +189,48 @@ export class NostrService {
     const filters: Filter = {
       kinds: [7],
       authors: [pubkey]
+    }
+
+    if (discussionId) {
+      filters['#a'] = [discussionId]
+    }
+
+    return this.getEvents([filters])
+  }
+
+  async getUserEvaluationsForPosts(
+    pubkey: string,
+    postIds: string[],
+    discussionId?: string
+  ): Promise<Event[]> {
+    if (postIds.length === 0) {
+      return []
+    }
+
+    const filters: Filter = {
+      kinds: [7],
+      authors: [pubkey],
+      '#e': postIds
+    }
+
+    if (discussionId) {
+      filters['#a'] = [discussionId]
+    }
+
+    return this.getEvents([filters])
+  }
+
+  async getEvaluationsForPosts(
+    postIds: string[],
+    discussionId?: string
+  ): Promise<Event[]> {
+    if (postIds.length === 0) {
+      return []
+    }
+
+    const filters: Filter = {
+      kinds: [7],
+      '#e': postIds
     }
 
     if (discussionId) {

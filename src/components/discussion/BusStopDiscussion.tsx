@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { LoginModal } from "./LoginModal";
 import { PostPreview } from "./PostPreview";
@@ -40,7 +40,9 @@ export function BusStopDiscussion({
   const [userEvaluations, setUserEvaluations] = useState<Set<string>>(
     new Set()
   );
-  const [topPost, setTopPost] = useState<PostWithStats | null>(null);
+  const [topPostsByStop, setTopPostsByStop] = useState<
+    Map<string, PostWithStats>
+  >(new Map());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -51,20 +53,38 @@ export function BusStopDiscussion({
   const [errors, setErrors] = useState<string[]>([]);
 
   const { user, signEvent } = useAuth();
-  const config = getDiscussionConfig();
-  const nostrService = createNostrService({
-    relays: config.relays,
-    defaultTimeout: 5000,
-  });
+  const config = useMemo(() => getDiscussionConfig(), []);
+  const discussionsEnabled = useMemo(() => isDiscussionsEnabled(), []);
+  const nostrService = useMemo(
+    () =>
+      createNostrService({
+        relays: config.relays,
+        defaultTimeout: 5000,
+      }),
+    [config.relays]
+  );
 
   const loadData = useCallback(async () => {
+    if (busStops.length === 0) {
+      setTopPostsByStop(new Map());
+      return;
+    }
+
     try {
-      const [postsEvents, approvalsEvents, evaluationsEvents] =
-        await Promise.all([
-          nostrService.getDiscussionPosts(config.busStopDiscussionId),
-          nostrService.getApprovals(config.busStopDiscussionId),
-          nostrService.getEvaluations("", config.busStopDiscussionId),
-        ]);
+      // Step 1: バス停タグ付きの投稿を取得
+      const postsEvents = await nostrService.getDiscussionPosts(
+        config.busStopDiscussionId,
+        50,
+        busStops
+      );
+
+      const postIds = postsEvents.map((event) => event.id);
+
+      // Step 2: 該当する投稿に対する承認のみを取得（通信量削減）
+      const approvalsEvents = await nostrService.getApprovalsForPosts(
+        postIds,
+        config.busStopDiscussionId
+      );
 
       const parsedApprovals = approvalsEvents
         .map(parseApprovalEvent)
@@ -77,6 +97,13 @@ export function BusStopDiscussion({
           (p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag)
         );
 
+      // Step 3: 承認された投稿のIDのみに対する評価を取得
+      const approvedPostIds = parsedPosts.map((p) => p.id);
+      const evaluationsEvents = await nostrService.getEvaluationsForPosts(
+        approvedPostIds,
+        config.busStopDiscussionId
+      );
+
       const parsedEvaluations = evaluationsEvents
         .map(parseEvaluationEvent)
         .filter((e): e is PostEvaluation => e !== null);
@@ -88,10 +115,22 @@ export function BusStopDiscussion({
         parsedPosts,
         parsedEvaluations
       );
-      const topPosts = sortPostsByScore(postsWithStats);
-      setTopPost(topPosts[0] || null);
+
+      // バス停ごとの最高評価投稿を取得
+      const topPostsMap = new Map<string, PostWithStats>();
+      busStops.forEach((stopName) => {
+        const stopPosts = postsWithStats.filter(
+          (p) => p.busStopTag === stopName
+        );
+        const sortedStopPosts = sortPostsByScore(stopPosts);
+        if (sortedStopPosts.length > 0) {
+          topPostsMap.set(stopName, sortedStopPosts[0]);
+        }
+      });
+      setTopPostsByStop(topPostsMap);
     } catch (error) {
       console.error("Failed to load bus stop discussion:", error);
+      setTopPostsByStop(new Map());
     }
   }, [busStops, config.busStopDiscussionId, nostrService]);
 
@@ -112,10 +151,10 @@ export function BusStopDiscussion({
   }, [user.pubkey, nostrService]);
 
   useEffect(() => {
-    if (isDiscussionsEnabled() && busStops.length > 0) {
+    if (discussionsEnabled) {
       loadData();
     }
-  }, [busStops, loadData]);
+  }, [discussionsEnabled, loadData]);
 
   useEffect(() => {
     if (user.pubkey) {
@@ -190,7 +229,7 @@ export function BusStopDiscussion({
     }
   };
 
-  if (!isDiscussionsEnabled() || busStops.length === 0) {
+  if (!discussionsEnabled || busStops.length === 0) {
     return null;
   }
 
@@ -199,22 +238,29 @@ export function BusStopDiscussion({
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Top rated post display */}
-      {topPost && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
-              メモ
-            </span>
-            {topPost.busStopTag && (
-              <span className="badge badge-primary badge-sm">
-                {topPost.busStopTag}
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-blue-900 dark:text-blue-100">
-            {topPost.content}
-          </p>
+      {/* Top rated posts display */}
+      {topPostsByStop.size > 0 && (
+        <div className="space-y-3">
+          {Array.from(topPostsByStop.entries()).map(
+            ([busStopName, topPost]) => (
+              <div
+                key={busStopName}
+                className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    メモ
+                  </span>
+                  <span className="badge badge-primary badge-sm">
+                    {busStopName}
+                  </span>
+                </div>
+                <p className="text-sm text-blue-900 dark:text-blue-100">
+                  {topPost.content}
+                </p>
+              </div>
+            )
+          )}
         </div>
       )}
 

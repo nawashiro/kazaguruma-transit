@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import type { PostWithStats } from "@/types/discussion";
 import { shuffleArray, filterUnevaluatedPosts } from "@/lib/nostr/nostr-utils";
 
@@ -24,14 +24,16 @@ export function EvaluationComponent({
   const [evaluatingPost, setEvaluatingPost] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const availablePosts = filterUnevaluatedPosts(
-    posts.filter((p) => p.approved),
-    userEvaluations
-  );
-  const displayPosts = isRandomOrder
-    ? shuffleArray(availablePosts)
-    : availablePosts;
-  const limitedPosts = displayPosts.slice(0, maxDisplayCount);
+  const limitedPosts = useMemo(() => {
+    const availablePosts = filterUnevaluatedPosts(
+      posts.filter((p) => p.approved),
+      userEvaluations
+    );
+    const displayPosts = isRandomOrder
+      ? shuffleArray(availablePosts)
+      : availablePosts;
+    return displayPosts.slice(0, maxDisplayCount);
+  }, [posts, userEvaluations, isRandomOrder, maxDisplayCount]);
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (evaluatingPost) return;

@@ -3,7 +3,7 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -246,9 +246,9 @@ export default function DiscussionDetailPage() {
     setPostForm((prev) => ({ ...prev, busStopTag: "" }));
   };
 
-  const approvedPosts = posts.filter((p) => p.approved);
-  const postsWithStats = combinePostsWithStats(approvedPosts, evaluations);
-  const topPosts = sortPostsByScore(postsWithStats).slice(0, 10);
+  const approvedPosts = useMemo(() => posts.filter((p) => p.approved), [posts]);
+  const postsWithStats = useMemo(() => combinePostsWithStats(approvedPosts, evaluations), [approvedPosts, evaluations]);
+  const topPosts = useMemo(() => sortPostsByScore(postsWithStats).slice(0, 10), [postsWithStats]);
   const auditItems = createAuditTimeline(
     discussion ? [discussion] : [],
     [],

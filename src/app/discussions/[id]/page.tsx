@@ -235,7 +235,19 @@ export default function DiscussionDetailPage() {
       }
 
       setUserEvaluations((prev) => new Set([...prev, postId]));
-      await loadData();
+      
+      // Create optimistic evaluation update
+      const newEvaluation = {
+        id: signedEvent.id,
+        postId,
+        evaluatorPubkey: user.pubkey || "",
+        rating,
+        discussionId: discussion.id,
+        createdAt: signedEvent.created_at,
+        event: signedEvent
+      };
+      
+      setEvaluations((prev) => [...prev, newEvaluation]);
     } catch (error) {
       console.error("Failed to evaluate post:", error);
     }

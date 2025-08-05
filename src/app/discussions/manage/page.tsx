@@ -43,13 +43,21 @@ export default function DiscussionManagePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState<DiscussionFormData>({
     title: "",
     description: "",
     moderators: [],
   });
+  const [editForm, setEditForm] = useState<DiscussionFormData>({
+    title: "",
+    description: "",
+    moderators: [],
+  });
   const [moderatorInput, setModeratorInput] = useState("");
+  const [editModeratorInput, setEditModeratorInput] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
+  const [editErrors, setEditErrors] = useState<string[]>([]);
 
   const { user, signEvent } = useAuth();
 
@@ -183,6 +191,82 @@ export default function DiscussionManagePage() {
     }));
   };
 
+  const startEdit = (discussion: Discussion) => {
+    setEditingId(discussion.id);
+    setEditForm({
+      title: discussion.title,
+      description: discussion.description,
+      moderators: discussion.moderators.map((m) => m.pubkey),
+    });
+    setEditModeratorInput("");
+    setEditErrors([]);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm({
+      title: "",
+      description: "",
+      moderators: [],
+    });
+    setEditModeratorInput("");
+    setEditErrors([]);
+  };
+
+  const handleEditSubmit = async (discussion: Discussion) => {
+    const validationErrors = validateDiscussionForm(editForm);
+    if (validationErrors.length > 0) {
+      setEditErrors(validationErrors);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setEditErrors([]);
+
+    try {
+      // NIP-72: replaceable eventとして同じdTagで新しいイベントを発行
+      const eventTemplate = nostrService.createDiscussionEvent(
+        editForm.title.trim(),
+        editForm.description.trim(),
+        editForm.moderators,
+        discussion.dTag // 既存のdTagを使用
+      );
+
+      const signedEvent = await signEvent(eventTemplate);
+      const published = await nostrService.publishSignedEvent(signedEvent);
+
+      if (!published) {
+        throw new Error("Failed to publish event to relays");
+      }
+
+      cancelEdit();
+      await loadData();
+    } catch (error) {
+      console.error("Failed to update discussion:", error);
+      setEditErrors(["会話の更新に失敗しました"]);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const addEditModerator = () => {
+    const trimmed = editModeratorInput.trim();
+    if (trimmed && !editForm.moderators.includes(trimmed)) {
+      setEditForm((prev) => ({
+        ...prev,
+        moderators: [...prev.moderators, trimmed],
+      }));
+      setEditModeratorInput("");
+    }
+  };
+
+  const removeEditModerator = (pubkey: string) => {
+    setEditForm((prev) => ({
+      ...prev,
+      moderators: prev.moderators.filter((m) => m !== pubkey),
+    }));
+  };
+
   return (
     <AdminCheck
       adminPubkey={ADMIN_PUBKEY}
@@ -285,15 +369,14 @@ export default function DiscussionManagePage() {
                             <span className="font-mono text-sm flex-1">
                               {mod.slice(0, 8)}...{mod.slice(-8)}
                             </span>
-                            <Button
+                            <button
                               type="button"
                               onClick={() => removeModerator(mod)}
-                              className="btn-xs text-error"
-                              secondary
+                              className="btn btn-xs btn-error rounded-full dark:rounded-sm"
                               disabled={isSubmitting}
                             >
                               削除
-                            </Button>
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -343,39 +426,174 @@ export default function DiscussionManagePage() {
                       className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
                     >
                       <div className="card-body p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h3 className="font-medium">{discussion.title}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                              {discussion.description}
-                            </p>
-                            <div className="flex items-center gap-4 mt-2">
-                              <span className="text-xs text-gray-500">
-                                {formatRelativeTime(discussion.createdAt)}
-                              </span>
-                              <span className="badge badge-outline badge-xs">
-                                {discussion.moderators.length + 1} モデレーター
-                              </span>
+                        {editingId === discussion.id ? (
+                          // 編集フォーム
+                          <div className="space-y-4">
+                            <div>
+                              <label className="label">
+                                <span className="label-text">タイトル *</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={editForm.title}
+                                onChange={(e) =>
+                                  setEditForm((prev) => ({
+                                    ...prev,
+                                    title: e.target.value,
+                                  }))
+                                }
+                                className="input input-bordered w-full"
+                                placeholder="会話のタイトル"
+                                required
+                                disabled={isSubmitting}
+                                maxLength={100}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="label">
+                                <span className="label-text">説明 *</span>
+                              </label>
+                              <textarea
+                                value={editForm.description}
+                                onChange={(e) =>
+                                  setEditForm((prev) => ({
+                                    ...prev,
+                                    description: e.target.value,
+                                  }))
+                                }
+                                className="textarea textarea-bordered w-full h-20"
+                                placeholder="会話の目的や内容"
+                                required
+                                disabled={isSubmitting}
+                                maxLength={500}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="label">
+                                <span className="label-text">モデレーター</span>
+                              </label>
+                              <div className="flex gap-2 mb-2">
+                                <input
+                                  type="text"
+                                  value={editModeratorInput}
+                                  onChange={(e) =>
+                                    setEditModeratorInput(e.target.value)
+                                  }
+                                  className="input input-bordered flex-1"
+                                  placeholder="公開鍵（64文字）"
+                                  pattern="[a-fA-F0-9]{64}"
+                                  disabled={isSubmitting}
+                                />
+                                <Button
+                                  type="button"
+                                  onClick={addEditModerator}
+                                  secondary
+                                  disabled={
+                                    isSubmitting || !editModeratorInput.trim()
+                                  }
+                                >
+                                  追加
+                                </Button>
+                              </div>
+
+                              {editForm.moderators.length > 0 && (
+                                <div className="space-y-1">
+                                  {editForm.moderators.map((mod) => (
+                                    <div
+                                      key={mod}
+                                      className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded"
+                                    >
+                                      <span className="font-mono text-sm flex-1">
+                                        {mod.slice(0, 8)}...{mod.slice(-8)}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeEditModerator(mod)}
+                                        className="btn btn-xs btn-error rounded-full dark:rounded-sm"
+                                        disabled={isSubmitting}
+                                      >
+                                        削除
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {editErrors.length > 0 && (
+                              <div className="alert alert-error">
+                                <ul className="text-sm">
+                                  {editErrors.map((error, index) => (
+                                    <li key={index}>{error}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                type="button"
+                                onClick={cancelEdit}
+                                secondary
+                                disabled={isSubmitting}
+                              >
+                                キャンセル
+                              </Button>
+                              <Button
+                                type="button"
+                                onClick={() => handleEditSubmit(discussion)}
+                                disabled={isSubmitting}
+                                loading={isSubmitting}
+                              >
+                                {isSubmitting ? "" : "更新"}
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Link
-                              href={`/discussions/${discussion.dTag}`}
-                              className="btn rounded-full dark:rounded-sm"
-                            >
-                              表示
-                            </Link>
-                            <button
-                              onClick={() =>
-                                handleDeleteDiscussion(discussion.id)
-                              }
-                              className="btn btn-error rounded-full dark:rounded-sm"
-                              disabled={deletingId === discussion.id}
-                            >
-                              {deletingId === discussion.id ? "" : "削除"}
-                            </button>
+                        ) : (
+                          // 表示モード
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                            {/* コンテンツ */}
+                            <div className="flex-1 order-2 sm:order-1">
+                              <h3 className="font-medium">
+                                {discussion.title}
+                              </h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                {discussion.description}
+                              </p>
+                              <div className="flex items-center gap-4 mt-2">
+                                <span className="text-xs text-gray-500">
+                                  {formatRelativeTime(discussion.createdAt)}
+                                </span>
+                                <span className="badge badge-outline badge-xs">
+                                  {discussion.moderators.length + 1}{" "}
+                                  モデレーター
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* ボタン */}
+                            <div className="flex gap-2 justify-end order-1 sm:order-2 sm:flex-shrink-0">
+                              <button
+                                onClick={() => startEdit(discussion)}
+                                className="btn btn-outline btn-sm sm:btn-md rounded-full dark:rounded-sm"
+                                disabled={isSubmitting}
+                              >
+                                編集
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleDeleteDiscussion(discussion.id)
+                                }
+                                className="btn btn-error btn-sm sm:btn-md rounded-full dark:rounded-sm"
+                                disabled={deletingId === discussion.id}
+                              >
+                                {deletingId === discussion.id ? "" : "削除"}
+                              </button>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </div>
                   ))}

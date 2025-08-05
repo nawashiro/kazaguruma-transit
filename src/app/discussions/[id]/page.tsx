@@ -68,7 +68,9 @@ export default function DiscussionDetailPage() {
     busStopTag: "",
   });
   const [errors, setErrors] = useState<string[]>([]);
-  const [busStops, setBusStops] = useState<{ route: string; stops: string[] }[]>([]);
+  const [busStops, setBusStops] = useState<
+    { route: string; stops: string[] }[]
+  >([]);
 
   const { user, signEvent } = useAuth();
 
@@ -143,9 +145,9 @@ export default function DiscussionDetailPage() {
 
   const loadBusStops = useCallback(async () => {
     try {
-      const response = await fetch('/api/bus-stops');
+      const response = await fetch("/api/bus-stops");
       const result = await response.json();
-      
+
       if (result.success) {
         setBusStops(result.data);
       } else {
@@ -355,9 +357,11 @@ export default function DiscussionDetailPage() {
           </ModeratorCheck>
         </div>
         <h1 className="text-3xl font-bold mb-2">{discussion.title}</h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          {discussion.description}
-        </p>
+        {discussion.description.split("\n").map((line, idx) => (
+          <p key={idx} className="text-gray-600 dark:text-gray-400">
+            {line}
+          </p>
+        ))}
       </div>
 
       <div className="join mb-6">

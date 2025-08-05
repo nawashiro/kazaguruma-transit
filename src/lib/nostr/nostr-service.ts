@@ -253,11 +253,12 @@ export class NostrService {
   createDiscussionEvent(
     title: string,
     description: string,
-    moderators: string[]
+    moderators: string[],
+    dTag?: string
   ): Omit<Event, 'id' | 'sig' | 'pubkey'> {
-    const dTag = uuidv4()
+    const tagValue = dTag || uuidv4()
     const tags: string[][] = [
-      ['d', dTag],
+      ['d', tagValue],
       ['name', title],
       ['description', description],
       ...moderators.map(mod => ['p', mod, '', 'moderator'])

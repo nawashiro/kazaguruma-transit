@@ -16,9 +16,7 @@ interface LocationSuggestionsProps {
   onLocationSelected: (location: Location) => void;
 }
 
-function LocationSuggestions({
-  onLocationSelected,
-}: LocationSuggestionsProps) {
+function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
   const [categories, setCategories] = useState<AddressCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

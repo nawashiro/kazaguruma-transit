@@ -49,7 +49,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
                   onClick={toggleSidebar}
                 >
                   <ChatBubbleLeftRightIcon className="h-6 w-6" />
-                  <span>意見交換</span>
+                  <span>意見交換（β）</span>
                 </Link>
               </li>
             </ul>

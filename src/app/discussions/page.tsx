@@ -41,7 +41,9 @@ export default function DiscussionsPage() {
   const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const [requests, setRequests] = useState<DiscussionRequest[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, { name?: string }>>({});
+  const [profiles, setProfiles] = useState<Record<string, { name?: string }>>(
+    {}
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -94,14 +96,14 @@ export default function DiscussionsPage() {
       // 管理者・モデレーターのプロファイル取得
       const uniquePubkeys = new Set<string>();
       uniquePubkeys.add(ADMIN_PUBKEY); // 管理者
-      parsedDiscussions.forEach(discussion => {
+      parsedDiscussions.forEach((discussion) => {
         uniquePubkeys.add(discussion.authorPubkey);
-        discussion.moderators.forEach(mod => uniquePubkeys.add(mod.pubkey));
+        discussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
       });
-      parsedRequests.forEach(request => {
+      parsedRequests.forEach((request) => {
         uniquePubkeys.add(request.authorPubkey);
       });
-      
+
       const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
         const profileEvent = await nostrService.getProfile(pubkey);
         if (profileEvent) {
@@ -114,7 +116,7 @@ export default function DiscussionsPage() {
         }
         return [pubkey, {}];
       });
-      
+
       const profileResults = await Promise.all(profilePromises);
       const profilesMap = Object.fromEntries(profileResults);
       setProfiles(profilesMap);
@@ -166,9 +168,9 @@ export default function DiscussionsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">意見交換</h1>
+        <h1 className="text-3xl font-bold mb-4">意見交換（β）</h1>
         <p className="text-gray-600 dark:text-gray-400">
-          風ぐるまの利用体験について意見交換を行う場所です。
+          風ぐるまの利用体験について意見交換を行う場所です。まだベータ版で、いくつかの支援機能が使えません。
         </p>
       </div>
 

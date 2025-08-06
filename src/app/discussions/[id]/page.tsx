@@ -26,7 +26,10 @@ import {
   formatRelativeTime,
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
-import { evaluationService, EvaluationAnalysisResult } from "@/lib/evaluation/evaluation-service";
+import {
+  evaluationService,
+  EvaluationAnalysisResult,
+} from "@/lib/evaluation/evaluation-service";
 import Button from "@/components/ui/Button";
 import type {
   Discussion,
@@ -58,11 +61,14 @@ export default function DiscussionDetailPage() {
   const [posts, setPosts] = useState<DiscussionPost[]>([]);
   const [approvals, setApprovals] = useState<PostApproval[]>([]);
   const [evaluations, setEvaluations] = useState<PostEvaluation[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, { name?: string }>>({});
+  const [profiles, setProfiles] = useState<Record<string, { name?: string }>>(
+    {}
+  );
   const [userEvaluations, setUserEvaluations] = useState<Set<string>>(
     new Set()
   );
-  const [analysisResult, setAnalysisResult] = useState<EvaluationAnalysisResult | null>(null);
+  const [analysisResult, setAnalysisResult] =
+    useState<EvaluationAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -84,22 +90,14 @@ export default function DiscussionDetailPage() {
     if (!isDiscussionsEnabled()) return;
     setIsLoading(true);
     try {
-      const [
-        discussionEvents,
-        postsEvents,
-        approvalsEvents,
-        evaluationsEvents,
-      ] = await Promise.all([
-        nostrService.getDiscussions(ADMIN_PUBKEY),
-        nostrService.getDiscussionPosts(
-          `34550:${ADMIN_PUBKEY}:${discussionId}`
-        ),
-        nostrService.getApprovals(`34550:${ADMIN_PUBKEY}:${discussionId}`),
-        nostrService.getEvaluations(
-          user.pubkey || "",
-          `34550:${ADMIN_PUBKEY}:${discussionId}`
-        ),
-      ]);
+      const [discussionEvents, postsEvents, approvalsEvents] =
+        await Promise.all([
+          nostrService.getDiscussions(ADMIN_PUBKEY),
+          nostrService.getDiscussionPosts(
+            `34550:${ADMIN_PUBKEY}:${discussionId}`
+          ),
+          nostrService.getApprovals(`34550:${ADMIN_PUBKEY}:${discussionId}`),
+        ]);
 
       const parsedDiscussion = discussionEvents
         .map(parseDiscussionEvent)
@@ -118,6 +116,13 @@ export default function DiscussionDetailPage() {
         .filter((p): p is DiscussionPost => p !== null)
         .sort((a, b) => b.createdAt - a.createdAt);
 
+      // Get ALL evaluations for ALL posts (not just current user's evaluations)
+      const postIds = parsedPosts.map((post) => post.id);
+      const evaluationsEvents = await nostrService.getEvaluationsForPosts(
+        postIds,
+        `34550:${ADMIN_PUBKEY}:${discussionId}`
+      );
+
       const parsedEvaluations = evaluationsEvents
         .map(parseEvaluationEvent)
         .filter((e): e is PostEvaluation => e !== null);
@@ -126,15 +131,19 @@ export default function DiscussionDetailPage() {
       setPosts(parsedPosts);
       setApprovals(parsedApprovals);
       setEvaluations(parsedEvaluations);
-      
+
       // 承認者・管理者のプロファイル取得（投稿者は除外）
       const uniquePubkeys = new Set<string>();
-      parsedApprovals.forEach(approval => uniquePubkeys.add(approval.moderatorPubkey));
+      parsedApprovals.forEach((approval) =>
+        uniquePubkeys.add(approval.moderatorPubkey)
+      );
       if (parsedDiscussion) {
         uniquePubkeys.add(parsedDiscussion.authorPubkey);
-        parsedDiscussion.moderators.forEach(mod => uniquePubkeys.add(mod.pubkey));
+        parsedDiscussion.moderators.forEach((mod) =>
+          uniquePubkeys.add(mod.pubkey)
+        );
       }
-      
+
       const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
         const profileEvent = await nostrService.getProfile(pubkey);
         if (profileEvent) {
@@ -147,7 +156,7 @@ export default function DiscussionDetailPage() {
         }
         return [pubkey, {}];
       });
-      
+
       const profileResults = await Promise.all(profilePromises);
       const profilesMap = Object.fromEntries(profileResults);
       setProfiles(profilesMap);
@@ -156,7 +165,7 @@ export default function DiscussionDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [discussionId, user.pubkey]);
+  }, [discussionId]);
 
   const loadUserEvaluations = useCallback(async () => {
     if (!user.pubkey || !isDiscussionsEnabled()) return;
@@ -216,16 +225,19 @@ export default function DiscussionDetailPage() {
 
     setIsAnalyzing(true);
     try {
-      const result = await evaluationService.analyzeConsensus(evaluations, approvedPosts);
+      const result = await evaluationService.analyzeConsensus(
+        evaluations,
+        approvedPosts
+      );
       setAnalysisResult(result);
     } catch (error) {
-      console.error('コンセンサス分析に失敗しました:', error);
+      console.error("コンセンサス分析に失敗しました:", error);
       setAnalysisResult(null);
     } finally {
       setIsAnalyzing(false);
     }
   }, [evaluations, approvedPosts]);
-  
+
   // 評価データまたは承認済み投稿が変更された時にコンセンサス分析を実行
   useEffect(() => {
     if (evaluations.length > 0 && approvedPosts.length > 0) {
@@ -455,11 +467,13 @@ export default function DiscussionDetailPage() {
 
             <div>
               <h2 className="text-xl font-semibold mb-4">主要な意見</h2>
-              
+
               {isAnalyzing && (
                 <div className="flex items-center justify-center p-4 mb-4">
                   <div className="loading loading-spinner loading-md mr-2"></div>
-                  <span className="text-sm text-gray-600">コンセンサス分析中...</span>
+                  <span className="text-sm text-gray-600">
+                    コンセンサス分析中...
+                  </span>
                 </div>
               )}
 
@@ -470,78 +484,49 @@ export default function DiscussionDetailPage() {
                       className="join-item btn btn-sm"
                       type="radio"
                       name="consensus-options"
-                      aria-label="グループ考慮型コンセンサス"
+                      aria-label="全体"
                       checked={consensusTab === "group-consensus"}
                       onChange={() => setConsensusTab("group-consensus")}
                     />
-                    {analysisResult.groupRepresentativeComments.map((group, index) => (
-                      <input
-                        key={group.groupId}
-                        className="join-item btn btn-sm"
-                        type="radio"
-                        name="consensus-options"
-                        aria-label={`グループ ${String.fromCharCode(65 + index)} の賛成タイプの代表的意見`}
-                        checked={consensusTab === `group-${String.fromCharCode(97 + index)}`}
-                        onChange={() => setConsensusTab(`group-${String.fromCharCode(97 + index)}`)}
-                      />
-                    ))}
+                    {analysisResult.groupRepresentativeComments.map(
+                      (group, index) => (
+                        <input
+                          key={group.groupId}
+                          className="join-item btn btn-sm"
+                          type="radio"
+                          name="consensus-options"
+                          aria-label={`グループ ${String.fromCharCode(
+                            65 + index
+                          )}`}
+                          checked={
+                            consensusTab ===
+                            `group-${String.fromCharCode(97 + index)}`
+                          }
+                          onChange={() =>
+                            setConsensusTab(
+                              `group-${String.fromCharCode(97 + index)}`
+                            )
+                          }
+                        />
+                      )
+                    )}
                   </div>
 
                   {consensusTab === "group-consensus" ? (
                     <div className="space-y-4">
                       {analysisResult.groupAwareConsensus.length > 0 ? (
-                        analysisResult.groupAwareConsensus.slice(0, 5).map((item) => (
-                          <div
-                            key={item.postId}
-                            className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
-                          >
-                            <div className="card-body p-4">
-                              <div className="flex items-start justify-between mb-2">
-                                <span className="badge badge-accent badge-sm">
-                                  コンセンサス スコア: {item.consensusScore.toFixed(3)}
-                                </span>
-                              </div>
-                              {item.post.busStopTag && (
-                                <div className="mb-2">
-                                  <span className="badge badge-outline badge-sm">
-                                    {item.post.busStopTag}
-                                  </span>
-                                </div>
-                              )}
-                              <div className="prose prose-sm dark:prose-invert max-w-none">
-                                {item.post.content.split("\n").map((line, i) => (
-                                  <p key={i} className="mb-1 last:mb-0">
-                                    {line || "\u00A0"}
-                                  </p>
-                                ))}
-                              </div>
-                              <div className="text-xs text-gray-500 mt-2">
-                                {formatRelativeTime(item.post.createdAt)}
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-gray-600 dark:text-gray-400">
-                          コンセンサス意見がありません。
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {(() => {
-                        const groupIndex = consensusTab.charCodeAt(consensusTab.length - 1) - 97;
-                        const group = analysisResult.groupRepresentativeComments[groupIndex];
-                        return group?.comments.length > 0 ? (
-                          group.comments.map((item) => (
+                        analysisResult.groupAwareConsensus
+                          .slice(0, 5)
+                          .map((item) => (
                             <div
                               key={item.postId}
                               className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
                             >
                               <div className="card-body p-4">
                                 <div className="flex items-start justify-between mb-2">
-                                  <span className="badge badge-secondary badge-sm">
-                                    代表性: {item.representativenessScore.toFixed(3)}
+                                  <span className="badge badge-accent badge-sm">
+                                    コンセンサス スコア:{" "}
+                                    {item.consensusScore.toFixed(3)}
                                   </span>
                                 </div>
                                 {item.post.busStopTag && (
@@ -552,11 +537,63 @@ export default function DiscussionDetailPage() {
                                   </div>
                                 )}
                                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                                  {item.post.content.split("\n").map((line, i) => (
-                                    <p key={i} className="mb-1 last:mb-0">
-                                      {line || "\u00A0"}
-                                    </p>
-                                  ))}
+                                  {item.post.content
+                                    .split("\n")
+                                    .map((line, i) => (
+                                      <p key={i} className="mb-1 last:mb-0">
+                                        {line || "\u00A0"}
+                                      </p>
+                                    ))}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-2">
+                                  {formatRelativeTime(item.post.createdAt)}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                      ) : (
+                        <p className="text-gray-600 dark:text-gray-400">
+                          コンセンサス意見がありません。
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {(() => {
+                        const groupIndex =
+                          consensusTab.charCodeAt(consensusTab.length - 1) - 97;
+                        const group =
+                          analysisResult.groupRepresentativeComments[
+                            groupIndex
+                          ];
+                        return group?.comments.length > 0 ? (
+                          group.comments.map((item) => (
+                            <div
+                              key={item.postId}
+                              className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                            >
+                              <div className="card-body p-4">
+                                <div className="flex items-start justify-between mb-2">
+                                  <span className="badge badge-secondary badge-sm">
+                                    代表性:{" "}
+                                    {item.representativenessScore.toFixed(3)}
+                                  </span>
+                                </div>
+                                {item.post.busStopTag && (
+                                  <div className="mb-2">
+                                    <span className="badge badge-outline badge-sm">
+                                      {item.post.busStopTag}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="prose prose-sm dark:prose-invert max-w-none">
+                                  {item.post.content
+                                    .split("\n")
+                                    .map((line, i) => (
+                                      <p key={i} className="mb-1 last:mb-0">
+                                        {line || "\u00A0"}
+                                      </p>
+                                    ))}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-2">
                                   {formatRelativeTime(item.post.createdAt)}
@@ -573,46 +610,48 @@ export default function DiscussionDetailPage() {
                     </div>
                   )}
                 </>
-              ) : !isAnalyzing && (
-                <div className="space-y-4">
-                  {topPosts.length > 0 ? (
-                    topPosts.map((post, index) => (
-                      <div
-                        key={post.id}
-                        className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
-                      >
-                        <div className="card-body p-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <span className="badge badge-primary badge-sm">
-                              #{index + 1}
-                            </span>
-                          </div>
-                          {post.busStopTag && (
-                            <div className="mb-2">
-                              <span className="badge badge-outline badge-sm">
-                                {post.busStopTag}
+              ) : (
+                !isAnalyzing && (
+                  <div className="space-y-4">
+                    {topPosts.length > 0 ? (
+                      topPosts.map((post, index) => (
+                        <div
+                          key={post.id}
+                          className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                        >
+                          <div className="card-body p-4">
+                            <div className="flex items-start justify-between mb-2">
+                              <span className="badge badge-primary badge-sm">
+                                #{index + 1}
                               </span>
                             </div>
-                          )}
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
-                            {post.content.split("\n").map((line, i) => (
-                              <p key={i} className="mb-1 last:mb-0">
-                                {line || "\u00A0"}
-                              </p>
-                            ))}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-2">
-                            {formatRelativeTime(post.createdAt)}
+                            {post.busStopTag && (
+                              <div className="mb-2">
+                                <span className="badge badge-outline badge-sm">
+                                  {post.busStopTag}
+                                </span>
+                              </div>
+                            )}
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                              {post.content.split("\n").map((line, i) => (
+                                <p key={i} className="mb-1 last:mb-0">
+                                  {line || "\u00A0"}
+                                </p>
+                              ))}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-2">
+                              {formatRelativeTime(post.createdAt)}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-600 dark:text-gray-400">
-                      承認された投稿がまだありません。
-                    </p>
-                  )}
-                </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-600 dark:text-gray-400">
+                        承認された投稿がまだありません。
+                      </p>
+                    )}
+                  </div>
+                )
               )}
             </div>
           </div>

@@ -123,7 +123,6 @@ export class NostrService {
 
   async getDiscussionPosts(
     discussionId: string,
-    limit: number = 50,
     busStopTags?: string[]
   ): Promise<Event[]> {
     const filters: Filter[] = []
@@ -134,16 +133,14 @@ export class NostrService {
         filters.push({
           kinds: [1111],
           '#a': [discussionId],
-          '#t': [busStopTag],
-          limit: Math.ceil(limit / busStopTags.length)
+          '#t': [busStopTag]
         })
       })
     } else {
       // バス停指定なしの場合は全投稿を取得
       filters.push({
         kinds: [1111],
-        '#a': [discussionId],
-        limit
+        '#a': [discussionId]
       })
     }
     
@@ -151,22 +148,19 @@ export class NostrService {
   }
 
   async getApprovals(
-    discussionId: string,
-    limit: number = 100
+    discussionId: string
   ): Promise<Event[]> {
     return this.getEvents([
       {
         kinds: [4550],
-        '#a': [discussionId],
-        limit
+        '#a': [discussionId]
       }
     ])
   }
 
   async getApprovalsForPosts(
     postIds: string[],
-    discussionId: string,
-    limit: number = 100
+    discussionId: string
   ): Promise<Event[]> {
     if (postIds.length === 0) {
       return []
@@ -176,8 +170,7 @@ export class NostrService {
       {
         kinds: [4550],
         '#a': [discussionId],
-        '#e': postIds,
-        limit
+        '#e': postIds
       }
     ])
   }

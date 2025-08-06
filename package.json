@@ -16,6 +16,7 @@
     "import-gtfs": "tsx scripts/import-gtfs.ts"
   },
   "dependencies": {
+    "@ai-on-browser/data-analysis-models": "^0.23.0",
     "@googlemaps/google-maps-services-js": "^3.4.1",
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.6.0",

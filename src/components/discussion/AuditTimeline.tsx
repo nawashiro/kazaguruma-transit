@@ -10,6 +10,21 @@ interface AuditTimelineProps {
 }
 
 export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
+  // 投稿IDと承認状況のマッピングを作成
+  const getApprovalStatus = (item: AuditTimelineItem) => {
+    if (item.type !== "post-submitted") return null;
+
+    // post-submitted の場合、item.id が投稿のIDになる
+    // post-approved の場合、item.targetId が承認対象の投稿のIDになる
+    const postId = item.id;
+    const hasApproval = items.some(
+      (approvalItem) =>
+        approvalItem.type === "post-approved" &&
+        approvalItem.targetId === postId
+    );
+
+    return hasApproval ? "approved" : "pending";
+  };
   const [selectedEvent, setSelectedEvent] = useState<AuditTimelineItem | null>(
     null
   );
@@ -236,11 +251,26 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
                 <time>{formatRelativeTime(item.timestamp)}</time>
               </p>
               <div className="timeline-box">
+                {profiles[item.actorPubkey]?.name && (
+                  <p className="text-sm">{profiles[item.actorPubkey].name}</p>
+                )}
                 <div className="join items-start mb-2">
-                  <p className="font-medium">
-                    {profiles[item.actorPubkey]?.name ||
-                      `${hexToNpub(item.actorPubkey).slice(0, 12)}...`}
-                  </p>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {`${hexToNpub(item.actorPubkey).slice(0, 12)}...`}
+                  </span>
+                  {item.type === "post-submitted" &&
+                    (() => {
+                      const approvalStatus = getApprovalStatus(item);
+                      return approvalStatus === "approved" ? (
+                        <div className="badge badge-success badge-sm ml-2">
+                          承認済み
+                        </div>
+                      ) : (
+                        <div className="badge badge-warning badge-sm ml-2">
+                          未承認
+                        </div>
+                      );
+                    })()}
                 </div>
                 <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
                   {item.description}

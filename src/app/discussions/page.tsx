@@ -41,6 +41,7 @@ export default function DiscussionsPage() {
   const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const [requests, setRequests] = useState<DiscussionRequest[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, { name?: string }>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -89,6 +90,34 @@ export default function DiscussionsPage() {
 
       setDiscussions(parsedDiscussions);
       setRequests(parsedRequests);
+
+      // 管理者・モデレーターのプロファイル取得
+      const uniquePubkeys = new Set<string>();
+      uniquePubkeys.add(ADMIN_PUBKEY); // 管理者
+      parsedDiscussions.forEach(discussion => {
+        uniquePubkeys.add(discussion.authorPubkey);
+        discussion.moderators.forEach(mod => uniquePubkeys.add(mod.pubkey));
+      });
+      parsedRequests.forEach(request => {
+        uniquePubkeys.add(request.authorPubkey);
+      });
+      
+      const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
+        const profileEvent = await nostrService.getProfile(pubkey);
+        if (profileEvent) {
+          try {
+            const profile = JSON.parse(profileEvent.content);
+            return [pubkey, { name: profile.name || profile.display_name }];
+          } catch {
+            return [pubkey, {}];
+          }
+        }
+        return [pubkey, {}];
+      });
+      
+      const profileResults = await Promise.all(profilePromises);
+      const profilesMap = Object.fromEntries(profileResults);
+      setProfiles(profilesMap);
     } catch (error) {
       console.error("Failed to load discussions:", error);
     } finally {
@@ -314,7 +343,7 @@ export default function DiscussionsPage() {
                   ))}
                 </div>
               ) : (
-                <AuditTimeline items={auditItems} />
+                <AuditTimeline items={auditItems} profiles={profiles} />
               )}
             </div>
           </div>

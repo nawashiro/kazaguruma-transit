@@ -56,6 +56,7 @@ export default function DiscussionDetailPage() {
   const [posts, setPosts] = useState<DiscussionPost[]>([]);
   const [approvals, setApprovals] = useState<PostApproval[]>([]);
   const [evaluations, setEvaluations] = useState<PostEvaluation[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, { name?: string }>>({});
   const [userEvaluations, setUserEvaluations] = useState<Set<string>>(
     new Set()
   );
@@ -121,6 +122,31 @@ export default function DiscussionDetailPage() {
       setPosts(parsedPosts);
       setApprovals(parsedApprovals);
       setEvaluations(parsedEvaluations);
+      
+      // 承認者・管理者のプロファイル取得（投稿者は除外）
+      const uniquePubkeys = new Set<string>();
+      parsedApprovals.forEach(approval => uniquePubkeys.add(approval.moderatorPubkey));
+      if (parsedDiscussion) {
+        uniquePubkeys.add(parsedDiscussion.authorPubkey);
+        parsedDiscussion.moderators.forEach(mod => uniquePubkeys.add(mod.pubkey));
+      }
+      
+      const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
+        const profileEvent = await nostrService.getProfile(pubkey);
+        if (profileEvent) {
+          try {
+            const profile = JSON.parse(profileEvent.content);
+            return [pubkey, { name: profile.name || profile.display_name }];
+          } catch {
+            return [pubkey, {}];
+          }
+        }
+        return [pubkey, {}];
+      });
+      
+      const profileResults = await Promise.all(profilePromises);
+      const profilesMap = Object.fromEntries(profileResults);
+      setProfiles(profilesMap);
     } catch (error) {
       console.error("Failed to load discussion:", error);
     } finally {
@@ -553,7 +579,7 @@ export default function DiscussionDetailPage() {
           <h2 className="text-xl font-semibold mb-4">監査画面</h2>
           <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="card-body">
-              <AuditTimeline items={auditItems} />
+              <AuditTimeline items={auditItems} profiles={profiles} />
             </div>
           </div>
         </div>

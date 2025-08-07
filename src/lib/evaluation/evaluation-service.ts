@@ -90,8 +90,12 @@ export class EvaluationService {
         };
       }
 
+      // 承認された投稿の評価データのみを抽出
+      const approvedPostIds = new Set(approvedPosts.map(p => p.id));
+      const approvedEvaluations = evaluations.filter(e => approvedPostIds.has(e.postId));
+
       // 評価データを投票データに変換
-      const votes = this.convertEvaluationsToVotes(evaluations, approvedPosts);
+      const votes = this.convertEvaluationsToVotes(approvedEvaluations, approvedPosts);
 
       console.log("投票データ変換完了", {
         votesCount: votes.length,
@@ -137,8 +141,8 @@ export class EvaluationService {
           const post = postMap.get(postId)!;
           if (!post) return null;
           
-          // 全体の賛成率を計算
-          const postEvaluations = evaluations.filter(e => e.postId === postId);
+          // 全体の賛成率を計算（承認された投稿の評価のみ）
+          const postEvaluations = approvedEvaluations.filter(e => e.postId === postId);
           const totalVotes = postEvaluations.length;
           const agreeVotes = postEvaluations.filter(e => e.rating === '+').length;
           const overallAgreePercentage = totalVotes > 0 ? Math.round((agreeVotes / totalVotes) * 100) : 0;

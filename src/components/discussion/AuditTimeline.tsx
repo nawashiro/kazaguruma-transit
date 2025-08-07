@@ -75,6 +75,8 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-label="履歴なし"
+          role="img"
         >
           <path
             strokeLinecap="round"
@@ -102,6 +104,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -118,6 +121,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -134,6 +138,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -150,6 +155,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -166,6 +172,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -182,6 +189,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -198,6 +206,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -231,9 +240,9 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
 
   return (
     <>
-      <ul className="timeline timeline-snap-icon timeline-compact timeline-vertical">
+      <ul className="timeline timeline-snap-icon timeline-compact timeline-vertical" role="list" aria-label="監査タイムライン">
         {items.map((item, index) => (
-          <li key={item.id}>
+          <li key={item.id} role="listitem">
             {index != 0 && <hr />}
 
             <div className="timeline-middle">
@@ -241,6 +250,8 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
                 className={`w-8 h-8 rounded-full flex items-center justify-center ${getColorByType(
                   item.type
                 )}`}
+                role="img"
+                aria-label={`${item.type}アイコン`}
               >
                 {getIconByType(item.type)}
               </div>
@@ -248,7 +259,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
 
             <div className="timeline-start mb-10 pt-2.5">
               <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                <time>{formatRelativeTime(item.timestamp)}</time>
+                <time dateTime={new Date(item.timestamp).toISOString()}>{formatRelativeTime(item.timestamp)}</time>
               </p>
               <div className="timeline-box">
                 {profiles[item.actorPubkey]?.name && (
@@ -279,6 +290,8 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
                 <button
                   onClick={() => setSelectedEvent(item)}
                   className="btn btn-xs btn-outline rounded-full dark:rounded-sm mt-2"
+                  type="button"
+                  aria-label={`${item.type}の技術情報を表示`}
                 >
                   技術情報
                 </button>
@@ -292,13 +305,20 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
 
       {/* イベントJSONモーダル */}
       {selectedEvent && (
-        <dialog className="modal modal-open">
+        <dialog 
+          className="modal modal-open" 
+          role="dialog" 
+          aria-modal="true" 
+          aria-labelledby="event-modal-title"
+        >
           <div className="modal-box max-w-4xl">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-lg">技術情報 - Nostrイベント</h3>
+              <h3 id="event-modal-title" className="font-bold text-lg">技術情報 - Nostrイベント</h3>
               <button
                 onClick={() => setSelectedEvent(null)}
                 className="btn btn-sm btn-circle btn-ghost"
+                type="button"
+                aria-label="モーダルを閉じる"
               >
                 ✕
               </button>
@@ -327,17 +347,24 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
               <button
                 onClick={() => setSelectedEvent(null)}
                 className="btn rounded-full dark:rounded-sm"
+                type="button"
               >
                 閉じる
               </button>
             </div>
           </div>
-          <form
+          <div
             className="modal-backdrop"
             onClick={() => setSelectedEvent(null)}
-          >
-            <button>close</button>
-          </form>
+            role="button"
+            tabIndex={0}
+            aria-label="モーダルの背景をクリックして閉じる"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                setSelectedEvent(null);
+              }
+            }}
+          />
         </dialog>
       )}
     </>

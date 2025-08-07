@@ -47,25 +47,31 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      onClick={handleBackdropClick}
+    <dialog 
+      open 
+      className="modal modal-open"
+      aria-labelledby="login-modal-title"
+      aria-describedby="login-modal-description"
     >
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+      <div className="modal-backdrop" onClick={handleBackdropClick}></div>
+      <div className="modal-box bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">
+          <h2 id="login-modal-title" className="text-xl font-bold">
             {mode === "login" ? "ログイン" : "アカウント作成"}
           </h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             disabled={isLoading}
+            aria-label="モーダルを閉じる"
+            type="button"
           >
             <svg
               className="w-6 h-6"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -77,8 +83,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
           </button>
         </div>
 
-        <div className="mb-4">
-          <div className="join mb-6">
+        <div className="mb-4" id="login-modal-description">
+          <div className="join mb-6" role="group" aria-label="モード選択">
             <input
               className="join-item btn"
               type="radio"
@@ -138,19 +144,22 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 placeholder="表示名を入力してください"
                 disabled={isLoading}
                 maxLength={50}
+                autoComplete="username"
+                aria-describedby="username-help"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p id="username-help" className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 空欄の場合はランダムな名前が生成されます
               </p>
             </div>
           )}
 
           {error && (
-            <div className="alert alert-error">
+            <div className="alert alert-error" role="alert" aria-live="polite">
               <svg
                 className="stroke-current shrink-0 h-6 w-6"
                 fill="none"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -205,6 +214,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -239,6 +249,6 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
           </div>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

@@ -19,18 +19,18 @@ export function PostPreview({
   isLoading = false 
 }: PostPreviewProps) {
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
-      <h3 className="text-lg font-medium mb-3">投稿プレビュー</h3>
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800" role="region" aria-labelledby="preview-title">
+      <h3 id="preview-title" className="text-lg font-medium mb-3">投稿プレビュー</h3>
       
       <div className="mb-4">
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-lg p-4" role="article" aria-label="投稿内容プレビュー">
           {busStopTag && (
             <div className="mb-2">
               <span className="badge badge-primary badge-sm">{busStopTag}</span>
             </div>
           )}
           
-          <div className="prose prose-sm dark:prose-invert max-w-none">
+          <div className="prose prose-sm dark:prose-invert max-w-none" role="document">
             {content.split('\n').map((line, index) => (
               <p key={index} className="mb-2 last:mb-0">
                 {line || '\u00A0'}

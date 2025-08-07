@@ -55,6 +55,8 @@ export function EvaluationComponent({
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-label="評価完了"
+          role="img"
         >
           <path
             strokeLinecap="round"
@@ -91,6 +93,8 @@ export function EvaluationComponent({
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-label="評価完了"
+          role="img"
         >
           <path
             strokeLinecap="round"
@@ -110,15 +114,16 @@ export function EvaluationComponent({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" role="region" aria-labelledby="evaluation-title">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">{title}</h3>
+        <h3 id="evaluation-title" className="text-lg font-medium">{title}</h3>
         <span className="text-sm text-gray-600 dark:text-gray-400">
           残り {remainingCount} 件
         </span>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6" role="article" aria-labelledby="current-post-label">
+        <div id="current-post-label" className="sr-only">現在評価中の投稿</div>
         {currentPost.busStopTag && (
           <div className="mb-3">
             <span className="badge badge-primary badge-sm">
@@ -127,7 +132,7 @@ export function EvaluationComponent({
           </div>
         )}
 
-        <div className="prose prose-sm dark:prose-invert max-w-none mb-6">
+        <div className="prose prose-sm dark:prose-invert max-w-none mb-6" role="document">
           {currentPost.content.split("\n").map((line, index) => (
             <p key={index} className="mb-2 last:mb-0">
               {line || "\u00A0"}
@@ -135,13 +140,15 @@ export function EvaluationComponent({
           ))}
         </div>
 
-        <div className="flex gap-4 justify-center">
+        <div className="flex gap-4 justify-center" role="group" aria-label="投稿の評価">
           <button
             onClick={() => handleEvaluate(currentPost.id, "+")}
             disabled={evaluatingPost !== null}
             className={`btn btn-success btn-lg flex-1 max-w-xs rounded-full dark:rounded-sm ${
               evaluatingPost === currentPost.id ? "loading" : ""
             }`}
+            type="button"
+            aria-label="この投稿に賛成"
           >
             {evaluatingPost === currentPost.id ? (
               ""
@@ -152,6 +159,7 @@ export function EvaluationComponent({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -170,6 +178,8 @@ export function EvaluationComponent({
             className={`btn btn-error btn-lg flex-1 max-w-xs rounded-full dark:rounded-sm ${
               evaluatingPost === currentPost.id ? "loading" : ""
             }`}
+            type="button"
+            aria-label="この投稿に反対"
           >
             {evaluatingPost === currentPost.id ? (
               ""
@@ -180,6 +190,7 @@ export function EvaluationComponent({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -200,6 +211,7 @@ export function EvaluationComponent({
           className="progress progress-primary w-full"
           value={progressPercentage}
           max="100"
+          aria-label={`評価進捗: ${Math.round(progressPercentage)}%完了`}
         ></progress>
       )}
     </div>

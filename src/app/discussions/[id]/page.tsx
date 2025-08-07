@@ -466,7 +466,7 @@ export default function DiscussionDetailPage() {
             </div>
 
             <div>
-              <h2 className="text-xl font-semibold mb-4">主要な意見</h2>
+              <h2 className="text-xl font-semibold mb-4">意見グループ</h2>
 
               {isAnalyzing && (
                 <div className="flex items-center justify-center p-4 mb-4">
@@ -479,35 +479,50 @@ export default function DiscussionDetailPage() {
 
               {analysisResult && !isAnalyzing ? (
                 <>
-                  <div className="join mb-4">
-                    <input
-                      className="join-item btn btn-sm"
-                      type="radio"
-                      name="consensus-options"
-                      aria-label="全体"
-                      checked={consensusTab === "group-consensus"}
-                      onChange={() => setConsensusTab("group-consensus")}
-                    />
+                  <div
+                    className="flex flex-row flex-wrap gap-2 mb-4"
+                    role="tablist"
+                    aria-label="意見タブ"
+                  >
+                    <button
+                      className={`btn border px-3 py-1 h-auto min-h-0 rounded-md font-medium ${
+                        consensusTab === "group-consensus"
+                          ? "btn-primary border-primary text-primary-content"
+                          : "btn-outline hover:border-primary/50 hover:bg-primary/5"
+                      }`}
+                      onClick={() => setConsensusTab("group-consensus")}
+                      role="tab"
+                      aria-selected={consensusTab === "group-consensus"}
+                      aria-label="主要な意見タブ"
+                    >
+                      主要な意見
+                    </button>
                     {analysisResult.groupRepresentativeComments.map(
                       (group, index) => (
-                        <input
+                        <button
                           key={group.groupId}
-                          className="join-item btn btn-sm"
-                          type="radio"
-                          name="consensus-options"
-                          aria-label={`グループ ${String.fromCharCode(
-                            65 + index
-                          )}`}
-                          checked={
+                          className={`btn border px-3 py-1 h-auto min-h-0 rounded-md font-medium ${
                             consensusTab ===
                             `group-${String.fromCharCode(97 + index)}`
-                          }
-                          onChange={() =>
+                              ? "btn-primary border-primary text-primary-content"
+                              : "btn-outline hover:border-primary/50 hover:bg-primary/5"
+                          }`}
+                          onClick={() =>
                             setConsensusTab(
                               `group-${String.fromCharCode(97 + index)}`
                             )
                           }
-                        />
+                          role="tab"
+                          aria-selected={
+                            consensusTab ===
+                            `group-${String.fromCharCode(97 + index)}`
+                          }
+                          aria-label={`グループ ${String.fromCharCode(
+                            65 + index
+                          )}タブ`}
+                        >
+                          グループ {String.fromCharCode(65 + index)}
+                        </button>
                       )
                     )}
                   </div>

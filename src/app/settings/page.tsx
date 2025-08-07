@@ -8,12 +8,10 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import { hexToNpub } from "@/lib/nostr/nostr-utils";
 import { LoginModal } from "@/components/discussion/LoginModal";
-import { CreateAccountModal } from "@/components/discussion/CreateAccountModal";
 import Button from "@/components/ui/Button";
 
 export default function SettingsPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
@@ -39,14 +37,14 @@ export default function SettingsPage() {
 
   const handleCopyPubkey = async () => {
     if (!user.pubkey) return;
-    
+
     try {
       const npubKey = hexToNpub(user.pubkey);
       await navigator.clipboard.writeText(npubKey);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
+      console.error("Failed to copy to clipboard:", error);
     }
   };
 
@@ -95,7 +93,7 @@ export default function SettingsPage() {
                     </label>
                     <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <span className="font-mono text-xs break-all flex-1">
-                        {user.pubkey ? hexToNpub(user.pubkey) : 'N/A'}
+                        {user.pubkey ? hexToNpub(user.pubkey) : "N/A"}
                       </span>
                       {user.pubkey && (
                         <button
@@ -308,11 +306,6 @@ export default function SettingsPage() {
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-      />
-
-      <CreateAccountModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
       />
     </div>
   );

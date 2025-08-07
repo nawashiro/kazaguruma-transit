@@ -114,16 +114,29 @@ export function EvaluationComponent({
   }
 
   return (
-    <div className="space-y-4" role="region" aria-labelledby="evaluation-title">
+    <div
+      className="space-y-4"
+      aria-live="polite"
+      role="region"
+      aria-labelledby="evaluation-title"
+    >
       <div className="flex justify-between items-center">
-        <h3 id="evaluation-title" className="text-lg font-medium">{title}</h3>
+        <h3 id="evaluation-title" className="text-lg font-medium">
+          {title}
+        </h3>
         <span className="text-sm text-gray-600 dark:text-gray-400">
           残り {remainingCount} 件
         </span>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6" role="article" aria-labelledby="current-post-label">
-        <div id="current-post-label" className="sr-only">現在評価中の投稿</div>
+      <div
+        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+        role="article"
+        aria-labelledby="current-post-label"
+      >
+        <div id="current-post-label" className="sr-only">
+          現在評価中の投稿
+        </div>
         {currentPost.busStopTag && (
           <div className="mb-3">
             <span className="badge badge-primary badge-sm">
@@ -132,7 +145,10 @@ export function EvaluationComponent({
           </div>
         )}
 
-        <div className="prose prose-sm dark:prose-invert max-w-none mb-6" role="document">
+        <div
+          className="prose prose-sm dark:prose-invert max-w-none mb-6"
+          role="document"
+        >
           {currentPost.content.split("\n").map((line, index) => (
             <p key={index} className="mb-2 last:mb-0">
               {line || "\u00A0"}
@@ -140,7 +156,11 @@ export function EvaluationComponent({
           ))}
         </div>
 
-        <div className="flex gap-4 justify-center" role="group" aria-label="投稿の評価">
+        <div
+          className="flex gap-4 justify-center"
+          role="group"
+          aria-label="投稿の評価"
+        >
           <button
             onClick={() => handleEvaluate(currentPost.id, "+")}
             disabled={evaluatingPost !== null}

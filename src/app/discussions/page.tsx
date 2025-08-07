@@ -210,7 +210,12 @@ export default function DiscussionsPage() {
 
           <div className="grid lg:grid-cols-2 gap-6">
             <section aria-labelledby="discussions-list-heading">
-              <h2 id="discussions-list-heading" className="text-xl font-semibold mb-4">会話一覧</h2>
+              <h2
+                id="discussions-list-heading"
+                className="text-xl font-semibold mb-4"
+              >
+                会話一覧
+              </h2>
 
               {isLoading ? (
                 <div className="space-y-4">
@@ -237,7 +242,12 @@ export default function DiscussionsPage() {
                               {discussion.description}
                             </p>
                             <div className="flex justify-between items-center mt-2">
-                              <time className="text-xs text-gray-500" dateTime={new Date(discussion.createdAt * 1000).toISOString()}>
+                              <time
+                                className="text-xs text-gray-500"
+                                dateTime={new Date(
+                                  discussion.createdAt * 1000
+                                ).toISOString()}
+                              >
                                 {formatRelativeTime(discussion.createdAt)}
                               </time>
                               <span className="badge badge-outline badge-sm">
@@ -260,7 +270,10 @@ export default function DiscussionsPage() {
             </section>
 
             <section aria-labelledby="request-form-heading">
-              <h2 id="request-form-heading" className="text-xl font-semibold mb-4">
+              <h2
+                id="request-form-heading"
+                className="text-xl font-semibold mb-4"
+              >
                 新しい会話をリクエスト
               </h2>
 
@@ -311,7 +324,9 @@ export default function DiscussionsPage() {
                         autoComplete="off"
                       />
                     </div>
-
+                    <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                      管理者による確認後、会話が作成される場合があります。
+                    </p>
                     <Button
                       type="submit"
                       className={isSubmitting ? "loading" : ""}
@@ -326,10 +341,6 @@ export default function DiscussionsPage() {
                       <p>{isSubmitting ? "" : "リクエストを送信"}</p>
                     </Button>
                   </form>
-
-                  <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-                    <p>管理者による確認後、会話が作成される場合があります。</p>
-                  </div>
                 </div>
               </div>
             </section>
@@ -338,7 +349,9 @@ export default function DiscussionsPage() {
       ) : (
         <main role="tabpanel" aria-labelledby="audit-tab">
           <section aria-labelledby="audit-log-heading">
-            <h2 id="audit-log-heading" className="text-xl font-semibold mb-4">監査ログ</h2>
+            <h2 id="audit-log-heading" className="text-xl font-semibold mb-4">
+              監査ログ
+            </h2>
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
                 {isLoading ? (

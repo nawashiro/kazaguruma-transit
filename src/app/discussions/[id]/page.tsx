@@ -466,7 +466,7 @@ export default function DiscussionDetailPage() {
             </div>
 
             <div>
-              <h2 className="text-xl font-semibold mb-4">意見グループ</h2>
+              <h2 className="text-xl font-semibold mb-4">主要な意見</h2>
 
               {isAnalyzing && (
                 <div className="flex items-center justify-center p-4 mb-4">
@@ -540,8 +540,7 @@ export default function DiscussionDetailPage() {
                               <div className="card-body p-4">
                                 <div className="flex items-start justify-between mb-2">
                                   <span className="badge badge-accent badge-sm">
-                                    コンセンサス スコア:{" "}
-                                    {item.consensusScore.toFixed(3)}
+                                    {item.overallAgreePercentage}% の人が賛成
                                   </span>
                                 </div>
                                 {item.post.busStopTag && (
@@ -589,10 +588,23 @@ export default function DiscussionDetailPage() {
                             >
                               <div className="card-body p-4">
                                 <div className="flex items-start justify-between mb-2">
-                                  <span className="badge badge-secondary badge-sm">
-                                    代表性:{" "}
-                                    {item.representativenessScore.toFixed(3)}
-                                  </span>
+                                  <div className="flex gap-2">
+                                    {item.voteType == "agree" ? (
+                                      <span className="badge badge-success badge-sm">
+                                        {String.fromCharCode(65 + groupIndex)}
+                                        のうち
+                                        {Math.round(item.agreeRatio * 100)}
+                                        %が賛成
+                                      </span>
+                                    ) : (
+                                      <span className="badge badge-error badge-sm">
+                                        {String.fromCharCode(65 + groupIndex)}
+                                        のうち
+                                        {Math.round(item.disagreeRatio * 100)}
+                                        %が反対
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 {item.post.busStopTag && (
                                   <div className="mb-2">

@@ -16,6 +16,9 @@ export interface GroupRepresentativeComment {
   reppnessScore: number;
   zScore: number;
   pValue: number;
+  voteType: "agree" | "disagree";
+  agreeRatio: number;
+  disagreeRatio: number;
 }
 
 export interface ConsensusResult {
@@ -542,6 +545,76 @@ export class PolisConsensus {
   }
 
   /**
+   * 各グループの代表的意見を抽出（賛成・反対両方を考慮）
+   */
+  private getGroupRepresentativeComments(
+    topN: number = 5,
+    zThreshold: number = 1.28
+  ): Record<number, GroupRepresentativeComment[]> {
+    const repnessResults = this.computeRepresentativeness();
+    const groupRepresentativeComments: Record<
+      number,
+      GroupRepresentativeComment[]
+    > = {};
+
+    const uniqueClusters = Array.from(new Set(this.clusterLabels));
+
+    for (const cluster of uniqueClusters) {
+      const clusterComments: GroupRepresentativeComment[] = [];
+
+      for (const tid of this.topicIds) {
+        const key = `${cluster}-${tid}`;
+        const statsData = repnessResults[key];
+
+        if (!statsData) continue;
+
+        // 賛成と反対、どちらの代表性が高いかを判断
+        const agreeScore = statsData.repnessAgree;
+        const disagreeScore = statsData.repnessDisagree;
+
+        let bestScore: number;
+        let bestType: "agree" | "disagree";
+        let bestPValue: number;
+
+        if (agreeScore > disagreeScore) {
+          bestScore = agreeScore;
+          bestType = "agree";
+          bestPValue = statsData.pAgree;
+        } else {
+          bestScore = disagreeScore;
+          bestType = "disagree";
+          bestPValue = statsData.pDisagree;
+        }
+
+        // Z値の近似計算
+        const zScore =
+          bestPValue > 0 ? this.inverseNormalCDF(1 - bestPValue) : 0;
+
+        // 統計的に有意かつ代表性スコアが正の場合のみ追加
+        if (zScore >= zThreshold && bestScore > 0) {
+          clusterComments.push({
+            tid,
+            reppnessScore: bestScore,
+            zScore,
+            pValue: bestPValue,
+            voteType: bestType,
+            agreeRatio: statsData.agreeRatio,
+            disagreeRatio: statsData.disagreeRatio,
+          });
+        }
+      }
+
+      // 代表性スコアで降順にソート
+      clusterComments.sort((a, b) => b.reppnessScore - a.reppnessScore);
+
+      // 上位N件を選択
+      groupRepresentativeComments[cluster] = clusterComments.slice(0, topN);
+    }
+
+    return groupRepresentativeComments;
+  }
+
+  /**
    * 各グループの賛成タイプの代表的意見を抽出
    */
   private getGroupAgreeComments(
@@ -576,6 +649,9 @@ export class PolisConsensus {
             reppnessScore: repnessScore,
             zScore,
             pValue,
+            voteType: "agree",
+            agreeRatio: statsData.agreeRatio,
+            disagreeRatio: statsData.disagreeRatio,
           });
         }
       }
@@ -633,8 +709,11 @@ export class PolisConsensus {
     // グループ考慮型コンセンサス検出
     const groupAwareConsensus = this.detectGroupAwareConsensus();
 
-    // 各グループの賛成タイプの代表的意見を抽出
-    const groupRepresentativeComments = this.getGroupAgreeComments(5, 1.28);
+    // 各グループの代表的意見を抽出（賛成・反対両方）
+    const groupRepresentativeComments = this.getGroupRepresentativeComments(
+      5,
+      0
+    );
 
     return {
       groupAwareConsensus,

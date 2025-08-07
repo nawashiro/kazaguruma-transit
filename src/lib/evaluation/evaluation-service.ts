@@ -14,6 +14,9 @@ export interface GroupConsensusData {
     representativenessScore: number;
     zScore: number;
     pValue: number;
+    voteType: 'agree' | 'disagree';
+    agreeRatio: number;
+    disagreeRatio: number;
   }>;
 }
 
@@ -22,6 +25,7 @@ export interface EvaluationAnalysisResult {
     postId: string;
     post: DiscussionPost;
     consensusScore: number;
+    overallAgreePercentage: number;
   }>;
   groupRepresentativeComments: GroupConsensusData[];
 }
@@ -129,12 +133,24 @@ export class EvaluationService {
 
       // グループ考慮型コンセンサス結果を処理
       const groupAwareConsensus = Object.entries(result.groupAwareConsensus)
-        .map(([postId, consensusScore]) => ({
-          postId,
-          post: postMap.get(postId)!,
-          consensusScore,
-        }))
-        .filter((item) => item.post) // 投稿が存在する場合のみ
+        .map(([postId, consensusScore]) => {
+          const post = postMap.get(postId)!;
+          if (!post) return null;
+          
+          // 全体の賛成率を計算
+          const postEvaluations = evaluations.filter(e => e.postId === postId);
+          const totalVotes = postEvaluations.length;
+          const agreeVotes = postEvaluations.filter(e => e.rating === '+').length;
+          const overallAgreePercentage = totalVotes > 0 ? Math.round((agreeVotes / totalVotes) * 100) : 0;
+          
+          return {
+            postId,
+            post,
+            consensusScore,
+            overallAgreePercentage,
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null) // 投稿が存在する場合のみ
         .sort((a, b) => b.consensusScore - a.consensusScore)
         .slice(0, 10); // 上位10件
 
@@ -152,6 +168,9 @@ export class EvaluationService {
             representativenessScore: comment.reppnessScore,
             zScore: comment.zScore,
             pValue: comment.pValue,
+            voteType: comment.voteType,
+            agreeRatio: comment.agreeRatio,
+            disagreeRatio: comment.disagreeRatio,
           }))
           .filter((item) => item.post) // 投稿が存在する場合のみ
           .slice(0, 5); // 各グループ上位5件

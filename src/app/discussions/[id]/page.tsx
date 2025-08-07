@@ -466,7 +466,11 @@ export default function DiscussionDetailPage() {
             </div>
 
             <div>
-              <h2 className="text-xl font-semibold mb-4">主要な意見</h2>
+              <h2 className="text-xl font-semibold mb-4">意見グループ</h2>
+
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                統計解析によって、投票が分析されます。
+              </p>
 
               {isAnalyzing && (
                 <div className="flex items-center justify-center p-4 mb-4">
@@ -493,9 +497,9 @@ export default function DiscussionDetailPage() {
                       onClick={() => setConsensusTab("group-consensus")}
                       role="tab"
                       aria-selected={consensusTab === "group-consensus"}
-                      aria-label="主要な意見タブ"
+                      aria-label="共通の意見タブ"
                     >
-                      主要な意見
+                      共通の意見
                     </button>
                     {analysisResult.groupRepresentativeComments.map(
                       (group, index) => (

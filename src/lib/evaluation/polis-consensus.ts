@@ -712,7 +712,7 @@ export class PolisConsensus {
     // 各グループの代表的意見を抽出（賛成・反対両方）
     const groupRepresentativeComments = this.getGroupRepresentativeComments(
       5,
-      0
+      1
     );
 
     return {

@@ -101,7 +101,7 @@ export default function DiscussionsPage() {
         discussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
       });
       parsedRequests.forEach((request) => {
-        uniquePubkeys.add(request.authorPubkey);
+        uniquePubkeys.add(request.requesterPubkey);
       });
 
       const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {

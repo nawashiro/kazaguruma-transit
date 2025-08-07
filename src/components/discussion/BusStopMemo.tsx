@@ -51,7 +51,6 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
       // Step 1: バス停タグ付きの投稿を取得
       const postsEvents = await nostrService.getDiscussionPosts(
         config.busStopDiscussionId,
-        50,
         busStops
       );
 
@@ -161,7 +160,6 @@ export async function getBusStopMemoData(
   try {
     const postsEvents = await nostrService.getDiscussionPosts(
       config.busStopDiscussionId,
-      50,
       busStops
     );
 

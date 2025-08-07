@@ -68,7 +68,6 @@ export function BusStopDiscussion({
       // Step 1: バス停タグ付きの投稿を取得
       const postsEvents = await nostrService.getDiscussionPosts(
         config.busStopDiscussionId,
-        50,
         busStops
       );
 

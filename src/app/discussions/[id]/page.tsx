@@ -433,12 +433,13 @@ export default function DiscussionDetailPage() {
         ))}
       </div>
 
-      <div className="join mb-6">
+      <nav role="tablist" aria-label="会話メニュー" className="join mb-6">
         <input
           className="join-item btn"
           type="radio"
           name="tab-options"
           aria-label="会話"
+          role="tab"
           checked={activeTab === "main"}
           onChange={() => setActiveTab("main")}
         />
@@ -447,26 +448,27 @@ export default function DiscussionDetailPage() {
           type="radio"
           name="tab-options"
           aria-label="監査ログ"
+          role="tab"
           checked={activeTab === "audit"}
           onChange={() => setActiveTab("audit")}
         />
-      </div>
+      </nav>
 
       {activeTab === "main" ? (
-        <div className="grid lg:grid-cols-2 gap-8">
+        <main role="tabpanel" aria-labelledby="main-tab" className="grid lg:grid-cols-2 gap-8">
           <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold mb-4">投稿を評価</h2>
+            <section aria-labelledby="evaluation-heading">
+              <h2 id="evaluation-heading" className="text-xl font-semibold mb-4">投稿を評価</h2>
               <EvaluationComponent
                 posts={postsWithStats}
                 onEvaluate={handleEvaluate}
                 userEvaluations={userEvaluations}
                 isRandomOrder={true}
               />
-            </div>
+            </section>
 
-            <div>
-              <h2 className="text-xl font-semibold mb-4">意見グループ</h2>
+            <section aria-labelledby="opinion-groups-heading">
+              <h2 id="opinion-groups-heading" className="text-xl font-semibold mb-4">意見グループ</h2>
 
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 統計解析によって、投票が分析されます。
@@ -684,11 +686,12 @@ export default function DiscussionDetailPage() {
                   </div>
                 )
               )}
-            </div>
+            </section>
           </div>
 
-          <div>
-            <h2 className="text-xl font-semibold mb-4">新しい投稿</h2>
+          <aside>
+            <section aria-labelledby="new-post-heading">
+              <h2 id="new-post-heading" className="text-xl font-semibold mb-4">新しい投稿</h2>
 
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
@@ -712,6 +715,7 @@ export default function DiscussionDetailPage() {
                         required
                         disabled={isSubmitting}
                         maxLength={280}
+                        autoComplete="off"
                       />
                       <div className="text-xs text-gray-500 mt-1">
                         {postForm.content.length}/280文字
@@ -729,6 +733,7 @@ export default function DiscussionDetailPage() {
                           onChange={(e) => handleRouteSelect(e.target.value)}
                           className="select select-bordered w-full"
                           disabled={isSubmitting}
+                          autoComplete="off"
                         >
                           <option value="">ルートを選択してください</option>
                           {busStops.map((route) => (
@@ -749,6 +754,7 @@ export default function DiscussionDetailPage() {
                             }
                             className="select select-bordered w-full"
                             disabled={isSubmitting}
+                            autoComplete="off"
                           >
                             <option value="">バス停を選択してください</option>
                             {busStops
@@ -792,17 +798,20 @@ export default function DiscussionDetailPage() {
                 )}
               </div>
             </div>
-          </div>
-        </div>
+            </section>
+          </aside>
+        </main>
       ) : (
-        <div>
-          <h2 className="text-xl font-semibold mb-4">監査画面</h2>
-          <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="card-body">
-              <AuditTimeline items={auditItems} profiles={profiles} />
+        <main role="tabpanel" aria-labelledby="audit-tab">
+          <section aria-labelledby="audit-screen-heading">
+            <h2 id="audit-screen-heading" className="text-xl font-semibold mb-4">監査画面</h2>
+            <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="card-body">
+                <AuditTimeline items={auditItems} profiles={profiles} />
+              </div>
             </div>
-          </div>
-        </div>
+          </section>
+        </main>
       )}
 
       <LoginModal

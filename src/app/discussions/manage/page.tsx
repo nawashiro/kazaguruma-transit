@@ -302,8 +302,8 @@ export default function DiscussionManagePage() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          <div>
-            <h2 className="text-xl font-semibold mb-4">新しい会話作成</h2>
+          <section aria-labelledby="create-discussion-heading">
+            <h2 id="create-discussion-heading" className="text-xl font-semibold mb-4">新しい会話作成</h2>
 
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
@@ -327,6 +327,7 @@ export default function DiscussionManagePage() {
                       required
                       disabled={isSubmitting}
                       maxLength={100}
+                      autoComplete="off"
                     />
                   </div>
 
@@ -348,6 +349,7 @@ export default function DiscussionManagePage() {
                       required
                       disabled={isSubmitting}
                       maxLength={500}
+                      autoComplete="off"
                     />
                   </div>
 
@@ -364,6 +366,7 @@ export default function DiscussionManagePage() {
                         className="input input-bordered flex-1"
                         placeholder="npub形式の公開鍵"
                         disabled={isSubmitting}
+                        autoComplete="off"
                       />
                       <Button
                         type="button"
@@ -420,11 +423,11 @@ export default function DiscussionManagePage() {
                 </form>
               </div>
             </div>
-          </div>
+          </section>
 
           <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold mb-4">既存の会話</h2>
+            <section aria-labelledby="existing-discussions-heading">
+              <h2 id="existing-discussions-heading" className="text-xl font-semibold mb-4">既存の会話</h2>
 
               {isLoading ? (
                 <div className="space-y-3">
@@ -463,6 +466,7 @@ export default function DiscussionManagePage() {
                                 required
                                 disabled={isSubmitting}
                                 maxLength={100}
+                                autoComplete="off"
                               />
                             </div>
 
@@ -483,6 +487,7 @@ export default function DiscussionManagePage() {
                                 required
                                 disabled={isSubmitting}
                                 maxLength={500}
+                                autoComplete="off"
                               />
                             </div>
 
@@ -500,6 +505,7 @@ export default function DiscussionManagePage() {
                                   className="input input-bordered flex-1"
                                   placeholder="npub形式の公開鍵"
                                   disabled={isSubmitting}
+                                  autoComplete="off"
                                 />
                                 <Button
                                   type="button"
@@ -618,9 +624,9 @@ export default function DiscussionManagePage() {
                   会話はありません。
                 </p>
               )}
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold mb-4">リクエスト一覧</h2>
+            </section>
+            <section aria-labelledby="requests-heading">
+              <h2 id="requests-heading" className="text-xl font-semibold mb-4">リクエスト一覧</h2>
 
               {isLoading ? (
                 <div className="space-y-3">
@@ -664,7 +670,7 @@ export default function DiscussionManagePage() {
                   リクエストはありません。
                 </p>
               )}
-            </div>
+            </section>
           </div>
         </div>
       </div>

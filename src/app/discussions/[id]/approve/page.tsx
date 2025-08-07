@@ -216,12 +216,13 @@ export default function PostApprovalPage() {
           <p className="text-gray-600 dark:text-gray-400">{discussion.title}</p>
         </div>
 
-        <div className="join mb-6">
+        <nav role="tablist" aria-label="投稿管理メニュー" className="join mb-6">
           <input
             className="join-item btn"
             type="radio"
             name="post-status"
             aria-label={`未承認投稿 (${pendingPosts.length})`}
+            role="tab"
             checked={activeTab === "pending"}
             onChange={() => setActiveTab("pending")}
           />
@@ -230,22 +231,26 @@ export default function PostApprovalPage() {
             type="radio"
             name="post-status"
             aria-label={`承認済み投稿 (${approvedPosts.length})`}
+            role="tab"
             checked={activeTab === "approved"}
             onChange={() => setActiveTab("approved")}
           />
-        </div>
+        </nav>
 
         {activeTab === "pending" ? (
-          <div>
-            <h2 className="text-xl font-semibold mb-4">未承認投稿</h2>
+          <main role="tabpanel" aria-labelledby="pending-tab">
+            <section aria-labelledby="pending-posts-heading">
+              <h2 id="pending-posts-heading" className="text-xl font-semibold mb-4">未承認投稿</h2>
 
-            {pendingPosts.length === 0 ? (
+              {pendingPosts.length === 0 ? (
               <div className="text-center py-8">
                 <svg
                   className="mx-auto h-12 w-12 text-gray-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-label="すべて承認済み"
+                  role="img"
                 >
                   <path
                     strokeLinecap="round"
@@ -314,10 +319,12 @@ export default function PostApprovalPage() {
                 ))}
               </div>
             )}
-          </div>
+            </section>
+          </main>
         ) : (
-          <div>
-            <h2 className="text-xl font-semibold mb-4">承認済み投稿</h2>
+          <main role="tabpanel" aria-labelledby="approved-tab">
+            <section aria-labelledby="approved-posts-heading">
+              <h2 id="approved-posts-heading" className="text-xl font-semibold mb-4">承認済み投稿</h2>
 
             {approvedPosts.length === 0 ? (
               <div className="text-center py-8">
@@ -326,6 +333,8 @@ export default function PostApprovalPage() {
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-label="投稿なし"
+                  role="img"
                 >
                   <path
                     strokeLinecap="round"
@@ -410,7 +419,8 @@ export default function PostApprovalPage() {
                 })}
               </div>
             )}
-          </div>
+            </section>
+          </main>
         )}
       </div>
     </ModeratorCheck>

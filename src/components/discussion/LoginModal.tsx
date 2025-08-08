@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -18,12 +19,16 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     e.preventDefault();
     if (isLoading) return;
 
+    if (mode === "create" && !username.trim()) {
+      return;
+    }
+
     setIsLoading(true);
     try {
       if (mode === "login") {
         await login();
       } else {
-        await createAccount(username.trim() || undefined);
+        await createAccount(username.trim());
       }
       onClose();
       setUsername("");
@@ -43,6 +48,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       onClose();
     }
   };
+
+  useRubyfulRun([mode], true);
 
   if (!isOpen) return null;
 
@@ -101,23 +108,26 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         </div>
 
         <div className="mb-4" id="login-modal-description">
-          <h2 id="login-modal-title" className="text-xl font-bold mb-4">
+          <h2
+            id="login-modal-title"
+            className="text-xl font-bold mb-4 ruby-text"
+          >
             {mode === "login" ? "ログイン" : "アカウント作成"}
           </h2>
 
           {mode === "login" ? (
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 ruby-text">
               保存されているパスキーを使用してログインします。端末の生体認証またはPINを使用してください。
             </p>
           ) : (
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 ruby-text">
               新しいパスキーが作成され、あなたのデバイスに安全に保存されます。端末の生体認証またはPINを使用してください。
             </p>
           )}
         </div>
 
         {mode == "create" && (
-          <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 mb-4 text-blue-800 dark:text-blue-200">
+          <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 mb-4 text-blue-800 dark:text-blue-200 ruby-text">
             <div className="flex items-start gap-2">
               <svg
                 className="w-5 h-5 mt-0.5 shrink-0"
@@ -157,9 +167,9 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             <div>
               <label
                 htmlFor="username"
-                className="block text-sm font-medium mb-2"
+                className="block text-sm font-medium mb-2 ruby-text"
               >
-                ユーザー名（任意）
+                ユーザー名
               </label>
               <input
                 type="text"
@@ -172,13 +182,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 maxLength={50}
                 autoComplete="off"
                 aria-describedby="username-help"
+                required
               />
-              <p
-                id="username-help"
-                className="text-xs text-gray-500 dark:text-gray-400 mt-1"
-              >
-                空欄の場合はランダムな名前が生成されます
-              </p>
             </div>
           )}
 
@@ -215,7 +220,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
               className={`btn btn-primary flex-1 rounded-full dark:rounded-sm ${
                 isLoading ? "loading" : ""
               }`}
-              disabled={isLoading}
+              disabled={isLoading || (mode === "create" && !username.trim())}
             >
               {isLoading
                 ? ""

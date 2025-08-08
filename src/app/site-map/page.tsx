@@ -121,7 +121,7 @@ export default function SiteMapPage() {
             href="https://docs.google.com/forms/d/e/1FAIpQLSdX33xU9DuxS5X0F13yeBNY2aeuttmm98lxVOmPLJjqca0RFw/viewform?usp=dialog"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary underline hover:no-underline"
+            className="link"
           >
             こちらのフォーム
           </a>

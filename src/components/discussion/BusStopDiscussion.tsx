@@ -227,13 +227,13 @@ export function BusStopDiscussion({
 
       {/* Post form */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <h3 className="text-lg font-medium mb-4">バス停メモを投稿</h3>
+        <h3 className="text-lg font-medium mb-4 ruby-text">バス停メモを投稿</h3>
 
         {!showPreview ? (
           <div className="space-y-4">
             <div>
               <label htmlFor="post-content" className="label">
-                <span className="label-text">投稿内容 *</span>
+                <span className="label-text ruby-text">投稿内容 *</span>
               </label>
               <textarea
                 id="post-content"
@@ -250,14 +250,14 @@ export function BusStopDiscussion({
                 disabled={isSubmitting}
                 maxLength={280}
               />
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-xs text-gray-500 mt-1 ruby-text">
                 {postForm.content.length}/280文字
               </div>
             </div>
 
             <div>
               <label htmlFor="bus-stop-tag" className="label">
-                <span className="label-text">バス停 *</span>
+                <span className="label-text ruby-text">バス停 *</span>
               </label>
               <select
                 id="bus-stop-tag"

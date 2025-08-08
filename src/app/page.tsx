@@ -14,7 +14,11 @@ import { logger } from "@/utils/logger";
 import RateLimitModal from "@/components/features/RateLimitModal";
 import FirstVisitGuideModal from "@/components/features/FirstVisitGuideModal";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
-import { BusStopDiscussion, BusStopMemo, getBusStopMemoData } from "@/components/discussion";
+import {
+  BusStopDiscussion,
+  BusStopMemo,
+  getBusStopMemoData,
+} from "@/components/discussion";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import type { PostWithStats } from "@/types/discussion";
 
@@ -127,7 +131,9 @@ export default function Home() {
   const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
   const [prioritizeSpeed, setPrioritizeSpeed] = useState<boolean>(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [memoData, setMemoData] = useState<Map<string, PostWithStats>>(new Map());
+  const [memoData, setMemoData] = useState<Map<string, PostWithStats>>(
+    new Map()
+  );
 
   // URLパラメータから目的地情報を読み取る
   useEffect(() => {
@@ -173,7 +179,7 @@ export default function Home() {
     if (routeInfo && routeInfo.type !== "none" && isDiscussionsEnabled()) {
       const busStops = [
         routeInfo.originStop.stopName,
-        routeInfo.destinationStop.stopName
+        routeInfo.destinationStop.stopName,
       ].filter((stop, index, arr) => arr.indexOf(stop) === index);
 
       getBusStopMemoData(busStops).then(setMemoData);
@@ -584,8 +590,10 @@ export default function Home() {
                       <BusStopMemo
                         busStops={[
                           routeInfo.originStop.stopName,
-                          routeInfo.destinationStop.stopName
-                        ].filter((stop, index, arr) => arr.indexOf(stop) === index)}
+                          routeInfo.destinationStop.stopName,
+                        ].filter(
+                          (stop, index, arr) => arr.indexOf(stop) === index
+                        )}
                       />
                     </div>
                   )}
@@ -615,8 +623,10 @@ export default function Home() {
                       <BusStopDiscussion
                         busStops={[
                           routeInfo.originStop.stopName,
-                          routeInfo.destinationStop.stopName
-                        ].filter((stop, index, arr) => arr.indexOf(stop) === index)}
+                          routeInfo.destinationStop.stopName,
+                        ].filter(
+                          (stop, index, arr) => arr.indexOf(stop) === index
+                        )}
                         className="border-t border-gray-200 dark:border-gray-700 pt-8"
                       />
                     </div>

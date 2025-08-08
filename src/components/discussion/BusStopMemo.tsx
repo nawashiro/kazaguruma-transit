@@ -19,6 +19,7 @@ import type {
   PostEvaluation,
   PostWithStats,
 } from "@/types/discussion";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface BusStopMemoProps {
   busStops: string[];
@@ -40,6 +41,8 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
       }),
     [config.relays]
   );
+
+  useRubyfulRun([topPostsByStop.size], true);
 
   const loadMemoData = useCallback(async () => {
     if (busStops.length === 0) {
@@ -134,7 +137,7 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
               コミュニティによるメモ
             </span>
           </div>
-          <p className="text-sm text-blue-900 dark:text-blue-100">
+          <p className="text-sm text-blue-900 dark:text-blue-100 ruby-text">
             {topPost.content}
           </p>
         </div>

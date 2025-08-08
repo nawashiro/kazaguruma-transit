@@ -7,7 +7,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
+import { isDiscussionsEnabled, buildDiscussionId } from "@/lib/config/discussion-config";
 import { LoginModal } from "@/components/discussion/LoginModal";
 import { PostPreview } from "@/components/discussion/PostPreview";
 import { EvaluationComponent } from "@/components/discussion/EvaluationComponent";
@@ -102,9 +102,9 @@ export default function DiscussionDetailPage() {
         await Promise.all([
           nostrService.getDiscussions(ADMIN_PUBKEY),
           nostrService.getDiscussionPosts(
-            `34550:${ADMIN_PUBKEY}:${discussionId}`
+            buildDiscussionId(ADMIN_PUBKEY, discussionId)
           ),
-          nostrService.getApprovals(`34550:${ADMIN_PUBKEY}:${discussionId}`),
+          nostrService.getApprovals(buildDiscussionId(ADMIN_PUBKEY, discussionId)),
         ]);
 
       const parsedDiscussion = discussionEvents
@@ -128,7 +128,7 @@ export default function DiscussionDetailPage() {
       const postIds = parsedPosts.map((post) => post.id);
       const evaluationsEvents = await nostrService.getEvaluationsForPosts(
         postIds,
-        `34550:${ADMIN_PUBKEY}:${discussionId}`
+        buildDiscussionId(ADMIN_PUBKEY, discussionId)
       );
 
       const parsedEvaluations = evaluationsEvents

@@ -7,7 +7,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
+import { isDiscussionsEnabled, buildDiscussionId } from "@/lib/config/discussion-config";
 import {
   ModeratorCheck,
   PermissionError,
@@ -65,9 +65,9 @@ export default function PostApprovalPage() {
         await Promise.all([
           nostrService.getDiscussions(ADMIN_PUBKEY),
           nostrService.getDiscussionPosts(
-            `34550:${ADMIN_PUBKEY}:${discussionId}`
+            buildDiscussionId(ADMIN_PUBKEY, discussionId)
           ),
-          nostrService.getApprovals(`34550:${ADMIN_PUBKEY}:${discussionId}`),
+          nostrService.getApprovals(buildDiscussionId(ADMIN_PUBKEY, discussionId)),
         ]);
 
       const parsedDiscussion = discussionEvents

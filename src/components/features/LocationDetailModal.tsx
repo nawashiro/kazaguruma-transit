@@ -16,12 +16,9 @@ export default function LocationDetailModal({
 }: LocationDetailModalProps) {
   const modalRef = useRef<HTMLDialogElement>(null);
 
-  // モーダルの開閉状態を制御
   useEffect(() => {
     if (location && modalRef.current) {
       modalRef.current.showModal();
-    } else if (modalRef.current) {
-      modalRef.current.close();
     }
   }, [location]);
 
@@ -120,8 +117,8 @@ export default function LocationDetailModal({
           <button
             className="btn btn-primary inline ruby-text rounded-full dark:rounded-sm min-h-10 h-fit"
             onClick={() => {
+              modalRef.current?.close();
               onGoToLocation(location);
-              onClose();
             }}
           >
             <span>ここへ行く</span>

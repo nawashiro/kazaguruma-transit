@@ -105,7 +105,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
                 isDeparture ? "btn-active btn-primary" : ""
               }`}
               onClick={() => handleTimeTypeChange(true)}
-              data-testid="departure-tab"
+              data-testid="departure-radio"
               disabled={disabled}
               aria-checked={isDeparture}
               role="radio"
@@ -118,7 +118,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
                 !isDeparture ? "btn-active btn-primary" : ""
               }`}
               onClick={() => handleTimeTypeChange(false)}
-              data-testid="arrival-tab"
+              data-testid="arrival-radio"
               disabled={disabled}
               aria-checked={!isDeparture}
               role="radio"

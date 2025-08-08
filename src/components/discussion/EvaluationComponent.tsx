@@ -164,7 +164,7 @@ export function EvaluationComponent({
           <button
             onClick={() => handleEvaluate(currentPost.id, "+")}
             disabled={evaluatingPost !== null}
-            className={`btn btn-success btn-lg flex-1 max-w-xs rounded-full dark:rounded-sm ${
+            className={`btn btn-primary btn-lg flex-1 max-w-xs rounded-full dark:rounded-sm ${
               evaluatingPost === currentPost.id ? "loading" : ""
             }`}
             type="button"
@@ -195,7 +195,7 @@ export function EvaluationComponent({
           <button
             onClick={() => handleEvaluate(currentPost.id, "-")}
             disabled={evaluatingPost !== null}
-            className={`btn btn-error btn-lg flex-1 max-w-xs rounded-full dark:rounded-sm ${
+            className={`btn btn-warning btn-lg flex-1 max-w-xs rounded-full dark:rounded-sm ${
               evaluatingPost === currentPost.id ? "loading" : ""
             }`}
             type="button"

@@ -327,7 +327,7 @@ export default function PostApprovalPage() {
                             <button
                               onClick={() => handleApprove(post)}
                               disabled={processingPostId === post.id}
-                              className="btn btn-success rounded-full dark:rounded-sm ruby-text success-content"
+                              className="btn btn-primary rounded-full dark:rounded-sm ruby-text"
                             >
                               <span>
                                 {processingPostId === post.id ? "" : "承認"}
@@ -394,7 +394,7 @@ export default function PostApprovalPage() {
                         <div className="card-body">
                           <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-2">
-                              <span className="badge badge-success badge-sm success-content">
+                              <span className="badge badge-primary badge-sm">
                                 承認済み
                               </span>
                               {post.busStopTag && (
@@ -441,7 +441,7 @@ export default function PostApprovalPage() {
                               <button
                                 onClick={() => handleReject(post)}
                                 disabled={processingPostId === post.id}
-                                className="btn btn-error rounded-full dark:rounded-sm ruby-text error-content"
+                                className="btn btn-warning rounded-full dark:rounded-sm ruby-text error-content"
                               >
                                 <span>
                                   {processingPostId === post.id

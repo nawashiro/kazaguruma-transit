@@ -100,3 +100,7 @@ textarea:focus-visible {
     color: SelectedItemText;
   }
 }
+
+li {
+  word-break: auto-phrase;
+}

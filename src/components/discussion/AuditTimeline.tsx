@@ -284,7 +284,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
                     (() => {
                       const approvalStatus = getApprovalStatus(item);
                       return approvalStatus === "approved" ? (
-                        <span className="badge badge-success badge-sm ml-2">
+                        <span className="badge badge-primary badge-sm ml-2">
                           承認済み
                         </span>
                       ) : (

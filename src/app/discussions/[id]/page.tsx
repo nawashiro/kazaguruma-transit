@@ -500,7 +500,7 @@ export default function DiscussionDetailPage() {
               </h2>
 
               <p className="text-gray-600 dark:text-gray-400 mb-4 ruby-text">
-                投票を統計解析して、意見はグループ分けされます。どのグループでも共通して評価された意見が評価されます。
+                投票を統計解析して、意見はグループ分けされます。どのグループでも共通した意見が評価されます。
               </p>
 
               {isAnalyzing && (
@@ -576,7 +576,7 @@ export default function DiscussionDetailPage() {
                             >
                               <div className="card-body p-4">
                                 <div className="flex items-start justify-between mb-2">
-                                  <span className="badge badge-sm badge-success">
+                                  <span className="badge badge-sm badge-primary">
                                     {item.overallAgreePercentage}% の人が賛成
                                   </span>
                                 </div>
@@ -627,7 +627,7 @@ export default function DiscussionDetailPage() {
                                 <div className="flex items-start justify-between mb-2">
                                   <div className="flex gap-2">
                                     {item.voteType == "agree" ? (
-                                      <span className="badge badge-sm badge-success">
+                                      <span className="badge badge-sm badge-primary">
                                         {String.fromCharCode(65 + groupIndex)}
                                         のうち
                                         {Math.round(item.agreeRatio * 100)}

@@ -300,7 +300,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
                 {getDetailContent(item)}
                 <button
                   onClick={() => setSelectedEvent(item)}
-                  className="btn btn-sm btn-outline rounded-full dark:rounded-sm mt-2 ruby-text"
+                  className="btn btn-sm btn-outline rounded-full dark:rounded-sm mt-2 ruby-text h-fit min-h-8"
                   type="button"
                   aria-label={`${item.type}の技術情報を表示`}
                 >

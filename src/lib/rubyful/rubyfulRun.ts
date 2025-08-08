@@ -62,45 +62,50 @@ export const useRubyfulRun = (trigger: unknown[], isLoaded: boolean) => {
   }, []);
 
   useEffect(() => {
-    // Rubyfulライブラリが未読み込みの場合は処理をスキップ
-    if (!isLoaded) return;
+    const run = async () => {
+      // Rubyfulライブラリが未読み込みの場合は処理をスキップ
+      if (!isLoaded) return;
 
-    try {
-      // 既存のRubyfulボタンを削除（重複防止）
-      const existingButtons = document.getElementsByClassName(
-        "rubyfuljs-button"
-      ) as HTMLCollectionOf<HTMLButtonElement>;
+      try {
+        // 既存のRubyfulボタンを削除（重複防止）
+        const existingButtons = document.getElementsByClassName(
+          "rubyfuljs-button"
+        ) as HTMLCollectionOf<HTMLButtonElement>;
 
-      for (const button of existingButtons) {
-        button.remove();
-      }
+        for (const button of existingButtons) {
+          button.remove();
+        }
 
-      // Rubyfulライブラリの設定
-      window.RubyfulJsApp = {
-        refPaths: ["//*[contains(@class,'ruby-text')]"],
-        defaultDisplay: isRubyVisible,
-        ...window.RubyfulJsApp,
-      };
-
-      // Rubyfulの手動初期化実行
-      window.RubyfulJsApp.manualLoadProcess?.();
-
-      // ルビ表示切り替えボタンにイベントリスナーを設定
-      const rubyfulButton = document.getElementsByClassName("rubyfuljs-button");
-
-      if (rubyfulButton.length > 0) {
-        rubyfulButton[0].addEventListener("click", handleToggleRuby);
-
-        // クリーンアップ関数でイベントリスナーを削除
-        return () => {
-          if (rubyfulButton[0]) {
-            rubyfulButton[0].removeEventListener("click", handleToggleRuby);
-          }
+        // Rubyfulライブラリの設定
+        window.RubyfulJsApp = {
+          refPaths: ["//*[contains(@class,'ruby-text')]"],
+          defaultDisplay: isRubyVisible,
+          ...window.RubyfulJsApp,
         };
+
+        // Rubyfulの手動初期化実行
+        await window.RubyfulJsApp.manualLoadProcess?.();
+
+        // ルビ表示切り替えボタンにイベントリスナーを設定
+        const rubyfulButton =
+          document.getElementsByClassName("rubyfuljs-button");
+
+        if (rubyfulButton.length > 0) {
+          rubyfulButton[0].addEventListener("click", handleToggleRuby);
+
+          // クリーンアップ関数でイベントリスナーを削除
+          return () => {
+            if (rubyfulButton[0]) {
+              rubyfulButton[0].removeEventListener("click", handleToggleRuby);
+            }
+          };
+        }
+      } catch (error) {
+        logger.error("Rubyfulの初期化中にエラーが発生しました:", error);
       }
-    } catch (error) {
-      logger.error("Rubyfulの初期化中にエラーが発生しました:", error);
-    }
+    };
+
+    run();
   }, [trigger, handleToggleRuby, isLoaded, isRubyVisible]);
 
   return { isRubyVisible };

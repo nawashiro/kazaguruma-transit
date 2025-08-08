@@ -301,7 +301,7 @@ export default function DiscussionManagePage() {
             href="/discussions"
             className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
           >
-            <span>← 会話一覧</span>
+            <span>← 会話一覧に戻る</span>
           </Link>
           <h1 className="text-3xl font-bold">会話管理</h1>
         </div>

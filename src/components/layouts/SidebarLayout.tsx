@@ -44,14 +44,20 @@ export default function SidebarLayout({
           const style = document.createElement("style");
           style.innerHTML = `
           button.rubyfuljs-button.is-customized {
-            background-color: var(--color-base-100);
-            color: var(--color-base-content);
+            background-color: var(--color-secondary-content);
+            color: var(--color-secondary);
             box-shadow: none;
-            border: 1px solid var(--color-base-content);
+            border: none;
           }
           .rubyfuljs-tooltip, .rubyfuljs-tooltip-close-button {
             background-color: var(--color-base-100);
             border: 1px solid var(--color-base-content);
+          }
+          rt {
+            margin-bottom: .33rem;
+            margin-top: .33rem;
+            font-size: 70%;
+            color: var(--color-secondary-content);
           }
           `;
           document.body.appendChild(style);

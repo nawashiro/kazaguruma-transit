@@ -419,7 +419,7 @@ export default function DiscussionDetailPage() {
             href="/discussions"
             className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
           >
-            <span>← 会話一覧</span>
+            <span>← 会話一覧に戻る</span>
           </Link>
           <ModeratorCheck
             moderators={discussion.moderators.map((m) => m.pubkey)}
@@ -428,7 +428,7 @@ export default function DiscussionDetailPage() {
           >
             <Link
               href={`/discussions/${discussionId}/approve`}
-              className="btn btn-outline btn-sm rounded-full dark:rounded-sm"
+              className="btn btn-outline btn-sm rounded-full dark:rounded-sm min-h-8 h-fit"
             >
               <span>投稿承認管理</span>
             </Link>
@@ -443,24 +443,30 @@ export default function DiscussionDetailPage() {
       </div>
 
       <nav role="tablist" aria-label="会話メニュー" className="join mb-6">
-        <input
-          className="join-item btn"
-          type="radio"
+        <button
+          className={`join-item btn ruby-text ${
+            activeTab === "main" && "btn-active btn-primary"
+          }`}
           name="tab-options"
-          aria-label="会話"
+          aria-label="会話タブを開く"
           role="tab"
-          checked={activeTab === "main"}
-          onChange={() => setActiveTab("main")}
-        />
-        <input
-          className="join-item btn"
-          type="radio"
+          area-selected={activeTab === "main" ? "true" : "false"}
+          onClick={() => setActiveTab("main")}
+        >
+          <span>会話</span>
+        </button>
+        <button
+          className={`join-item btn ruby-text ${
+            activeTab === "audit" && "btn-active btn-primary"
+          }`}
           name="tab-options"
-          aria-label="監査ログ"
+          aria-label="監査ログを開く"
           role="tab"
-          checked={activeTab === "audit"}
-          onChange={() => setActiveTab("audit")}
-        />
+          area-selected={activeTab === "audit" ? "true" : "false"}
+          onClick={() => setActiveTab("audit")}
+        >
+          <span>監査ログ</span>
+        </button>
       </nav>
 
       {activeTab === "main" ? (
@@ -494,7 +500,7 @@ export default function DiscussionDetailPage() {
               </h2>
 
               <p className="text-gray-600 dark:text-gray-400 mb-4 ruby-text">
-                統計解析によって、投票が分析されます。
+                投票を統計解析して、意見はグループ分けされます。どのグループでも共通して評価された意見が評価されます。
               </p>
 
               {isAnalyzing && (
@@ -570,7 +576,7 @@ export default function DiscussionDetailPage() {
                             >
                               <div className="card-body p-4">
                                 <div className="flex items-start justify-between mb-2">
-                                  <span className="badge badge-accent badge-sm">
+                                  <span className="badge badge-sm badge-success">
                                     {item.overallAgreePercentage}% の人が賛成
                                   </span>
                                 </div>
@@ -621,14 +627,14 @@ export default function DiscussionDetailPage() {
                                 <div className="flex items-start justify-between mb-2">
                                   <div className="flex gap-2">
                                     {item.voteType == "agree" ? (
-                                      <span className="badge badge-success badge-sm">
+                                      <span className="badge badge-sm badge-success">
                                         {String.fromCharCode(65 + groupIndex)}
                                         のうち
                                         {Math.round(item.agreeRatio * 100)}
                                         %が賛成
                                       </span>
                                     ) : (
-                                      <span className="badge badge-error badge-sm">
+                                      <span className="badge badge-sm badge-warning">
                                         {String.fromCharCode(65 + groupIndex)}
                                         のうち
                                         {Math.round(item.disagreeRatio * 100)}

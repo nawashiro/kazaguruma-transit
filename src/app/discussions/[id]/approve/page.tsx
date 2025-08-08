@@ -224,24 +224,30 @@ export default function PostApprovalPage() {
         </div>
 
         <nav role="tablist" aria-label="投稿管理メニュー" className="join mb-6">
-          <input
-            className="join-item btn"
-            type="radio"
+          <button
+            className={`join-item btn ruby-text ${
+              activeTab === "pending" && "btn-active btn-primary"
+            }`}
             name="post-status"
-            aria-label={`未承認投稿 (${pendingPosts.length})`}
+            aria-label={`未承認投稿タブ ${pendingPosts.length}件`}
             role="tab"
-            checked={activeTab === "pending"}
-            onChange={() => setActiveTab("pending")}
-          />
-          <input
-            className="join-item btn"
-            type="radio"
+            area-selected={activeTab === "pending" ? "true" : "false"}
+            onClick={() => setActiveTab("pending")}
+          >
+            <span>{`未承認投稿 (${pendingPosts.length})`}</span>
+          </button>
+          <button
+            className={`join-item btn ruby-text ${
+              activeTab === "approved" && "btn-active btn-primary"
+            }`}
             name="post-status"
-            aria-label={`承認済み投稿 (${approvedPosts.length})`}
+            aria-label={`承認済み投稿タブ ${approvedPosts.length}件`}
             role="tab"
-            checked={activeTab === "approved"}
-            onChange={() => setActiveTab("approved")}
-          />
+            area-selected={activeTab === "approved" ? "true" : "false"}
+            onClick={() => setActiveTab("approved")}
+          >
+            <span>{`承認済み投稿 (${approvedPosts.length})`}</span>
+          </button>
         </nav>
 
         {activeTab === "pending" ? (
@@ -288,7 +294,7 @@ export default function PostApprovalPage() {
                       <div className="card-body">
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex items-center gap-2">
-                            <span className="badge badge-warning badge-sm">
+                            <span className="badge badge-warning badge-sm warning-content">
                               未承認
                             </span>
                             {post.busStopTag && (
@@ -311,7 +317,7 @@ export default function PostApprovalPage() {
                         </div>
 
                         <div className="flex justify-between items-center">
-                          <span className="text-xs font-mono text-gray-500">
+                          <span className="text-xs font-mono text-gray-500 ruby-text">
                             投稿者: {hexToNpub(post.authorPubkey).slice(0, 12)}
                             ...
                             {hexToNpub(post.authorPubkey).slice(-8)}
@@ -321,7 +327,7 @@ export default function PostApprovalPage() {
                             <button
                               onClick={() => handleApprove(post)}
                               disabled={processingPostId === post.id}
-                              className="btn btn-success rounded-full dark:rounded-sm ruby-text"
+                              className="btn btn-success rounded-full dark:rounded-sm ruby-text success-content"
                             >
                               <span>
                                 {processingPostId === post.id ? "" : "承認"}
@@ -388,7 +394,7 @@ export default function PostApprovalPage() {
                         <div className="card-body">
                           <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-2">
-                              <span className="badge badge-success badge-sm">
+                              <span className="badge badge-success badge-sm success-content">
                                 承認済み
                               </span>
                               {post.busStopTag && (
@@ -414,7 +420,7 @@ export default function PostApprovalPage() {
                           </div>
 
                           <div className="flex justify-between items-center">
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-gray-500 ruby-text">
                               <div>
                                 投稿者:{" "}
                                 {hexToNpub(post.authorPubkey).slice(0, 12)}...
@@ -435,7 +441,7 @@ export default function PostApprovalPage() {
                               <button
                                 onClick={() => handleReject(post)}
                                 disabled={processingPostId === post.id}
-                                className="btn btn-error rounded-full dark:rounded-sm ruby-text"
+                                className="btn btn-error rounded-full dark:rounded-sm ruby-text error-content"
                               >
                                 <span>
                                   {processingPostId === post.id

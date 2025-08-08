@@ -176,25 +176,31 @@ export default function DiscussionsPage() {
         </p>
       </div>
 
-      <nav role="tablist" aria-label="意見交換メニュー" className="join mb-6">
-        <input
-          className="join-item btn"
-          type="radio"
+      <nav role="tablist" className="join mb-6">
+        <button
+          className={`join-item btn ruby-text ${
+            activeTab === "main" && "btn-active btn-primary"
+          }`}
           name="tab-options"
-          aria-label="会話一覧"
+          aria-label="意見交換タブを開く"
           role="tab"
-          checked={activeTab === "main"}
-          onChange={() => setActiveTab("main")}
-        />
-        <input
-          className="join-item btn"
-          type="radio"
+          area-selected={activeTab === "main" ? "true" : "false"}
+          onClick={() => setActiveTab("main")}
+        >
+          <span>意見交換</span>
+        </button>
+        <button
+          className={`join-item btn ruby-text ${
+            activeTab === "audit" && "btn-active btn-primary"
+          }`}
           name="tab-options"
-          aria-label="監査ログ"
+          aria-label="監査ログを開く"
           role="tab"
-          checked={activeTab === "audit"}
-          onChange={() => setActiveTab("audit")}
-        />
+          area-selected={activeTab === "audit" ? "true" : "false"}
+          onClick={() => setActiveTab("audit")}
+        >
+          <span>監査ログ</span>
+        </button>
       </nav>
 
       {activeTab === "main" ? (
@@ -279,7 +285,7 @@ export default function DiscussionsPage() {
                 新しい会話をリクエスト
               </h2>
 
-              <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 ruby-text">
+              <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="card-body">
                   <form onSubmit={handleRequestSubmit} className="space-y-4">
                     <div>
@@ -307,7 +313,7 @@ export default function DiscussionsPage() {
 
                     <div>
                       <label htmlFor="description" className="label">
-                        <span className="label-text">説明</span>
+                        <span className="label-text ruby-text">説明</span>
                       </label>
                       <textarea
                         id="description"
@@ -326,7 +332,7 @@ export default function DiscussionsPage() {
                         autoComplete="off"
                       />
                     </div>
-                    <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                    <p className="mt-4 text-sm text-gray-600 dark:text-gray-400 ruby-text">
                       管理者による確認後、会話が作成される場合があります。
                     </p>
                     <Button

@@ -315,8 +315,8 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
   // 時刻表示用のフォーマッター
   const formatTimeDisplay = (time: string) => {
     if (time === "時刻不明") return time;
-    const match = time.match(/^(\d{2}:\d{2}):\d{2}$/);
-    return match ? match[1] : time;
+    const match = time.match(/^(\d{2}):(\d{2}):\d{2}$/);
+    return match ? `${match[1]}時${match[2]}分` : time;
   };
 
   // バス停のメモを取得する関数

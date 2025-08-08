@@ -21,6 +21,7 @@ import {
   hexToNpub,
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
   Discussion,
   DiscussionPost,
@@ -50,8 +51,12 @@ export default function PostApprovalPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [processingPostId, setProcessingPostId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const { user, signEvent } = useAuth();
+
+  // Rubyfulライブラリ対応
+  useRubyfulRun([discussion, posts, approvals], isLoaded);
 
   const loadData = useCallback(async () => {
     if (!isDiscussionsEnabled()) return;
@@ -97,6 +102,7 @@ export default function PostApprovalPage() {
     if (isDiscussionsEnabled()) {
       loadData();
     }
+    setIsLoaded(true);
   }, [loadData]);
 
   // Check if discussions are enabled and render accordingly
@@ -202,14 +208,14 @@ export default function PostApprovalPage() {
       userPubkey={user.pubkey}
       fallback={<PermissionError type="moderator" />}
     >
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 ruby-text">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <Link
               href={`/discussions/${discussionId}`}
               className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
             >
-              ← 会話に戻る
+              <span>← 会話に戻る</span>
             </Link>
           </div>
           <h1 className="text-3xl font-bold mb-2">投稿承認管理</h1>
@@ -310,7 +316,7 @@ export default function PostApprovalPage() {
                             disabled={processingPostId === post.id}
                             className="btn btn-success rounded-full dark:rounded-sm"
                           >
-                            {processingPostId === post.id ? "" : "承認"}
+                            <span>{processingPostId === post.id ? "" : "承認"}</span>
                           </button>
                         </div>
                       </div>
@@ -409,7 +415,7 @@ export default function PostApprovalPage() {
                               disabled={processingPostId === post.id}
                               className="btn btn-error rounded-full dark:rounded-sm"
                             >
-                              {processingPostId === post.id ? "" : "承認撤回"}
+                              <span>{processingPostId === post.id ? "" : "承認撤回"}</span>
                             </button>
                           )}
                         </div>

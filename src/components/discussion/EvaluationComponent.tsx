@@ -49,7 +49,7 @@ export function EvaluationComponent({
 
   if (limitedPosts.length === 0) {
     return (
-      <div className="text-center py-8">
+      <div className="text-center py-8 ruby-text">
         <svg
           className="mx-auto h-12 w-12 text-gray-400"
           fill="none"
@@ -87,7 +87,7 @@ export function EvaluationComponent({
 
   if (!currentPost) {
     return (
-      <div className="text-center py-8">
+      <div className="text-center py-8 ruby-text">
         <svg
           className="mx-auto h-12 w-12 text-green-400"
           fill="none"
@@ -121,10 +121,10 @@ export function EvaluationComponent({
       aria-labelledby="evaluation-title"
     >
       <div className="flex justify-between items-center">
-        <h3 id="evaluation-title" className="text-lg font-medium">
+        <h3 id="evaluation-title" className="text-lg font-medium ruby-text">
           {title}
         </h3>
-        <span className="text-sm text-gray-600 dark:text-gray-400">
+        <span className="text-sm text-gray-600 dark:text-gray-400 ruby-text">
           残り {remainingCount} 件
         </span>
       </div>
@@ -150,7 +150,7 @@ export function EvaluationComponent({
           role="document"
         >
           {currentPost.content.split("\n").map((line, index) => (
-            <p key={index} className="mb-2 last:mb-0">
+            <p key={index} className="mb-2 last:mb-0 ruby-text">
               {line || "\u00A0"}
             </p>
           ))}
@@ -188,7 +188,7 @@ export function EvaluationComponent({
                     d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
                   />
                 </svg>
-                <span>賛成</span>
+                <span className="ruby-text">賛成</span>
               </>
             )}
           </button>
@@ -219,7 +219,7 @@ export function EvaluationComponent({
                     d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"
                   />
                 </svg>
-                <span>反対</span>
+                <span className="ruby-text">反対</span>
               </>
             )}
           </button>

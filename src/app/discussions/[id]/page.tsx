@@ -31,6 +31,7 @@ import {
   EvaluationAnalysisResult,
 } from "@/lib/evaluation/evaluation-service";
 import Button from "@/components/ui/Button";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
   Discussion,
   DiscussionPost,
@@ -83,8 +84,15 @@ export default function DiscussionDetailPage() {
   const [busStops, setBusStops] = useState<
     { route: string; stops: string[] }[]
   >([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const { user, signEvent } = useAuth();
+
+  // Rubyfulライブラリ対応
+  useRubyfulRun(
+    [discussion, posts, approvals, evaluations, consensusTab],
+    isLoaded
+  );
 
   const loadData = useCallback(async () => {
     if (!isDiscussionsEnabled()) return;
@@ -206,6 +214,7 @@ export default function DiscussionDetailPage() {
       loadData();
       loadBusStops();
     }
+    setIsLoaded(true);
   }, [loadData, loadBusStops]);
 
   useEffect(() => {
@@ -404,13 +413,13 @@ export default function DiscussionDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
+      <div className="mb-8 ruby-text">
         <div className="flex items-center gap-4 mb-4">
           <Link
             href="/discussions"
             className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
           >
-            ← 会話一覧
+            <span>← 会話一覧</span>
           </Link>
           <ModeratorCheck
             moderators={discussion.moderators.map((m) => m.pubkey)}
@@ -421,7 +430,7 @@ export default function DiscussionDetailPage() {
               href={`/discussions/${discussionId}/approve`}
               className="btn btn-outline btn-sm rounded-full dark:rounded-sm"
             >
-              投稿承認管理
+              <span>投稿承認管理</span>
             </Link>
           </ModeratorCheck>
         </div>
@@ -455,10 +464,19 @@ export default function DiscussionDetailPage() {
       </nav>
 
       {activeTab === "main" ? (
-        <main role="tabpanel" aria-labelledby="main-tab" className="grid lg:grid-cols-2 gap-8">
+        <main
+          role="tabpanel"
+          aria-labelledby="main-tab"
+          className="grid lg:grid-cols-2 gap-8"
+        >
           <div className="space-y-6">
             <section aria-labelledby="evaluation-heading">
-              <h2 id="evaluation-heading" className="text-xl font-semibold mb-4">投稿を評価</h2>
+              <h2
+                id="evaluation-heading"
+                className="text-xl font-semibold mb-4 ruby-text"
+              >
+                投稿を評価
+              </h2>
               <EvaluationComponent
                 posts={postsWithStats}
                 onEvaluate={handleEvaluate}
@@ -468,9 +486,14 @@ export default function DiscussionDetailPage() {
             </section>
 
             <section aria-labelledby="opinion-groups-heading">
-              <h2 id="opinion-groups-heading" className="text-xl font-semibold mb-4">意見グループ</h2>
+              <h2
+                id="opinion-groups-heading"
+                className="text-xl font-semibold mb-4 ruby-text"
+              >
+                意見グループ
+              </h2>
 
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
+              <p className="text-gray-600 dark:text-gray-400 mb-4 ruby-text">
                 統計解析によって、投票が分析されます。
               </p>
 
@@ -491,7 +514,7 @@ export default function DiscussionDetailPage() {
                     aria-label="意見タブ"
                   >
                     <button
-                      className={`btn border px-3 py-1 h-auto min-h-0 rounded-md font-medium ${
+                      className={`btn border px-3 py-1 h-auto min-h-0 rounded-md font-medium ruby-text ${
                         consensusTab === "group-consensus"
                           ? "btn-primary border-primary text-primary-content"
                           : "btn-outline hover:border-primary/50 hover:bg-primary/5"
@@ -501,7 +524,7 @@ export default function DiscussionDetailPage() {
                       aria-selected={consensusTab === "group-consensus"}
                       aria-label="共通の意見タブ"
                     >
-                      共通の意見
+                      <span>共通の意見</span>
                     </button>
                     {analysisResult.groupRepresentativeComments.map(
                       (group, index) => (
@@ -527,7 +550,9 @@ export default function DiscussionDetailPage() {
                             65 + index
                           )}タブ`}
                         >
-                          グループ {String.fromCharCode(65 + index)}
+                          <span>
+                            グループ {String.fromCharCode(65 + index)}
+                          </span>
                         </button>
                       )
                     )}
@@ -556,7 +581,7 @@ export default function DiscussionDetailPage() {
                                     </span>
                                   </div>
                                 )}
-                                <div className="prose prose-sm dark:prose-invert max-w-none">
+                                <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
                                   {item.post.content
                                     .split("\n")
                                     .map((line, i) => (
@@ -572,7 +597,7 @@ export default function DiscussionDetailPage() {
                             </div>
                           ))
                       ) : (
-                        <p className="text-gray-600 dark:text-gray-400">
+                        <p className="text-gray-600 dark:text-gray-400 ruby-text">
                           コンセンサス意見がありません。
                         </p>
                       )}
@@ -619,7 +644,7 @@ export default function DiscussionDetailPage() {
                                     </span>
                                   </div>
                                 )}
-                                <div className="prose prose-sm dark:prose-invert max-w-none">
+                                <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
                                   {item.post.content
                                     .split("\n")
                                     .map((line, i) => (
@@ -635,7 +660,7 @@ export default function DiscussionDetailPage() {
                             </div>
                           ))
                         ) : (
-                          <p className="text-gray-600 dark:text-gray-400">
+                          <p className="text-gray-600 dark:text-gray-400 ruby-text">
                             このグループの代表的意見がありません。
                           </p>
                         );
@@ -691,120 +716,133 @@ export default function DiscussionDetailPage() {
 
           <aside>
             <section aria-labelledby="new-post-heading">
-              <h2 id="new-post-heading" className="text-xl font-semibold mb-4">新しい投稿</h2>
+              <h2
+                id="new-post-heading"
+                className="text-xl font-semibold mb-4 ruby-text"
+              >
+                新しい投稿
+              </h2>
 
-            <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="card-body">
-                {!showPreview ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor="post-content" className="label">
-                        <span className="label-text">投稿内容 *</span>
-                      </label>
-                      <textarea
-                        id="post-content"
-                        value={postForm.content}
-                        onChange={(e) =>
-                          setPostForm((prev) => ({
-                            ...prev,
-                            content: e.target.value,
-                          }))
-                        }
-                        className="textarea textarea-bordered w-full h-32"
-                        placeholder="あなたの体験や意見を投稿してください"
-                        required
-                        disabled={isSubmitting}
-                        maxLength={280}
-                        autoComplete="off"
-                      />
-                      <div className="text-xs text-gray-500 mt-1">
-                        {postForm.content.length}/280文字
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="label">
-                        <span className="label-text">バス停タグ（任意）</span>
-                      </label>
-
-                      <div className="space-y-2">
-                        <select
-                          value={selectedRoute}
-                          onChange={(e) => handleRouteSelect(e.target.value)}
-                          className="select select-bordered w-full"
-                          disabled={isSubmitting}
-                          autoComplete="off"
+              <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="card-body">
+                  {!showPreview ? (
+                    <div className="space-y-4">
+                      <div>
+                        <label
+                          htmlFor="post-content"
+                          className="label ruby-text"
                         >
-                          <option value="">ルートを選択してください</option>
-                          {busStops.map((route) => (
-                            <option key={route.route} value={route.route}>
-                              {route.route}
-                            </option>
-                          ))}
-                        </select>
+                          <span className="label-text">投稿内容 *</span>
+                        </label>
+                        <textarea
+                          id="post-content"
+                          value={postForm.content}
+                          onChange={(e) =>
+                            setPostForm((prev) => ({
+                              ...prev,
+                              content: e.target.value,
+                            }))
+                          }
+                          className="textarea textarea-bordered w-full h-32"
+                          placeholder="あなたの体験や意見を投稿してください"
+                          required
+                          disabled={isSubmitting}
+                          maxLength={280}
+                          autoComplete="off"
+                        />
+                        <div className="text-xs text-gray-500 mt-1">
+                          {postForm.content.length}/280文字
+                        </div>
+                      </div>
 
-                        {selectedRoute && (
+                      <div>
+                        <label className="label ruby-text">
+                          <span className="label-text">バス停タグ（任意）</span>
+                        </label>
+
+                        <div className="space-y-2">
                           <select
-                            value={postForm.busStopTag}
-                            onChange={(e) =>
-                              setPostForm((prev) => ({
-                                ...prev,
-                                busStopTag: e.target.value,
-                              }))
-                            }
+                            value={selectedRoute}
+                            onChange={(e) => handleRouteSelect(e.target.value)}
                             className="select select-bordered w-full"
                             disabled={isSubmitting}
                             autoComplete="off"
                           >
-                            <option value="">バス停を選択してください</option>
-                            {busStops
-                              .find((route) => route.route === selectedRoute)
-                              ?.stops.map((stop) => (
-                                <option key={stop} value={stop}>
-                                  {stop}
-                                </option>
-                              ))}
+                            <option value="">ルートを選択してください</option>
+                            {busStops.map((route) => (
+                              <option key={route.route} value={route.route}>
+                                {route.route}
+                              </option>
+                            ))}
                           </select>
-                        )}
+
+                          {selectedRoute && (
+                            <select
+                              value={postForm.busStopTag}
+                              onChange={(e) =>
+                                setPostForm((prev) => ({
+                                  ...prev,
+                                  busStopTag: e.target.value,
+                                }))
+                              }
+                              className="select select-bordered w-full"
+                              disabled={isSubmitting}
+                              autoComplete="off"
+                            >
+                              <option value="">バス停を選択してください</option>
+                              {busStops
+                                .find((route) => route.route === selectedRoute)
+                                ?.stops.map((stop) => (
+                                  <option key={stop} value={stop}>
+                                    {stop}
+                                  </option>
+                                ))}
+                            </select>
+                          )}
+                        </div>
                       </div>
+
+                      {errors.length > 0 && (
+                        <div className="alert alert-error">
+                          <ul className="text-sm">
+                            {errors.map((error, index) => (
+                              <li key={index}>{error}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      <Button
+                        onClick={() => setShowPreview(true)}
+                        fullWidth
+                        disabled={!postForm.content.trim()}
+                      >
+                        <span>プレビュー</span>
+                      </Button>
                     </div>
-
-                    {errors.length > 0 && (
-                      <div className="alert alert-error">
-                        <ul className="text-sm">
-                          {errors.map((error, index) => (
-                            <li key={index}>{error}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={() => setShowPreview(true)}
-                      fullWidth
-                      disabled={!postForm.content.trim()}
-                    >
-                      プレビュー
-                    </Button>
-                  </div>
-                ) : (
-                  <PostPreview
-                    content={postForm.content}
-                    busStopTag={postForm.busStopTag}
-                    onConfirm={handlePostSubmit}
-                    onCancel={() => setShowPreview(false)}
-                    isLoading={isSubmitting}
-                  />
-                )}
+                  ) : (
+                    <PostPreview
+                      content={postForm.content}
+                      busStopTag={postForm.busStopTag}
+                      onConfirm={handlePostSubmit}
+                      onCancel={() => setShowPreview(false)}
+                      isLoading={isSubmitting}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
             </section>
           </aside>
         </main>
       ) : (
         <main role="tabpanel" aria-labelledby="audit-tab">
           <section aria-labelledby="audit-screen-heading">
-            <h2 id="audit-screen-heading" className="text-xl font-semibold mb-4">監査画面</h2>
+            <h2
+              id="audit-screen-heading"
+              className="text-xl font-semibold mb-4 ruby-text"
+            >
+              監査画面
+            </h2>
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
                 <AuditTimeline items={auditItems} profiles={profiles} />

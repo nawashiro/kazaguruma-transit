@@ -9,6 +9,7 @@ import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import { hexToNpub } from "@/lib/nostr/nostr-utils";
 import { LoginModal } from "@/components/discussion/LoginModal";
 import Button from "@/components/ui/Button";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 export default function SettingsPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -17,10 +18,12 @@ export default function SettingsPage() {
 
   const { user, logout, isLoading, error } = useAuth();
 
+  useRubyfulRun([isLoading], !isLoading);
+
   // Check if discussions are enabled and render accordingly
   if (!isDiscussionsEnabled()) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 ruby-text">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">設定</h1>
           <p className="text-gray-600">この機能は現在利用できません。</p>
@@ -62,8 +65,8 @@ export default function SettingsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">設定</h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <h1 className="text-3xl font-bold mb-4 ruby-text">設定</h1>
+        <p className="text-gray-600 dark:text-gray-400 ruby-text">
           アカウント設定と認証情報を管理します。
         </p>
       </div>
@@ -71,12 +74,14 @@ export default function SettingsPage() {
       <div className="max-w-2xl">
         <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="card-body">
-            <h2 className="card-title mb-4">アカウント情報</h2>
+            <h2 className="card-title mb-4 ruby-text">
+              <span>アカウント情報</span>
+            </h2>
 
             {user.isLoggedIn ? (
               <div className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div>
+                  <div className="ruby-text">
                     <label className="label">
                       <span className="label-text font-medium">ユーザー名</span>
                     </label>
@@ -89,7 +94,9 @@ export default function SettingsPage() {
 
                   <div>
                     <label className="label">
-                      <span className="label-text font-medium">公開鍵</span>
+                      <span className="label-text font-medium ruby-text">
+                        ユーザーID
+                      </span>
                     </label>
                     <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <span className="font-mono text-xs break-all flex-1">
@@ -139,7 +146,9 @@ export default function SettingsPage() {
                 {user.profile?.about && (
                   <div>
                     <label className="label">
-                      <span className="label-text font-medium">自己紹介</span>
+                      <span className="label-text font-medium ruby-text">
+                        自己紹介
+                      </span>
                     </label>
                     <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <span className="text-sm">{user.profile.about}</span>
@@ -148,6 +157,31 @@ export default function SettingsPage() {
                 )}
 
                 <div className="divider"></div>
+
+                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg ruby-text">
+                  <div className="flex items-start gap-3">
+                    <svg
+                      className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <div className="text-sm text-blue-800 dark:text-blue-200">
+                      <p className="font-medium mb-1">認証について</p>
+                      <p>
+                        あなたのアカウントはパスキーで保護されています。
+                        ログアウトすると、再度生体認証または端末のPINでのログインが必要になります。
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
@@ -176,31 +210,6 @@ export default function SettingsPage() {
                       </>
                     )}
                   </button>
-                </div>
-
-                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <svg
-                      className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <div className="text-sm text-blue-800 dark:text-blue-200">
-                      <p className="font-medium mb-1">認証について</p>
-                      <p>
-                        あなたのアカウントはパスキーで保護されています。
-                        ログアウトすると、再度生体認証または端末のPINでのログインが必要になります。
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
             ) : (
@@ -260,7 +269,7 @@ export default function SettingsPage() {
                         d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
                       />
                     </svg>
-                    <span>ログイン / アカウント作成</span>
+                    <span className="ruby-text">ログイン / アカウント作成</span>
                   </Button>
                 </div>
               </div>
@@ -269,7 +278,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="mt-8">
-          <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 ruby-text">
             <div className="card-body">
               <h2 className="card-title mb-4">プライバシー</h2>
 
@@ -283,7 +292,7 @@ export default function SettingsPage() {
                     <li>
                       認証情報（パスキー）はあなたのデバイスにのみ保存されます
                     </li>
-                    <li>運営者はあなたの秘密鍵にアクセスできません</li>
+                    <li>運営者はあなたの認証情報にアクセスできません</li>
                     <li>投稿は削除できない場合があります</li>
                   </ul>
                 </div>
@@ -294,7 +303,7 @@ export default function SettingsPage() {
                     <li>
                       メールアドレスやデバイス情報などの個人情報は送信されません
                     </li>
-                    <li>公開鍵は技術的な目的でのみ使用されます</li>
+                    <li>ユーザーIDは技術的な目的でのみ使用されます</li>
                   </ul>
                 </div>
               </div>

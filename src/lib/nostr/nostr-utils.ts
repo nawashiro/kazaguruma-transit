@@ -1,32 +1,32 @@
-import type { Event } from 'nostr-tools'
-import * as nip19 from 'nostr-tools/nip19'
-import type { 
-  Discussion, 
-  DiscussionPost, 
-  PostApproval, 
-  PostEvaluation, 
+import type { Event } from "nostr-tools";
+import * as nip19 from "nostr-tools/nip19";
+import type {
+  Discussion,
+  DiscussionPost,
+  PostApproval,
+  PostEvaluation,
   DiscussionRequest,
   NostrProfile,
   EvaluationStats,
   PostWithStats,
-  AuditTimelineItem
-} from '@/types/discussion'
+  AuditTimelineItem,
+} from "@/types/discussion";
 
 export function parseDiscussionEvent(event: Event): Discussion | null {
-  if (event.kind !== 34550) return null
+  if (event.kind !== 34550) return null;
 
-  const dTag = event.tags.find(tag => tag[0] === 'd')?.[1]
-  const name = event.tags.find(tag => tag[0] === 'name')?.[1]
-  const description = event.tags.find(tag => tag[0] === 'description')?.[1]
-  
-  if (!dTag) return null
+  const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
+  const name = event.tags.find((tag) => tag[0] === "name")?.[1];
+  const description = event.tags.find((tag) => tag[0] === "description")?.[1];
+
+  if (!dTag) return null;
 
   const moderators = event.tags
-    .filter(tag => tag[0] === 'p' && tag[3] === 'moderator')
-    .map(tag => ({
+    .filter((tag) => tag[0] === "p" && tag[3] === "moderator")
+    .map((tag) => ({
       pubkey: tag[1],
-      name: undefined
-    }))
+      name: undefined,
+    }));
 
   return {
     id: `34550:${event.pubkey}:${dTag}`,
@@ -36,22 +36,32 @@ export function parseDiscussionEvent(event: Event): Discussion | null {
     moderators,
     authorPubkey: event.pubkey,
     createdAt: event.created_at,
-    event
-  }
+    event,
+  };
 }
 
-export function parsePostEvent(event: Event, approvals: PostApproval[] = []): DiscussionPost | null {
-  if (event.kind !== 1111) return null
+export function parsePostEvent(
+  event: Event,
+  approvals: PostApproval[] = []
+): DiscussionPost | null {
+  if (event.kind !== 1111) return null;
 
-  const discussionTag = event.tags.find(tag => tag[0] === 'a' || tag[0] === 'A')?.[1]
-  const busStopTag = event.tags.find(tag => tag[0] === 't')?.[1]
-  
-  if (!discussionTag) return null
+  const discussionTag = event.tags.find(
+    (tag) => tag[0] === "a" || tag[0] === "A"
+  )?.[1];
+  const busStopTag = event.tags.find((tag) => tag[0] === "t")?.[1];
 
-  const postApprovals = approvals.filter(approval => approval.postId === event.id)
-  const approved = postApprovals.length > 0
-  const approvedBy = postApprovals.map(approval => approval.moderatorPubkey)
-  const approvedAt = postApprovals.length > 0 ? Math.min(...postApprovals.map(a => a.createdAt)) : undefined
+  if (!discussionTag) return null;
+
+  const postApprovals = approvals.filter(
+    (approval) => approval.postId === event.id
+  );
+  const approved = postApprovals.length > 0;
+  const approvedBy = postApprovals.map((approval) => approval.moderatorPubkey);
+  const approvedAt =
+    postApprovals.length > 0
+      ? Math.min(...postApprovals.map((a) => a.createdAt))
+      : undefined;
 
   return {
     id: event.id,
@@ -63,18 +73,18 @@ export function parsePostEvent(event: Event, approvals: PostApproval[] = []): Di
     approved,
     approvedBy,
     approvedAt,
-    event
-  }
+    event,
+  };
 }
 
 export function parseApprovalEvent(event: Event): PostApproval | null {
-  if (event.kind !== 4550) return null
+  if (event.kind !== 4550) return null;
 
-  const discussionTag = event.tags.find(tag => tag[0] === 'a')?.[1]
-  const postId = event.tags.find(tag => tag[0] === 'e')?.[1]
-  const postAuthorPubkey = event.tags.find(tag => tag[0] === 'p')?.[1]
+  const discussionTag = event.tags.find((tag) => tag[0] === "a")?.[1];
+  const postId = event.tags.find((tag) => tag[0] === "e")?.[1];
+  const postAuthorPubkey = event.tags.find((tag) => tag[0] === "p")?.[1];
 
-  if (!discussionTag || !postId || !postAuthorPubkey) return null
+  if (!discussionTag || !postId || !postAuthorPubkey) return null;
 
   return {
     id: event.id,
@@ -83,18 +93,20 @@ export function parseApprovalEvent(event: Event): PostApproval | null {
     moderatorPubkey: event.pubkey,
     discussionId: discussionTag,
     createdAt: event.created_at,
-    event
-  }
+    event,
+  };
 }
 
 export function parseEvaluationEvent(event: Event): PostEvaluation | null {
-  if (event.kind !== 7) return null
+  if (event.kind !== 7) return null;
 
-  const postId = event.tags.find(tag => tag[0] === 'e')?.[1]
-  const rating = event.tags.find(tag => tag[0] === 'rating')?.[1] as '+' | '-'
-  const discussionId = event.tags.find(tag => tag[0] === 'a')?.[1]
+  const postId = event.tags.find((tag) => tag[0] === "e")?.[1];
+  const rating = event.tags.find((tag) => tag[0] === "rating")?.[1] as
+    | "+"
+    | "-";
+  const discussionId = event.tags.find((tag) => tag[0] === "a")?.[1];
 
-  if (!postId || !rating || (rating !== '+' && rating !== '-')) return null
+  if (!postId || !rating || (rating !== "+" && rating !== "-")) return null;
 
   return {
     id: event.id,
@@ -103,22 +115,26 @@ export function parseEvaluationEvent(event: Event): PostEvaluation | null {
     rating,
     discussionId,
     createdAt: event.created_at,
-    event
-  }
+    event,
+  };
 }
 
-export function parseDiscussionRequestEvent(event: Event): DiscussionRequest | null {
-  if (event.kind !== 1) return null
+export function parseDiscussionRequestEvent(
+  event: Event
+): DiscussionRequest | null {
+  if (event.kind !== 1) return null;
 
-  const hasDiscussionRequestTag = event.tags.some(tag => tag[0] === 't' && tag[1] === 'discussion-request')
-  const adminPubkey = event.tags.find(tag => tag[0] === 'p')?.[1]
+  const hasDiscussionRequestTag = event.tags.some(
+    (tag) => tag[0] === "t" && tag[1] === "discussion-request"
+  );
+  const adminPubkey = event.tags.find((tag) => tag[0] === "p")?.[1];
 
-  if (!hasDiscussionRequestTag || !adminPubkey) return null
+  if (!hasDiscussionRequestTag || !adminPubkey) return null;
 
   // NIP-14に従ってsubjectタグからタイトルを取得
-  const title = event.tags.find(tag => tag[0] === 'subject')?.[1] || ''
-  
-  const description = event.content
+  const title = event.tags.find((tag) => tag[0] === "subject")?.[1] || "";
+
+  const description = event.content;
 
   return {
     id: event.id,
@@ -127,74 +143,79 @@ export function parseDiscussionRequestEvent(event: Event): DiscussionRequest | n
     requesterPubkey: event.pubkey,
     adminPubkey,
     createdAt: event.created_at,
-    event
-  }
+    event,
+  };
 }
 
 export function parseProfileEvent(event: Event): NostrProfile | null {
-  if (event.kind !== 0) return null
+  if (event.kind !== 0) return null;
 
   try {
-    const content = JSON.parse(event.content)
+    const content = JSON.parse(event.content);
     return {
       name: content.name,
       about: content.about,
       picture: content.picture,
-      pubkey: event.pubkey
-    }
+      pubkey: event.pubkey,
+    };
   } catch {
     return {
-      pubkey: event.pubkey
-    }
+      pubkey: event.pubkey,
+    };
   }
 }
 
-export function calculateEvaluationStats(evaluations: PostEvaluation[]): EvaluationStats {
-  const positive = evaluations.filter(e => e.rating === '+').length
-  const negative = evaluations.filter(e => e.rating === '-').length
-  const total = positive + negative
-  const score = total > 0 ? (positive - negative) / total : 0
+export function calculateEvaluationStats(
+  evaluations: PostEvaluation[]
+): EvaluationStats {
+  const positive = evaluations.filter((e) => e.rating === "+").length;
+  const negative = evaluations.filter((e) => e.rating === "-").length;
+  const total = positive + negative;
+  const score = total > 0 ? (positive - negative) / total : 0;
 
-  return { positive, negative, total, score }
+  return { positive, negative, total, score };
 }
 
 export function combinePostsWithStats(
   posts: DiscussionPost[],
   evaluations: PostEvaluation[]
 ): PostWithStats[] {
-  return posts.map(post => {
-    const postEvaluations = evaluations.filter(e => e.postId === post.id)
-    const evaluationStats = calculateEvaluationStats(postEvaluations)
-    
+  return posts.map((post) => {
+    const postEvaluations = evaluations.filter((e) => e.postId === post.id);
+    const evaluationStats = calculateEvaluationStats(postEvaluations);
+
     return {
       ...post,
-      evaluationStats
-    }
-  })
+      evaluationStats,
+    };
+  });
 }
 
-export function sortPostsByScore(posts: PostWithStats[], ascending: boolean = false): PostWithStats[] {
+export function sortPostsByScore(
+  posts: PostWithStats[],
+  ascending: boolean = false
+): PostWithStats[] {
   return [...posts].sort((a, b) => {
-    const scoreA = a.evaluationStats.score
-    const scoreB = b.evaluationStats.score
-    return ascending ? scoreA - scoreB : scoreB - scoreA
-  })
+    const scoreA = a.evaluationStats.score;
+    const scoreB = b.evaluationStats.score;
+    return ascending ? scoreA - scoreB : scoreB - scoreA;
+  });
 }
 
 export function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array]
+  const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  return shuffled
+  return shuffled;
 }
 
 export function filterUnevaluatedPosts(
   posts: PostWithStats[],
   userEvaluations: Set<string>
 ): PostWithStats[] {
-  return posts.filter(post => !userEvaluations.has(post.id))
+  return posts.filter((post) => !userEvaluations.has(post.id));
 }
 
 export function createAuditTimeline(
@@ -203,192 +224,200 @@ export function createAuditTimeline(
   posts: DiscussionPost[],
   approvals: PostApproval[]
 ): AuditTimelineItem[] {
-  const items: AuditTimelineItem[] = []
+  const items: AuditTimelineItem[] = [];
 
-  requests.forEach(request => {
+  requests.forEach((request) => {
     items.push({
       id: request.id,
-      type: 'discussion-request',
+      type: "discussion-request",
       timestamp: request.createdAt,
       actorPubkey: request.requesterPubkey,
       targetId: request.adminPubkey,
-      description: `会話「${request.title}」の作成がリクエストされました`,
-      event: request.event
-    })
-  })
+      description: `会話「${request.title}」の作成をリクエストしました`,
+      event: request.event,
+    });
+  });
 
-  discussions.forEach(discussion => {
+  discussions.forEach((discussion) => {
     items.push({
       id: discussion.id,
-      type: 'discussion-created',
+      type: "discussion-created",
       timestamp: discussion.createdAt,
       actorPubkey: discussion.authorPubkey,
       targetId: discussion.id,
-      description: `会話「${discussion.title}」が作成されました`,
-      event: discussion.event
-    })
-  })
+      description: `会話「${discussion.title}」を作成しました`,
+      event: discussion.event,
+    });
+  });
 
-  posts.forEach(post => {
+  posts.forEach((post) => {
     items.push({
       id: post.id,
-      type: 'post-submitted',
+      type: "post-submitted",
       timestamp: post.createdAt,
       actorPubkey: post.authorPubkey,
       targetId: post.discussionId,
-      description: '新しい投稿が提出されました',
-      event: post.event
-    })
-  })
+      description: "新しい投稿を提出しました",
+      event: post.event,
+    });
+  });
 
-  approvals.forEach(approval => {
+  approvals.forEach((approval) => {
     items.push({
       id: approval.id,
-      type: 'post-approved',
+      type: "post-approved",
       timestamp: approval.createdAt,
       actorPubkey: approval.moderatorPubkey,
       targetId: approval.postId,
-      description: '投稿が承認されました',
-      event: approval.event
-    })
-  })
+      description: "投稿を承認しました",
+      event: approval.event,
+    });
+  });
 
-  return items.sort((a, b) => b.timestamp - a.timestamp)
+  return items.sort((a, b) => b.timestamp - a.timestamp);
 }
 
-export function isAdmin(userPubkey: string | null | undefined, adminPubkey: string): boolean {
-  return userPubkey === adminPubkey
+export function isAdmin(
+  userPubkey: string | null | undefined,
+  adminPubkey: string
+): boolean {
+  return userPubkey === adminPubkey;
 }
 
-export function isModerator(userPubkey: string | null | undefined, moderators: string[], adminPubkey?: string): boolean {
-  if (userPubkey === null || userPubkey === undefined) return false
-  
+export function isModerator(
+  userPubkey: string | null | undefined,
+  moderators: string[],
+  adminPubkey?: string
+): boolean {
+  if (userPubkey === null || userPubkey === undefined) return false;
+
   // 管理者もモデレーターとみなす
-  if (adminPubkey && userPubkey === adminPubkey) return true
-  
-  return moderators.includes(userPubkey)
+  if (adminPubkey && userPubkey === adminPubkey) return true;
+
+  return moderators.includes(userPubkey);
 }
 
 export function formatRelativeTime(timestamp: number): string {
-  const now = Math.floor(Date.now() / 1000)
-  const diff = now - timestamp
-  
-  if (diff < 60) return '今'
-  if (diff < 3600) return `${Math.floor(diff / 60)}分前`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}時間前`
-  if (diff < 604800) return `${Math.floor(diff / 86400)}日前`
-  
-  const date = new Date(timestamp * 1000)
-  return date.toLocaleDateString('ja-JP')
+  const now = Math.floor(Date.now() / 1000);
+  const diff = now - timestamp;
+
+  if (diff < 60) return "今";
+  if (diff < 3600) return `${Math.floor(diff / 60)}分前`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}時間前`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}日前`;
+
+  const date = new Date(timestamp * 1000);
+  return date.toLocaleDateString("ja-JP");
 }
 
 export function validateDiscussionForm(data: {
-  title: string
-  description: string
+  title: string;
+  description: string;
 }): string[] {
-  const errors: string[] = []
-  
+  const errors: string[] = [];
+
   if (!data.title?.trim()) {
-    errors.push('タイトルは必須です')
+    errors.push("タイトルは必須です");
   }
-  
+
   if (!data.description?.trim()) {
-    errors.push('説明は必須です')
+    errors.push("説明は必須です");
   }
-  
-  return errors
+
+  return errors;
 }
 
 export function validatePostForm(data: {
-  content: string
-  busStopTag?: string
+  content: string;
+  busStopTag?: string;
 }): string[] {
-  const errors: string[] = []
-  
+  const errors: string[] = [];
+
   if (!data.content?.trim()) {
-    errors.push('投稿内容は必須です')
+    errors.push("投稿内容は必須です");
   }
-  
+
   if (data.content && data.content.length > 280) {
-    errors.push('投稿内容は280文字以内で入力してください')
+    errors.push("投稿内容は280文字以内で入力してください");
   }
-  
-  return errors
+
+  return errors;
 }
 
 export function extractNip19References(content: string): string[] {
-  const nip19Regex = /(npub|nsec|note|nprofile|nevent|naddr|nrelay)1[a-zA-Z0-9]+/g
-  return content.match(nip19Regex) || []
+  const nip19Regex =
+    /(npub|nsec|note|nprofile|nevent|naddr|nrelay)1[a-zA-Z0-9]+/g;
+  return content.match(nip19Regex) || [];
 }
 
 export function sanitizeContent(content: string): string {
   return content
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;")
+    .replace(/\//g, "&#x2F;");
 }
 
 // NIP-19 utility functions
 export function hexToNpub(hex: string): string {
   try {
-    return nip19.npubEncode(hex)
+    return nip19.npubEncode(hex);
   } catch (error) {
-    console.error('Failed to encode npub:', error)
-    return hex // fallback to hex
+    console.error("Failed to encode npub:", error);
+    return hex; // fallback to hex
   }
 }
 
 export function npubToHex(npub: string): string {
   try {
-    if (npub.startsWith('npub')) {
-      const { type, data } = nip19.decode(npub)
-      if (type === 'npub') {
-        return data as string
+    if (npub.startsWith("npub")) {
+      const { type, data } = nip19.decode(npub);
+      if (type === "npub") {
+        return data as string;
       }
     }
     // If it's already hex or invalid, return as-is
-    return npub
+    return npub;
   } catch (error) {
-    console.error('Failed to decode npub:', error)
-    return npub // fallback
+    console.error("Failed to decode npub:", error);
+    return npub; // fallback
   }
 }
 
 export function isValidNpub(npub: string): boolean {
   try {
-    if (npub.startsWith('npub')) {
-      const { type } = nip19.decode(npub)
-      return type === 'npub'
+    if (npub.startsWith("npub")) {
+      const { type } = nip19.decode(npub);
+      return type === "npub";
     }
     // Also accept hex format (64 characters)
-    return /^[a-fA-F0-9]{64}$/.test(npub)
+    return /^[a-fA-F0-9]{64}$/.test(npub);
   } catch {
-    return false
+    return false;
   }
 }
 
 // Environment variable utilities - assumes env vars are stored as npub
 export function getAdminPubkeyHex(): string {
-  const npubFromEnv = process.env.NEXT_PUBLIC_ADMIN_PUBKEY || ''
+  const npubFromEnv = process.env.NEXT_PUBLIC_ADMIN_PUBKEY || "";
   if (!npubFromEnv) {
-    console.warn('NEXT_PUBLIC_ADMIN_PUBKEY is not set')
-    return ''
+    console.warn("NEXT_PUBLIC_ADMIN_PUBKEY is not set");
+    return "";
   }
-  return npubToHex(npubFromEnv)
+  return npubToHex(npubFromEnv);
 }
 
 export function getModeratorPubkeysHex(): string[] {
-  const npubsFromEnv = process.env.NEXT_PUBLIC_MODERATORS || ''
+  const npubsFromEnv = process.env.NEXT_PUBLIC_MODERATORS || "";
   if (!npubsFromEnv) {
-    return []
+    return [];
   }
-  
+
   // Comma-separated npub values
   return npubsFromEnv
-    .split(',')
-    .map(npub => npub.trim())
-    .filter(npub => npub.length > 0)
-    .map(npub => npubToHex(npub))
+    .split(",")
+    .map((npub) => npub.trim())
+    .filter((npub) => npub.length > 0)
+    .map((npub) => npubToHex(npub));
 }

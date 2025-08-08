@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import type { AuditTimelineItem } from "@/types/discussion";
 import { formatRelativeTime, hexToNpub } from "@/lib/nostr/nostr-utils";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface AuditTimelineProps {
   items: AuditTimelineItem[];
@@ -29,12 +30,14 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
     null
   );
 
+  useRubyfulRun([selectedEvent], true);
+
   const getDetailContent = (item: AuditTimelineItem) => {
     switch (item.type) {
       case "discussion-request":
         // リクエストの場合、contentを表示
         return item.event.content ? (
-          <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm">
+          <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm ruby-text">
             <div className="whitespace-pre-wrap">{item.event.content}</div>
           </div>
         ) : null;
@@ -42,7 +45,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
       case "post-submitted":
         // 投稿提出の場合、contentを表示
         return item.event.content ? (
-          <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm">
+          <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm ruby-text">
             <div className="whitespace-pre-wrap">{item.event.content}</div>
           </div>
         ) : null;
@@ -52,7 +55,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
         try {
           const approvedPost = JSON.parse(item.event.content);
           return (
-            <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm">
+            <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm ruby-text">
               <div className="whitespace-pre-wrap">
                 {approvedPost.content || "内容なし"}
               </div>
@@ -69,7 +72,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
 
   if (items.length === 0) {
     return (
-      <div className="text-center py-8">
+      <div className="text-center py-8 ruby-text">
         <svg
           className="mx-auto h-12 w-12 text-gray-400"
           fill="none"
@@ -240,7 +243,11 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
 
   return (
     <>
-      <ul className="timeline timeline-snap-icon timeline-compact timeline-vertical" role="list" aria-label="監査タイムライン">
+      <ul
+        className="timeline timeline-snap-icon timeline-compact timeline-vertical"
+        role="list"
+        aria-label="監査タイムライン"
+      >
         {items.map((item, index) => (
           <li key={item.id} role="listitem">
             {index != 0 && <hr />}
@@ -259,11 +266,15 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
 
             <div className="timeline-start mb-10 pt-2.5">
               <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                <time dateTime={new Date(item.timestamp).toISOString()}>{formatRelativeTime(item.timestamp)}</time>
+                <time dateTime={new Date(item.timestamp).toISOString()}>
+                  {formatRelativeTime(item.timestamp)}
+                </time>
               </p>
               <div className="timeline-box">
                 {profiles[item.actorPubkey]?.name && (
-                  <p className="text-sm">{profiles[item.actorPubkey].name}</p>
+                  <p className="text-sm ruby-text">
+                    {profiles[item.actorPubkey].name}
+                  </p>
                 )}
                 <div className="join items-start mb-2">
                   <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -273,27 +284,27 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
                     (() => {
                       const approvalStatus = getApprovalStatus(item);
                       return approvalStatus === "approved" ? (
-                        <div className="badge badge-success badge-sm ml-2">
+                        <span className="badge badge-success badge-sm ml-2">
                           承認済み
-                        </div>
+                        </span>
                       ) : (
-                        <div className="badge badge-warning badge-sm ml-2">
+                        <span className="badge badge-warning badge-sm ml-2">
                           未承認
-                        </div>
+                        </span>
                       );
                     })()}
                 </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2 ruby-text">
                   {item.description}
                 </p>
                 {getDetailContent(item)}
                 <button
                   onClick={() => setSelectedEvent(item)}
-                  className="btn btn-xs btn-outline rounded-full dark:rounded-sm mt-2"
+                  className="btn btn-sm btn-outline rounded-full dark:rounded-sm mt-2 ruby-text"
                   type="button"
                   aria-label={`${item.type}の技術情報を表示`}
                 >
-                  技術情報
+                  <span>技術情報</span>
                 </button>
               </div>
             </div>
@@ -305,15 +316,20 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
 
       {/* イベントJSONモーダル */}
       {selectedEvent && (
-        <dialog 
-          className="modal modal-open" 
-          role="dialog" 
-          aria-modal="true" 
+        <dialog
+          className="modal modal-open"
+          role="dialog"
+          aria-modal="true"
           aria-labelledby="event-modal-title"
         >
           <div className="modal-box max-w-4xl">
             <div className="flex justify-between items-center mb-4">
-              <h3 id="event-modal-title" className="font-bold text-lg">技術情報 - Nostrイベント</h3>
+              <h3
+                id="event-modal-title"
+                className="font-bold text-lg ruby-text"
+              >
+                技術情報 - Nostrイベント
+              </h3>
               <button
                 onClick={() => setSelectedEvent(null)}
                 className="btn btn-sm btn-circle btn-ghost"
@@ -328,7 +344,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
               <div className="badge badge-primary mb-2">
                 {selectedEvent.type}
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400 ruby-text">
                 {selectedEvent.description}
               </p>
             </div>
@@ -346,10 +362,10 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
             <div className="modal-action">
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="btn rounded-full dark:rounded-sm"
+                className="btn rounded-full dark:rounded-sm ruby-text"
                 type="button"
               >
-                閉じる
+                <span>閉じる</span>
               </button>
             </div>
           </div>
@@ -360,7 +376,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
             tabIndex={0}
             aria-label="モーダルの背景をクリックして閉じる"
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (e.key === "Enter" || e.key === " ") {
                 setSelectedEvent(null);
               }
             }}

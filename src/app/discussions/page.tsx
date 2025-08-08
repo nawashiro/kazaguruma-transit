@@ -19,6 +19,7 @@ import {
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import Button from "@/components/ui/Button";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
   Discussion,
   DiscussionRequest,
@@ -51,19 +52,24 @@ export default function DiscussionsPage() {
     title: "",
     description: "",
   });
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const { user, signEvent } = useAuth();
+
+  // Rubyfulライブラリ対応
+  useRubyfulRun([discussions, requests], isLoaded);
 
   useEffect(() => {
     if (isDiscussionsEnabled()) {
       loadData();
     }
+    setIsLoaded(true);
   }, []);
 
   // Check if discussions are enabled and render accordingly
   if (!isDiscussionsEnabled()) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 ruby-text">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">意見交換機能</h1>
           <p className="text-gray-600">この機能は現在利用できません。</p>
@@ -167,7 +173,7 @@ export default function DiscussionsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
+      <div className="mb-8 ruby-text">
         <h1 className="text-3xl font-bold mb-4">意見交換</h1>
         <p className="text-gray-600 dark:text-gray-400">
           風ぐるまの利用体験について意見交換を行う場所です。
@@ -203,7 +209,7 @@ export default function DiscussionsPage() {
                 href="/discussions/manage"
                 className="btn btn-primary rounded-full dark:rounded-sm"
               >
-                会話管理
+                <span>会話管理</span>
               </Link>
             </aside>
           </AdminCheck>
@@ -212,7 +218,7 @@ export default function DiscussionsPage() {
             <section aria-labelledby="discussions-list-heading">
               <h2
                 id="discussions-list-heading"
-                className="text-xl font-semibold mb-4"
+                className="text-xl font-semibold mb-4 ruby-text"
               >
                 会話一覧
               </h2>
@@ -226,7 +232,7 @@ export default function DiscussionsPage() {
                   ))}
                 </div>
               ) : discussions.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-4 ruby-text">
                   {discussions.map((discussion) => (
                     <article key={discussion.id}>
                       <Link
@@ -236,7 +242,7 @@ export default function DiscussionsPage() {
                         <div className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
                           <div className="card-body p-4">
                             <h3 className="card-title text-lg">
-                              {discussion.title}
+                              <span>{discussion.title}</span>
                             </h3>
                             <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                               {discussion.description}
@@ -262,7 +268,7 @@ export default function DiscussionsPage() {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-gray-600 dark:text-gray-400 ruby-text">
                     会話がまだありません。
                   </p>
                 </div>
@@ -272,12 +278,12 @@ export default function DiscussionsPage() {
             <section aria-labelledby="request-form-heading">
               <h2
                 id="request-form-heading"
-                className="text-xl font-semibold mb-4"
+                className="text-xl font-semibold mb-4 ruby-text"
               >
                 新しい会話をリクエスト
               </h2>
 
-              <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 ruby-text">
                 <div className="card-body">
                   <form onSubmit={handleRequestSubmit} className="space-y-4">
                     <div>
@@ -338,7 +344,7 @@ export default function DiscussionsPage() {
                       }
                       loading={isSubmitting}
                     >
-                      <p>{isSubmitting ? "" : "リクエストを送信"}</p>
+                      <span>{isSubmitting ? "" : "リクエストを送信"}</span>
                     </Button>
                   </form>
                 </div>
@@ -349,7 +355,10 @@ export default function DiscussionsPage() {
       ) : (
         <main role="tabpanel" aria-labelledby="audit-tab">
           <section aria-labelledby="audit-log-heading">
-            <h2 id="audit-log-heading" className="text-xl font-semibold mb-4">
+            <h2
+              id="audit-log-heading"
+              className="text-xl font-semibold mb-4 ruby-text"
+            >
               監査ログ
             </h2>
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">

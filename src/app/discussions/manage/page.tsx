@@ -23,6 +23,7 @@ import {
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import Button from "@/components/ui/Button";
+import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
   Discussion,
   DiscussionRequest,
@@ -63,13 +64,18 @@ export default function DiscussionManagePage() {
   const [editModeratorInput, setEditModeratorInput] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
   const [editErrors, setEditErrors] = useState<string[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const { user, signEvent } = useAuth();
+
+  // Rubyfulライブラリ対応
+  useRubyfulRun([discussions, requests], isLoaded);
 
   useEffect(() => {
     if (isDiscussionsEnabled()) {
       loadData();
     }
+    setIsLoaded(true);
   }, []);
 
   // Check if discussions are enabled and render accordingly
@@ -191,7 +197,7 @@ export default function DiscussionManagePage() {
         setErrors([]);
       }
     } else {
-      setErrors(["有効なnpub形式の公開鍵を入力してください"]);
+      setErrors(["有効なユーザーIDを入力してください"]);
     }
   };
 
@@ -273,7 +279,7 @@ export default function DiscussionManagePage() {
         setEditErrors([]);
       }
     } else {
-      setEditErrors(["有効なnpub形式の公開鍵を入力してください"]);
+      setEditErrors(["有効なユーザーIDを入力してください"]);
     }
   };
 
@@ -290,13 +296,13 @@ export default function DiscussionManagePage() {
       userPubkey={user.pubkey}
       fallback={<PermissionError type="admin" />}
     >
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 ruby-text">
         <div className="mb-8">
           <Link
             href="/discussions"
             className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
           >
-            ← 会話一覧
+            <span>← 会話一覧</span>
           </Link>
           <h1 className="text-3xl font-bold">会話管理</h1>
         </div>
@@ -364,7 +370,7 @@ export default function DiscussionManagePage() {
                         value={moderatorInput}
                         onChange={(e) => setModeratorInput(e.target.value)}
                         className="input input-bordered flex-1"
-                        placeholder="npub形式の公開鍵"
+                        placeholder="ユーザーID"
                         disabled={isSubmitting}
                         autoComplete="off"
                       />
@@ -374,7 +380,7 @@ export default function DiscussionManagePage() {
                         secondary
                         disabled={isSubmitting || !moderatorInput.trim()}
                       >
-                        追加
+                        <span>追加</span>
                       </Button>
                     </div>
 
@@ -394,7 +400,7 @@ export default function DiscussionManagePage() {
                               className="btn btn-xs btn-error rounded-full dark:rounded-sm"
                               disabled={isSubmitting}
                             >
-                              削除
+                              <span>削除</span>
                             </button>
                           </div>
                         ))}
@@ -418,7 +424,7 @@ export default function DiscussionManagePage() {
                     disabled={isSubmitting}
                     loading={isSubmitting}
                   >
-                    <p>{isSubmitting ? "" : "会話作成"}</p>
+                    <span>{isSubmitting ? "" : "会話作成"}</span>
                   </Button>
                 </form>
               </div>
@@ -503,7 +509,7 @@ export default function DiscussionManagePage() {
                                     setEditModeratorInput(e.target.value)
                                   }
                                   className="input input-bordered flex-1"
-                                  placeholder="npub形式の公開鍵"
+                                  placeholder="ユーザーID"
                                   disabled={isSubmitting}
                                   autoComplete="off"
                                 />
@@ -515,7 +521,7 @@ export default function DiscussionManagePage() {
                                     isSubmitting || !editModeratorInput.trim()
                                   }
                                 >
-                                  追加
+                                  <span>追加</span>
                                 </Button>
                               </div>
 
@@ -535,7 +541,7 @@ export default function DiscussionManagePage() {
                                         className="btn btn-xs btn-error rounded-full dark:rounded-sm"
                                         disabled={isSubmitting}
                                       >
-                                        削除
+                                        <span>削除</span>
                                       </button>
                                     </div>
                                   ))}
@@ -560,7 +566,7 @@ export default function DiscussionManagePage() {
                                 secondary
                                 disabled={isSubmitting}
                               >
-                                キャンセル
+                                <span>キャンセル</span>
                               </Button>
                               <Button
                                 type="button"
@@ -568,7 +574,7 @@ export default function DiscussionManagePage() {
                                 disabled={isSubmitting}
                                 loading={isSubmitting}
                               >
-                                {isSubmitting ? "" : "更新"}
+                                <span>{isSubmitting ? "" : "更新"}</span>
                               </Button>
                             </div>
                           </div>
@@ -601,7 +607,7 @@ export default function DiscussionManagePage() {
                                 className="btn btn-outline btn-sm sm:btn-md rounded-full dark:rounded-sm"
                                 disabled={isSubmitting}
                               >
-                                編集
+                                <span>編集</span>
                               </button>
                               <button
                                 onClick={() =>
@@ -610,7 +616,7 @@ export default function DiscussionManagePage() {
                                 className="btn btn-error btn-sm sm:btn-md rounded-full dark:rounded-sm"
                                 disabled={deletingId === discussion.id}
                               >
-                                {deletingId === discussion.id ? "" : "削除"}
+                                <span>{deletingId === discussion.id ? "" : "削除"}</span>
                               </button>
                             </div>
                           </div>

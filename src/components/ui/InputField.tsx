@@ -76,6 +76,7 @@ export default function InputField({
         aria-required={required ? "true" : undefined}
         aria-describedby={ariaDescribedby}
         data-testid={testId}
+        autoComplete="true"
       />
       {hasError && (
         <div

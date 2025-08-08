@@ -180,9 +180,23 @@ export default function Home() {
       const busStops = [
         routeInfo.originStop.stopName,
         routeInfo.destinationStop.stopName,
-      ].filter((stop, index, arr) => arr.indexOf(stop) === index);
+      ];
 
-      getBusStopMemoData(busStops).then(setMemoData);
+      // 乗り換えバス停があれば追加
+      if (routeInfo.routes && routeInfo.routes.length > 0) {
+        routeInfo.routes.forEach(route => {
+          if (route.transfers) {
+            route.transfers.forEach(transfer => {
+              busStops.push(transfer.transferStop.stopName);
+            });
+          }
+        });
+      }
+
+      // 重複を除去
+      const uniqueBusStops = busStops.filter((stop, index, arr) => arr.indexOf(stop) === index);
+
+      getBusStopMemoData(uniqueBusStops).then(setMemoData);
     } else {
       setMemoData(new Map());
     }
@@ -588,12 +602,26 @@ export default function Home() {
                   {isDiscussionsEnabled() && routeInfo.type !== "none" && (
                     <div className="mt-8">
                       <BusStopMemo
-                        busStops={[
-                          routeInfo.originStop.stopName,
-                          routeInfo.destinationStop.stopName,
-                        ].filter(
-                          (stop, index, arr) => arr.indexOf(stop) === index
-                        )}
+                        busStops={(() => {
+                          const busStops = [
+                            routeInfo.originStop.stopName,
+                            routeInfo.destinationStop.stopName,
+                          ];
+
+                          // 乗り換えバス停があれば追加
+                          if (routeInfo.routes && routeInfo.routes.length > 0) {
+                            routeInfo.routes.forEach(route => {
+                              if (route.transfers) {
+                                route.transfers.forEach(transfer => {
+                                  busStops.push(transfer.transferStop.stopName);
+                                });
+                              }
+                            });
+                          }
+
+                          // 重複を除去
+                          return busStops.filter((stop, index, arr) => arr.indexOf(stop) === index);
+                        })()}
                       />
                     </div>
                   )}
@@ -621,12 +649,26 @@ export default function Home() {
                   {isDiscussionsEnabled() && routeInfo.type !== "none" && (
                     <div className="mt-8">
                       <BusStopDiscussion
-                        busStops={[
-                          routeInfo.originStop.stopName,
-                          routeInfo.destinationStop.stopName,
-                        ].filter(
-                          (stop, index, arr) => arr.indexOf(stop) === index
-                        )}
+                        busStops={(() => {
+                          const busStops = [
+                            routeInfo.originStop.stopName,
+                            routeInfo.destinationStop.stopName,
+                          ];
+
+                          // 乗り換えバス停があれば追加
+                          if (routeInfo.routes && routeInfo.routes.length > 0) {
+                            routeInfo.routes.forEach(route => {
+                              if (route.transfers) {
+                                route.transfers.forEach(transfer => {
+                                  busStops.push(transfer.transferStop.stopName);
+                                });
+                              }
+                            });
+                          }
+
+                          // 重複を除去
+                          return busStops.filter((stop, index, arr) => arr.indexOf(stop) === index);
+                        })()}
                         className="border-t border-gray-200 dark:border-gray-700 pt-8"
                       />
                     </div>

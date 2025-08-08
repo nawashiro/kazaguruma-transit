@@ -124,7 +124,9 @@ export default function LocationsPage() {
             categoryLocations,
             geoJSON
           );
-          setLocationsByArea(groupedLocations as { [areaName: string]: LocationWithDistance[] });
+          setLocationsByArea(
+            groupedLocations as { [areaName: string]: LocationWithDistance[] }
+          );
         }
       } catch (err) {
         logger.log("GeoJSON分類エラー:", err);

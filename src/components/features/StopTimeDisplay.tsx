@@ -21,7 +21,7 @@ const StopTimeDisplay: React.FC<StopTimeDisplayProps> = ({
       <div className="flex-1">
         <div className="font-bold">{stopName}</div>
       </div>
-      <time className="badge badge-secondary text-lg p-3" dateTime={dateTime}>
+      <time className="badge badge-secondary p-3" dateTime={dateTime}>
         {time}
       </time>
     </div>

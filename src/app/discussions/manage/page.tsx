@@ -42,7 +42,6 @@ const nostrService = createNostrService({
   defaultTimeout: 5000,
 });
 
-
 export default function DiscussionManagePage() {
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
   const [requests, setRequests] = useState<DiscussionRequest[]>([]);
@@ -296,8 +295,8 @@ export default function DiscussionManagePage() {
       userPubkey={user.pubkey}
       fallback={<PermissionError type="admin" />}
     >
-      <div className="container mx-auto px-4 py-8 ruby-text">
-        <div className="mb-8">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8 ruby-text">
           <Link
             href="/discussions"
             className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
@@ -309,7 +308,12 @@ export default function DiscussionManagePage() {
 
         <div className="grid lg:grid-cols-2 gap-8">
           <section aria-labelledby="create-discussion-heading">
-            <h2 id="create-discussion-heading" className="text-xl font-semibold mb-4">新しい会話作成</h2>
+            <h2
+              id="create-discussion-heading"
+              className="text-xl font-semibold mb-4 ruby-text"
+            >
+              新しい会話作成
+            </h2>
 
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
@@ -339,7 +343,7 @@ export default function DiscussionManagePage() {
 
                   <div>
                     <label htmlFor="create-description" className="label">
-                      <span className="label-text">説明 *</span>
+                      <span className="label-text ruby-text">説明 *</span>
                     </label>
                     <textarea
                       id="create-description"
@@ -392,7 +396,8 @@ export default function DiscussionManagePage() {
                             className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded"
                           >
                             <span className="font-mono text-sm flex-1">
-                              {hexToNpub(mod).slice(0, 12)}...{hexToNpub(mod).slice(-8)}
+                              {hexToNpub(mod).slice(0, 12)}...
+                              {hexToNpub(mod).slice(-8)}
                             </span>
                             <button
                               type="button"
@@ -409,7 +414,7 @@ export default function DiscussionManagePage() {
                   </div>
 
                   {errors.length > 0 && (
-                    <div className="alert alert-error">
+                    <div className="alert alert-error ruby-text">
                       <ul className="text-sm">
                         {errors.map((error, index) => (
                           <li key={index}>{error}</li>
@@ -433,7 +438,12 @@ export default function DiscussionManagePage() {
 
           <div className="space-y-6">
             <section aria-labelledby="existing-discussions-heading">
-              <h2 id="existing-discussions-heading" className="text-xl font-semibold mb-4">既存の会話</h2>
+              <h2
+                id="existing-discussions-heading"
+                className="text-xl font-semibold mb-4 ruby-text"
+              >
+                既存の会話
+              </h2>
 
               {isLoading ? (
                 <div className="space-y-3">
@@ -478,7 +488,9 @@ export default function DiscussionManagePage() {
 
                             <div>
                               <label className="label">
-                                <span className="label-text">説明 *</span>
+                                <span className="label-text ruby-text">
+                                  説明 *
+                                </span>
                               </label>
                               <textarea
                                 value={editForm.description}
@@ -533,7 +545,8 @@ export default function DiscussionManagePage() {
                                       className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded"
                                     >
                                       <span className="font-mono text-sm flex-1">
-                                        {hexToNpub(mod).slice(0, 12)}...{hexToNpub(mod).slice(-8)}
+                                        {hexToNpub(mod).slice(0, 12)}...
+                                        {hexToNpub(mod).slice(-8)}
                                       </span>
                                       <button
                                         type="button"
@@ -550,7 +563,7 @@ export default function DiscussionManagePage() {
                             </div>
 
                             {editErrors.length > 0 && (
-                              <div className="alert alert-error">
+                              <div className="alert alert-error ruby-text">
                                 <ul className="text-sm">
                                   {editErrors.map((error, index) => (
                                     <li key={index}>{error}</li>
@@ -583,10 +596,10 @@ export default function DiscussionManagePage() {
                           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                             {/* コンテンツ */}
                             <div className="flex-1 order-2 sm:order-1">
-                              <h3 className="font-medium">
+                              <h3 className="font-medium ruby-text">
                                 {discussion.title}
                               </h3>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ruby-text">
                                 {discussion.description}
                               </p>
                               <div className="flex items-center gap-4 mt-2">
@@ -604,7 +617,7 @@ export default function DiscussionManagePage() {
                             <div className="flex gap-2 justify-end order-1 sm:order-2 sm:flex-shrink-0">
                               <button
                                 onClick={() => startEdit(discussion)}
-                                className="btn btn-outline btn-sm sm:btn-md rounded-full dark:rounded-sm"
+                                className="btn btn-outline btn-sm sm:btn-md rounded-full dark:rounded-sm ruby-text"
                                 disabled={isSubmitting}
                               >
                                 <span>編集</span>
@@ -613,10 +626,12 @@ export default function DiscussionManagePage() {
                                 onClick={() =>
                                   handleDeleteDiscussion(discussion.id)
                                 }
-                                className="btn btn-error btn-sm sm:btn-md rounded-full dark:rounded-sm"
+                                className="btn btn-error btn-sm sm:btn-md rounded-full dark:rounded-sm ruby-text"
                                 disabled={deletingId === discussion.id}
                               >
-                                <span>{deletingId === discussion.id ? "" : "削除"}</span>
+                                <span>
+                                  {deletingId === discussion.id ? "" : "削除"}
+                                </span>
                               </button>
                             </div>
                           </div>
@@ -626,13 +641,18 @@ export default function DiscussionManagePage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-gray-600 dark:text-gray-400 ruby-text">
                   会話はありません。
                 </p>
               )}
             </section>
             <section aria-labelledby="requests-heading">
-              <h2 id="requests-heading" className="text-xl font-semibold mb-4">リクエスト一覧</h2>
+              <h2
+                id="requests-heading"
+                className="text-xl font-semibold mb-4 ruby-text"
+              >
+                リクエスト一覧
+              </h2>
 
               {isLoading ? (
                 <div className="space-y-3">
@@ -650,10 +670,12 @@ export default function DiscussionManagePage() {
                       className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
                     >
                       <div className="card-body p-4">
-                        <h3 className="font-medium">{request.title}</h3>
+                        <h3 className="font-medium ruby-text">
+                          {request.title}
+                        </h3>
                         {request.description.split("\n").map((line, index) => (
                           <p
-                            className="text-sm text-gray-600 dark:text-gray-400"
+                            className="text-sm text-gray-600 dark:text-gray-400 ruby-text"
                             key={index}
                           >
                             {line}

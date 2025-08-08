@@ -40,7 +40,6 @@ const nostrService = createNostrService({
   defaultTimeout: 5000,
 });
 
-
 export default function PostApprovalPage() {
   const params = useParams();
   const discussionId = params.id as string;
@@ -208,9 +207,9 @@ export default function PostApprovalPage() {
       userPubkey={user.pubkey}
       fallback={<PermissionError type="moderator" />}
     >
-      <div className="container mx-auto px-4 py-8 ruby-text">
+      <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-4 mb-4 ruby-text">
             <Link
               href={`/discussions/${discussionId}`}
               className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
@@ -218,8 +217,10 @@ export default function PostApprovalPage() {
               <span>← 会話に戻る</span>
             </Link>
           </div>
-          <h1 className="text-3xl font-bold mb-2">投稿承認管理</h1>
-          <p className="text-gray-600 dark:text-gray-400">{discussion.title}</p>
+          <h1 className="text-3xl font-bold mb-2 ruby-text">投稿承認管理</h1>
+          <p className="text-gray-600 dark:text-gray-400 ruby-text">
+            {discussion.title}
+          </p>
         </div>
 
         <nav role="tablist" aria-label="投稿管理メニュー" className="join mb-6">
@@ -246,126 +247,40 @@ export default function PostApprovalPage() {
         {activeTab === "pending" ? (
           <main role="tabpanel" aria-labelledby="pending-tab">
             <section aria-labelledby="pending-posts-heading">
-              <h2 id="pending-posts-heading" className="text-xl font-semibold mb-4">未承認投稿</h2>
+              <h2
+                id="pending-posts-heading"
+                className="text-xl font-semibold mb-4 ruby-text"
+              >
+                未承認投稿
+              </h2>
 
               {pendingPosts.length === 0 ? (
-              <div className="text-center py-8">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-label="すべて承認済み"
-                  role="img"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
-                  未承認の投稿はありません
-                </h3>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  すべての投稿が承認済みです。
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {pendingPosts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                <div className="text-center py-8 ruby-text">
+                  <svg
+                    className="mx-auto h-12 w-12 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-label="すべて承認済み"
+                    role="img"
                   >
-                    <div className="card-body">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-2">
-                          <span className="badge badge-warning badge-sm">
-                            未承認
-                          </span>
-                          {post.busStopTag && (
-                            <span className="badge badge-outline badge-sm">
-                              {post.busStopTag}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-gray-500">
-                          {formatRelativeTime(post.createdAt)}
-                        </span>
-                      </div>
-
-                      <div className="prose prose-sm dark:prose-invert max-w-none mb-4">
-                        {post.content.split("\n").map((line, index) => (
-                          <p key={index} className="mb-2 last:mb-0">
-                            {line || "\u00A0"}
-                          </p>
-                        ))}
-                      </div>
-
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-mono text-gray-500">
-                          投稿者: {hexToNpub(post.authorPubkey).slice(0, 12)}...
-                          {hexToNpub(post.authorPubkey).slice(-8)}
-                        </span>
-
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleApprove(post)}
-                            disabled={processingPostId === post.id}
-                            className="btn btn-success rounded-full dark:rounded-sm"
-                          >
-                            <span>{processingPostId === post.id ? "" : "承認"}</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            </section>
-          </main>
-        ) : (
-          <main role="tabpanel" aria-labelledby="approved-tab">
-            <section aria-labelledby="approved-posts-heading">
-              <h2 id="approved-posts-heading" className="text-xl font-semibold mb-4">承認済み投稿</h2>
-
-            {approvedPosts.length === 0 ? (
-              <div className="text-center py-8">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-label="投稿なし"
-                  role="img"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-                  />
-                </svg>
-                <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
-                  承認済みの投稿はありません
-                </h3>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  まだ投稿が承認されていません。
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {approvedPosts.map((post) => {
-                  const userApproval = approvals.find(
-                    (a) =>
-                      a.postId === post.id && a.moderatorPubkey === user.pubkey
-                  );
-                  const canReject = !!userApproval;
-
-                  return (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                    未承認の投稿はありません
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    すべての投稿が承認済みです。
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingPosts.map((post) => (
                     <div
                       key={post.id}
                       className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
@@ -373,8 +288,8 @@ export default function PostApprovalPage() {
                       <div className="card-body">
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex items-center gap-2">
-                            <span className="badge badge-success badge-sm">
-                              承認済み
+                            <span className="badge badge-warning badge-sm">
+                              未承認
                             </span>
                             {post.busStopTag && (
                               <span className="badge badge-outline badge-sm">
@@ -389,42 +304,153 @@ export default function PostApprovalPage() {
 
                         <div className="prose prose-sm dark:prose-invert max-w-none mb-4">
                           {post.content.split("\n").map((line, index) => (
-                            <p key={index} className="mb-2 last:mb-0">
+                            <p key={index} className="mb-2 last:mb-0 ruby-text">
                               {line || "\u00A0"}
                             </p>
                           ))}
                         </div>
 
                         <div className="flex justify-between items-center">
-                          <div className="text-xs text-gray-500">
-                            <div>
-                              投稿者: {hexToNpub(post.authorPubkey).slice(0, 12)}...
-                              {hexToNpub(post.authorPubkey).slice(-8)}
-                            </div>
-                            <div>承認者: {post.approvedBy?.length || 0}人</div>
-                            {post.approvedAt && (
-                              <div>
-                                承認日時: {formatRelativeTime(post.approvedAt)}
-                              </div>
-                            )}
-                          </div>
+                          <span className="text-xs font-mono text-gray-500">
+                            投稿者: {hexToNpub(post.authorPubkey).slice(0, 12)}
+                            ...
+                            {hexToNpub(post.authorPubkey).slice(-8)}
+                          </span>
 
-                          {canReject && (
+                          <div className="flex gap-2">
                             <button
-                              onClick={() => handleReject(post)}
+                              onClick={() => handleApprove(post)}
                               disabled={processingPostId === post.id}
-                              className="btn btn-error rounded-full dark:rounded-sm"
+                              className="btn btn-success rounded-full dark:rounded-sm ruby-text"
                             >
-                              <span>{processingPostId === post.id ? "" : "承認撤回"}</span>
+                              <span>
+                                {processingPostId === post.id ? "" : "承認"}
+                              </span>
                             </button>
-                          )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </section>
+          </main>
+        ) : (
+          <main role="tabpanel" aria-labelledby="approved-tab">
+            <section aria-labelledby="approved-posts-heading">
+              <h2
+                id="approved-posts-heading"
+                className="text-xl font-semibold mb-4 ruby-text"
+              >
+                承認済み投稿
+              </h2>
+
+              {approvedPosts.length === 0 ? (
+                <div className="text-center py-8">
+                  <svg
+                    className="mx-auto h-12 w-12 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-label="投稿なし"
+                    role="img"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                    />
+                  </svg>
+                  <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                    承認済みの投稿はありません
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    まだ投稿が承認されていません。
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {approvedPosts.map((post) => {
+                    const userApproval = approvals.find(
+                      (a) =>
+                        a.postId === post.id &&
+                        a.moderatorPubkey === user.pubkey
+                    );
+                    const canReject = !!userApproval;
+
+                    return (
+                      <div
+                        key={post.id}
+                        className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                      >
+                        <div className="card-body">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-2">
+                              <span className="badge badge-success badge-sm">
+                                承認済み
+                              </span>
+                              {post.busStopTag && (
+                                <span className="badge badge-outline badge-sm">
+                                  {post.busStopTag}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {formatRelativeTime(post.createdAt)}
+                            </span>
+                          </div>
+
+                          <div className="prose prose-sm dark:prose-invert max-w-none mb-4">
+                            {post.content.split("\n").map((line, index) => (
+                              <p
+                                key={index}
+                                className="mb-2 last:mb-0 ruby-text"
+                              >
+                                {line || "\u00A0"}
+                              </p>
+                            ))}
+                          </div>
+
+                          <div className="flex justify-between items-center">
+                            <div className="text-xs text-gray-500">
+                              <div>
+                                投稿者:{" "}
+                                {hexToNpub(post.authorPubkey).slice(0, 12)}...
+                                {hexToNpub(post.authorPubkey).slice(-8)}
+                              </div>
+                              <div>
+                                承認者: {post.approvedBy?.length || 0}人
+                              </div>
+                              {post.approvedAt && (
+                                <div>
+                                  承認日時:{" "}
+                                  {formatRelativeTime(post.approvedAt)}
+                                </div>
+                              )}
+                            </div>
+
+                            {canReject && (
+                              <button
+                                onClick={() => handleReject(post)}
+                                disabled={processingPostId === post.id}
+                                className="btn btn-error rounded-full dark:rounded-sm ruby-text"
+                              >
+                                <span>
+                                  {processingPostId === post.id
+                                    ? ""
+                                    : "承認撤回"}
+                                </span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           </main>
         )}

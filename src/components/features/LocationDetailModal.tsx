@@ -118,24 +118,17 @@ export default function LocationDetailModal({
         {/* アクションボタン */}
         <div className="modal-action">
           <button
-            className="btn btn-primary inline"
+            className="btn btn-primary inline ruby-text rounded-full dark:rounded-sm min-h-10 h-fit"
             onClick={() => {
               onGoToLocation(location);
               onClose();
             }}
           >
-            ここへ
-            <ruby>
-              行<rt>い</rt>
-            </ruby>
-            く
+            <span>ここへ行く</span>
           </button>
           <form method="dialog">
-            <button className="btn inline">
-              <ruby>
-                閉<rt>と</rt>
-              </ruby>
-              じる
+            <button className="btn inline ruby-text rounded-full dark:rounded-sm min-h-10 h-fit">
+              <span>閉じる</span>
             </button>
           </form>
         </div>

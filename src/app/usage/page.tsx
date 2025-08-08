@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Card from "@/components/common/Card";
+import Card from "@/components/ui/Card";
 
 export default function Usage() {
   return (
@@ -19,28 +19,28 @@ export default function Usage() {
         <Card title="目次">
           <ul className="menu bg-base-100 p-0 ">
             <li>
-              <a href="#basic-usage" className="inline">
-                基本的な使いかた
+              <a href="#basic-usage">
+                <span>基本的な使いかた</span>
               </a>
             </li>
             <li>
-              <a href="#origin-selection" className="inline whitespace-nowrap">
-                出発地・目的地の選び方
+              <a href="#origin-selection">
+                <span>出発地・目的地の選び方</span>
               </a>
             </li>
             <li>
-              <a href="#destination-selection" className="inline">
-                風ぐるまで行ける場所の探し方
+              <a href="#destination-selection">
+                <span>風ぐるまで行ける場所の探し方</span>
               </a>
             </li>
             <li>
-              <a href="#install-app" className="inline">
-                インストールしていつでも使えるようにする
+              <a href="#install-app">
+                <span>インストールしていつでも使えるようにする</span>
               </a>
             </li>
             <li>
-              <a href="#rubyful-button" className="inline">
-                ふりながをつける / 消す
+              <a href="#rubyful-button">
+                <span>ふりながをつける / 消す</span>
               </a>
             </li>
           </ul>
@@ -48,6 +48,7 @@ export default function Usage() {
 
         <Card id="basic-usage" className="shadow-md" title="基本的な使いかた">
           <div className="space-y-4">
+            <img src="/images/route.gif" alt="ルートをさがす操作" />
             <p>
               風ぐるま乗換案内は、千代田区内の移動をサポートするためのサービスです。以下のステップで簡単に最適な経路を検索できます。
             </p>
@@ -92,6 +93,7 @@ export default function Usage() {
           title="風ぐるまで行ける場所の探し方"
         >
           <div className="space-y-4">
+            <img src="/images/locations.gif" alt="場所をさがす操作" />
             <p>
               <Link href="/locations" className="link">
                 場所を探す
@@ -143,6 +145,7 @@ export default function Usage() {
           title="ふりながをつける / 消す"
         >
           <div className="space-y-4">
+            <img src="/images/rubyful.gif" alt="ルビフルボタンの操作" />
             <p>
               このサイトは、一般財団法人ルビ財団が提供するルビフルボタンを備えています。
             </p>

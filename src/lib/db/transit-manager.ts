@@ -1,6 +1,15 @@
 import { importGtfs } from "gtfs";
 import { Database } from "./database";
-import { Stop as AppStop, Departure } from "../../types/transit";
+import { Departure } from "@/types/core";
+
+// Using local Stop type definition for this module
+interface Stop {
+  id: string;
+  name: string;
+  code?: string;
+  stop_id?: string;
+  stop_name?: string;
+}
 import { loadConfig, TransitConfig } from "../config/config";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { logger } from "../../utils/logger";
@@ -365,7 +374,7 @@ export class TransitManager {
     lat: number,
     lng: number
   ): Promise<{
-    stops: AppStop[];
+    stops: Stop[];
     nearestStop: {
       id: string;
       name: string;

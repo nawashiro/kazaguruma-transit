@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs";
+import { logger } from "@/utils/logger";
 
 /**
  * 設定ファイルのパス
@@ -27,7 +28,7 @@ export function loadConfig(): TransitConfig {
   try {
     return JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
   } catch (error) {
-    console.error("設定ファイルの読み込みに失敗しました:", error);
+    logger.error("設定ファイルの読み込みに失敗しました:", error);
     throw new Error("設定ファイルの読み込みに失敗しました");
   }
 }
@@ -39,7 +40,7 @@ export function saveConfig(config: TransitConfig): void {
   try {
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
   } catch (error) {
-    console.error("設定ファイルの保存に失敗しました:", error);
+    logger.error("設定ファイルの保存に失敗しました:", error);
     throw new Error("設定ファイルの保存に失敗しました");
   }
 }

@@ -45,10 +45,11 @@ next-env.d.ts
 prisma/.temp/
 .docs/
 
-## transit
+# transit
 transit-config.json
 
 .gtfs/
 
-# cursor
-mcp.json
+# claude
+
+.claude/

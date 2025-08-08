@@ -20,6 +20,7 @@ export function generateGoogleMapPointLink(lat: number, lng: number): string {
 // サーバーコンポーネントをインポート
 import { generateStaticMapUrl } from "../lib/maps/staticMap";
 import { getDirectionsPolyline as getServerDirectionsPolyline } from "../lib/maps/directions";
+import { logger } from "./logger";
 
 /**
  * Google Maps Static APIで徒歩経路を表示するURLを生成する
@@ -52,7 +53,7 @@ export async function generateStaticMapWithDirectionsUrl(
 
     return result.url;
   } catch (error) {
-    console.error("Error fetching static map URL:", error);
+    logger.error("Error fetching static map URL:", error);
     // フォールバック: 絶対URLのプレースホルダー画像を返す
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     return `${baseUrl}/images/map_placeholder.png`;
@@ -83,7 +84,7 @@ export async function getDirectionsPolyline(
 
     return result.encodedPolyline;
   } catch (error) {
-    console.error("Error fetching directions:", error);
+    logger.error("Error fetching directions:", error);
     return null;
   }
 }
@@ -120,7 +121,7 @@ export async function generateStaticMapWithPolylineUrl(
 
     return result.url;
   } catch (error) {
-    console.error("Error fetching static map URL:", error);
+    logger.error("Error fetching static map URL:", error);
     // フォールバック: 絶対URLのプレースホルダー画像を返す
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     return `${baseUrl}/images/map_placeholder.png`;

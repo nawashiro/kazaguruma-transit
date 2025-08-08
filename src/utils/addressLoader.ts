@@ -1,4 +1,5 @@
-import { Location } from "../types/transit";
+import { Location } from "@/types/core";
+import { logger } from "./logger";
 
 export interface AddressLocation {
   name: string;
@@ -23,7 +24,7 @@ export interface KeyLocation extends AddressLocation {
   nodeSourceId: number | null;
   licence: string;
   licenceUri: string;
-  [key: string]: any; // その他の属性（多言語名など）
+  [key: string]: string | number | null; // その他の属性（多言語名など）
 }
 
 export interface KeyLocationCategory {
@@ -43,7 +44,7 @@ export async function loadAddressData(): Promise<AddressCategory[]> {
     const data = await response.json();
     return data as AddressCategory[];
   } catch (error) {
-    console.error("住所データ読み込みエラー:", error);
+    logger.error("住所データ読み込みエラー:", error);
     return [];
   }
 }
@@ -60,7 +61,7 @@ export async function loadKeyLocationsData(): Promise<KeyLocationCategory[]> {
     const data = await response.json();
     return data as KeyLocationCategory[];
   } catch (error) {
-    console.error("主要施設データ読み込みエラー:", error);
+    logger.error("主要施設データ読み込みエラー:", error);
     return [];
   }
 }

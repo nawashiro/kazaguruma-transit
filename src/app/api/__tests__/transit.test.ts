@@ -88,7 +88,7 @@ beforeEach(() => {
     .spyOn(Date, "now")
     .mockImplementation(() => new Date(2023, 0, 1, 0, 0).getTime());
 
-  (gtfs.getStops as jest.Mock).mockImplementation((params: any) => {
+  (gtfs.getStops as jest.Mock).mockImplementation((params?: { stop_id?: string }) => {
     if (params?.stop_id) {
       return Promise.resolve(
         mockStops.filter((stop) => stop.stop_id === params.stop_id)
@@ -97,7 +97,7 @@ beforeEach(() => {
     return Promise.resolve(mockStops);
   });
 
-  (gtfs.getRoutes as jest.Mock).mockImplementation((params: any) => {
+  (gtfs.getRoutes as jest.Mock).mockImplementation((params?: { route_id?: string }) => {
     if (params?.route_id) {
       return Promise.resolve(
         mockRoutes.filter((route) => route.route_id === params.route_id)
@@ -106,7 +106,7 @@ beforeEach(() => {
     return Promise.resolve(mockRoutes);
   });
 
-  (gtfs.getTrips as jest.Mock).mockImplementation((params: any) => {
+  (gtfs.getTrips as jest.Mock).mockImplementation((params?: { trip_id?: string; route_id?: string }) => {
     // trip_idに基づいてモックデータをフィルタリング
     const tripId = params?.trip_id;
     if (tripId) {
@@ -116,7 +116,7 @@ beforeEach(() => {
     }
     return Promise.resolve(mockTrips);
   });
-  (gtfs.getStoptimes as jest.Mock).mockImplementation((params: any) => {
+  (gtfs.getStoptimes as jest.Mock).mockImplementation((params?: { stop_id?: string; trip_id?: string }) => {
     // stop_idに基づいてモックデータをフィルタリング
     const stopId = params?.stop_id;
     if (stopId) {

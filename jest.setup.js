@@ -4,6 +4,11 @@
 // learn more: https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom";
 
+// TextEncoder/TextDecoder polyfill for crypto libraries
+import { TextEncoder, TextDecoder } from 'util';
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;
+
 // Fetch APIのモック設定
 import { enableMocks } from "jest-fetch-mock";
 enableMocks();

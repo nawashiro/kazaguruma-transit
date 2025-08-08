@@ -1,0 +1,10 @@
+{
+  "sqlitePath": "prisma/.temp/data.db",
+  "agencies": [
+    {
+      "agency_key": "chiyoda",
+      "url": "https://example.com"
+    }
+  ],
+  "verbose": true
+}

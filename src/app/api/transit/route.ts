@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { TransitService } from "@/lib/transit/transit-service";
-import { TransitQuery, TransitResponse } from "@/types/transit-api";
+import { TransitQuery, TransitResponse } from "@/types/core";
 import { appRouterRateLimitMiddleware } from "../../../lib/api/rate-limit-middleware";
 import { logger } from "../../../utils/logger";
 

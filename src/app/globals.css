@@ -2,7 +2,8 @@
 @plugin "daisyui" {
   themes: cupcake --default, dark;
 }
-
+/* daisyuiとnostrの競合のため */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 :root {
   --focus-color: #0056b3;
   --focus-color-light: rgba(0, 86, 179, 0.3);
@@ -98,4 +99,8 @@ textarea:focus-visible {
     outline: 3px solid SelectedItem;
     color: SelectedItemText;
   }
+}
+
+li {
+  word-break: auto-phrase;
 }

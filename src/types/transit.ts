@@ -1,18 +1,5 @@
-export interface Departure {
-  routeId: string;
-  routeName: string;
-  stopId: string;
-  stopName?: string;
-  direction?: string;
-  scheduledTime?: string;
-  realtime?: boolean;
-  delay?: number | null;
-  tripId?: string;
-  time?: string;
-  timeUntilDeparture?: string;
-  msUntilDeparture?: number;
-  headsign?: string;
-}
+// These types have been moved to @/types/core
+// Keeping only types that are used locally with different structures
 
 export interface TransitApiResponse {
   departures: Departure[];
@@ -39,69 +26,13 @@ export interface Route {
   route_long_name?: string;
 }
 
-export interface Location {
-  lat: number;
-  lng: number;
-  address?: string;
-}
+// Import the core types for local reference
+import { Departure, StopInfo } from "@/types/core";
 
-export interface TransitFormData {
-  stopId?: string;
-  routeId?: string;
-  origin?: Location;
-  destination?: Location;
-  dateTime?: string;
-  isDeparture?: boolean;
-}
-
-export interface GTFSStop {
-  stop_id: string;
-  stop_name: string;
-  stop_code?: string;
-  stop_lat: string;
-  stop_lon: string;
-  [key: string]: any;
-}
-
-export interface GTFSRoute {
-  route_id: string;
-  route_short_name?: string;
-  route_long_name?: string;
-  route_color?: string;
-  route_text_color?: string;
-  [key: string]: any;
-}
-
-export interface GTFSStopTime {
-  trip_id?: string;
-  arrival_time?: string;
-  departure_time?: string;
-  stop_id?: string;
-  stop_sequence?: number;
-  stop_headsign?: string;
-  pickup_type?: number;
-  drop_off_type?: number;
-  shape_dist_traveled?: number;
-  timepoint?: number;
-  [key: string]: any;
-}
-
-export interface GTFSTrip {
-  trip_id: string;
-  route_id: string;
-  service_id: string;
-  trip_headsign?: string;
-  [key: string]: any;
-}
+// GTFS types removed - not used in current codebase
 
 // 統合経路表示のための型定義
-export interface StopInfo {
-  stop_id: string;
-  stop_name: string;
-  stop_lat: number;
-  stop_lon: number;
-  distance?: number;
-}
+// StopInfo moved to core.ts
 
 export interface TransferInfo {
   transferStop: {

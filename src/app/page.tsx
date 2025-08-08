@@ -1,19 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import DateTimeSelector from "../components/DateTimeSelector";
-import OriginSelector from "../components/OriginSelector";
-import DestinationSelector from "../components/DestinationSelector";
-import IntegratedRouteDisplay from "../components/IntegratedRouteDisplay";
-import RoutePdfExport from "../components/RoutePdfExport";
-import Button from "../components/common/Button";
-import ResetButton from "../components/common/ResetButton";
-import Card from "../components/common/Card";
-import { TransitFormData, Location } from "../types/transit";
-import { logger } from "../utils/logger";
-import RateLimitModal from "../components/RateLimitModal";
-import FirstVisitGuideModal from "../components/common/FirstVisitGuideModal";
+import DateTimeSelector from "@/components/features/DateTimeSelector";
+import OriginSelector from "@/components/features/OriginSelector";
+import DestinationSelector from "@/components/features/DestinationSelector";
+import IntegratedRouteDisplay from "@/components/features/IntegratedRouteDisplay";
+import RoutePdfExport from "@/components/features/RoutePdfExport";
+import Button from "@/components/ui/Button";
+import ResetButton from "@/components/ui/ResetButton";
+import Card from "@/components/ui/Card";
+import { TransitFormData, Location } from "@/types/core";
+import { logger } from "@/utils/logger";
+import RateLimitModal from "@/components/features/RateLimitModal";
+import FirstVisitGuideModal from "@/components/features/FirstVisitGuideModal";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import {
+  BusStopDiscussion,
+  BusStopMemo,
+  getBusStopMemoData,
+} from "@/components/discussion";
+import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
+import type { PostWithStats } from "@/types/discussion";
 
 interface JourneySegment {
   from: string;
@@ -124,6 +131,9 @@ export default function Home() {
   const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
   const [prioritizeSpeed, setPrioritizeSpeed] = useState<boolean>(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [memoData, setMemoData] = useState<Map<string, PostWithStats>>(
+    new Map()
+  );
 
   // URLパラメータから目的地情報を読み取る
   useEffect(() => {
@@ -157,12 +167,40 @@ export default function Home() {
             );
           }
         } catch (err) {
-          console.error("目的地情報の解析に失敗しました:", err);
+          logger.error("目的地情報の解析に失敗しました:", err);
         }
       }
     }
     setIsLoaded(true);
   }, []);
+
+  // routeInfoが更新されたときにメモデータを取得
+  useEffect(() => {
+    if (routeInfo && routeInfo.type !== "none" && isDiscussionsEnabled()) {
+      const busStops = [
+        routeInfo.originStop.stopName,
+        routeInfo.destinationStop.stopName,
+      ];
+
+      // 乗り換えバス停があれば追加
+      if (routeInfo.routes && routeInfo.routes.length > 0) {
+        routeInfo.routes.forEach(route => {
+          if (route.transfers) {
+            route.transfers.forEach(transfer => {
+              busStops.push(transfer.transferStop.stopName);
+            });
+          }
+        });
+      }
+
+      // 重複を除去
+      const uniqueBusStops = busStops.filter((stop, index, arr) => arr.indexOf(stop) === index);
+
+      getBusStopMemoData(uniqueBusStops).then(setMemoData);
+    } else {
+      setMemoData(new Map());
+    }
+  }, [routeInfo]);
 
   useRubyfulRun([selectedOrigin, selectedDestination, routeInfo], isLoaded);
 
@@ -560,6 +598,34 @@ export default function Home() {
                     destLng={selectedDestination.lng}
                   />
 
+                  {/* バス停メモを追加 */}
+                  {isDiscussionsEnabled() && routeInfo.type !== "none" && (
+                    <div className="mt-8">
+                      <BusStopMemo
+                        busStops={(() => {
+                          const busStops = [
+                            routeInfo.originStop.stopName,
+                            routeInfo.destinationStop.stopName,
+                          ];
+
+                          // 乗り換えバス停があれば追加
+                          if (routeInfo.routes && routeInfo.routes.length > 0) {
+                            routeInfo.routes.forEach(route => {
+                              if (route.transfers) {
+                                route.transfers.forEach(transfer => {
+                                  busStops.push(transfer.transferStop.stopName);
+                                });
+                              }
+                            });
+                          }
+
+                          // 重複を除去
+                          return busStops.filter((stop, index, arr) => arr.indexOf(stop) === index);
+                        })()}
+                      />
+                    </div>
+                  )}
+
                   {/* PDF出力ボタンを追加 */}
                   {routeInfo.type !== "none" && (
                     <div className="mt-4 flex justify-center">
@@ -574,6 +640,36 @@ export default function Home() {
                         destLat={selectedDestination.lat}
                         destLng={selectedDestination.lng}
                         selectedDateTime={selectedDateTime}
+                        memoData={memoData}
+                      />
+                    </div>
+                  )}
+
+                  {/* ディスカッション機能を追加 */}
+                  {isDiscussionsEnabled() && routeInfo.type !== "none" && (
+                    <div className="mt-8">
+                      <BusStopDiscussion
+                        busStops={(() => {
+                          const busStops = [
+                            routeInfo.originStop.stopName,
+                            routeInfo.destinationStop.stopName,
+                          ];
+
+                          // 乗り換えバス停があれば追加
+                          if (routeInfo.routes && routeInfo.routes.length > 0) {
+                            routeInfo.routes.forEach(route => {
+                              if (route.transfers) {
+                                route.transfers.forEach(transfer => {
+                                  busStops.push(transfer.transferStop.stopName);
+                                });
+                              }
+                            });
+                          }
+
+                          // 重複を除去
+                          return busStops.filter((stop, index, arr) => arr.indexOf(stop) === index);
+                        })()}
+                        className="border-t border-gray-200 dark:border-gray-700 pt-8"
                       />
                     </div>
                   )}

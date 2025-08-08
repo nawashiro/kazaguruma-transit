@@ -9,18 +9,18 @@ import {
   convertToLocation,
 } from "../../utils/addressLoader";
 import { logger } from "../../utils/logger";
-import RateLimitModal from "../../components/RateLimitModal";
-import LocationDetailModal from "../../components/LocationDetailModal";
+import RateLimitModal from "@/components/features/RateLimitModal";
+import LocationDetailModal from "@/components/features/LocationDetailModal";
 import {
   loadGeoJSON,
   groupLocationsByArea,
   formatAreaName,
   getAreaNameFromCoordinates,
 } from "../../utils/clientGeoUtils";
-import Card from "@/components/common/Card";
-import CarouselCard from "@/components/common/CarouselCard";
+import Card from "@/components/ui/Card";
+import CarouselCard from "@/components/ui/CarouselCard";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
-import Button from "@/components/common/Button";
+import Button from "@/components/ui/Button";
 
 // 2点間の距離を計算する関数（ハーバーサイン公式）
 const calculateDistance = (
@@ -49,9 +49,9 @@ const calculateDistance = (
   return R * c; // キロメートル単位の距離
 };
 
-interface LocationWithDistance extends KeyLocation {
+type LocationWithDistance = KeyLocation & {
   distance?: number;
-}
+};
 
 export default function LocationsPage() {
   const [categories, setCategories] = useState<KeyLocationCategory[]>([]);
@@ -98,7 +98,7 @@ export default function LocationsPage() {
         setError(null);
       } catch (err) {
         setError("施設データの読み込みに失敗しました");
-        console.error(err);
+        logger.error(err);
       } finally {
         setLoading(false);
       }
@@ -124,7 +124,9 @@ export default function LocationsPage() {
             categoryLocations,
             geoJSON
           );
-          setLocationsByArea(groupedLocations);
+          setLocationsByArea(
+            groupedLocations as { [areaName: string]: LocationWithDistance[] }
+          );
         }
       } catch (err) {
         logger.log("GeoJSON分類エラー:", err);
@@ -220,7 +222,7 @@ export default function LocationsPage() {
           setPositionLoading(false);
         },
         (error) => {
-          console.error("位置情報の取得に失敗しました:", error);
+          logger.error("位置情報の取得に失敗しました:", error);
           setSearchError(
             "位置情報の取得に失敗しました。検索機能で住所を指定してください。"
           );
@@ -397,7 +399,7 @@ export default function LocationsPage() {
               src={location.imageUri}
               alt={location.name}
               className="object-cover h-48 w-full"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              style={{ width: "100%", height: "192px", objectFit: "cover" }}
             />
           </figure>
         )}
@@ -664,7 +666,7 @@ export default function LocationsPage() {
                 href="https://compass.graffer.jp/handbook/landing"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2"
+                className="btn btn-outline w-fit h-fit py-2 rounded-full dark:rounded-sm"
               >
                 <p>お悩みハンドブックウェブサイトへ</p>
               </a>
@@ -688,7 +690,7 @@ export default function LocationsPage() {
                 href="https://sekaibivouac.jp/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline"
+                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>せかいビバークウェブサイトへ</p>
               </a>
@@ -708,7 +710,7 @@ export default function LocationsPage() {
                 href="https://visit-chiyoda.tokyo/app/event"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline"
+                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>千代田区観光協会ウェブサイトへ</p>
               </a>
@@ -716,7 +718,7 @@ export default function LocationsPage() {
                 href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline"
+                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>千代田区ウェブサイトへ</p>
               </a>

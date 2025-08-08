@@ -1,5 +1,68 @@
 import { prisma } from "../db/prisma";
 import { logger } from "@/utils/logger";
+import type { Prisma } from "@prisma/client";
+
+/**
+ * 停留所時刻データの型定義
+ */
+interface StopTimeData {
+  stop_id: string;
+  stop_sequence: number;
+  departure_time?: string | null;
+  arrival_time?: string | null;
+}
+
+/**
+ * Prismaから返される停留所時刻データの型定義（関連データ含む）
+ */
+type StopTimeWithRelations = Prisma.StopTimeGetPayload<{
+  include: {
+    trip: {
+      include: {
+        route: true;
+        stop_times: {
+          orderBy: {
+            stop_sequence: 'asc';
+          };
+        };
+      };
+    };
+    stop: {
+      select: {
+        id: true;
+        name: true;
+        lat: true;
+        lon: true;
+      };
+    };
+  };
+}>;
+
+/**
+ * 目的地停留所時刻の型定義（到着時刻指定時に使用）
+ */
+type DestStopTimeWithTrip = Prisma.StopTimeGetPayload<{
+  include: {
+    trip: {
+      include: {
+        route: true;
+        stop_times: {
+          orderBy: {
+            stop_sequence: 'asc';
+          };
+        };
+      };
+    };
+    stop: {
+      select: {
+        id: true;
+        name: true;
+        lat: true;
+        lon: true;
+      };
+    };
+  };
+}>;
 
 /**
  * 経路探索アルゴリズムのパラメータ設定
@@ -486,7 +549,7 @@ export class TimeTableRouter {
    */
   private async findTransferRoutesForArrivalTime(
     originStopId: string,
-    destStopTimes: any[],
+    destStopTimes: DestStopTimeWithTrip[],
     activeServiceIds: string[],
     startTimeWindow: string,
     arrivalTime: string,
@@ -496,8 +559,8 @@ export class TimeTableRouter {
     for (const destST of destStopTimes) {
       // 最終区間の出発停留所（=乗換地点）を特定
       const transferStopIds = destST.trip.stop_times
-        .filter((st: any) => st.stop_sequence < destST.stop_sequence)
-        .map((st: any) => st.stop_id);
+        .filter((st: StopTimeData) => st.stop_sequence < destST.stop_sequence)
+        .map((st: StopTimeData) => st.stop_id);
 
       // 各乗換地点について処理
       for (const transferStopId of transferStopIds) {
@@ -510,7 +573,7 @@ export class TimeTableRouter {
               // 乗換地点での最小待ち時間（1分）を確保
               lt: this.addMinutesToTime(
                 destST.trip.stop_times.find(
-                  (st: any) => st.stop_id === transferStopId
+                  (st: StopTimeData) => st.stop_id === transferStopId
                 )?.departure_time || "",
                 -ROUTE_PARAMS.MIN_TRANSFER_WAIT
               ),
@@ -554,7 +617,7 @@ export class TimeTableRouter {
         for (const transferArrivalST of transferStopTimes) {
           // 乗換先のトリップから発車する停留所時刻を取得
           const transferDep = destST.trip.stop_times.find(
-            (st: any) => st.stop_id === transferStopId
+            (st: StopTimeData) => st.stop_id === transferStopId
           );
 
           if (!transferDep) continue;
@@ -618,7 +681,7 @@ export class TimeTableRouter {
                     transferArrivalST.trip.route_id,
                   arrivalTime:
                     originRoute.arrival_time || originRoute.departure_time,
-                  departureTime: originRoute.departure_time,
+                  departureTime: originRoute.departure_time || "",
                   stopSequence: originRoute.stop_sequence,
                   stopLat: originStop?.lat || 0,
                   stopLon: originStop?.lon || 0,
@@ -632,7 +695,7 @@ export class TimeTableRouter {
                     transferArrivalST.trip.route.short_name ||
                     transferArrivalST.trip.route.long_name ||
                     transferArrivalST.trip.route_id,
-                  arrivalTime: transferArrivalST.arrival_time,
+                  arrivalTime: transferArrivalST.arrival_time || "",
                   departureTime:
                     transferArrivalST.departure_time ||
                     transferArrivalST.arrival_time,
@@ -651,7 +714,7 @@ export class TimeTableRouter {
                     destST.trip.route_id,
                   arrivalTime:
                     transferDep.arrival_time || transferDep.departure_time,
-                  departureTime: transferDep.departure_time,
+                  departureTime: transferDep.departure_time || "",
                   stopSequence: transferDep.stop_sequence,
                   stopLat: transferStop?.lat || 0,
                   stopLon: transferStop?.lon || 0,
@@ -665,8 +728,8 @@ export class TimeTableRouter {
                     destST.trip.route.short_name ||
                     destST.trip.route.long_name ||
                     destST.trip.route_id,
-                  arrivalTime: destST.arrival_time,
-                  departureTime: destST.departure_time || destST.arrival_time,
+                  arrivalTime: destST.arrival_time || "",
+                  departureTime: destST.departure_time || destST.arrival_time || "",
                   stopSequence: destST.stop_sequence,
                   stopLat: destStop?.lat || 0,
                   stopLon: destStop?.lon || 0,
@@ -674,18 +737,18 @@ export class TimeTableRouter {
               ];
 
               const waitTime = this.calculateTimeDifference(
-                transferArrivalST.arrival_time,
-                transferDep.departure_time
+                transferArrivalST.arrival_time || "",
+                transferDep.departure_time || ""
               );
 
               const firstLegDuration = this.calculateTimeDifference(
-                originRoute.departure_time,
-                transferArrivalST.arrival_time
+                originRoute.departure_time || "",
+                transferArrivalST.arrival_time || ""
               );
 
               const secondLegDuration = this.calculateTimeDifference(
-                transferDep.departure_time,
-                destST.arrival_time
+                transferDep.departure_time || "",
+                destST.arrival_time || ""
               );
 
               const totalDuration =
@@ -709,7 +772,7 @@ export class TimeTableRouter {
    * 直行便を検索
    */
   private async findDirectRoutes(
-    originStopTimes: any[],
+    originStopTimes: StopTimeWithRelations[],
     destStopId: string
   ): Promise<TimeTableRouteResult[]> {
     const directRoutes: TimeTableRouteResult[] = [];
@@ -717,7 +780,7 @@ export class TimeTableRouter {
     for (const originST of originStopTimes) {
       // 同じトリップで目的地に到着する停留所時刻を検索
       const destST = originST.trip.stop_times.find(
-        (st: any) =>
+        (st: StopTimeData) =>
           st.stop_id === destStopId && st.stop_sequence > originST.stop_sequence
       );
 
@@ -753,8 +816,8 @@ export class TimeTableRouter {
               originST.trip.route.short_name ||
               originST.trip.route.long_name ||
               originST.trip.route_id,
-            arrivalTime: originST.arrival_time || originST.departure_time,
-            departureTime: originST.departure_time,
+            arrivalTime: originST.arrival_time || originST.departure_time || "",
+            departureTime: originST.departure_time || "",
             stopSequence: originST.stop_sequence,
             stopLat: originStop?.lat || 0,
             stopLon: originStop?.lon || 0,
@@ -768,8 +831,8 @@ export class TimeTableRouter {
               originST.trip.route.short_name ||
               originST.trip.route.long_name ||
               originST.trip.route_id,
-            arrivalTime: destST.arrival_time,
-            departureTime: destST.departure_time || destST.arrival_time,
+            arrivalTime: destST.arrival_time || "",
+            departureTime: destST.departure_time || destST.arrival_time || "",
             stopSequence: destST.stop_sequence,
             stopLat: destStop?.lat || 0,
             stopLon: destStop?.lon || 0,
@@ -777,16 +840,16 @@ export class TimeTableRouter {
         ];
 
         const totalDuration = this.calculateTimeDifference(
-          originST.departure_time,
-          destST.arrival_time
+          originST.departure_time || "",
+          destST.arrival_time || ""
         );
 
         directRoutes.push({
           nodes,
           transfers: 0,
           totalDuration,
-          departure: originST.departure_time,
-          arrival: destST.arrival_time,
+          departure: originST.departure_time || "",
+          arrival: destST.arrival_time || "",
         });
       }
     }
@@ -798,7 +861,7 @@ export class TimeTableRouter {
    * 乗換が必要な経路を検索
    */
   private async findRoutesWithTransfer(
-    originStopTimes: any[],
+    originStopTimes: StopTimeWithRelations[],
     destStopId: string,
     activeServiceIds: string[],
     startTimeWindow: string,
@@ -816,7 +879,7 @@ export class TimeTableRouter {
     for (const originST of originStopTimes) {
       // トリップの全停留所を取得
       const tripStops = originST.trip.stop_times.filter(
-        (st: any) => st.stop_sequence > originST.stop_sequence
+        (st: StopTimeData) => st.stop_sequence > originST.stop_sequence
       );
 
       // 各停留所を乗換地点として検討
@@ -831,11 +894,11 @@ export class TimeTableRouter {
             departure_time: {
               // 到着から最低1分後、最大120分後に出発する便
               gt: this.addMinutesToTime(
-                transferArrivalTime,
+                transferArrivalTime || "",
                 ROUTE_PARAMS.MIN_TRANSFER_WAIT
               ),
               lte: this.addMinutesToTime(
-                transferArrivalTime,
+                transferArrivalTime || "",
                 ROUTE_PARAMS.MAX_TRANSFER_WAIT
               ),
             },
@@ -878,7 +941,7 @@ export class TimeTableRouter {
         for (const transferDep of transferDepartures) {
           // 乗換先のトリップで目的地に到着する停留所時刻を検索
           const destST = transferDep.trip.stop_times.find(
-            (st: any) =>
+            (st: StopTimeData) =>
               st.stop_id === destStopId &&
               st.stop_sequence > transferDep.stop_sequence
           );
@@ -925,8 +988,8 @@ export class TimeTableRouter {
                   originST.trip.route.short_name ||
                   originST.trip.route.long_name ||
                   originST.trip.route_id,
-                arrivalTime: originST.arrival_time || originST.departure_time,
-                departureTime: originST.departure_time,
+                arrivalTime: originST.arrival_time || originST.departure_time || "",
+                departureTime: originST.departure_time || "",
                 stopSequence: originST.stop_sequence,
                 stopLat: originStop?.lat || 0,
                 stopLon: originStop?.lon || 0,
@@ -940,9 +1003,9 @@ export class TimeTableRouter {
                   originST.trip.route.short_name ||
                   originST.trip.route.long_name ||
                   originST.trip.route_id,
-                arrivalTime: transferST.arrival_time,
+                arrivalTime: transferST.arrival_time || "",
                 departureTime:
-                  transferST.departure_time || transferST.arrival_time,
+                  transferST.departure_time || transferST.arrival_time || "",
                 stopSequence: transferST.stop_sequence,
                 stopLat: transferStop?.lat || 0,
                 stopLon: transferStop?.lon || 0,
@@ -957,8 +1020,8 @@ export class TimeTableRouter {
                   transferDep.trip.route.long_name ||
                   transferDep.trip.route_id,
                 arrivalTime:
-                  transferDep.arrival_time || transferDep.departure_time,
-                departureTime: transferDep.departure_time,
+                  transferDep.arrival_time || transferDep.departure_time || "",
+                departureTime: transferDep.departure_time || "",
                 stopSequence: transferDep.stop_sequence,
                 stopLat: transferStop?.lat || 0,
                 stopLon: transferStop?.lon || 0,
@@ -972,8 +1035,8 @@ export class TimeTableRouter {
                   transferDep.trip.route.short_name ||
                   transferDep.trip.route.long_name ||
                   transferDep.trip.route_id,
-                arrivalTime: destST.arrival_time,
-                departureTime: destST.departure_time || destST.arrival_time,
+                arrivalTime: destST.arrival_time || "",
+                departureTime: destST.departure_time || destST.arrival_time || "",
                 stopSequence: destST.stop_sequence,
                 stopLat: destStop?.lat || 0,
                 stopLon: destStop?.lon || 0,
@@ -1002,7 +1065,7 @@ export class TimeTableRouter {
               nodes,
               transfers: 1,
               totalDuration,
-              departure: originST.departure_time,
+              departure: originST.departure_time || "",
               arrival: destST.arrival_time || destST.departure_time || "",
             });
           }

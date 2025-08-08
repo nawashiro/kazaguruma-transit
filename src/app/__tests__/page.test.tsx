@@ -25,7 +25,7 @@ global.fetch = jest.fn().mockImplementation(() => {
 
 // コンポーネントのモック
 jest.mock(
-  "../../components/DateTimeSelector",
+  "@/components/features/DateTimeSelector",
   () =>
     ({ onDateTimeSelected }: any) =>
       (
@@ -42,7 +42,7 @@ jest.mock(
 );
 
 jest.mock(
-  "../../components/OriginSelector",
+  "@/components/features/OriginSelector",
   () =>
     ({ onOriginSelected }: any) =>
       (
@@ -56,7 +56,7 @@ jest.mock(
 );
 
 jest.mock(
-  "../../components/DestinationSelector",
+  "@/components/features/DestinationSelector",
   () =>
     ({ onDestinationSelected }: any) =>
       (
@@ -73,16 +73,16 @@ jest.mock(
       )
 );
 
-jest.mock("../../components/IntegratedRouteDisplay", () => () => (
+jest.mock("@/components/features/IntegratedRouteDisplay", () => () => (
   <div data-testid="mock-route-display" />
 ));
 
-jest.mock("../../components/RoutePdfExport", () => () => (
+jest.mock("@/components/features/RoutePdfExport", () => () => (
   <div data-testid="mock-pdf-export" />
 ));
 
 jest.mock(
-  "../../components/common/Button",
+  "@/components/ui/Button",
   () =>
     ({ children, onClick, testId }: any) =>
       (
@@ -92,21 +92,21 @@ jest.mock(
       )
 );
 
-jest.mock("../../components/common/ResetButton", () => ({ onReset }: any) => (
+jest.mock("@/components/ui/ResetButton", () => ({ onReset }: any) => (
   <button data-testid="mock-reset-button" onClick={onReset}>
     リセット
   </button>
 ));
 
 jest.mock(
-  "../../components/RateLimitModal",
+  "@/components/features/RateLimitModal",
   () =>
     ({ isOpen }: any) =>
       isOpen ? <div data-testid="mock-rate-limit-modal" /> : null
 );
 
 // 初心者ガイド関連のコンポーネントもモック
-jest.mock("../../components/common/FirstVisitGuideModal", () => () => (
+jest.mock("@/components/features/FirstVisitGuideModal", () => () => (
   <div data-testid="mock-first-visit-modal">初回訪問ガイドモーダル</div>
 ));
 

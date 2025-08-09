@@ -24,7 +24,6 @@ import {
   parseApprovalEvent,
   parseEvaluationEvent,
   combinePostsWithStats,
-  sortPostsByScore,
   createAuditTimeline,
   validatePostForm,
   formatRelativeTime,
@@ -254,10 +253,6 @@ export default function DiscussionDetailPage() {
   const postsWithStats = useMemo(
     () => combinePostsWithStats(approvedPosts, evaluations),
     [approvedPosts, evaluations]
-  );
-  const topPosts = useMemo(
-    () => sortPostsByScore(postsWithStats).slice(0, 10),
-    [postsWithStats]
   );
   const auditItems = useMemo(
     () =>
@@ -673,47 +668,9 @@ export default function DiscussionDetailPage() {
                   )}
                 </>
               ) : (
-                !isAnalyzing && (
-                  <div className="space-y-4">
-                    {topPosts.length > 0 ? (
-                      topPosts.map((post, index) => (
-                        <div
-                          key={post.id}
-                          className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
-                        >
-                          <div className="card-body p-4">
-                            <div className="flex items-start justify-between mb-2">
-                              <span className="badge badge-primary badge-sm">
-                                #{index + 1}
-                              </span>
-                            </div>
-                            {post.busStopTag && (
-                              <div className="mb-2">
-                                <span className="badge badge-outline badge-sm">
-                                  {post.busStopTag}
-                                </span>
-                              </div>
-                            )}
-                            <div className="prose prose-sm dark:prose-invert max-w-none">
-                              {post.content.split("\n").map((line, i) => (
-                                <p key={i} className="mb-1 last:mb-0">
-                                  {line || "\u00A0"}
-                                </p>
-                              ))}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-2">
-                              {formatRelativeTime(post.createdAt)}
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-gray-600 dark:text-gray-400">
-                        承認された投稿がまだありません。
-                      </p>
-                    )}
-                  </div>
-                )
+                <p className="text-gray-600 dark:text-gray-400">
+                  分析された投稿がまだありません。
+                </p>
               )}
             </section>
           </div>

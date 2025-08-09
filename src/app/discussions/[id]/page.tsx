@@ -7,7 +7,10 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { isDiscussionsEnabled, buildDiscussionId } from "@/lib/config/discussion-config";
+import {
+  isDiscussionsEnabled,
+  buildDiscussionId,
+} from "@/lib/config/discussion-config";
 import { LoginModal } from "@/components/discussion/LoginModal";
 import { PostPreview } from "@/components/discussion/PostPreview";
 import { EvaluationComponent } from "@/components/discussion/EvaluationComponent";
@@ -39,6 +42,7 @@ import type {
   PostEvaluation,
   PostFormData,
 } from "@/types/discussion";
+import { logger } from "@/utils/logger";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const RELAYS = [
@@ -104,7 +108,9 @@ export default function DiscussionDetailPage() {
           nostrService.getDiscussionPosts(
             buildDiscussionId(ADMIN_PUBKEY, discussionId)
           ),
-          nostrService.getApprovals(buildDiscussionId(ADMIN_PUBKEY, discussionId)),
+          nostrService.getApprovals(
+            buildDiscussionId(ADMIN_PUBKEY, discussionId)
+          ),
         ]);
 
       const parsedDiscussion = discussionEvents
@@ -169,7 +175,7 @@ export default function DiscussionDetailPage() {
       const profilesMap = Object.fromEntries(profileResults);
       setProfiles(profilesMap);
     } catch (error) {
-      console.error("Failed to load discussion:", error);
+      logger.error("Failed to load discussion:", error);
     } finally {
       setIsLoading(false);
     }
@@ -187,7 +193,7 @@ export default function DiscussionDetailPage() {
       );
       setUserEvaluations(evalPostIds);
     } catch (error) {
-      console.error("Failed to load user evaluations:", error);
+      logger.error("Failed to load user evaluations:", error);
     }
   }, [user.pubkey]);
 
@@ -199,11 +205,11 @@ export default function DiscussionDetailPage() {
       if (result.success) {
         setBusStops(result.data);
       } else {
-        console.error("Failed to load bus stops:", result.error);
+        logger.error("Failed to load bus stops:", result.error);
         setBusStops([]);
       }
     } catch (error) {
-      console.error("Failed to load bus stops:", error);
+      logger.error("Failed to load bus stops:", error);
       // エラー時はフォールバックとして空配列を設定
       setBusStops([]);
     }
@@ -240,7 +246,7 @@ export default function DiscussionDetailPage() {
       );
       setAnalysisResult(result);
     } catch (error) {
-      console.error("コンセンサス分析に失敗しました:", error);
+      logger.error("コンセンサス分析に失敗しました:", error);
       setAnalysisResult(null);
     } finally {
       setIsAnalyzing(false);
@@ -328,7 +334,7 @@ export default function DiscussionDetailPage() {
 
       setPosts((prev) => [newPost, ...prev]);
     } catch (error) {
-      console.error("Failed to submit post:", error);
+      logger.error("Failed to submit post:", error);
       setErrors(["投稿の送信に失敗しました"]);
     } finally {
       setIsSubmitting(false);
@@ -370,7 +376,7 @@ export default function DiscussionDetailPage() {
 
       setEvaluations((prev) => [...prev, newEvaluation]);
     } catch (error) {
-      console.error("Failed to evaluate post:", error);
+      logger.error("Failed to evaluate post:", error);
     }
   };
 

@@ -29,6 +29,7 @@ import type {
   DiscussionRequest,
   DiscussionFormData,
 } from "@/types/discussion";
+import { logger } from "@/utils/logger";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const RELAYS = [
@@ -110,7 +111,7 @@ export default function DiscussionManagePage() {
       setDiscussions(parsedDiscussions);
       setRequests(parsedRequests);
     } catch (error) {
-      console.error("Failed to load data:", error);
+      logger.error("Failed to load data:", error);
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +151,7 @@ export default function DiscussionManagePage() {
       setModeratorInput("");
       await loadData();
     } catch (error) {
-      console.error("Failed to create discussion:", error);
+      logger.error("Failed to create discussion:", error);
       setErrors(["会話の作成に失敗しました"]);
     } finally {
       setIsSubmitting(false);
@@ -177,7 +178,7 @@ export default function DiscussionManagePage() {
 
       await loadData();
     } catch (error) {
-      console.error("Failed to delete discussion:", error);
+      logger.error("Failed to delete discussion:", error);
     } finally {
       setDeletingId(null);
     }
@@ -258,7 +259,7 @@ export default function DiscussionManagePage() {
       cancelEdit();
       await loadData();
     } catch (error) {
-      console.error("Failed to update discussion:", error);
+      logger.error("Failed to update discussion:", error);
       setEditErrors(["会話の更新に失敗しました"]);
     } finally {
       setIsSubmitting(false);

@@ -4,6 +4,7 @@
  */
 
 import dam from "@ai-on-browser/data-analysis-models";
+import { logger } from "@/utils/logger";
 
 export interface VoteData {
   pid: string; // 参加者ID
@@ -47,7 +48,7 @@ export class PolisConsensus {
   private preprocess() {
     // データ検証
     if (!this.voteData || this.voteData.length === 0) {
-      console.warn("投票データが空です");
+      logger.warn("投票データが空です");
       this.participantIds = [];
       this.topicIds = [];
       this.voteMatrix = [];
@@ -65,7 +66,7 @@ export class PolisConsensus {
 
     // 最小要件の確認
     if (this.participantIds.length < 2 || this.topicIds.length < 2) {
-      console.warn("参加者または意見数が不足しています", {
+      logger.warn("参加者または意見数が不足しています", {
         participants: this.participantIds.length,
         topics: this.topicIds.length,
       });
@@ -81,7 +82,7 @@ export class PolisConsensus {
       });
     });
 
-    console.log("前処理完了:", {
+    logger.log("前処理完了:", {
       participants: this.participantIds.length,
       topics: this.topicIds.length,
       matrixSize: `${this.voteMatrix.length}x${
@@ -96,12 +97,12 @@ export class PolisConsensus {
   private runPCA(nComponents: number = 2): number[][] {
     // データ検証
     if (!this.voteMatrix || this.voteMatrix.length === 0) {
-      console.warn("投票行列が空です");
+      logger.warn("投票行列が空です");
       return [];
     }
 
     if (this.voteMatrix[0].length === 0) {
-      console.warn("投票行列の次元が無効です");
+      logger.warn("投票行列の次元が無効です");
       return [];
     }
 
@@ -110,7 +111,7 @@ export class PolisConsensus {
       this.voteMatrix.length < nComponents ||
       this.voteMatrix[0].length < nComponents
     ) {
-      console.warn("PCAに必要な最小データサイズが不足しています", {
+      logger.warn("PCAに必要な最小データサイズが不足しています", {
         rows: this.voteMatrix.length,
         cols: this.voteMatrix[0].length,
         required: nComponents,
@@ -122,7 +123,7 @@ export class PolisConsensus {
     }
 
     try {
-      console.log("PCA実行開始", {
+      logger.log("PCA実行開始", {
         matrixShape: `${this.voteMatrix.length}x${this.voteMatrix[0].length}`,
         components: nComponents,
       });
@@ -147,7 +148,7 @@ export class PolisConsensus {
       pca.fit(this.voteMatrix);
       const result = pca.predict(this.voteMatrix);
 
-      console.log("PCA実行成功", {
+      logger.log("PCA実行成功", {
         inputShape: `${this.voteMatrix.length}x${this.voteMatrix[0].length}`,
         outputShape: `${result.length}x${result[0]?.length || 0}`,
       });
@@ -159,8 +160,8 @@ export class PolisConsensus {
 
       return result || [];
     } catch (error) {
-      console.error("PCA実行エラー:", error);
-      console.log("フォールバック: 元データの最初の列を使用");
+      logger.error("PCA実行エラー:", error);
+      logger.log("フォールバック: 元データの最初の列を使用");
 
       // エラー時は元データの最初のn列を返す
       return this.voteMatrix.map((row) => {
@@ -184,14 +185,12 @@ export class PolisConsensus {
   ): ClusteringResult {
     // データ検証
     if (!data || data.length === 0) {
-      console.warn("クラスタリング用データが空です");
+      logger.warn("クラスタリング用データが空です");
       return { clusterLabels: [], pcaResult: [] };
     }
 
     if (data.length < 2) {
-      console.warn(
-        "クラスタリングに必要な最小データポイント数が不足しています"
-      );
+      logger.warn("クラスタリングに必要な最小データポイント数が不足しています");
       return {
         clusterLabels: [0],
         pcaResult: data,
@@ -199,7 +198,7 @@ export class PolisConsensus {
     }
 
     try {
-      console.log("クラスタリング実行開始", {
+      logger.log("クラスタリング実行開始", {
         dataPoints: data.length,
         dimensions: data[0]?.length || 0,
         maxClusters,
@@ -254,12 +253,12 @@ export class PolisConsensus {
             bestK = k;
           }
         } catch (error) {
-          console.warn(`K=${k}でのクラスタリングに失敗:`, error);
+          logger.warn(`K=${k}でのクラスタリングに失敗:`, error);
           continue;
         }
       }
 
-      console.log("最適なクラスタ数決定:", bestK);
+      logger.log("最適なクラスタ数決定:", bestK);
 
       // 最適なクラスタ数でK-meansを実行
       const kmeans = new dam.models.KMeans();
@@ -270,7 +269,7 @@ export class PolisConsensus {
       kmeans.fit(data);
       const labels = kmeans.predict(data);
 
-      console.log("クラスタリング実行成功", {
+      logger.log("クラスタリング実行成功", {
         clusters: bestK,
         labelDistribution: this.getClusterDistribution(labels),
       });
@@ -280,8 +279,8 @@ export class PolisConsensus {
         pcaResult: data,
       };
     } catch (error) {
-      console.error("クラスタリング実行エラー:", error);
-      console.log("フォールバック: 全データを単一クラスタに分類");
+      logger.error("クラスタリング実行エラー:", error);
+      logger.log("フォールバック: 全データを単一クラスタに分類");
 
       // エラー時はすべて同じクラスタに分類
       return {

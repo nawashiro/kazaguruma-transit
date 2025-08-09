@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import { logger } from "@/utils/logger";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -34,7 +35,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       setUsername("");
       setMode("create");
     } catch (error) {
-      console.error(
+      logger.error(
         `${mode === "login" ? "Login" : "Account creation"} failed:`,
         error
       );

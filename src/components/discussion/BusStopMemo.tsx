@@ -20,6 +20,7 @@ import type {
   PostWithStats,
 } from "@/types/discussion";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import { logger } from "@/utils/logger";
 
 interface BusStopMemoProps {
   busStops: string[];
@@ -105,7 +106,7 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
       });
       setTopPostsByStop(topPostsMap);
     } catch (error) {
-      console.error("Failed to load bus stop memo:", error);
+      logger.error("Failed to load bus stop memo:", error);
       setTopPostsByStop(new Map());
     }
   }, [busStops, config.busStopDiscussionId, nostrService]);
@@ -210,7 +211,7 @@ export async function getBusStopMemoData(
 
     return topPostsMap;
   } catch (error) {
-    console.error("Failed to load bus stop memo data:", error);
+    logger.error("Failed to load bus stop memo data:", error);
     return new Map();
   }
 }

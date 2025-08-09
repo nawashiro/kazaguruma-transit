@@ -69,7 +69,7 @@ export function getNostrServiceConfig(): NostrServiceConfig {
 }
 
 export function isDiscussionsEnabled(): boolean {
-  return getDiscussionConfig().enabled && !!getDiscussionConfig().adminPubkey;
+  return getDiscussionConfig().enabled;
 }
 
 export function validateDiscussionConfig(): string[] {

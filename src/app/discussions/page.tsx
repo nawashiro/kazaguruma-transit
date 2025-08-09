@@ -18,6 +18,7 @@ import {
   formatRelativeTime,
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
+import { getNostrServiceConfig } from "@/lib/config/discussion-config";
 import Button from "@/components/ui/Button";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
@@ -28,16 +29,7 @@ import type {
 import { logger } from "@/utils/logger";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
-const RELAYS = [
-  { url: "wss://relay.damus.io", read: true, write: true },
-  { url: "wss://relay.nostr.band", read: true, write: true },
-  { url: "wss://nos.lol", read: true, write: true },
-];
-
-const nostrService = createNostrService({
-  relays: RELAYS,
-  defaultTimeout: 5000,
-});
+const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function DiscussionsPage() {
   const [activeTab, setActiveTab] = useState<"main" | "audit">("main");

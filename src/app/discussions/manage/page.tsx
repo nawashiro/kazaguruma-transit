@@ -22,6 +22,7 @@ import {
   isValidNpub,
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
+import { getNostrServiceConfig } from "@/lib/config/discussion-config";
 import Button from "@/components/ui/Button";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
@@ -32,16 +33,7 @@ import type {
 import { logger } from "@/utils/logger";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
-const RELAYS = [
-  { url: "wss://relay.damus.io", read: true, write: true },
-  { url: "wss://relay.nostr.band", read: true, write: true },
-  { url: "wss://nos.lol", read: true, write: true },
-];
-
-const nostrService = createNostrService({
-  relays: RELAYS,
-  defaultTimeout: 5000,
-});
+const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function DiscussionManagePage() {
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
@@ -55,6 +47,7 @@ export default function DiscussionManagePage() {
     description: "",
     moderators: [],
   });
+  const [discussionId, setDiscussionId] = useState("");
   const [editForm, setEditForm] = useState<DiscussionFormData>({
     title: "",
     description: "",
@@ -120,6 +113,17 @@ export default function DiscussionManagePage() {
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // IDのバリデーション
+    const trimmedId = discussionId.trim();
+    if (!trimmedId) {
+      setErrors(["IDを入力してください"]);
+      return;
+    }
+    if (!/^[a-z\-]+$/.test(trimmedId)) {
+      setErrors(["IDは小文字とハイフンのみ使用できます"]);
+      return;
+    }
+
     const validationErrors = validateDiscussionForm(createForm);
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
@@ -133,7 +137,8 @@ export default function DiscussionManagePage() {
       const eventTemplate = nostrService.createDiscussionEvent(
         createForm.title.trim(),
         createForm.description.trim(),
-        createForm.moderators
+        createForm.moderators,
+        trimmedId
       );
 
       const signedEvent = await signEvent(eventTemplate);
@@ -148,6 +153,7 @@ export default function DiscussionManagePage() {
         description: "",
         moderators: [],
       });
+      setDiscussionId("");
       setModeratorInput("");
       await loadData();
     } catch (error) {
@@ -319,6 +325,25 @@ export default function DiscussionManagePage() {
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
                 <form onSubmit={handleCreateSubmit} className="space-y-4">
+                  <div>
+                    <label htmlFor="discussion-id" className="label">
+                      <span className="label-text">ID *</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="discussion-id"
+                      value={discussionId}
+                      onChange={(e) => setDiscussionId(e.target.value)}
+                      className="input input-bordered w-full"
+                      placeholder="会話のID（小文字とハイフンのみ）"
+                      required
+                      disabled={isSubmitting}
+                      maxLength={50}
+                      autoComplete="off"
+                      pattern="[a-z\-]+"
+                    />
+                  </div>
+
                   <div>
                     <label htmlFor="create-title" className="label">
                       <span className="label-text">タイトル *</span>

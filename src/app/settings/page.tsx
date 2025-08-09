@@ -187,7 +187,7 @@ export default function SettingsPage() {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={handleLogout}
-                    className="btn btn-error rounded-full dark:rounded-sm"
+                    className="btn btn-warning rounded-full dark:rounded-sm"
                     disabled={isLoggingOut}
                   >
                     {isLoggingOut ? (

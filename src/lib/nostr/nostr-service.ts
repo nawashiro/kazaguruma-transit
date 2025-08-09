@@ -1,6 +1,5 @@
 import { SimplePool, Event, Filter, finalizeEvent } from "nostr-tools";
 import type { PWKBlob } from "nosskey-sdk";
-import { v4 as uuidv4 } from "uuid";
 import { logger } from "@/utils/logger";
 
 export interface NostrRelayConfig {
@@ -243,11 +242,10 @@ export class NostrService {
     title: string,
     description: string,
     moderators: string[],
-    dTag?: string
+    dTag: string
   ): Omit<Event, "id" | "sig" | "pubkey"> {
-    const tagValue = dTag || uuidv4();
     const tags: string[][] = [
-      ["d", tagValue],
+      ["d", dTag],
       ["name", title],
       ["description", description],
       ...moderators.map((mod) => ["p", mod, "", "moderator"]),

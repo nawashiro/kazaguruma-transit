@@ -23,7 +23,7 @@ const getRubyfulSetting = (): boolean => {
   }
 
   try {
-    const savedSetting = localStorage.getItem("rubyful");
+    const savedSetting = localStorage.getItem("isRubyOn");
     // 明示的に"false"が設定されている場合のみOFF、それ以外はON
     return savedSetting !== "false";
   } catch (error) {
@@ -46,15 +46,9 @@ export const useRubyfulRun = (trigger: unknown[], isLoaded: boolean) => {
     setIsRubyVisible((prevState) => {
       const newRubyState = !prevState;
 
-      try {
-        localStorage.setItem("rubyful", newRubyState.toString());
-
-        // Rubyfulライブラリの設定も同時に更新
-        if (window.RubyfulJsApp) {
-          window.RubyfulJsApp.defaultDisplay = newRubyState;
-        }
-      } catch (error) {
-        logger.warn("ローカルストレージの保存に失敗しました:", error);
+      // Rubyfulライブラリの設定も同時に更新
+      if (window.RubyfulJsApp) {
+        window.RubyfulJsApp.defaultDisplay = newRubyState;
       }
 
       return newRubyState;

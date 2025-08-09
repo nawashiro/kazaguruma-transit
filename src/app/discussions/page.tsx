@@ -25,6 +25,7 @@ import type {
   DiscussionRequest,
   DiscussionRequestFormData,
 } from "@/types/discussion";
+import { logger } from "@/utils/logger";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const RELAYS = [
@@ -123,7 +124,7 @@ export default function DiscussionsPage() {
       const profilesMap = Object.fromEntries(profileResults);
       setProfiles(profilesMap);
     } catch (error) {
-      console.error("Failed to load discussions:", error);
+      logger.error("Failed to load discussions:", error);
     } finally {
       setIsLoading(false);
     }
@@ -159,7 +160,7 @@ export default function DiscussionsPage() {
       setRequestForm({ title: "", description: "" });
       await loadData();
     } catch (error) {
-      console.error("Failed to submit request:", error);
+      logger.error("Failed to submit request:", error);
     } finally {
       setIsSubmitting(false);
     }

@@ -48,7 +48,7 @@ async function importGtfsData() {
           );
           return;
         }
-      } catch (error) {
+      } catch {
         console.log(
           "データベースへの接続に失敗しました。データを再インポートします。"
         );

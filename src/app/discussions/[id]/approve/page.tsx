@@ -7,7 +7,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
+import {
+  isDiscussionsEnabled,
+  buildDiscussionId,
+} from "@/lib/config/discussion-config";
 import {
   ModeratorCheck,
   PermissionError,
@@ -27,6 +30,7 @@ import type {
   DiscussionPost,
   PostApproval,
 } from "@/types/discussion";
+import { logger } from "@/utils/logger";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const RELAYS = [
@@ -65,9 +69,11 @@ export default function PostApprovalPage() {
         await Promise.all([
           nostrService.getDiscussions(ADMIN_PUBKEY),
           nostrService.getDiscussionPosts(
-            `34550:${ADMIN_PUBKEY}:${discussionId}`
+            buildDiscussionId(ADMIN_PUBKEY, discussionId)
           ),
-          nostrService.getApprovals(`34550:${ADMIN_PUBKEY}:${discussionId}`),
+          nostrService.getApprovals(
+            buildDiscussionId(ADMIN_PUBKEY, discussionId)
+          ),
         ]);
 
       const parsedDiscussion = discussionEvents
@@ -91,7 +97,7 @@ export default function PostApprovalPage() {
       setPosts(parsedPosts);
       setApprovals(parsedApprovals);
     } catch (error) {
-      console.error("Failed to load data:", error);
+      logger.error("Failed to load data:", error);
     } finally {
       setIsLoading(false);
     }
@@ -134,7 +140,7 @@ export default function PostApprovalPage() {
       }
       await loadData();
     } catch (error) {
-      console.error("Failed to approve post:", error);
+      logger.error("Failed to approve post:", error);
     } finally {
       setProcessingPostId(null);
     }
@@ -160,7 +166,7 @@ export default function PostApprovalPage() {
       }
       await loadData();
     } catch (error) {
-      console.error("Failed to reject post:", error);
+      logger.error("Failed to reject post:", error);
     } finally {
       setProcessingPostId(null);
     }

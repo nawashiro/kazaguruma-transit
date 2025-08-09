@@ -44,8 +44,8 @@ export default function SidebarLayout({
           const style = document.createElement("style");
           style.innerHTML = `
           button.rubyfuljs-button.is-customized {
-            background-color: var(--color-accent-content);
-            color: var(--color-accent);
+            background-color: var(--color-secondary-content);
+            color: var(--color-secondary);
             box-shadow: none;
             border: none;
           }
@@ -57,6 +57,22 @@ export default function SidebarLayout({
             margin-bottom: .30rem;
             margin-top: .30rem;
             font-size: 70%;
+            color: var(--color-secondary-content);
+          }
+          .alert-error rt {
+            color: var(--color-error-content);
+          }
+          .alert-success rt {
+            color: var(--color-success-content);
+          }
+          .btn-primary rt {
+            color: var(--color-primary-content);
+          }
+          .btn-warning rt{
+            color: var(--color-warning-content);
+          }
+          .btn:is(:disabled, [disabled], .btn-disabled) rt {
+            color: color-mix(in oklch, var(--color-base-content) 20%, rgba(0, 0, 0, 0));
           }
           `;
           document.body.appendChild(style);

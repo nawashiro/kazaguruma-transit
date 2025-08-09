@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import type { PostWithStats } from "@/types/discussion";
 import { shuffleArray, filterUnevaluatedPosts } from "@/lib/nostr/nostr-utils";
+import { logger } from "@/utils/logger";
 
 interface EvaluationComponentProps {
   posts: PostWithStats[];
@@ -41,7 +42,7 @@ export function EvaluationComponent({
       // filterUnevaluatedPostsが自動的に評価済み投稿を除外するため、
       // インデックスを手動で進める必要はない
     } catch (error) {
-      console.error("Evaluation failed:", error);
+      logger.error("Evaluation failed:", error);
     } finally {
       setEvaluatingPost(null);
     }

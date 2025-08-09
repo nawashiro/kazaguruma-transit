@@ -5,6 +5,7 @@
 
 import { PolisConsensus, VoteData, ConsensusResult } from "./polis-consensus";
 import type { PostEvaluation, DiscussionPost } from "@/types/discussion";
+import { logger } from "@/utils/logger";
 
 export interface GroupConsensusData {
   groupId: number;
@@ -14,7 +15,7 @@ export interface GroupConsensusData {
     representativenessScore: number;
     zScore: number;
     pValue: number;
-    voteType: 'agree' | 'disagree';
+    voteType: "agree" | "disagree";
     agreeRatio: number;
     disagreeRatio: number;
   }>;
@@ -64,7 +65,7 @@ export class EvaluationService {
     posts: DiscussionPost[]
   ): Promise<EvaluationAnalysisResult> {
     try {
-      console.log("コンセンサス分析開始", {
+      logger.log("コンセンサス分析開始", {
         evaluations: evaluations.length,
         totalPosts: posts.length,
       });
@@ -72,14 +73,14 @@ export class EvaluationService {
       // 承認された投稿のみを対象とする
       const approvedPosts = posts.filter((p) => p.approved);
 
-      console.log("データ検証", {
+      logger.log("データ検証", {
         approvedPosts: approvedPosts.length,
         evaluationsCount: evaluations.length,
       });
 
       // 評価データが不十分な場合は空の結果を返す
       if (evaluations.length < 5 || approvedPosts.length < 2) {
-        console.warn("データ不足のため分析をスキップ", {
+        logger.warn("データ不足のため分析をスキップ", {
           evaluations: evaluations.length,
           approvedPosts: approvedPosts.length,
           minRequired: { evaluations: 5, posts: 2 },
@@ -91,13 +92,18 @@ export class EvaluationService {
       }
 
       // 承認された投稿の評価データのみを抽出
-      const approvedPostIds = new Set(approvedPosts.map(p => p.id));
-      const approvedEvaluations = evaluations.filter(e => approvedPostIds.has(e.postId));
+      const approvedPostIds = new Set(approvedPosts.map((p) => p.id));
+      const approvedEvaluations = evaluations.filter((e) =>
+        approvedPostIds.has(e.postId)
+      );
 
       // 評価データを投票データに変換
-      const votes = this.convertEvaluationsToVotes(approvedEvaluations, approvedPosts);
+      const votes = this.convertEvaluationsToVotes(
+        approvedEvaluations,
+        approvedPosts
+      );
 
-      console.log("投票データ変換完了", {
+      logger.log("投票データ変換完了", {
         votesCount: votes.length,
         uniqueParticipants: new Set(votes.map((v) => v.pid)).size,
         uniqueTopics: new Set(votes.map((v) => v.tid)).size,
@@ -105,7 +111,7 @@ export class EvaluationService {
 
       // 投票データが不十分な場合は空の結果を返す
       if (votes.length < 5) {
-        console.warn("投票データ不足", { votes: votes.length, minRequired: 5 });
+        logger.warn("投票データ不足", { votes: votes.length, minRequired: 5 });
         return {
           groupAwareConsensus: [],
           groupRepresentativeComments: [],
@@ -117,7 +123,7 @@ export class EvaluationService {
       const uniqueTopics = new Set(votes.map((v) => v.tid)).size;
 
       if (uniqueParticipants < 2 || uniqueTopics < 2) {
-        console.warn("ユニーク参加者または投稿数が不足", {
+        logger.warn("ユニーク参加者または投稿数が不足", {
           uniqueParticipants,
           uniqueTopics,
           minRequired: { participants: 2, topics: 2 },
@@ -140,13 +146,18 @@ export class EvaluationService {
         .map(([postId, consensusScore]) => {
           const post = postMap.get(postId)!;
           if (!post) return null;
-          
+
           // 全体の賛成率を計算（承認された投稿の評価のみ）
-          const postEvaluations = approvedEvaluations.filter(e => e.postId === postId);
+          const postEvaluations = approvedEvaluations.filter(
+            (e) => e.postId === postId
+          );
           const totalVotes = postEvaluations.length;
-          const agreeVotes = postEvaluations.filter(e => e.rating === '+').length;
-          const overallAgreePercentage = totalVotes > 0 ? Math.round((agreeVotes / totalVotes) * 100) : 0;
-          
+          const agreeVotes = postEvaluations.filter(
+            (e) => e.rating === "+"
+          ).length;
+          const overallAgreePercentage =
+            totalVotes > 0 ? Math.round((agreeVotes / totalVotes) * 100) : 0;
+
           return {
             postId,
             post,
@@ -192,7 +203,7 @@ export class EvaluationService {
         groupRepresentativeComments,
       };
     } catch (error) {
-      console.error("コンセンサス分析エラー:", error);
+      logger.error("コンセンサス分析エラー:", error);
       return {
         groupAwareConsensus: [],
         groupRepresentativeComments: [],
@@ -243,7 +254,7 @@ export class EvaluationService {
 
       return polisConsensus.getParticipantClusters();
     } catch (error) {
-      console.error("参加者クラスタリング取得エラー:", error);
+      logger.error("参加者クラスタリング取得エラー:", error);
       return {};
     }
   }

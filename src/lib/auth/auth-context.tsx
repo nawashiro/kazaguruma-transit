@@ -14,6 +14,7 @@ import { createNostrService } from "@/lib/nostr/nostr-service";
 import { parseProfileEvent } from "@/lib/nostr/nostr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
 import type { Event } from "nostr-tools";
+import { logger } from "@/utils/logger";
 
 interface PWKEvent {
   kind: number;
@@ -72,7 +73,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUser((prev) => ({ ...prev, profile }));
         }
       } catch (error) {
-        console.error("Failed to load profile:", error);
+        logger.error("Failed to load profile:", error);
       }
     },
     [nostrService]
@@ -95,7 +96,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await loadProfile(pubkey);
       }
     } catch (error) {
-      console.error("Failed to load stored PWK:", error);
+      logger.error("Failed to load stored PWK:", error);
       localStorage.removeItem(PWK_STORAGE_KEY);
     } finally {
       setIsLoading(false);
@@ -134,7 +135,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await loadProfile(pubkey);
       localStorage.setItem(PWK_STORAGE_KEY, JSON.stringify(pwk));
     } catch (error) {
-      console.error("Login failed:", error);
+      logger.error("Login failed:", error);
       setError(
         error instanceof Error ? error.message : "ログインに失敗しました"
       );
@@ -148,10 +149,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
 
     try {
-      console.log("🚀 Starting account creation with 2-step approach...");
+      logger.log("🚀 Starting account creation with 2-step approach...");
 
       // Step 1: Create a passkey (displays browser's passkey UI)
-      console.log("📱 Step 1: Creating passkey...");
+      logger.log("📱 Step 1: Creating passkey...");
       const credentialId = await pwkManager.createPasskey({
         user: {
           name: username || `user_${Date.now()}`,
@@ -159,18 +160,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         },
       });
 
-      console.log(
+      logger.log(
         "✅ Passkey created successfully, credentialId:",
         credentialId
       );
 
       // Step 2: Use PRF value directly as a Nostr key
-      console.log("🔑 Step 2: Using PRF value as Nostr key...");
+      logger.log("🔑 Step 2: Using PRF value as Nostr key...");
       const pwk = await pwkManager.directPrfToNostrKey(credentialId, {
         username: username || "Anonymous User",
       });
 
-      console.log("✅ PWK created successfully:", {
+      logger.log("✅ PWK created successfully:", {
         pubkey: pwk.pubkey,
         algorithm: pwk.alg,
         hasCredentialId: !!pwk.credentialId,
@@ -181,14 +182,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // Step 4: Get public key for verification
       const publicKey = await pwkManager.getPublicKey();
-      console.log(`✅ Public key verified: ${publicKey}`);
+      logger.log(`✅ Public key verified: ${publicKey}`);
 
       const pubkey = pwk.pubkey;
 
       // Step 5: Publish profile
-      console.log("📤 Publishing profile...");
+      logger.log("📤 Publishing profile...");
       await publishProfile(username || "Anonymous User", pwk);
-      console.log("✅ Profile published successfully");
+      logger.log("✅ Profile published successfully");
 
       setUser({
         pwk,
@@ -199,10 +200,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       localStorage.setItem(PWK_STORAGE_KEY, JSON.stringify(pwk));
 
-      console.log("🎉 Account creation completed successfully!");
+      logger.log("🎉 Account creation completed successfully!");
     } catch (error) {
-      console.error("❌ Account creation failed:", error);
-      console.error("Error details:", {
+      logger.error("❌ Account creation failed:", error);
+      logger.error("Error details:", {
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         name: error instanceof Error ? error.name : undefined,
@@ -262,7 +263,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       )) as unknown as Event;
       await nostrService.publishSignedEvent(signedEvent);
     } catch (error) {
-      console.error("Failed to publish profile:", error);
+      logger.error("Failed to publish profile:", error);
     }
   };
 
@@ -291,7 +292,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       )) as unknown as Event;
       return signedEvent;
     } catch (error) {
-      console.error("Failed to sign event:", error);
+      logger.error("Failed to sign event:", error);
       throw error;
     }
   };

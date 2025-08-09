@@ -11,6 +11,7 @@ import type {
   PostWithStats,
   AuditTimelineItem,
 } from "@/types/discussion";
+import { logger } from "@/utils/logger";
 
 export function parseDiscussionEvent(event: Event): Discussion | null {
   if (event.kind !== 34550) return null;
@@ -364,7 +365,7 @@ export function hexToNpub(hex: string): string {
   try {
     return nip19.npubEncode(hex);
   } catch (error) {
-    console.error("Failed to encode npub:", error);
+    logger.error("Failed to encode npub:", error);
     return hex; // fallback to hex
   }
 }
@@ -380,7 +381,7 @@ export function npubToHex(npub: string): string {
     // If it's already hex or invalid, return as-is
     return npub;
   } catch (error) {
-    console.error("Failed to decode npub:", error);
+    logger.error("Failed to decode npub:", error);
     return npub; // fallback
   }
 }
@@ -402,7 +403,7 @@ export function isValidNpub(npub: string): boolean {
 export function getAdminPubkeyHex(): string {
   const npubFromEnv = process.env.NEXT_PUBLIC_ADMIN_PUBKEY || "";
   if (!npubFromEnv) {
-    console.warn("NEXT_PUBLIC_ADMIN_PUBKEY is not set");
+    logger.warn("NEXT_PUBLIC_ADMIN_PUBKEY is not set");
     return "";
   }
   return npubToHex(npubFromEnv);

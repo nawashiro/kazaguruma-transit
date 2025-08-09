@@ -10,6 +10,7 @@ import { hexToNpub } from "@/lib/nostr/nostr-utils";
 import { LoginModal } from "@/components/discussion/LoginModal";
 import Button from "@/components/ui/Button";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import { logger } from "@/utils/logger";
 
 export default function SettingsPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -47,7 +48,7 @@ export default function SettingsPage() {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch (error) {
-      console.error("Failed to copy to clipboard:", error);
+      logger.error("Failed to copy to clipboard:", error);
     }
   };
 

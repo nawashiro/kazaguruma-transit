@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import { logger } from "@/utils/logger";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -34,7 +35,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       setUsername("");
       setMode("create");
     } catch (error) {
-      console.error(
+      logger.error(
         `${mode === "login" ? "Login" : "Account creation"} failed:`,
         error
       );
@@ -63,26 +64,32 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       <div className="modal-backdrop" onClick={handleBackdropClick}></div>
       <div className="modal-box bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
         <div className="flex justify-between items-center mb-6">
-          <div className="join" role="group" aria-label="モード選択">
-            <input
-              className="join-item btn"
-              type="radio"
-              name="mode-options"
-              aria-label="新規作成"
-              checked={mode === "create"}
-              onChange={() => setMode("create")}
-              disabled={isLoading}
-            />
-            <input
-              className="join-item btn"
-              type="radio"
-              name="mode-options"
-              aria-label="ログイン"
-              checked={mode === "login"}
-              onChange={() => setMode("login")}
-              disabled={isLoading}
-            />
-          </div>
+          <nav role="tablist" className="join mb-6" aria-label="モード選択">
+            <button
+              className={`join-item btn ruby-text ${
+                mode === "create" && "btn-active btn-primary"
+              }`}
+              name="tab-options"
+              aria-label="新規作成タブを開く"
+              role="tab"
+              area-selected={mode === "create" ? "true" : "false"}
+              onClick={() => setMode("create")}
+            >
+              <span>新規作成</span>
+            </button>
+            <button
+              className={`join-item btn ruby-text ${
+                mode === "login" && "btn-active btn-primary"
+              }`}
+              name="tab-options"
+              aria-label="ログインを開く"
+              role="tab"
+              area-selected={mode === "login" ? "true" : "false"}
+              onClick={() => setMode("login")}
+            >
+              <span>ログイン</span>
+            </button>
+          </nav>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -222,11 +229,13 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
               }`}
               disabled={isLoading || (mode === "create" && !username.trim())}
             >
-              {isLoading
-                ? ""
-                : mode === "login"
-                ? "ログイン"
-                : "アカウント作成"}
+              {isLoading ? (
+                ""
+              ) : mode === "login" ? (
+                <span className="ruby-text">ログイン</span>
+              ) : (
+                <span className="ruby-text">アカウント作成</span>
+              )}
             </button>
           </div>
         </form>

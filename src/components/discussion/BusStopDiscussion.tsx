@@ -23,6 +23,7 @@ import type {
   PostEvaluation,
   PostFormData,
 } from "@/types/discussion";
+import { logger } from "@/utils/logger";
 
 interface BusStopDiscussionProps {
   busStops: string[];
@@ -104,7 +105,7 @@ export function BusStopDiscussion({
       setPosts(parsedPosts);
       setEvaluations(parsedEvaluations);
     } catch (error) {
-      console.error("Failed to load bus stop discussion:", error);
+      logger.error("Failed to load bus stop discussion:", error);
     }
   }, [busStops, config.busStopDiscussionId, nostrService]);
 
@@ -120,7 +121,7 @@ export function BusStopDiscussion({
       );
       setUserEvaluations(evalPostIds);
     } catch (error) {
-      console.error("Failed to load user evaluations:", error);
+      logger.error("Failed to load user evaluations:", error);
     }
   }, [user.pubkey, nostrService]);
 
@@ -169,7 +170,7 @@ export function BusStopDiscussion({
       setShowPreview(false);
       await loadData();
     } catch (error) {
-      console.error("Failed to submit post:", error);
+      logger.error("Failed to submit post:", error);
       setErrors(["投稿の送信に失敗しました"]);
     } finally {
       setIsSubmitting(false);
@@ -199,7 +200,7 @@ export function BusStopDiscussion({
       setUserEvaluations((prev) => new Set([...prev, postId]));
       await loadData();
     } catch (error) {
-      console.error("Failed to evaluate post:", error);
+      logger.error("Failed to evaluate post:", error);
     }
   };
 

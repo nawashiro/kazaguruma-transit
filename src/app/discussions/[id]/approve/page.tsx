@@ -259,7 +259,7 @@ export default function PostApprovalPage() {
               </h2>
 
               {pendingPosts.length === 0 ? (
-                <div className="text-center py-8 ruby-text">
+                <div className="text-center py-8">
                   <svg
                     className="mx-auto h-12 w-12 text-gray-400"
                     fill="none"
@@ -275,10 +275,10 @@ export default function PostApprovalPage() {
                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                  <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100 ruby-text">
                     未承認の投稿はありません
                   </h3>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 ruby-text">
                     すべての投稿が承認済みです。
                   </p>
                 </div>

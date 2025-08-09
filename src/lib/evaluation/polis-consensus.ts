@@ -55,6 +55,18 @@ export class PolisConsensus {
       return;
     }
 
+    // 最低限必要な投票数をチェック（5票未満の場合は処理しない）
+    if (this.voteData.length < 5) {
+      logger.warn("投票データが不足しています", {
+        votes: this.voteData.length,
+        required: 5,
+      });
+      this.participantIds = [];
+      this.topicIds = [];
+      this.voteMatrix = [];
+      return;
+    }
+
     // 参加者IDと意見IDのユニークリストを作成
     const participantSet = new Set(this.voteData.map((v) => v.pid));
     const topicSet = new Set(this.voteData.map((v) => v.tid));
@@ -189,10 +201,14 @@ export class PolisConsensus {
       return { clusterLabels: [], pcaResult: [] };
     }
 
-    if (data.length < 2) {
-      logger.warn("クラスタリングに必要な最小データポイント数が不足しています");
+    // データポイント数が少なすぎる場合は全て同じクラスタに分類
+    if (data.length < 3) {
+      logger.warn("データポイント数が不足しています - 単一クラスタに分類", {
+        dataPoints: data.length,
+        required: 3,
+      });
       return {
-        clusterLabels: [0],
+        clusterLabels: new Array(data.length).fill(0),
         pcaResult: data,
       };
     }
@@ -698,6 +714,20 @@ export class PolisConsensus {
    * 全体の分析を実行
    */
   public runAnalysis(): ConsensusResult {
+    // データ不足の場合は空の結果を返す
+    if (
+      !this.voteMatrix ||
+      this.voteMatrix.length === 0 ||
+      this.participantIds.length < 2 ||
+      this.topicIds.length < 2
+    ) {
+      logger.warn("データ不足のため分析をスキップします");
+      return {
+        groupAwareConsensus: {},
+        groupRepresentativeComments: {},
+      };
+    }
+
     // PCAによる次元削減
     this.pcaResult = this.runPCA(2);
 

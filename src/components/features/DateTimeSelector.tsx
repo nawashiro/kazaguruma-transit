@@ -21,73 +21,54 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
   const uniqueId = useId();
   const inputId = `time-input-${uniqueId}`;
-  const groupId = `time-type-group-${uniqueId}`;
   const labelText = isDeparture ? "出発日時" : "到着日時";
   const timeDescription = isDeparture
     ? "いつ出発するか指定してください"
     : "いつ到着するか指定してください";
 
+  const notifyParent = (formData: TransitFormData) => {
+    onSubmit?.(formData);
+    onDateTimeSelected?.(formData);
+  };
+
   // 初期値設定
   useEffect(() => {
-    // 現在の日時を初期値として設定
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    const initialDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
-
-    // 既に値が設定されている場合は更新しない
     if (!dateTime) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const initialDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+      
       setDateTime(initialDateTime);
-
-      // 初期値を親に通知
-      const formData = {
+      notifyParent({
         stopId: initialStopId,
         dateTime: initialDateTime,
         isDeparture,
-      };
-
-      if (onSubmit) {
-        onSubmit(formData);
-      }
-
-      if (onDateTimeSelected) {
-        onDateTimeSelected(formData);
-      }
+      });
     }
-  }, [initialStopId, onSubmit, onDateTimeSelected, isDeparture, dateTime]);
+  }, [initialStopId, isDeparture, dateTime]);
 
-  // 値が変更されたときに親コンポーネントに通知
   const handleChange = (newDateTime: string, newIsDeparture: boolean) => {
     setDateTime(newDateTime);
     setIsDeparture(newIsDeparture);
-
-    const formData = {
+    notifyParent({
       stopId: initialStopId,
       dateTime: newDateTime,
       isDeparture: newIsDeparture,
-    };
-
-    if (onSubmit) {
-      onSubmit(formData);
-    }
-
-    if (onDateTimeSelected) {
-      onDateTimeSelected(formData);
-    }
+    });
   };
 
   const handleTimeTypeChange = (newValue: boolean) => {
     setIsDeparture(newValue);
     logger.log(`時間タイプを切り替え: ${newValue ? "出発" : "到着"}`);
-    if (onDateTimeSelected) {
-      onDateTimeSelected({
-        dateTime,
-        isDeparture: newValue,
-      });
-    }
+    notifyParent({
+      stopId: initialStopId,
+      dateTime,
+      isDeparture: newValue,
+    });
   };
 
   return (
@@ -98,7 +79,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
           <legend id={`legend-${uniqueId}`} className="sr-only">
             時間タイプを選択
           </legend>
-          <div role="radiogroup" aria-labelledby={groupId} className="join">
+          <div className="join">
             <button
               type="button"
               className={`btn join-item ruby-text ${

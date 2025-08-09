@@ -63,6 +63,7 @@ describe("DateTimeSelector", () => {
     // タブ切り替え時にonDateTimeSelectedが呼ばれ、isDepartureがfalseになることを確認
     expect(mockOnDateTimeSelected).toHaveBeenCalledWith(
       expect.objectContaining({
+        stopId: mockStopId,
         isDeparture: false,
       })
     );
@@ -91,29 +92,20 @@ describe("DateTimeSelector", () => {
       <DateTimeSelector initialStopId={mockStopId} onSubmit={mockOnSubmit} />
     );
 
-    // 時間タイプ選択のラジオグループを検証（joinクラスを持つdiv）
-    const radiogroups = screen.getAllByRole("radiogroup");
-    const timeTypeRadiogroup = radiogroups.find((group) =>
-      group.classList.contains("join")
-    );
-    expect(timeTypeRadiogroup).toBeInTheDocument();
-
-    // ラジオグループにaria-labelledby属性があることを確認
-    expect(timeTypeRadiogroup).toHaveAttribute(
-      "aria-labelledby",
-      expect.any(String)
-    );
-
-    // fieldsetのラジオグループも存在することを確認
-    const fieldsetRadiogroup = radiogroups.find(
-      (group) => group.tagName.toLowerCase() === "fieldset"
-    );
+    // fieldsetのラジオグループが存在することを確認
+    const fieldsetRadiogroup = screen.getByRole("radiogroup");
     expect(fieldsetRadiogroup).toBeInTheDocument();
 
     // 隠れたラベルテキストが存在することを確認
-    const labelId = fieldsetRadiogroup?.getAttribute("aria-labelledby");
+    const labelId = fieldsetRadiogroup.getAttribute("aria-labelledby");
     const label = document.getElementById(labelId || "");
     expect(label).toHaveTextContent("時間タイプを選択");
+
+    // ラジオボタンが適切にrole="radio"を持つことを確認
+    const departureRadio = screen.getByTestId("departure-radio");
+    const arrivalRadio = screen.getByTestId("arrival-radio");
+    expect(departureRadio).toHaveAttribute("role", "radio");
+    expect(arrivalRadio).toHaveAttribute("role", "radio");
   });
 
   it("アクセシビリティ：日時入力フィールドが適切なaria属性を持つこと", () => {

@@ -1,9 +1,11 @@
 /**
  * Polis コンセンサス検出アルゴリズム実装
- * ai-on-browserライブラリを使用してPolisのコンセンサス検出を実装
+ * ML-JSライブラリを使用してPolisのコンセンサス検出を実装
  */
 
-import dam from "@ai-on-browser/data-analysis-models";
+import { Matrix } from "ml-matrix";
+import { PCA } from "ml-pca";
+import { kmeans } from "ml-kmeans";
 import { logger } from "@/utils/logger";
 
 export interface VoteData {
@@ -128,7 +130,7 @@ export class PolisConsensus {
         components: nComponents,
       });
 
-      // ai-on-browserのMatrixクラスは2次元配列を期待
+      // データの有効性をチェック
       const validMatrix = this.voteMatrix.every(
         (row) =>
           Array.isArray(row) &&
@@ -140,25 +142,22 @@ export class PolisConsensus {
         throw new Error("投票行列に無効な値が含まれています");
       }
 
-      // ai-on-browserのPCAを使用
-      // 直接2次元配列からMatrixを作成する方法を試す
-      const pca = new dam.models.PCA(nComponents);
+      // ml-matrixでMatrixオブジェクトを作成
+      const matrix = new Matrix(this.voteMatrix);
 
-      // フィットしてトランスフォーム（直接2次元配列を使用）
-      pca.fit(this.voteMatrix);
-      const result = pca.predict(this.voteMatrix);
+      // ml-pcaを使用してPCAを実行
+      const pca = new PCA(matrix);
+      const transformedMatrix = pca.predict(matrix, { nComponents });
+
+      // Matrixオブジェクトを2次元配列に変換
+      const result = transformedMatrix.to2DArray();
 
       logger.log("PCA実行成功", {
         inputShape: `${this.voteMatrix.length}x${this.voteMatrix[0].length}`,
         outputShape: `${result.length}x${result[0]?.length || 0}`,
       });
 
-      // 結果を指定次元数に制限
-      if (result.length > 0 && result[0] && result[0].length > nComponents) {
-        return result.map((row: number[]) => row.slice(0, nComponents));
-      }
-
-      return result || [];
+      return result;
     } catch (error) {
       logger.error("PCA実行エラー:", error);
       logger.log("フォールバック: 元データの最初の列を使用");
@@ -241,13 +240,12 @@ export class PolisConsensus {
         if (k > data.length) continue; // クラスタ数がデータポイント数を超えないように
 
         try {
-          const kmeans = new dam.models.KMeans();
-          // KMeansの正しい使い方：add → fit → predict
-          for (let i = 0; i < k; i++) {
-            kmeans.add(data);
-          }
-          kmeans.fit(data);
-          const labels = kmeans.predict(data);
+          // ml-kmeansを使用
+          const result = kmeans(data, k, {
+            maxIterations: 100,
+            tolerance: 1e-6,
+          });
+          const labels = result.clusters;
 
           // 簡単なシルエットスコアの近似計算
           const score = this.calculateSimpleClusterScore(data, labels, k);
@@ -265,13 +263,11 @@ export class PolisConsensus {
       logger.log("最適なクラスタ数決定:", bestK);
 
       // 最適なクラスタ数でK-meansを実行
-      const kmeans = new dam.models.KMeans();
-      // クラスタ数だけaddを実行
-      for (let i = 0; i < bestK; i++) {
-        kmeans.add(data);
-      }
-      kmeans.fit(data);
-      const labels = kmeans.predict(data);
+      const result = kmeans(data, bestK, {
+        maxIterations: 100,
+        tolerance: 1e-6,
+      });
+      const labels = result.clusters;
 
       logger.log("クラスタリング実行成功", {
         clusters: bestK,

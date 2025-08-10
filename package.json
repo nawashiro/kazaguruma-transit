@@ -16,7 +16,6 @@
     "import-gtfs": "tsx scripts/import-gtfs.ts"
   },
   "dependencies": {
-    "@ai-on-browser/data-analysis-models": "^0.23.0",
     "@googlemaps/google-maps-services-js": "^3.4.1",
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.6.0",
@@ -28,6 +27,9 @@
     "isomorphic-fetch": "^3.0.0",
     "jspdf": "^3.0.1",
     "luxon": "^3.6.0",
+    "ml-kmeans": "^6.0.0",
+    "ml-matrix": "^6.12.1",
+    "ml-pca": "^4.1.1",
     "next": "^15.3.1",
     "next-iron-session": "^4.2.0",
     "nosskey-sdk": "^0.0.2",

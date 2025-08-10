@@ -110,12 +110,27 @@ export class NostrService {
   }
 
   async getDiscussions(adminPubkey: string): Promise<Event[]> {
-    return this.getEvents([
+    const events = await this.getEvents([
       {
         kinds: [34550],
         authors: [adminPubkey],
       },
     ]);
+    
+    // replaceable eventの重複を除去（同じdTagで最新のもののみを保持）
+    const eventsByDTag = new Map<string, Event>();
+    
+    for (const event of events) {
+      const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
+      if (!dTag) continue;
+      
+      const existing = eventsByDTag.get(dTag);
+      if (!existing || event.created_at > existing.created_at) {
+        eventsByDTag.set(dTag, event);
+      }
+    }
+    
+    return Array.from(eventsByDTag.values());
   }
 
   async getDiscussionPosts(

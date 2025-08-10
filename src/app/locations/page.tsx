@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   loadKeyLocationsData,
@@ -89,6 +89,9 @@ export default function LocationsPage() {
     string | null
   >(null);
 
+  // すべてのデータ読み込み状態の管理（Rubyful実行タイミング制御用）
+  const [allDataLoaded, setAllDataLoaded] = useState(false);
+
   useEffect(() => {
     async function fetchLocationData() {
       try {
@@ -101,6 +104,8 @@ export default function LocationsPage() {
         logger.error(err);
       } finally {
         setLoading(false);
+        // 基本データ読み込み完了をマーク
+        setAllDataLoaded(true);
       }
     }
 
@@ -132,11 +137,15 @@ export default function LocationsPage() {
         logger.log("GeoJSON分類エラー:", err);
       } finally {
         setGeoJsonLoading(false);
+        // GeoJSONデータ処理完了時も全体完了状態を更新
+        if (!loading) {
+          setAllDataLoaded(true);
+        }
       }
     }
 
     classifyLocationsByArea();
-  }, [activeCategory, categories, sortedByDistance]);
+  }, [activeCategory, categories, sortedByDistance, loading]);
 
   const toggleCategory = (category: string) => {
     if (activeCategory === category) {
@@ -179,7 +188,7 @@ export default function LocationsPage() {
     );
   };
 
-  const sortByDistance = () => {
+  const sortByDistance = useCallback(() => {
     setPositionLoading(true);
     // カテゴリが選択されていない場合はソート状態をリセットしない
     if (activeCategory) {
@@ -236,7 +245,7 @@ export default function LocationsPage() {
       );
       setPositionLoading(false);
     }
-  };
+  }, [activeCategory, categories]);
 
   // 住所検索を行う関数
   const handleAddressSearch = async (e: React.FormEvent) => {
@@ -421,15 +430,15 @@ export default function LocationsPage() {
 
   useRubyfulRun(
     [
-      loading,
+      allDataLoaded,
       error,
       currentPosition,
       searchError,
       isModalOpen,
       locationsSorted,
-      sortByDistance,
+      geoJsonLoading,
     ],
-    !loading
+    allDataLoaded && !geoJsonLoading
   );
 
   if (loading) {

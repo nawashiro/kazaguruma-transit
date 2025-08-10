@@ -62,12 +62,12 @@ export const useRubyfulRun = (trigger: unknown[], isLoaded: boolean) => {
 
       try {
         // 既存のRubyfulボタンを削除（重複防止）
-        const existingButtons = document.getElementsByClassName(
-          "rubyfuljs-button"
-        ) as HTMLCollectionOf<HTMLButtonElement>;
+        const existingButtons = document.getElementById(
+          "rubyful-button-container"
+        );
 
-        for (const button of existingButtons) {
-          button.remove();
+        if (existingButtons instanceof HTMLElement) {
+          existingButtons.remove();
         }
 
         // Rubyfulライブラリの設定

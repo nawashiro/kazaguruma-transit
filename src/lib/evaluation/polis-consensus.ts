@@ -55,18 +55,6 @@ export class PolisConsensus {
       return;
     }
 
-    // 最低限必要な投票数をチェック（5票未満の場合は処理しない）
-    if (this.voteData.length < 5) {
-      logger.warn("投票データが不足しています", {
-        votes: this.voteData.length,
-        required: 5,
-      });
-      this.participantIds = [];
-      this.topicIds = [];
-      this.voteMatrix = [];
-      return;
-    }
-
     // 参加者IDと意見IDのユニークリストを作成
     const participantSet = new Set(this.voteData.map((v) => v.pid));
     const topicSet = new Set(this.voteData.map((v) => v.tid));

@@ -239,8 +239,10 @@ export default function DiscussionsPage() {
                             <h3 className="card-title text-lg">
                               <span>{discussion.title}</span>
                             </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                              {discussion.description}
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {discussion.description.length > 70
+                                ? `${discussion.description.slice(0, 70)}...`
+                                : discussion.description}
                             </p>
                             <div className="flex justify-between items-center mt-2">
                               <time

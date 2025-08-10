@@ -1,9 +1,11 @@
 /**
  * Polis コンセンサス検出アルゴリズム実装
- * ai-on-browserライブラリを使用してPolisのコンセンサス検出を実装
+ * ML-JSライブラリを使用してPolisのコンセンサス検出を実装
  */
 
-import dam from "@ai-on-browser/data-analysis-models";
+import { Matrix, SingularValueDecomposition } from "ml-matrix";
+import { PCA } from "ml-pca";
+import { kmeans } from "ml-kmeans";
 import { logger } from "@/utils/logger";
 
 export interface VoteData {
@@ -55,18 +57,6 @@ export class PolisConsensus {
       return;
     }
 
-    // 最低限必要な投票数をチェック（5票未満の場合は処理しない）
-    if (this.voteData.length < 5) {
-      logger.warn("投票データが不足しています", {
-        votes: this.voteData.length,
-        required: 5,
-      });
-      this.participantIds = [];
-      this.topicIds = [];
-      this.voteMatrix = [];
-      return;
-    }
-
     // 参加者IDと意見IDのユニークリストを作成
     const participantSet = new Set(this.voteData.map((v) => v.pid));
     const topicSet = new Set(this.voteData.map((v) => v.tid));
@@ -105,6 +95,7 @@ export class PolisConsensus {
 
   /**
    * PCAによる次元削減を実行
+   * 疎行列の場合はSVDフォールバックを使用
    */
   private runPCA(nComponents: number = 2): number[][] {
     // データ検証
@@ -140,7 +131,7 @@ export class PolisConsensus {
         components: nComponents,
       });
 
-      // ai-on-browserのMatrixクラスは2次元配列を期待
+      // データの有効性をチェック
       const validMatrix = this.voteMatrix.every(
         (row) =>
           Array.isArray(row) &&
@@ -152,25 +143,41 @@ export class PolisConsensus {
         throw new Error("投票行列に無効な値が含まれています");
       }
 
-      // ai-on-browserのPCAを使用
-      // 直接2次元配列からMatrixを作成する方法を試す
-      const pca = new dam.models.PCA(nComponents);
+      // ml-matrixでMatrixオブジェクトを作成
+      const matrix = new Matrix(this.voteMatrix);
 
-      // フィットしてトランスフォーム（直接2次元配列を使用）
-      pca.fit(this.voteMatrix);
-      const result = pca.predict(this.voteMatrix);
+      // データの疎密度を確認
+      const totalElements = matrix.rows * matrix.columns;
+      const nonZeroCount = this.voteMatrix.reduce(
+        (count, row) => count + row.filter(val => val !== 0).length,
+        0
+      );
+      const sparsity = 1.0 - nonZeroCount / totalElements;
 
-      logger.log("PCA実行成功", {
-        inputShape: `${this.voteMatrix.length}x${this.voteMatrix[0].length}`,
-        outputShape: `${result.length}x${result[0]?.length || 0}`,
+      logger.log("データ密度分析", {
+        totalElements,
+        nonZeroCount,
+        sparsity: `${(sparsity * 100).toFixed(1)}%`,
       });
 
-      // 結果を指定次元数に制限
-      if (result.length > 0 && result[0] && result[0].length > nComponents) {
-        return result.map((row: number[]) => row.slice(0, nComponents));
-      }
+      // 疎行列の場合はSVDフォールバックを使用
+      if (sparsity > 0.5) {
+        logger.log("疎行列検出 - SVDフォールバックを使用");
+        return this.runSVDFallback(matrix, nComponents);
+      } else {
+        // 密行列の場合は通常のPCAを使用
+        logger.log("密行列 - 通常のPCAを使用");
+        const pca = new PCA(matrix);
+        const transformedMatrix = pca.predict(matrix, { nComponents });
+        const result = transformedMatrix.to2DArray();
 
-      return result || [];
+        logger.log("PCA実行成功", {
+          inputShape: `${this.voteMatrix.length}x${this.voteMatrix[0].length}`,
+          outputShape: `${result.length}x${result[0]?.length || 0}`,
+        });
+
+        return result;
+      }
     } catch (error) {
       logger.error("PCA実行エラー:", error);
       logger.log("フォールバック: 元データの最初の列を使用");
@@ -185,6 +192,60 @@ export class PolisConsensus {
         }
         return result;
       });
+    }
+  }
+
+  /**
+   * SVDを使用した次元削減（疎行列用フォールバック）
+   */
+  private runSVDFallback(matrix: Matrix, nComponents: number): number[][] {
+    try {
+      // SVD分解を実行
+      const svd = new SingularValueDecomposition(matrix, {
+        computeLeftSingularVectors: true,
+        computeRightSingularVectors: true,
+      });
+
+      // 左特異ベクトル（U行列）の最初のnComponents列を取得
+      const leftVectors = svd.leftSingularVectors;
+      const result: number[][] = [];
+
+      // 各行について、最初のnComponents個の成分を取得
+      for (let i = 0; i < leftVectors.rows; i++) {
+        const row: number[] = [];
+        for (let j = 0; j < Math.min(nComponents, leftVectors.columns); j++) {
+          row.push(leftVectors.get(i, j));
+        }
+        // 不足する次元をゼロで埋める
+        while (row.length < nComponents) {
+          row.push(0);
+        }
+        result.push(row);
+      }
+
+      logger.log("SVDフォールバック実行成功", {
+        inputShape: `${matrix.rows}x${matrix.columns}`,
+        outputShape: `${result.length}x${result[0]?.length || 0}`,
+        rank: svd.rank,
+        condition: svd.condition,
+      });
+
+      return result;
+    } catch (svdError) {
+      logger.error("SVDフォールバック実行エラー:", svdError);
+      
+      // SVDも失敗した場合は、元データの最初のn列を返す
+      const result = this.voteMatrix.map((row) => {
+        const cols = Math.min(nComponents, row.length);
+        const resultRow = row.slice(0, cols);
+        while (resultRow.length < nComponents) {
+          resultRow.push(0);
+        }
+        return resultRow;
+      });
+
+      logger.log("最終フォールバック: 元データの最初の列を使用");
+      return result;
     }
   }
 
@@ -253,13 +314,12 @@ export class PolisConsensus {
         if (k > data.length) continue; // クラスタ数がデータポイント数を超えないように
 
         try {
-          const kmeans = new dam.models.KMeans();
-          // KMeansの正しい使い方：add → fit → predict
-          for (let i = 0; i < k; i++) {
-            kmeans.add(data);
-          }
-          kmeans.fit(data);
-          const labels = kmeans.predict(data);
+          // ml-kmeansを使用
+          const result = kmeans(data, k, {
+            maxIterations: 100,
+            tolerance: 1e-6,
+          });
+          const labels = result.clusters;
 
           // 簡単なシルエットスコアの近似計算
           const score = this.calculateSimpleClusterScore(data, labels, k);
@@ -277,13 +337,11 @@ export class PolisConsensus {
       logger.log("最適なクラスタ数決定:", bestK);
 
       // 最適なクラスタ数でK-meansを実行
-      const kmeans = new dam.models.KMeans();
-      // クラスタ数だけaddを実行
-      for (let i = 0; i < bestK; i++) {
-        kmeans.add(data);
-      }
-      kmeans.fit(data);
-      const labels = kmeans.predict(data);
+      const result = kmeans(data, bestK, {
+        maxIterations: 100,
+        tolerance: 1e-6,
+      });
+      const labels = result.clusters;
 
       logger.log("クラスタリング実行成功", {
         clusters: bestK,

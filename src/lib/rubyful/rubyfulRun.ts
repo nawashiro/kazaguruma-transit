@@ -61,14 +61,9 @@ export const useRubyfulRun = (trigger: unknown[], isLoaded: boolean) => {
       if (!isLoaded) return;
 
       try {
-        // 既存のRubyfulボタンを削除（重複防止）
-        const existingButtons = document.getElementById(
-          "rubyful-button-container"
-        );
-
-        if (existingButtons instanceof HTMLElement) {
-          existingButtons.remove();
-        }
+        // 既存のRubyfulボタンを全て削除（重複防止）
+        const existingButtons = document.querySelectorAll(".rubyfuljs-button, #rubyful-button-container");
+        existingButtons.forEach(button => button.remove());
 
         // Rubyfulライブラリの設定
         window.RubyfulJsApp = {
@@ -81,16 +76,22 @@ export const useRubyfulRun = (trigger: unknown[], isLoaded: boolean) => {
         await window.RubyfulJsApp.manualLoadProcess?.();
 
         // ルビ表示切り替えボタンにイベントリスナーを設定
-        const rubyfulButton =
-          document.getElementsByClassName("rubyfuljs-button");
+        const rubyfulButtons = document.getElementsByClassName("rubyfuljs-button");
 
-        if (rubyfulButton.length > 0) {
-          rubyfulButton[0].addEventListener("click", handleToggleRuby);
+        if (rubyfulButtons.length > 0) {
+          // 最初のボタンのみにイベントリスナーを設定
+          const firstButton = rubyfulButtons[0] as HTMLElement;
+          firstButton.addEventListener("click", handleToggleRuby);
+
+          // 重複したボタンがあれば削除
+          for (let i = 1; i < rubyfulButtons.length; i++) {
+            rubyfulButtons[i].remove();
+          }
 
           // クリーンアップ関数でイベントリスナーを削除
           return () => {
-            if (rubyfulButton[0]) {
-              rubyfulButton[0].removeEventListener("click", handleToggleRuby);
+            if (firstButton) {
+              firstButton.removeEventListener("click", handleToggleRuby);
             }
           };
         }

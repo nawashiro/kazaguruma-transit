@@ -44,10 +44,10 @@ export default function SidebarLayout({
           const style = document.createElement("style");
           style.innerHTML = `
           button.rubyfuljs-button.is-customized {
-            background-color: var(--color-secondary-content);
-            color: var(--color-secondary);
+            background-color: var(--color-primary);
+            color: var(--color-primary-content);
             box-shadow: none;
-            border: none;
+            border: 2px solid color-mix(in oklab, var(--color-primary), rgb(0, 0, 0) calc(5%));
           }
           .rubyfuljs-tooltip, .rubyfuljs-tooltip-close-button {
             background-color: var(--color-base-100);

@@ -3,7 +3,7 @@
  * ML-JSライブラリを使用してPolisのコンセンサス検出を実装
  */
 
-import { Matrix } from "ml-matrix";
+import { Matrix, SingularValueDecomposition } from "ml-matrix";
 import { PCA } from "ml-pca";
 import { kmeans } from "ml-kmeans";
 import { logger } from "@/utils/logger";
@@ -95,6 +95,7 @@ export class PolisConsensus {
 
   /**
    * PCAによる次元削減を実行
+   * 疎行列の場合はSVDフォールバックを使用
    */
   private runPCA(nComponents: number = 2): number[][] {
     // データ検証
@@ -145,19 +146,38 @@ export class PolisConsensus {
       // ml-matrixでMatrixオブジェクトを作成
       const matrix = new Matrix(this.voteMatrix);
 
-      // ml-pcaを使用してPCAを実行
-      const pca = new PCA(matrix);
-      const transformedMatrix = pca.predict(matrix, { nComponents });
+      // データの疎密度を確認
+      const totalElements = matrix.rows * matrix.columns;
+      const nonZeroCount = this.voteMatrix.reduce(
+        (count, row) => count + row.filter(val => val !== 0).length,
+        0
+      );
+      const sparsity = 1.0 - nonZeroCount / totalElements;
 
-      // Matrixオブジェクトを2次元配列に変換
-      const result = transformedMatrix.to2DArray();
-
-      logger.log("PCA実行成功", {
-        inputShape: `${this.voteMatrix.length}x${this.voteMatrix[0].length}`,
-        outputShape: `${result.length}x${result[0]?.length || 0}`,
+      logger.log("データ密度分析", {
+        totalElements,
+        nonZeroCount,
+        sparsity: `${(sparsity * 100).toFixed(1)}%`,
       });
 
-      return result;
+      // 疎行列の場合はSVDフォールバックを使用
+      if (sparsity > 0.5) {
+        logger.log("疎行列検出 - SVDフォールバックを使用");
+        return this.runSVDFallback(matrix, nComponents);
+      } else {
+        // 密行列の場合は通常のPCAを使用
+        logger.log("密行列 - 通常のPCAを使用");
+        const pca = new PCA(matrix);
+        const transformedMatrix = pca.predict(matrix, { nComponents });
+        const result = transformedMatrix.to2DArray();
+
+        logger.log("PCA実行成功", {
+          inputShape: `${this.voteMatrix.length}x${this.voteMatrix[0].length}`,
+          outputShape: `${result.length}x${result[0]?.length || 0}`,
+        });
+
+        return result;
+      }
     } catch (error) {
       logger.error("PCA実行エラー:", error);
       logger.log("フォールバック: 元データの最初の列を使用");
@@ -172,6 +192,60 @@ export class PolisConsensus {
         }
         return result;
       });
+    }
+  }
+
+  /**
+   * SVDを使用した次元削減（疎行列用フォールバック）
+   */
+  private runSVDFallback(matrix: Matrix, nComponents: number): number[][] {
+    try {
+      // SVD分解を実行
+      const svd = new SingularValueDecomposition(matrix, {
+        computeLeftSingularVectors: true,
+        computeRightSingularVectors: true,
+      });
+
+      // 左特異ベクトル（U行列）の最初のnComponents列を取得
+      const leftVectors = svd.leftSingularVectors;
+      const result: number[][] = [];
+
+      // 各行について、最初のnComponents個の成分を取得
+      for (let i = 0; i < leftVectors.rows; i++) {
+        const row: number[] = [];
+        for (let j = 0; j < Math.min(nComponents, leftVectors.columns); j++) {
+          row.push(leftVectors.get(i, j));
+        }
+        // 不足する次元をゼロで埋める
+        while (row.length < nComponents) {
+          row.push(0);
+        }
+        result.push(row);
+      }
+
+      logger.log("SVDフォールバック実行成功", {
+        inputShape: `${matrix.rows}x${matrix.columns}`,
+        outputShape: `${result.length}x${result[0]?.length || 0}`,
+        rank: svd.rank,
+        condition: svd.condition,
+      });
+
+      return result;
+    } catch (svdError) {
+      logger.error("SVDフォールバック実行エラー:", svdError);
+      
+      // SVDも失敗した場合は、元データの最初のn列を返す
+      const result = this.voteMatrix.map((row) => {
+        const cols = Math.min(nComponents, row.length);
+        const resultRow = row.slice(0, cols);
+        while (resultRow.length < nComponents) {
+          resultRow.push(0);
+        }
+        return resultRow;
+      });
+
+      logger.log("最終フォールバック: 元データの最初の列を使用");
+      return result;
     }
   }
 

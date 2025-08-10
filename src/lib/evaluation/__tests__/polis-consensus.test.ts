@@ -59,6 +59,31 @@ describe('PolisConsensus', () => {
     expect(Object.keys(result.groupAwareConsensus).length).toBeGreaterThan(0);
   });
 
+  test('should handle sparse data with SVD fallback', () => {
+    const votes: VoteData[] = [];
+    
+    // 疎なデータを生成（10人の参加者、10個の投稿、約20%のデータのみ）
+    const participants = Array.from({ length: 10 }, (_, i) => `user${i + 1}`);
+    const topics = Array.from({ length: 10 }, (_, i) => `topic${i + 1}`);
+    
+    participants.forEach((pid) => {
+      topics.forEach((tid) => {
+        // 約20%の確率でのみ投票する（疎行列を作成）
+        if (Math.random() < 0.2) {
+          const vote = Math.random() > 0.5 ? 1 : -1;
+          votes.push({ pid, tid, vote });
+        }
+      });
+    });
+
+    const polis = new PolisConsensus(votes);
+    const result = polis.runAnalysis();
+
+    expect(result).toHaveProperty('groupAwareConsensus');
+    expect(result).toHaveProperty('groupRepresentativeComments');
+    // 疎なデータでも結果が返されることを確認
+  });
+
   test('should get clustering result', () => {
     const votes: VoteData[] = [
       { pid: 'user1', tid: 'topic1', vote: 1 },

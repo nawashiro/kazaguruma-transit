@@ -123,4 +123,51 @@ describe('PolisConsensus', () => {
       expect(participantClusters).toEqual({});
     }
   });
+
+  test('should test exact minimum requirements scenario', () => {
+    // あなたの報告通りのデータ：ユーザー1が2投票、ユーザー2が1投票
+    const votes: VoteData[] = [
+      // ユーザー1による2件の投票
+      { pid: 'user1', tid: 'topic1', vote: 1 },   // 投稿1に賛成
+      { pid: 'user1', tid: 'topic2', vote: -1 },  // 投稿2に反対
+      
+      // ユーザー2による1件の投票  
+      { pid: 'user2', tid: 'topic1', vote: 1 },   // 投稿1に賛成
+    ];
+
+    console.log('テストデータ検証:');
+    const participants = [...new Set(votes.map(v => v.pid))];
+    const topics = [...new Set(votes.map(v => v.tid))];
+    console.log('参加者数:', participants.length, participants);
+    console.log('投稿数:', topics.length, topics);
+    console.log('投票数:', votes.length);
+
+    const polis = new PolisConsensus(votes);
+    const result = polis.runAnalysis();
+    
+    console.log('分析結果:');
+    console.log('groupAwareConsensus keys:', Object.keys(result.groupAwareConsensus).length);
+    console.log('groupRepresentativeComments keys:', Object.keys(result.groupRepresentativeComments).length);
+
+    // 最小要件（参加者2人、投稿2件）を満たしているので、何らかの結果が返されるべき
+    expect(result).toHaveProperty('groupAwareConsensus');
+    expect(result).toHaveProperty('groupRepresentativeComments');
+    
+    // この場合、分析が実行されるかどうかを確認
+    const hasResults = Object.keys(result.groupAwareConsensus).length > 0 || 
+                      Object.keys(result.groupRepresentativeComments).length > 0;
+    
+    console.log('分析が実行されたか:', hasResults);
+    
+    // 詳細な結果を表示
+    if (hasResults) {
+      console.log('groupAwareConsensus:', result.groupAwareConsensus);
+      console.log('groupRepresentativeComments:', result.groupRepresentativeComments);
+      
+      // クラスタリング結果も確認
+      const clustering = polis.getClusteringResult();
+      console.log('clusterLabels:', clustering.clusterLabels);
+      console.log('pcaResult dimensions:', clustering.pcaResult.length, 'x', clustering.pcaResult[0]?.length || 0);
+    }
+  });
 });

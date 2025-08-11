@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from "@jest/globals";
-import { GET } from "../transit/route";
+import { POST } from "../transit/route";
 import { NextRequest } from "next/server";
 import * as gtfs from "gtfs";
 import "isomorphic-fetch";
@@ -88,7 +88,7 @@ beforeEach(() => {
     .spyOn(Date, "now")
     .mockImplementation(() => new Date(2023, 0, 1, 0, 0).getTime());
 
-  (gtfs.getStops as jest.Mock).mockImplementation((params?: { stop_id?: string }) => {
+  (gtfs.getStops as jest.Mock).mockImplementation((params?: any) => {
     if (params?.stop_id) {
       return Promise.resolve(
         mockStops.filter((stop) => stop.stop_id === params.stop_id)
@@ -97,7 +97,7 @@ beforeEach(() => {
     return Promise.resolve(mockStops);
   });
 
-  (gtfs.getRoutes as jest.Mock).mockImplementation((params?: { route_id?: string }) => {
+  (gtfs.getRoutes as jest.Mock).mockImplementation((params?: any) => {
     if (params?.route_id) {
       return Promise.resolve(
         mockRoutes.filter((route) => route.route_id === params.route_id)
@@ -106,7 +106,7 @@ beforeEach(() => {
     return Promise.resolve(mockRoutes);
   });
 
-  (gtfs.getTrips as jest.Mock).mockImplementation((params?: { trip_id?: string; route_id?: string }) => {
+  (gtfs.getTrips as jest.Mock).mockImplementation((params?: any) => {
     // trip_idに基づいてモックデータをフィルタリング
     const tripId = params?.trip_id;
     if (tripId) {
@@ -116,7 +116,7 @@ beforeEach(() => {
     }
     return Promise.resolve(mockTrips);
   });
-  (gtfs.getStoptimes as jest.Mock).mockImplementation((params?: { stop_id?: string; trip_id?: string }) => {
+  (gtfs.getStoptimes as jest.Mock).mockImplementation((params?: any) => {
     // stop_idに基づいてモックデータをフィルタリング
     const stopId = params?.stop_id;
     if (stopId) {
@@ -139,7 +139,7 @@ describe("Transit API", () => {
       const request = new NextRequest(
         "http://localhost:3000/api/transit?dataType=metadata"
       );
-      const response = await GET(request);
+      const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -154,7 +154,7 @@ describe("Transit API", () => {
       const request = new NextRequest(
         "http://localhost:3000/api/transit?stop=1"
       );
-      const response = await GET(request);
+      const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -165,7 +165,7 @@ describe("Transit API", () => {
     // パラメータが不足している場合のエラーテスト
     it.skip("必要なパラメータが不足している場合エラーを返すこと", async () => {
       const request = new NextRequest("http://localhost:3000/api/transit");
-      const response = await GET(request);
+      const response = await POST(request);
 
       expect(response.status).toBe(400);
       const data = await response.json();
@@ -177,7 +177,7 @@ describe("Transit API", () => {
       const request = new NextRequest(
         "http://localhost:3000/api/transit?dataType=unknown"
       );
-      const response = await GET(request);
+      const response = await POST(request);
 
       expect(response.status).toBe(400);
       const data = await response.json();

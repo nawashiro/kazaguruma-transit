@@ -40,7 +40,7 @@ export default function Usage() {
             </li>
             <li>
               <a href="#rubyful-button">
-                <span>ふりながをつける / 消す</span>
+                <span>ふりがなをつける / 消す</span>
               </a>
             </li>
           </ul>
@@ -142,7 +142,7 @@ export default function Usage() {
         <Card
           id="rubyful-button"
           className="shadow-md"
-          title="ふりながをつける / 消す"
+          title="ふりがなをつける / 消す"
         >
           <div className="space-y-4">
             <img src="/images/rubyful.gif" alt="ルビフルボタンの操作" />
@@ -150,7 +150,7 @@ export default function Usage() {
               このサイトは、一般財団法人ルビ財団が提供するルビフルボタンを備えています。
             </p>
             <p>
-              右下に出ているルビフルボタンを使うと、ふりながをつける /
+              右下に出ているルビフルボタンを使うと、ふりがなをつける /
               消すことができます。
             </p>
             <p>

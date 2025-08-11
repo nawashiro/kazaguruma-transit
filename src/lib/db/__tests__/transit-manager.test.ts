@@ -197,7 +197,7 @@ describe("TransitManager", () => {
     db.withConnection.mockImplementationOnce(async (callbackFn: (db: unknown) => Promise<unknown>) => {
       // コールバックを実行
       if (typeof callbackFn === "function") {
-        await callbackFn();
+        await callbackFn(null);
       }
       // モックデータを返す
       return [
@@ -228,25 +228,35 @@ describe("TransitManager", () => {
     db.withConnection.mockImplementationOnce(async (callbackFn: (db: unknown) => Promise<unknown>) => {
       // コールバックを実行
       if (typeof callbackFn === "function") {
-        await callbackFn();
+        await callbackFn(null);
       }
       // モックデータを返す
       return [
         {
           id: "route1",
-          name: "R1",
-          shortName: "R1",
-          longName: "Test Route 1",
-          color: "#FF0000",
-          textColor: "#FFFFFF",
+          agency_id: "agency1",
+          short_name: "R1",
+          long_name: "Test Route 1",
+          desc: null,
+          type: 3,
+          url: null,
+          color: "FF0000",
+          text_color: "FFFFFF",
+          sort_order: null,
+          trips: [],
         },
         {
           id: "route2",
-          name: "R2",
-          shortName: "R2",
-          longName: "Test Route 2",
-          color: "#00FF00",
-          textColor: "#FFFFFF",
+          agency_id: "agency1",
+          short_name: "R2",
+          long_name: "Test Route 2",
+          desc: null,
+          type: 3,
+          url: null,
+          color: "00FF00",
+          text_color: "FFFFFF",
+          sort_order: null,
+          trips: [],
         },
       ];
     });
@@ -255,7 +265,7 @@ describe("TransitManager", () => {
 
     expect(routes).toHaveLength(2);
     expect(routes[0].id).toBe("route1");
-    expect(routes[0].name).toBe("R1");
+    expect(routes[0].short_name).toBe("R1");
   });
 
   test.skip("getDepartures returns properly formatted departures", async () => {
@@ -265,7 +275,7 @@ describe("TransitManager", () => {
     db.withConnection.mockImplementationOnce(async (callbackFn: (db: unknown) => Promise<unknown>) => {
       // コールバックを実行
       if (typeof callbackFn === "function") {
-        await callbackFn();
+        await callbackFn(null);
       }
       // モックデータを返す
       return [
@@ -306,7 +316,7 @@ describe("TransitManager", () => {
     db.withConnection.mockImplementationOnce(async (callbackFn: (db: unknown) => Promise<unknown>) => {
       // コールバックを実行
       if (typeof callbackFn === "function") {
-        await callbackFn();
+        await callbackFn(null);
       }
       // モックデータを返す
       return {
@@ -323,11 +333,11 @@ describe("TransitManager", () => {
           },
         ],
         nearestStop: {
-          stop_id: "stop1",
-          stop_name: "Test Stop 1",
-          stop_code: undefined,
-          stop_lat: "35.681236",
-          stop_lon: "139.767125",
+          id: "stop1",
+          name: "Test Stop 1",
+          code: undefined,
+          lat: 35.681236,
+          lon: 139.767125,
           distance: 0.05,
         },
       };
@@ -337,6 +347,8 @@ describe("TransitManager", () => {
 
     expect(result.stops).toHaveLength(2);
     expect(result.nearestStop).not.toBeNull();
-    expect(result.nearestStop.stop_id).toBe("stop1");
+    if (result.nearestStop) {
+      expect(result.nearestStop.id).toBe("stop1");
+    }
   });
 });

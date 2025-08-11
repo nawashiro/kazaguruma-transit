@@ -1465,7 +1465,6 @@ export class TransitService {
                 },
               },
             },
-            take: 1, // 各ルートから1つのトリップのみ取得
           },
         },
         orderBy: {
@@ -1475,16 +1474,17 @@ export class TransitService {
 
       return routes.map(route => {
         const routeName = route.short_name || route.long_name || route.id;
-        const firstTrip = route.trips[0];
         
-        if (!firstTrip) {
+        if (!route.trips || route.trips.length === 0) {
           return { route: routeName, stops: [] };
         }
 
-        // 重複を除いてバス停名のリストを作成
+        // 全てのトリップから重複を除いてバス停名のリストを作成
         const uniqueStops = new Set<string>();
-        firstTrip.stop_times.forEach(stopTime => {
-          uniqueStops.add(stopTime.stop.name);
+        route.trips.forEach(trip => {
+          trip.stop_times.forEach(stopTime => {
+            uniqueStops.add(stopTime.stop.name);
+          });
         });
 
         return {

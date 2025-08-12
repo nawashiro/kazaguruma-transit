@@ -149,7 +149,7 @@ export class PolisConsensus {
       // データの疎密度を確認
       const totalElements = matrix.rows * matrix.columns;
       const nonZeroCount = this.voteMatrix.reduce(
-        (count, row) => count + row.filter(val => val !== 0).length,
+        (count, row) => count + row.filter((val) => val !== 0).length,
         0
       );
       const sparsity = 1.0 - nonZeroCount / totalElements;
@@ -233,7 +233,7 @@ export class PolisConsensus {
       return result;
     } catch (svdError) {
       logger.error("SVDフォールバック実行エラー:", svdError);
-      
+
       // SVDも失敗した場合は、元データの最初のn列を返す
       const result = this.voteMatrix.map((row) => {
         const cols = Math.min(nComponents, row.length);
@@ -542,17 +542,17 @@ export class PolisConsensus {
 
     const totalN = n1 + n2;
     const expectedFrequencies = [
-      (x1 + (n2 - x2)) * n1 / totalN, // グループ1の期待成功数
-      ((n1 - x1) + x2) * n1 / totalN, // グループ1の期待失敗数
-      (x1 + (n2 - x2)) * n2 / totalN, // グループ2の期待成功数
-      ((n1 - x1) + x2) * n2 / totalN, // グループ2の期待失敗数
+      ((x1 + (n2 - x2)) * n1) / totalN, // グループ1の期待成功数
+      ((n1 - x1 + x2) * n1) / totalN, // グループ1の期待失敗数
+      ((x1 + (n2 - x2)) * n2) / totalN, // グループ2の期待成功数
+      ((n1 - x1 + x2) * n2) / totalN, // グループ2の期待失敗数
     ];
 
     // Fisher正確確率検定の条件判定
     // 1. 標本サイズが小さい（合計30未満）
     // 2. 期待度数が5未満のセルがある
     // 3. 計算量制限（総数100以下でクライアント側実行を考慮）
-    const hasSmallExpectedFreq = expectedFrequencies.some(freq => freq < 5);
+    const hasSmallExpectedFreq = expectedFrequencies.some((freq) => freq < 5);
     const isSmallSample = totalN < 30;
     const isComputationallyFeasible = totalN <= 100;
 
@@ -562,11 +562,35 @@ export class PolisConsensus {
       const b = n1 - x1;
       const c = n2 - x2;
       const d = x2;
-      
-      return this.calculateFisherExactTestPValue(a, b, c, d);
+
+      const p = this.calculateFisherExactTestPValue(a, b, c, d);
+
+      logger.log("Fisher正確確率検定を使用", {
+        in: {
+          x1: x1,
+          n1: n1,
+          x2: x2,
+          n2: n2,
+        },
+        out: { p: p },
+      });
+
+      return p;
     } else {
       // Z検定（正規近似）を使用
-      return this.calculateZTestPValue(x1, n1, x2, n2);
+      const p = this.calculateZTestPValue(x1, n1, x2, n2);
+
+      logger.log("Z検定（正規近似）を使用", {
+        in: {
+          x1: x1,
+          n1: n1,
+          x2: x2,
+          n2: n2,
+        },
+        out: { p: p },
+      });
+
+      return p;
     }
   }
 
@@ -638,7 +662,7 @@ export class PolisConsensus {
 
     // より極端な場合の確率を合計（両側検定）
     let pValue = 0;
-    
+
     // 可能な全てのa値について確率を計算
     const maxA = Math.min(n1, k1);
     const minA = Math.max(0, k1 - n2);
@@ -650,7 +674,7 @@ export class PolisConsensus {
 
       if (testB >= 0 && testC >= 0 && testD >= 0) {
         const testProb = this.hypergeometricProbability(testA, n1, k1, n);
-        
+
         // 観測値と同等またはより極端な場合を合計
         if (testProb <= observedProb) {
           pValue += testProb;
@@ -674,9 +698,10 @@ export class PolisConsensus {
     if (k < 0 || k < K - (N - n)) return 0;
 
     // P(X = k) = C(K,k) * C(N-K,n-k) / C(N,n)
-    const numerator = this.logCombination(K, k) + this.logCombination(N - K, n - k);
+    const numerator =
+      this.logCombination(K, k) + this.logCombination(N - K, n - k);
     const denominator = this.logCombination(N, n);
-    
+
     return Math.exp(numerator - denominator);
   }
 
@@ -693,7 +718,7 @@ export class PolisConsensus {
     for (let i = 0; i < k; i++) {
       result += Math.log(n - i) - Math.log(i + 1);
     }
-    
+
     return result;
   }
 
@@ -815,58 +840,6 @@ export class PolisConsensus {
     }
 
     return groupRepresentativeComments;
-  }
-
-  /**
-   * 各グループの賛成タイプの代表的意見を抽出
-   */
-  private getGroupAgreeComments(
-    topN: number = 5,
-    zThreshold: number = 1.28
-  ): Record<number, GroupRepresentativeComment[]> {
-    const repnessResults = this.computeRepresentativeness();
-    const groupAgreeComments: Record<number, GroupRepresentativeComment[]> = {};
-
-    const uniqueClusters = Array.from(new Set(this.clusterLabels));
-
-    for (const cluster of uniqueClusters) {
-      const clusterComments: GroupRepresentativeComment[] = [];
-
-      for (const tid of this.topicIds) {
-        const key = `${cluster}-${tid}`;
-        const statsData = repnessResults[key];
-
-        if (!statsData) continue;
-
-        // 賛成の代表性のみを考慮
-        const repnessScore = statsData.repnessAgree;
-        const pValue = statsData.pAgree;
-
-        // Z値の近似計算
-        const zScore = pValue > 0 ? this.inverseNormalCDF(1 - pValue) : 0;
-
-        // 統計的に有意かつ代表性スコアが正の場合のみ追加
-        if (zScore >= zThreshold && repnessScore > 0) {
-          clusterComments.push({
-            tid,
-            reppnessScore: repnessScore,
-            zScore,
-            pValue,
-            voteType: "agree",
-            agreeRatio: statsData.agreeRatio,
-            disagreeRatio: statsData.disagreeRatio,
-          });
-        }
-      }
-
-      // 代表性スコアで降順にソート
-      clusterComments.sort((a, b) => b.reppnessScore - a.reppnessScore);
-
-      // 上位N件を選択
-      groupAgreeComments[cluster] = clusterComments.slice(0, topN);
-    }
-
-    return groupAgreeComments;
   }
 
   /**

@@ -487,8 +487,8 @@ export class PolisConsensus {
         const agreeCount = clusterVotes.filter((v) => v === 1).length;
         const otherAgreeCount = otherVotes.filter((v) => v === 1).length;
 
-        // Z検定の簡易実装
-        const pAgree = this.calculateZTestPValue(
+        // 適切な統計的検定を選択してp値を計算
+        const pAgree = this.calculateStatisticalTestPValue(
           agreeCount,
           clusterVotes.length,
           otherAgreeCount,
@@ -498,7 +498,7 @@ export class PolisConsensus {
         const disagreeCount = clusterVotes.filter((v) => v === -1).length;
         const otherDisagreeCount = otherVotes.filter((v) => v === -1).length;
 
-        const pDisagree = this.calculateZTestPValue(
+        const pDisagree = this.calculateStatisticalTestPValue(
           disagreeCount,
           clusterVotes.length,
           otherDisagreeCount,
@@ -526,6 +526,48 @@ export class PolisConsensus {
     }
 
     return results;
+  }
+
+  /**
+   * 適切な統計的検定を選択してp値を計算
+   * 標本サイズや計算量を考慮してZ検定またはFisher正確確率検定を選択
+   */
+  private calculateStatisticalTestPValue(
+    x1: number,
+    n1: number,
+    x2: number,
+    n2: number
+  ): number {
+    if (n1 === 0 || n2 === 0) return 1.0;
+
+    const totalN = n1 + n2;
+    const expectedFrequencies = [
+      (x1 + (n2 - x2)) * n1 / totalN, // グループ1の期待成功数
+      ((n1 - x1) + x2) * n1 / totalN, // グループ1の期待失敗数
+      (x1 + (n2 - x2)) * n2 / totalN, // グループ2の期待成功数
+      ((n1 - x1) + x2) * n2 / totalN, // グループ2の期待失敗数
+    ];
+
+    // Fisher正確確率検定の条件判定
+    // 1. 標本サイズが小さい（合計30未満）
+    // 2. 期待度数が5未満のセルがある
+    // 3. 計算量制限（総数100以下でクライアント側実行を考慮）
+    const hasSmallExpectedFreq = expectedFrequencies.some(freq => freq < 5);
+    const isSmallSample = totalN < 30;
+    const isComputationallyFeasible = totalN <= 100;
+
+    if ((isSmallSample || hasSmallExpectedFreq) && isComputationallyFeasible) {
+      // Fisher正確確率検定を使用
+      const a = x1;
+      const b = n1 - x1;
+      const c = n2 - x2;
+      const d = x2;
+      
+      return this.calculateFisherExactTestPValue(a, b, c, d);
+    } else {
+      // Z検定（正規近似）を使用
+      return this.calculateZTestPValue(x1, n1, x2, n2);
+    }
   }
 
   /**
@@ -565,6 +607,94 @@ export class PolisConsensus {
         t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
 
     return x > 0 ? 1 - prob : prob;
+  }
+
+  /**
+   * Fisher正確確率検定のp値を計算
+   */
+  private calculateFisherExactTestPValue(
+    a: number,
+    b: number,
+    c: number,
+    d: number
+  ): number {
+    if (a < 0 || b < 0 || c < 0 || d < 0) return 1.0;
+
+    // 2x2分割表:
+    //      成功  失敗  合計
+    // グループ1  a     b    a+b
+    // グループ2  c     d    c+d
+    // 合計    a+c   b+d    n
+
+    const n = a + b + c + d;
+    if (n === 0) return 1.0;
+
+    const n1 = a + b;
+    const n2 = c + d;
+    const k1 = a + c;
+
+    // 観測値のhypergeometric確率を計算
+    const observedProb = this.hypergeometricProbability(a, n1, k1, n);
+
+    // より極端な場合の確率を合計（両側検定）
+    let pValue = 0;
+    
+    // 可能な全てのa値について確率を計算
+    const maxA = Math.min(n1, k1);
+    const minA = Math.max(0, k1 - n2);
+
+    for (let testA = minA; testA <= maxA; testA++) {
+      const testB = n1 - testA;
+      const testC = k1 - testA;
+      const testD = n2 - testC;
+
+      if (testB >= 0 && testC >= 0 && testD >= 0) {
+        const testProb = this.hypergeometricProbability(testA, n1, k1, n);
+        
+        // 観測値と同等またはより極端な場合を合計
+        if (testProb <= observedProb) {
+          pValue += testProb;
+        }
+      }
+    }
+
+    return Math.min(pValue, 1.0);
+  }
+
+  /**
+   * 超幾何分布の確率を計算
+   */
+  private hypergeometricProbability(
+    k: number,
+    n: number,
+    K: number,
+    N: number
+  ): number {
+    if (k > n || k > K || n > N || K > N) return 0;
+    if (k < 0 || k < K - (N - n)) return 0;
+
+    // P(X = k) = C(K,k) * C(N-K,n-k) / C(N,n)
+    const numerator = this.logCombination(K, k) + this.logCombination(N - K, n - k);
+    const denominator = this.logCombination(N, n);
+    
+    return Math.exp(numerator - denominator);
+  }
+
+  /**
+   * 組み合わせの対数を計算（オーバーフロー対策）
+   */
+  private logCombination(n: number, k: number): number {
+    if (k > n || k < 0) return -Infinity;
+    if (k === 0 || k === n) return 0;
+
+    k = Math.min(k, n - k); // 計算の効率化
+
+    let result = 0;
+    for (let i = 0; i < k; i++) {
+      result += Math.log(n - i) - Math.log(i + 1);
+    }
+    
+    return result;
   }
 
   /**

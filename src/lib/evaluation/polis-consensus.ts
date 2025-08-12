@@ -322,8 +322,8 @@ export class PolisConsensus {
           });
           const labels = result.clusters;
 
-          // 簡単なシルエットスコアの近似計算
-          const score = this.calculateSimpleClusterScore(data, labels, k);
+          // 標準的なシルエットスコア計算
+          const score = this.calculateSilhouetteScore(data, labels);
 
           if (score > bestScore) {
             bestScore = score;
@@ -377,53 +377,81 @@ export class PolisConsensus {
   }
 
   /**
-   * 簡単なクラスター品質スコア計算
+   * 標準的なシルエットスコア計算
    */
-  private calculateSimpleClusterScore(
+  private calculateSilhouetteScore(
     data: number[][],
-    labels: number[],
-    k: number
+    labels: number[]
   ): number {
-    if (k === 1) return 0;
+    if (data.length === 0) return 0;
 
-    // クラスタ内分散とクラスタ間分散の比を計算
-    let totalWithinVariance = 0;
-    let totalBetweenVariance = 0;
-
-    for (let cluster = 0; cluster < k; cluster++) {
-      const clusterPoints = data.filter((_, i) => labels[i] === cluster);
-      if (clusterPoints.length <= 1) continue;
-
-      // クラスタ内分散を計算
-      const centroid = this.calculateCentroid(clusterPoints);
-      const withinVariance =
-        clusterPoints.reduce(
-          (sum, point) => sum + this.euclideanDistance(point, centroid) ** 2,
-          0
-        ) / clusterPoints.length;
-
-      totalWithinVariance += withinVariance;
+    const n = data.length;
+    let totalSilhouette = 0;
+    
+    // 各クラスタのサイズを計算
+    const clusterSizes: Record<number, number> = {};
+    for (const label of labels) {
+      clusterSizes[label] = (clusterSizes[label] || 0) + 1;
     }
 
-    // 全体の中心を計算
-    const globalCentroid = this.calculateCentroid(data);
+    // 各データポイントのシルエット値を計算
+    for (let i = 0; i < n; i++) {
+      const point = data[i];
+      const cluster = labels[i];
+      
+      // クラスタサイズが1の場合、シルエット値は0
+      if (clusterSizes[cluster] === 1) {
+        continue;
+      }
 
-    // クラスタ間分散を計算
-    for (let cluster = 0; cluster < k; cluster++) {
-      const clusterPoints = data.filter((_, i) => labels[i] === cluster);
-      if (clusterPoints.length === 0) continue;
+      // a(i): 同じクラスタ内の他の点との平均距離
+      let aValue = 0;
+      let sameClusterCount = 0;
+      
+      for (let j = 0; j < n; j++) {
+        if (i !== j && labels[j] === cluster) {
+          aValue += this.euclideanDistance(point, data[j]);
+          sameClusterCount++;
+        }
+      }
+      
+      if (sameClusterCount > 0) {
+        aValue /= sameClusterCount;
+      }
 
-      const centroid = this.calculateCentroid(clusterPoints);
-      const betweenVariance =
-        this.euclideanDistance(centroid, globalCentroid) ** 2;
-      totalBetweenVariance += betweenVariance * clusterPoints.length;
+      // b(i): 最も近い他のクラスタとの平均距離の最小値
+      let bValue = Infinity;
+      const otherClusters = Array.from(new Set(labels)).filter(c => c !== cluster);
+      
+      for (const otherCluster of otherClusters) {
+        let otherClusterDistance = 0;
+        let otherClusterCount = 0;
+        
+        for (let j = 0; j < n; j++) {
+          if (labels[j] === otherCluster) {
+            otherClusterDistance += this.euclideanDistance(point, data[j]);
+            otherClusterCount++;
+          }
+        }
+        
+        if (otherClusterCount > 0) {
+          const avgDistanceToOtherCluster = otherClusterDistance / otherClusterCount;
+          bValue = Math.min(bValue, avgDistanceToOtherCluster);
+        }
+      }
+
+      // シルエット値 s(i) = (b(i) - a(i)) / max(a(i), b(i))
+      if (bValue !== Infinity) {
+        const maxValue = Math.max(aValue, bValue);
+        if (maxValue > 0) {
+          const silhouetteValue = (bValue - aValue) / maxValue;
+          totalSilhouette += silhouetteValue;
+        }
+      }
     }
 
-    totalBetweenVariance /= data.length;
-
-    return totalWithinVariance > 0
-      ? totalBetweenVariance / totalWithinVariance
-      : 0;
+    // 平均シルエットスコアを返す
+    return totalSilhouette / n;
   }
 
   private calculateCentroid(points: number[][]): number[] {

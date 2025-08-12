@@ -19,6 +19,7 @@ export interface GroupRepresentativeComment {
   reppnessScore: number;
   zScore: number;
   pValue: number;
+  adjustedPValue: number;
   voteType: "agree" | "disagree";
   agreeRatio: number;
   disagreeRatio: number;
@@ -774,10 +775,11 @@ export class PolisConsensus {
 
   /**
    * 各グループの代表的意見を抽出（賛成・反対両方を考慮）
+   * Benjamini-Hochberg法による多重比較補正を適用
    */
   private getGroupRepresentativeComments(
     topN: number = 5,
-    zThreshold: number = 1.28
+    fdrAlpha: number = 0.05
   ): Record<number, GroupRepresentativeComment[]> {
     const repnessResults = this.computeRepresentativeness();
     const groupRepresentativeComments: Record<
@@ -787,6 +789,51 @@ export class PolisConsensus {
 
     const uniqueClusters = Array.from(new Set(this.clusterLabels));
 
+    // 全てのp値を収集（多重比較補正のため）
+    const allPValues: number[] = [];
+    const pValueMappings: {
+      cluster: number;
+      tid: string;
+      type: "agree" | "disagree";
+      pValue: number;
+      adjustedPValue?: number;
+    }[] = [];
+
+    for (const cluster of uniqueClusters) {
+      for (const tid of this.topicIds) {
+        const key = `${cluster}-${tid}`;
+        const statsData = repnessResults[key];
+
+        if (!statsData) continue;
+
+        // 賛成と反対の両方のp値を追加
+        allPValues.push(statsData.pAgree);
+        pValueMappings.push({
+          cluster,
+          tid,
+          type: "agree",
+          pValue: statsData.pAgree,
+        });
+
+        allPValues.push(statsData.pDisagree);
+        pValueMappings.push({
+          cluster,
+          tid,
+          type: "disagree",
+          pValue: statsData.pDisagree,
+        });
+      }
+    }
+
+    // Benjamini-Hochberg法を適用
+    const adjustedPValues = this.benjaminiHochbergCorrection(allPValues);
+
+    // 調整済みp値をマッピングに追加
+    pValueMappings.forEach((mapping, index) => {
+      mapping.adjustedPValue = adjustedPValues[index];
+    });
+
+    // 各クラスタについて代表的コメントを抽出
     for (const cluster of uniqueClusters) {
       const clusterComments: GroupRepresentativeComment[] = [];
 
@@ -803,28 +850,42 @@ export class PolisConsensus {
         let bestScore: number;
         let bestType: "agree" | "disagree";
         let bestPValue: number;
+        let bestAdjustedPValue: number;
+
+        // 対応する調整済みp値を取得
+        const agreeMapping = pValueMappings.find(
+          (m) => m.cluster === cluster && m.tid === tid && m.type === "agree"
+        );
+        const disagreeMapping = pValueMappings.find(
+          (m) => m.cluster === cluster && m.tid === tid && m.type === "disagree"
+        );
 
         if (agreeScore > disagreeScore) {
           bestScore = agreeScore;
           bestType = "agree";
           bestPValue = statsData.pAgree;
+          bestAdjustedPValue = agreeMapping?.adjustedPValue || 1.0;
         } else {
           bestScore = disagreeScore;
           bestType = "disagree";
           bestPValue = statsData.pDisagree;
+          bestAdjustedPValue = disagreeMapping?.adjustedPValue || 1.0;
         }
 
-        // Z値の近似計算
+        // Z値の近似計算（調整済みp値を使用）
         const zScore =
-          bestPValue > 0 ? this.inverseNormalCDF(1 - bestPValue) : 0;
+          bestAdjustedPValue > 0
+            ? this.inverseNormalCDF(1 - bestAdjustedPValue)
+            : 0;
 
-        // 統計的に有意かつ代表性スコアが正の場合のみ追加
-        if (zScore >= zThreshold && bestScore > 0) {
+        // FDR制御済みp値が有意かつ代表性スコアが正の場合のみ追加
+        if (bestAdjustedPValue < fdrAlpha && bestScore > 0) {
           clusterComments.push({
             tid,
             reppnessScore: bestScore,
             zScore,
             pValue: bestPValue,
+            adjustedPValue: bestAdjustedPValue,
             voteType: bestType,
             agreeRatio: statsData.agreeRatio,
             disagreeRatio: statsData.disagreeRatio,
@@ -839,7 +900,52 @@ export class PolisConsensus {
       groupRepresentativeComments[cluster] = clusterComments.slice(0, topN);
     }
 
+    logger.log("多重比較補正適用完了", {
+      totalTests: allPValues.length,
+      significantAfterCorrection: Object.values(
+        groupRepresentativeComments
+      ).flat().length,
+      fdrAlpha,
+      out: groupRepresentativeComments,
+    });
+
     return groupRepresentativeComments;
+  }
+
+  /**
+   * Benjamini-Hochberg法による偽発見率（FDR）制御
+   * 多重比較補正を適用してadjusted p-valueを計算
+   */
+  private benjaminiHochbergCorrection(pValues: number[]): number[] {
+    if (pValues.length === 0) return [];
+
+    // p値とインデックスのペアを作成し、p値でソート
+    const indexedPValues = pValues.map((p, i) => ({ p, index: i }));
+    indexedPValues.sort((a, b) => a.p - b.p);
+
+    const n = pValues.length;
+    const adjustedPValues = new Array(n).fill(0);
+
+    // Benjamini-Hochberg手順を適用
+    // 最大のp値から開始して、逆順に処理
+    let previousAdjusted = 1.0;
+
+    for (let i = n - 1; i >= 0; i--) {
+      const rank = i + 1; // ランク（1から始まる）
+      const rawP = indexedPValues[i].p;
+      const originalIndex = indexedPValues[i].index;
+
+      // adjusted p-value = min(1, (n/rank) * p)
+      const adjustedP = Math.min(1.0, (n / rank) * rawP);
+
+      // 単調性を保持（前の値より小さくならないようにする）
+      const monotoneAdjustedP = Math.min(previousAdjusted, adjustedP);
+
+      adjustedPValues[originalIndex] = monotoneAdjustedP;
+      previousAdjusted = monotoneAdjustedP;
+    }
+
+    return adjustedPValues;
   }
 
   /**
@@ -899,10 +1005,10 @@ export class PolisConsensus {
     // グループ考慮型コンセンサス検出
     const groupAwareConsensus = this.detectGroupAwareConsensus();
 
-    // 各グループの代表的意見を抽出（賛成・反対両方）
+    // 各グループの代表的意見を抽出（賛成・反対両方、多重比較補正適用）
     const groupRepresentativeComments = this.getGroupRepresentativeComments(
       5,
-      1.28
+      0.05
     );
 
     return {

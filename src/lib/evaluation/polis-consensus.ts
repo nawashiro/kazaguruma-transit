@@ -752,8 +752,9 @@ export class PolisConsensus {
         const A = groupVotes.filter((v) => v === 1).length;
         const S = groupVotes.length;
 
-        // ベイジアンスムージングを適用した確率を計算
-        const prob = S > 0 ? (A + 1.0) / (S + 2.0) : 0.5;
+        // Jeffreys事前分布ベースのベイジアン平滑化を適用した確率を計算
+        // Beta(0.5, 0.5)事前分布（Jeffreys事前分布）を使用
+        const prob = S > 0 ? (A + 0.5) / (S + 1.0) : 0.5;
         tidGidProbs[tid][gid] = prob;
       }
     }

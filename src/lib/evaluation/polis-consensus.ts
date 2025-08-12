@@ -674,8 +674,21 @@ export class PolisConsensus {
         const agreeCount = clusterVotes.filter((v) => v === 1).length;
         const otherAgreeCount = otherVotes.filter((v) => v === 1).length;
 
+        /*
         // 適切な統計的検定を選択してp値を計算
         const pAgree = this.calculateStatisticalTestPValue(
+          agreeCount,
+          clusterVotes.length,
+          otherAgreeCount,
+          otherVotes.length
+        );
+        */
+
+        // 暫定的にZ検定のみ使用する。
+        // 小標本のとき問題がある可能性があるが、混在は運用上問題があり、
+        // Fisher正確確率検定ではほぼすべての投稿が除外されてしまうため、
+        // クラスタの特徴を知るという目的を果たすことができない。
+        const pAgree = this.calculateZTestPValue(
           agreeCount,
           clusterVotes.length,
           otherAgreeCount,
@@ -685,7 +698,17 @@ export class PolisConsensus {
         const disagreeCount = clusterVotes.filter((v) => v === -1).length;
         const otherDisagreeCount = otherVotes.filter((v) => v === -1).length;
 
+        /*
         const pDisagree = this.calculateStatisticalTestPValue(
+          disagreeCount,
+          clusterVotes.length,
+          otherDisagreeCount,
+          otherVotes.length
+        );
+        */
+
+        // 暫定的にZ検定のみ使用する。
+        const pDisagree = this.calculateZTestPValue(
           disagreeCount,
           clusterVotes.length,
           otherDisagreeCount,
@@ -1067,6 +1090,7 @@ export class PolisConsensus {
 
         // FDR制御済みp値が有意かつ代表性スコアが正の場合のみ追加
         if (bestAdjustedPValue < fdrAlpha && bestScore > 0) {
+          logger.log({ bestAdjustedPValue, bestPValue });
           clusterComments.push({
             tid,
             reppnessScore: bestScore,

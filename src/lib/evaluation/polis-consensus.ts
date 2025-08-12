@@ -632,6 +632,53 @@ export class PolisConsensus {
   }
 
   /**
+   * フィルタ前の標本に対してパーセンテージを計算
+   */
+  private calculateOriginalPercentages(): Record<
+    string,
+    { agreeRatio: number; disagreeRatio: number }
+  > {
+    const results: Record<
+      string,
+      { agreeRatio: number; disagreeRatio: number }
+    > = {};
+    const uniqueClusters = Array.from(new Set(this.clusterLabels));
+
+    for (let tidIndex = 0; tidIndex < this.topicIds.length; tidIndex++) {
+      const tid = this.topicIds[tidIndex];
+
+      for (const cluster of uniqueClusters) {
+        const clusterIndices = this.clusterLabels
+          .map((label, i) => (label === cluster ? i : -1))
+          .filter((i) => i >= 0);
+
+        if (clusterIndices.length === 0) continue;
+
+        // クラスタ内の全投票（フィルタ前）
+        const clusterVotes = clusterIndices.map(
+          (i) => this.voteMatrix[i][tidIndex]
+        );
+
+        // フィルタ前の標本に対するパーセンテージを計算
+        const totalVotes = clusterVotes.length;
+        const agreeCount = clusterVotes.filter((v) => v === 1).length;
+        const disagreeCount = clusterVotes.filter((v) => v === -1).length;
+
+        const agreeRatio = totalVotes > 0 ? agreeCount / totalVotes : 0;
+        const disagreeRatio = totalVotes > 0 ? disagreeCount / totalVotes : 0;
+
+        const key = `${cluster}-${tid}`;
+        if (!results[key]) {
+          results[key] = { agreeRatio: 0, disagreeRatio: 0 };
+        }
+        results[key] = { agreeRatio, disagreeRatio };
+      }
+    }
+
+    return results;
+  }
+
+  /**
    * 代表性分析を実行
    */
   private computeRepresentativeness(): Record<string, Record<string, number>> {
@@ -992,6 +1039,7 @@ export class PolisConsensus {
     fdrAlpha: number = 0.05
   ): Record<number, GroupRepresentativeComment[]> {
     const repnessResults = this.computeRepresentativeness();
+    const originalPercentages = this.calculateOriginalPercentages();
     const groupRepresentativeComments: Record<
       number,
       GroupRepresentativeComment[]
@@ -1090,7 +1138,18 @@ export class PolisConsensus {
 
         // FDR制御済みp値が有意かつ代表性スコアが正の場合のみ追加
         if (bestAdjustedPValue < fdrAlpha && bestScore > 0) {
-          logger.log({ bestAdjustedPValue, bestPValue });
+          // フィルタ前の標本に対するパーセンテージを使用
+          const originalPercentage = originalPercentages[key];
+          const displayAgreeRatio = originalPercentage?.agreeRatio || 0;
+          const displayDisagreeRatio = originalPercentage?.disagreeRatio || 0;
+
+          logger.log({
+            bestAdjustedPValue,
+            bestPValue,
+            displayAgreeRatio,
+            displayDisagreeRatio,
+          });
+
           clusterComments.push({
             tid,
             reppnessScore: bestScore,
@@ -1098,8 +1157,8 @@ export class PolisConsensus {
             pValue: bestPValue,
             adjustedPValue: bestAdjustedPValue,
             voteType: bestType,
-            agreeRatio: statsData.agreeRatio,
-            disagreeRatio: statsData.disagreeRatio,
+            agreeRatio: displayAgreeRatio,
+            disagreeRatio: displayDisagreeRatio,
           });
         }
       }

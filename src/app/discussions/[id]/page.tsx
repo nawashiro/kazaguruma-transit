@@ -43,6 +43,7 @@ import type {
   PostFormData,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
+import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
@@ -93,6 +94,17 @@ export default function DiscussionDetailPage() {
     if (!isDiscussionsEnabled()) return;
     setIsLoading(true);
     try {
+      // テストモードの場合はテストデータを使用
+      if (isTestMode(discussionId)) {
+        const testData = await loadTestData();
+        setDiscussion(testData.discussion);
+        setPosts(testData.posts);
+        setApprovals([]); // テストデータでは承認データは空
+        setEvaluations(testData.evaluations);
+        setProfiles({}); // テストデータではプロファイルは空
+        return;
+      }
+
       const [discussionEvents, postsEvents, approvalsEvents] =
         await Promise.all([
           nostrService.getDiscussions(ADMIN_PUBKEY),
@@ -174,6 +186,12 @@ export default function DiscussionDetailPage() {
 
   const loadUserEvaluations = useCallback(async () => {
     if (!user.pubkey || !isDiscussionsEnabled()) return;
+    
+    // テストモードの場合はユーザー評価をスキップ
+    if (isTestMode(discussionId)) {
+      setUserEvaluations(new Set());
+      return;
+    }
 
     try {
       const userEvals = await nostrService.getEvaluations(user.pubkey);
@@ -186,7 +204,7 @@ export default function DiscussionDetailPage() {
     } catch (error) {
       logger.error("Failed to load user evaluations:", error);
     }
-  }, [user.pubkey]);
+  }, [user.pubkey, discussionId]);
 
   const loadBusStops = useCallback(async () => {
     try {
@@ -278,6 +296,12 @@ export default function DiscussionDetailPage() {
       return;
     }
 
+    // テストモードの場合は投稿を無効化
+    if (isTestMode(discussionId)) {
+      setErrors(["テストモードでは投稿できません"]);
+      return;
+    }
+
     const validationErrors = validatePostForm(postForm);
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
@@ -331,6 +355,11 @@ export default function DiscussionDetailPage() {
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (!user.isLoggedIn || !discussion) {
       setShowLoginModal(true);
+      return;
+    }
+
+    // テストモードの場合は評価を無効化
+    if (isTestMode(discussionId)) {
       return;
     }
 

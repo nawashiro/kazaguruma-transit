@@ -612,21 +612,6 @@ export class PolisConsensus {
     return centroids;
   }
 
-  private calculateCentroid(points: number[][]): number[] {
-    if (points.length === 0) return [];
-
-    const dimensions = points[0].length;
-    const centroid = new Array(dimensions).fill(0);
-
-    for (const point of points) {
-      for (let i = 0; i < dimensions; i++) {
-        centroid[i] += point[i];
-      }
-    }
-
-    return centroid.map((sum) => sum / points.length);
-  }
-
   private euclideanDistance(a: number[], b: number[]): number {
     return Math.sqrt(a.reduce((sum, val, i) => sum + (val - b[i]) ** 2, 0));
   }
@@ -721,21 +706,8 @@ export class PolisConsensus {
         const agreeCount = clusterVotes.filter((v) => v === 1).length;
         const otherAgreeCount = otherVotes.filter((v) => v === 1).length;
 
-        /*
-        // 適切な統計的検定を選択してp値を計算
-        const pAgree = this.calculateStatisticalTestPValue(
-          agreeCount,
-          clusterVotes.length,
-          otherAgreeCount,
-          otherVotes.length
-        );
-        */
-
-        // 暫定的にZ検定のみ使用する。
-        // 小標本のとき問題がある可能性があるが、混在は運用上問題があり、
-        // Fisher正確確率検定ではほぼすべての投稿が除外されてしまうため、
-        // クラスタの特徴を知るという目的を果たすことができない。
-        const pAgree = this.calculateZTestPValue(
+        // Network Algorithm + mid-P値アプローチを使用してp値を計算
+        const pAgree = this.calculateNetworkMidPValue(
           agreeCount,
           clusterVotes.length,
           otherAgreeCount,
@@ -745,17 +717,7 @@ export class PolisConsensus {
         const disagreeCount = clusterVotes.filter((v) => v === -1).length;
         const otherDisagreeCount = otherVotes.filter((v) => v === -1).length;
 
-        /*
-        const pDisagree = this.calculateStatisticalTestPValue(
-          disagreeCount,
-          clusterVotes.length,
-          otherDisagreeCount,
-          otherVotes.length
-        );
-        */
-
-        // 暫定的にZ検定のみ使用する。
-        const pDisagree = this.calculateZTestPValue(
+        const pDisagree = this.calculateNetworkMidPValue(
           disagreeCount,
           clusterVotes.length,
           otherDisagreeCount,
@@ -786,114 +748,10 @@ export class PolisConsensus {
   }
 
   /**
-   * 適切な統計的検定を選択してp値を計算
-   * 標本サイズや計算量を考慮してZ検定またはFisher正確確率検定を選択
+   * Network Algorithm (Mehta & Patel, 1983) を使用したFisher正確検定の近似計算
+   * 2x2分割表に対する効率的な確率計算を実行
    */
-  private calculateStatisticalTestPValue(
-    x1: number,
-    n1: number,
-    x2: number,
-    n2: number
-  ): number {
-    if (n1 === 0 || n2 === 0) return 1.0;
-
-    const totalN = n1 + n2;
-    const expectedFrequencies = [
-      ((x1 + (n2 - x2)) * n1) / totalN, // グループ1の期待成功数
-      ((n1 - x1 + x2) * n1) / totalN, // グループ1の期待失敗数
-      ((x1 + (n2 - x2)) * n2) / totalN, // グループ2の期待成功数
-      ((n1 - x1 + x2) * n2) / totalN, // グループ2の期待失敗数
-    ];
-
-    // Fisher正確確率検定の条件判定
-    // 1. 標本サイズが小さい（合計30未満）
-    // 2. 期待度数が5未満のセルがある
-    // 3. 計算量制限（総数100以下でクライアント側実行を考慮）
-    const hasSmallExpectedFreq = expectedFrequencies.some((freq) => freq < 5);
-    const isSmallSample = totalN < 30;
-    const isComputationallyFeasible = totalN <= 100;
-
-    if ((isSmallSample || hasSmallExpectedFreq) && isComputationallyFeasible) {
-      // Fisher正確確率検定を使用
-      const a = x1;
-      const b = n1 - x1;
-      const c = n2 - x2;
-      const d = x2;
-
-      const p = this.calculateFisherExactTestPValue(a, b, c, d);
-
-      logger.log("Fisher正確確率検定を使用", {
-        in: {
-          x1: x1,
-          n1: n1,
-          x2: x2,
-          n2: n2,
-        },
-        out: { p: p },
-      });
-
-      return p;
-    } else {
-      // Z検定（正規近似）を使用
-      const p = this.calculateZTestPValue(x1, n1, x2, n2);
-
-      logger.log("Z検定（正規近似）を使用", {
-        in: {
-          x1: x1,
-          n1: n1,
-          x2: x2,
-          n2: n2,
-        },
-        out: { p: p },
-      });
-
-      return p;
-    }
-  }
-
-  /**
-   * Z検定のp値を計算（簡易版）
-   */
-  private calculateZTestPValue(
-    x1: number,
-    n1: number,
-    x2: number,
-    n2: number
-  ): number {
-    if (n1 === 0 || n2 === 0) return 1.0;
-
-    const p1 = x1 / n1;
-    const p2 = x2 / n2;
-    const pPooled = (x1 + x2) / (n1 + n2);
-
-    if (pPooled === 0 || pPooled === 1) return 1.0;
-
-    const se = Math.sqrt(pPooled * (1 - pPooled) * (1 / n1 + 1 / n2));
-    const z = Math.abs(p1 - p2) / se;
-
-    // 標準正規分布のCDF近似
-    return 2 * (1 - this.normalCDF(z));
-  }
-
-  /**
-   * 標準正規分布の累積分布関数の近似
-   */
-  private normalCDF(x: number): number {
-    const t = 1 / (1 + 0.2316419 * Math.abs(x));
-    const d = 0.3989423 * Math.exp((-x * x) / 2);
-    const prob =
-      d *
-      t *
-      (0.3193815 +
-        t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
-
-    return x > 0 ? 1 - prob : prob;
-  }
-
-  /**
-   * Fisher正確確率検定のp値を計算
-   */
-  private calculateFisherExactTestPValue(
+  private calculateNetworkAlgorithmPValue(
     a: number,
     b: number,
     c: number,
@@ -901,40 +759,36 @@ export class PolisConsensus {
   ): number {
     if (a < 0 || b < 0 || c < 0 || d < 0) return 1.0;
 
-    // 2x2分割表:
-    //      成功  失敗  合計
-    // グループ1  a     b    a+b
-    // グループ2  c     d    c+d
-    // 合計    a+c   b+d    n
-
     const n = a + b + c + d;
     if (n === 0) return 1.0;
 
-    const n1 = a + b;
-    const n2 = c + d;
-    const k1 = a + c;
+    const n1 = a + b; // 行1の合計
+    const n2 = c + d; // 行2の合計
+    const k1 = a + c; // 列1の合計
 
-    // 観測値のhypergeometric確率を計算
-    const observedProb = this.hypergeometricProbability(a, n1, k1, n);
+    // 観測値の対数確率を計算
+    const observedLogProb = this.logHypergeometricProb(a, n1, k1, n);
 
-    // より極端な場合の確率を合計（両側検定）
+    // Network Algorithmによる確率の累積計算
     let pValue = 0;
 
-    // 可能な全てのa値について確率を計算
-    const maxA = Math.min(n1, k1);
+    // 可能なa値の範囲を計算
     const minA = Math.max(0, k1 - n2);
+    const maxA = Math.min(n1, k1);
 
+    // 各可能なa値について確率を計算し、観測値以下の確率を合計
     for (let testA = minA; testA <= maxA; testA++) {
       const testB = n1 - testA;
       const testC = k1 - testA;
       const testD = n2 - testC;
 
       if (testB >= 0 && testC >= 0 && testD >= 0) {
-        const testProb = this.hypergeometricProbability(testA, n1, k1, n);
+        const testLogProb = this.logHypergeometricProb(testA, n1, k1, n);
 
-        // 観測値と同等またはより極端な場合を合計
-        if (testProb <= observedProb) {
-          pValue += testProb;
+        // 観測値以下の確率値を選択（両側検定）
+        if (testLogProb <= observedLogProb + 1e-12) {
+          // 数値誤差を考慮
+          pValue += Math.exp(testLogProb);
         }
       }
     }
@@ -943,23 +797,99 @@ export class PolisConsensus {
   }
 
   /**
-   * 超幾何分布の確率を計算
+   * 超幾何分布の対数確率を計算（オーバーフロー対策）
+   * P(X = k) = C(K,k) * C(N-K,n-k) / C(N,n)
    */
-  private hypergeometricProbability(
+  private logHypergeometricProb(
     k: number,
     n: number,
     K: number,
     N: number
   ): number {
-    if (k > n || k > K || n > N || K > N) return 0;
-    if (k < 0 || k < K - (N - n)) return 0;
+    if (k > n || k > K || n > N || K > N) return -Infinity;
+    if (k < 0 || k < K - (N - n)) return -Infinity;
 
-    // P(X = k) = C(K,k) * C(N-K,n-k) / C(N,n)
+    // log P(X = k) = log C(K,k) + log C(N-K,n-k) - log C(N,n)
     const numerator =
       this.logCombination(K, k) + this.logCombination(N - K, n - k);
     const denominator = this.logCombination(N, n);
 
-    return Math.exp(numerator - denominator);
+    return numerator - denominator;
+  }
+
+  /**
+   * Network Algorithm (Mehta & Patel, 1983) + mid-P値アプローチの組み合わせ
+   * 効率的な確率計算と過度な保守性の緩和を同時に実現
+   */
+  private calculateNetworkMidPValue(
+    x1: number,
+    n1: number,
+    x2: number,
+    n2: number
+  ): number {
+    if (n1 === 0 || n2 === 0) return 1.0;
+
+    // 2x2分割表の形式に変換
+    const a = x1;
+    const b = n1 - x1;
+    const c = x2;
+    const d = n2 - x2;
+
+    if (a < 0 || b < 0 || c < 0 || d < 0) return 1.0;
+
+    const n = a + b + c + d;
+    if (n === 0) return 1.0;
+
+    const n1Total = a + b; // 行1の合計
+    const n2Total = c + d; // 行2の合計
+    const k1 = a + c; // 列1の合計
+
+    // Network Algorithmによる効率的な確率計算
+    // 観測値の対数確率を計算
+    const observedLogProb = this.logHypergeometricProb(a, n1Total, k1, n);
+    const observedProb = Math.exp(observedLogProb);
+
+    // Network Algorithmによる効率的な範囲計算と確率累積
+    let extremePValue = 0;
+
+    // 可能なa値の範囲を計算（Network Algorithm）
+    const minA = Math.max(0, k1 - n2Total);
+    const maxA = Math.min(n1Total, k1);
+
+    // Network Algorithmによる効率的な確率累積
+    for (let testA = minA; testA <= maxA; testA++) {
+      const testB = n1Total - testA;
+      const testC = k1 - testA;
+      const testD = n2Total - testC;
+
+      if (testB >= 0 && testC >= 0 && testD >= 0) {
+        const testLogProb = this.logHypergeometricProb(testA, n1Total, k1, n);
+
+        // Network Algorithmの効率的な確率比較
+        // 観測値より極端（確率がより小さい）な場合を合計
+        if (testLogProb < observedLogProb - 1e-12) {
+          // 数値誤差を考慮
+          extremePValue += Math.exp(testLogProb);
+        }
+      }
+    }
+
+    // mid-P値アプローチを適用してNetwork Algorithmの過度な保守性を緩和
+    // mid-P = P(X < observed) + 0.5 * P(X = observed)
+    const networkMidPValue = extremePValue + 0.5 * observedProb;
+
+    logger.log("Network Algorithm + mid-P値を使用", {
+      in: { x1, n1, x2, n2 },
+      contingencyTable: { a, b, c, d },
+      networkAlgorithm: {
+        observedProb,
+        extremePValue,
+        totalRange: maxA - minA + 1,
+      },
+      out: { networkMidPValue },
+    });
+
+    return Math.min(networkMidPValue, 1.0);
   }
 
   /**

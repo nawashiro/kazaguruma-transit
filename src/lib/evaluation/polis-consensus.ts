@@ -276,7 +276,7 @@ export class PolisConsensus {
     }
 
     try {
-      logger.log("クラスタリング実行開始", {
+      logger.log("クラスタリング実行開始 (Calinski-Harabasz Index使用)", {
         dataPoints: data.length,
         dimensions: data[0]?.length || 0,
         maxClusters,
@@ -308,9 +308,9 @@ export class PolisConsensus {
       );
 
       let bestK = 2;
-      let bestScore = -1;
+      let bestScore = 0; // CHIは高い方が良いので、0から開始
 
-      // シルエットスコアに基づいて最適なクラスタ数を決定
+      // Calinski-Harabasz Indexに基づいて最適なクラスタ数を決定
       for (const k of kRange) {
         if (k > data.length) continue; // クラスタ数がデータポイント数を超えないように
 
@@ -322,8 +322,10 @@ export class PolisConsensus {
           });
           const labels = result.clusters;
 
-          // 標準的なシルエットスコア計算
-          const score = this.calculateSilhouetteScore(data, labels);
+          // Calinski-Harabasz Indexを計算
+          const score = this.calculateCalinskiHarabaszIndex(data, labels);
+
+          logger.log(`K=${k} CHI=${score.toFixed(4)}`);
 
           if (score > bestScore) {
             bestScore = score;
@@ -335,7 +337,10 @@ export class PolisConsensus {
         }
       }
 
-      logger.log("最適なクラスタ数決定:", bestK);
+      logger.log("最適なクラスタ数決定 (CHI最大化):", {
+        bestK,
+        bestCHI: bestScore,
+      });
 
       // 最適なクラスタ数でK-meansを実行
       const result = kmeans(data, bestK, {
@@ -377,203 +382,84 @@ export class PolisConsensus {
   }
 
   /**
-   * 適応的シルエットスコア計算（サンプルサイズに応じて最適化）
+   * Calinski-Harabasz Index (CHI) を計算
+   * CHI = (BCSS/(k-1)) / (WCSS/(n-k))
+   * より高い値がより良いクラスタリングを示す
+   *
+   * 計算効率: O(n*d + k*d) ここで n=データ点数、d=次元数、k=クラスタ数
+   * シルエット法のO(n²)と比較して大幅に効率的
    */
-  private calculateSilhouetteScore(data: number[][], labels: number[]): number {
+  private calculateCalinskiHarabaszIndex(
+    data: number[][],
+    labels: number[]
+  ): number {
     if (data.length === 0) return 0;
 
     const n = data.length;
+    const uniqueLabels = Array.from(new Set(labels));
+    const k = uniqueLabels.length;
 
-    // 計算量に基づいて適応的に手法を選択
-    // O(n²)の計算量制限: 200点以下は完全計算、それ以上は近似
-    if (n <= 200) {
-      return this.calculateFullSilhouetteScore(data, labels);
-    } else {
-      return this.calculateApproximateSilhouetteScore(data, labels);
-    }
-  }
+    // k=1の場合はCHIを計算できない（分母が0になる）
+    if (k <= 1 || k >= n) return 0;
 
-  /**
-   * 完全なシルエットスコア計算（小～中規模データ用）
-   */
-  private calculateFullSilhouetteScore(
-    data: number[][],
-    labels: number[]
-  ): number {
-    const n = data.length;
-    let totalSilhouette = 0;
-
-    // 各クラスタのサイズを計算
-    const clusterSizes: Record<number, number> = {};
-    for (const label of labels) {
-      clusterSizes[label] = (clusterSizes[label] || 0) + 1;
-    }
-
-    // 各データポイントのシルエット値を計算
-    for (let i = 0; i < n; i++) {
-      const point = data[i];
-      const cluster = labels[i];
-
-      // クラスタサイズが1の場合、シルエット値は0
-      if (clusterSizes[cluster] === 1) {
-        continue;
-      }
-
-      // a(i): 同じクラスタ内の他の点との平均距離
-      let aValue = 0;
-      let sameClusterCount = 0;
-
-      for (let j = 0; j < n; j++) {
-        if (i !== j && labels[j] === cluster) {
-          aValue += this.euclideanDistance(point, data[j]);
-          sameClusterCount++;
-        }
-      }
-
-      if (sameClusterCount > 0) {
-        aValue /= sameClusterCount;
-      }
-
-      // b(i): 最も近い他のクラスタとの平均距離の最小値
-      let bValue = Infinity;
-      const otherClusters = Array.from(new Set(labels)).filter(
-        (c) => c !== cluster
-      );
-
-      for (const otherCluster of otherClusters) {
-        let otherClusterDistance = 0;
-        let otherClusterCount = 0;
-
-        for (let j = 0; j < n; j++) {
-          if (labels[j] === otherCluster) {
-            otherClusterDistance += this.euclideanDistance(point, data[j]);
-            otherClusterCount++;
-          }
-        }
-
-        if (otherClusterCount > 0) {
-          const avgDistanceToOtherCluster =
-            otherClusterDistance / otherClusterCount;
-          bValue = Math.min(bValue, avgDistanceToOtherCluster);
-        }
-      }
-
-      // シルエット値 s(i) = (b(i) - a(i)) / max(a(i), b(i))
-      if (bValue !== Infinity) {
-        const maxValue = Math.max(aValue, bValue);
-        if (maxValue > 0) {
-          const silhouetteValue = (bValue - aValue) / maxValue;
-          totalSilhouette += silhouetteValue;
-        }
-      }
-    }
-
-    return totalSilhouette / n;
-  }
-
-  /**
-   * 近似シルエットスコア計算（大規模データ用）
-   * サンプリングベース近似とクラスタ重心近似を組み合わせ
-   */
-  private calculateApproximateSilhouetteScore(
-    data: number[][],
-    labels: number[]
-  ): number {
-    const n = data.length;
-
-    // サンプリングサイズを動的に決定（√n、最小100、最大500）
-    const sampleSize = Math.min(500, Math.max(100, Math.floor(Math.sqrt(n))));
-    const sampleIndices = this.stratifiedSample(labels, sampleSize);
-
-    let totalSilhouette = 0;
-    let validSamples = 0;
-
-    // クラスタ別の重心を事前計算（計算効率化）
+    // WCSS計算時にクラスタ重心を再利用してBCSS計算も効率化
     const clusterCentroids = this.calculateClusterCentroids(data, labels);
-    const clusterSizes: Record<number, number> = {};
+    const overallCentroid = this.calculateOverallCentroid(data);
 
+    // WCSSを計算（各点とクラスタ重心の距離の二乗和）
+    let wcss = 0;
+    for (let i = 0; i < data.length; i++) {
+      const point = data[i];
+      const clusterLabel = labels[i];
+      const centroid = clusterCentroids[clusterLabel];
+
+      if (centroid) {
+        wcss += this.euclideanDistanceSquared(point, centroid);
+      }
+    }
+
+    // BCSSを計算（クラスタ重心と全体重心の加重距離の二乗和）
+    let bcss = 0;
+    const clusterSizes: Record<number, number> = {};
     for (const label of labels) {
       clusterSizes[label] = (clusterSizes[label] || 0) + 1;
     }
 
-    for (const i of sampleIndices) {
-      const point = data[i];
-      const cluster = labels[i];
-
-      if (clusterSizes[cluster] <= 1) continue;
-
-      // a(i): 同一クラスタ重心との距離で近似
-      const ownCentroid = clusterCentroids[cluster];
-      const aValue = this.euclideanDistance(point, ownCentroid);
-
-      // b(i): 最近傍クラスタ重心との距離
-      let bValue = Infinity;
-      for (const [otherCluster, centroid] of Object.entries(clusterCentroids)) {
-        if (parseInt(otherCluster) !== cluster) {
-          const distance = this.euclideanDistance(point, centroid);
-          bValue = Math.min(bValue, distance);
-        }
-      }
-
-      if (bValue !== Infinity && (aValue > 0 || bValue > 0)) {
-        const maxValue = Math.max(aValue, bValue);
-        if (maxValue > 0) {
-          const silhouetteValue = (bValue - aValue) / maxValue;
-          totalSilhouette += silhouetteValue;
-          validSamples++;
-        }
-      }
+    for (const [clusterLabel, centroid] of Object.entries(clusterCentroids)) {
+      const clusterSize = clusterSizes[parseInt(clusterLabel)];
+      const distanceSquared = this.euclideanDistanceSquared(
+        centroid,
+        overallCentroid
+      );
+      bcss += clusterSize * distanceSquared;
     }
 
-    return validSamples > 0 ? totalSilhouette / validSamples : 0;
+    // CHI = (BCSS/(k-1)) / (WCSS/(n-k))
+    const chi = bcss / (k - 1) / (wcss / (n - k));
+
+    return isFinite(chi) ? chi : 0;
   }
 
   /**
-   * 層化サンプリング（各クラスタから比例的にサンプル）
+   * 全体重心を計算
    */
-  private stratifiedSample(labels: number[], sampleSize: number): number[] {
-    const clusterIndices: Record<number, number[]> = {};
+  private calculateOverallCentroid(data: number[][]): number[] {
+    if (data.length === 0) return [];
 
-    // クラスタ別にインデックスを分類
-    labels.forEach((label, index) => {
-      if (!clusterIndices[label]) {
-        clusterIndices[label] = [];
+    const dimensions = data[0].length;
+    const centroid = new Array(dimensions).fill(0);
+
+    for (const point of data) {
+      for (let i = 0; i < dimensions; i++) {
+        centroid[i] += point[i];
       }
-      clusterIndices[label].push(index);
-    });
-
-    const totalSize = labels.length;
-    const sampleIndices: number[] = [];
-
-    // 各クラスタから比例的にサンプリング
-    for (const indices of Object.values(clusterIndices)) {
-      const clusterProportion = indices.length / totalSize;
-      const clusterSampleSize = Math.max(
-        1,
-        Math.floor(sampleSize * clusterProportion)
-      );
-
-      // ランダムサンプリング
-      const shuffled = indices.sort(() => 0.5 - Math.random());
-      sampleIndices.push(
-        ...shuffled.slice(0, Math.min(clusterSampleSize, indices.length))
-      );
     }
 
-    // 目標サンプルサイズに調整
-    if (sampleIndices.length < sampleSize) {
-      const remaining = sampleSize - sampleIndices.length;
-      const allIndices = Array.from({ length: labels.length }, (_, i) => i);
-      const unusedIndices = allIndices.filter(
-        (i) => !sampleIndices.includes(i)
-      );
-      const additionalSamples = unusedIndices
-        .sort(() => 0.5 - Math.random())
-        .slice(0, remaining);
-      sampleIndices.push(...additionalSamples);
+    for (let i = 0; i < dimensions; i++) {
+      centroid[i] /= data.length;
     }
 
-    return sampleIndices.slice(0, sampleSize);
+    return centroid;
   }
 
   /**
@@ -614,6 +500,13 @@ export class PolisConsensus {
 
   private euclideanDistance(a: number[], b: number[]): number {
     return Math.sqrt(a.reduce((sum, val, i) => sum + (val - b[i]) ** 2, 0));
+  }
+
+  /**
+   * ユークリッド距離の二乗を計算（平方根の計算を省略）
+   */
+  private euclideanDistanceSquared(a: number[], b: number[]): number {
+    return a.reduce((sum, val, i) => sum + (val - b[i]) ** 2, 0);
   }
 
   /**

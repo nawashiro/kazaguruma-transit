@@ -99,9 +99,9 @@ export async function loadTestData(): Promise<{
     const testDiscussion: Discussion = {
       id: "test-discussion-id",
       dTag: "test",
-      title: "テスト討論: AI生成物の著作権について",
+      title: "統計処理のテスト: AI生成物の著作権について",
       description:
-        "AI生成物の著作権や依拠性について議論するテスト用討論です。\nこれはデモンストレーション用のデータです。",
+        "意見グループを特定し、論点を抽出する統計処理のテストです。\n「意見グループ」セクションをご覧ください。\nAI生成物の著作権や依拠性について議論するテスト用データが書き込まれています。\n新たな書き込みや投票はできません。監査ログもなく、見ようとするとエラーが出るはずです。",
       authorPubkey: "test-admin-pubkey",
       moderators: [{ pubkey: "test-admin-pubkey" }],
       createdAt: Date.now() / 1000,
@@ -187,5 +187,5 @@ export async function loadTestData(): Promise<{
  * IDが"test"の場合にテストモードかどうかを判定
  */
 export function isTestMode(discussionId: string): boolean {
-  return discussionId === "test";
+  return discussionId === "a52957e8-b28f-4b43-b037-e6c4fd34ec6c";
 }

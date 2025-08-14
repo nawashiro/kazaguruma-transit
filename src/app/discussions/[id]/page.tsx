@@ -186,7 +186,7 @@ export default function DiscussionDetailPage() {
 
   const loadUserEvaluations = useCallback(async () => {
     if (!user.pubkey || !isDiscussionsEnabled()) return;
-    
+
     // テストモードの場合はユーザー評価をスキップ
     if (isTestMode(discussionId)) {
       setUserEvaluations(new Set());
@@ -599,7 +599,7 @@ export default function DiscussionDetailPage() {
                               <div className="card-body p-4">
                                 <div className="flex items-start justify-between mb-2">
                                   <span className="badge badge-sm badge-primary">
-                                    {item.overallAgreePercentage}% の人が賛成
+                                    {item.overallAgreePercentage}%の人が賛成
                                   </span>
                                 </div>
                                 {item.post.busStopTag && (

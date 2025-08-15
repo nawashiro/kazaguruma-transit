@@ -1,19 +1,19 @@
 import { AddressLocation } from "./addressLoader";
 
 interface GeoJSONFeature {
-  type: 'Feature';
+  type: "Feature";
   properties: {
     name: string;
     uri: string;
   };
   geometry: {
-    type: 'Polygon' | 'MultiPolygon';
+    type: "Polygon" | "MultiPolygon";
     coordinates: number[][][] | number[][][][];
   };
 }
 
 interface GeoJSON {
-  type: 'FeatureCollection';
+  type: "FeatureCollection";
   features: GeoJSONFeature[];
 }
 
@@ -26,7 +26,7 @@ export async function loadGeoJSON(): Promise<GeoJSON> {
   }
 
   const response = await fetch(
-    "https://raw.githubusercontent.com/nawashiro/chiyoda_city_town_geojson/refs/heads/main/chiyoda_city.json"
+    "https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_town_geojson@latest/chiyoda_city.json"
   );
   const data = await response.json();
   cachedGeoJSON = data as GeoJSON;

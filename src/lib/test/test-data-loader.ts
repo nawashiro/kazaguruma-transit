@@ -33,42 +33,72 @@ interface TestVote {
  * テスト用CSVデータをパースする
  */
 function parseTestCSV(csvText: string): TestComment[] {
-  const lines = csvText.split("\n").filter((line) => line.trim());
-  const headers = lines[0].split(",");
+  const results: TestComment[] = [];
+  let headers: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  let isFirstLine = true;
+  let values: string[] = [];
 
-  return lines.slice(1).map((line) => {
-    const values: string[] = [];
-    let current = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"' && (i === 0 || line[i - 1] === ",")) {
-        inQuotes = true;
-      } else if (
-        char === '"' &&
-        inQuotes &&
-        (i === line.length - 1 || line[i + 1] === ",")
-      ) {
-        inQuotes = false;
-      } else if (char === "," && !inQuotes) {
-        values.push(current);
-        current = "";
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+    
+    if (char === '"') {
+      if (inQuotes && i + 1 < csvText.length && csvText[i + 1] === '"') {
+        // エスケープされた引用符
+        current += '"';
+        i++; // 次の引用符をスキップ
       } else {
-        current += char;
+        // 引用符の開始/終了
+        inQuotes = !inQuotes;
       }
+    } else if (char === "," && !inQuotes) {
+      // フィールドの区切り
+      values.push(current.trim());
+      current = "";
+    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+      // 行の終了
+      if (current.trim() || values.length > 0) {
+        values.push(current.trim());
+        
+        if (isFirstLine) {
+          headers = values;
+          isFirstLine = false;
+        } else {
+          // データ行を処理
+          const comment: any = {};
+          headers.forEach((header, index) => {
+            const cleanHeader = header.replace(/"/g, "").trim();
+            const value = values[index]?.replace(/^"|"$/g, "").trim() || "";
+            comment[cleanHeader] = value;
+          });
+          
+          results.push(comment as TestComment);
+        }
+        
+        values = [];
+        current = "";
+      }
+    } else {
+      current += char;
     }
-    values.push(current);
+  }
 
-    const comment: any = {};
-    headers.forEach((header, index) => {
-      const cleanHeader = header.replace(/"/g, "");
-      const value = values[index]?.replace(/"/g, "").replace(/^\s+|\s+$/g, "");
-      comment[cleanHeader] = value;
-    });
+  // 最後の行を処理
+  if (current.trim() || values.length > 0) {
+    values.push(current.trim());
+    if (!isFirstLine && values.length > 0) {
+      const comment: any = {};
+      headers.forEach((header, index) => {
+        const cleanHeader = header.replace(/"/g, "").trim();
+        const value = values[index]?.replace(/^"|"$/g, "").trim() || "";
+        comment[cleanHeader] = value;
+      });
+      results.push(comment as TestComment);
+    }
+  }
 
-    return comment as TestComment;
-  });
+  return results;
 }
 
 /**

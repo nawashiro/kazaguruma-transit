@@ -615,7 +615,7 @@ export default function DiscussionDetailPage() {
                                     {item.overallAgreePercentage}%の人が賛成
                                   </span>
                                 </div>
-                                {item.post.busStopTag && (
+                                {item.post?.busStopTag && (
                                   <div className="mb-2">
                                     <span className="badge badge-outline badge-sm">
                                       {item.post.busStopTag}
@@ -623,16 +623,18 @@ export default function DiscussionDetailPage() {
                                   </div>
                                 )}
                                 <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
-                                  {item.post.content
-                                    .split("\n")
-                                    .map((line, i) => (
-                                      <p key={i} className="mb-1 last:mb-0">
-                                        {line || "\u00A0"}
-                                      </p>
-                                    ))}
+                                  {item.post?.content
+                                    ? item.post.content
+                                        .split("\n")
+                                        .map((line, i) => (
+                                          <p key={i} className="mb-1 last:mb-0">
+                                            {line || "\u00A0"}
+                                          </p>
+                                        ))
+                                    : <p className="text-gray-500">コンテンツがありません</p>}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-2">
-                                  {formatRelativeTime(item.post.createdAt)}
+                                  {formatRelativeTime(item.post?.createdAt || 0)}
                                 </div>
                               </div>
                             </div>
@@ -678,7 +680,7 @@ export default function DiscussionDetailPage() {
                                     )}
                                   </div>
                                 </div>
-                                {item.post.busStopTag && (
+                                {item.post?.busStopTag && (
                                   <div className="mb-2">
                                     <span className="badge badge-outline badge-sm">
                                       {item.post.busStopTag}
@@ -686,16 +688,18 @@ export default function DiscussionDetailPage() {
                                   </div>
                                 )}
                                 <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
-                                  {item.post.content
-                                    .split("\n")
-                                    .map((line, i) => (
-                                      <p key={i} className="mb-1 last:mb-0">
-                                        {line || "\u00A0"}
-                                      </p>
-                                    ))}
+                                  {item.post?.content
+                                    ? item.post.content
+                                        .split("\n")
+                                        .map((line, i) => (
+                                          <p key={i} className="mb-1 last:mb-0">
+                                            {line || "\u00A0"}
+                                          </p>
+                                        ))
+                                    : <p className="text-gray-500">コンテンツがありません</p>}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-2">
-                                  {formatRelativeTime(item.post.createdAt)}
+                                  {formatRelativeTime(item.post?.createdAt || 0)}
                                 </div>
                               </div>
                             </div>

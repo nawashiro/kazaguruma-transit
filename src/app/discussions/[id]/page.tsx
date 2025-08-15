@@ -43,6 +43,7 @@ import type {
   PostFormData,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
+import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
@@ -93,6 +94,17 @@ export default function DiscussionDetailPage() {
     if (!isDiscussionsEnabled()) return;
     setIsLoading(true);
     try {
+      // テストモードの場合はテストデータを使用
+      if (isTestMode(discussionId)) {
+        const testData = await loadTestData();
+        setDiscussion(testData.discussion);
+        setPosts(testData.posts);
+        setApprovals([]); // テストデータでは承認データは空
+        setEvaluations(testData.evaluations);
+        setProfiles({}); // テストデータではプロファイルは空
+        return;
+      }
+
       const [discussionEvents, postsEvents, approvalsEvents] =
         await Promise.all([
           nostrService.getDiscussions(ADMIN_PUBKEY),
@@ -175,6 +187,12 @@ export default function DiscussionDetailPage() {
   const loadUserEvaluations = useCallback(async () => {
     if (!user.pubkey || !isDiscussionsEnabled()) return;
 
+    // テストモードの場合はユーザー評価をスキップ
+    if (isTestMode(discussionId)) {
+      setUserEvaluations(new Set());
+      return;
+    }
+
     try {
       const userEvals = await nostrService.getEvaluations(user.pubkey);
       const evalPostIds = new Set(
@@ -186,7 +204,7 @@ export default function DiscussionDetailPage() {
     } catch (error) {
       logger.error("Failed to load user evaluations:", error);
     }
-  }, [user.pubkey]);
+  }, [user.pubkey, discussionId]);
 
   const loadBusStops = useCallback(async () => {
     try {
@@ -278,6 +296,12 @@ export default function DiscussionDetailPage() {
       return;
     }
 
+    // テストモードの場合は投稿を無効化
+    if (isTestMode(discussionId)) {
+      setErrors(["テストモードでは投稿できません"]);
+      return;
+    }
+
     const validationErrors = validatePostForm(postForm);
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
@@ -331,6 +355,11 @@ export default function DiscussionDetailPage() {
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (!user.isLoggedIn || !discussion) {
       setShowLoginModal(true);
+      return;
+    }
+
+    // テストモードの場合は評価を無効化
+    if (isTestMode(discussionId)) {
       return;
     }
 
@@ -493,7 +522,20 @@ export default function DiscussionDetailPage() {
               </h2>
 
               <p className="text-gray-600 dark:text-gray-400 mb-4 ruby-text">
-                投票を統計解析して、意見はグループ分けされます。どのグループでも共通した意見が評価されます。
+                投票を統計処理して、意見はグループ分けされます。どのグループでも共通した意見が評価されます。
+              </p>
+
+              <p className="text-gray-600 dark:text-gray-400 mb-4 ruby-text">
+                統計処理の詳細は
+                <a
+                  href="https://nawashiro.dev/posts/20250815-a-pol-is-inspired-consensus-finding-algorithm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link"
+                >
+                  こちら
+                </a>
+                をご覧ください。
               </p>
 
               {isAnalyzing && (
@@ -570,7 +612,7 @@ export default function DiscussionDetailPage() {
                               <div className="card-body p-4">
                                 <div className="flex items-start justify-between mb-2">
                                   <span className="badge badge-sm badge-primary">
-                                    {item.overallAgreePercentage}% の人が賛成
+                                    {item.overallAgreePercentage}%の人が賛成
                                   </span>
                                 </div>
                                 {item.post.busStopTag && (

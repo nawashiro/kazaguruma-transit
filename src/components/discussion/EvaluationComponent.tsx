@@ -150,7 +150,7 @@ export function EvaluationComponent({
           className="prose prose-sm dark:prose-invert max-w-none mb-6"
           role="document"
         >
-          {currentPost.content.split("\n").map((line, index) => (
+          {(currentPost.content || "").split("\n").map((line, index) => (
             <p key={index} className="mb-2 last:mb-0 ruby-text">
               {line || "\u00A0"}
             </p>

@@ -522,7 +522,20 @@ export default function DiscussionDetailPage() {
               </h2>
 
               <p className="text-gray-600 dark:text-gray-400 mb-4 ruby-text">
-                投票を統計解析して、意見はグループ分けされます。どのグループでも共通した意見が評価されます。
+                投票を統計処理して、意見はグループ分けされます。どのグループでも共通した意見が評価されます。
+              </p>
+
+              <p className="text-gray-600 dark:text-gray-400 mb-4 ruby-text">
+                統計処理の詳細は
+                <a
+                  href="https://nawashiro.dev/posts/20250815-a-pol-is-inspired-consensus-finding-algorithm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link"
+                >
+                  こちら
+                </a>
+                をご覧ください。
               </p>
 
               {isAnalyzing && (

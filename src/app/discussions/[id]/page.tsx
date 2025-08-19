@@ -133,7 +133,7 @@ export default function DiscussionDetailPage() {
         .filter((p): p is DiscussionPost => p !== null)
         .sort((a, b) => b.createdAt - a.createdAt);
 
-      // Get ALL evaluations for ALL posts (not just current user's evaluations)
+      // すべての投稿に対するすべての評価を取得
       const postIds = parsedPosts.map((post) => post.id);
       const evaluationsEvents = await nostrService.getEvaluationsForPosts(
         postIds,
@@ -278,7 +278,7 @@ export default function DiscussionDetailPage() {
     [discussion, posts, approvals]
   );
 
-  // Check if discussions are enabled and render accordingly
+  // ディスカッションが有効になっているかどうか確認し、それに応じて表示
   if (!isDiscussionsEnabled()) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -329,7 +329,7 @@ export default function DiscussionDetailPage() {
       setSelectedRoute("");
       setShowPreview(false);
 
-      // Create optimistic post update
+      // 楽観的な投稿の更新を作成する
       const newPost = {
         id: signedEvent.id,
         content: postForm.content.trim(),
@@ -379,7 +379,7 @@ export default function DiscussionDetailPage() {
 
       setUserEvaluations((prev) => new Set([...prev, postId]));
 
-      // Create optimistic evaluation update
+      // 楽観的な評価の更新を作成する
       const newEvaluation = {
         id: signedEvent.id,
         postId,
@@ -525,19 +525,6 @@ export default function DiscussionDetailPage() {
                 投票を統計処理して、意見はグループ分けされます。どのグループでも共通した意見が評価されます。
               </p>
 
-              <p className="text-gray-600 dark:text-gray-400 mb-4 ruby-text">
-                統計処理の詳細は
-                <a
-                  href="https://nawashiro.dev/posts/20250815-a-pol-is-inspired-consensus-finding-algorithm"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="link"
-                >
-                  こちら
-                </a>
-                をご覧ください。
-              </p>
-
               {isAnalyzing && (
                 <div className="flex items-center justify-center p-4 mb-4">
                   <div className="loading loading-spinner loading-md mr-2"></div>
@@ -623,18 +610,24 @@ export default function DiscussionDetailPage() {
                                   </div>
                                 )}
                                 <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
-                                  {item.post?.content
-                                    ? item.post.content
-                                        .split("\n")
-                                        .map((line, i) => (
-                                          <p key={i} className="mb-1 last:mb-0">
-                                            {line || "\u00A0"}
-                                          </p>
-                                        ))
-                                    : <p className="text-gray-500">コンテンツがありません</p>}
+                                  {item.post?.content ? (
+                                    item.post.content
+                                      .split("\n")
+                                      .map((line, i) => (
+                                        <p key={i} className="mb-1 last:mb-0">
+                                          {line || "\u00A0"}
+                                        </p>
+                                      ))
+                                  ) : (
+                                    <p className="text-gray-500">
+                                      コンテンツがありません
+                                    </p>
+                                  )}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-2">
-                                  {formatRelativeTime(item.post?.createdAt || 0)}
+                                  {formatRelativeTime(
+                                    item.post?.createdAt || 0
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -688,18 +681,24 @@ export default function DiscussionDetailPage() {
                                   </div>
                                 )}
                                 <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
-                                  {item.post?.content
-                                    ? item.post.content
-                                        .split("\n")
-                                        .map((line, i) => (
-                                          <p key={i} className="mb-1 last:mb-0">
-                                            {line || "\u00A0"}
-                                          </p>
-                                        ))
-                                    : <p className="text-gray-500">コンテンツがありません</p>}
+                                  {item.post?.content ? (
+                                    item.post.content
+                                      .split("\n")
+                                      .map((line, i) => (
+                                        <p key={i} className="mb-1 last:mb-0">
+                                          {line || "\u00A0"}
+                                        </p>
+                                      ))
+                                  ) : (
+                                    <p className="text-gray-500">
+                                      コンテンツがありません
+                                    </p>
+                                  )}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-2">
-                                  {formatRelativeTime(item.post?.createdAt || 0)}
+                                  {formatRelativeTime(
+                                    item.post?.createdAt || 0
+                                  )}
                                 </div>
                               </div>
                             </div>

@@ -133,8 +133,8 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
           className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4"
         >
           <div className="flex items-center gap-2 mb-2 justify-between">
-            <span className="badge badge-primary badge-sm">{busStopName}</span>
-            <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+            <span className="text-sm truncate">{busStopName}</span>
+            <span className="text-sm font-medium text-blue-800 dark:text-blue-200 break-keep">
               コミュニティによるメモ
             </span>
           </div>

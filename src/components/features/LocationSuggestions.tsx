@@ -14,9 +14,13 @@ import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface LocationSuggestionsProps {
   onLocationSelected: (location: Location) => void;
+  onLoadingChange?: (loading: boolean) => void;
 }
 
-function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
+function LocationSuggestions({
+  onLocationSelected,
+  onLoadingChange,
+}: LocationSuggestionsProps) {
   const [categories, setCategories] = useState<AddressCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +37,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
         const data = await loadAddressData();
         setCategories(data);
         setError(null);
+        onLoadingChange?.(loading);
       } catch (err) {
         setError("住所データの読み込みに失敗しました");
         logger.error(err);

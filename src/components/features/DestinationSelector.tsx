@@ -11,10 +11,12 @@ import RateLimitModal from "./RateLimitModal";
 
 interface DestinationSelectorProps {
   onDestinationSelected: (location: Location) => void;
+  onLocationSuggestionsLoadingChange?: (loading: boolean) => void;
 }
 
 export default function DestinationSelector({
   onDestinationSelected,
+  onLocationSuggestionsLoadingChange,
 }: DestinationSelectorProps) {
   const [address, setAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +93,10 @@ export default function DestinationSelector({
   return (
     <>
       <Card title="目的地を選択してください" className="mb-6">
-        <LocationSuggestions onLocationSelected={handleLocationSelected} />
+        <LocationSuggestions 
+          onLocationSelected={handleLocationSelected}
+          onLoadingChange={onLocationSuggestionsLoadingChange}
+        />
 
         <div className="divider">または</div>
 

@@ -49,7 +49,3 @@ prisma/.temp/
 transit-config.json
 
 .gtfs/
-
-# claude
-
-.claude/

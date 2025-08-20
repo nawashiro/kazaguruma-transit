@@ -130,7 +130,8 @@ export default function Home() {
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
   const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
   const [prioritizeSpeed, setPrioritizeSpeed] = useState<boolean>(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLocationSuggestionsLoading, setIsLocationSuggestionsLoading] = useState(true);
   const [memoData, setMemoData] = useState<Map<string, PostWithStats>>(
     new Map()
   );
@@ -173,12 +174,15 @@ export default function Home() {
         }
       }
       
-      // 全ての初期化処理完了後にisLoadedをtrueに設定
-      setIsLoaded(true);
+      // 全ての初期化処理完了後にisInitializedをtrueに設定
+      setIsInitialized(true);
     };
 
     initializeApp();
   }, []);
+
+  // isLoadedの計算 - 初期化処理とLocationSuggestionsのローディングが完了したとき
+  const isLoaded = isInitialized && !isLocationSuggestionsLoading;
 
   // routeInfoが更新されたときにメモデータを取得
   useEffect(() => {
@@ -222,6 +226,10 @@ export default function Home() {
     // 選択値をリセット
     setSearchPerformed(false);
     setRouteInfo(null);
+  };
+
+  const handleLocationSuggestionsLoadingChange = (loading: boolean) => {
+    setIsLocationSuggestionsLoading(loading);
   };
 
   const handleDateTimeSelected = (formData: TransitFormData) => {
@@ -507,6 +515,7 @@ export default function Home() {
           {!selectedDestination ? (
             <DestinationSelector
               onDestinationSelected={handleDestinationSelected}
+              onLocationSuggestionsLoadingChange={handleLocationSuggestionsLoadingChange}
             />
           ) : !selectedOrigin ? (
             <>

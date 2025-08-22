@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import DateTimeSelector from "@/components/features/DateTimeSelector";
 import OriginSelector from "@/components/features/OriginSelector";
 import DestinationSelector from "@/components/features/DestinationSelector";
@@ -231,9 +231,9 @@ export default function Home() {
     setRouteInfo(null);
   };
 
-  const handleLocationSuggestionsLoadingChange = (loading: boolean) => {
+  const handleLocationSuggestionsLoadingChange = useCallback((loading: boolean) => {
     setIsLocationSuggestionsLoading(loading);
-  };
+  }, []);
 
   const handleDateTimeSelected = (formData: TransitFormData) => {
     setSelectedDateTime(formData.dateTime || "");

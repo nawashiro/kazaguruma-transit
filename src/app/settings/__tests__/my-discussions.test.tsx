@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { useAuth } from '@/lib/auth/auth-context';
 import SettingsPage from '../page';
 
@@ -53,44 +53,6 @@ const mockAuth = {
   error: null,
 };
 
-const mockUserDiscussions = [
-  {
-    id: '34550:user-pubkey-hex:discussion-1',
-    dTag: 'discussion-1',
-    title: '私の会話1',
-    description: '説明1',
-    moderators: [],
-    authorPubkey: 'user-pubkey-hex',
-    createdAt: 1640995200,
-    event: {
-      id: 'event-1',
-      kind: 34550,
-      pubkey: 'user-pubkey-hex',
-      created_at: 1640995200,
-      content: '説明1',
-      tags: [['d', 'discussion-1']],
-      sig: 'signature',
-    },
-  },
-  {
-    id: '34550:user-pubkey-hex:discussion-2',
-    dTag: 'discussion-2',
-    title: '私の会話2',
-    description: '説明2',
-    moderators: [],
-    authorPubkey: 'user-pubkey-hex',
-    createdAt: 1640995300,
-    event: {
-      id: 'event-2',
-      kind: 34550,
-      pubkey: 'user-pubkey-hex',
-      created_at: 1640995300,
-      content: '説明2',
-      tags: [['d', 'discussion-2']],
-      sig: 'signature',
-    },
-  },
-];
 
 describe('設定画面 - 自作会話一覧', () => {
   beforeEach(() => {

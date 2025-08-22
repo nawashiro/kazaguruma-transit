@@ -354,6 +354,26 @@ export class NostrService {
     };
   }
 
+  createRevocationEvent(
+    approvalEventId: string,
+    discussionId?: string
+  ): Omit<Event, "id" | "sig" | "pubkey"> {
+    const tags: string[][] = [
+      ["e", approvalEventId]
+    ];
+
+    if (discussionId) {
+      tags.push(["h", discussionId]);
+    }
+
+    return {
+      kind: 5,
+      created_at: Math.floor(Date.now() / 1000),
+      tags,
+      content: "Revoked approval",
+    };
+  }
+
   createDeleteEvent(
     targetEventId: string
   ): Omit<Event, "id" | "sig" | "pubkey"> {

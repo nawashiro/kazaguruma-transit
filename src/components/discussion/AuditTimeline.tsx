@@ -21,7 +21,6 @@ export function AuditTimeline({
   adminPubkey,
   moderators = [],
   viewerPubkey,
-  discussionAuthorPubkey,
   shouldLoadProfiles = true, // eslint-disable-line @typescript-eslint/no-unused-vars
 }: AuditTimelineProps) {
   // 投稿IDと承認状況のマッピングを作成
@@ -62,15 +61,11 @@ export function AuditTimeline({
   };
 
   const getActorBadge = (actorPubkey: string) => {
-    if (actorPubkey === adminPubkey) {
-      return '管理者';
-    }
+    // Only show moderator role in audit timeline
     if (moderators.includes(actorPubkey)) {
       return 'モデレーター';
     }
-    if (actorPubkey === discussionAuthorPubkey) {
-      return '作成者';
-    }
+    // Do not show admin or creator roles in audit timeline
     return null;
   };
 

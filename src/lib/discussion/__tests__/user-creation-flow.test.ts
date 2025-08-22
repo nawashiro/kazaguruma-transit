@@ -325,8 +325,8 @@ describe('User Discussion Creation Flow', () => {
       const discussionEvent = createDiscussionCreationEvent(form, validUserPubkey);
       expect(discussionEvent.kind).toBe(34550);
 
-      // 3. Build naddr from created discussion
-      const mockDiscussion = {
+      // 3. Build naddr from created discussion (data structure for reference)
+      const discussionData = {
         id: `34550:${validUserPubkey}:${discussionEvent.tags.find(t => t[0] === 'd')?.[1]}`,
         dTag: discussionEvent.tags.find(t => t[0] === 'd')?.[1] || '',
         title: form.title,
@@ -347,6 +347,11 @@ describe('User Discussion Creation Flow', () => {
 
       expect(listingRequest.kind).toBe(1);
       expect(listingRequest.content).toContain('nostr:naddr1test...');
+
+      // 5. Validate discussion data structure
+      expect(discussionData.dTag).toBeTruthy();
+      expect(discussionData.title).toBe(form.title);
+      expect(discussionData.description).toBe(form.description);
     });
 
     test('should handle edge cases in creation flow', async () => {

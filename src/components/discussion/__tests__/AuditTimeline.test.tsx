@@ -9,7 +9,7 @@ import { AuditTimeline } from '../AuditTimeline';
 import type { AuditTimelineItem } from '@/types/discussion';
 
 jest.mock('@/lib/nostr/nostr-utils', () => ({
-  formatRelativeTime: (timestamp: number) => '1時間前',
+  formatRelativeTime: () => '1時間前',
   hexToNpub: (hex: string) => `npub1${hex.slice(0, 10)}`,
 }));
 
@@ -190,7 +190,8 @@ describe('AuditTimeline権限表示', () => {
         />
       );
       
-      expect(screen.getByText('作成者')).toBeInTheDocument();
+      // 仕様により監査画面では作成者バッジは表示されない
+      expect(screen.queryByText('作成者')).not.toBeInTheDocument();
     });
 
     test('モデレーターには「モデレーター」badgeが表示される', () => {

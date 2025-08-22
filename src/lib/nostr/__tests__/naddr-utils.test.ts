@@ -13,7 +13,7 @@ import {
   isValidNaddr,
   generateDiscussionId,
 } from '../naddr-utils';
-import type { AddressPointer, DiscussionInfo } from '../naddr-utils';
+import type { AddressPointer } from '../naddr-utils';
 
 jest.mock('@/utils/logger', () => ({
   logger: {

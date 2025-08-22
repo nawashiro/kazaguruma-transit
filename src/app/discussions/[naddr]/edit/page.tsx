@@ -14,7 +14,6 @@ import { LoginModal } from "@/components/discussion/LoginModal";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parseDiscussionEvent,
-  getAdminPubkeyHex,
   isValidNpub,
   npubToHex,
 } from "@/lib/nostr/nostr-utils";

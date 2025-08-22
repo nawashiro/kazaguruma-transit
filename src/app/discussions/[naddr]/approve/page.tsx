@@ -45,6 +45,7 @@ export default function PostApprovalPage() {
   const [approvals, setApprovals] = useState<PostApproval[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
+  const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [isLoaded, setIsLoaded] = useState(false);
 
   const { user, signEvent } = useAuth();
@@ -149,6 +150,51 @@ export default function PostApprovalPage() {
       logger.error("Failed to approve post:", error);
     } finally {
       setApprovingIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(post.id);
+        return newSet;
+      });
+    }
+  };
+
+  const handleRevokeApproval = async (post: DiscussionPost) => {
+    if (!user.isLoggedIn || !discussion) return;
+
+    const approval = approvals.find(a => a.postId === post.id && a.moderatorPubkey === user.pubkey);
+    if (!approval) return;
+
+    setRevokingIds((prev) => new Set([...prev, post.id]));
+    try {
+      const eventTemplate = nostrService.createRevocationEvent(
+        approval.id,
+        discussion.id
+      );
+
+      const signedEvent = await signEvent(eventTemplate);
+      const published = await nostrService.publishSignedEvent(signedEvent);
+
+      if (!published) {
+        throw new Error("Failed to publish revocation to relays");
+      }
+
+      // 楽観的な更新 - 承認を削除
+      setApprovals((prev) => prev.filter(a => a.id !== approval.id));
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === post.id
+            ? {
+                ...p,
+                approved: false,
+                approvedBy: p.approvedBy?.filter(pubkey => pubkey !== user.pubkey) || [],
+                approvedAt: undefined,
+              }
+            : p
+        )
+      );
+    } catch (error) {
+      logger.error("Failed to revoke approval:", error);
+    } finally {
+      setRevokingIds((prev) => {
         const newSet = new Set(prev);
         newSet.delete(post.id);
         return newSet;
@@ -316,9 +362,24 @@ export default function PostApprovalPage() {
                               ))}
                             </div>
                           </div>
-                          <span className="badge badge-success badge-sm ml-4">
-                            承認済み
-                          </span>
+                          <div className="flex gap-2 ml-4">
+                            <span className="badge badge-success badge-sm">
+                              承認済み
+                            </span>
+                            {approvals.some(a => a.postId === post.id && a.moderatorPubkey === user.pubkey) && (
+                              <Button
+                                onClick={() => handleRevokeApproval(post)}
+                                disabled={revokingIds.has(post.id)}
+                                loading={revokingIds.has(post.id)}
+                                variant="outline"
+                                className="btn-xs"
+                              >
+                                <span>
+                                  {revokingIds.has(post.id) ? "" : "承認を撤回"}
+                                </span>
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         <div className="text-xs text-gray-500">
                           承認: {formatRelativeTime(post.approvedAt || post.createdAt)}

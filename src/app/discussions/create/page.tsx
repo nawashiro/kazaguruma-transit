@@ -89,8 +89,8 @@ export default function DiscussionCreatePage() {
       const dTagTrimmed = formData.dTag.trim();
       if (dTagTrimmed.length < 3 || dTagTrimmed.length > 50) {
         errors.push('IDは3文字以上50文字以内で入力してください');
-      } else if (!/^[a-zA-Z0-9_-]+$/.test(dTagTrimmed)) {
-        errors.push('IDは英数字、ハイフン、アンダースコアのみ使用できます');
+      } else if (!/^[a-z0-9-]+$/.test(dTagTrimmed)) {
+        errors.push('IDは小文字英数字、ハイフンのみ使用できます');
       }
     }
 
@@ -288,6 +288,34 @@ export default function DiscussionCreatePage() {
                 </div>
 
                 <div>
+                  <label htmlFor="dTag" className="label ruby-text">
+                    <span className="label-text">会話ID（任意）</span>
+                  </label>
+                  <input
+                    id="dTag"
+                    type="text"
+                    value={formData.dTag}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        dTag: e.target.value,
+                      }))
+                    }
+                    className="input input-bordered w-full"
+                    placeholder="例: transit-discussion-2024"
+                    disabled={isSubmitting}
+                    maxLength={50}
+                    autoComplete="off"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {formData.dTag?.length || 0}/50文字
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    小文字英数字、ハイフン、アンダースコアのみ使用可能。空欄の場合は自動生成されます。
+                  </div>
+                </div>
+
+                <div>
                   <label htmlFor="description" className="label ruby-text">
                     <span className="label-text">説明 *</span>
                   </label>
@@ -312,34 +340,6 @@ export default function DiscussionCreatePage() {
                   </div>
                   <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                     参加者が理解しやすい説明を心がけてください。
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="dTag" className="label ruby-text">
-                    <span className="label-text">会話ID（任意）</span>
-                  </label>
-                  <input
-                    id="dTag"
-                    type="text"
-                    value={formData.dTag}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        dTag: e.target.value,
-                      }))
-                    }
-                    className="input input-bordered w-full"
-                    placeholder="例: transit-discussion-2024"
-                    disabled={isSubmitting}
-                    maxLength={50}
-                    autoComplete="off"
-                  />
-                  <div className="text-xs text-gray-500 mt-1">
-                    {formData.dTag?.length || 0}/50文字
-                  </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    英数字、ハイフン、アンダースコアのみ使用可能。空欄の場合は自動生成されます。
                   </div>
                 </div>
 

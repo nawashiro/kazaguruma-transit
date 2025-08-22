@@ -152,40 +152,49 @@ export default function DiscussionDetailPage() {
       setApprovals(parsedApprovals);
       setEvaluations(parsedEvaluations);
 
-      // Profile loading logic (same as before)
-      const uniquePubkeys = new Set<string>();
-      parsedApprovals.forEach((approval) =>
-        uniquePubkeys.add(approval.moderatorPubkey)
+      // Profile loading logic - only load profiles if user is moderator
+      const shouldLoadProfiles = user.pubkey && (
+        user.pubkey === ADMIN_PUBKEY || 
+        parsedDiscussion?.moderators.some(m => m.pubkey === user.pubkey)
       );
-      if (parsedDiscussion) {
-        uniquePubkeys.add(parsedDiscussion.authorPubkey);
-        parsedDiscussion.moderators.forEach((mod) =>
-          uniquePubkeys.add(mod.pubkey)
+
+      if (shouldLoadProfiles) {
+        const uniquePubkeys = new Set<string>();
+        parsedApprovals.forEach((approval) =>
+          uniquePubkeys.add(approval.moderatorPubkey)
         );
-      }
-
-      const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
-        const profileEvent = await nostrService.getProfile(pubkey);
-        if (profileEvent) {
-          try {
-            const profile = JSON.parse(profileEvent.content);
-            return [pubkey, { name: profile.name || profile.display_name }];
-          } catch {
-            return [pubkey, {}];
-          }
+        if (parsedDiscussion) {
+          uniquePubkeys.add(parsedDiscussion.authorPubkey);
+          parsedDiscussion.moderators.forEach((mod) =>
+            uniquePubkeys.add(mod.pubkey)
+          );
         }
-        return [pubkey, {}];
-      });
 
-      const profileResults = await Promise.all(profilePromises);
-      const profilesMap = Object.fromEntries(profileResults);
-      setProfiles(profilesMap);
+        const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
+          const profileEvent = await nostrService.getProfile(pubkey);
+          if (profileEvent) {
+            try {
+              const profile = JSON.parse(profileEvent.content);
+              return [pubkey, { name: profile.name || profile.display_name }];
+            } catch {
+              return [pubkey, {}];
+            }
+          }
+          return [pubkey, {}];
+        });
+
+        const profileResults = await Promise.all(profilePromises);
+        const profilesMap = Object.fromEntries(profileResults);
+        setProfiles(profilesMap);
+      } else {
+        setProfiles({});
+      }
     } catch (error) {
       logger.error("Failed to load discussion:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [discussionInfo]);
+  }, [discussionInfo, user.pubkey]);
 
   const loadUserEvaluations = useCallback(async () => {
     if (!user.pubkey || !isDiscussionsEnabled() || !discussionInfo) return;
@@ -453,9 +462,7 @@ export default function DiscussionDetailPage() {
           >
             <span>← 会話一覧に戻る</span>
           </Link>
-          {(user.pubkey === discussion.authorPubkey || 
-            user.pubkey === ADMIN_PUBKEY || 
-            discussion.moderators.some(m => m.pubkey === user.pubkey)) && (
+          {user.pubkey === discussion.authorPubkey && (
             <Link
               href={`/discussions/${naddrParam}/edit`}
               className="btn btn-outline btn-sm rounded-full dark:rounded-sm min-h-8 h-fit"

@@ -18,6 +18,7 @@ import {
   formatRelativeTime,
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
+import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
 import Button from "@/components/ui/Button";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
@@ -231,7 +232,7 @@ export default function DiscussionsPage() {
                   {discussions.map((discussion) => (
                     <article key={discussion.id}>
                       <Link
-                        href={`/discussions/${discussion.dTag}`}
+                        href={`/discussions/${buildNaddrFromDiscussion(discussion)}`}
                         className="block"
                       >
                         <div className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">

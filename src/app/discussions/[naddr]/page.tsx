@@ -9,7 +9,6 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   isDiscussionsEnabled,
-  buildDiscussionId,
   getNostrServiceConfig,
 } from "@/lib/config/discussion-config";
 import { LoginModal } from "@/components/discussion/LoginModal";
@@ -29,6 +28,9 @@ import {
   formatRelativeTime,
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
+import {
+  extractDiscussionFromNaddr,
+} from "@/lib/nostr/naddr-utils";
 import {
   evaluationService,
   EvaluationAnalysisResult,
@@ -50,7 +52,7 @@ const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function DiscussionDetailPage() {
   const params = useParams();
-  const discussionId = params.id as string;
+  const naddrParam = params.naddr as string;
 
   const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
   const [consensusTab, setConsensusTab] = useState<string>("group-consensus");
@@ -84,6 +86,12 @@ export default function DiscussionDetailPage() {
 
   const { user, signEvent } = useAuth();
 
+  // Parse naddr and extract discussion info
+  const discussionInfo = useMemo(() => {
+    if (!naddrParam) return null;
+    return extractDiscussionFromNaddr(naddrParam);
+  }, [naddrParam]);
+
   // Rubyfulライブラリ対応
   useRubyfulRun(
     [discussion, posts, approvals, evaluations, consensusTab],
@@ -91,34 +99,30 @@ export default function DiscussionDetailPage() {
   );
 
   const loadData = useCallback(async () => {
-    if (!isDiscussionsEnabled()) return;
+    if (!isDiscussionsEnabled() || !discussionInfo) return;
     setIsLoading(true);
     try {
-      // テストモードの場合はテストデータを使用
-      if (isTestMode(discussionId)) {
+      // Check if this is test mode (for backward compatibility)
+      if (isTestMode(discussionInfo.dTag)) {
         const testData = await loadTestData();
         setDiscussion(testData.discussion);
         setPosts(testData.posts);
-        setApprovals([]); // テストデータでは承認データは空
+        setApprovals([]);
         setEvaluations(testData.evaluations);
-        setProfiles({}); // テストデータではプロファイルは空
+        setProfiles({});
         return;
       }
 
       const [discussionEvents, postsEvents, approvalsEvents] =
         await Promise.all([
-          nostrService.getDiscussions(ADMIN_PUBKEY),
-          nostrService.getDiscussionPosts(
-            buildDiscussionId(ADMIN_PUBKEY, discussionId)
-          ),
-          nostrService.getApprovals(
-            buildDiscussionId(ADMIN_PUBKEY, discussionId)
-          ),
+          nostrService.getDiscussions(discussionInfo.authorPubkey),
+          nostrService.getDiscussionPosts(discussionInfo.discussionId),
+          nostrService.getApprovals(discussionInfo.discussionId),
         ]);
 
       const parsedDiscussion = discussionEvents
         .map(parseDiscussionEvent)
-        .find((d) => d && d.dTag === discussionId);
+        .find((d) => d && d.dTag === discussionInfo.dTag);
 
       if (!parsedDiscussion) {
         throw new Error("Discussion not found");
@@ -133,11 +137,10 @@ export default function DiscussionDetailPage() {
         .filter((p): p is DiscussionPost => p !== null)
         .sort((a, b) => b.createdAt - a.createdAt);
 
-      // すべての投稿に対するすべての評価を取得
       const postIds = parsedPosts.map((post) => post.id);
       const evaluationsEvents = await nostrService.getEvaluationsForPosts(
         postIds,
-        buildDiscussionId(ADMIN_PUBKEY, discussionId)
+        discussionInfo.discussionId
       );
 
       const parsedEvaluations = evaluationsEvents
@@ -149,7 +152,7 @@ export default function DiscussionDetailPage() {
       setApprovals(parsedApprovals);
       setEvaluations(parsedEvaluations);
 
-      // 承認者・管理者のプロファイル取得（投稿者は除外）
+      // Profile loading logic (same as before)
       const uniquePubkeys = new Set<string>();
       parsedApprovals.forEach((approval) =>
         uniquePubkeys.add(approval.moderatorPubkey)
@@ -182,13 +185,12 @@ export default function DiscussionDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [discussionId]);
+  }, [discussionInfo]);
 
   const loadUserEvaluations = useCallback(async () => {
-    if (!user.pubkey || !isDiscussionsEnabled()) return;
+    if (!user.pubkey || !isDiscussionsEnabled() || !discussionInfo) return;
 
-    // テストモードの場合はユーザー評価をスキップ
-    if (isTestMode(discussionId)) {
+    if (isTestMode(discussionInfo.dTag)) {
       setUserEvaluations(new Set());
       return;
     }
@@ -204,7 +206,7 @@ export default function DiscussionDetailPage() {
     } catch (error) {
       logger.error("Failed to load user evaluations:", error);
     }
-  }, [user.pubkey, discussionId]);
+  }, [user.pubkey, discussionInfo]);
 
   const loadBusStops = useCallback(async () => {
     try {
@@ -219,18 +221,17 @@ export default function DiscussionDetailPage() {
       }
     } catch (error) {
       logger.error("Failed to load bus stops:", error);
-      // エラー時はフォールバックとして空配列を設定
       setBusStops([]);
     }
   }, []);
 
   useEffect(() => {
-    if (isDiscussionsEnabled()) {
+    if (isDiscussionsEnabled() && discussionInfo) {
       loadData();
       loadBusStops();
     }
     setIsLoaded(true);
-  }, [loadData, loadBusStops]);
+  }, [loadData, loadBusStops, discussionInfo]);
 
   useEffect(() => {
     if (user.pubkey && isDiscussionsEnabled()) {
@@ -240,7 +241,6 @@ export default function DiscussionDetailPage() {
 
   const approvedPosts = useMemo(() => posts.filter((p) => p.approved), [posts]);
 
-  // コンセンサス分析を実行
   const runConsensusAnalysis = useCallback(async () => {
     if (evaluations.length < 5 || approvedPosts.length < 2) {
       setAnalysisResult(null);
@@ -262,12 +262,12 @@ export default function DiscussionDetailPage() {
     }
   }, [evaluations, approvedPosts]);
 
-  // 評価データまたは承認済み投稿が変更された時にコンセンサス分析を実行
   useEffect(() => {
     if (evaluations.length > 0 && approvedPosts.length > 0) {
       runConsensusAnalysis();
     }
   }, [runConsensusAnalysis, evaluations.length, approvedPosts.length]);
+
   const postsWithStats = useMemo(
     () => combinePostsWithStats(approvedPosts, evaluations),
     [approvedPosts, evaluations]
@@ -278,7 +278,21 @@ export default function DiscussionDetailPage() {
     [discussion, posts, approvals]
   );
 
-  // ディスカッションが有効になっているかどうか確認し、それに応じて表示
+  // Check for invalid naddr
+  if (!discussionInfo) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">無効な会話URL</h1>
+          <p className="text-gray-600 mb-4">指定された会話URLが無効です。</p>
+          <Link href="/discussions" className="btn btn-primary">
+            会話一覧に戻る
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!isDiscussionsEnabled()) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -296,8 +310,7 @@ export default function DiscussionDetailPage() {
       return;
     }
 
-    // テストモードの場合は投稿を無効化
-    if (isTestMode(discussionId)) {
+    if (isTestMode(discussionInfo.dTag)) {
       setErrors(["テストモードでは投稿できません"]);
       return;
     }
@@ -329,7 +342,6 @@ export default function DiscussionDetailPage() {
       setSelectedRoute("");
       setShowPreview(false);
 
-      // 楽観的な投稿の更新を作成する
       const newPost = {
         id: signedEvent.id,
         content: postForm.content.trim(),
@@ -358,8 +370,7 @@ export default function DiscussionDetailPage() {
       return;
     }
 
-    // テストモードの場合は評価を無効化
-    if (isTestMode(discussionId)) {
+    if (isTestMode(discussionInfo.dTag)) {
       return;
     }
 
@@ -379,7 +390,6 @@ export default function DiscussionDetailPage() {
 
       setUserEvaluations((prev) => new Set([...prev, postId]));
 
-      // 楽観的な評価の更新を作成する
       const newEvaluation = {
         id: signedEvent.id,
         postId,
@@ -449,7 +459,7 @@ export default function DiscussionDetailPage() {
             userPubkey={user.pubkey}
           >
             <Link
-              href={`/discussions/${discussionId}/approve`}
+              href={`/discussions/${naddrParam}/approve`}
               className="btn btn-outline btn-sm rounded-full dark:rounded-sm min-h-8 h-fit"
             >
               <span>投稿承認管理</span>

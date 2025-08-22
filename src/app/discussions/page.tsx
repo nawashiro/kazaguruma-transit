@@ -87,27 +87,34 @@ export default function DiscussionsPage() {
 
       setDiscussions(parsedDiscussions);
 
-      // spec_v2.md要件: 管理者・モデレーターのみプロファイル取得
-      const profileEvent = await nostrService.getProfile(ADMIN_PUBKEY);
+      // spec_v2.md要件: 管理者・モデレーターのプロファイルを取得
+      const uniquePubkeys = new Set<string>();
+      uniquePubkeys.add(ADMIN_PUBKEY);
 
-      const profilePromise = async () => {
+      parsedDiscussions.forEach((discussion) => {
+        // 作成者が管理者・モデレーターの場合のみプロファイル取得
+        if (discussion.authorPubkey === ADMIN_PUBKEY || 
+            discussion.moderators.some(m => m.pubkey === discussion.authorPubkey)) {
+          uniquePubkeys.add(discussion.authorPubkey);
+        }
+        // モデレーターのプロファイル取得
+        discussion.moderators.forEach(mod => uniquePubkeys.add(mod.pubkey));
+      });
+
+      const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
+        const profileEvent = await nostrService.getProfile(pubkey);
         if (profileEvent) {
           try {
             const profile = JSON.parse(profileEvent.content);
-            return [
-              ADMIN_PUBKEY,
-              { name: profile.name || profile.display_name },
-            ];
+            return [pubkey, { name: profile.name || profile.display_name }];
           } catch {
-            return [ADMIN_PUBKEY, {}];
+            return [pubkey, {}];
           }
-        } else {
-          return [ADMIN_PUBKEY, {}];
         }
-      };
+        return [pubkey, {}];
+      });
 
-      // ユーザー作成会話の作成者プロファイルは取得しない（spec_v2.md要件）
-      const profileResults = await Promise.all([profilePromise()]);
+      const profileResults = await Promise.all(profilePromises);
       const profilesMap = Object.fromEntries(profileResults);
       setProfiles(profilesMap);
     } catch (error) {
@@ -208,14 +215,30 @@ export default function DiscussionsPage() {
                                 : discussion.description}
                             </p>
                             <div className="flex justify-between items-center mt-2">
-                              <time
-                                className="text-xs text-gray-500"
-                                dateTime={new Date(
-                                  discussion.createdAt * 1000
-                                ).toISOString()}
-                              >
-                                {formatRelativeTime(discussion.createdAt)}
-                              </time>
+                              <div className="text-xs text-gray-500 space-y-1">
+                                <time
+                                  dateTime={new Date(
+                                    discussion.createdAt * 1000
+                                  ).toISOString()}
+                                >
+                                  {formatRelativeTime(discussion.createdAt)}
+                                </time>
+                                {/* 作成者が管理者・モデレーターの場合、名前を表示 */}
+                                {(discussion.authorPubkey === ADMIN_PUBKEY || 
+                                  discussion.moderators.some(m => m.pubkey === discussion.authorPubkey)) && (
+                                  <div className="text-xs">
+                                    作成者: {profiles[discussion.authorPubkey]?.name || '名前未設定'}
+                                  </div>
+                                )}
+                                {/* モデレーターの名前を表示 */}
+                                {discussion.moderators.length > 0 && (
+                                  <div className="text-xs">
+                                    モデレーター: {discussion.moderators.map(mod => 
+                                      profiles[mod.pubkey]?.name || '名前未設定'
+                                    ).join(', ')}
+                                  </div>
+                                )}
+                              </div>
                               <span className="badge badge-outline badge-sm">
                                 {discussion.moderators.length + 1} モデレーター
                               </span>

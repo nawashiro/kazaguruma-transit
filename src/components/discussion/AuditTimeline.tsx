@@ -22,7 +22,7 @@ export function AuditTimeline({
   moderators = [],
   viewerPubkey,
   discussionAuthorPubkey,
-  shouldLoadProfiles = true,
+  shouldLoadProfiles = true, // eslint-disable-line @typescript-eslint/no-unused-vars
 }: AuditTimelineProps) {
   // 投稿IDと承認状況のマッピングを作成
   const getApprovalStatus = (item: AuditTimelineItem) => {

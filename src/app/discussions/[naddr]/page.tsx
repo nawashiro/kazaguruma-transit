@@ -476,7 +476,14 @@ export default function DiscussionDetailPage() {
             </Link>
           </ModeratorCheck>
         </div>
-        <h1 className="text-3xl font-bold mb-2">{discussion.title}</h1>
+        <div className="flex items-center gap-3 mb-4">
+          <h1 className="text-3xl font-bold">{discussion.title}</h1>
+          {discussion.moderators.some(m => m.pubkey === discussion.authorPubkey) ? (
+            <span className="badge badge-secondary">モデレーター</span>
+          ) : (
+            <span className="badge badge-outline">作成者</span>
+          )}
+        </div>
         {discussion.description.split("\n").map((line, idx) => (
           <p key={idx} className="text-gray-600 dark:text-gray-400">
             {line}

@@ -25,13 +25,14 @@ import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 
-const ADMIN_PUBKEY = getAdminPubkeyHex();
+// const ADMIN_PUBKEY = getAdminPubkeyHex(); // eslint-disable-line @typescript-eslint/no-unused-vars
 const nostrService = createNostrService(getNostrServiceConfig());
 
 interface EditFormData {
   title: string;
   description: string;
   moderators: string[];
+  dTag: string;
 }
 
 export default function DiscussionEditPage() {
@@ -45,6 +46,7 @@ export default function DiscussionEditPage() {
     title: "",
     description: "",
     moderators: [],
+    dTag: "",
   });
   const [moderatorInput, setModeratorInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -83,6 +85,7 @@ export default function DiscussionEditPage() {
         title: parsedDiscussion.title,
         description: parsedDiscussion.description,
         moderators: parsedDiscussion.moderators.map(m => m.pubkey), // npub形式に変換が必要
+        dTag: parsedDiscussion.dTag,
       });
     } catch (error) {
       logger.error("Failed to load discussion:", error);
@@ -95,7 +98,7 @@ export default function DiscussionEditPage() {
     if (discussionInfo) {
       loadDiscussion();
     }
-  }, [loadDiscussion]);
+  }, [loadDiscussion, discussionInfo]);
 
   const handleSave = async () => {
     if (!user.isLoggedIn) {
@@ -131,6 +134,14 @@ export default function DiscussionEditPage() {
       }
     }
 
+    if (!formData.dTag.trim()) {
+      errors.push('IDは必須です');
+    } else if (formData.dTag.length < 3 || formData.dTag.length > 50) {
+      errors.push('IDは3文字以上50文字以内で入力してください');
+    } else if (!/^[a-zA-Z0-9_-]+$/.test(formData.dTag)) {
+      errors.push('IDは英数字、ハイフン、アンダースコアのみ使用できます');
+    }
+
     if (errors.length > 0) {
       setErrors(errors);
       return;
@@ -146,7 +157,7 @@ export default function DiscussionEditPage() {
       }
 
       const tags: string[][] = [
-        ['d', discussion.dTag],
+        ['d', formData.dTag.trim()],
         ['name', formData.title.trim()],
         ['description', formData.description.trim()],
       ];
@@ -390,6 +401,34 @@ export default function DiscussionEditPage() {
                   </div>
 
                   <div>
+                    <label htmlFor="dTag" className="label ruby-text">
+                      <span className="label-text">会話ID *</span>
+                    </label>
+                    <input
+                      id="dTag"
+                      type="text"
+                      value={formData.dTag}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          dTag: e.target.value,
+                        }))
+                      }
+                      className="input input-bordered w-full"
+                      required
+                      disabled={isSaving || isDeleting}
+                      maxLength={50}
+                      autoComplete="off"
+                    />
+                    <div className="text-xs text-gray-500 mt-1">
+                      {formData.dTag.length}/50文字
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      英数字、ハイフン、アンダースコアのみ使用可能。変更するとURLも変更されます。
+                    </div>
+                  </div>
+
+                  <div>
                     <label htmlFor="moderators" className="label ruby-text">
                       <span className="label-text">モデレーター（任意）</span>
                     </label>
@@ -453,7 +492,7 @@ export default function DiscussionEditPage() {
                       onClick={handleSave}
                       variant="primary"
                       fullWidth
-                      disabled={isSaving || isDeleting || !formData.title.trim() || !formData.description.trim()}
+                      disabled={isSaving || isDeleting || !formData.title.trim() || !formData.description.trim() || !formData.dTag.trim()}
                       loading={isSaving}
                     >
                       {isSaving ? "保存中..." : "変更を保存"}

@@ -1,5 +1,5 @@
-// These types have been moved to @/types/core
-// Keeping only types that are used locally with different structures
+// これらの型定義は @/types/core に移動されました
+// ローカルで異なる構造で使用される型のみ保持
 
 export interface TransitApiResponse {
   departures: Departure[];
@@ -26,13 +26,13 @@ export interface Route {
   route_long_name?: string;
 }
 
-// Import the core types for local reference
+// ローカル参照用にコア型をインポート
 import { Departure, StopInfo } from "@/types/core";
 
-// GTFS types removed - not used in current codebase
+// GTFS型は削除済み - 現在のコードベースで未使用
 
 // 統合経路表示のための型定義
-// StopInfo moved to core.ts
+// StopInfo は core.ts に移動済み
 
 export interface TransferInfo {
   transferStop: {

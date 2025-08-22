@@ -365,6 +365,235 @@ export class NostrService {
     };
   }
 
+  // spec_v2.md要件: 管理者作成のKind:34550による承認システム
+  async getAdminApprovalEvents(adminPubkey: string): Promise<Event[]> {
+    const events = await this.getEvents([
+      {
+        kinds: [34550],
+        authors: [adminPubkey],
+      },
+    ]);
+    
+    // 承認リストのみを取得（qタグを含むもの）
+    const approvalEvents = events.filter(event => 
+      event.tags.some(tag => tag[0] === "q")
+    );
+    
+    // replaceable eventの重複を除去
+    const eventsByDTag = new Map<string, Event>();
+    
+    for (const event of approvalEvents) {
+      const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
+      if (!dTag) continue;
+      
+      const existing = eventsByDTag.get(dTag);
+      if (!existing || event.created_at > existing.created_at) {
+        eventsByDTag.set(dTag, event);
+      }
+    }
+    
+    return Array.from(eventsByDTag.values());
+  }
+
+  // spec_v2.md要件: 引用されたユーザー作成Kind:34550の取得
+  async getReferencedUserDiscussions(references: string[]): Promise<Event[]> {
+    if (references.length === 0) {
+      return [];
+    }
+
+    // 引用形式: "34550:pubkey:dTag" を解析
+    const filters: Filter[] = [];
+    
+    for (const ref of references) {
+      const parts = ref.split(':');
+      if (parts.length === 3 && parts[0] === '34550') {
+        const [, pubkey, dTag] = parts;
+        filters.push({
+          kinds: [34550],
+          authors: [pubkey],
+          "#d": [dTag],
+          limit: 1,
+        });
+      }
+    }
+
+    if (filters.length === 0) {
+      return [];
+    }
+
+    const events = await this.getEvents(filters);
+    
+    // 最新のreplaceable eventのみを保持
+    const eventsByRef = new Map<string, Event>();
+    
+    for (const event of events) {
+      const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
+      if (!dTag) continue;
+      
+      const ref = `34550:${event.pubkey}:${dTag}`;
+      const existing = eventsByRef.get(ref);
+      if (!existing || event.created_at > existing.created_at) {
+        eventsByRef.set(ref, event);
+      }
+    }
+    
+    return Array.from(eventsByRef.values());
+  }
+
+  // spec_v2.md要件: NIP-72承認システムでの承認済みユーザー会話取得
+  async getApprovedUserDiscussions(adminPubkey: string): Promise<{
+    userDiscussion: Event;
+    approvalEvent: Event;
+    approvedAt: number;
+  }[]> {
+    try {
+      // 1. 管理者の承認イベントを取得
+      const approvalEvents = await this.getAdminApprovalEvents(adminPubkey);
+      
+      // 2. すべてのqタグから引用を抽出
+      const allReferences: string[] = [];
+      const approvalMap = new Map<string, Event>();
+      
+      for (const approvalEvent of approvalEvents) {
+        const qTags = approvalEvent.tags.filter(tag => tag[0] === "q");
+        for (const qTag of qTags) {
+          if (qTag[1]) {
+            allReferences.push(qTag[1]);
+            approvalMap.set(qTag[1], approvalEvent);
+          }
+        }
+      }
+      
+      // 3. 引用されたユーザー会話を取得
+      const userDiscussions = await this.getReferencedUserDiscussions(allReferences);
+      
+      // 4. 承認情報と組み合わせ
+      const result: {
+        userDiscussion: Event;
+        approvalEvent: Event;
+        approvedAt: number;
+      }[] = [];
+      
+      for (const userDiscussion of userDiscussions) {
+        const dTag = userDiscussion.tags.find((tag) => tag[0] === "d")?.[1];
+        if (!dTag) continue;
+        
+        const ref = `34550:${userDiscussion.pubkey}:${dTag}`;
+        const approvalEvent = approvalMap.get(ref);
+        
+        if (approvalEvent) {
+          result.push({
+            userDiscussion,
+            approvalEvent,
+            approvedAt: approvalEvent.created_at,
+          });
+        }
+      }
+      
+      // 承認日時順にソート
+      return result.sort((a, b) => b.approvedAt - a.approvedAt);
+      
+    } catch (error) {
+      logger.error("Failed to get approved user discussions:", error);
+      return [];
+    }
+  }
+
+  // spec_v2.md要件: 承認待ちユーザー会話の取得
+  async getPendingUserDiscussions(adminPubkey: string): Promise<Event[]> {
+    try {
+      // 1. 全てのユーザー作成Kind:34550を取得
+      const allUserDiscussions = await this.getEvents([
+        {
+          kinds: [34550],
+          // 管理者以外が作成したイベント
+        },
+      ]);
+
+      // 2. 管理者の承認イベントを取得
+      const approvalEvents = await this.getAdminApprovalEvents(adminPubkey);
+      
+      // 3. 承認済みの会話IDを抽出
+      const approvedRefs = new Set<string>();
+      for (const approvalEvent of approvalEvents) {
+        const qTags = approvalEvent.tags.filter(tag => tag[0] === "q");
+        for (const qTag of qTags) {
+          if (qTag[1]) {
+            approvedRefs.add(qTag[1]);
+          }
+        }
+      }
+
+      // 4. 承認されていない会話をフィルタリング
+      const pendingDiscussions = allUserDiscussions.filter(event => {
+        if (event.pubkey === adminPubkey) return false; // 管理者作成は除外
+        
+        const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
+        if (!dTag) return false;
+        
+        const ref = `34550:${event.pubkey}:${dTag}`;
+        return !approvedRefs.has(ref);
+      });
+
+      // 最新のreplaceable eventのみを保持
+      const eventsByRef = new Map<string, Event>();
+      
+      for (const event of pendingDiscussions) {
+        const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
+        if (!dTag) continue;
+        
+        const ref = `34550:${event.pubkey}:${dTag}`;
+        const existing = eventsByRef.get(ref);
+        if (!existing || event.created_at > existing.created_at) {
+          eventsByRef.set(ref, event);
+        }
+      }
+      
+      return Array.from(eventsByRef.values());
+      
+    } catch (error) {
+      logger.error("Failed to get pending user discussions:", error);
+      return [];
+    }
+  }
+
+  // spec_v2.md要件: 会話承認イベントの作成
+  createDiscussionApprovalEvent(
+    userDiscussion: { id: string; dTag: string; authorPubkey: string },
+    approvalId?: string
+  ): Omit<Event, "id" | "sig" | "pubkey"> {
+    const approvalDTag = approvalId || `approval-${Date.now()}`;
+    const ref = `34550:${userDiscussion.authorPubkey}:${userDiscussion.dTag}`;
+    
+    const tags: string[][] = [
+      ["d", approvalDTag],
+      ["name", "承認済み会話リスト"],
+      ["description", "管理者による承認済み会話リスト"],
+      ["q", ref], // NIP-18 qタグでの引用
+    ];
+
+    return {
+      kind: 34550,
+      created_at: Math.floor(Date.now() / 1000),
+      tags,
+      content: `承認済み会話リスト（${new Date().toLocaleDateString()}）`,
+    };
+  }
+
+
+  // spec_v2.md要件: 承認撤回イベントの作成
+  createApprovalRevocationEvent(
+    approvalEventId: string
+  ): Omit<Event, "id" | "sig" | "pubkey"> {
+    return {
+      kind: 5,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [["e", approvalEventId]],
+      content: "delete",
+    };
+  }
+
+
   disconnect(): void {
     this.pool.close(this.relays);
   }

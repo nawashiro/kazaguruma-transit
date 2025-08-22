@@ -453,6 +453,16 @@ export default function DiscussionDetailPage() {
           >
             <span>← 会話一覧に戻る</span>
           </Link>
+          {(user.pubkey === discussion.authorPubkey || 
+            user.pubkey === ADMIN_PUBKEY || 
+            discussion.moderators.some(m => m.pubkey === user.pubkey)) && (
+            <Link
+              href={`/discussions/${naddrParam}/edit`}
+              className="btn btn-outline btn-sm rounded-full dark:rounded-sm min-h-8 h-fit"
+            >
+              <span>会話を編集</span>
+            </Link>
+          )}
           <ModeratorCheck
             moderators={discussion.moderators.map((m) => m.pubkey)}
             adminPubkey={ADMIN_PUBKEY}
@@ -861,7 +871,15 @@ export default function DiscussionDetailPage() {
             </h2>
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
-                <AuditTimeline items={auditItems} profiles={profiles} />
+                <AuditTimeline 
+                  items={auditItems} 
+                  profiles={profiles}
+                  adminPubkey={ADMIN_PUBKEY}
+                  moderators={discussion.moderators.map(m => m.pubkey)}
+                  viewerPubkey={user.pubkey}
+                  discussionAuthorPubkey={discussion.authorPubkey}
+                  shouldLoadProfiles={user.pubkey === ADMIN_PUBKEY || discussion.moderators.some(m => m.pubkey === user.pubkey)}
+                />
               </div>
             </div>
           </section>

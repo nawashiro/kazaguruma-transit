@@ -7,6 +7,7 @@ export interface DiscussionCreationForm {
   title: string;
   description: string;
   moderators: string[];
+  dTag?: string;
 }
 
 export interface ValidationResult {
@@ -51,6 +52,15 @@ export function validateDiscussionCreationForm(form: DiscussionCreationForm): Va
     }
   }
 
+  if (form.dTag && form.dTag.trim()) {
+    const dTagTrimmed = form.dTag.trim();
+    if (dTagTrimmed.length < 3 || dTagTrimmed.length > 50) {
+      errors.push('IDは3文字以上50文字以内で入力してください');
+    } else if (!/^[a-zA-Z0-9_-]+$/.test(dTagTrimmed)) {
+      errors.push('IDは英数字、ハイフン、アンダースコアのみ使用できます');
+    }
+  }
+
   return {
     isValid: errors.length === 0,
     errors,
@@ -61,7 +71,7 @@ export function createDiscussionCreationEvent(
   form: DiscussionCreationForm,
   userPubkey: string
 ): Partial<Event> {
-  const dTag = generateDiscussionId();
+  const dTag = form.dTag && form.dTag.trim() ? form.dTag.trim() : generateDiscussionId();
   
   const tags: string[][] = [
     ['d', dTag],

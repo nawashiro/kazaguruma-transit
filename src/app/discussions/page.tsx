@@ -7,26 +7,19 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
-import { LoginModal } from "@/components/discussion/LoginModal";
 import { AuditTimeline } from "@/components/discussion/AuditTimeline";
 import { AdminCheck } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parseDiscussionEvent,
-  parseDiscussionRequestEvent,
   createAuditTimeline,
   formatRelativeTime,
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
-import Button from "@/components/ui/Button";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
-import type {
-  Discussion,
-  DiscussionRequest,
-  DiscussionRequestFormData,
-} from "@/types/discussion";
+import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
@@ -35,23 +28,16 @@ const nostrService = createNostrService(getNostrServiceConfig());
 export default function DiscussionsPage() {
   const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
-  const [requests, setRequests] = useState<DiscussionRequest[]>([]);
   const [profiles, setProfiles] = useState<Record<string, { name?: string }>>(
     {}
   );
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [requestForm, setRequestForm] = useState<DiscussionRequestFormData>({
-    title: "",
-    description: "",
-  });
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const { user, signEvent } = useAuth();
+  const { user } = useAuth();
 
   // Rubyfulライブラリ対応
-  useRubyfulRun([discussions, requests], isLoaded);
+  useRubyfulRun([discussions], isLoaded);
 
   useEffect(() => {
     if (isDiscussionsEnabled()) {
@@ -75,26 +61,33 @@ export default function DiscussionsPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [discussionEvents, requestEvents] = await Promise.all([
-        nostrService.getDiscussions(ADMIN_PUBKEY),
-        nostrService.getDiscussionRequests(ADMIN_PUBKEY),
-      ]);
+      // spec_v2.md要件: 管理者作成のKind:34550で承認されたユーザー作成会話を取得
+      const approvedUserDiscussions =
+        await nostrService.getApprovedUserDiscussions(ADMIN_PUBKEY);
 
-      const parsedDiscussions = discussionEvents
-        .map(parseDiscussionEvent)
+      const parsedDiscussions = approvedUserDiscussions
+        .map(({ userDiscussion, approvalEvent, approvedAt }) => {
+          const discussion = parseDiscussionEvent(userDiscussion);
+          if (!discussion) return null;
+
+          // 承認情報を追加
+          return {
+            ...discussion,
+            approvedAt,
+            approvalReference: `34550:${approvalEvent.pubkey}:${
+              approvalEvent.tags.find((tag) => tag[0] === "d")?.[1] || ""
+            }`,
+          };
+        })
         .filter((d): d is Discussion => d !== null)
-        .sort((a, b) => b.createdAt - a.createdAt);
-
-      const parsedRequests = requestEvents
-        .map(parseDiscussionRequestEvent)
-        .filter((r): r is DiscussionRequest => r !== null)
-        .sort((a, b) => b.createdAt - a.createdAt);
+        .sort(
+          (a, b) =>
+            (b.approvedAt || b.createdAt) - (a.approvedAt || a.createdAt)
+        );
 
       setDiscussions(parsedDiscussions);
-      setRequests(parsedRequests);
 
-      // 管理者のプロファイル取得
-
+      // spec_v2.md要件: 管理者・モデレーターのみプロファイル取得
       const profileEvent = await nostrService.getProfile(ADMIN_PUBKEY);
 
       const profilePromise = async () => {
@@ -113,6 +106,7 @@ export default function DiscussionsPage() {
         }
       };
 
+      // ユーザー作成会話の作成者プロファイルは取得しない（spec_v2.md要件）
       const profileResults = await Promise.all([profilePromise()]);
       const profilesMap = Object.fromEntries(profileResults);
       setProfiles(profilesMap);
@@ -123,43 +117,9 @@ export default function DiscussionsPage() {
     }
   };
 
-  const handleRequestSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // spec_v2.md要件: リクエスト機能は完全オミット
 
-    if (!user.isLoggedIn) {
-      setShowLoginModal(true);
-      return;
-    }
-
-    if (!requestForm.title.trim() || !requestForm.description.trim()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const eventTemplate = nostrService.createDiscussionRequestEvent(
-        requestForm.title.trim(),
-        requestForm.description.trim(),
-        ADMIN_PUBKEY
-      );
-
-      const signedEvent = await signEvent(eventTemplate);
-      const published = await nostrService.publishSignedEvent(signedEvent);
-
-      if (!published) {
-        throw new Error("Failed to publish request to relays");
-      }
-
-      setRequestForm({ title: "", description: "" });
-      await loadData();
-    } catch (error) {
-      logger.error("Failed to submit request:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const auditItems = createAuditTimeline(discussions, requests, [], []);
+  const auditItems = createAuditTimeline(discussions, [], [], []);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -232,7 +192,9 @@ export default function DiscussionsPage() {
                   {discussions.map((discussion) => (
                     <article key={discussion.id}>
                       <Link
-                        href={`/discussions/${buildNaddrFromDiscussion(discussion)}`}
+                        href={`/discussions/${buildNaddrFromDiscussion(
+                          discussion
+                        )}`}
                         className="block"
                       >
                         <div className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
@@ -273,78 +235,26 @@ export default function DiscussionsPage() {
               )}
             </section>
 
-            <section aria-labelledby="request-form-heading">
+            {/* spec_v2.md要件: 会話作成ページへのリンクを表示 */}
+            <section aria-labelledby="create-discussion-section">
               <h2
-                id="request-form-heading"
+                id="create-discussion-section"
                 className="text-xl font-semibold mb-4 ruby-text"
               >
-                新しい会話をリクエスト
+                会話を作成
               </h2>
 
               <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="card-body">
-                  <form onSubmit={handleRequestSubmit} className="space-y-4">
-                    <div>
-                      <label htmlFor="title" className="label">
-                        <span className="label-text">タイトル</span>
-                      </label>
-                      <input
-                        type="text"
-                        id="title"
-                        value={requestForm.title}
-                        onChange={(e) =>
-                          setRequestForm((prev) => ({
-                            ...prev,
-                            title: e.target.value,
-                          }))
-                        }
-                        className="input input-bordered w-full"
-                        placeholder="会話のタイトル"
-                        required
-                        disabled={isSubmitting}
-                        maxLength={100}
-                        autoComplete="off"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="description" className="label">
-                        <span className="label-text ruby-text">説明</span>
-                      </label>
-                      <textarea
-                        id="description"
-                        value={requestForm.description}
-                        onChange={(e) =>
-                          setRequestForm((prev) => ({
-                            ...prev,
-                            description: e.target.value,
-                          }))
-                        }
-                        className="textarea textarea-bordered w-full h-24"
-                        placeholder="会話の目的や内容を説明してください"
-                        required
-                        disabled={isSubmitting}
-                        maxLength={500}
-                        autoComplete="off"
-                      />
-                    </div>
-                    <p className="mt-4 text-sm text-gray-600 dark:text-gray-400 ruby-text">
-                      管理者による確認後、会話が作成される場合があります。
-                    </p>
-                    <Button
-                      type="submit"
-                      className={isSubmitting ? "loading" : ""}
-                      fullWidth
-                      disabled={
-                        isSubmitting ||
-                        !requestForm.title.trim() ||
-                        !requestForm.description.trim()
-                      }
-                      loading={isSubmitting}
-                    >
-                      <span>{isSubmitting ? "" : "リクエストを送信"}</span>
-                    </Button>
-                  </form>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 ruby-text mb-4">
+                    誰でも新しい会話を作成できます。会話一覧への掲載は管理者による承認が必要です。
+                  </p>
+                  <Link
+                    href="/discussions/create"
+                    className="btn btn-primary rounded-full dark:rounded-sm ruby-text w-full"
+                  >
+                    <span>新しい会話を作成</span>
+                  </Link>
                 </div>
               </div>
             </section>
@@ -371,7 +281,13 @@ export default function DiscussionsPage() {
                     ))}
                   </div>
                 ) : (
-                  <AuditTimeline items={auditItems} profiles={profiles} />
+                  <AuditTimeline
+                    items={auditItems}
+                    profiles={profiles}
+                    adminPubkey={ADMIN_PUBKEY}
+                    viewerPubkey={user.pubkey}
+                    shouldLoadProfiles={false}
+                  />
                 )}
               </div>
             </div>
@@ -379,10 +295,7 @@ export default function DiscussionsPage() {
         </main>
       )}
 
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-      />
+      {/* spec_v2.md要件: ログインモーダルも不要 */}
     </div>
   );
 }

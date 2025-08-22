@@ -8,9 +8,22 @@ import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 interface AuditTimelineProps {
   items: AuditTimelineItem[];
   profiles?: Record<string, { name?: string }>;
+  adminPubkey?: string;
+  moderators?: string[];
+  viewerPubkey?: string | null;
+  discussionAuthorPubkey?: string;
+  shouldLoadProfiles?: boolean;
 }
 
-export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
+export function AuditTimeline({ 
+  items, 
+  profiles = {}, 
+  adminPubkey,
+  moderators = [],
+  viewerPubkey,
+  discussionAuthorPubkey,
+  shouldLoadProfiles = true,
+}: AuditTimelineProps) {
   // 投稿IDと承認状況のマッピングを作成
   const getApprovalStatus = (item: AuditTimelineItem) => {
     if (item.type !== "post-submitted") return null;
@@ -29,6 +42,37 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
   const [selectedEvent, setSelectedEvent] = useState<AuditTimelineItem | null>(
     null
   );
+
+  // 権限チェック関数
+  const isViewerAdminOrModerator = () => {
+    if (!viewerPubkey) return false;
+    return viewerPubkey === adminPubkey || moderators.includes(viewerPubkey);
+  };
+
+  const isActorAdminOrModerator = (actorPubkey: string) => {
+    return actorPubkey === adminPubkey || moderators.includes(actorPubkey);
+  };
+
+  const getActorDisplayName = (actorPubkey: string) => {
+    // 閲覧者が管理者・モデレーターの場合、または操作者が管理者・モデレーターの場合のみ名前を表示
+    if (isViewerAdminOrModerator() || isActorAdminOrModerator(actorPubkey)) {
+      return profiles[actorPubkey]?.name;
+    }
+    return null;
+  };
+
+  const getActorBadge = (actorPubkey: string) => {
+    if (actorPubkey === adminPubkey) {
+      return '管理者';
+    }
+    if (moderators.includes(actorPubkey)) {
+      return 'モデレーター';
+    }
+    if (actorPubkey === discussionAuthorPubkey) {
+      return '作成者';
+    }
+    return null;
+  };
 
   useRubyfulRun([selectedEvent], true);
 
@@ -271,24 +315,31 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
                 </time>
               </p>
               <div className="timeline-box">
-                {profiles[item.actorPubkey]?.name && (
+                {getActorDisplayName(item.actorPubkey) && (
                   <p className="text-sm ruby-text">
-                    {profiles[item.actorPubkey].name}
+                    {getActorDisplayName(item.actorPubkey)}
                   </p>
                 )}
-                <div className="join items-start mb-2">
+                <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500 dark:text-gray-400">
                     {`${hexToNpub(item.actorPubkey).slice(0, 12)}...`}
                   </span>
+                  
+                  {getActorBadge(item.actorPubkey) && (
+                    <span className="badge badge-outline badge-sm">
+                      {getActorBadge(item.actorPubkey)}
+                    </span>
+                  )}
+                  
                   {item.type === "post-submitted" &&
                     (() => {
                       const approvalStatus = getApprovalStatus(item);
                       return approvalStatus === "approved" ? (
-                        <span className="badge badge-primary badge-sm ml-2">
+                        <span className="badge badge-primary badge-sm">
                           承認済み
                         </span>
                       ) : (
-                        <span className="badge badge-warning badge-sm ml-2">
+                        <span className="badge badge-warning badge-sm">
                           未承認
                         </span>
                       );

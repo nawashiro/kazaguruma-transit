@@ -9,8 +9,11 @@ import {
   parseNaddrFromUrl,
   buildNaddrFromDiscussion,
   extractDiscussionFromNaddr,
+  buildDiscussionNaddr,
+  isValidNaddr,
+  generateDiscussionId,
 } from '../naddr-utils';
-import type { AddressPointer } from '../naddr-utils';
+import type { AddressPointer, DiscussionInfo } from '../naddr-utils';
 
 jest.mock('@/utils/logger', () => ({
   logger: {
@@ -246,6 +249,154 @@ describe('naddr utilities', () => {
     });
   });
 
+  describe('buildDiscussionNaddr', () => {
+    test('should build naddr from parameters', () => {
+      const result = buildDiscussionNaddr(
+        validAddressPointer.pubkey,
+        validAddressPointer.identifier,
+        validAddressPointer.relays
+      );
+      
+      expect(result).toMatch(/^naddr1[a-z0-9]+$/);
+      
+      const decoded = naddrDecode(result);
+      expect(decoded.pubkey).toBe(validAddressPointer.pubkey);
+      expect(decoded.identifier).toBe(validAddressPointer.identifier);
+      expect(decoded.kind).toBe(34550);
+      expect(decoded.relays).toEqual(validAddressPointer.relays);
+    });
+
+    test('should build naddr without relays', () => {
+      const result = buildDiscussionNaddr(
+        validAddressPointer.pubkey,
+        validAddressPointer.identifier
+      );
+      
+      expect(result).toMatch(/^naddr1[a-z0-9]+$/);
+      
+      const decoded = naddrDecode(result);
+      expect(decoded.kind).toBe(34550);
+    });
+
+    test('should throw error for invalid parameters', () => {
+      expect(() => buildDiscussionNaddr('invalid-pubkey', 'test-id'))
+        .toThrow('Failed to build discussion naddr');
+    });
+  });
+
+  describe('isValidNaddr', () => {
+    test('should return true for valid naddr', () => {
+      const validNaddr = naddrEncode(validAddressPointer);
+      expect(isValidNaddr(validNaddr)).toBe(true);
+    });
+
+    test('should return false for invalid naddr formats', () => {
+      expect(isValidNaddr('invalid-naddr')).toBe(false);
+      expect(isValidNaddr('')).toBe(false);
+      expect(isValidNaddr('npub1test')).toBe(false);
+      expect(isValidNaddr('note1test')).toBe(false);
+    });
+
+    test('should return false for malformed naddr', () => {
+      expect(isValidNaddr('naddr1invalid')).toBe(false);
+    });
+  });
+
+  describe('generateDiscussionId', () => {
+    test('should generate unique discussion IDs', () => {
+      const id1 = generateDiscussionId();
+      const id2 = generateDiscussionId();
+      
+      expect(id1).not.toBe(id2);
+      expect(id1).toMatch(/^[a-z0-9]+-[a-z0-9]+$/);
+      expect(id2).toMatch(/^[a-z0-9]+-[a-z0-9]+$/);
+    });
+
+    test('should include timestamp in generated ID', () => {
+      const beforeTimestamp = Date.now();
+      const id = generateDiscussionId();
+      const afterTimestamp = Date.now();
+      
+      const [timestampPart] = id.split('-');
+      const timestamp = parseInt(timestampPart, 36);
+      
+      expect(timestamp).toBeGreaterThanOrEqual(beforeTimestamp);
+      expect(timestamp).toBeLessThanOrEqual(afterTimestamp);
+    });
+
+    test('should generate IDs with random component', () => {
+      const ids = Array.from({ length: 100 }, () => generateDiscussionId());
+      const randomParts = ids.map(id => id.split('-')[1]);
+      const uniqueRandomParts = new Set(randomParts);
+      
+      // Should have high uniqueness in random parts
+      expect(uniqueRandomParts.size).toBeGreaterThan(90);
+    });
+  });
+
+  describe('spec_v2.md compliance', () => {
+    test('should handle URI scheme nostr:naddr format', () => {
+      const naddr = naddrEncode(validAddressPointer);
+      const uri = `nostr:${naddr}`;
+      
+      // Extract naddr from URI
+      const extractedNaddr = uri.replace('nostr:', '');
+      const decoded = naddrDecode(extractedNaddr);
+      
+      expect(decoded.identifier).toBe(validAddressPointer.identifier);
+      expect(decoded.kind).toBe(34550);
+    });
+
+    test('should support 30023 format as specified in spec', () => {
+      const discussionInfo = extractDiscussionFromNaddr(naddrEncode(validAddressPointer));
+      expect(discussionInfo?.discussionId).toBe(
+        `34550:${validAddressPointer.pubkey}:${validAddressPointer.identifier}`
+      );
+    });
+
+    test('should enforce kind 34550 for discussions', () => {
+      const nonDiscussionKind = { ...validAddressPointer, kind: 1111 };
+      const naddr = naddrEncode(nonDiscussionKind);
+      const discussionInfo = extractDiscussionFromNaddr(naddr);
+      
+      expect(discussionInfo).toBeNull();
+    });
+
+    test('should support NIP-18 q tag format', () => {
+      const discussionInfo = extractDiscussionFromNaddr(naddrEncode(validAddressPointer));
+      expect(discussionInfo?.discussionId).toMatch(/^34550:[a-fA-F0-9]{64}:.+$/);
+    });
+  });
+
+  describe('error handling robustness', () => {
+    test('should provide descriptive error messages', () => {
+      expect(() => naddrEncode({
+        identifier: '',
+        pubkey: validAddressPointer.pubkey,
+        kind: 34550,
+      })).toThrow(/Invalid identifier/);
+
+      expect(() => naddrEncode({
+        identifier: 'test',
+        pubkey: 'invalid',
+        kind: 34550,
+      })).toThrow(/Invalid pubkey/);
+
+      expect(() => naddrEncode({
+        identifier: 'test',
+        pubkey: validAddressPointer.pubkey,
+        kind: -1,
+      })).toThrow(/Invalid kind/);
+    });
+
+    test('should handle null and undefined inputs gracefully', () => {
+      expect(() => naddrDecode(null as any)).toThrow();
+      expect(() => naddrDecode(undefined as any)).toThrow();
+      expect(parseNaddrFromUrl(null as any)).toBeNull();
+      expect(parseNaddrFromUrl(undefined as any)).toBeNull();
+    });
+  });
+
   describe('edge cases', () => {
     test('should handle very long identifiers', () => {
       const longIdentifier = 'a'.repeat(100);
@@ -282,6 +433,41 @@ describe('naddr utilities', () => {
       const decoded = naddrDecode(encoded);
       
       expect(decoded.kind).toBe(30023);
+    });
+
+    test('should handle relay URLs with various protocols', () => {
+      const relayAddr: AddressPointer = {
+        ...validAddressPointer,
+        relays: [
+          'wss://relay.example.com',
+          'ws://insecure-relay.com',
+          'wss://relay.with-dash.com:443',
+        ],
+      };
+      
+      const encoded = naddrEncode(relayAddr);
+      const decoded = naddrDecode(encoded);
+      
+      expect(decoded.relays).toEqual(relayAddr.relays);
+    });
+  });
+
+  describe('performance and memory tests', () => {
+    test('should handle large number of encode/decode operations efficiently', () => {
+      const start = performance.now();
+      
+      for (let i = 0; i < 1000; i++) {
+        const addr = {
+          ...validAddressPointer,
+          identifier: `test-${i}`,
+        };
+        const encoded = naddrEncode(addr);
+        const decoded = naddrDecode(encoded);
+        expect(decoded.identifier).toBe(`test-${i}`);
+      }
+      
+      const end = performance.now();
+      expect(end - start).toBeLessThan(1000); // Should complete in under 1 second
     });
   });
 });

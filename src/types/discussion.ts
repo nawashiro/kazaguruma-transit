@@ -22,6 +22,9 @@ export interface Discussion {
   authorPubkey: string
   createdAt: number
   event: Event
+  // spec_v2.md要件: 承認システム対応
+  approvedAt?: number
+  approvalReference?: string
 }
 
 export interface DiscussionPost {

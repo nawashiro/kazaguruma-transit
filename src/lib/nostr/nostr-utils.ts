@@ -399,6 +399,60 @@ export function isValidNpub(npub: string): boolean {
   }
 }
 
+// spec_v2.md要件: 承認されたユーザー作成会話のパース
+export function parseApprovedUserDiscussion(
+  userDiscussion: Event,
+  approvalEvent: Event,
+  approvedAt: number
+): Discussion | null {
+  const baseDiscussion = parseDiscussionEvent(userDiscussion);
+  if (!baseDiscussion) return null;
+
+  // 承認情報を追加
+  return {
+    ...baseDiscussion,
+    approvedAt,
+    approvalReference: `34550:${approvalEvent.pubkey}:${approvalEvent.tags.find(tag => tag[0] === "d")?.[1] || ""}`,
+  };
+}
+
+// spec_v2.md要件: 会話承認イベントのパース
+export function parseDiscussionApprovalEvent(event: Event): {
+  id: string;
+  dTag: string;
+  title: string;
+  description: string;
+  references: string[];
+  authorPubkey: string;
+  createdAt: number;
+  event: Event;
+} | null {
+  if (event.kind !== 34550) return null;
+
+  const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
+  const name = event.tags.find((tag) => tag[0] === "name")?.[1];
+  const description = event.tags.find((tag) => tag[0] === "description")?.[1];
+
+  if (!dTag) return null;
+
+  // NIP-18 qタグから引用を抽出
+  const references = event.tags
+    .filter((tag) => tag[0] === "q")
+    .map((tag) => tag[1])
+    .filter(Boolean);
+
+  return {
+    id: `34550:${event.pubkey}:${dTag}`,
+    dTag,
+    title: name || dTag,
+    description: description || event.content,
+    references,
+    authorPubkey: event.pubkey,
+    createdAt: event.created_at,
+    event,
+  };
+}
+
 // Environment variable utilities - assumes env vars are stored as npub
 export function getAdminPubkeyHex(): string {
   const npubFromEnv = process.env.NEXT_PUBLIC_ADMIN_PUBKEY || "";

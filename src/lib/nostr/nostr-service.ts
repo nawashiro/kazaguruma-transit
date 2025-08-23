@@ -1,6 +1,7 @@
 import { SimplePool, Event, Filter, finalizeEvent } from "nostr-tools";
 import type { PWKBlob } from "nosskey-sdk";
 import { logger } from "@/utils/logger";
+import { naddrDecode } from "@/lib/nostr/naddr-utils";
 
 export interface NostrRelayConfig {
   url: string;
@@ -283,7 +284,6 @@ export class NostrService {
     let discussionHexId = discussionId;
     if (discussionId.startsWith('naddr1')) {
       try {
-        const { naddrDecode } = require('@/lib/nostr/naddr-utils');
         const decoded = naddrDecode(discussionId);
         discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
       } catch (error) {
@@ -316,7 +316,6 @@ export class NostrService {
     let discussionHexId = discussionId;
     if (discussionId.startsWith('naddr1')) {
       try {
-        const { naddrDecode } = require('@/lib/nostr/naddr-utils');
         const decoded = naddrDecode(discussionId);
         discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
       } catch (error) {
@@ -355,8 +354,7 @@ export class NostrService {
       let discussionHexId = discussionId;
       if (discussionId.startsWith('naddr1')) {
         try {
-          const { naddrDecode } = require('@/lib/nostr/naddr-utils');
-          const decoded = naddrDecode(discussionId);
+            const decoded = naddrDecode(discussionId);
           discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
         } catch (error) {
           logger.error('Failed to decode discussion naddr:', error);
@@ -460,6 +458,71 @@ export class NostrService {
     }
     
     return Array.from(eventsByDTag.values());
+  }
+
+  // Get single event by hex ID (format: "kind:pubkey:identifier")
+  async getEventByNaddr(hexId: string): Promise<Event | null> {
+    try {
+      const parts = hexId.split(':');
+      if (parts.length !== 3) {
+        throw new Error('Invalid hex ID format');
+      }
+      
+      const [kindStr, pubkey, identifier] = parts;
+      const kind = parseInt(kindStr, 10);
+      
+      if (isNaN(kind)) {
+        throw new Error('Invalid kind in hex ID');
+      }
+
+      const filter: Filter = {
+        kinds: [kind],
+        authors: [pubkey],
+        "#d": [identifier],
+        limit: 1,
+      };
+
+      const events = await this.getEvents([filter]);
+      return events.length > 0 ? events[0] : null;
+    } catch (error) {
+      logger.error('Failed to get event by naddr:', error);
+      return null;
+    }
+  }
+
+  // Get profiles for multiple pubkeys
+  async getProfiles(pubkeys: string[]): Promise<Record<string, { name?: string; display_name?: string }>> {
+    try {
+      if (pubkeys.length === 0) {
+        return {};
+      }
+
+      const filter: Filter = {
+        kinds: [0], // Profile events
+        authors: pubkeys,
+        limit: pubkeys.length,
+      };
+
+      const events = await this.getEvents([filter]);
+      const profiles: Record<string, { name?: string; display_name?: string }> = {};
+
+      events.forEach(event => {
+        try {
+          const content = JSON.parse(event.content);
+          profiles[event.pubkey] = {
+            name: content.name,
+            display_name: content.display_name,
+          };
+        } catch (error) {
+          logger.error('Failed to parse profile content:', error);
+        }
+      });
+
+      return profiles;
+    } catch (error) {
+      logger.error('Failed to get profiles:', error);
+      return {};
+    }
   }
 
   // spec_v2.md要件: 引用されたユーザー作成Kind:34550の取得
@@ -575,9 +638,21 @@ export class NostrService {
     options: { limit?: number; until?: number } = {}
   ): Promise<Event[]> {
     try {
+      // Convert naddr to hex format for NIP-72 compliance
+      let discussionListHex = discussionListNaddr;
+      if (discussionListNaddr.startsWith('naddr1')) {
+        try {
+            const decoded = naddrDecode(discussionListNaddr);
+          discussionListHex = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
+        } catch (error) {
+          logger.error('Failed to decode discussion list naddr:', error);
+          throw new Error(`Invalid discussion list naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
       const filter: Filter = {
         kinds: [1111], // NIP-72 community posts
-        "#A": [discussionListNaddr], // Discussion list community reference
+        "#a": [discussionListHex], // Discussion list community reference (lowercase 'a' for NIP-72 compliance)
         limit: options.limit || 50,
       };
 

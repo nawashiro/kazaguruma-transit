@@ -13,27 +13,23 @@ import {
 } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
-  parseDiscussionEvent,
   formatRelativeTime,
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
 import Button from "@/components/ui/Button";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
-import type {
-  Discussion,
-} from "@/types/discussion";
-import type { Event as NostrEvent } from "nostr-tools";
 import { logger } from "@/utils/logger";
 import { processCommunityPosts, extractDiscussionDetails, type ProcessedDiscussion } from "./discussion-processing";
+import { enhanceDiscussionsWithDetails, type EnhancedProcessedDiscussion } from "./discussion-enhancement";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function DiscussionManagePage() {
   // spec_v2.md要件: 承認待ちと承認済み会話の管理
-  const [pendingDiscussions, setPendingDiscussions] = useState<ProcessedDiscussion[]>([]);
-  const [approvedDiscussions, setApprovedDiscussions] = useState<ProcessedDiscussion[]>([]);
+  const [pendingDiscussions, setPendingDiscussions] = useState<EnhancedProcessedDiscussion[]>([]);
+  const [approvedDiscussions, setApprovedDiscussions] = useState<EnhancedProcessedDiscussion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
@@ -81,8 +77,14 @@ export default function DiscussionManagePage() {
       // Process community posts according to NIP-72 spec
       const processed = processCommunityPosts(communityPosts, approvalEvents);
       
-      setPendingDiscussions(processed.pending);
-      setApprovedDiscussions(processed.approved);
+      // spec_v2.md要件: Kind:34550詳細の表示
+      const [enhancedPending, enhancedApproved] = await Promise.all([
+        enhanceDiscussionsWithDetails(processed.pending),
+        enhanceDiscussionsWithDetails(processed.approved),
+      ]);
+      
+      setPendingDiscussions(enhancedPending);
+      setApprovedDiscussions(enhancedApproved);
     } catch (error) {
       logger.error("Failed to load data:", error);
       setPendingDiscussions([]);
@@ -239,7 +241,7 @@ export default function DiscussionManagePage() {
             ) : pendingDiscussions.length > 0 ? (
               <div className="space-y-4">
                 {pendingDiscussions.map((discussion) => {
-                  const details = extractDiscussionDetails(discussion.userDiscussionNaddr);
+                  const details = discussion.discussionDetails || extractDiscussionDetails(discussion.userDiscussionNaddr);
                   return (
                   <div
                     key={discussion.communityPostId}
@@ -302,7 +304,7 @@ export default function DiscussionManagePage() {
             ) : approvedDiscussions.length > 0 ? (
               <div className="space-y-4">
                 {approvedDiscussions.map((discussion) => {
-                  const details = extractDiscussionDetails(discussion.userDiscussionNaddr);
+                  const details = discussion.discussionDetails || extractDiscussionDetails(discussion.userDiscussionNaddr);
                   return (
                   <div
                     key={discussion.communityPostId}

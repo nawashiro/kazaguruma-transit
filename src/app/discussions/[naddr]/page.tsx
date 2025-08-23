@@ -28,9 +28,7 @@ import {
   formatRelativeTime,
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
-import {
-  extractDiscussionFromNaddr,
-} from "@/lib/nostr/naddr-utils";
+import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import {
   evaluationService,
   EvaluationAnalysisResult,
@@ -153,10 +151,10 @@ export default function DiscussionDetailPage() {
       setEvaluations(parsedEvaluations);
 
       // Profile loading logic - only load profiles if user is moderator
-      const shouldLoadProfiles = user.pubkey && (
-        user.pubkey === ADMIN_PUBKEY || 
-        parsedDiscussion?.moderators.some(m => m.pubkey === user.pubkey)
-      );
+      const shouldLoadProfiles =
+        user.pubkey &&
+        (user.pubkey === ADMIN_PUBKEY ||
+          parsedDiscussion?.moderators.some((m) => m.pubkey === user.pubkey));
 
       if (shouldLoadProfiles) {
         const uniquePubkeys = new Set<string>();
@@ -170,18 +168,20 @@ export default function DiscussionDetailPage() {
           );
         }
 
-        const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
-          const profileEvent = await nostrService.getProfile(pubkey);
-          if (profileEvent) {
-            try {
-              const profile = JSON.parse(profileEvent.content);
-              return [pubkey, { name: profile.name || profile.display_name }];
-            } catch {
-              return [pubkey, {}];
+        const profilePromises = Array.from(uniquePubkeys).map(
+          async (pubkey) => {
+            const profileEvent = await nostrService.getProfile(pubkey);
+            if (profileEvent) {
+              try {
+                const profile = JSON.parse(profileEvent.content);
+                return [pubkey, { name: profile.name || profile.display_name }];
+              } catch {
+                return [pubkey, {}];
+              }
             }
+            return [pubkey, {}];
           }
-          return [pubkey, {}];
-        });
+        );
 
         const profileResults = await Promise.all(profilePromises);
         const profilesMap = Object.fromEntries(profileResults);
@@ -455,42 +455,57 @@ export default function DiscussionDetailPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 ruby-text">
-        <div className="flex items-center gap-4 mb-4">
-          <Link
-            href="/discussions"
-            className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
-          >
-            <span>← 会話一覧に戻る</span>
-          </Link>
-          {user.pubkey === discussion.authorPubkey && (
-            <Link
-              href={`/discussions/${naddrParam}/edit`}
-              className="btn btn-outline btn-sm rounded-full dark:rounded-sm min-h-8 h-fit"
-            >
-              <span>会話を編集</span>
-            </Link>
-          )}
-          <ModeratorCheck
-            moderators={discussion.moderators.map((m) => m.pubkey)}
-            adminPubkey={ADMIN_PUBKEY}
-            userPubkey={user.pubkey}
-          >
-            <Link
-              href={`/discussions/${naddrParam}/approve`}
-              className="btn btn-outline btn-sm rounded-full dark:rounded-sm min-h-8 h-fit"
-            >
-              <span>投稿承認管理</span>
-            </Link>
-          </ModeratorCheck>
-        </div>
-        <div className="flex items-center gap-3 mb-4">
-          <h1 className="text-3xl font-bold">{discussion.title}</h1>
-          {discussion.moderators.some(m => m.pubkey === discussion.authorPubkey) ? (
-            <span className="badge badge-secondary">モデレーター</span>
-          ) : (
-            <span className="badge badge-outline">作成者</span>
-          )}
-        </div>
+        <Link
+          href="/discussions"
+          className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
+        >
+          <span>← 会話一覧に戻る</span>
+        </Link>
+
+        <h1 className="text-3xl font-bold mb-4">{discussion.title}</h1>
+
+        {/* Only show aside if user is creator or moderator */}
+        {(user.pubkey === discussion.authorPubkey || 
+          user.pubkey === ADMIN_PUBKEY ||
+          discussion.moderators.some((m) => m.pubkey === user.pubkey)) && (
+          <aside className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4">
+            <p className="mb-4">
+              あなたは
+              {/* Show "モデレーター" if user is moderator (including admin), otherwise show "作成者" */}
+              {user.pubkey === ADMIN_PUBKEY || 
+               discussion.moderators.some((m) => m.pubkey === user.pubkey) ? (
+                <span>モデレーター</span>
+              ) : (
+                <span>作成者</span>
+              )}
+              です。
+            </p>
+
+            <div className="flex items-center gap-4">
+              {user.pubkey === discussion.authorPubkey && (
+                <Link
+                  href={`/discussions/${naddrParam}/edit`}
+                  className="btn btn-primary rounded-full dark:rounded-sm min-h-8 h-fit"
+                >
+                  <span>会話を編集</span>
+                </Link>
+              )}
+              <ModeratorCheck
+                moderators={discussion.moderators.map((m) => m.pubkey)}
+                adminPubkey={ADMIN_PUBKEY}
+                userPubkey={user.pubkey}
+              >
+                <Link
+                  href={`/discussions/${naddrParam}/approve`}
+                  className="btn btn-primary rounded-full dark:rounded-sm min-h-8 h-fit"
+                >
+                  <span>投稿承認管理</span>
+                </Link>
+              </ModeratorCheck>
+            </div>
+          </aside>
+        )}
+
         {discussion.description.split("\n").map((line, idx) => (
           <p key={idx} className="text-gray-600 dark:text-gray-400">
             {line}
@@ -885,14 +900,17 @@ export default function DiscussionDetailPage() {
             </h2>
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
-                <AuditTimeline 
-                  items={auditItems} 
+                <AuditTimeline
+                  items={auditItems}
                   profiles={profiles}
                   adminPubkey={ADMIN_PUBKEY}
-                  moderators={discussion.moderators.map(m => m.pubkey)}
+                  moderators={discussion.moderators.map((m) => m.pubkey)}
                   viewerPubkey={user.pubkey}
                   discussionAuthorPubkey={discussion.authorPubkey}
-                  shouldLoadProfiles={user.pubkey === ADMIN_PUBKEY || discussion.moderators.some(m => m.pubkey === user.pubkey)}
+                  shouldLoadProfiles={
+                    user.pubkey === ADMIN_PUBKEY ||
+                    discussion.moderators.some((m) => m.pubkey === user.pubkey)
+                  }
                 />
               </div>
             </div>

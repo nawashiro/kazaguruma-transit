@@ -31,7 +31,6 @@ interface EditFormData {
   title: string;
   description: string;
   moderators: string[];
-  dTag: string;
 }
 
 export default function DiscussionEditPage() {
@@ -45,7 +44,6 @@ export default function DiscussionEditPage() {
     title: "",
     description: "",
     moderators: [],
-    dTag: "",
   });
   const [moderatorInput, setModeratorInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -84,7 +82,6 @@ export default function DiscussionEditPage() {
         title: parsedDiscussion.title,
         description: parsedDiscussion.description,
         moderators: parsedDiscussion.moderators.map(m => m.pubkey), // npub形式に変換が必要
-        dTag: parsedDiscussion.dTag,
       });
     } catch (error) {
       logger.error("Failed to load discussion:", error);
@@ -133,13 +130,7 @@ export default function DiscussionEditPage() {
       }
     }
 
-    if (!formData.dTag.trim()) {
-      errors.push('IDは必須です');
-    } else if (formData.dTag.length < 3 || formData.dTag.length > 50) {
-      errors.push('IDは3文字以上50文字以内で入力してください');
-    } else if (!/^[a-zA-Z0-9_-]+$/.test(formData.dTag)) {
-      errors.push('IDは英数字、ハイフン、アンダースコアのみ使用できます');
-    }
+    // ID is not editable as per NIP-72 specification
 
     if (errors.length > 0) {
       setErrors(errors);
@@ -156,7 +147,7 @@ export default function DiscussionEditPage() {
       }
 
       const tags: string[][] = [
-        ['d', formData.dTag.trim()],
+        ['d', discussion.dTag], // Use original dTag - not editable per NIP-72
         ['name', formData.title.trim()],
         ['description', formData.description.trim()],
       ];
@@ -399,31 +390,16 @@ export default function DiscussionEditPage() {
                     </div>
                   </div>
 
+                  {/* Read-only ID display - not editable per NIP-72 */}
                   <div>
-                    <label htmlFor="dTag" className="label ruby-text">
-                      <span className="label-text">会話ID *</span>
+                    <label className="label ruby-text">
+                      <span className="label-text">会話ID</span>
                     </label>
-                    <input
-                      id="dTag"
-                      type="text"
-                      value={formData.dTag}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          dTag: e.target.value,
-                        }))
-                      }
-                      className="input input-bordered w-full"
-                      required
-                      disabled={isSaving || isDeleting}
-                      maxLength={50}
-                      autoComplete="off"
-                    />
-                    <div className="text-xs text-gray-500 mt-1">
-                      {formData.dTag.length}/50文字
+                    <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <span className="text-sm font-mono">{discussion?.dTag || 'loading...'}</span>
                     </div>
                     <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      英数字、ハイフン、アンダースコアのみ使用可能。変更するとURLも変更されます。
+                      IDはNIP-72仕様により変更できません。
                     </div>
                   </div>
 
@@ -468,7 +444,7 @@ export default function DiscussionEditPage() {
                       />
                       <Button
                         onClick={addModerator}
-                        variant="outline"
+                        secondary
                         disabled={!moderatorInput.trim() || isSaving || isDeleting}
                       >
                         追加
@@ -489,9 +465,9 @@ export default function DiscussionEditPage() {
                   <div className="flex gap-4">
                     <Button
                       onClick={handleSave}
-                      variant="primary"
+                      
                       fullWidth
-                      disabled={isSaving || isDeleting || !formData.title.trim() || !formData.description.trim() || !formData.dTag.trim()}
+                      disabled={isSaving || isDeleting || !formData.title.trim() || !formData.description.trim()}
                       loading={isSaving}
                     >
                       {isSaving ? "保存中..." : "変更を保存"}
@@ -499,7 +475,7 @@ export default function DiscussionEditPage() {
                     
                     <Button
                       onClick={() => setShowDeleteConfirm(true)}
-                      variant="error"
+                      secondary
                       disabled={isSaving || isDeleting}
                       loading={isDeleting}
                     >
@@ -524,14 +500,14 @@ export default function DiscussionEditPage() {
             <div className="modal-action">
               <Button
                 onClick={() => setShowDeleteConfirm(false)}
-                variant="outline"
+                secondary
                 disabled={isDeleting}
               >
                 キャンセル
               </Button>
               <Button
                 onClick={handleDelete}
-                variant="error"
+                secondary
                 disabled={isDeleting}
                 loading={isDeleting}
               >

@@ -24,6 +24,7 @@ import { logger } from "@/utils/logger";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
+const ITEMS_PER_PAGE = 10;
 
 export default function DiscussionsPage() {
   const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
@@ -33,6 +34,9 @@ export default function DiscussionsPage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const { user } = useAuth();
 
@@ -58,14 +62,35 @@ export default function DiscussionsPage() {
     );
   }
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (page: number = 1, append: boolean = false) => {
+    if (page === 1) {
+      setIsLoading(true);
+    } else {
+      setIsLoadingMore(true);
+    }
+    
     try {
-      // spec_v2.md要件: 管理者作成のKind:34550で承認されたユーザー作成会話を取得
-      const approvedUserDiscussions =
-        await nostrService.getApprovedUserDiscussions(ADMIN_PUBKEY);
+      // Calculate until timestamp for pagination (last discussion's created_at - 1)
+      let until: number | undefined;
+      if (page > 1 && discussions.length > 0) {
+        const lastDiscussion = discussions[discussions.length - 1];
+        until = (lastDiscussion.approvedAt || lastDiscussion.createdAt) - 1;
+      }
 
-      const parsedDiscussions = approvedUserDiscussions
+      // spec_v2.md要件: 管理者作成のKind:34550で承認されたユーザー作成会話を取得（ページネーション対応）
+      const approvedUserDiscussions =
+        await nostrService.getApprovedUserDiscussions(ADMIN_PUBKEY, { 
+          limit: ITEMS_PER_PAGE + 1, // +1 to check if there are more items
+          until 
+        });
+
+      // Check if there are more items
+      const hasMoreItems = approvedUserDiscussions.length > ITEMS_PER_PAGE;
+      const discussionsToProcess = hasMoreItems 
+        ? approvedUserDiscussions.slice(0, ITEMS_PER_PAGE)
+        : approvedUserDiscussions;
+
+      const parsedDiscussions = discussionsToProcess
         .map(({ userDiscussion, approvalEvent, approvedAt }) => {
           const discussion = parseDiscussionEvent(userDiscussion);
           if (!discussion) return null;
@@ -79,26 +104,42 @@ export default function DiscussionsPage() {
             }`,
           };
         })
-        .filter((d): d is Discussion => d !== null)
+        .filter((d): d is any => d !== null)
         .sort(
-          (a, b) =>
-            (b.approvedAt || b.createdAt) - (a.approvedAt || a.createdAt)
+          (a: any, b: any) => {
+            const aTime = a?.approvedAt || a?.createdAt || 0;
+            const bTime = b?.approvedAt || b?.createdAt || 0;
+            return bTime - aTime;
+          }
         );
 
-      setDiscussions(parsedDiscussions);
+      if (append && page > 1) {
+        setDiscussions(prev => [...prev, ...parsedDiscussions as Discussion[]]);
+      } else {
+        setDiscussions(parsedDiscussions as Discussion[]);
+      }
+      
+      setHasMore(hasMoreItems);
+      setCurrentPage(page);
 
       // spec_v2.md要件: 管理者・モデレーターのプロファイルを取得
       const uniquePubkeys = new Set<string>();
       uniquePubkeys.add(ADMIN_PUBKEY);
 
       parsedDiscussions.forEach((discussion) => {
-        // 作成者が管理者・モデレーターの場合のみプロファイル取得
-        if (discussion.authorPubkey === ADMIN_PUBKEY || 
-            discussion.moderators.some(m => m.pubkey === discussion.authorPubkey)) {
-          uniquePubkeys.add(discussion.authorPubkey);
+        if (discussion) {
+          // 作成者が管理者・モデレーターの場合のみプロファイル取得
+          if (
+            discussion.authorPubkey === ADMIN_PUBKEY ||
+            discussion.moderators.some(
+              (m: any) => m.pubkey === discussion.authorPubkey
+            )
+          ) {
+            uniquePubkeys.add(discussion.authorPubkey);
+          }
+          // モデレーターのプロファイル取得
+          discussion.moderators.forEach((mod: any) => uniquePubkeys.add(mod.pubkey));
         }
-        // モデレーターのプロファイル取得
-        discussion.moderators.forEach(mod => uniquePubkeys.add(mod.pubkey));
       });
 
       const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
@@ -121,6 +162,13 @@ export default function DiscussionsPage() {
       logger.error("Failed to load discussions:", error);
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (!isLoadingMore && hasMore) {
+      await loadData(currentPage + 1, true);
     }
   };
 
@@ -168,6 +216,7 @@ export default function DiscussionsPage() {
         <main role="tabpanel" aria-labelledby="main-tab" className="space-y-6">
           <AdminCheck adminPubkey={ADMIN_PUBKEY} userPubkey={user.pubkey}>
             <aside className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+              <p className="mb-4">あなたは管理者です。</p>
               <Link
                 href="/discussions/manage"
                 className="btn btn-primary rounded-full dark:rounded-sm ruby-text"
@@ -224,18 +273,27 @@ export default function DiscussionsPage() {
                                   {formatRelativeTime(discussion.createdAt)}
                                 </time>
                                 {/* 作成者が管理者・モデレーターの場合、名前を表示 */}
-                                {(discussion.authorPubkey === ADMIN_PUBKEY || 
-                                  discussion.moderators.some(m => m.pubkey === discussion.authorPubkey)) && (
+                                {(discussion.authorPubkey === ADMIN_PUBKEY ||
+                                  discussion.moderators.some(
+                                    (m) => m.pubkey === discussion.authorPubkey
+                                  )) && (
                                   <div className="text-xs">
-                                    作成者: {profiles[discussion.authorPubkey]?.name || '名前未設定'}
+                                    作成者:{" "}
+                                    {profiles[discussion.authorPubkey]?.name ||
+                                      "名前未設定"}
                                   </div>
                                 )}
                                 {/* モデレーターの名前を表示 */}
                                 {discussion.moderators.length > 0 && (
                                   <div className="text-xs">
-                                    モデレーター: {discussion.moderators.map(mod => 
-                                      profiles[mod.pubkey]?.name || '名前未設定'
-                                    ).join(', ')}
+                                    モデレーター:{" "}
+                                    {discussion.moderators
+                                      .map(
+                                        (mod) =>
+                                          profiles[mod.pubkey]?.name ||
+                                          "名前未設定"
+                                      )
+                                      .join(", ")}
                                   </div>
                                 )}
                               </div>
@@ -254,6 +312,26 @@ export default function DiscussionsPage() {
                   <p className="text-gray-600 dark:text-gray-400 ruby-text">
                     会話がまだありません。
                   </p>
+                </div>
+              )}
+
+              {/* ページネーション */}
+              {hasMore && !isLoading && discussions.length > 0 && (
+                <div className="text-center mt-6">
+                  <button
+                    onClick={loadMore}
+                    disabled={isLoadingMore}
+                    className="btn btn-outline rounded-full dark:rounded-sm"
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <span className="loading loading-spinner loading-sm"></span>
+                        読み込み中...
+                      </>
+                    ) : (
+                      'さらに読み込む'
+                    )}
+                  </button>
                 </div>
               )}
             </section>

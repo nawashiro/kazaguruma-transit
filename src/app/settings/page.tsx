@@ -6,8 +6,15 @@ export const dynamic = "force-dynamic";
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
-import { isDiscussionsEnabled, getNostrServiceConfig } from "@/lib/config/discussion-config";
-import { hexToNpub, parseDiscussionEvent, formatRelativeTime } from "@/lib/nostr/nostr-utils";
+import {
+  isDiscussionsEnabled,
+  getNostrServiceConfig,
+} from "@/lib/config/discussion-config";
+import {
+  hexToNpub,
+  parseDiscussionEvent,
+  formatRelativeTime,
+} from "@/lib/nostr/nostr-utils";
 import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import { LoginModal } from "@/components/discussion/LoginModal";
@@ -24,7 +31,9 @@ export default function SettingsPage() {
   const [isCopied, setIsCopied] = useState(false);
   const [myDiscussions, setMyDiscussions] = useState<Discussion[]>([]);
   const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
+    null
+  );
   const [isDeletingDiscussion, setIsDeletingDiscussion] = useState(false);
 
   const { user, logout, isLoading, error, signEvent } = useAuth();
@@ -33,7 +42,7 @@ export default function SettingsPage() {
 
   const loadMyDiscussions = useCallback(async () => {
     if (!user.isLoggedIn || !user.pubkey) return;
-    
+
     setIsLoadingDiscussions(true);
     try {
       const discussionEvents = await nostrService.getDiscussions(user.pubkey);
@@ -41,7 +50,7 @@ export default function SettingsPage() {
         .map(parseDiscussionEvent)
         .filter((d): d is Discussion => d !== null)
         .sort((a, b) => b.createdAt - a.createdAt);
-      
+
       setMyDiscussions(parsedDiscussions);
     } catch (error) {
       logger.error("Failed to load user discussions:", error);
@@ -59,7 +68,7 @@ export default function SettingsPage() {
   const handleDeleteDiscussion = async (discussionId: string) => {
     if (!user.isLoggedIn || !signEvent) return;
 
-    const discussion = myDiscussions.find(d => d.id === discussionId);
+    const discussion = myDiscussions.find((d) => d.id === discussionId);
     if (!discussion?.event?.id) return;
 
     setIsDeletingDiscussion(true);
@@ -80,7 +89,7 @@ export default function SettingsPage() {
       }
 
       // 削除した会話をリストから除去
-      setMyDiscussions(prev => prev.filter(d => d.id !== discussionId));
+      setMyDiscussions((prev) => prev.filter((d) => d.id !== discussionId));
       setShowDeleteConfirm(null);
     } catch (error) {
       logger.error("Failed to delete discussion:", error);
@@ -352,7 +361,7 @@ export default function SettingsPage() {
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
                 <h2 className="card-title mb-4 ruby-text">自作会話一覧</h2>
-                
+
                 {isLoadingDiscussions ? (
                   <div className="animate-pulse space-y-4">
                     {[...Array(2)].map((_, i) => (
@@ -383,7 +392,8 @@ export default function SettingsPage() {
                                 {discussion.description}
                               </p>
                               <p className="text-xs text-gray-500 mt-2">
-                                作成日: {formatRelativeTime(discussion.createdAt)}
+                                作成日:{" "}
+                                {formatRelativeTime(discussion.createdAt)}
                               </p>
                             </div>
                             <div className="flex gap-2 ml-4">
@@ -394,7 +404,9 @@ export default function SettingsPage() {
                                 編集
                               </Link>
                               <button
-                                onClick={() => setShowDeleteConfirm(discussion.id)}
+                                onClick={() =>
+                                  setShowDeleteConfirm(discussion.id)
+                                }
                                 className="btn btn-error btn-outline btn-sm rounded-full dark:rounded-sm"
                                 disabled={isDeletingDiscussion}
                               >
@@ -484,21 +496,19 @@ export default function SettingsPage() {
               この会話を削除しますか？この操作は取り消せません。
             </p>
             <div className="modal-action">
-              <Button
+              <button
+                className="btn btn-outline rounded-full dark:rounded-sm"
                 onClick={() => setShowDeleteConfirm(null)}
-                variant="outline"
-                disabled={isDeletingDiscussion}
               >
                 キャンセル
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={() => handleDeleteDiscussion(showDeleteConfirm)}
-                variant="error"
+                className="btn btn-error rounded-full dark:rounded-sm"
                 disabled={isDeletingDiscussion}
-                loading={isDeletingDiscussion}
               >
-                削除実行
-              </Button>
+                削除
+              </button>
             </div>
           </div>
         </dialog>

@@ -386,13 +386,23 @@ export class NostrService {
   }
 
   // spec_v2.md要件: 管理者作成のKind:34550による承認システム
-  async getAdminApprovalEvents(adminPubkey: string): Promise<Event[]> {
-    const events = await this.getEvents([
-      {
-        kinds: [34550],
-        authors: [adminPubkey],
-      },
-    ]);
+  async getAdminApprovalEvents(
+    adminPubkey: string,
+    options: { limit?: number; until?: number } = {}
+  ): Promise<Event[]> {
+    const filter: any = {
+      kinds: [34550],
+      authors: [adminPubkey],
+    };
+
+    if (options.limit) {
+      filter.limit = options.limit;
+    }
+    if (options.until) {
+      filter.until = options.until;
+    }
+
+    const events = await this.getEvents([filter]);
     
     // 承認リストのみを取得（qタグを含むもの）
     const approvalEvents = events.filter(event => 
@@ -461,14 +471,17 @@ export class NostrService {
   }
 
   // spec_v2.md要件: NIP-72承認システムでの承認済みユーザー会話取得
-  async getApprovedUserDiscussions(adminPubkey: string): Promise<{
+  async getApprovedUserDiscussions(
+    adminPubkey: string,
+    options: { limit?: number; until?: number } = {}
+  ): Promise<{
     userDiscussion: Event;
     approvalEvent: Event;
     approvedAt: number;
   }[]> {
     try {
-      // 1. 管理者の承認イベントを取得
-      const approvalEvents = await this.getAdminApprovalEvents(adminPubkey);
+      // 1. 管理者の承認イベントを取得（ページネーション対応）
+      const approvalEvents = await this.getAdminApprovalEvents(adminPubkey, options);
       
       // 2. すべてのqタグから引用を抽出
       const allReferences: string[] = [];
@@ -519,7 +532,45 @@ export class NostrService {
     }
   }
 
-  // spec_v2.md要件: 承認待ちユーザー会話の取得
+  // NIP-72 compliant: Get community posts to discussion list
+  async getCommunityPostsToDiscussionList(
+    discussionListNaddr: string,
+    options: { limit?: number; until?: number } = {}
+  ): Promise<Event[]> {
+    try {
+      const filter: Filter = {
+        kinds: [1111], // NIP-72 community posts
+        "#A": [discussionListNaddr], // Discussion list community reference
+        limit: options.limit || 50,
+      };
+
+      if (options.until) {
+        filter.until = options.until;
+      }
+
+      return this.getEvents([filter]);
+    } catch (error) {
+      logger.error("Failed to get community posts:", error);
+      return [];
+    }
+  }
+
+  // Get approval events (kind:4550) from admin
+  async getApprovalEvents(adminPubkey: string): Promise<Event[]> {
+    try {
+      return this.getEvents([
+        {
+          kinds: [4550],
+          authors: [adminPubkey],
+        },
+      ]);
+    } catch (error) {
+      logger.error("Failed to get approval events:", error);
+      return [];
+    }
+  }
+
+  // spec_v2.md要件: 承認待ちユーザー会話の取得 (DEPRECATED - use getCommunityPostsToDiscussionList)
   async getPendingUserDiscussions(adminPubkey: string): Promise<Event[]> {
     try {
       // 1. 全てのユーザー作成Kind:34550を取得

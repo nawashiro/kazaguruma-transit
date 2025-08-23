@@ -1,7 +1,7 @@
-import type { Event } from 'nostr-tools';
-import { isValidNpub, npubToHex } from '@/lib/nostr/nostr-utils';
-import { generateDiscussionId, naddrEncode } from '@/lib/nostr/naddr-utils';
-import { logger } from '@/utils/logger';
+import type { Event } from "nostr-tools";
+import { isValidNpub, npubToHex } from "@/lib/nostr/nostr-utils";
+import { naddrEncode } from "@/lib/nostr/naddr-utils";
+import { logger } from "@/utils/logger";
 
 export interface DiscussionCreationForm {
   title: string;
@@ -30,34 +30,41 @@ export interface CreationFlowResult {
   successMessage?: string;
 }
 
-export function validateDiscussionCreationForm(form: DiscussionCreationForm): ValidationResult {
+export function validateDiscussionCreationForm(
+  form: DiscussionCreationForm
+): ValidationResult {
   const errors: string[] = [];
 
   if (!form.title?.trim()) {
-    errors.push('タイトルは必須です');
+    errors.push("タイトルは必須です");
   } else if (form.title.length > 100) {
-    errors.push('タイトルは100文字以内で入力してください');
+    errors.push("タイトルは100文字以内で入力してください");
   }
 
   if (!form.description?.trim()) {
-    errors.push('説明は必須です');
+    errors.push("説明は必須です");
   } else if (form.description.length > 500) {
-    errors.push('説明は500文字以内で入力してください');
+    errors.push("説明は500文字以内で入力してください");
   }
 
   if (form.moderators && form.moderators.length > 0) {
-    const invalidModerators = form.moderators.filter(mod => !isValidNpub(mod));
+    const invalidModerators = form.moderators.filter(
+      (mod) => !isValidNpub(mod)
+    );
     if (invalidModerators.length > 0) {
-      errors.push('無効なモデレーターIDが含まれています');
+      errors.push("無効なモデレーターIDが含まれています");
     }
   }
 
-  if (form.dTag && form.dTag.trim()) {
+  // ID is now required
+  if (!form.dTag || !form.dTag.trim()) {
+    errors.push("IDは必須です");
+  } else {
     const dTagTrimmed = form.dTag.trim();
-    if (dTagTrimmed.length < 3 || dTagTrimmed.length > 50) {
-      errors.push('IDは3文字以上50文字以内で入力してください');
-    } else if (!/^[a-zA-Z0-9_-]+$/.test(dTagTrimmed)) {
-      errors.push('IDは英数字、ハイフン、アンダースコアのみ使用できます');
+    if (dTagTrimmed.length < 3 || dTagTrimmed.length > 100) {
+      errors.push("IDは3文字以上100文字以内で入力してください");
+    } else if (!/^[a-z0-9-]+$/.test(dTagTrimmed)) {
+      errors.push("IDは小文字英数字、ハイフンのみ使用できます");
     }
   }
 
@@ -71,18 +78,19 @@ export function createDiscussionCreationEvent(
   form: DiscussionCreationForm,
   userPubkey: string
 ): Partial<Event> {
-  const dTag = form.dTag && form.dTag.trim() ? form.dTag.trim() : generateDiscussionId();
-  
+  // ID is now required and validated above, so we can safely use it
+  const dTag = form.dTag!.trim();
+
   const tags: string[][] = [
-    ['d', dTag],
-    ['name', form.title.trim()],
-    ['description', form.description.trim()],
+    ["d", dTag],
+    ["name", form.title.trim()],
+    ["description", form.description.trim()],
   ];
 
   if (form.moderators && form.moderators.length > 0) {
-    form.moderators.forEach(moderatorNpub => {
+    form.moderators.forEach((moderatorNpub) => {
       const hexPubkey = npubToHex(moderatorNpub);
-      tags.push(['p', hexPubkey, '', 'moderator']);
+      tags.push(["p", hexPubkey, "", "moderator"]);
     });
   }
 
@@ -101,17 +109,34 @@ export function createDiscussionListingRequest(
   adminPubkey: string,
   userPubkey: string
 ): Partial<Event> {
+  const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
+  if (!discussionListNaddr) {
+    throw new Error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is required");
+  }
+
+  // Parse discussion list naddr to get pubkey
+  const discussionListPubkey = adminPubkey; // Assuming admin manages the discussion list
+
   const tags: string[][] = [
-    ['t', 'discussion-request'],
-    ['p', adminPubkey],
-    ['q', `30023:${adminPubkey}:discussion-list`],
-    ['subject', form.title.trim()],
+    // NIP-72 requires uppercase tags for community definition
+    ["A", discussionListNaddr],
+    ["P", discussionListPubkey],
+    ["K", "34550"],
+    
+    // NIP-72 requires lowercase tags for the specific post/discussion
+    ["a", discussionNaddr],
+    ["p", discussionListPubkey],
+    ["k", "34550"],
+    
+    // Spec requirement: q tag for user-created kind:34550 reference
+    ["q", discussionNaddr]
   ];
 
-  const content = `${form.description.trim()}\n\nnostr:${discussionNaddr}`;
+  // NIP-72 compliant: content should only contain the nostr: URI
+  const content = `nostr:${discussionNaddr}`;
 
   return {
-    kind: 1,
+    kind: 1111, // NIP-72 requires kind:1111 for community posts
     content,
     tags,
     pubkey: userPubkey,
@@ -140,26 +165,28 @@ export async function processDiscussionCreationFlow(
     try {
       signedDiscussionEvent = await params.signEvent(discussionEvent);
     } catch (error) {
-      logger.error('Failed to sign discussion event:', error);
+      logger.error("Failed to sign discussion event:", error);
       return {
         success: false,
-        errors: ['イベントの署名に失敗しました'],
+        errors: ["イベントの署名に失敗しました"],
       };
     }
 
-    const discussionPublished = await params.publishEvent(signedDiscussionEvent);
+    const discussionPublished = await params.publishEvent(
+      signedDiscussionEvent
+    );
     if (!discussionPublished) {
       return {
         success: false,
-        errors: ['リレーへの投稿に失敗しました'],
+        errors: ["リレーへの投稿に失敗しました"],
       };
     }
 
-    const dTag = discussionEvent.tags?.find(tag => tag[0] === 'd')?.[1];
+    const dTag = discussionEvent.tags?.find((tag) => tag[0] === "d")?.[1];
     if (!dTag) {
       return {
         success: false,
-        errors: ['会話IDの生成に失敗しました'],
+        errors: ["会話IDの生成に失敗しました"],
       };
     }
 
@@ -180,10 +207,10 @@ export async function processDiscussionCreationFlow(
     try {
       signedListingRequest = await params.signEvent(listingRequest);
     } catch (error) {
-      logger.error('Failed to sign listing request:', error);
+      logger.error("Failed to sign listing request:", error);
       return {
         success: false,
-        errors: ['掲載リクエストの署名に失敗しました'],
+        errors: ["掲載リクエストの署名に失敗しました"],
       };
     }
 
@@ -191,7 +218,7 @@ export async function processDiscussionCreationFlow(
     if (!requestPublished) {
       return {
         success: false,
-        errors: ['掲載リクエストの送信に失敗しました'],
+        errors: ["掲載リクエストの送信に失敗しました"],
       };
     }
 
@@ -209,12 +236,11 @@ export async function processDiscussionCreationFlow(
       errors: [],
       successMessage,
     };
-
   } catch (error) {
-    logger.error('Discussion creation flow failed:', error);
+    logger.error("Discussion creation flow failed:", error);
     return {
       success: false,
-      errors: ['会話作成中に予期しないエラーが発生しました'],
+      errors: ["会話作成中に予期しないエラーが発生しました"],
     };
   }
 }

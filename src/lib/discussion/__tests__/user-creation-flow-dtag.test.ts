@@ -13,22 +13,30 @@ describe('User Creation Flow - dTag Support', () => {
     title: 'Test Discussion',
     description: 'Test Description',
     moderators: [],
+    dTag: 'test-discussion', // dTag is now required
   };
 
   describe('validateDiscussionCreationForm with dTag', () => {
-    it('validates form without dTag', () => {
-      const result = validateDiscussionCreationForm(baseForm);
+    it('rejects form without dTag', () => {
+      const formWithoutDTag = {
+        title: 'Test Discussion',
+        description: 'Test Description',
+        moderators: [],
+        // dTag is missing
+      } as DiscussionCreationForm;
       
-      expect(result.isValid).toBe(true);
-      expect(result.errors).toHaveLength(0);
+      const result = validateDiscussionCreationForm(formWithoutDTag);
+      
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('IDは必須です');
     });
 
-    it('validates form with empty dTag', () => {
+    it('rejects form with empty dTag', () => {
       const form = { ...baseForm, dTag: '' };
       const result = validateDiscussionCreationForm(form);
       
-      expect(result.isValid).toBe(true);
-      expect(result.errors).toHaveLength(0);
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('IDは必須です');
     });
 
     it('validates form with valid dTag', () => {
@@ -44,27 +52,25 @@ describe('User Creation Flow - dTag Support', () => {
       const result = validateDiscussionCreationForm(form);
       
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('IDは3文字以上50文字以内で入力してください');
+      expect(result.errors).toContain('IDは3文字以上100文字以内で入力してください');
     });
 
     it('rejects dTag that is too long', () => {
-      const form = { ...baseForm, dTag: 'a'.repeat(51) };
+      const form = { ...baseForm, dTag: 'a'.repeat(101) };
       const result = validateDiscussionCreationForm(form);
       
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('IDは3文字以上50文字以内で入力してください');
+      expect(result.errors).toContain('IDは3文字以上100文字以内で入力してください');
     });
 
     it('accepts dTag with valid characters', () => {
       const validDTags = [
         'abc123',
         'test-discussion',
-        'test_discussion',
-        'TEST-DISCUSSION-2024',
-        'discussion_with_underscores',
         'discussion-with-hyphens',
         '123abc',
         'a1b2c3',
+        'my-discussion-2024',
       ];
 
       validDTags.forEach(dTag => {
@@ -86,6 +92,8 @@ describe('User Creation Flow - dTag Support', () => {
         'test&discussion', // ampersand
         'testディスカッション', // non-ASCII
         'test/discussion', // slash
+        'TEST-DISCUSSION', // uppercase letters
+        'test_discussion', // underscore
       ];
 
       invalidDTags.forEach(dTag => {
@@ -93,7 +101,7 @@ describe('User Creation Flow - dTag Support', () => {
         const result = validateDiscussionCreationForm(form);
         
         expect(result.isValid).toBe(false);
-        expect(result.errors).toContain('IDは英数字、ハイフン、アンダースコアのみ使用できます');
+        expect(result.errors).toContain('IDは小文字英数字、ハイフンのみ使用できます');
       });
     });
 
@@ -103,8 +111,8 @@ describe('User Creation Flow - dTag Support', () => {
       const minResult = validateDiscussionCreationForm(minForm);
       expect(minResult.isValid).toBe(true);
 
-      // 50文字（最大）
-      const maxForm = { ...baseForm, dTag: 'a'.repeat(50) };
+      // 100文字（最大）
+      const maxForm = { ...baseForm, dTag: 'a'.repeat(100) };
       const maxResult = validateDiscussionCreationForm(maxForm);
       expect(maxResult.isValid).toBe(true);
     });
@@ -119,37 +127,14 @@ describe('User Creation Flow - dTag Support', () => {
       expect(dTag).toBe('custom-discussion-id');
     });
 
-    it('generates automatic dTag when not specified', () => {
+    it('uses dTag from baseForm when creating event', () => {
       const event = createDiscussionCreationEvent(baseForm, 'test-pubkey');
       
       const dTag = event.tags?.find(tag => tag[0] === 'd')?.[1];
-      expect(dTag).toBeDefined();
-      expect(typeof dTag).toBe('string');
-      expect(dTag!.length).toBeGreaterThan(0);
+      expect(dTag).toBe('test-discussion');
     });
 
-    it('generates automatic dTag when empty string provided', () => {
-      const form = { ...baseForm, dTag: '' };
-      const event = createDiscussionCreationEvent(form, 'test-pubkey');
-      
-      const dTag = event.tags?.find(tag => tag[0] === 'd')?.[1];
-      expect(dTag).toBeDefined();
-      expect(typeof dTag).toBe('string');
-      expect(dTag!.length).toBeGreaterThan(0);
-    });
-
-    it('generates automatic dTag when whitespace-only string provided', () => {
-      const form = { ...baseForm, dTag: '   ' };
-      const event = createDiscussionCreationEvent(form, 'test-pubkey');
-      
-      const dTag = event.tags?.find(tag => tag[0] === 'd')?.[1];
-      expect(dTag).toBeDefined();
-      expect(typeof dTag).toBe('string');
-      expect(dTag!.length).toBeGreaterThan(0);
-      expect(dTag).not.toBe('   ');
-    });
-
-    it('trims whitespace from provided dTag', () => {
+    it('uses trimmed dTag when provided with whitespace', () => {
       const form = { ...baseForm, dTag: '  custom-id  ' };
       const event = createDiscussionCreationEvent(form, 'test-pubkey');
       

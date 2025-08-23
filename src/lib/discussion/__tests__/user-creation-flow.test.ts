@@ -32,6 +32,7 @@ describe('User Discussion Creation Flow', () => {
     title: 'バス停での体験',
     description: 'バス停での利用体験について意見交換しましょう',
     moderators: [], // Skip moderators for now
+    dTag: 'bus-stop-experience-001',
   };
 
   const validUserPubkey = 'f723816e33f9e4ed5e3b4c3b2c99e8b8a8c8d9e7f123456789abcdef01234567';
@@ -130,13 +131,13 @@ describe('User Discussion Creation Flow', () => {
       expect(result.pubkey).toBe(validUserPubkey);
       
       // Check required tags
-      const nameTag = result.tags.find(tag => tag[0] === 'name');
-      const descTag = result.tags.find(tag => tag[0] === 'description');
-      const dTag = result.tags.find(tag => tag[0] === 'd');
+      const nameTag = result.tags!.find(tag => tag[0] === 'name');
+      const descTag = result.tags!.find(tag => tag[0] === 'description');
+      const dTag = result.tags!.find(tag => tag[0] === 'd');
       
       expect(nameTag?.[1]).toBe(validCreationForm.title);
       expect(descTag?.[1]).toBe(validCreationForm.description);
-      expect(dTag?.[1]).toMatch(/^[a-z0-9\-]+$/); // generated ID
+      expect(dTag?.[1]).toBe(validCreationForm.dTag);
     });
 
     test('should include moderator tags', () => {
@@ -145,28 +146,32 @@ describe('User Discussion Creation Flow', () => {
         validUserPubkey
       );
       
-      const moderatorTags = result.tags.filter(tag => 
+      const moderatorTags = result.tags!.filter(tag => 
         tag[0] === 'p' && tag[3] === 'moderator'
       );
       
       expect(moderatorTags).toHaveLength(validCreationForm.moderators.length);
     });
 
-    test('should generate unique dTag for each creation', () => {
-      const result1 = createDiscussionCreationEvent(validCreationForm, validUserPubkey);
-      const result2 = createDiscussionCreationEvent(validCreationForm, validUserPubkey);
+    test('should use provided dTag', () => {
+      const result = createDiscussionCreationEvent(validCreationForm, validUserPubkey);
       
-      const dTag1 = result1.tags.find(tag => tag[0] === 'd')?.[1];
-      const dTag2 = result2.tags.find(tag => tag[0] === 'd')?.[1];
+      const dTag = result.tags!.find(tag => tag[0] === 'd')?.[1];
       
-      expect(dTag1).not.toBe(dTag2);
+      expect(dTag).toBe(validCreationForm.dTag);
     });
   });
 
   describe('createDiscussionListingRequest', () => {
     const mockDiscussionNaddr = 'naddr1test123...';
+    const mockDiscussionListNaddr = 'naddr1discussion_list_test...';
 
-    test('should create valid listing request event', () => {
+    // Mock process.env for testing
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR = mockDiscussionListNaddr;
+    });
+
+    test('should create NIP-72 compliant listing request', () => {
       const result = createDiscussionListingRequest(
         validCreationForm,
         mockDiscussionNaddr,
@@ -174,22 +179,15 @@ describe('User Discussion Creation Flow', () => {
         validUserPubkey
       );
       
-      expect(result.kind).toBe(1);
+      // NIP-72 requires kind:1111 for community posts
+      expect(result.kind).toBe(1111);
       expect(result.pubkey).toBe(validUserPubkey);
       
-      // Check required tags
-      const requestTag = result.tags.find(tag => 
-        tag[0] === 't' && tag[1] === 'discussion-request'
-      );
-      const adminTag = result.tags.find(tag => tag[0] === 'p');
-      const qTag = result.tags.find(tag => tag[0] === 'q');
-      
-      expect(requestTag).toBeDefined();
-      expect(adminTag?.[1]).toBe(adminPubkey);
-      expect(qTag?.[1]).toBe(`30023:${adminPubkey}:discussion-list`);
+      // Content should only contain nostr: URI as per NIP-72
+      expect(result.content).toBe(`nostr:${mockDiscussionNaddr}`);
     });
 
-    test('should include subject tag with title', () => {
+    test('should include required NIP-72 tags', () => {
       const result = createDiscussionListingRequest(
         validCreationForm,
         mockDiscussionNaddr,
@@ -197,11 +195,43 @@ describe('User Discussion Creation Flow', () => {
         validUserPubkey
       );
       
-      const subjectTag = result.tags.find(tag => tag[0] === 'subject');
-      expect(subjectTag?.[1]).toBe(validCreationForm.title);
+      const tags = result.tags || [];
+      
+      // NIP-72 requires uppercase A tag for community definition
+      const ATag = tags.find(tag => tag[0] === 'A');
+      expect(ATag).toBeDefined();
+      expect(ATag![1]).toBe(mockDiscussionListNaddr);
+
+      // NIP-72 requires lowercase a tag for the user's discussion
+      const aTag = tags.find(tag => tag[0] === 'a');
+      expect(aTag).toBeDefined();
+      expect(aTag![1]).toBe(mockDiscussionNaddr);
+
+      // NIP-72 requires uppercase P tag for community author
+      const PTag = tags.find(tag => tag[0] === 'P');
+      expect(PTag).toBeDefined();
+
+      // NIP-72 requires lowercase p tag for community author
+      const pTag = tags.find(tag => tag[0] === 'p');
+      expect(pTag).toBeDefined();
+
+      // NIP-72 requires uppercase K tag with 34550
+      const KTag = tags.find(tag => tag[0] === 'K');
+      expect(KTag).toBeDefined();
+      expect(KTag![1]).toBe('34550');
+
+      // NIP-72 requires lowercase k tag with 34550
+      const kTag = tags.find(tag => tag[0] === 'k');
+      expect(kTag).toBeDefined();
+      expect(kTag![1]).toBe('34550');
+
+      // Spec requires q tag for user-created kind:34550 reference
+      const qTag = tags.find(tag => tag[0] === 'q');
+      expect(qTag).toBeDefined();
+      expect(qTag![1]).toBe(mockDiscussionNaddr);
     });
 
-    test('should include discussion naddr in content', () => {
+    test('should NOT include non-compliant tags', () => {
       const result = createDiscussionListingRequest(
         validCreationForm,
         mockDiscussionNaddr,
@@ -209,8 +239,15 @@ describe('User Discussion Creation Flow', () => {
         validUserPubkey
       );
       
-      expect(result.content).toContain(`nostr:${mockDiscussionNaddr}`);
-      expect(result.content).toContain(validCreationForm.description);
+      const tags = result.tags || [];
+      
+      // Should NOT have t tag (non-standard)
+      const tTag = tags.find(tag => tag[0] === 't');
+      expect(tTag).toBeUndefined();
+      
+      // Should NOT have subject tag (non-standard)
+      const subjectTag = tags.find(tag => tag[0] === 'subject');
+      expect(subjectTag).toBeUndefined();
     });
   });
 
@@ -315,6 +352,7 @@ describe('User Discussion Creation Flow', () => {
         title: '新宿駅前バス停の体験',
         description: '朝の通勤時間帯での利用体験について話し合いましょう',
         moderators: [],
+        dTag: 'shinjuku-station-experience',
       };
 
       // 1. Validate form
@@ -327,8 +365,8 @@ describe('User Discussion Creation Flow', () => {
 
       // 3. Build naddr from created discussion (data structure for reference)
       const discussionData = {
-        id: `34550:${validUserPubkey}:${discussionEvent.tags.find(t => t[0] === 'd')?.[1]}`,
-        dTag: discussionEvent.tags.find(t => t[0] === 'd')?.[1] || '',
+        id: `34550:${validUserPubkey}:${form.dTag}`,
+        dTag: form.dTag,
         title: form.title,
         description: form.description,
         moderators: [],
@@ -345,11 +383,11 @@ describe('User Discussion Creation Flow', () => {
         validUserPubkey
       );
 
-      expect(listingRequest.kind).toBe(1);
-      expect(listingRequest.content).toContain('nostr:naddr1test...');
+      expect(listingRequest.kind).toBe(1111);
+      expect(listingRequest.content).toBe('nostr:naddr1test...');
 
       // 5. Validate discussion data structure
-      expect(discussionData.dTag).toBeTruthy();
+      expect(discussionData.dTag).toBe(form.dTag);
       expect(discussionData.title).toBe(form.title);
       expect(discussionData.description).toBe(form.description);
     });
@@ -360,6 +398,7 @@ describe('User Discussion Creation Flow', () => {
         title: 'バス停での体験談 - 朝の通勤編',
         description: '毎朝利用している風ぐるまについて、\n改善点や良い点を共有しませんか？',
         moderators: [],
+        dTag: 'bus-experience-morning-commute',
       };
 
       const validation = validateDiscussionCreationForm(japaneseForm);
@@ -385,6 +424,7 @@ describe('User Discussion Creation Flow', () => {
           title,
           description,
           moderators: [],
+          dTag: 'test-discussion-id',
         });
         
         expect(result.isValid).toBe(false);
@@ -396,8 +436,13 @@ describe('User Discussion Creation Flow', () => {
       const mockSignEvent = jest.fn().mockResolvedValue({ id: 'test' });
       const mockPublishEvent = jest.fn().mockResolvedValue(false); // Network failure
 
+      const validFormWithDTag = {
+        ...validCreationForm,
+        dTag: 'network-test-discussion',
+      };
+
       const result = await processDiscussionCreationFlow({
-        formData: validCreationForm,
+        formData: validFormWithDTag,
         userPubkey: validUserPubkey,
         adminPubkey,
         signEvent: mockSignEvent,
@@ -415,12 +460,12 @@ describe('User Discussion Creation Flow', () => {
       
       // Check NIP-72 compliance
       expect(event.kind).toBe(34550); // Replaceable event
-      expect(event.tags.find(tag => tag[0] === 'd')).toBeDefined(); // d tag required
-      expect(event.tags.find(tag => tag[0] === 'name')).toBeDefined(); // name tag
-      expect(event.tags.find(tag => tag[0] === 'description')).toBeDefined(); // description tag
+      expect(event.tags!.find(tag => tag[0] === 'd')).toBeDefined(); // d tag required
+      expect(event.tags!.find(tag => tag[0] === 'name')).toBeDefined(); // name tag
+      expect(event.tags!.find(tag => tag[0] === 'description')).toBeDefined(); // description tag
     });
 
-    test('should create listing request according to NIP-18 specification', () => {
+    test('should create listing request according to NIP-72 specification', () => {
       const request = createDiscussionListingRequest(
         validCreationForm,
         'naddr1test...',
@@ -428,16 +473,16 @@ describe('User Discussion Creation Flow', () => {
         validUserPubkey
       );
       
-      // Check NIP-18 compliance for quotes
-      const qTag = request.tags.find(tag => tag[0] === 'q');
+      // Check NIP-72 compliance - should have q tag referencing user discussion
+      const qTag = request.tags!.find(tag => tag[0] === 'q');
       expect(qTag).toBeDefined();
-      expect(qTag?.[1]).toMatch(/^30023:/); // Correct event reference format
+      expect(qTag?.[1]).toBe('naddr1test...'); // Should reference the user's discussion naddr
       
-      // Check discussion-request tag
-      const requestTag = request.tags.find(tag => 
-        tag[0] === 't' && tag[1] === 'discussion-request'
-      );
-      expect(requestTag).toBeDefined();
+      // Should NOT have t or subject tags (non-standard)
+      const tTag = request.tags!.find(tag => tag[0] === 't');
+      const subjectTag = request.tags!.find(tag => tag[0] === 'subject');
+      expect(tTag).toBeUndefined();
+      expect(subjectTag).toBeUndefined();
     });
 
     test('should include friendly guidance messages as per spec', () => {

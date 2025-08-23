@@ -110,8 +110,7 @@ export default function PostApprovalPage() {
     setApprovingIds((prev) => new Set([...prev, post.id]));
     try {
       const eventTemplate = nostrService.createApprovalEvent(
-        post.id,
-        post.authorPubkey,
+        post.event,
         discussion.id
       );
 
@@ -371,7 +370,7 @@ export default function PostApprovalPage() {
                                 onClick={() => handleRevokeApproval(post)}
                                 disabled={revokingIds.has(post.id)}
                                 loading={revokingIds.has(post.id)}
-                                variant="outline"
+                                secondary
                                 className="btn-xs"
                               >
                                 <span>

@@ -1,6 +1,6 @@
 import type { Event } from "nostr-tools";
 import { isValidNpub, npubToHex } from "@/lib/nostr/nostr-utils";
-import { naddrEncode } from "@/lib/nostr/naddr-utils";
+import { naddrEncode, naddrDecode } from "@/lib/nostr/naddr-utils";
 import { logger } from "@/utils/logger";
 
 export interface DiscussionCreationForm {
@@ -114,22 +114,36 @@ export function createDiscussionListingRequest(
     throw new Error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is required");
   }
 
+  // Convert discussion list naddr to hex format required by NIP-72
+  let discussionListHexId: string;
+  try {
+    const listDecoded = naddrDecode(discussionListNaddr);
+    discussionListHexId = `${listDecoded.kind}:${listDecoded.pubkey}:${listDecoded.identifier}`;
+  } catch (error) {
+    throw new Error(`Invalid discussion list naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+
   // Parse discussion list naddr to get pubkey
   const discussionListPubkey = adminPubkey; // Assuming admin manages the discussion list
 
+  // Convert discussion naddr to hex format required by NIP-72
+  // discussionNaddr format: naddr1... -> needs to be 34550:pubkey:identifier
+  let discussionHexId: string;
+  try {
+    const decoded = naddrDecode(discussionNaddr);
+    discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
+  } catch (error) {
+    throw new Error(`Invalid discussion naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+
   const tags: string[][] = [
-    // NIP-72 requires uppercase tags for community definition
-    ["A", discussionListNaddr],
-    ["P", discussionListPubkey],
-    ["K", "34550"],
-    
-    // NIP-72 requires lowercase tags for the specific post/discussion
-    ["a", discussionNaddr],
+    // NIP-72 requires a tag for community definition - must be hex format
+    ["a", discussionListHexId],
     ["p", discussionListPubkey],
     ["k", "34550"],
     
-    // Spec requirement: q tag for user-created kind:34550 reference
-    ["q", discussionNaddr]
+    // Spec requirement: q tag for user-created kind:34550 reference - use hex format
+    ["q", discussionHexId]
   ];
 
   // NIP-72 compliant: content should only contain the nostr: URI

@@ -17,9 +17,7 @@ import {
   isValidNpub,
   npubToHex,
 } from "@/lib/nostr/nostr-utils";
-import {
-  extractDiscussionFromNaddr,
-} from "@/lib/nostr/naddr-utils";
+import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
@@ -65,10 +63,12 @@ export default function DiscussionEditPage() {
 
   const loadDiscussion = useCallback(async () => {
     if (!isDiscussionsEnabled() || !discussionInfo) return;
-    
+
     setIsLoading(true);
     try {
-      const discussionEvents = await nostrService.getDiscussions(discussionInfo.authorPubkey);
+      const discussionEvents = await nostrService.getDiscussions(
+        discussionInfo.authorPubkey
+      );
       const parsedDiscussion = discussionEvents
         .map(parseDiscussionEvent)
         .find((d) => d && d.dTag === discussionInfo.dTag);
@@ -81,7 +81,7 @@ export default function DiscussionEditPage() {
       setFormData({
         title: parsedDiscussion.title,
         description: parsedDiscussion.description,
-        moderators: parsedDiscussion.moderators.map(m => m.pubkey), // npub形式に変換が必要
+        moderators: parsedDiscussion.moderators.map((m) => m.pubkey), // npub形式に変換が必要
       });
     } catch (error) {
       logger.error("Failed to load discussion:", error);
@@ -104,17 +104,17 @@ export default function DiscussionEditPage() {
 
     // バリデーション
     const errors: string[] = [];
-    
+
     if (!formData.title.trim()) {
-      errors.push('タイトルは必須です');
+      errors.push("タイトルは必須です");
     } else if (formData.title.length > 100) {
-      errors.push('タイトルは100文字以内で入力してください');
+      errors.push("タイトルは100文字以内で入力してください");
     }
 
     if (!formData.description.trim()) {
-      errors.push('説明は必須です');
+      errors.push("説明は必須です");
     } else if (formData.description.length > 500) {
-      errors.push('説明は500文字以内で入力してください');
+      errors.push("説明は500文字以内で入力してください");
     }
 
     const moderators = moderatorInput
@@ -124,9 +124,9 @@ export default function DiscussionEditPage() {
       .concat(formData.moderators);
 
     if (moderators.length > 0) {
-      const invalidModerators = moderators.filter(mod => !isValidNpub(mod));
+      const invalidModerators = moderators.filter((mod) => !isValidNpub(mod));
       if (invalidModerators.length > 0) {
-        errors.push('無効なモデレーターIDが含まれています');
+        errors.push("無効なモデレーターIDが含まれています");
       }
     }
 
@@ -147,14 +147,14 @@ export default function DiscussionEditPage() {
       }
 
       const tags: string[][] = [
-        ['d', discussion.dTag], // Use original dTag - not editable per NIP-72
-        ['name', formData.title.trim()],
-        ['description', formData.description.trim()],
+        ["d", discussion.dTag], // Use original dTag - not editable per NIP-72
+        ["name", formData.title.trim()],
+        ["description", formData.description.trim()],
       ];
 
-      moderators.forEach(moderatorNpub => {
+      moderators.forEach((moderatorNpub) => {
         const hexPubkey = npubToHex(moderatorNpub);
-        tags.push(['p', hexPubkey, '', 'moderator']);
+        tags.push(["p", hexPubkey, "", "moderator"]);
       });
 
       const eventTemplate = {
@@ -173,12 +173,11 @@ export default function DiscussionEditPage() {
       }
 
       setSuccessMessage("会話が更新されました");
-      
+
       // 数秒後に会話詳細画面に戻る
       setTimeout(() => {
         router.push(`/discussions/${naddrParam}`);
       }, 2000);
-
     } catch (error) {
       logger.error("Failed to update discussion:", error);
       setErrors(["会話の更新に失敗しました"]);
@@ -229,7 +228,7 @@ export default function DiscussionEditPage() {
   const addModerator = () => {
     const trimmedInput = moderatorInput.trim();
     if (trimmedInput && !formData.moderators.includes(trimmedInput)) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         moderators: [...prev.moderators, trimmedInput],
       }));
@@ -238,9 +237,9 @@ export default function DiscussionEditPage() {
   };
 
   const removeModerator = (npub: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      moderators: prev.moderators.filter(m => m !== npub),
+      moderators: prev.moderators.filter((m) => m !== npub),
     }));
   };
 
@@ -299,7 +298,9 @@ export default function DiscussionEditPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">アクセス拒否</h1>
-          <p className="text-gray-600 mb-4">この会話を編集する権限がありません。</p>
+          <p className="text-gray-600 mb-4">
+            この会話を編集する権限がありません。
+          </p>
           <Link href={`/discussions/${naddrParam}`} className="btn btn-primary">
             会話に戻る
           </Link>
@@ -318,7 +319,7 @@ export default function DiscussionEditPage() {
           >
             <span>← 会話に戻る</span>
           </Link>
-          
+
           <h1 className="text-3xl font-bold mb-6 ruby-text">会話を編集</h1>
         </div>
 
@@ -338,8 +339,10 @@ export default function DiscussionEditPage() {
           ) : (
             <div className="card bg-base-100 shadow-lg border border-gray-200 dark:border-gray-700">
               <div className="card-body">
-                <h2 className="text-xl font-semibold mb-6 ruby-text">会話情報を編集</h2>
-                
+                <h2 className="text-xl font-semibold mb-6 ruby-text">
+                  会話情報を編集
+                </h2>
+
                 <div className="space-y-6">
                   <div>
                     <label htmlFor="title" className="label ruby-text">
@@ -396,10 +399,9 @@ export default function DiscussionEditPage() {
                       <span className="label-text">会話ID</span>
                     </label>
                     <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <span className="text-sm font-mono">{discussion?.dTag || 'loading...'}</span>
-                    </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      IDはNIP-72仕様により変更できません。
+                      <span className="text-sm font-mono">
+                        {discussion?.dTag || "loading..."}
+                      </span>
                     </div>
                   </div>
 
@@ -407,14 +409,11 @@ export default function DiscussionEditPage() {
                     <label htmlFor="moderators" className="label ruby-text">
                       <span className="label-text">モデレーター（任意）</span>
                     </label>
-                    
+
                     {formData.moderators.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-2">
                         {formData.moderators.map((npub) => (
-                          <div
-                            key={npub}
-                            className="badge badge-outline gap-1"
-                          >
+                          <div key={npub} className="badge badge-outline gap-1">
                             <span className="text-xs font-mono">
                               {npub.substring(0, 10)}...
                             </span>
@@ -430,7 +429,7 @@ export default function DiscussionEditPage() {
                         ))}
                       </div>
                     )}
-                    
+
                     <div className="flex gap-2">
                       <input
                         id="moderators"
@@ -445,7 +444,9 @@ export default function DiscussionEditPage() {
                       <Button
                         onClick={addModerator}
                         secondary
-                        disabled={!moderatorInput.trim() || isSaving || isDeleting}
+                        disabled={
+                          !moderatorInput.trim() || isSaving || isDeleting
+                        }
                       >
                         追加
                       </Button>
@@ -463,24 +464,34 @@ export default function DiscussionEditPage() {
                   )}
 
                   <div className="flex gap-4">
-                    <Button
+                    <button
+                      className="btn btn-primary rounded-full dark:rounded-sm ruby-text"
                       onClick={handleSave}
-                      
-                      fullWidth
-                      disabled={isSaving || isDeleting || !formData.title.trim() || !formData.description.trim()}
-                      loading={isSaving}
+                      disabled={
+                        isSaving ||
+                        isDeleting ||
+                        !formData.title.trim() ||
+                        !formData.description.trim()
+                      }
                     >
-                      {isSaving ? "保存中..." : "変更を保存"}
-                    </Button>
-                    
-                    <Button
+                      {isSaving ? (
+                        <span>保存中...</span>
+                      ) : (
+                        <span>変更を保存</span>
+                      )}
+                    </button>
+
+                    <button
+                      className="btn btn-outline btn-error rounded-full dark:rounded-sm ruby-text"
                       onClick={() => setShowDeleteConfirm(true)}
-                      secondary
                       disabled={isSaving || isDeleting}
-                      loading={isDeleting}
                     >
-                      {isDeleting ? "削除中..." : "会話を削除"}
-                    </Button>
+                      {isDeleting ? (
+                        <span>削除中...</span>
+                      ) : (
+                        <span>会話を削除</span>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -498,21 +509,20 @@ export default function DiscussionEditPage() {
               この会話を削除しますか？この操作は取り消せません。
             </p>
             <div className="modal-action">
-              <Button
+              <button
                 onClick={() => setShowDeleteConfirm(false)}
-                secondary
+                className="btn btn-outline rounded-full dark:rounded-sm"
                 disabled={isDeleting}
               >
-                キャンセル
-              </Button>
-              <Button
+                <span>キャンセル</span>
+              </button>
+              <button
                 onClick={handleDelete}
-                secondary
+                className="btn btn-error rounded-full dark:rounded-sm"
                 disabled={isDeleting}
-                loading={isDeleting}
               >
-                削除する
-              </Button>
+                <span>削除する</span>
+              </button>
             </div>
           </div>
         </dialog>

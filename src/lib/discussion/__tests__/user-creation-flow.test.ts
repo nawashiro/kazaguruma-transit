@@ -163,8 +163,19 @@ describe('User Discussion Creation Flow', () => {
   });
 
   describe('createDiscussionListingRequest', () => {
-    const mockDiscussionNaddr = 'naddr1test123...';
-    const mockDiscussionListNaddr = 'naddr1discussion_list_test...';
+    // Import naddr utilities for testing
+    const { naddrEncode } = require('@/lib/nostr/naddr-utils');
+    
+    const mockDiscussionNaddr = naddrEncode({
+      identifier: 'bus-stop-experience-001',
+      pubkey: validUserPubkey,
+      kind: 34550,
+    });
+    const mockDiscussionListNaddr = naddrEncode({
+      identifier: 'discussion_list_test',
+      pubkey: adminPubkey,
+      kind: 34550,
+    });
 
     // Mock process.env for testing
     beforeEach(() => {
@@ -197,38 +208,24 @@ describe('User Discussion Creation Flow', () => {
       
       const tags = result.tags || [];
       
-      // NIP-72 requires uppercase A tag for community definition
-      const ATag = tags.find(tag => tag[0] === 'A');
-      expect(ATag).toBeDefined();
-      expect(ATag![1]).toBe(mockDiscussionListNaddr);
-
-      // NIP-72 requires lowercase a tag for the user's discussion
+      // NIP-72 requires a tag for community definition (in hex format)
       const aTag = tags.find(tag => tag[0] === 'a');
       expect(aTag).toBeDefined();
-      expect(aTag![1]).toBe(mockDiscussionNaddr);
+      expect(aTag![1]).toBe(`34550:${adminPubkey}:discussion_list_test`);
 
-      // NIP-72 requires uppercase P tag for community author
-      const PTag = tags.find(tag => tag[0] === 'P');
-      expect(PTag).toBeDefined();
-
-      // NIP-72 requires lowercase p tag for community author
+      // NIP-72 requires p tag for community author
       const pTag = tags.find(tag => tag[0] === 'p');
       expect(pTag).toBeDefined();
 
-      // NIP-72 requires uppercase K tag with 34550
-      const KTag = tags.find(tag => tag[0] === 'K');
-      expect(KTag).toBeDefined();
-      expect(KTag![1]).toBe('34550');
-
-      // NIP-72 requires lowercase k tag with 34550
+      // NIP-72 requires k tag with 34550
       const kTag = tags.find(tag => tag[0] === 'k');
       expect(kTag).toBeDefined();
       expect(kTag![1]).toBe('34550');
 
-      // Spec requires q tag for user-created kind:34550 reference
+      // Spec requires q tag for user-created kind:34550 reference (in hex format)
       const qTag = tags.find(tag => tag[0] === 'q');
       expect(qTag).toBeDefined();
-      expect(qTag![1]).toBe(mockDiscussionNaddr);
+      expect(qTag![1]).toBe(`34550:${validUserPubkey}:bus-stop-experience-001`);
     });
 
     test('should NOT include non-compliant tags', () => {
@@ -376,15 +373,22 @@ describe('User Discussion Creation Flow', () => {
       };
 
       // 4. Create listing request
+      const { naddrEncode } = require('@/lib/nostr/naddr-utils');
+      const validMockNaddr = naddrEncode({
+        identifier: 'bus-stop-experience-001',
+        pubkey: validUserPubkey,
+        kind: 34550,
+      });
+      
       const listingRequest = createDiscussionListingRequest(
         form,
-        'naddr1test...', // Mock naddr
+        validMockNaddr,
         adminPubkey,
         validUserPubkey
       );
 
       expect(listingRequest.kind).toBe(1111);
-      expect(listingRequest.content).toBe('nostr:naddr1test...');
+      expect(listingRequest.content).toBe(`nostr:${validMockNaddr}`);
 
       // 5. Validate discussion data structure
       expect(discussionData.dTag).toBe(form.dTag);
@@ -466,17 +470,24 @@ describe('User Discussion Creation Flow', () => {
     });
 
     test('should create listing request according to NIP-72 specification', () => {
+      const { naddrEncode } = require('@/lib/nostr/naddr-utils');
+      const validMockNaddr = naddrEncode({
+        identifier: 'bus-stop-experience-001',
+        pubkey: validUserPubkey,
+        kind: 34550,
+      });
+      
       const request = createDiscussionListingRequest(
         validCreationForm,
-        'naddr1test...',
+        validMockNaddr,
         adminPubkey,
         validUserPubkey
       );
       
-      // Check NIP-72 compliance - should have q tag referencing user discussion
+      // Check NIP-72 compliance - should have q tag referencing user discussion (in hex format)
       const qTag = request.tags!.find(tag => tag[0] === 'q');
       expect(qTag).toBeDefined();
-      expect(qTag?.[1]).toBe('naddr1test...'); // Should reference the user's discussion naddr
+      expect(qTag?.[1]).toBe(`34550:${validUserPubkey}:bus-stop-experience-001`); // Should reference the user's discussion in hex format
       
       // Should NOT have t or subject tags (non-standard)
       const tTag = request.tags!.find(tag => tag[0] === 't');

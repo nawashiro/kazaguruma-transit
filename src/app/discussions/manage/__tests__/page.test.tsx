@@ -78,9 +78,8 @@ describe('DiscussionManagePage NIP-72 compliance', () => {
         id: 'post1',
         kind: 1111,
         tags: [
-          ['A', 'naddr1discussion_list'], // Community definition
-          ['a', 'naddr1user_discussion'], // User's discussion reference
-          ['q', 'naddr1user_discussion'], // Spec requirement
+          ['a', '34550:admin-pubkey:discussion_list'], // Community definition
+          ['q', '34550:user1:user_discussion'], // Spec requirement
         ],
         content: 'nostr:naddr1user_discussion',
         pubkey: 'user1',
@@ -172,7 +171,6 @@ describe('DiscussionManagePage NIP-72 compliance', () => {
       id: 'post1',
       kind: 1111,
       tags: [
-        ['A', 'community_naddr'],
         ['a', 'user_discussion_naddr'], 
         ['q', 'user_discussion_naddr'], // This should be used to get discussion details
       ],

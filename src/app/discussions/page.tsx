@@ -68,7 +68,7 @@ export default function DiscussionsPage() {
     } else {
       setIsLoadingMore(true);
     }
-    
+
     try {
       // Calculate until timestamp for pagination (last discussion's created_at - 1)
       let until: number | undefined;
@@ -79,14 +79,14 @@ export default function DiscussionsPage() {
 
       // spec_v2.md要件: 管理者作成のKind:34550で承認されたユーザー作成会話を取得（ページネーション対応）
       const approvedUserDiscussions =
-        await nostrService.getApprovedUserDiscussions(ADMIN_PUBKEY, { 
+        await nostrService.getApprovedUserDiscussions(ADMIN_PUBKEY, {
           limit: ITEMS_PER_PAGE + 1, // +1 to check if there are more items
-          until 
+          until,
         });
 
       // Check if there are more items
       const hasMoreItems = approvedUserDiscussions.length > ITEMS_PER_PAGE;
-      const discussionsToProcess = hasMoreItems 
+      const discussionsToProcess = hasMoreItems
         ? approvedUserDiscussions.slice(0, ITEMS_PER_PAGE)
         : approvedUserDiscussions;
 
@@ -105,20 +105,21 @@ export default function DiscussionsPage() {
           };
         })
         .filter((d): d is any => d !== null)
-        .sort(
-          (a: any, b: any) => {
-            const aTime = a?.approvedAt || a?.createdAt || 0;
-            const bTime = b?.approvedAt || b?.createdAt || 0;
-            return bTime - aTime;
-          }
-        );
+        .sort((a: any, b: any) => {
+          const aTime = a?.approvedAt || a?.createdAt || 0;
+          const bTime = b?.approvedAt || b?.createdAt || 0;
+          return bTime - aTime;
+        });
 
       if (append && page > 1) {
-        setDiscussions(prev => [...prev, ...parsedDiscussions as Discussion[]]);
+        setDiscussions((prev) => [
+          ...prev,
+          ...(parsedDiscussions as Discussion[]),
+        ]);
       } else {
         setDiscussions(parsedDiscussions as Discussion[]);
       }
-      
+
       setHasMore(hasMoreItems);
       setCurrentPage(page);
 
@@ -138,7 +139,9 @@ export default function DiscussionsPage() {
             uniquePubkeys.add(discussion.authorPubkey);
           }
           // モデレーターのプロファイル取得
-          discussion.moderators.forEach((mod: any) => uniquePubkeys.add(mod.pubkey));
+          discussion.moderators.forEach((mod: any) =>
+            uniquePubkeys.add(mod.pubkey)
+          );
         }
       });
 
@@ -329,7 +332,7 @@ export default function DiscussionsPage() {
                         読み込み中...
                       </>
                     ) : (
-                      'さらに読み込む'
+                      "さらに読み込む"
                     )}
                   </button>
                 </div>
@@ -348,7 +351,7 @@ export default function DiscussionsPage() {
               <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="card-body">
                   <p className="text-sm text-gray-600 dark:text-gray-400 ruby-text mb-4">
-                    誰でも新しい会話を作成できます。会話一覧への掲載は管理者による承認が必要です。
+                    誰でも新しい会話を作成できます。
                   </p>
                   <Link
                     href="/discussions/create"

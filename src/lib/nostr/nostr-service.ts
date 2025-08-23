@@ -279,9 +279,21 @@ export class NostrService {
     discussionId: string,
     busStopTag?: string
   ): Omit<Event, "id" | "sig" | "pubkey"> {
+    // Convert discussionId from naddr to hex format if needed
+    let discussionHexId = discussionId;
+    if (discussionId.startsWith('naddr1')) {
+      try {
+        const { naddrDecode } = require('@/lib/nostr/naddr-utils');
+        const decoded = naddrDecode(discussionId);
+        discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
+      } catch (error) {
+        logger.error('Failed to decode discussion naddr:', error);
+        throw new Error(`Invalid discussion naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
     const tags: string[][] = [
-      ["a", discussionId],
-      ["A", discussionId],
+      ["a", discussionHexId],
     ];
 
     if (busStopTag) {
@@ -300,8 +312,21 @@ export class NostrService {
     postEvent: Event,
     discussionId: string
   ): Omit<Event, "id" | "sig" | "pubkey"> {
+    // Convert discussionId from naddr to hex format if needed
+    let discussionHexId = discussionId;
+    if (discussionId.startsWith('naddr1')) {
+      try {
+        const { naddrDecode } = require('@/lib/nostr/naddr-utils');
+        const decoded = naddrDecode(discussionId);
+        discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
+      } catch (error) {
+        logger.error('Failed to decode discussion naddr:', error);
+        throw new Error(`Invalid discussion naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
     const tags: string[][] = [
-      ["a", discussionId],
+      ["a", discussionHexId],
       ["e", postEvent.id],
       ["p", postEvent.pubkey],
       ["k", postEvent.kind.toString()],
@@ -326,7 +351,19 @@ export class NostrService {
     ];
 
     if (discussionId) {
-      tags.push(["a", discussionId]);
+      // Convert discussionId from naddr to hex format if needed
+      let discussionHexId = discussionId;
+      if (discussionId.startsWith('naddr1')) {
+        try {
+          const { naddrDecode } = require('@/lib/nostr/naddr-utils');
+          const decoded = naddrDecode(discussionId);
+          discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
+        } catch (error) {
+          logger.error('Failed to decode discussion naddr:', error);
+          throw new Error(`Invalid discussion naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+      tags.push(["a", discussionHexId]);
     }
 
     return {

@@ -25,14 +25,15 @@ import type {
 } from "@/types/discussion";
 import type { Event as NostrEvent } from "nostr-tools";
 import { logger } from "@/utils/logger";
+import { processCommunityPosts, extractDiscussionDetails, type ProcessedDiscussion } from "./discussion-processing";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function DiscussionManagePage() {
   // spec_v2.md要件: 承認待ちと承認済み会話の管理
-  const [pendingDiscussions, setPendingDiscussions] = useState<Discussion[]>([]);
-  const [approvedDiscussions, setApprovedDiscussions] = useState<Discussion[]>([]);
+  const [pendingDiscussions, setPendingDiscussions] = useState<ProcessedDiscussion[]>([]);
+  const [approvedDiscussions, setApprovedDiscussions] = useState<ProcessedDiscussion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
@@ -77,27 +78,39 @@ export default function DiscussionManagePage() {
         nostrService.getApprovalEvents(ADMIN_PUBKEY),
       ]);
 
-      // For now, set empty arrays to make the page functional
-      // TODO: Implement proper NIP-72 community post processing
-      setPendingDiscussions([]);
-      setApprovedDiscussions([]);
+      // Process community posts according to NIP-72 spec
+      const processed = processCommunityPosts(communityPosts, approvalEvents);
+      
+      setPendingDiscussions(processed.pending);
+      setApprovedDiscussions(processed.approved);
     } catch (error) {
       logger.error("Failed to load data:", error);
+      setPendingDiscussions([]);
+      setApprovedDiscussions([]);
     } finally {
       setIsLoading(false);
     }
   };
 
   // spec_v2.md要件: 会話一覧への追加承認
-  const handleApproveDiscussion = async (discussion: Discussion) => {
-    setProcessingId(discussion.id);
+  const handleApproveDiscussion = async (discussion: ProcessedDiscussion) => {
+    setProcessingId(discussion.communityPostId);
     setErrors([]);
     try {
-      const eventTemplate = nostrService.createDiscussionApprovalEvent({
-        id: discussion.id,
-        dTag: discussion.dTag,
-        authorPubkey: discussion.authorPubkey,
-      });
+      // Create NIP-72 approval event for the community post
+      const eventTemplate = nostrService.createApprovalEvent(
+        // We need the original community post event for approval
+        {
+          id: discussion.communityPostId,
+          kind: 1111,
+          pubkey: discussion.authorPubkey,
+          created_at: discussion.createdAt,
+          tags: [],
+          content: `nostr:${discussion.userDiscussionNaddr}`,
+          sig: '',
+        },
+        discussion.userDiscussionNaddr
+      );
 
       const signedEvent = await signEvent(eventTemplate);
       const published = await nostrService.publishSignedEvent(signedEvent);
@@ -116,20 +129,20 @@ export default function DiscussionManagePage() {
   };
 
   // spec_v2.md要件: 会話一覧からの撤回
-  const handleRevokeDiscussion = async (discussion: Discussion) => {
-    if (!discussion.approvalReference) return;
+  const handleRevokeDiscussion = async (discussion: ProcessedDiscussion) => {
+    if (!discussion.approvalEventId) return;
     
     if (!confirm("この会話を一覧から削除してもよろしいですか？")) {
       return;
     }
 
-    setProcessingId(discussion.id);
+    setProcessingId(discussion.communityPostId);
     setErrors([]);
     try {
-      // 承認イベントIDを抽出
-      const approvalEventId = discussion.approvalReference.split(':')[2] || '';
-      
-      const eventTemplate = nostrService.createApprovalRevocationEvent(approvalEventId);
+      const eventTemplate = nostrService.createRevocationEvent(
+        discussion.approvalEventId,
+        discussion.userDiscussionNaddr
+      );
       const signedEvent = await signEvent(eventTemplate);
       const published = await nostrService.publishSignedEvent(signedEvent);
 
@@ -225,9 +238,11 @@ export default function DiscussionManagePage() {
               </div>
             ) : pendingDiscussions.length > 0 ? (
               <div className="space-y-4">
-                {pendingDiscussions.map((discussion) => (
+                {pendingDiscussions.map((discussion) => {
+                  const details = extractDiscussionDetails(discussion.userDiscussionNaddr);
+                  return (
                   <div
-                    key={discussion.id}
+                    key={discussion.communityPostId}
                     className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
                   >
                     <div className="card-body p-4">
@@ -235,9 +250,9 @@ export default function DiscussionManagePage() {
                         <div className="flex-1">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <h3 className="font-medium ruby-text">{discussion.title}</h3>
+                              <h3 className="font-medium ruby-text">{details.title}</h3>
                               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ruby-text">
-                                {discussion.description}
+                                {details.description}
                               </p>
                               <div className="flex items-center gap-4 mt-2">
                                 <span className="text-xs text-gray-500">
@@ -245,24 +260,25 @@ export default function DiscussionManagePage() {
                                 </span>
                                 <span className="badge badge-sm">作成者</span>
                                 <span className="badge badge-outline badge-sm">
-                                  {discussion.moderators.length + 1} モデレーター
+                                  {discussion.userDiscussionNaddr}
                                 </span>
                               </div>
                             </div>
                             <Button
                               onClick={() => handleApproveDiscussion(discussion)}
-                              disabled={processingId === discussion.id}
-                              loading={processingId === discussion.id}
+                              disabled={processingId === discussion.communityPostId}
+                              loading={processingId === discussion.communityPostId}
                               className="btn-sm"
                             >
-                              <span>{processingId === discussion.id ? '' : '承認'}</span>
+                              <span>{processingId === discussion.communityPostId ? '' : '承認'}</span>
                             </Button>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8">
@@ -285,17 +301,19 @@ export default function DiscussionManagePage() {
               </div>
             ) : approvedDiscussions.length > 0 ? (
               <div className="space-y-4">
-                {approvedDiscussions.map((discussion) => (
+                {approvedDiscussions.map((discussion) => {
+                  const details = extractDiscussionDetails(discussion.userDiscussionNaddr);
+                  return (
                   <div
-                    key={discussion.id}
+                    key={discussion.communityPostId}
                     className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
                   >
                     <div className="card-body p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-medium ruby-text">{discussion.title}</h3>
+                          <h3 className="font-medium ruby-text">{details.title}</h3>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ruby-text">
-                            {discussion.description}
+                            {details.description}
                           </p>
                           <div className="flex items-center gap-4 mt-2">
                             <span className="text-xs text-gray-500">
@@ -308,22 +326,23 @@ export default function DiscussionManagePage() {
                             )}
                             <span className="badge badge-sm badge-success">承認済み</span>
                             <span className="badge badge-outline badge-sm">
-                              {discussion.moderators.length + 1} モデレーター
+                              {discussion.userDiscussionNaddr}
                             </span>
                           </div>
                         </div>
                         <Button
                           onClick={() => handleRevokeDiscussion(discussion)}
-                          disabled={processingId === discussion.id}
-                          loading={processingId === discussion.id}
+                          disabled={processingId === discussion.communityPostId}
+                          loading={processingId === discussion.communityPostId}
                           className="btn-sm btn-error"
                         >
-                          <span>{processingId === discussion.id ? '' : '一覧から削除'}</span>
+                          <span>{processingId === discussion.communityPostId ? '' : '一覧から削除'}</span>
                         </Button>
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8">

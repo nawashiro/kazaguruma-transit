@@ -183,17 +183,8 @@ export default function DiscussionCreatePage() {
               </div>
 
               <div className="flex gap-4 mt-6">
-                <Button
-                  onClick={handleGoToDiscussion}
-                  fullWidth
-                >
-                  会話を開始する
-                </Button>
-                <Button
-                  onClick={() => router.push("/discussions")}
-                  secondary
-                  fullWidth
-                >
+                <Button onClick={handleGoToDiscussion}>会話を開始する</Button>
+                <Button onClick={() => router.push("/discussions")} secondary>
                   会話一覧に戻る
                 </Button>
               </div>
@@ -226,8 +217,16 @@ export default function DiscussionCreatePage() {
               <div className="space-y-4 ruby-text">
                 <div className="flex gap-4 items-center">
                   <div className="flex-shrink-0">
-                    <svg className="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
+                    <svg
+                      className="w-6 h-6 text-primary"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -236,8 +235,16 @@ export default function DiscussionCreatePage() {
                 </div>
                 <div className="flex gap-4 items-center">
                   <div className="flex-shrink-0">
-                    <svg className="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    <svg
+                      className="w-6 h-6 text-primary"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -246,8 +253,12 @@ export default function DiscussionCreatePage() {
                 </div>
                 <div className="flex gap-4 items-center">
                   <div className="flex-shrink-0">
-                    <svg className="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+                    <svg
+                      className="w-6 h-6 text-primary"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
                     </svg>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">

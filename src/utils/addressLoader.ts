@@ -35,8 +35,9 @@ export interface KeyLocationCategory {
 
 export async function loadAddressData(): Promise<AddressCategory[]> {
   try {
+    const version = process.env.NEXT_PUBLIC_LOCATIONS_DATA_VERSION || "1.0.0";
     const response = await fetch(
-      "https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@latest/kazaguruma_json_min/main_facilities.json"
+      `https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@${version}/kazaguruma_json_min/main_facilities.json`
     );
     if (!response.ok) {
       throw new Error("住所データの取得に失敗しました");
@@ -52,8 +53,9 @@ export async function loadAddressData(): Promise<AddressCategory[]> {
 // key_locations.jsonからデータを読み込む関数
 export async function loadKeyLocationsData(): Promise<KeyLocationCategory[]> {
   try {
+    const version = process.env.NEXT_PUBLIC_LOCATIONS_DATA_VERSION || "1.0.0";
     const response = await fetch(
-      "https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@latest/kazaguruma_json_min/key_locations.json"
+      `https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@${version}/kazaguruma_json_min/key_locations.json`
     );
     if (!response.ok) {
       throw new Error("主要施設データの取得に失敗しました");

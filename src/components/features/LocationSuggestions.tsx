@@ -34,20 +34,21 @@ function LocationSuggestions({
     async function fetchAddressData() {
       try {
         setLoading(true);
+        onLoadingChange?.(true);
         const data = await loadAddressData();
         setCategories(data);
         setError(null);
-        onLoadingChange?.(loading);
       } catch (err) {
         setError("住所データの読み込みに失敗しました");
         logger.error(err);
       } finally {
         setLoading(false);
+        onLoadingChange?.(false);
       }
     }
 
     fetchAddressData();
-  }, []);
+  }, [onLoadingChange]);
 
   const handleLocationSelect = (location: AddressLocation) => {
     onLocationSelected(convertToLocation(location));

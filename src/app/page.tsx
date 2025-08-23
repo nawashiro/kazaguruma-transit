@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import DateTimeSelector from "@/components/features/DateTimeSelector";
 import OriginSelector from "@/components/features/OriginSelector";
 import DestinationSelector from "@/components/features/DestinationSelector";
@@ -131,7 +131,8 @@ export default function Home() {
   const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
   const [prioritizeSpeed, setPrioritizeSpeed] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isLocationSuggestionsLoading, setIsLocationSuggestionsLoading] = useState(true);
+  const [isLocationSuggestionsLoading, setIsLocationSuggestionsLoading] =
+    useState(true);
   const [memoData, setMemoData] = useState<Map<string, PostWithStats>>(
     new Map()
   );
@@ -173,7 +174,7 @@ export default function Home() {
           }
         }
       }
-      
+
       // 全ての初期化処理完了後にisInitializedをtrueに設定
       setIsInitialized(true);
     };
@@ -194,9 +195,9 @@ export default function Home() {
 
       // 乗り換えバス停があれば追加
       if (routeInfo.routes && routeInfo.routes.length > 0) {
-        routeInfo.routes.forEach(route => {
+        routeInfo.routes.forEach((route) => {
           if (route.transfers) {
-            route.transfers.forEach(transfer => {
+            route.transfers.forEach((transfer) => {
               busStops.push(transfer.transferStop.stopName);
             });
           }
@@ -204,7 +205,9 @@ export default function Home() {
       }
 
       // 重複を除去
-      const uniqueBusStops = busStops.filter((stop, index, arr) => arr.indexOf(stop) === index);
+      const uniqueBusStops = busStops.filter(
+        (stop, index, arr) => arr.indexOf(stop) === index
+      );
 
       getBusStopMemoData(uniqueBusStops).then(setMemoData);
     } else {
@@ -228,9 +231,9 @@ export default function Home() {
     setRouteInfo(null);
   };
 
-  const handleLocationSuggestionsLoadingChange = (loading: boolean) => {
+  const handleLocationSuggestionsLoadingChange = useCallback((loading: boolean) => {
     setIsLocationSuggestionsLoading(loading);
-  };
+  }, []);
 
   const handleDateTimeSelected = (formData: TransitFormData) => {
     setSelectedDateTime(formData.dateTime || "");
@@ -495,6 +498,206 @@ export default function Home() {
     setSelectedDateTime("");
   };
 
+  const renderDestinationSelection = () => (
+    <DestinationSelector
+      onDestinationSelected={handleDestinationSelected}
+      onLocationSuggestionsLoadingChange={
+        handleLocationSuggestionsLoadingChange
+      }
+    />
+  );
+
+  const renderOriginSelection = () => (
+    <>
+      <Card title="選択された目的地">
+        <p data-testid="selected-destination">
+          {selectedDestination?.address ||
+            `緯度: ${selectedDestination?.lat.toFixed(
+              6
+            )}, 経度: ${selectedDestination?.lng.toFixed(6)}`}
+        </p>
+      </Card>
+      <OriginSelector onOriginSelected={handleOriginSelected} />
+      <ResetButton onReset={resetSearch} />
+    </>
+  );
+
+  const renderDateTimeSelection = () => (
+    <>
+      <Card title="選択された目的地">
+        <p data-testid="selected-destination">
+          {selectedDestination?.address ||
+            `緯度: ${selectedDestination?.lat.toFixed(
+              6
+            )}, 経度: ${selectedDestination?.lng.toFixed(6)}`}
+        </p>
+      </Card>
+
+      <Card title="選択された出発地">
+        <p data-testid="selected-origin">
+          {selectedOrigin?.address ||
+            `緯度: ${selectedOrigin?.lat.toFixed(
+              6
+            )}, 経度: ${selectedOrigin?.lng.toFixed(6)}`}
+        </p>
+      </Card>
+
+      <Card title="日時の選択">
+        <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
+
+        <div className="form-control mt-4 space-y-2">
+          <p className="text-sm /60 mt-1 ruby-text">
+            早く到着したい場合はオンにしてください。
+            <br />
+            歩きを最小限にしたい場合はオフにしてください。
+          </p>
+          <label className="flex items-center space-x-2 cursor-pointer inline-block">
+            <span className="label-text ruby-text">はやさ優先</span>
+            <input
+              type="checkbox"
+              className="toggle toggle-primary"
+              checked={prioritizeSpeed}
+              onChange={handlePrioritizeSpeedChange}
+            />
+            <span className="label-text">{prioritizeSpeed ? "ON" : "OFF"}</span>
+          </label>
+        </div>
+
+        <div className="card-actions justify-center">
+          <Button
+            onClick={handleSearch}
+            disabled={!selectedDateTime}
+            testId="search-route"
+          >
+            検索
+          </Button>
+        </div>
+      </Card>
+
+      <ResetButton onReset={resetSearch} />
+    </>
+  );
+
+  const getBusStops = () => {
+    if (!routeInfo || routeInfo.type === "none") return [];
+
+    const busStops = [
+      routeInfo.originStop.stopName,
+      routeInfo.destinationStop.stopName,
+    ];
+
+    if (routeInfo.routes && routeInfo.routes.length > 0) {
+      routeInfo.routes.forEach((route) => {
+        if (route.transfers) {
+          route.transfers.forEach((transfer) => {
+            busStops.push(transfer.transferStop.stopName);
+          });
+        }
+      });
+    }
+
+    return busStops.filter((stop, index, arr) => arr.indexOf(stop) === index);
+  };
+
+  const renderBusStopFeatures = () => {
+    if (!isDiscussionsEnabled() || !routeInfo || routeInfo.type === "none") {
+      return null;
+    }
+
+    const busStops = getBusStops();
+
+    return (
+      <>
+        <div className="mt-8">
+          <BusStopMemo busStops={busStops} />
+        </div>
+        <div className="mt-8">
+          <BusStopDiscussion
+            busStops={busStops}
+            className="border-t border-gray-200 dark:border-gray-700 pt-8"
+          />
+        </div>
+      </>
+    );
+  };
+
+  const renderRouteResults = () => {
+    if (error) {
+      return <div className="alert alert-error">{error}</div>;
+    }
+
+    if (routeLoading) {
+      return (
+        <Card bodyClassName="items-center text-center">
+          <span className="loading loading-spinner loading-lg"></span>
+          <p>経路を検索中...</p>
+        </Card>
+      );
+    }
+
+    if (!routeInfo) {
+      return null;
+    }
+
+    return (
+      <div>
+        <IntegratedRouteDisplay
+          originStop={routeInfo.originStop}
+          destinationStop={routeInfo.destinationStop}
+          routes={routeInfo.routes}
+          type={routeInfo.type}
+          _transfers={routeInfo.transfers}
+          _message={routeInfo.message}
+          originLat={selectedOrigin!.lat}
+          originLng={selectedOrigin!.lng}
+          destLat={selectedDestination!.lat}
+          destLng={selectedDestination!.lng}
+        />
+
+        {renderBusStopFeatures()}
+
+        {routeInfo.type !== "none" && (
+          <div className="mt-4 flex justify-center">
+            <RoutePdfExport
+              originStop={routeInfo.originStop}
+              destinationStop={routeInfo.destinationStop}
+              routes={routeInfo.routes}
+              type={routeInfo.type}
+              transfers={routeInfo.transfers}
+              originLat={selectedOrigin!.lat}
+              originLng={selectedOrigin!.lng}
+              destLat={selectedDestination!.lat}
+              destLng={selectedDestination!.lng}
+              selectedDateTime={selectedDateTime}
+              memoData={memoData}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderMainContent = () => {
+    if (!selectedDestination) {
+      return renderDestinationSelection();
+    }
+
+    if (!selectedOrigin) {
+      return renderOriginSelection();
+    }
+
+    if (!searchPerformed) {
+      return renderDateTimeSelection();
+    }
+
+    return (
+      <>
+        <ResetButton onReset={resetSearch} />
+        {renderRouteResults()}
+      </>
+    );
+  };
+
   return (
     <div className="container">
       <header className="relative text-center mb-8 ruby-text">
@@ -512,186 +715,7 @@ export default function Home() {
 
       <main className="space-y-4 max-w-md mx-auto">
         <div aria-live="polite" className="space-y-4">
-          {!selectedDestination ? (
-            <DestinationSelector
-              onDestinationSelected={handleDestinationSelected}
-              onLocationSuggestionsLoadingChange={handleLocationSuggestionsLoadingChange}
-            />
-          ) : !selectedOrigin ? (
-            <>
-              <Card title="選択された目的地">
-                <p data-testid="selected-destination">
-                  {selectedDestination.address ||
-                    `緯度: ${selectedDestination.lat.toFixed(
-                      6
-                    )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
-                </p>
-              </Card>
-              <OriginSelector onOriginSelected={handleOriginSelected} />
-              <ResetButton onReset={resetSearch} />
-            </>
-          ) : !searchPerformed ? (
-            <>
-              <Card title="選択された目的地">
-                <p data-testid="selected-destination">
-                  {selectedDestination.address ||
-                    `緯度: ${selectedDestination.lat.toFixed(
-                      6
-                    )}, 経度: ${selectedDestination.lng.toFixed(6)}`}
-                </p>
-              </Card>
-
-              <Card title="選択された出発地">
-                <p data-testid="selected-origin">
-                  {selectedOrigin.address ||
-                    `緯度: ${selectedOrigin.lat.toFixed(
-                      6
-                    )}, 経度: ${selectedOrigin.lng.toFixed(6)}`}
-                </p>
-              </Card>
-
-              <Card title="日時の選択">
-                <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
-
-                {/* はやさ優先スイッチ */}
-                <div className="form-control mt-4 space-y-2">
-                  <p className="text-sm /60 mt-1 ruby-text">
-                    早く到着したい場合はオンにしてください。
-                    <br />
-                    歩きを最小限にしたい場合はオフにしてください。
-                  </p>
-                  <label className="flex items-center space-x-2 cursor-pointer inline-block">
-                    <span className="label-text ruby-text">はやさ優先</span>
-                    <input
-                      type="checkbox"
-                      className="toggle toggle-primary"
-                      checked={prioritizeSpeed}
-                      onChange={handlePrioritizeSpeedChange}
-                    />
-                    <span className="label-text">
-                      {prioritizeSpeed ? "ON" : "OFF"}
-                    </span>
-                  </label>
-                </div>
-
-                <div className="card-actions justify-center">
-                  <Button
-                    onClick={handleSearch}
-                    disabled={!selectedDateTime}
-                    testId="search-route"
-                  >
-                    検索
-                  </Button>
-                </div>
-              </Card>
-
-              <ResetButton onReset={resetSearch} />
-            </>
-          ) : (
-            <>
-              <ResetButton onReset={resetSearch} />
-
-              {error ? (
-                <div className="alert alert-error">{error}</div>
-              ) : routeLoading ? (
-                <Card bodyClassName="items-center text-center">
-                  <span className="loading loading-spinner loading-lg"></span>
-                  <p>経路を検索中...</p>
-                </Card>
-              ) : routeInfo ? (
-                <div>
-                  <IntegratedRouteDisplay
-                    originStop={routeInfo.originStop}
-                    destinationStop={routeInfo.destinationStop}
-                    routes={routeInfo.routes}
-                    type={routeInfo.type}
-                    _transfers={routeInfo.transfers}
-                    _message={routeInfo.message}
-                    originLat={selectedOrigin.lat}
-                    originLng={selectedOrigin.lng}
-                    destLat={selectedDestination.lat}
-                    destLng={selectedDestination.lng}
-                  />
-
-                  {/* バス停メモを追加 */}
-                  {isDiscussionsEnabled() && routeInfo.type !== "none" && (
-                    <div className="mt-8">
-                      <BusStopMemo
-                        busStops={(() => {
-                          const busStops = [
-                            routeInfo.originStop.stopName,
-                            routeInfo.destinationStop.stopName,
-                          ];
-
-                          // 乗り換えバス停があれば追加
-                          if (routeInfo.routes && routeInfo.routes.length > 0) {
-                            routeInfo.routes.forEach(route => {
-                              if (route.transfers) {
-                                route.transfers.forEach(transfer => {
-                                  busStops.push(transfer.transferStop.stopName);
-                                });
-                              }
-                            });
-                          }
-
-                          // 重複を除去
-                          return busStops.filter((stop, index, arr) => arr.indexOf(stop) === index);
-                        })()}
-                      />
-                    </div>
-                  )}
-
-                  {/* PDF出力ボタンを追加 */}
-                  {routeInfo.type !== "none" && (
-                    <div className="mt-4 flex justify-center">
-                      <RoutePdfExport
-                        originStop={routeInfo.originStop}
-                        destinationStop={routeInfo.destinationStop}
-                        routes={routeInfo.routes}
-                        type={routeInfo.type}
-                        transfers={routeInfo.transfers}
-                        originLat={selectedOrigin.lat}
-                        originLng={selectedOrigin.lng}
-                        destLat={selectedDestination.lat}
-                        destLng={selectedDestination.lng}
-                        selectedDateTime={selectedDateTime}
-                        memoData={memoData}
-                      />
-                    </div>
-                  )}
-
-                  {/* ディスカッション機能を追加 */}
-                  {isDiscussionsEnabled() && routeInfo.type !== "none" && (
-                    <div className="mt-8">
-                      <BusStopDiscussion
-                        busStops={(() => {
-                          const busStops = [
-                            routeInfo.originStop.stopName,
-                            routeInfo.destinationStop.stopName,
-                          ];
-
-                          // 乗り換えバス停があれば追加
-                          if (routeInfo.routes && routeInfo.routes.length > 0) {
-                            routeInfo.routes.forEach(route => {
-                              if (route.transfers) {
-                                route.transfers.forEach(transfer => {
-                                  busStops.push(transfer.transferStop.stopName);
-                                });
-                              }
-                            });
-                          }
-
-                          // 重複を除去
-                          return busStops.filter((stop, index, arr) => arr.indexOf(stop) === index);
-                        })()}
-                        className="border-t border-gray-200 dark:border-gray-700 pt-8"
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : null}
-            </>
-          )}
+          {renderMainContent()}
         </div>
         <Card bodyClassName="text-center text-xs ruby-text">
           <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>

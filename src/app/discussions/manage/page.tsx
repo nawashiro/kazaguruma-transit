@@ -389,7 +389,7 @@ export default function DiscussionManagePage() {
                       className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
                     >
                       <div className="card-body p-4">
-                        <div className="flex justify-between items-start mb-3">
+                        <div className="flex justify-between items-start">
                           <div className="flex-1">
                             {renderQTagReferences(post)}
                           </div>
@@ -433,7 +433,7 @@ export default function DiscussionManagePage() {
                       className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 opacity-75"
                     >
                       <div className="card-body p-4">
-                        <div className="flex justify-between items-start mb-3">
+                        <div className="flex justify-between items-start">
                           <div className="flex-1">
                             {renderQTagReferences(post)}
                           </div>

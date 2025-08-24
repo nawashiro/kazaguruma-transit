@@ -20,26 +20,36 @@ import { getNostrServiceConfig } from "@/lib/config/discussion-config";
 import Button from "@/components/ui/Button";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import { logger } from "@/utils/logger";
-import { processCommunityPosts, extractDiscussionDetails, type ProcessedDiscussion } from "./discussion-processing";
-import { enhanceDiscussionsWithDetails, type EnhancedProcessedDiscussion } from "./discussion-enhancement";
+import {
+  parseDiscussionEvent,
+  parsePostEvent,
+  parseApprovalEvent,
+  createAuditTimeline,
+} from "@/lib/nostr/nostr-utils";
+import { extractDiscussionFromNaddr, buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
+import type { Discussion, DiscussionPost, PostApproval } from "@/types/discussion";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function DiscussionManagePage() {
-  // spec_v2.md要件: 承認待ちと承認済み会話の管理
-  const [pendingDiscussions, setPendingDiscussions] = useState<EnhancedProcessedDiscussion[]>([]);
-  const [approvedDiscussions, setApprovedDiscussions] = useState<EnhancedProcessedDiscussion[]>([]);
+  // 会話一覧ページとほぼ同じstate管理
+  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "audit">("pending");
+  const [discussions, setDiscussions] = useState<Discussion[]>([]);
+  const [allPosts, setAllPosts] = useState<DiscussionPost[]>([]);
+  const [allApprovals, setAllApprovals] = useState<PostApproval[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, { name?: string }>>(
+    {}
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
   const [errors, setErrors] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   const { user, signEvent } = useAuth();
 
   // Rubyfulライブラリ対応
-  useRubyfulRun([pendingDiscussions, approvedDiscussions], isLoaded);
+  useRubyfulRun([discussions, allPosts, allApprovals], isLoaded);
 
   useEffect(() => {
     if (isDiscussionsEnabled()) {
@@ -63,55 +73,170 @@ export default function DiscussionManagePage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
+      // 会話一覧ページと全く同じロジック
       const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
       if (!discussionListNaddr) {
+        logger.error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is not configured");
         throw new Error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is not configured");
       }
 
-      // NIP-72 compliant: Get community posts to discussion list and approval events
-      const [communityPosts, approvalEvents] = await Promise.all([
-        nostrService.getCommunityPostsToDiscussionList(discussionListNaddr, { limit: 100 }),
-        nostrService.getApprovalEvents(ADMIN_PUBKEY),
+      const discussionInfo = extractDiscussionFromNaddr(discussionListNaddr);
+      if (!discussionInfo) {
+        throw new Error("Invalid DISCUSSION_LIST_NADDR format");
+      }
+
+      logger.info("Loading discussion list management with discussionId:", discussionInfo.discussionId);
+
+      // 会話一覧ページと同じデータ取得
+      const [discussionListEvents, discussionListPosts, discussionListApprovals] = await Promise.all([
+        nostrService.getEvents([{
+          kinds: [34550],
+          authors: [discussionInfo.authorPubkey],
+          "#d": [discussionInfo.dTag],
+          limit: 1
+        }]),
+        nostrService.getDiscussionPosts(discussionInfo.discussionId),
+        nostrService.getApprovals(discussionInfo.discussionId),
       ]);
 
-      // Process community posts according to NIP-72 spec
-      const processed = processCommunityPosts(communityPosts, approvalEvents);
+      const discussionListMeta = discussionListEvents.length > 0 
+        ? parseDiscussionEvent(discussionListEvents[0])
+        : null;
+
+      if (!discussionListMeta) {
+        throw new Error("Discussion list metadata not found");
+      }
+
+      // 承認・未承認のkind:1111投稿を解析
+      const listApprovals = discussionListApprovals
+        .map(parseApprovalEvent)
+        .filter((a): a is PostApproval => a !== null);
+
+      const listPosts = discussionListPosts
+        .map((event) => parsePostEvent(event, listApprovals))
+        .filter((p): p is DiscussionPost => p !== null)
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+      // qタグから個別会話の参照を取得
+      const individualDiscussionRefs: string[] = [];
+      listPosts.forEach(post => {
+        const qTags = post.event?.tags?.filter(tag => tag[0] === "q") || [];
+        qTags.forEach(qTag => {
+          if (qTag[1] && qTag[1].startsWith("34550:")) {
+            individualDiscussionRefs.push(qTag[1]);
+          }
+        });
+      });
+
+      // 個別会話のkind:34550を取得
+      const individualDiscussions = await nostrService.getReferencedUserDiscussions(individualDiscussionRefs);
       
-      // spec_v2.md要件: Kind:34550詳細の表示
-      const [enhancedPending, enhancedApproved] = await Promise.all([
-        enhanceDiscussionsWithDetails(processed.pending),
-        enhanceDiscussionsWithDetails(processed.approved),
-      ]);
-      
-      setPendingDiscussions(enhancedPending);
-      setApprovedDiscussions(enhancedApproved);
+      const parsedIndividualDiscussions = individualDiscussions
+        .map(parseDiscussionEvent)
+        .filter((d): d is Discussion => d !== null)
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+      setDiscussions(parsedIndividualDiscussions);
+      setAllPosts(listPosts);
+      setAllApprovals(listApprovals);
+
+      // プロファイル取得（管理者のみ）
+      if (user.pubkey === ADMIN_PUBKEY) {
+        const uniquePubkeys = new Set<string>();
+        uniquePubkeys.add(ADMIN_PUBKEY);
+        
+        parsedIndividualDiscussions.forEach((discussion) => {
+          if (discussion.authorPubkey === ADMIN_PUBKEY ||
+              discussion.moderators.some(m => m.pubkey === discussion.authorPubkey)) {
+            uniquePubkeys.add(discussion.authorPubkey);
+          }
+          discussion.moderators.forEach((mod) =>
+            uniquePubkeys.add(mod.pubkey)
+          );
+        });
+
+        const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
+          const profileEvent = await nostrService.getProfile(pubkey);
+          if (profileEvent) {
+            try {
+              const profile = JSON.parse(profileEvent.content);
+              return [pubkey, { name: profile.name || profile.display_name }];
+            } catch {
+              return [pubkey, {}];
+            }
+          }
+          return [pubkey, {}];
+        });
+
+        const profileResults = await Promise.all(profilePromises);
+        const profilesMap = Object.fromEntries(profileResults);
+        setProfiles(profilesMap);
+      }
+
+      logger.info("Discussion management loaded:", {
+        individualDiscussions: parsedIndividualDiscussions.length,
+        listPosts: listPosts.length,
+        listApprovals: listApprovals.length
+      });
+
     } catch (error) {
-      logger.error("Failed to load data:", error);
-      setPendingDiscussions([]);
-      setApprovedDiscussions([]);
+      logger.error("Failed to load discussion management data:", error);
+      setDiscussions([]);
+      setAllPosts([]);
+      setAllApprovals([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // spec_v2.md要件: 会話一覧への追加承認
-  const handleApproveDiscussion = async (discussion: ProcessedDiscussion) => {
-    setProcessingId(discussion.communityPostId);
+  // 承認待ちと承認済みの会話を分類
+  const pendingPosts = allPosts.filter(post => !post.approved);
+  const approvedPosts = allPosts.filter(post => post.approved);
+
+  // 承認待ちの個別会話（qタグがある投稿）
+  const pendingDiscussions = discussions.filter(discussion => {
+    return pendingPosts.some(post => {
+      const qTags = post.event?.tags?.filter(tag => tag[0] === "q") || [];
+      return qTags.some(qTag => 
+        qTag[1] === `34550:${discussion.authorPubkey}:${discussion.dTag}`
+      );
+    });
+  });
+
+  // 承認済みの個別会話
+  const approvedDiscussions = discussions.filter(discussion => {
+    return approvedPosts.some(post => {
+      const qTags = post.event?.tags?.filter(tag => tag[0] === "q") || [];
+      return qTags.some(qTag => 
+        qTag[1] === `34550:${discussion.authorPubkey}:${discussion.dTag}`
+      );
+    });
+  });
+
+  const discussionListMeta = discussions.length > 0 ? discussions[0] : null;
+  const auditItems = createAuditTimeline(discussions, [], allPosts, allApprovals);
+
+  // 会話一覧への追加承認
+  const handleApproveDiscussion = async (discussion: Discussion) => {
+    const correspondingPost = pendingPosts.find(post => {
+      const qTags = post.event?.tags?.filter(tag => tag[0] === "q") || [];
+      return qTags.some(qTag => 
+        qTag[1] === `34550:${discussion.authorPubkey}:${discussion.dTag}`
+      );
+    });
+
+    if (!correspondingPost) {
+      setErrors(["対応する投稿が見つかりません"]);
+      return;
+    }
+
+    setProcessingId(discussion.id);
     setErrors([]);
     try {
-      // Create NIP-72 approval event for the community post
+      // 投稿を承認するkind:4550イベントを作成
       const eventTemplate = nostrService.createApprovalEvent(
-        // We need the original community post event for approval
-        {
-          id: discussion.communityPostId,
-          kind: 1111,
-          pubkey: discussion.authorPubkey,
-          created_at: discussion.createdAt,
-          tags: [],
-          content: `nostr:${discussion.userDiscussionNaddr}`,
-          sig: '',
-        },
-        discussion.userDiscussionNaddr
+        correspondingPost.event!,
+        `34550:${discussion.authorPubkey}:${discussion.dTag}`
       );
 
       const signedEvent = await signEvent(eventTemplate);
@@ -130,20 +255,31 @@ export default function DiscussionManagePage() {
     }
   };
 
-  // spec_v2.md要件: 会話一覧からの撤回
-  const handleRevokeDiscussion = async (discussion: ProcessedDiscussion) => {
-    if (!discussion.approvalEventId) return;
-    
+  // 会話一覧からの撤回
+  const handleRevokeDiscussion = async (discussion: Discussion) => {
+    const correspondingPost = approvedPosts.find(post => {
+      const qTags = post.event?.tags?.filter(tag => tag[0] === "q") || [];
+      return qTags.some(qTag => 
+        qTag[1] === `34550:${discussion.authorPubkey}:${discussion.dTag}`
+      );
+    });
+
+    if (!correspondingPost) {
+      setErrors(["対応する投稿が見つかりません"]);
+      return;
+    }
+
     if (!confirm("この会話を一覧から削除してもよろしいですか？")) {
       return;
     }
 
-    setProcessingId(discussion.communityPostId);
+    setProcessingId(discussion.id);
     setErrors([]);
     try {
+      // 承認を撤回するkind:5イベントを作成
       const eventTemplate = nostrService.createRevocationEvent(
-        discussion.approvalEventId,
-        discussion.userDiscussionNaddr
+        correspondingPost.approvedBy[0], // 最初の承認イベントIDを撤回
+        `34550:${discussion.authorPubkey}:${discussion.dTag}`
       );
       const signedEvent = await signEvent(eventTemplate);
       const published = await nostrService.publishSignedEvent(signedEvent);
@@ -239,48 +375,74 @@ export default function DiscussionManagePage() {
                 ))}
               </div>
             ) : pendingDiscussions.length > 0 ? (
-              <div className="space-y-4">
-                {pendingDiscussions.map((discussion) => {
-                  const details = discussion.discussionDetails || extractDiscussionDetails(discussion.userDiscussionNaddr);
-                  return (
+              <div className="space-y-4 ruby-text">
+                {pendingDiscussions.map((discussion) => (
                   <div
-                    key={discussion.communityPostId}
-                    className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                    key={discussion.id}
+                    className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700"
                   >
                     <div className="card-body p-4">
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h3 className="font-medium ruby-text">{details.title}</h3>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ruby-text">
-                                {details.description}
-                              </p>
-                              <div className="flex items-center gap-4 mt-2">
-                                <span className="text-xs text-gray-500">
-                                  {formatRelativeTime(discussion.createdAt)}
-                                </span>
-                                <span className="badge badge-sm">作成者</span>
-                                <span className="badge badge-outline badge-sm">
-                                  {discussion.userDiscussionNaddr}
-                                </span>
-                              </div>
+                          <h3 className="card-title text-lg">
+                            <span>{discussion.title}</span>
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {discussion.description.length > 70
+                              ? `${discussion.description.slice(0, 70)}...`
+                              : discussion.description}
+                          </p>
+                          <div className="flex justify-between items-center mt-2">
+                            <div className="text-xs text-gray-500 space-y-1">
+                              <time
+                                dateTime={new Date(
+                                  discussion.createdAt * 1000
+                                ).toISOString()}
+                              >
+                                {formatRelativeTime(discussion.createdAt)}
+                              </time>
+                              {/* 作成者が管理者・モデレーターの場合、名前を表示 */}
+                              {(discussion.authorPubkey === ADMIN_PUBKEY ||
+                                discussion.moderators.some(
+                                  (m) => m.pubkey === discussion.authorPubkey
+                                )) && (
+                                <div className="text-xs">
+                                  作成者:{" "}
+                                  {profiles[discussion.authorPubkey]?.name ||
+                                    "名前未設定"}
+                                </div>
+                              )}
+                              {/* モデレーターの名前を表示 */}
+                              {discussion.moderators.length > 0 && (
+                                <div className="text-xs">
+                                  モデレーター:{" "}
+                                  {discussion.moderators
+                                    .map(
+                                      (mod) =>
+                                        profiles[mod.pubkey]?.name ||
+                                        "名前未設定"
+                                    )
+                                    .join(", ")}
+                                </div>
+                              )}
                             </div>
-                            <Button
-                              onClick={() => handleApproveDiscussion(discussion)}
-                              disabled={processingId === discussion.communityPostId}
-                              loading={processingId === discussion.communityPostId}
-                              className="btn-sm"
-                            >
-                              <span>{processingId === discussion.communityPostId ? '' : '承認'}</span>
-                            </Button>
+                            <span className="badge badge-outline badge-sm">
+                              {discussion.moderators.length + 1} モデレーター
+                            </span>
                           </div>
                         </div>
+                        <Button
+                          onClick={() => handleApproveDiscussion(discussion)}
+                          disabled={processingId === discussion.id}
+                          loading={processingId === discussion.id}
+                          className="btn-sm ml-4"
+                        >
+                          <span>{processingId === discussion.id ? '' : '承認'}</span>
+                        </Button>
                       </div>
                     </div>
                   </div>
-                  );
-                })}
+                ))}
               </div>
             ) : (
               <div className="text-center py-8">
@@ -302,49 +464,75 @@ export default function DiscussionManagePage() {
                 ))}
               </div>
             ) : approvedDiscussions.length > 0 ? (
-              <div className="space-y-4">
-                {approvedDiscussions.map((discussion) => {
-                  const details = discussion.discussionDetails || extractDiscussionDetails(discussion.userDiscussionNaddr);
-                  return (
+              <div className="space-y-4 ruby-text">
+                {approvedDiscussions.map((discussion) => (
                   <div
-                    key={discussion.communityPostId}
-                    className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                    key={discussion.id}
+                    className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700"
                   >
                     <div className="card-body p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-medium ruby-text">{details.title}</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ruby-text">
-                            {details.description}
+                          <h3 className="card-title text-lg">
+                            <span>{discussion.title}</span>
+                            <span className="badge badge-sm badge-success ml-2">承認済み</span>
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {discussion.description.length > 70
+                              ? `${discussion.description.slice(0, 70)}...`
+                              : discussion.description}
                           </p>
-                          <div className="flex items-center gap-4 mt-2">
-                            <span className="text-xs text-gray-500">
-                              作成: {formatRelativeTime(discussion.createdAt)}
-                            </span>
-                            {discussion.approvedAt && (
-                              <span className="text-xs text-green-600">
-                                承認: {formatRelativeTime(discussion.approvedAt)}
-                              </span>
-                            )}
-                            <span className="badge badge-sm badge-success">承認済み</span>
+                          <div className="flex justify-between items-center mt-2">
+                            <div className="text-xs text-gray-500 space-y-1">
+                              <time
+                                dateTime={new Date(
+                                  discussion.createdAt * 1000
+                                ).toISOString()}
+                              >
+                                作成: {formatRelativeTime(discussion.createdAt)}
+                              </time>
+                              {/* 作成者が管理者・モデレーターの場合、名前を表示 */}
+                              {(discussion.authorPubkey === ADMIN_PUBKEY ||
+                                discussion.moderators.some(
+                                  (m) => m.pubkey === discussion.authorPubkey
+                                )) && (
+                                <div className="text-xs">
+                                  作成者:{" "}
+                                  {profiles[discussion.authorPubkey]?.name ||
+                                    "名前未設定"}
+                                </div>
+                              )}
+                              {/* モデレーターの名前を表示 */}
+                              {discussion.moderators.length > 0 && (
+                                <div className="text-xs">
+                                  モデレーター:{" "}
+                                  {discussion.moderators
+                                    .map(
+                                      (mod) =>
+                                        profiles[mod.pubkey]?.name ||
+                                        "名前未設定"
+                                    )
+                                    .join(", ")}
+                                </div>
+                              )}
+                            </div>
                             <span className="badge badge-outline badge-sm">
-                              {discussion.userDiscussionNaddr}
+                              {discussion.moderators.length + 1} モデレーター
                             </span>
                           </div>
                         </div>
                         <Button
                           onClick={() => handleRevokeDiscussion(discussion)}
-                          disabled={processingId === discussion.communityPostId}
-                          loading={processingId === discussion.communityPostId}
-                          className="btn-sm btn-error"
+                          disabled={processingId === discussion.id}
+                          loading={processingId === discussion.id}
+                          className="btn-sm btn-error ml-4"
                         >
-                          <span>{processingId === discussion.communityPostId ? '' : '一覧から削除'}</span>
+                          <span>{processingId === discussion.id ? '' : '一覧から削除'}</span>
                         </Button>
                       </div>
                     </div>
                   </div>
-                  );
-                })}
+                ))}
               </div>
             ) : (
               <div className="text-center py-8">

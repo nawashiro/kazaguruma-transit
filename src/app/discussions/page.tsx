@@ -74,152 +74,131 @@ export default function DiscussionsPage() {
     }
 
     try {
-      // Calculate until timestamp for pagination (last discussion's created_at - 1)
-      let until: number | undefined;
-      if (page > 1 && discussions.length > 0) {
-        const lastDiscussion = discussions[discussions.length - 1];
-        until = (lastDiscussion.approvedAt || lastDiscussion.createdAt) - 1;
-      }
-
-      // spec_v2.md要件: 管理者作成のKind:34550（DISCUSSION_LIST_NADDR）を使用して承認済み投稿を取得
+      // spec_v2.md要件: 個別会話ページと全く同じ実装。環境変数のnaddrを使用。
       const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
       if (!discussionListNaddr) {
+        logger.error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is not configured");
         throw new Error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is not configured");
       }
 
-      const [communityPosts, approvalEvents] = await Promise.all([
-        nostrService.getCommunityPostsToDiscussionList(discussionListNaddr, { 
-          limit: ITEMS_PER_PAGE * 3, // Get more to account for filtering unapproved posts
-          until 
-        }),
-        nostrService.getApprovalEvents(ADMIN_PUBKEY),
-      ]);
-
-      // Filter only approved community posts
-      const approvedCommunityPosts = communityPosts.filter(post => {
-        // Check if this community post has been approved (has corresponding kind:4550)
-        return approvalEvents.some(approval => 
-          approval.tags.some(tag => tag[0] === "e" && tag[1] === post.id)
-        );
-      });
-
-      // Check if there are more items and limit to page size
-      const hasMoreItems = approvedCommunityPosts.length > ITEMS_PER_PAGE;
-      const postsToProcess = hasMoreItems
-        ? approvedCommunityPosts.slice(0, ITEMS_PER_PAGE)
-        : approvedCommunityPosts;
-
-      // Extract referenced user discussions from community posts
-      const userDiscussionRefs: string[] = [];
-      postsToProcess.forEach(post => {
-        // Extract naddr from post content (format: nostr:naddr...)
-        const content = post.content;
-        const naddrMatch = content.match(/nostr:(naddr1[a-z0-9]+)/);
-        if (naddrMatch) {
-          const naddr = naddrMatch[1];
-          try {
-            const discussionInfo = extractDiscussionFromNaddr(naddr);
-            if (discussionInfo) {
-              userDiscussionRefs.push(`34550:${discussionInfo.authorPubkey}:${discussionInfo.dTag}`);
-            }
-          } catch (error) {
-            logger.error('Failed to extract discussion from naddr:', error);
-          }
-        }
-      });
-
-      // Get referenced user discussions
-      const userDiscussions = await nostrService.getReferencedUserDiscussions(userDiscussionRefs);
-      
-      const parsedDiscussions = userDiscussions
-        .map(userDiscussion => {
-          const discussion = parseDiscussionEvent(userDiscussion);
-          if (!discussion) return null;
-
-          // Find corresponding community post for approval info
-          const correspondingPost = postsToProcess.find(post => {
-            const naddrMatch = post.content.match(/nostr:(naddr1[a-z0-9]+)/);
-            if (naddrMatch) {
-              try {
-                const discussionInfo = extractDiscussionFromNaddr(naddrMatch[1]);
-                return discussionInfo && 
-                       discussionInfo.authorPubkey === discussion.authorPubkey && 
-                       discussionInfo.dTag === discussion.dTag;
-              } catch {
-                return false;
-              }
-            }
-            return false;
-          });
-
-          return {
-            ...discussion,
-            approvedAt: correspondingPost?.created_at || discussion.createdAt,
-            approvalReference: correspondingPost?.id || "",
-          };
-        })
-        .filter((d): d is Discussion => d !== null)
-        .sort((a, b) => {
-          const aTime = a.approvedAt || a.createdAt;
-          const bTime = b.approvedAt || b.createdAt;
-          return bTime - aTime;
-        });
-
-      if (append && page > 1) {
-        setDiscussions((prev) => [
-          ...prev,
-          ...(parsedDiscussions as Discussion[]),
-        ]);
-      } else {
-        setDiscussions(parsedDiscussions as Discussion[]);
+      // 個別会話ページと同じ：naddrからdiscussionInfoを取得
+      const discussionInfo = extractDiscussionFromNaddr(discussionListNaddr);
+      if (!discussionInfo) {
+        throw new Error("Invalid DISCUSSION_LIST_NADDR format");
       }
 
-      setHasMore(hasMoreItems);
-      setCurrentPage(page);
+      logger.info("Loading discussion list with discussionId:", discussionInfo.discussionId);
 
-      // spec_v2.md要件: 管理者・モデレーターのプロファイルを取得
-      const uniquePubkeys = new Set<string>();
-      uniquePubkeys.add(ADMIN_PUBKEY);
+      // spec_v2.md仕様: 会話一覧管理用のkind:34550から、承認されたkind:1111を取得
+      const [discussionListEvents, discussionListPosts, discussionListApprovals] = await Promise.all([
+        // 会話一覧管理用のkind:34550（メタデータ）
+        nostrService.getEvents([{
+          kinds: [34550],
+          authors: [discussionInfo.authorPubkey],
+          "#d": [discussionInfo.dTag],
+          limit: 1
+        }]),
+        // 会話一覧管理用の会話のkind:1111投稿
+        nostrService.getDiscussionPosts(discussionInfo.discussionId),
+        // 会話一覧管理用の会話のkind:4550承認
+        nostrService.getApprovals(discussionInfo.discussionId),
+      ]);
 
-      parsedDiscussions.forEach((discussion) => {
-        if (discussion) {
-          // 作成者が管理者・モデレーターの場合のみプロファイル取得
-          if (
-            discussion.authorPubkey === ADMIN_PUBKEY ||
-            discussion.moderators.some(
-              (m: any) => m.pubkey === discussion.authorPubkey
-            )
-          ) {
+      const discussionListMeta = discussionListEvents.length > 0 
+        ? parseDiscussionEvent(discussionListEvents[0])
+        : null;
+
+      if (!discussionListMeta) {
+        throw new Error("Discussion list metadata not found");
+      }
+
+      // 承認されたkind:1111投稿を特定
+      const listApprovals = discussionListApprovals
+        .map(parseApprovalEvent)
+        .filter((a): a is PostApproval => a !== null);
+
+      const listPosts = discussionListPosts
+        .map((event) => parsePostEvent(event, listApprovals))
+        .filter((p): p is DiscussionPost => p !== null && p.approved)
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+      logger.info("Discussion list posts:", {
+        totalPosts: discussionListPosts.length,
+        approvedPosts: listPosts.length,
+        posts: listPosts.map(p => ({ content: p.content.slice(0, 50) }))
+      });
+
+      // spec_v2.md仕様: 承認されたkind:1111のqタグから個別会話のnaddrを取得
+      const individualDiscussionRefs: string[] = [];
+      listPosts.forEach(post => {
+        // qタグから個別会話の参照を取得
+        const qTags = post.event?.tags?.filter(tag => tag[0] === "q") || [];
+        qTags.forEach(qTag => {
+          if (qTag[1] && qTag[1].startsWith("34550:")) {
+            individualDiscussionRefs.push(qTag[1]);
+          }
+        });
+      });
+
+      logger.info("Individual discussion refs:", individualDiscussionRefs);
+
+      // 個別会話のkind:34550を取得
+      const individualDiscussions = await nostrService.getReferencedUserDiscussions(individualDiscussionRefs);
+      
+      const parsedIndividualDiscussions = individualDiscussions
+        .map(parseDiscussionEvent)
+        .filter((d): d is Discussion => d !== null)
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+      // 表示用データを設定
+      setDiscussions(parsedIndividualDiscussions);
+      setPosts(discussionListPosts.map((event) => parsePostEvent(event, listApprovals)).filter((p): p is DiscussionPost => p !== null));
+      setApprovals(listApprovals);
+
+      // プロファイル取得（管理者・モデレーターのみ）
+      const shouldLoadProfiles = user.pubkey === ADMIN_PUBKEY;
+
+      if (shouldLoadProfiles) {
+        const uniquePubkeys = new Set<string>();
+        uniquePubkeys.add(ADMIN_PUBKEY);
+        
+        parsedIndividualDiscussions.forEach((discussion) => {
+          if (discussion.authorPubkey === ADMIN_PUBKEY ||
+              discussion.moderators.some(m => m.pubkey === discussion.authorPubkey)) {
             uniquePubkeys.add(discussion.authorPubkey);
           }
-          // モデレーターのプロファイル取得
-          discussion.moderators.forEach((mod: any) =>
+          discussion.moderators.forEach((mod) =>
             uniquePubkeys.add(mod.pubkey)
           );
-        }
-      });
+        });
 
-      const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
-        const profileEvent = await nostrService.getProfile(pubkey);
-        if (profileEvent) {
-          try {
-            const profile = JSON.parse(profileEvent.content);
-            return [pubkey, { name: profile.name || profile.display_name }];
-          } catch {
-            return [pubkey, {}];
+        const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
+          const profileEvent = await nostrService.getProfile(pubkey);
+          if (profileEvent) {
+            try {
+              const profile = JSON.parse(profileEvent.content);
+              return [pubkey, { name: profile.name || profile.display_name }];
+            } catch {
+              return [pubkey, {}];
+            }
           }
-        }
-        return [pubkey, {}];
+          return [pubkey, {}];
+        });
+
+        const profileResults = await Promise.all(profilePromises);
+        const profilesMap = Object.fromEntries(profileResults);
+        setProfiles(profilesMap);
+      } else {
+        setProfiles({});
+      }
+
+      logger.info("Individual discussions loaded:", {
+        count: parsedIndividualDiscussions.length,
+        discussions: parsedIndividualDiscussions.map(d => d.title)
       });
 
-      const profileResults = await Promise.all(profilePromises);
-      const profilesMap = Object.fromEntries(profileResults);
-      setProfiles(profilesMap);
-
-      // spec_v2.md要件: 監査ログのためにkind:1111を取得
-      await loadAuditData(parsedDiscussions);
     } catch (error) {
-      logger.error("Failed to load discussions:", error);
+      logger.error("Failed to load discussion list:", error);
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);
@@ -232,47 +211,6 @@ export default function DiscussionsPage() {
     }
   };
 
-  // spec_v2.md要件: 監査ログのためのkind:1111取得（承認・未承認両方）
-  const loadAuditData = async (discussionList: Discussion[]) => {
-    try {
-      // 全会話のkind:1111を取得（承認・未承認問わず、監査ログ用）
-      const allPostsPromises = discussionList.map(async (discussion) => {
-        const discussionId = `34550:${discussion.authorPubkey}:${discussion.dTag}`;
-        const postsEvents = await nostrService.getDiscussionPosts(discussionId);
-        return postsEvents;
-      });
-
-      const allPostsEventsArrays = await Promise.all(allPostsPromises);
-      const allPostsEvents = allPostsEventsArrays.flat();
-
-      // 承認イベントも取得
-      const allApprovalsPromises = discussionList.map(async (discussion) => {
-        const discussionId = `34550:${discussion.authorPubkey}:${discussion.dTag}`;
-        const approvalsEvents = await nostrService.getApprovals(discussionId);
-        return approvalsEvents;
-      });
-
-      const allApprovalsEventsArrays = await Promise.all(allApprovalsPromises);
-      const allApprovalsEvents = allApprovalsEventsArrays.flat();
-
-      // Parse events (監査ログでは承認・未承認問わずすべて表示)
-      const parsedApprovals = allApprovalsEvents
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
-      const parsedPosts = allPostsEvents
-        .map((event) => parsePostEvent(event, parsedApprovals))
-        .filter((p): p is DiscussionPost => p !== null)
-        .sort((a, b) => b.createdAt - a.createdAt);
-
-      setPosts(parsedPosts);
-      setApprovals(parsedApprovals);
-    } catch (error) {
-      logger.error("Failed to load audit data:", error);
-      setPosts([]);
-      setApprovals([]);
-    }
-  };
 
   // spec_v2.md要件: リクエスト機能は完全オミット
 
@@ -489,7 +427,10 @@ export default function DiscussionsPage() {
                     profiles={profiles}
                     adminPubkey={ADMIN_PUBKEY}
                     viewerPubkey={user.pubkey}
-                    shouldLoadProfiles={false}
+                    shouldLoadProfiles={
+                      user.pubkey === ADMIN_PUBKEY ||
+                      discussions.some(d => d.moderators.some(m => m.pubkey === user.pubkey))
+                    }
                   />
                 )}
               </div>

@@ -22,7 +22,10 @@ import {
   formatRelativeTime,
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
-import { extractDiscussionFromNaddr, buildNaddrFromRef } from "@/lib/nostr/naddr-utils";
+import {
+  extractDiscussionFromNaddr,
+  buildNaddrFromRef,
+} from "@/lib/nostr/naddr-utils";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
   Discussion,
@@ -38,7 +41,9 @@ export default function DiscussionManagePage() {
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [posts, setPosts] = useState<DiscussionPost[]>([]);
   const [approvals, setApprovals] = useState<PostApproval[]>([]);
-  const [referencedDiscussions, setReferencedDiscussions] = useState<Discussion[]>([]);
+  const [referencedDiscussions, setReferencedDiscussions] = useState<
+    Discussion[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
@@ -48,27 +53,31 @@ export default function DiscussionManagePage() {
 
   // qタグから参照されている会話を検索
   const findReferencedDiscussion = (qRef: string): Discussion | null => {
-    return referencedDiscussions.find(d => {
-      const expectedRef = `34550:${d.authorPubkey}:${d.dTag}`;
-      return expectedRef === qRef;
-    }) || null;
+    return (
+      referencedDiscussions.find((d) => {
+        const expectedRef = `34550:${d.authorPubkey}:${d.dTag}`;
+        return expectedRef === qRef;
+      }) || null
+    );
   };
 
-  // qタグ引用をレンダリング
+  // qタグ引用をレンダリング（会話一覧風）
   const renderQTagReferences = (post: DiscussionPost) => {
-    const qTags = post.event?.tags?.filter(tag => tag[0] === "q") || [];
+    const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
     if (qTags.length === 0) return null;
 
     return (
-      <div className="mt-3 space-y-2">
-        <p className="text-xs text-gray-500 font-semibold">引用している会話:</p>
+      <div className="space-y-3">
         {qTags.map((qTag, index) => {
           if (!qTag[1] || !qTag[1].startsWith("34550:")) return null;
-          
+
           const referencedDiscussion = findReferencedDiscussion(qTag[1]);
           if (!referencedDiscussion) {
             return (
-              <div key={index} className="text-xs text-gray-400 italic">
+              <div
+                key={index}
+                className="text-sm text-gray-400 italic ruby-text"
+              >
                 参照: {qTag[1]} (会話が見つかりません)
               </div>
             );
@@ -76,16 +85,32 @@ export default function DiscussionManagePage() {
 
           const naddr = buildNaddrFromRef(qTag[1]);
           return (
-            <div key={index} className="border-l-2 border-blue-200 pl-3">
+            <div key={index} className="ruby-text">
               <Link
                 href={`/discussions/${naddr}`}
-                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                className="block hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-3 -m-3 transition-colors"
               >
-                <div className="text-sm font-medium">{referencedDiscussion.title}</div>
-                <div className="text-xs text-gray-500">
-                  {referencedDiscussion.description.length > 50
-                    ? `${referencedDiscussion.description.slice(0, 50)}...`
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  {referencedDiscussion.title}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  {referencedDiscussion.description.length > 100
+                    ? `${referencedDiscussion.description.slice(0, 100)}...`
                     : referencedDiscussion.description}
+                </p>
+                <div className="flex justify-between items-center">
+                  <div className="text-xs text-gray-500">
+                    <time
+                      dateTime={new Date(
+                        referencedDiscussion.createdAt * 1000
+                      ).toISOString()}
+                    >
+                      {formatRelativeTime(referencedDiscussion.createdAt)}
+                    </time>
+                  </div>
+                  <span className="badge badge-outline badge-sm">
+                    {referencedDiscussion.moderators.length + 1} モデレーター
+                  </span>
                 </div>
               </Link>
             </div>
@@ -132,9 +157,9 @@ export default function DiscussionManagePage() {
 
       // qタグから参照されている個別会話のkind:34550を取得
       const individualDiscussionRefs: string[] = [];
-      parsedPosts.forEach(post => {
-        const qTags = post.event?.tags?.filter(tag => tag[0] === "q") || [];
-        qTags.forEach(qTag => {
+      parsedPosts.forEach((post) => {
+        const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
+        qTags.forEach((qTag) => {
           if (qTag[1] && qTag[1].startsWith("34550:")) {
             individualDiscussionRefs.push(qTag[1]);
           }
@@ -143,7 +168,10 @@ export default function DiscussionManagePage() {
 
       let referencedDiscussionsData: Discussion[] = [];
       if (individualDiscussionRefs.length > 0) {
-        const individualDiscussions = await nostrService.getReferencedUserDiscussions(individualDiscussionRefs);
+        const individualDiscussions =
+          await nostrService.getReferencedUserDiscussions(
+            individualDiscussionRefs
+          );
         referencedDiscussionsData = individualDiscussions
           .map(parseDiscussionEvent)
           .filter((d): d is Discussion => d !== null);
@@ -161,7 +189,10 @@ export default function DiscussionManagePage() {
   }, [discussionInfo]);
 
   // Rubyfulライブラリ対応
-  useRubyfulRun([discussion, posts, approvals, referencedDiscussions], isLoaded);
+  useRubyfulRun(
+    [discussion, posts, approvals, referencedDiscussions],
+    isLoaded
+  );
 
   useEffect(() => {
     if (isDiscussionsEnabled() && discussionInfo) {
@@ -297,8 +328,14 @@ export default function DiscussionManagePage() {
     );
   }
 
-  const pendingPosts = posts.filter((post) => !post.approved);
-  const approvedPosts = posts.filter((post) => post.approved);
+  // qタグ引用があるもののみをフィルタリング
+  const postsWithQTags = posts.filter((post) => {
+    const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
+    return qTags.some((qTag) => qTag[1] && qTag[1].startsWith("34550:"));
+  });
+
+  const pendingPosts = postsWithQTags.filter((post) => !post.approved);
+  const approvedPosts = postsWithQTags.filter((post) => post.approved);
 
   return (
     <AdminCheck
@@ -354,20 +391,6 @@ export default function DiscussionManagePage() {
                       <div className="card-body p-4">
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex-1">
-                            {post.busStopTag && (
-                              <div className="mb-2">
-                                <span className="badge badge-outline badge-sm">
-                                  {post.busStopTag}
-                                </span>
-                              </div>
-                            )}
-                            <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
-                              {post.content.split("\n").map((line, i) => (
-                                <p key={i} className="mb-1 last:mb-0">
-                                  {line || "\u00A0"}
-                                </p>
-                              ))}
-                            </div>
                             {renderQTagReferences(post)}
                           </div>
                           <button
@@ -379,9 +402,6 @@ export default function DiscussionManagePage() {
                               {approvingIds.has(post.id) ? "" : "承認"}
                             </span>
                           </button>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {formatRelativeTime(post.createdAt)}
                         </div>
                       </div>
                     </div>
@@ -415,20 +435,6 @@ export default function DiscussionManagePage() {
                       <div className="card-body p-4">
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex-1">
-                            {post.busStopTag && (
-                              <div className="mb-2">
-                                <span className="badge badge-outline badge-sm">
-                                  {post.busStopTag}
-                                </span>
-                              </div>
-                            )}
-                            <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
-                              {post.content.split("\n").map((line, i) => (
-                                <p key={i} className="mb-1 last:mb-0">
-                                  {line || "\u00A0"}
-                                </p>
-                              ))}
-                            </div>
                             {renderQTagReferences(post)}
                           </div>
                           <div className="flex gap-2 ml-4">
@@ -448,12 +454,6 @@ export default function DiscussionManagePage() {
                               </button>
                             )}
                           </div>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          承認:{" "}
-                          {formatRelativeTime(
-                            post.approvedAt || post.createdAt
-                          )}
                         </div>
                       </div>
                     </div>

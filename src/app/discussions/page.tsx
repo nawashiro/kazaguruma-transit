@@ -18,10 +18,17 @@ import {
   formatRelativeTime,
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
-import { buildNaddrFromDiscussion, extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
+import {
+  buildNaddrFromDiscussion,
+  extractDiscussionFromNaddr,
+} from "@/lib/nostr/naddr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
-import type { Discussion, DiscussionPost, PostApproval } from "@/types/discussion";
+import type {
+  Discussion,
+  DiscussionPost,
+  PostApproval,
+} from "@/types/discussion";
 import { logger } from "@/utils/logger";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
@@ -80,26 +87,36 @@ export default function DiscussionsPage() {
         throw new Error("Invalid DISCUSSION_LIST_NADDR format");
       }
 
-      logger.info("Loading discussion list with discussionId:", discussionInfo.discussionId);
+      logger.info(
+        "Loading discussion list with discussionId:",
+        discussionInfo.discussionId
+      );
 
       // spec_v2.md仕様: 会話一覧管理用のkind:34550から、承認されたkind:1111を取得
-      const [discussionListEvents, discussionListPosts, discussionListApprovals] = await Promise.all([
+      const [
+        discussionListEvents,
+        discussionListPosts,
+        discussionListApprovals,
+      ] = await Promise.all([
         // 会話一覧管理用のkind:34550（メタデータ）
-        nostrService.getEvents([{
-          kinds: [34550],
-          authors: [discussionInfo.authorPubkey],
-          "#d": [discussionInfo.dTag],
-          limit: 1
-        }]),
+        nostrService.getEvents([
+          {
+            kinds: [34550],
+            authors: [discussionInfo.authorPubkey],
+            "#d": [discussionInfo.dTag],
+            limit: 1,
+          },
+        ]),
         // 会話一覧管理用の会話のkind:1111投稿
         nostrService.getDiscussionPosts(discussionInfo.discussionId),
         // 会話一覧管理用の会話のkind:4550承認
         nostrService.getApprovals(discussionInfo.discussionId),
       ]);
 
-      const discussionListMeta = discussionListEvents.length > 0 
-        ? parseDiscussionEvent(discussionListEvents[0])
-        : null;
+      const discussionListMeta =
+        discussionListEvents.length > 0
+          ? parseDiscussionEvent(discussionListEvents[0])
+          : null;
 
       if (!discussionListMeta) {
         throw new Error("Discussion list metadata not found");
@@ -118,15 +135,15 @@ export default function DiscussionsPage() {
       logger.info("Discussion list posts:", {
         totalPosts: discussionListPosts.length,
         approvedPosts: listPosts.length,
-        posts: listPosts.map(p => ({ content: p.content.slice(0, 50) }))
+        posts: listPosts.map((p) => ({ content: p.content.slice(0, 50) })),
       });
 
       // spec_v2.md仕様: 承認されたkind:1111のqタグから個別会話のnaddrを取得
       const individualDiscussionRefs: string[] = [];
-      listPosts.forEach(post => {
+      listPosts.forEach((post) => {
         // qタグから個別会話の参照を取得
-        const qTags = post.event?.tags?.filter(tag => tag[0] === "q") || [];
-        qTags.forEach(qTag => {
+        const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
+        qTags.forEach((qTag) => {
           if (qTag[1] && qTag[1].startsWith("34550:")) {
             individualDiscussionRefs.push(qTag[1]);
           }
@@ -136,8 +153,11 @@ export default function DiscussionsPage() {
       logger.info("Individual discussion refs:", individualDiscussionRefs);
 
       // 個別会話のkind:34550を取得
-      const individualDiscussions = await nostrService.getReferencedUserDiscussions(individualDiscussionRefs);
-      
+      const individualDiscussions =
+        await nostrService.getReferencedUserDiscussions(
+          individualDiscussionRefs
+        );
+
       const parsedIndividualDiscussions = individualDiscussions
         .map(parseDiscussionEvent)
         .filter((d): d is Discussion => d !== null)
@@ -145,7 +165,11 @@ export default function DiscussionsPage() {
 
       // 表示用データを設定
       setDiscussions(parsedIndividualDiscussions);
-      setPosts(discussionListPosts.map((event) => parsePostEvent(event, listApprovals)).filter((p): p is DiscussionPost => p !== null));
+      setPosts(
+        discussionListPosts
+          .map((event) => parsePostEvent(event, listApprovals))
+          .filter((p): p is DiscussionPost => p !== null)
+      );
       setApprovals(listApprovals);
 
       // プロファイル取得（管理者・モデレーターのみ）
@@ -154,29 +178,33 @@ export default function DiscussionsPage() {
       if (shouldLoadProfiles) {
         const uniquePubkeys = new Set<string>();
         uniquePubkeys.add(ADMIN_PUBKEY);
-        
+
         parsedIndividualDiscussions.forEach((discussion) => {
-          if (discussion.authorPubkey === ADMIN_PUBKEY ||
-              discussion.moderators.some(m => m.pubkey === discussion.authorPubkey)) {
+          if (
+            discussion.authorPubkey === ADMIN_PUBKEY ||
+            discussion.moderators.some(
+              (m) => m.pubkey === discussion.authorPubkey
+            )
+          ) {
             uniquePubkeys.add(discussion.authorPubkey);
           }
-          discussion.moderators.forEach((mod) =>
-            uniquePubkeys.add(mod.pubkey)
-          );
+          discussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
         });
 
-        const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
-          const profileEvent = await nostrService.getProfile(pubkey);
-          if (profileEvent) {
-            try {
-              const profile = JSON.parse(profileEvent.content);
-              return [pubkey, { name: profile.name || profile.display_name }];
-            } catch {
-              return [pubkey, {}];
+        const profilePromises = Array.from(uniquePubkeys).map(
+          async (pubkey) => {
+            const profileEvent = await nostrService.getProfile(pubkey);
+            if (profileEvent) {
+              try {
+                const profile = JSON.parse(profileEvent.content);
+                return [pubkey, { name: profile.name || profile.display_name }];
+              } catch {
+                return [pubkey, {}];
+              }
             }
+            return [pubkey, {}];
           }
-          return [pubkey, {}];
-        });
+        );
 
         const profileResults = await Promise.all(profilePromises);
         const profilesMap = Object.fromEntries(profileResults);
@@ -187,9 +215,8 @@ export default function DiscussionsPage() {
 
       logger.info("Individual discussions loaded:", {
         count: parsedIndividualDiscussions.length,
-        discussions: parsedIndividualDiscussions.map(d => d.title)
+        discussions: parsedIndividualDiscussions.map((d) => d.title),
       });
-
     } catch (error) {
       logger.error("Failed to load discussion list:", error);
     } finally {
@@ -203,7 +230,6 @@ export default function DiscussionsPage() {
       await loadData();
     }
   };
-
 
   // spec_v2.md要件: リクエスト機能は完全オミット
 
@@ -305,30 +331,6 @@ export default function DiscussionsPage() {
                                 >
                                   {formatRelativeTime(discussion.createdAt)}
                                 </time>
-                                {/* 作成者が管理者・モデレーターの場合、名前を表示 */}
-                                {(discussion.authorPubkey === ADMIN_PUBKEY ||
-                                  discussion.moderators.some(
-                                    (m) => m.pubkey === discussion.authorPubkey
-                                  )) && (
-                                  <div className="text-xs">
-                                    作成者:{" "}
-                                    {profiles[discussion.authorPubkey]?.name ||
-                                      "名前未設定"}
-                                  </div>
-                                )}
-                                {/* モデレーターの名前を表示 */}
-                                {discussion.moderators.length > 0 && (
-                                  <div className="text-xs">
-                                    モデレーター:{" "}
-                                    {discussion.moderators
-                                      .map(
-                                        (mod) =>
-                                          profiles[mod.pubkey]?.name ||
-                                          "名前未設定"
-                                      )
-                                      .join(", ")}
-                                  </div>
-                                )}
                               </div>
                               <span className="badge badge-outline badge-sm">
                                 {discussion.moderators.length + 1} モデレーター
@@ -422,7 +424,9 @@ export default function DiscussionsPage() {
                     viewerPubkey={user.pubkey}
                     shouldLoadProfiles={
                       user.pubkey === ADMIN_PUBKEY ||
-                      discussions.some(d => d.moderators.some(m => m.pubkey === user.pubkey))
+                      discussions.some((d) =>
+                        d.moderators.some((m) => m.pubkey === user.pubkey)
+                      )
                     }
                   />
                 )}

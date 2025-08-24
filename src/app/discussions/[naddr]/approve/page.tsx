@@ -31,6 +31,7 @@ import type {
   PostApproval,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
+import { CheckBadgeIcon } from "@heroicons/react/24/outline";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
@@ -46,6 +47,7 @@ export default function PostApprovalPage() {
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [isLoaded, setIsLoaded] = useState(false);
+  const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
 
   const { user, signEvent } = useAuth();
 
@@ -256,6 +258,43 @@ export default function PostApprovalPage() {
           )}
         </div>
 
+        <nav className="join mb-6" role="tablist">
+          <button
+            aria-selected={activeTab === "pending"}
+            aria-label="承認待ちタブを開く"
+            className={`join-item btn ruby-text ${
+              activeTab === "pending" ? "btn-active btn-primary" : "false"
+            }`}
+            name="tab-options"
+            role="tab"
+            onClick={() => setActiveTab("pending")}
+          >
+            <span>承認待ち</span>
+            {pendingPosts.length > 0 && (
+              <span className="badge badge-warning badge-sm ml-1">
+                {pendingPosts.length}
+              </span>
+            )}
+          </button>
+          <button
+            aria-selected={activeTab === "approved"}
+            aria-label="承認済みタブを開く"
+            className={`join-item btn ruby-text ${
+              activeTab === "approved" ? "btn-active btn-primary" : "false"
+            }`}
+            name="tab-options"
+            role="tab"
+            onClick={() => setActiveTab("approved")}
+          >
+            <span>承認済み</span>
+            {approvedPosts.length > 0 && (
+              <span className="badge badge-success badge-sm ml-1">
+                {approvedPosts.length}
+              </span>
+            )}
+          </button>
+        </nav>
+
         {isLoading ? (
           <div className="animate-pulse space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -266,143 +305,169 @@ export default function PostApprovalPage() {
             ))}
           </div>
         ) : (
-          <div className="space-y-8">
-            <section aria-labelledby="pending-posts-heading">
-              <h2
-                id="pending-posts-heading"
-                className="text-xl font-semibold mb-4 ruby-text"
-              >
-                承認待ち投稿
-                <span className="badge badge-warning badge-sm ml-2">
-                  {pendingPosts.length}
-                </span>
-              </h2>
+          <main aria-labelledby={`${activeTab}-tab`} role="tabpanel">
+            {activeTab === "pending" && (
+              <section aria-labelledby="pending-posts-heading">
+                <h2
+                  id="pending-posts-heading"
+                  className="text-xl font-semibold mb-4 ruby-text"
+                >
+                  承認待ち投稿
+                </h2>
 
-              {pendingPosts.length > 0 ? (
-                <div className="space-y-4">
-                  {pendingPosts.map((post) => (
-                    <div
-                      key={post.id}
-                      className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
-                    >
-                      <div className="card-body p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            {post.busStopTag && (
-                              <div className="mb-2">
-                                <span className="badge badge-outline badge-sm">
-                                  {post.busStopTag}
-                                </span>
+                {pendingPosts.length > 0 ? (
+                  <div className="space-y-4">
+                    {pendingPosts.map((post) => (
+                      <div
+                        key={post.id}
+                        className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                      >
+                        <div className="card-body p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              {post.busStopTag && (
+                                <div className="mb-2">
+                                  <span className="badge badge-outline badge-sm">
+                                    {post.busStopTag}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
+                                {post.content.split("\n").map((line, i) => (
+                                  <p key={i} className="mb-1 last:mb-0">
+                                    {line || "\u00A0"}
+                                  </p>
+                                ))}
                               </div>
-                            )}
-                            <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
-                              {post.content.split("\n").map((line, i) => (
-                                <p key={i} className="mb-1 last:mb-0">
-                                  {line || "\u00A0"}
-                                </p>
-                              ))}
                             </div>
+                            <button
+                              onClick={() => handleApprovePost(post)}
+                              disabled={approvingIds.has(post.id)}
+                              className="ml-4 btn btn-primary rounded-full dark:rounded-sm"
+                            >
+                              <span>
+                                {approvingIds.has(post.id) ? "" : "承認"}
+                              </span>
+                            </button>
                           </div>
-                          <button
-                            onClick={() => handleApprovePost(post)}
-                            disabled={approvingIds.has(post.id)}
-                            className="ml-4 btn btn-primary rounded-full dark:rounded-sm"
-                          >
-                            <span>
-                              {approvingIds.has(post.id) ? "" : "承認"}
-                            </span>
-                          </button>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {formatRelativeTime(post.createdAt)}
+                          <div className="text-xs text-gray-500">
+                            {formatRelativeTime(post.createdAt)}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-600 dark:text-gray-400 ruby-text">
-                  承認待ちの投稿はありません。
-                </p>
-              )}
-            </section>
-
-            <section aria-labelledby="approved-posts-heading">
-              <h2
-                id="approved-posts-heading"
-                className="text-xl font-semibold mb-4 ruby-text"
-              >
-                承認済み投稿
-                <span className="badge badge-success badge-sm ml-2">
-                  {approvedPosts.length}
-                </span>
-              </h2>
-
-              {approvedPosts.length > 0 ? (
-                <div className="space-y-4">
-                  {approvedPosts.slice(0, 10).map((post) => (
-                    <div
-                      key={post.id}
-                      className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 opacity-75"
-                    >
-                      <div className="card-body p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            {post.busStopTag && (
-                              <div className="mb-2">
-                                <span className="badge badge-outline badge-sm">
-                                  {post.busStopTag}
-                                </span>
-                              </div>
-                            )}
-                            <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
-                              {post.content.split("\n").map((line, i) => (
-                                <p key={i} className="mb-1 last:mb-0">
-                                  {line || "\u00A0"}
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex gap-2 ml-4">
-                            {approvals.some(
-                              (a) =>
-                                a.postId === post.id &&
-                                a.moderatorPubkey === user.pubkey
-                            ) && (
-                              <button
-                                onClick={() => handleRevokeApproval(post)}
-                                disabled={revokingIds.has(post.id)}
-                                className="btn btn-warning rounded-full dark:rounded-sm"
-                              >
-                                <span>
-                                  {revokingIds.has(post.id) ? "" : "承認を撤回"}
-                                </span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          承認:{" "}
-                          {formatRelativeTime(
-                            post.approvedAt || post.createdAt
-                          )}
-                        </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div className="card-body">
+                      <div className="text-center py-8 ruby-text">
+                        <CheckBadgeIcon
+                          aria-label="承認待ちなし"
+                          className="mx-auto h-12 w-12 text-gray-400"
+                        />
+                        <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                          承認待ちの投稿はありません
+                        </h3>
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                          新しい投稿が投稿されると、ここに表示されます。
+                        </p>
                       </div>
                     </div>
-                  ))}
-                  {approvedPosts.length > 10 && (
-                    <p className="text-center text-gray-500 text-sm">
-                      最新10件を表示中（全{approvedPosts.length}件）
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-gray-600 dark:text-gray-400 ruby-text">
-                  承認済みの投稿はありません。
-                </p>
-              )}
-            </section>
-          </div>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {activeTab === "approved" && (
+              <section aria-labelledby="approved-posts-heading">
+                <h2
+                  id="approved-posts-heading"
+                  className="text-xl font-semibold mb-4 ruby-text"
+                >
+                  承認済み投稿
+                </h2>
+
+                {approvedPosts.length > 0 ? (
+                  <div className="space-y-4">
+                    {approvedPosts.slice(0, 10).map((post) => (
+                      <div
+                        key={post.id}
+                        className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 opacity-75"
+                      >
+                        <div className="card-body p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              {post.busStopTag && (
+                                <div className="mb-2">
+                                  <span className="badge badge-outline badge-sm">
+                                    {post.busStopTag}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
+                                {post.content.split("\n").map((line, i) => (
+                                  <p key={i} className="mb-1 last:mb-0">
+                                    {line || "\u00A0"}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="flex gap-2 ml-4">
+                              {approvals.some(
+                                (a) =>
+                                  a.postId === post.id &&
+                                  a.moderatorPubkey === user.pubkey
+                              ) && (
+                                <button
+                                  onClick={() => handleRevokeApproval(post)}
+                                  disabled={revokingIds.has(post.id)}
+                                  className="btn btn-warning rounded-full dark:rounded-sm"
+                                >
+                                  <span>
+                                    {revokingIds.has(post.id)
+                                      ? ""
+                                      : "承認を撤回"}
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            承認:{" "}
+                            {formatRelativeTime(
+                              post.approvedAt || post.createdAt
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {approvedPosts.length > 10 && (
+                      <p className="text-center text-gray-500 text-sm">
+                        最新10件を表示中（全{approvedPosts.length}件）
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div className="card-body">
+                      <div className="text-center py-8 ruby-text">
+                        <CheckBadgeIcon
+                          aria-label="承認済みなし"
+                          className="mx-auto h-12 w-12 text-gray-400"
+                        />
+                        <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                          承認済みの投稿はありません
+                        </h3>
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                          投稿が承認されると、ここに表示されます。
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+          </main>
         )}
       </div>
     </ModeratorCheck>

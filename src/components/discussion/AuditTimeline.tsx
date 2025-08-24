@@ -49,7 +49,12 @@ export function AuditTimeline({
   // qタグフィルタに基づいてアイテムをフィルタリング
   const filteredItems = useMemo(() => {
     if (!qTagFilter) return items;
-    return items.filter((item) => hasQTag(item));
+    return items.filter((item) => {
+      // 承認イベントは常に含める
+      if (item.type === "post-approved") return true;
+      // その他のイベントはqタグの有無で判断
+      return hasQTag(item);
+    });
   }, [items, qTagFilter]);
 
   // 投稿IDと承認状況のマッピングを作成

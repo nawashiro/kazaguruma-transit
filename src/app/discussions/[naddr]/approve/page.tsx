@@ -24,7 +24,6 @@ import {
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
-import Button from "@/components/ui/Button";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
   Discussion,
@@ -159,7 +158,9 @@ export default function PostApprovalPage() {
   const handleRevokeApproval = async (post: DiscussionPost) => {
     if (!user.isLoggedIn || !discussion) return;
 
-    const approval = approvals.find(a => a.postId === post.id && a.moderatorPubkey === user.pubkey);
+    const approval = approvals.find(
+      (a) => a.postId === post.id && a.moderatorPubkey === user.pubkey
+    );
     if (!approval) return;
 
     setRevokingIds((prev) => new Set([...prev, post.id]));
@@ -177,14 +178,16 @@ export default function PostApprovalPage() {
       }
 
       // 楽観的な更新 - 承認を削除
-      setApprovals((prev) => prev.filter(a => a.id !== approval.id));
+      setApprovals((prev) => prev.filter((a) => a.id !== approval.id));
       setPosts((prev) =>
         prev.map((p) =>
           p.id === post.id
             ? {
                 ...p,
                 approved: false,
-                approvedBy: p.approvedBy?.filter(pubkey => pubkey !== user.pubkey) || [],
+                approvedBy:
+                  p.approvedBy?.filter((pubkey) => pubkey !== user.pubkey) ||
+                  [],
                 approvedAt: undefined,
               }
             : p
@@ -300,16 +303,15 @@ export default function PostApprovalPage() {
                               ))}
                             </div>
                           </div>
-                          <Button
+                          <button
                             onClick={() => handleApprovePost(post)}
                             disabled={approvingIds.has(post.id)}
-                            loading={approvingIds.has(post.id)}
-                            className="ml-4"
+                            className="ml-4 btn btn-primary rounded-full dark:rounded-sm"
                           >
                             <span>
                               {approvingIds.has(post.id) ? "" : "承認"}
                             </span>
-                          </Button>
+                          </button>
                         </div>
                         <div className="text-xs text-gray-500">
                           {formatRelativeTime(post.createdAt)}
@@ -362,26 +364,28 @@ export default function PostApprovalPage() {
                             </div>
                           </div>
                           <div className="flex gap-2 ml-4">
-                            <span className="badge badge-success badge-sm">
-                              承認済み
-                            </span>
-                            {approvals.some(a => a.postId === post.id && a.moderatorPubkey === user.pubkey) && (
-                              <Button
+                            {approvals.some(
+                              (a) =>
+                                a.postId === post.id &&
+                                a.moderatorPubkey === user.pubkey
+                            ) && (
+                              <button
                                 onClick={() => handleRevokeApproval(post)}
                                 disabled={revokingIds.has(post.id)}
-                                loading={revokingIds.has(post.id)}
-                                secondary
-                                className="btn-xs"
+                                className="btn btn-warning rounded-full dark:rounded-sm"
                               >
                                 <span>
                                   {revokingIds.has(post.id) ? "" : "承認を撤回"}
                                 </span>
-                              </Button>
+                              </button>
                             )}
                           </div>
                         </div>
                         <div className="text-xs text-gray-500">
-                          承認: {formatRelativeTime(post.approvedAt || post.createdAt)}
+                          承認:{" "}
+                          {formatRelativeTime(
+                            post.approvedAt || post.createdAt
+                          )}
                         </div>
                       </div>
                     </div>

@@ -428,6 +428,8 @@ export default function DiscussionsPage() {
                         d.moderators.some((m) => m.pubkey === user.pubkey)
                       )
                     }
+                    qTagFilter={true}
+                    referencedDiscussions={discussions}
                   />
                 )}
               </div>

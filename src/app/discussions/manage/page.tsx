@@ -81,7 +81,7 @@ export default function DiscussionManagePage() {
                   key={index}
                   className="text-sm text-gray-400 italic ruby-text"
                 >
-                  参照: {naddr} (会話が見つかりません)
+                  会話が見つかりません。参照: {naddr}
                 </div>
               );
             } catch {
@@ -90,7 +90,7 @@ export default function DiscussionManagePage() {
                   key={index}
                   className="text-sm text-gray-400 italic ruby-text"
                 >
-                  参照: {qTag[1]} (無効な参照形式)
+                  無効な参照形式。参照: {qTag[1]}
                 </div>
               );
             }

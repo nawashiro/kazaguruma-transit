@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
-import type { AuditTimelineItem } from "@/types/discussion";
+import React, { useState, useMemo } from "react";
+import Link from "next/link";
+import type { AuditTimelineItem, Discussion } from "@/types/discussion";
 import { formatRelativeTime, hexToNpub } from "@/lib/nostr/nostr-utils";
+import { buildNaddrFromRef } from "@/lib/nostr/naddr-utils";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface AuditTimelineProps {
@@ -13,16 +15,43 @@ interface AuditTimelineProps {
   viewerPubkey?: string | null;
   discussionAuthorPubkey?: string;
   shouldLoadProfiles?: boolean;
+  qTagFilter?: boolean;
+  referencedDiscussions?: Discussion[];
 }
 
-export function AuditTimeline({ 
-  items, 
-  profiles = {}, 
+export function AuditTimeline({
+  items,
+  profiles = {},
   adminPubkey,
   moderators = [],
   viewerPubkey,
-  shouldLoadProfiles = true, // eslint-disable-line @typescript-eslint/no-unused-vars
+  qTagFilter = false,
+  referencedDiscussions = [],
 }: AuditTimelineProps) {
+  // qタグから参照されている会話を検索
+  const findReferencedDiscussion = (qRef: string): Discussion | null => {
+    return (
+      referencedDiscussions.find((d) => {
+        const expectedRef = `34550:${d.authorPubkey}:${d.dTag}`;
+        return expectedRef === qRef;
+      }) || null
+    );
+  };
+
+  // qタグを持つアイテムかどうかを判断
+  const hasQTag = (item: AuditTimelineItem): boolean => {
+    if (item.type !== "post-submitted" && item.type !== "post-approved")
+      return false;
+    const qTags = item.event?.tags?.filter((tag) => tag[0] === "q") || [];
+    return qTags.some((qTag) => qTag[1] && qTag[1].startsWith("34550:"));
+  };
+
+  // qタグフィルタに基づいてアイテムをフィルタリング
+  const filteredItems = useMemo(() => {
+    if (!qTagFilter) return items;
+    return items.filter((item) => hasQTag(item));
+  }, [items, qTagFilter]);
+
   // 投稿IDと承認状況のマッピングを作成
   const getApprovalStatus = (item: AuditTimelineItem) => {
     if (item.type !== "post-submitted") return null;
@@ -63,15 +92,92 @@ export function AuditTimeline({
   const getActorBadge = (actorPubkey: string) => {
     // Only show moderator role in audit timeline
     if (moderators.includes(actorPubkey)) {
-      return 'モデレーター';
+      return "モデレーター";
     }
     // Do not show admin or creator roles in audit timeline
     return null;
   };
 
+  // qタグ引用をレンダリング（会話一覧風）
+  const renderQTagReferences = (item: AuditTimelineItem) => {
+    if (item.type !== "post-submitted" && item.type !== "post-approved")
+      return null;
+
+    const qTags = item.event?.tags?.filter((tag) => tag[0] === "q") || [];
+    if (qTags.length === 0) return null;
+
+    return (
+      <div className="space-y-3">
+        {qTags.map((qTag, index) => {
+          if (!qTag[1] || !qTag[1].startsWith("34550:")) return null;
+
+          const referencedDiscussion = findReferencedDiscussion(qTag[1]);
+          if (!referencedDiscussion) {
+            // 内部参照形式をnaddr形式に変換してユーザーに表示
+            try {
+              const naddr = buildNaddrFromRef(qTag[1]);
+              return (
+                <div
+                  key={index}
+                  className="text-sm text-gray-400 italic ruby-text"
+                >
+                  会話が見つかりません。参照: {naddr}
+                </div>
+              );
+            } catch {
+              return (
+                <div
+                  key={index}
+                  className="text-sm text-gray-400 italic ruby-text"
+                >
+                  無効な参照形式。参照: {qTag[1]}
+                </div>
+              );
+            }
+          }
+
+          const naddr = buildNaddrFromRef(qTag[1]);
+          return (
+            <div key={index} className="ruby-text">
+              <Link
+                href={`/discussions/${naddr}`}
+                className="block hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-3 -m-3 transition-colors"
+              >
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  {referencedDiscussion.title}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  {referencedDiscussion.description.length > 100
+                    ? `${referencedDiscussion.description.slice(0, 100)}...`
+                    : referencedDiscussion.description}
+                </p>
+                <div className="flex justify-between items-center">
+                  <div className="text-xs text-gray-500">
+                    <time
+                      dateTime={new Date(
+                        referencedDiscussion.createdAt * 1000
+                      ).toISOString()}
+                    >
+                      {formatRelativeTime(referencedDiscussion.createdAt)}
+                    </time>
+                  </div>
+                  <span className="badge badge-outline badge-sm">
+                    {referencedDiscussion.moderators.length + 1} モデレーター
+                  </span>
+                </div>
+              </Link>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   useRubyfulRun([selectedEvent], true);
 
   const getDetailContent = (item: AuditTimelineItem) => {
+    const qTagContent = renderQTagReferences(item);
+
     switch (item.type) {
       case "discussion-request":
         // リクエストの場合、contentを表示
@@ -82,26 +188,25 @@ export function AuditTimeline({
         ) : null;
 
       case "post-submitted":
-        // 投稿提出の場合、contentを表示
-        return item.event.content ? (
-          <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm ruby-text">
-            <div className="whitespace-pre-wrap">{item.event.content}</div>
-          </div>
-        ) : null;
+        // 投稿提出の場合、qタグ引用とcontentを表示
+        return qTagContent;
 
       case "post-approved":
-        // 承認の場合、承認された投稿の内容を表示
+        // 承認の場合、qタグ引用と承認された投稿の内容を表示
         try {
           const approvedPost = JSON.parse(item.event.content);
           return (
-            <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm ruby-text">
-              <div className="whitespace-pre-wrap">
-                {approvedPost.content || "内容なし"}
+            <>
+              {qTagContent}
+              <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm ruby-text">
+                <div className="whitespace-pre-wrap">
+                  {approvedPost.content || "内容なし"}
+                </div>
               </div>
-            </div>
+            </>
           );
         } catch {
-          return null;
+          return qTagContent;
         }
 
       default:
@@ -109,7 +214,7 @@ export function AuditTimeline({
     }
   };
 
-  if (items.length === 0) {
+  if (filteredItems.length === 0) {
     return (
       <div className="text-center py-8 ruby-text">
         <svg
@@ -128,10 +233,12 @@ export function AuditTimeline({
           />
         </svg>
         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
-          履歴がありません
+          {qTagFilter ? "qタグを含む履歴がありません" : "履歴がありません"}
         </h3>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          まだ操作履歴がありません。
+          {qTagFilter
+            ? "会話を参照する投稿履歴がありません。"
+            : "まだ操作履歴がありません。"}
         </p>
       </div>
     );
@@ -287,7 +394,7 @@ export function AuditTimeline({
         role="list"
         aria-label="監査タイムライン"
       >
-        {items.map((item, index) => (
+        {filteredItems.map((item, index) => (
           <li key={item.id} role="listitem">
             {index != 0 && <hr />}
 
@@ -309,7 +416,7 @@ export function AuditTimeline({
                   {formatRelativeTime(item.timestamp)}
                 </time>
               </p>
-              <div className="timeline-box">
+              <div className="timeline-box break-all">
                 {getActorDisplayName(item.actorPubkey) && (
                   <p className="text-sm ruby-text">
                     {getActorDisplayName(item.actorPubkey)}
@@ -319,13 +426,13 @@ export function AuditTimeline({
                   <span className="text-sm text-gray-500 dark:text-gray-400">
                     {`${hexToNpub(item.actorPubkey).slice(0, 12)}...`}
                   </span>
-                  
+
                   {getActorBadge(item.actorPubkey) && (
                     <span className="badge badge-outline badge-sm">
                       {getActorBadge(item.actorPubkey)}
                     </span>
                   )}
-                  
+
                   {item.type === "post-submitted" &&
                     (() => {
                       const approvalStatus = getApprovalStatus(item);
@@ -355,7 +462,7 @@ export function AuditTimeline({
               </div>
             </div>
 
-            {index < items.length - 1 && <hr />}
+            {index < filteredItems.length - 1 && <hr />}
           </li>
         ))}
       </ul>

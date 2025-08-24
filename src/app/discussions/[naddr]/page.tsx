@@ -471,12 +471,11 @@ export default function DiscussionDetailPage() {
           <aside className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4">
             <p className="mb-4">
               あなたは
-              {/* Show "モデレーター" if user is moderator (including admin), otherwise show "作成者" */}
-              {user.pubkey === ADMIN_PUBKEY || 
-               discussion.moderators.some((m) => m.pubkey === user.pubkey) ? (
-                <span>モデレーター</span>
-              ) : (
+              {/* Priority: Creator > Moderator. Show creator if user is the author, otherwise show moderator */}
+              {user.pubkey === discussion.authorPubkey ? (
                 <span>作成者</span>
+              ) : (
+                <span>モデレーター</span>
               )}
               です。
             </p>

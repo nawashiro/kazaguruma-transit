@@ -67,20 +67,33 @@ export default function DiscussionManagePage() {
     if (qTags.length === 0) return null;
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-3 break-all">
         {qTags.map((qTag, index) => {
           if (!qTag[1] || !qTag[1].startsWith("34550:")) return null;
 
           const referencedDiscussion = findReferencedDiscussion(qTag[1]);
           if (!referencedDiscussion) {
-            return (
-              <div
-                key={index}
-                className="text-sm text-gray-400 italic ruby-text"
-              >
-                参照: {qTag[1]} (会話が見つかりません)
-              </div>
-            );
+            // 内部参照形式をnaddr形式に変換してユーザーに表示
+            try {
+              const naddr = buildNaddrFromRef(qTag[1]);
+              return (
+                <div
+                  key={index}
+                  className="text-sm text-gray-400 italic ruby-text"
+                >
+                  参照: {naddr} (会話が見つかりません)
+                </div>
+              );
+            } catch {
+              return (
+                <div
+                  key={index}
+                  className="text-sm text-gray-400 italic ruby-text"
+                >
+                  参照: {qTag[1]} (無効な参照形式)
+                </div>
+              );
+            }
           }
 
           const naddr = buildNaddrFromRef(qTag[1]);

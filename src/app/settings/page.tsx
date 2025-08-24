@@ -360,7 +360,9 @@ export default function SettingsPage() {
           <div className="mt-8">
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
-                <h2 className="card-title mb-4 ruby-text">自作会話一覧</h2>
+                <h2 className="card-title mb-4 ruby-text">
+                  <span>あなたが作った会話の一覧</span>
+                </h2>
 
                 {isLoadingDiscussions ? (
                   <div className="animate-pulse space-y-4">
@@ -384,7 +386,7 @@ export default function SettingsPage() {
                             <div className="flex-1">
                               <Link
                                 href={`/discussions/${naddr}`}
-                                className="text-lg font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 ruby-text"
+                                className="text-lg font-semibold dark:text-blue-400 dark:hover:text-blue-300 ruby-text"
                               >
                                 {discussion.title}
                               </Link>

@@ -143,28 +143,14 @@ export function AuditTimeline({
                 href={`/discussions/${naddr}`}
                 className="block hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-3 -m-3 transition-colors"
               >
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                   {referencedDiscussion.title}
-                </h3>
+                </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                   {referencedDiscussion.description.length > 100
                     ? `${referencedDiscussion.description.slice(0, 100)}...`
                     : referencedDiscussion.description}
                 </p>
-                <div className="flex justify-between items-center">
-                  <div className="text-xs text-gray-500">
-                    <time
-                      dateTime={new Date(
-                        referencedDiscussion.createdAt * 1000
-                      ).toISOString()}
-                    >
-                      {formatRelativeTime(referencedDiscussion.createdAt)}
-                    </time>
-                  </div>
-                  <span className="badge badge-outline badge-sm">
-                    {referencedDiscussion.moderators.length + 1} モデレーター
-                  </span>
-                </div>
               </Link>
             </div>
           );

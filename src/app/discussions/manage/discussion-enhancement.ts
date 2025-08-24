@@ -59,6 +59,9 @@ export async function fetchDiscussionDetails(hexId: string): Promise<DiscussionD
     }
 
     const parsed = parseDiscussionEvent(event);
+    if (!parsed) {
+      throw new Error('Failed to parse discussion event');
+    }
     return {
       id: event.id,
       dTag: parsed.dTag,

@@ -52,7 +52,7 @@ describe('Kind:34550 Display from Q Tag References', () => {
 
   test('should fetch Kind:34550 details from hex ID', async () => {
     const mockCreateNostrService = createNostrService as jest.MockedFunction<typeof createNostrService>;
-    const mockService = mockCreateNostrService.mock.results[0]?.value || mockCreateNostrService();
+    const mockService = mockCreateNostrService.mock.results[0]?.value || mockCreateNostrService({} as any);
     mockService.getEventByNaddr.mockResolvedValue(mockKind34550Event);
     const result = await fetchDiscussionDetails('34550:user1-pubkey:user_discussion_1');
 
@@ -69,7 +69,7 @@ describe('Kind:34550 Display from Q Tag References', () => {
 
   test('should enhance processed discussions with Kind:34550 details', async () => {
     const mockCreateNostrService = createNostrService as jest.MockedFunction<typeof createNostrService>;
-    const mockService = mockCreateNostrService.mock.results[0]?.value || mockCreateNostrService();
+    const mockService = mockCreateNostrService.mock.results[0]?.value || mockCreateNostrService({} as any);
     mockService.getEventByNaddr.mockResolvedValue(mockKind34550Event);
     const enhanced = await enhanceDiscussionsWithDetails([mockProcessedDiscussion]);
 
@@ -81,7 +81,7 @@ describe('Kind:34550 Display from Q Tag References', () => {
 
   test('should handle missing Kind:34550 events gracefully', async () => {
     const mockCreateNostrService = createNostrService as jest.MockedFunction<typeof createNostrService>;
-    const mockService = mockCreateNostrService.mock.results[0]?.value || mockCreateNostrService();
+    const mockService = mockCreateNostrService.mock.results[0]?.value || mockCreateNostrService({} as any);
     mockService.getEventByNaddr.mockResolvedValue(null);
     const result = await fetchDiscussionDetails('34550:nonexistent-pubkey:nonexistent_discussion');
 
@@ -102,7 +102,7 @@ describe('Kind:34550 Display from Q Tag References', () => {
     ];
 
     const mockCreateNostrService = createNostrService as jest.MockedFunction<typeof createNostrService>;
-    const mockService = mockCreateNostrService.mock.results[0]?.value || mockCreateNostrService();
+    const mockService = mockCreateNostrService.mock.results[0]?.value || mockCreateNostrService({} as any);
     mockService.getEventByNaddr
       .mockResolvedValueOnce(mockKind34550Event)
       .mockResolvedValueOnce(null);

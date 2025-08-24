@@ -73,7 +73,12 @@ describe('DiscussionsPage - 監査ログでの未承認投稿確認テスト', (
     jest.clearAllMocks();
     mockCreateNostrService.mockReturnValue(mockNostrService as any);
     mockUseAuth.mockReturnValue({
-      user: { pubkey: 'mock-user-pubkey', isLoggedIn: true },
+      user: { 
+        pwk: null,
+        pubkey: 'mock-user-pubkey', 
+        isLoggedIn: true,
+        profile: null
+      },
       signEvent: jest.fn(),
       logout: jest.fn()
     });

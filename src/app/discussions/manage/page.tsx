@@ -278,7 +278,7 @@ export default function DiscussionManagePage() {
     try {
       // 承認を撤回するkind:5イベントを作成
       const eventTemplate = nostrService.createRevocationEvent(
-        correspondingPost.approvedBy[0], // 最初の承認イベントIDを撤回
+        correspondingPost.approvedBy?.[0] || '', // 最初の承認イベントIDを撤回
         `34550:${discussion.authorPubkey}:${discussion.dTag}`
       );
       const signedEvent = await signEvent(eventTemplate);

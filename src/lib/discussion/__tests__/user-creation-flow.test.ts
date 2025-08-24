@@ -9,6 +9,7 @@ import {
   createDiscussionListingRequest,
   processDiscussionCreationFlow,
 } from '../user-creation-flow';
+import { naddrEncode } from '@/lib/nostr/naddr-utils';
 
 jest.mock('@/utils/logger', () => ({
   logger: {
@@ -163,8 +164,6 @@ describe('User Discussion Creation Flow', () => {
   });
 
   describe('createDiscussionListingRequest', () => {
-    // Import naddr utilities for testing
-    const { naddrEncode } = require('@/lib/nostr/naddr-utils');
     
     const mockDiscussionNaddr = naddrEncode({
       identifier: 'bus-stop-experience-001',
@@ -373,7 +372,6 @@ describe('User Discussion Creation Flow', () => {
       };
 
       // 4. Create listing request
-      const { naddrEncode } = require('@/lib/nostr/naddr-utils');
       const validMockNaddr = naddrEncode({
         identifier: 'bus-stop-experience-001',
         pubkey: validUserPubkey,
@@ -470,7 +468,6 @@ describe('User Discussion Creation Flow', () => {
     });
 
     test('should create listing request according to NIP-72 specification', () => {
-      const { naddrEncode } = require('@/lib/nostr/naddr-utils');
       const validMockNaddr = naddrEncode({
         identifier: 'bus-stop-experience-001',
         pubkey: validUserPubkey,

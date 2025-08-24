@@ -24,9 +24,8 @@ import {
   parseDiscussionEvent,
   parsePostEvent,
   parseApprovalEvent,
-  createAuditTimeline,
 } from "@/lib/nostr/nostr-utils";
-import { extractDiscussionFromNaddr, buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
+import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import type { Discussion, DiscussionPost, PostApproval } from "@/types/discussion";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
@@ -213,8 +212,6 @@ export default function DiscussionManagePage() {
     });
   });
 
-  const discussionListMeta = discussions.length > 0 ? discussions[0] : null;
-  const auditItems = createAuditTimeline(discussions, [], allPosts, allApprovals);
 
   // 会話一覧への追加承認
   const handleApproveDiscussion = async (discussion: Discussion) => {

@@ -12,12 +12,12 @@ jest.mock('@/lib/config/discussion-config', () => ({
   getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 5000 }),
 }));
 jest.mock('@/lib/nostr/naddr-utils', () => ({
-  extractDiscussionFromNaddr: (naddr: string) => ({
+  extractDiscussionFromNaddr: () => ({
     dTag: 'discussion-tag',
     authorPubkey: 'author-pubkey',
     discussionId: '34550:author-pubkey:discussion-tag'
   }),
-  buildNaddrFromDiscussion: (discussion: any) => 'naddr1test123'
+  buildNaddrFromDiscussion: () => 'naddr1test123'
 }));
 jest.mock('@/lib/nostr/nostr-utils', () => ({
   getAdminPubkeyHex: () => 'admin-pubkey',
@@ -57,7 +57,7 @@ jest.mock('@/lib/nostr/nostr-utils', () => ({
     ...posts.map((post: any) => ({ type: 'post', ...post })),
     ...approvals.map((approval: any) => ({ type: 'approval', ...approval }))
   ],
-  formatRelativeTime: (timestamp: number) => '1時間前',
+  formatRelativeTime: () => '1時間前',
 }));
 jest.mock('@/components/discussion/PermissionGuards', () => ({
   AdminCheck: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

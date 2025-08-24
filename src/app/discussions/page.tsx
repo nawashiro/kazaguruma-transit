@@ -26,7 +26,6 @@ import { logger } from "@/utils/logger";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
-const ITEMS_PER_PAGE = 10;
 
 export default function DiscussionsPage() {
   const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
@@ -38,8 +37,6 @@ export default function DiscussionsPage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const { user } = useAuth();
@@ -66,12 +63,8 @@ export default function DiscussionsPage() {
     );
   }
 
-  const loadData = async (page: number = 1, append: boolean = false) => {
-    if (page === 1) {
-      setIsLoading(true);
-    } else {
-      setIsLoadingMore(true);
-    }
+  const loadData = async () => {
+    setIsLoading(true);
 
     try {
       // spec_v2.md要件: 個別会話ページと全く同じ実装。環境変数のnaddrを使用。
@@ -206,8 +199,8 @@ export default function DiscussionsPage() {
   };
 
   const loadMore = async () => {
-    if (!isLoadingMore && hasMore) {
-      await loadData(currentPage + 1, true);
+    if (!isLoadingMore) {
+      await loadData();
     }
   };
 
@@ -356,7 +349,7 @@ export default function DiscussionsPage() {
               )}
 
               {/* ページネーション */}
-              {hasMore && !isLoading && discussions.length > 0 && (
+              {!isLoading && discussions.length > 0 && (
                 <div className="text-center mt-6">
                   <button
                     onClick={loadMore}

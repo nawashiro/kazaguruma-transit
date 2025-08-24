@@ -117,3 +117,11 @@ Images may be loaded from an external URL. In this case, Image cannot be used an
 ## btn
 
 Rounding by cupcake in daisyui may not work so `rounded-full dark:rounded-sm` is used.
+
+## TDD
+
+Follow TDD principles. First, write the tests. Avoid writing tests for things that don't exist in the specification (e.g., don't create a test for "the administrator role does not exist"). Ensure all tests pass. If something is known to work, you may remove overly complex tests that fail. Run syntax check, lint, test, and build; fix errors until none remain.
+
+## 会話
+
+会話は日本語で行う。

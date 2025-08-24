@@ -22,7 +22,7 @@ import {
   formatRelativeTime,
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
-import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
+import { extractDiscussionFromNaddr, buildNaddrFromRef } from "@/lib/nostr/naddr-utils";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
   Discussion,
@@ -38,12 +38,62 @@ export default function DiscussionManagePage() {
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [posts, setPosts] = useState<DiscussionPost[]>([]);
   const [approvals, setApprovals] = useState<PostApproval[]>([]);
+  const [referencedDiscussions, setReferencedDiscussions] = useState<Discussion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [isLoaded, setIsLoaded] = useState(false);
 
   const { user, signEvent } = useAuth();
+
+  // qタグから参照されている会話を検索
+  const findReferencedDiscussion = (qRef: string): Discussion | null => {
+    return referencedDiscussions.find(d => {
+      const expectedRef = `34550:${d.authorPubkey}:${d.dTag}`;
+      return expectedRef === qRef;
+    }) || null;
+  };
+
+  // qタグ引用をレンダリング
+  const renderQTagReferences = (post: DiscussionPost) => {
+    const qTags = post.event?.tags?.filter(tag => tag[0] === "q") || [];
+    if (qTags.length === 0) return null;
+
+    return (
+      <div className="mt-3 space-y-2">
+        <p className="text-xs text-gray-500 font-semibold">引用している会話:</p>
+        {qTags.map((qTag, index) => {
+          if (!qTag[1] || !qTag[1].startsWith("34550:")) return null;
+          
+          const referencedDiscussion = findReferencedDiscussion(qTag[1]);
+          if (!referencedDiscussion) {
+            return (
+              <div key={index} className="text-xs text-gray-400 italic">
+                参照: {qTag[1]} (会話が見つかりません)
+              </div>
+            );
+          }
+
+          const naddr = buildNaddrFromRef(qTag[1]);
+          return (
+            <div key={index} className="border-l-2 border-blue-200 pl-3">
+              <Link
+                href={`/discussions/${naddr}`}
+                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                <div className="text-sm font-medium">{referencedDiscussion.title}</div>
+                <div className="text-xs text-gray-500">
+                  {referencedDiscussion.description.length > 50
+                    ? `${referencedDiscussion.description.slice(0, 50)}...`
+                    : referencedDiscussion.description}
+                </div>
+              </Link>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   // Parse naddr and extract discussion info
   const discussionInfo = useMemo(() => {
@@ -80,9 +130,29 @@ export default function DiscussionManagePage() {
         .filter((p): p is DiscussionPost => p !== null)
         .sort((a, b) => b.createdAt - a.createdAt);
 
+      // qタグから参照されている個別会話のkind:34550を取得
+      const individualDiscussionRefs: string[] = [];
+      parsedPosts.forEach(post => {
+        const qTags = post.event?.tags?.filter(tag => tag[0] === "q") || [];
+        qTags.forEach(qTag => {
+          if (qTag[1] && qTag[1].startsWith("34550:")) {
+            individualDiscussionRefs.push(qTag[1]);
+          }
+        });
+      });
+
+      let referencedDiscussionsData: Discussion[] = [];
+      if (individualDiscussionRefs.length > 0) {
+        const individualDiscussions = await nostrService.getReferencedUserDiscussions(individualDiscussionRefs);
+        referencedDiscussionsData = individualDiscussions
+          .map(parseDiscussionEvent)
+          .filter((d): d is Discussion => d !== null);
+      }
+
       setDiscussion(parsedDiscussion);
       setPosts(parsedPosts);
       setApprovals(parsedApprovals);
+      setReferencedDiscussions(referencedDiscussionsData);
     } catch (error) {
       logger.error("Failed to load discussion:", error);
     } finally {
@@ -91,7 +161,7 @@ export default function DiscussionManagePage() {
   }, [discussionInfo]);
 
   // Rubyfulライブラリ対応
-  useRubyfulRun([discussion, posts, approvals], isLoaded);
+  useRubyfulRun([discussion, posts, approvals, referencedDiscussions], isLoaded);
 
   useEffect(() => {
     if (isDiscussionsEnabled() && discussionInfo) {
@@ -298,6 +368,7 @@ export default function DiscussionManagePage() {
                                 </p>
                               ))}
                             </div>
+                            {renderQTagReferences(post)}
                           </div>
                           <button
                             onClick={() => handleApprovePost(post)}
@@ -358,6 +429,7 @@ export default function DiscussionManagePage() {
                                 </p>
                               ))}
                             </div>
+                            {renderQTagReferences(post)}
                           </div>
                           <div className="flex gap-2 ml-4">
                             {approvals.some(

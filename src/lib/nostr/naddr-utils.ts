@@ -155,3 +155,32 @@ export function generateDiscussionId(): string {
   const randomPart = Math.random().toString(36).substring(2, 8);
   return `${timestamp}-${randomPart}`;
 }
+
+export function buildNaddrFromRef(ref: string, relays?: string[]): string {
+  try {
+    // ref format: "kind:pubkey:identifier"
+    const parts = ref.split(':');
+    if (parts.length !== 3) {
+      throw new Error('Invalid reference format');
+    }
+
+    const [kindStr, pubkey, identifier] = parts;
+    const kind = parseInt(kindStr, 10);
+
+    if (isNaN(kind)) {
+      throw new Error('Invalid kind in reference');
+    }
+
+    const addr: AddressPointer = {
+      identifier,
+      pubkey,
+      kind,
+      relays,
+    };
+
+    return naddrEncode(addr);
+  } catch (error) {
+    logger.error('Failed to build naddr from ref:', error);
+    throw new Error('Failed to build naddr from reference');
+  }
+}

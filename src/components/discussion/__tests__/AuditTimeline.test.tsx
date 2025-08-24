@@ -98,7 +98,6 @@ const mockDiscussion: Discussion = {
   dTag: "test-discussion",
   moderators: [],
   createdAt: 1640995200,
-  updatedAt: 1640995200,
   event: {
     kind: 34550,
     id: "event-1",

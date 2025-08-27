@@ -42,7 +42,6 @@ export default function DiscussionsPage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // 監査ログ用の独立した状態
   const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
@@ -209,7 +208,6 @@ export default function DiscussionsPage() {
       logger.error("Failed to load discussion list:", error);
     } finally {
       setIsLoading(false);
-      setIsLoadingMore(false);
     }
   };
 
@@ -291,11 +289,6 @@ export default function DiscussionsPage() {
     }
   };
 
-  const loadMore = async () => {
-    if (!isLoadingMore) {
-      await loadData();
-    }
-  };
 
   // 監査ログタブがアクティブになった時のデータ取得
   const handleTabChange = (tab: "main" | "audit") => {
@@ -441,25 +434,6 @@ export default function DiscussionsPage() {
                 </div>
               )}
 
-              {/* ページネーション */}
-              {!isLoading && discussions.length > 0 && (
-                <div className="text-center mt-6">
-                  <button
-                    onClick={loadMore}
-                    disabled={isLoadingMore}
-                    className="btn btn-outline rounded-full dark:rounded-sm"
-                  >
-                    {isLoadingMore ? (
-                      <>
-                        <span className="loading loading-spinner loading-sm"></span>
-                        読み込み中...
-                      </>
-                    ) : (
-                      "さらに読み込む"
-                    )}
-                  </button>
-                </div>
-              )}
             </section>
 
             {/* spec_v2.md要件: 会話作成ページへのリンクを表示 */}

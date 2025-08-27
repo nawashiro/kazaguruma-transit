@@ -108,7 +108,32 @@ export function AuditTimeline({
     if (item.type !== "post-submitted" && item.type !== "post-approved")
       return null;
 
-    const qTags = item.event?.tags?.filter((tag) => tag[0] === "q") || [];
+    let qTags: string[][] = [];
+
+    switch (item.type) {
+      case "post-submitted":
+        // post-submitted の場合は event.tags から直接取得
+        qTags = item.event?.tags?.filter((tag) => tag[0] === "q") || [];
+        break;
+
+      case "post-approved":
+        // post-approved の場合は content 内の承認された投稿のqタグを取得
+        try {
+          const approvedPost = JSON.parse(item.event.content);
+          if (approvedPost.tags) {
+            qTags = approvedPost.tags.filter((tag: string[]) => tag[0] === "q");
+          }
+        } catch {
+          // JSON パースに失敗した場合は空配列
+          qTags = [];
+        }
+        break;
+
+      default:
+        qTags = [];
+        break;
+    }
+
     if (qTags.length === 0) return null;
 
     return (
@@ -180,22 +205,35 @@ export function AuditTimeline({
 
       case "post-submitted":
         // 投稿提出の場合、qタグ引用とcontentを表示
-        return qTagContent;
+
+        if (qTagContent) {
+          return qTagContent;
+        } else {
+          return (
+            <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm ruby-text">
+              <div className="whitespace-pre-wrap">
+                {item.event.content || "内容なし"}
+              </div>
+            </div>
+          );
+        }
 
       case "post-approved":
         // 承認の場合、qタグ引用と承認された投稿の内容を表示
         try {
           const approvedPost = JSON.parse(item.event.content);
-          return (
-            <>
-              {qTagContent}
+
+          if (qTagContent) {
+            return qTagContent;
+          } else {
+            return (
               <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm ruby-text">
                 <div className="whitespace-pre-wrap">
                   {approvedPost.content || "内容なし"}
                 </div>
               </div>
-            </>
-          );
+            );
+          }
         } catch {
           return qTagContent;
         }
@@ -224,7 +262,9 @@ export function AuditTimeline({
           />
         </svg>
         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
-          {conversationAuditMode ? "会話関連の履歴がありません" : "履歴がありません"}
+          {conversationAuditMode
+            ? "会話関連の履歴がありません"
+            : "履歴がありません"}
         </h3>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
           {conversationAuditMode

@@ -250,7 +250,10 @@ export default function DiscussionEditPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">無効な会話URL</h1>
           <p className="text-gray-600 mb-4">指定された会話URLが無効です。</p>
-          <Link href="/discussions" className="btn btn-primary">
+          <Link
+            href="/discussions"
+            className="btn btn-primary rounded-full dark:rounded-sm"
+          >
             会話一覧に戻る
           </Link>
         </div>
@@ -285,7 +288,10 @@ export default function DiscussionEditPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">会話が見つかりません</h1>
-          <Link href="/discussions" className="btn btn-primary">
+          <Link
+            href="/discussions"
+            className="btn btn-primary rounded-full dark:rounded-sm"
+          >
             会話一覧に戻る
           </Link>
         </div>
@@ -301,7 +307,10 @@ export default function DiscussionEditPage() {
           <p className="text-gray-600 mb-4">
             この会話を編集する権限がありません。
           </p>
-          <Link href={`/discussions/${naddrParam}`} className="btn btn-primary">
+          <Link
+            href={`/discussions/${naddrParam}`}
+            className="btn btn-primary rounded-full dark:rounded-sm"
+          >
             会話に戻る
           </Link>
         </div>

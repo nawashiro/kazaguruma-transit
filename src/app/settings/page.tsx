@@ -445,7 +445,7 @@ export default function SettingsPage() {
                       href="/discussions/create"
                       className="btn btn-primary rounded-full dark:rounded-sm"
                     >
-                      会話を作成する
+                      <span>会話を作成する</span>
                     </Link>
                   </div>
                 )}

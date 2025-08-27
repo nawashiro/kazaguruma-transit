@@ -213,7 +213,10 @@ export default function PostApprovalPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">無効な会話URL</h1>
           <p className="text-gray-600 mb-4">指定された会話URLが無効です。</p>
-          <Link href="/discussions" className="btn btn-primary">
+          <Link
+            href="/discussions"
+            className="btn btn-primary rounded-full dark:rounded-sm"
+          >
             会話一覧に戻る
           </Link>
         </div>

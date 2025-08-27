@@ -294,7 +294,10 @@ export default function DiscussionDetailPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">無効な会話URL</h1>
           <p className="text-gray-600 mb-4">指定された会話URLが無効です。</p>
-          <Link href="/discussions" className="btn btn-primary">
+          <Link
+            href="/discussions"
+            className="btn btn-primary rounded-full dark:rounded-sm"
+          >
             会話一覧に戻る
           </Link>
         </div>
@@ -444,7 +447,10 @@ export default function DiscussionDetailPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">会話が見つかりません</h1>
-          <Link href="/discussions" className="btn btn-primary">
+          <Link
+            href="/discussions"
+            className="btn btn-primary rounded-full dark:rounded-sm"
+          >
             会話一覧に戻る
           </Link>
         </div>
@@ -465,7 +471,7 @@ export default function DiscussionDetailPage() {
         <h1 className="text-3xl font-bold mb-4">{discussion.title}</h1>
 
         {/* Only show aside if user is creator or moderator */}
-        {(user.pubkey === discussion.authorPubkey || 
+        {(user.pubkey === discussion.authorPubkey ||
           discussion.moderators.some((m) => m.pubkey === user.pubkey)) && (
           <aside className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4">
             <p className="mb-4">
@@ -901,7 +907,6 @@ export default function DiscussionDetailPage() {
                 <AuditTimeline
                   items={auditItems}
                   profiles={profiles}
-                  adminPubkey={ADMIN_PUBKEY}
                   moderators={discussion.moderators.map((m) => m.pubkey)}
                   viewerPubkey={user.pubkey}
                   discussionAuthorPubkey={discussion.authorPubkey}

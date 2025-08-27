@@ -309,7 +309,7 @@ export default function DiscussionCreatePage() {
                     <span className="label-text">会話ID *</span>
                   </label>
                   <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 ruby-text">
-                    小文字英数字、ハイフンのみ使用可能。3文字以上100文字以内で入力してください。
+                    小文字英数字、ハイフンのみ使用可能。
                   </div>
                   <input
                     id="dTag"
@@ -322,7 +322,7 @@ export default function DiscussionCreatePage() {
                       }))
                     }
                     className="input input-bordered w-full"
-                    placeholder="例: transit-discussion-2024"
+                    placeholder="chiyoda-kazaguruma-discussion"
                     required
                     disabled={isSubmitting}
                     maxLength={100}

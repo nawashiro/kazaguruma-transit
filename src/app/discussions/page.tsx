@@ -133,13 +133,13 @@ export default function DiscussionsPage() {
         .filter((p): p is DiscussionPost => p !== null && p.approved)
         .sort((a, b) => b.createdAt - a.createdAt);
 
-      // 承認されたkind:1111のqタグから個別会話のnaddrを取得
-      const individualDiscussionRefs: string[] = [];
+      // 承認されたkind:1111のqタグから個別会話のnaddrを取得（重複排除）
+      const individualDiscussionRefs = new Set<string>();
       listPosts.forEach((post) => {
         const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
         qTags.forEach((qTag) => {
           if (qTag[1] && qTag[1].startsWith("34550:")) {
-            individualDiscussionRefs.push(qTag[1]);
+            individualDiscussionRefs.add(qTag[1]);
           }
         });
       });
@@ -147,7 +147,7 @@ export default function DiscussionsPage() {
       // 個別会話のkind:34550を取得
       const individualDiscussions =
         await nostrService.getReferencedUserDiscussions(
-          individualDiscussionRefs
+          Array.from(individualDiscussionRefs)
         );
 
       const parsedIndividualDiscussions = individualDiscussions
@@ -245,22 +245,22 @@ export default function DiscussionsPage() {
         .map((event) => parsePostEvent(event, listApprovals))
         .filter((p): p is DiscussionPost => p !== null);
 
-      // qタグから参照されている個別会話のIDを収集
-      const individualDiscussionRefs: string[] = [];
+      // qタグから参照されている個別会話のIDを収集（重複排除）
+      const individualDiscussionRefs = new Set<string>();
       listPosts.forEach((post) => {
         const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
         qTags.forEach((qTag) => {
           if (qTag[1] && qTag[1].startsWith("34550:")) {
-            individualDiscussionRefs.push(qTag[1]);
+            individualDiscussionRefs.add(qTag[1]);
           }
         });
       });
 
       // 参照されている個別会話のkind:34550を取得
       let referencedDiscussions: Discussion[] = [];
-      if (individualDiscussionRefs.length > 0) {
+      if (individualDiscussionRefs.size > 0) {
         const individualDiscussions =
-          await nostrService.getReferencedUserDiscussions(individualDiscussionRefs);
+          await nostrService.getReferencedUserDiscussions(Array.from(individualDiscussionRefs));
         referencedDiscussions = individualDiscussions
           .map(parseDiscussionEvent)
           .filter((d): d is Discussion => d !== null);

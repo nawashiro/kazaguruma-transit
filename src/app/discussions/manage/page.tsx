@@ -12,7 +12,6 @@ import {
   getNostrServiceConfig,
 } from "@/lib/config/discussion-config";
 import {
-  AdminCheck,
   PermissionError,
 } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
@@ -21,7 +20,6 @@ import {
   parsePostEvent,
   parseApprovalEvent,
   formatRelativeTime,
-  getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import {
   extractDiscussionFromNaddr,
@@ -35,7 +33,6 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 
-const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function DiscussionManagePage() {
@@ -352,12 +349,17 @@ export default function DiscussionManagePage() {
   const pendingPosts = postsWithQTags.filter((post) => !post.approved);
   const approvedPosts = postsWithQTags.filter((post) => post.approved);
 
+  // 会話一覧の作成者またはモデレーターのみアクセス可能
+  const hasPermission = discussion && (
+    user.pubkey === discussion.authorPubkey ||
+    discussion.moderators.some((m) => m.pubkey === user.pubkey)
+  );
+
+  if (!hasPermission) {
+    return <PermissionError type="moderator" />;
+  }
+
   return (
-    <AdminCheck
-      adminPubkey={ADMIN_PUBKEY}
-      userPubkey={user.pubkey}
-      fallback={<PermissionError type="admin" />}
-    >
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 ruby-text">
           <Link
@@ -551,6 +553,5 @@ export default function DiscussionManagePage() {
           </main>
         )}
       </div>
-    </AdminCheck>
   );
 }

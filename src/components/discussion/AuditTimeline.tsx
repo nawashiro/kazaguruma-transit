@@ -10,7 +10,6 @@ import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 interface AuditTimelineProps {
   items: AuditTimelineItem[];
   profiles?: Record<string, { name?: string }>;
-  adminPubkey?: string;
   moderators?: string[];
   viewerPubkey?: string | null;
   discussionAuthorPubkey?: string;
@@ -22,7 +21,6 @@ interface AuditTimelineProps {
 export function AuditTimeline({
   items,
   profiles = {},
-  adminPubkey,
   moderators = [],
   viewerPubkey,
   conversationAuditMode = false,
@@ -77,18 +75,18 @@ export function AuditTimeline({
   );
 
   // 権限チェック関数
-  const isViewerAdminOrModerator = () => {
+  const isViewerModerator = () => {
     if (!viewerPubkey) return false;
-    return viewerPubkey === adminPubkey || moderators.includes(viewerPubkey);
+    return moderators.includes(viewerPubkey);
   };
 
-  const isActorAdminOrModerator = (actorPubkey: string) => {
-    return actorPubkey === adminPubkey || moderators.includes(actorPubkey);
+  const isActorModerator = (actorPubkey: string) => {
+    return moderators.includes(actorPubkey);
   };
 
   const getActorDisplayName = (actorPubkey: string) => {
-    // 閲覧者が管理者・モデレーターの場合、または操作者が管理者・モデレーターの場合のみ名前を表示
-    if (isViewerAdminOrModerator() || isActorAdminOrModerator(actorPubkey)) {
+    // 閲覧者がモデレーターの場合、または操作者がモデレーターの場合のみ名前を表示
+    if (isViewerModerator() || isActorModerator(actorPubkey)) {
       return profiles[actorPubkey]?.name;
     }
     return null;

@@ -47,7 +47,9 @@ export default function DiscussionsPage() {
   // 監査ログ用の独立した状態
   const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
   const [auditApprovals, setAuditApprovals] = useState<PostApproval[]>([]);
-  const [auditReferencedDiscussions, setAuditReferencedDiscussions] = useState<Discussion[]>([]);
+  const [auditReferencedDiscussions, setAuditReferencedDiscussions] = useState<
+    Discussion[]
+  >([]);
   const [isAuditLoading, setIsAuditLoading] = useState(false);
   const [isAuditLoaded, setIsAuditLoaded] = useState(false);
 
@@ -63,7 +65,7 @@ export default function DiscussionsPage() {
     setIsLoaded(true);
   }, []);
 
-  // Check if discussions are enabled and render accordingly
+  // ディスカッション機能が有効になっているか確認し、それに応じて表示を切り替える
   if (!isDiscussionsEnabled()) {
     return (
       <div className="container mx-auto px-4 py-8 ruby-text">
@@ -214,7 +216,7 @@ export default function DiscussionsPage() {
   // 監査ログ専用のデータ取得
   const loadAuditData = async () => {
     if (isAuditLoaded || isAuditLoading) return;
-    
+
     setIsAuditLoading(true);
 
     try {
@@ -229,7 +231,10 @@ export default function DiscussionsPage() {
         throw new Error("Invalid DISCUSSION_LIST_NADDR format");
       }
 
-      logger.info("Loading audit data for discussionId:", discussionInfo.discussionId);
+      logger.info(
+        "Loading audit data for discussionId:",
+        discussionInfo.discussionId
+      );
 
       // 監査ログ用のデータを取得
       const [discussionListPosts, discussionListApprovals] = await Promise.all([
@@ -260,7 +265,9 @@ export default function DiscussionsPage() {
       let referencedDiscussions: Discussion[] = [];
       if (individualDiscussionRefs.size > 0) {
         const individualDiscussions =
-          await nostrService.getReferencedUserDiscussions(Array.from(individualDiscussionRefs));
+          await nostrService.getReferencedUserDiscussions(
+            Array.from(individualDiscussionRefs)
+          );
         referencedDiscussions = individualDiscussions
           .map(parseDiscussionEvent)
           .filter((d): d is Discussion => d !== null);
@@ -299,7 +306,12 @@ export default function DiscussionsPage() {
   };
 
   // spec_v2.md要件: リクエスト機能は完全オミット
-  const auditItems = createAuditTimeline(auditReferencedDiscussions, [], auditPosts, auditApprovals);
+  const auditItems = createAuditTimeline(
+    auditReferencedDiscussions,
+    [],
+    auditPosts,
+    auditApprovals
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -339,9 +351,22 @@ export default function DiscussionsPage() {
 
       {activeTab === "main" ? (
         <main role="tabpanel" aria-labelledby="main-tab" className="space-y-6">
-          <AdminCheck adminPubkey={ADMIN_PUBKEY} userPubkey={user.pubkey}>
+          {/* 作成者またはモデレーターの場合のみ表示 */}
+          {(discussions.some((d) => user.pubkey === d.authorPubkey) ||
+            discussions.some((d) =>
+              d.moderators.some((m) => m.pubkey === user.pubkey)
+            )) && (
             <aside className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-              <p className="mb-4">あなたは管理者です。</p>
+              <p className="mb-4">
+                あなたは
+                {/* Priority: Creator > Moderator */}
+                {discussions.some((d) => user.pubkey === d.authorPubkey) ? (
+                  <span>作成者</span>
+                ) : (
+                  <span>モデレーター</span>
+                )}
+                です。
+              </p>
               <Link
                 href="/discussions/manage"
                 className="btn btn-primary rounded-full dark:rounded-sm ruby-text"
@@ -349,7 +374,7 @@ export default function DiscussionsPage() {
                 <span>会話管理</span>
               </Link>
             </aside>
-          </AdminCheck>
+          )}
 
           <div className="grid lg:grid-cols-2 gap-6">
             <section aria-labelledby="discussions-list-heading">
@@ -486,11 +511,10 @@ export default function DiscussionsPage() {
                   <AuditTimeline
                     items={auditItems}
                     profiles={profiles}
-                    adminPubkey={ADMIN_PUBKEY}
                     viewerPubkey={user.pubkey}
                     shouldLoadProfiles={
-                      user.pubkey === ADMIN_PUBKEY ||
                       auditReferencedDiscussions.some((d) =>
+                        user.pubkey === d.authorPubkey ||
                         d.moderators.some((m) => m.pubkey === user.pubkey)
                       )
                     }

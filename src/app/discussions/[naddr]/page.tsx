@@ -466,7 +466,6 @@ export default function DiscussionDetailPage() {
 
         {/* Only show aside if user is creator or moderator */}
         {(user.pubkey === discussion.authorPubkey || 
-          user.pubkey === ADMIN_PUBKEY ||
           discussion.moderators.some((m) => m.pubkey === user.pubkey)) && (
           <aside className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4">
             <p className="mb-4">

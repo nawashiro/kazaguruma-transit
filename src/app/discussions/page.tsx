@@ -494,7 +494,7 @@ export default function DiscussionsPage() {
                         d.moderators.some((m) => m.pubkey === user.pubkey)
                       )
                     }
-                    qTagFilter={true}
+                    conversationAuditMode={true}
                     referencedDiscussions={auditReferencedDiscussions}
                   />
                 )}

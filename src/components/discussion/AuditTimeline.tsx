@@ -15,7 +15,7 @@ interface AuditTimelineProps {
   viewerPubkey?: string | null;
   discussionAuthorPubkey?: string;
   shouldLoadProfiles?: boolean;
-  qTagFilter?: boolean;
+  conversationAuditMode?: boolean;
   referencedDiscussions?: Discussion[];
 }
 
@@ -25,7 +25,7 @@ export function AuditTimeline({
   adminPubkey,
   moderators = [],
   viewerPubkey,
-  qTagFilter = false,
+  conversationAuditMode = false,
   referencedDiscussions = [],
 }: AuditTimelineProps) {
   // qタグから参照されている会話を検索
@@ -46,16 +46,16 @@ export function AuditTimeline({
     return qTags.some((qTag) => qTag[1] && qTag[1].startsWith("34550:"));
   };
 
-  // qタグフィルタに基づいてアイテムをフィルタリング
+  // 会話監査モードに基づいてアイテムをフィルタリング
   const filteredItems = useMemo(() => {
-    if (!qTagFilter) return items;
+    if (!conversationAuditMode) return items;
     return items.filter((item) => {
       // 承認イベントは常に含める
       if (item.type === "post-approved") return true;
       // その他のイベントはqタグの有無で判断
       return hasQTag(item);
     });
-  }, [items, qTagFilter]);
+  }, [items, conversationAuditMode]);
 
   // 投稿IDと承認状況のマッピングを作成
   const getApprovalStatus = (item: AuditTimelineItem) => {
@@ -224,10 +224,10 @@ export function AuditTimeline({
           />
         </svg>
         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
-          {qTagFilter ? "qタグを含む履歴がありません" : "履歴がありません"}
+          {conversationAuditMode ? "会話関連の履歴がありません" : "履歴がありません"}
         </h3>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          {qTagFilter
+          {conversationAuditMode
             ? "会話を参照する投稿履歴がありません。"
             : "まだ操作履歴がありません。"}
         </p>

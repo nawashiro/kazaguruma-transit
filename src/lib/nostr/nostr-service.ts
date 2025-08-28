@@ -141,18 +141,27 @@ export class NostrService {
     const filters: Filter[] = [];
 
     if (busStopTags && busStopTags.length > 0) {
-      // バス停ごとに個別のフィルタを作成
+      // バス停ごとに個別のフィルタを作成（kind:1111とkind:1の両方）
       busStopTags.forEach((busStopTag) => {
         filters.push({
           kinds: [1111],
           "#a": [discussionId],
           "#t": [busStopTag],
         });
+        filters.push({
+          kinds: [1],
+          "#a": [discussionId],
+          "#t": [busStopTag],
+        });
       });
     } else {
-      // バス停指定なしの場合は全投稿を取得
+      // バス停指定なしの場合は全投稿を取得（kind:1111とkind:1の両方）
       filters.push({
         kinds: [1111],
+        "#a": [discussionId],
+      });
+      filters.push({
+        kinds: [1],
         "#a": [discussionId],
       });
     }
@@ -650,17 +659,25 @@ export class NostrService {
         }
       }
 
-      const filter: Filter = {
-        kinds: [1111], // NIP-72 community posts
-        "#a": [discussionListHex], // Discussion list community reference (lowercase 'a' for NIP-72 compliance)
-        limit: options.limit || 50,
-      };
+      const filters: Filter[] = [
+        {
+          kinds: [1111], // NIP-72 community posts
+          "#a": [discussionListHex], // Discussion list community reference (lowercase 'a' for NIP-72 compliance)
+          limit: options.limit || 50,
+        },
+        {
+          kinds: [1], // NIP-72後方互換性: kind:1もサポート
+          "#a": [discussionListHex],
+          limit: options.limit || 50,
+        }
+      ];
 
       if (options.until) {
-        filter.until = options.until;
+        filters[0].until = options.until;
+        filters[1].until = options.until;
       }
 
-      return this.getEvents([filter]);
+      return this.getEvents(filters);
     } catch (error) {
       logger.error("Failed to get community posts:", error);
       return [];

@@ -99,7 +99,6 @@ export default function DiscussionsPage() {
       // 会話一覧管理用のデータを取得
       const [
         discussionListEvents,
-        discussionListPosts,
         discussionListApprovals,
       ] = await Promise.all([
         nostrService.getEvents([
@@ -110,7 +109,6 @@ export default function DiscussionsPage() {
             limit: 1,
           },
         ]),
-        nostrService.getDiscussionPosts(discussionInfo.discussionId),
         nostrService.getApprovals(discussionInfo.discussionId),
       ]);
 
@@ -128,9 +126,17 @@ export default function DiscussionsPage() {
         .map(parseApprovalEvent)
         .filter((a): a is PostApproval => a !== null);
 
-      const listPosts = discussionListPosts
-        .map((event) => parsePostEvent(event, listApprovals))
-        .filter((p): p is DiscussionPost => p !== null && p.approved)
+      // 承認イベントから投稿データを復元
+      const listPosts = listApprovals
+        .map((approval) => {
+          try {
+            const approvedPost = JSON.parse(approval.event.content);
+            return parsePostEvent(approvedPost, [approval]);
+          } catch {
+            return null;
+          }
+        })
+        .filter((p): p is DiscussionPost => p !== null)
         .sort((a, b) => b.createdAt - a.createdAt);
 
       // 承認されたkind:1111のqタグから個別会話のnaddrを取得（重複排除）

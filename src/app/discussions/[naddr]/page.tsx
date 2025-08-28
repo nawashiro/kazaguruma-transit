@@ -130,10 +130,9 @@ export default function DiscussionDetailPage() {
         return;
       }
 
-      const [discussionEvents, postsEvents, approvalsEvents] =
+      const [discussionEvents, approvalsEvents] =
         await Promise.all([
           nostrService.getDiscussions(discussionInfo.authorPubkey),
-          nostrService.getDiscussionPosts(discussionInfo.discussionId),
           nostrService.getApprovals(discussionInfo.discussionId),
         ]);
 
@@ -149,8 +148,16 @@ export default function DiscussionDetailPage() {
         .map(parseApprovalEvent)
         .filter((a): a is PostApproval => a !== null);
 
-      const parsedPosts = postsEvents
-        .map((event) => parsePostEvent(event, parsedApprovals))
+      // 承認イベントから投稿データを復元
+      const parsedPosts = parsedApprovals
+        .map((approval) => {
+          try {
+            const approvedPost = JSON.parse(approval.event.content);
+            return parsePostEvent(approvedPost, [approval]);
+          } catch {
+            return null;
+          }
+        })
         .filter((p): p is DiscussionPost => p !== null)
         .sort((a, b) => b.createdAt - a.createdAt);
 

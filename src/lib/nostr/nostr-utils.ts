@@ -45,7 +45,8 @@ export function parsePostEvent(
   event: Event,
   approvals: PostApproval[] = []
 ): DiscussionPost | null {
-  if (event.kind !== 1111) return null;
+  // NIP-72後方互換性: kind:1とkind:1111の両方をサポート
+  if (event.kind !== 1111 && event.kind !== 1) return null;
 
   const discussionTag = event.tags.find(
     (tag) => tag[0] === "a" || tag[0] === "A"

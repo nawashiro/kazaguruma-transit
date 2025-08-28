@@ -309,7 +309,7 @@ export default function DiscussionCreatePage() {
                     <span className="label-text">会話ID *</span>
                   </label>
                   <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 ruby-text">
-                    小文字英数字、ハイフンのみ使用可能。
+                    小文字英数字、ハイフンのみ。
                   </div>
                   <input
                     id="dTag"

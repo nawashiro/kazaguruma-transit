@@ -31,7 +31,7 @@ export function EvaluationComponent({
 
     // 初回のみシャッフル、その後は順序を保持
     return isRandomOrder ? shuffleArray(availablePosts) : availablePosts;
-  }, [posts.length, userEvaluations.size, isRandomOrder]);
+  }, [posts, userEvaluations, isRandomOrder]);
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (evaluatingPost) return;

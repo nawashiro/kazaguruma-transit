@@ -3,7 +3,7 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
@@ -53,30 +53,9 @@ export default function DiscussionsPage() {
 
   const { user } = useAuth();
 
-  // Rubyfulライブラリ対応
-  useRubyfulRun([discussions], isLoaded);
-
-  useEffect(() => {
-    if (isDiscussionsEnabled()) {
-      loadData();
-    }
-    setIsLoaded(true);
-  }, []);
-
-  // ディスカッション機能が有効になっているか確認し、それに応じて表示を切り替える
-  if (!isDiscussionsEnabled()) {
-    return (
-      <div className="container mx-auto px-4 py-8 ruby-text">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">意見交換機能</h1>
-          <p className="text-gray-600">この機能は現在利用できません。</p>
-        </div>
-      </div>
-    );
-  }
-
   // 会話一覧専用のデータ取得
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!isDiscussionsEnabled()) return;
     setIsLoading(true);
 
     try {
@@ -213,7 +192,29 @@ export default function DiscussionsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user.pubkey]);
+
+  // Rubyfulライブラリ対応
+  useRubyfulRun([discussions], isLoaded);
+
+  useEffect(() => {
+    if (isDiscussionsEnabled()) {
+      loadData();
+    }
+    setIsLoaded(true);
+  }, [loadData]);
+
+  // ディスカッション機能が有効になっているか確認し、それに応じて表示を切り替える
+  if (!isDiscussionsEnabled()) {
+    return (
+      <div className="container mx-auto px-4 py-8 ruby-text">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">意見交換機能</h1>
+          <p className="text-gray-600">この機能は現在利用できません。</p>
+        </div>
+      </div>
+    );
+  }
 
   // 監査ログ専用のデータ取得
   const loadAuditData = async () => {

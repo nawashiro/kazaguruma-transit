@@ -213,7 +213,7 @@ export default function DiscussionDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [discussionInfo, user.pubkey]);
+  }, [discussionInfo]);
 
   // 監査ログ専用のデータ取得
   const loadAuditData = useCallback(async () => {

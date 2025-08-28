@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import { XMarkIcon } from "@heroicons/react/24/solid";
 
 interface RateLimitModalProps {
   isOpen: boolean;
@@ -63,7 +64,7 @@ export default function RateLimitModal({
             aria-label="閉じる"
             data-testid="x-close-btn"
           >
-            ✕
+            <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
 

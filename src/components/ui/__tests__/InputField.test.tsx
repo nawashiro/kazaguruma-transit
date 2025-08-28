@@ -104,7 +104,7 @@ describe("InputField", () => {
     expect(screen.getByText("エラーメッセージ")).toBeInTheDocument();
 
     // エラーアイコンが表示されることを確認
-    const errorIcon = screen.getByText("⚠️");
+    const errorIcon = screen.getByRole("alert").querySelector("svg");
     expect(errorIcon).toBeInTheDocument();
     expect(errorIcon).toHaveAttribute("aria-hidden", "true");
 
@@ -114,7 +114,7 @@ describe("InputField", () => {
 
     // エラーメッセージにrole="alert"が設定されていることを確認
     const errorMessage = screen.getByRole("alert");
-    expect(errorMessage).toHaveTextContent("⚠️エラーメッセージ");
+    expect(errorMessage).toHaveTextContent("エラーメッセージ");
   });
 
   it("説明テキストが表示され、適切にaria-describedbyが設定されること", () => {

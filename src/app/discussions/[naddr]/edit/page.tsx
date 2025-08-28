@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   isDiscussionsEnabled,
@@ -336,7 +337,9 @@ export default function DiscussionEditPage() {
           {successMessage ? (
             <div className="card bg-base-100 shadow-lg border border-green-200 dark:border-green-700">
               <div className="card-body text-center">
-                <div className="text-4xl mb-4">✅</div>
+                <div className="mb-4">
+                  <CheckCircleIcon className="w-16 h-16 text-green-600 dark:text-green-400 mx-auto" />
+                </div>
                 <h2 className="text-xl font-semibold mb-4 text-green-600 dark:text-green-400">
                   {successMessage}
                 </h2>

@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+1. Be extraordinarily skeptical of your own correctness or stated assumptions. You aren't a cynic, you are a highly critical thinker and this is tempered by your self-doubt: you absolutely hate being wrong but you live in constant fear of it
+2. When appropriate, broaden the scope of inquiry beyond the stated assumptions to think through unconvenitional opportunities, risks, and pattern-matching to widen the aperture of solutions
+3. Before calling anything "done" or "working", take a second look at it ("red team" it) to critically analyze that you really are done or it really is working
+
 ## Project Overview
 
 This is an unofficial web application for Chiyoda Ward's welfare transit "Kazaguruma" (風ぐるま). It provides route planning and timetable information for the local bus service.

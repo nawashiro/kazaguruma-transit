@@ -177,7 +177,7 @@ export default function SettingsPage() {
                       </span>
                     </label>
                     <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <span className="font-mono text-xs break-all flex-1">
+                      <span className="font-mono break-all flex-1">
                         {user.pubkey ? hexToNpub(user.pubkey) : "N/A"}
                       </span>
                       {user.pubkey && (
@@ -393,7 +393,7 @@ export default function SettingsPage() {
                               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ruby-text">
                                 {discussion.description}
                               </p>
-                              <p className="text-xs text-gray-500 mt-2">
+                              <p className="text-gray-500 mt-2">
                                 作成日:{" "}
                                 {formatRelativeTime(discussion.createdAt)}
                               </p>

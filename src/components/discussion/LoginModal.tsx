@@ -150,10 +150,10 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <div className="text-xs">
+              <div className="text-sm">
                 <p className="font-medium mb-1">ブラウザの対応状況</p>
                 <p>
-                  このウェブサイトはPRF拡張を使用します。一部の環境では利用できない場合があります。
+                  ほとんどの場合は問題ありませんが、一部の環境では利用できない場合があります。お使いのブラウザがPRF対応である必要があります。
                   <a
                     target="_blank"
                     rel="noopener noreferrer"

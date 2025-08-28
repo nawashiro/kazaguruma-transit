@@ -151,7 +151,10 @@ export function EvaluationComponent({
           role="document"
         >
           {(currentPost.content || "").split("\n").map((line, index) => (
-            <p key={index} className="mb-2 last:mb-0 ruby-text">
+            <p
+              key={index}
+              className="mb-2 last:mb-0 ruby-text text-balance break-all"
+            >
               {line || "\u00A0"}
             </p>
           ))}

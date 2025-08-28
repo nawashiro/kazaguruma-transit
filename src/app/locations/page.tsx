@@ -513,7 +513,7 @@ export default function LocationsPage() {
 
           <div className="flex flex-col sm:flex-row gap-4 mb-4">
             <div>
-              <p className="text-xs mb-1 ruby-text">モバイル端末向け</p>
+              <p className="mb-1 ruby-text">モバイル端末向け</p>
               <Button
                 onClick={sortByDistance}
                 disabled={positionLoading}
@@ -530,9 +530,7 @@ export default function LocationsPage() {
             <div className="divider sm:hidden">または</div>
 
             <div className="flex-1">
-              <p className="text-xs mb-1 ruby-text">
-                PC向け / 任意の場所から選びたい
-              </p>
+              <p className="mb-1 ruby-text">PC向け / 任意の場所から選びたい</p>
               <form
                 onSubmit={handleAddressSearch}
                 className="flex flex-col sm:flex-row gap-2"

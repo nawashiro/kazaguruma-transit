@@ -87,7 +87,7 @@ export default function LocationDetailModal({
         {/* 著作権情報 */}
         <div className="mt-6 bg-base-100 p-3 rounded-lg ruby-text">
           <h4 className="font-semibold text-sm mb-2 ">提供情報</h4>
-          <div className="text-xs space-y-2">
+          <div className="space-y-2 text-sm">
             <p className="/90">座標データ提供: {location.nodeCopyright}</p>
 
             {location.imageCopyright && (

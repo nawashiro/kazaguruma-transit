@@ -373,7 +373,7 @@ export default function DiscussionEditPage() {
                       maxLength={100}
                       autoComplete="off"
                     />
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-gray-500 mt-1">
                       {formData.title.length}/100文字
                     </div>
                   </div>
@@ -397,7 +397,7 @@ export default function DiscussionEditPage() {
                       maxLength={500}
                       autoComplete="off"
                     />
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-gray-500 mt-1">
                       {formData.description.length}/500文字
                     </div>
                   </div>
@@ -423,7 +423,7 @@ export default function DiscussionEditPage() {
                       <div className="flex flex-wrap gap-2 mb-2">
                         {formData.moderators.map((npub) => (
                           <div key={npub} className="badge badge-outline gap-1">
-                            <span className="text-xs font-mono">
+                            <span className="font-mono">
                               {npub.substring(0, 10)}...
                             </span>
                             <button

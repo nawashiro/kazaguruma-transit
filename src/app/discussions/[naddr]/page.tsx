@@ -69,11 +69,13 @@ export default function DiscussionDetailPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // 監査ログ用の独立した状態
   const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
   const [auditApprovals, setAuditApprovals] = useState<PostApproval[]>([]);
-  const [auditEvaluations, setAuditEvaluations] = useState<PostEvaluation[]>([]);
+  const [auditEvaluations, setAuditEvaluations] = useState<PostEvaluation[]>(
+    []
+  );
   const [isAuditLoading, setIsAuditLoading] = useState(false);
   const [isAuditLoaded, setIsAuditLoaded] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -99,7 +101,16 @@ export default function DiscussionDetailPage() {
 
   // Rubyfulライブラリ対応
   useRubyfulRun(
-    [discussion, posts, approvals, evaluations, auditPosts, auditApprovals, auditEvaluations, consensusTab],
+    [
+      discussion,
+      posts,
+      approvals,
+      evaluations,
+      auditPosts,
+      auditApprovals,
+      auditEvaluations,
+      consensusTab,
+    ],
     isLoaded
   );
 
@@ -206,8 +217,14 @@ export default function DiscussionDetailPage() {
 
   // 監査ログ専用のデータ取得
   const loadAuditData = useCallback(async () => {
-    if (!isDiscussionsEnabled() || !discussionInfo || isAuditLoaded || isAuditLoading) return;
-    
+    if (
+      !isDiscussionsEnabled() ||
+      !discussionInfo ||
+      isAuditLoaded ||
+      isAuditLoading
+    )
+      return;
+
     setIsAuditLoading(true);
     try {
       // Check if this is test mode (for backward compatibility)
@@ -347,7 +364,12 @@ export default function DiscussionDetailPage() {
   );
   const auditItems = useMemo(
     () =>
-      createAuditTimeline(discussion ? [discussion] : [], [], auditPosts, auditApprovals),
+      createAuditTimeline(
+        discussion ? [discussion] : [],
+        [],
+        auditPosts,
+        auditApprovals
+      ),
     [discussion, auditPosts, auditApprovals]
   );
 
@@ -744,7 +766,7 @@ export default function DiscussionDetailPage() {
                                     </p>
                                   )}
                                 </div>
-                                <div className="text-xs text-gray-500 mt-2">
+                                <div className="text-gray-500 mt-2">
                                   {formatRelativeTime(
                                     item.post?.createdAt || 0
                                   )}
@@ -815,7 +837,7 @@ export default function DiscussionDetailPage() {
                                     </p>
                                   )}
                                 </div>
-                                <div className="text-xs text-gray-500 mt-2">
+                                <div className="text-gray-500 mt-2">
                                   {formatRelativeTime(
                                     item.post?.createdAt || 0
                                   )}
@@ -876,7 +898,7 @@ export default function DiscussionDetailPage() {
                           maxLength={280}
                           autoComplete="off"
                         />
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-gray-500 mt-1">
                           {postForm.content.length}/280文字
                         </div>
                       </div>
@@ -989,7 +1011,9 @@ export default function DiscussionDetailPage() {
                     discussionAuthorPubkey={discussion.authorPubkey}
                     shouldLoadProfiles={
                       user.pubkey === discussion.authorPubkey ||
-                      discussion.moderators.some((m) => m.pubkey === user.pubkey)
+                      discussion.moderators.some(
+                        (m) => m.pubkey === user.pubkey
+                      )
                     }
                   />
                 )}

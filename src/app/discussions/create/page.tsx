@@ -299,7 +299,7 @@ export default function DiscussionCreatePage() {
                     maxLength={100}
                     autoComplete="off"
                   />
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-gray-500 mt-1">
                     {formData.title.length}/100文字
                   </div>
                 </div>
@@ -308,7 +308,7 @@ export default function DiscussionCreatePage() {
                   <label htmlFor="dTag" className="label ruby-text">
                     <span className="label-text">会話ID *</span>
                   </label>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 ruby-text">
+                  <div className="text-gray-600 dark:text-gray-400 mb-2 ruby-text">
                     小文字英数字、ハイフンのみ。
                   </div>
                   <input
@@ -328,7 +328,7 @@ export default function DiscussionCreatePage() {
                     maxLength={100}
                     autoComplete="off"
                   />
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-gray-500 mt-1">
                     {formData.dTag?.length || 0}/100文字
                   </div>
                 </div>
@@ -353,7 +353,7 @@ export default function DiscussionCreatePage() {
                     maxLength={500}
                     autoComplete="off"
                   />
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-gray-500 mt-1">
                     {formData.description.length}/500文字
                   </div>
                 </div>
@@ -367,7 +367,7 @@ export default function DiscussionCreatePage() {
                     <div className="flex flex-wrap gap-2 mb-2">
                       {formData.moderators.map((npub) => (
                         <div key={npub} className="badge badge-outline gap-1">
-                          <span className="text-xs font-mono">
+                          <span className="font-mono">
                             {npub.substring(0, 10)}...
                           </span>
                           <button
@@ -383,7 +383,7 @@ export default function DiscussionCreatePage() {
                     </div>
                   )}
 
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 mb-2 ruby-text">
+                  <div className="text-gray-600 dark:text-gray-400 mt-1 mb-2 ruby-text">
                     投稿の承認を手伝ってくれる人のユーザーIDを入力してください。
                   </div>
 

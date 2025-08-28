@@ -353,7 +353,7 @@ export default function PostApprovalPage() {
                               </span>
                             </button>
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-gray-500">
                             {formatRelativeTime(post.createdAt)}
                           </div>
                         </div>
@@ -435,7 +435,7 @@ export default function PostApprovalPage() {
                               )}
                             </div>
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-gray-500">
                             承認:{" "}
                             {formatRelativeTime(
                               post.approvedAt || post.createdAt

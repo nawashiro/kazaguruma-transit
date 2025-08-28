@@ -109,7 +109,7 @@ export default function DiscussionManagePage() {
                     : referencedDiscussion.description}
                 </p>
                 <div className="flex justify-between items-center">
-                  <div className="text-xs text-gray-500">
+                  <div className="text-gray-500">
                     <time
                       dateTime={new Date(
                         referencedDiscussion.createdAt * 1000

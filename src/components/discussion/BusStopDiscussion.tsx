@@ -251,7 +251,7 @@ export function BusStopDiscussion({
                 disabled={isSubmitting}
                 maxLength={280}
               />
-              <div className="text-xs text-gray-500 mt-1 ruby-text">
+              <div className="text-gray-500 mt-1 ruby-text">
                 {postForm.content.length}/280文字
               </div>
             </div>

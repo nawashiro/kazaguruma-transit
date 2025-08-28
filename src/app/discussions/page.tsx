@@ -8,7 +8,6 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import { AuditTimeline } from "@/components/discussion/AuditTimeline";
-import { AdminCheck } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parseDiscussionEvent,
@@ -289,7 +288,6 @@ export default function DiscussionsPage() {
     }
   };
 
-
   // 監査ログタブがアクティブになった時のデータ取得
   const handleTabChange = (tab: "main" | "audit") => {
     setActiveTab(tab);
@@ -407,7 +405,7 @@ export default function DiscussionsPage() {
                                 : discussion.description}
                             </p>
                             <div className="flex justify-between items-center mt-2">
-                              <div className="text-xs text-gray-500 space-y-1">
+                              <div className="text-gray-500 space-y-1">
                                 <time
                                   dateTime={new Date(
                                     discussion.createdAt * 1000
@@ -433,7 +431,6 @@ export default function DiscussionsPage() {
                   </p>
                 </div>
               )}
-
             </section>
 
             {/* spec_v2.md要件: 会話作成ページへのリンクを表示 */}
@@ -486,12 +483,11 @@ export default function DiscussionsPage() {
                     items={auditItems}
                     profiles={profiles}
                     viewerPubkey={user.pubkey}
-                    shouldLoadProfiles={
-                      auditReferencedDiscussions.some((d) =>
+                    shouldLoadProfiles={auditReferencedDiscussions.some(
+                      (d) =>
                         user.pubkey === d.authorPubkey ||
                         d.moderators.some((m) => m.pubkey === user.pubkey)
-                      )
-                    }
+                    )}
                     conversationAuditMode={true}
                     referencedDiscussions={auditReferencedDiscussions}
                   />

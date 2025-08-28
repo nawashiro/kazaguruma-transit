@@ -174,24 +174,19 @@ export default function DiscussionDetailPage() {
       setApprovals(parsedApprovals);
       setEvaluations(parsedEvaluations);
 
-      // Profile loading logic - only load profiles if user is creator or moderator
-      const shouldLoadProfiles =
-        user.pubkey &&
-        (user.pubkey === parsedDiscussion.authorPubkey ||
-          parsedDiscussion?.moderators.some((m) => m.pubkey === user.pubkey));
-
-      if (shouldLoadProfiles) {
-        const uniquePubkeys = new Set<string>();
-        parsedApprovals.forEach((approval) =>
-          uniquePubkeys.add(approval.moderatorPubkey)
+      // Profile loading logic - load profiles for discussion creators and moderators
+      const uniquePubkeys = new Set<string>();
+      parsedApprovals.forEach((approval) =>
+        uniquePubkeys.add(approval.moderatorPubkey)
+      );
+      if (parsedDiscussion) {
+        uniquePubkeys.add(parsedDiscussion.authorPubkey);
+        parsedDiscussion.moderators.forEach((mod) =>
+          uniquePubkeys.add(mod.pubkey)
         );
-        if (parsedDiscussion) {
-          uniquePubkeys.add(parsedDiscussion.authorPubkey);
-          parsedDiscussion.moderators.forEach((mod) =>
-            uniquePubkeys.add(mod.pubkey)
-          );
-        }
+      }
 
+      if (uniquePubkeys.size > 0) {
         const profilePromises = Array.from(uniquePubkeys).map(
           async (pubkey) => {
             const profileEvent = await nostrService.getProfile(pubkey);
@@ -1018,15 +1013,7 @@ export default function DiscussionDetailPage() {
                   <AuditTimeline
                     items={auditItems}
                     profiles={profiles}
-                    moderators={discussion.moderators.map((m) => m.pubkey)}
-                    viewerPubkey={user.pubkey}
-                    discussionAuthorPubkey={discussion.authorPubkey}
-                    shouldLoadProfiles={
-                      user.pubkey === discussion.authorPubkey ||
-                      discussion.moderators.some(
-                        (m) => m.pubkey === user.pubkey
-                      )
-                    }
+                    referencedDiscussions={discussion ? [discussion] : []}
                   />
                 )}
               </div>

@@ -10,21 +10,15 @@ import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 interface AuditTimelineProps {
   items: AuditTimelineItem[];
   profiles?: Record<string, { name?: string }>;
-  moderators?: string[];
-  viewerPubkey?: string | null;
-  discussionAuthorPubkey?: string;
-  shouldLoadProfiles?: boolean;
-  conversationAuditMode?: boolean;
   referencedDiscussions?: Discussion[];
+  conversationAuditMode?: boolean;
 }
 
 export function AuditTimeline({
   items,
   profiles = {},
-  moderators = [],
-  viewerPubkey,
-  conversationAuditMode = false,
   referencedDiscussions = [],
+  conversationAuditMode = false,
 }: AuditTimelineProps) {
   // qタグから参照されている会話を検索
   const findReferencedDiscussion = (qRef: string): Discussion | null => {
@@ -74,30 +68,42 @@ export function AuditTimeline({
     null
   );
 
-  // 権限チェック関数
-  const isViewerModerator = () => {
-    if (!viewerPubkey) return false;
-    return moderators.includes(viewerPubkey);
-  };
-
-  const isActorModerator = (actorPubkey: string) => {
-    return moderators.includes(actorPubkey);
+  // 参照された会話の作成者またはモデレーターかどうかを判断
+  const isActorFromReferencedConversation = (actorPubkey: string) => {
+    return referencedDiscussions.some(
+      (discussion) =>
+        discussion.authorPubkey === actorPubkey ||
+        discussion.moderators.some((mod) => mod.pubkey === actorPubkey)
+    );
   };
 
   const getActorDisplayName = (actorPubkey: string) => {
-    // 閲覧者がモデレーターの場合、または操作者がモデレーターの場合のみ名前を表示
-    if (isViewerModerator() || isActorModerator(actorPubkey)) {
+    // 参照された会話の作成者・モデレーターの名前を表示
+    if (isActorFromReferencedConversation(actorPubkey)) {
       return profiles[actorPubkey]?.name;
     }
     return null;
   };
 
   const getActorBadge = (actorPubkey: string) => {
-    // Only show moderator role in audit timeline
-    if (moderators.includes(actorPubkey)) {
+    // 参照された会話での役割を表示
+    const referencedConversation = referencedDiscussions.find(
+      (discussion) => discussion.authorPubkey === actorPubkey
+    );
+
+    if (referencedConversation) {
+      return "作成者";
+    }
+
+    const isModeratorInReferencedConversation = referencedDiscussions.some(
+      (discussion) =>
+        discussion.moderators.some((mod) => mod.pubkey === actorPubkey)
+    );
+
+    if (isModeratorInReferencedConversation) {
       return "モデレーター";
     }
-    // Do not show admin or creator roles in audit timeline
+
     return null;
   };
 
@@ -447,21 +453,26 @@ export function AuditTimeline({
               </p>
               <div className="timeline-box break-all">
                 {getActorDisplayName(item.actorPubkey) && (
-                  <p className="text-sm ruby-text">
-                    {getActorDisplayName(item.actorPubkey)}
-                  </p>
-                )}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {`${hexToNpub(item.actorPubkey).slice(0, 12)}...`}
-                  </span>
-
-                  {getActorBadge(item.actorPubkey) && (
-                    <span className="badge badge-outline badge-sm">
-                      {getActorBadge(item.actorPubkey)}
+                  <div className="flex items-center gap-2 mb-1">
+                    {getActorBadge(item.actorPubkey) && (
+                      <span className="badge badge-neutral badge-sm">
+                        {getActorBadge(item.actorPubkey)}
+                      </span>
+                    )}
+                    <span className="text-sm ruby-text">
+                      {getActorDisplayName(item.actorPubkey)}
                     </span>
-                  )}
+                  </div>
+                )}
 
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {`${hexToNpub(item.actorPubkey).slice(0, 12)}...`}
+                </span>
+
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 ruby-text">
+                    {item.description}
+                  </p>
                   {item.type === "post-submitted" &&
                     (() => {
                       const approvalStatus = getApprovalStatus(item);
@@ -476,9 +487,6 @@ export function AuditTimeline({
                       );
                     })()}
                 </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2 ruby-text">
-                  {item.description}
-                </p>
                 {getDetailContent(item)}
                 <button
                   onClick={() => setSelectedEvent(item)}

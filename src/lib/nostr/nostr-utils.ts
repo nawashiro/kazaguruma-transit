@@ -313,7 +313,11 @@ export function formatRelativeTime(timestamp: number): string {
   if (diff < 604800) return `${Math.floor(diff / 86400)}日前`;
 
   const date = new Date(timestamp * 1000);
-  return date.toLocaleDateString("ja-JP");
+  return date.toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
 }
 
 export function validateDiscussionForm(data: {

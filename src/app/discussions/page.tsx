@@ -275,6 +275,45 @@ export default function DiscussionsPage() {
           .filter((d): d is Discussion => d !== null);
       }
 
+      // 監査ログ用のプロファイル取得（参照された会話の作成者・モデレーターのみ）
+      const shouldLoadAuditProfiles = user.pubkey === ADMIN_PUBKEY;
+
+      if (shouldLoadAuditProfiles && referencedDiscussions.length > 0) {
+        const auditUniquePubkeys = new Set<string>();
+        auditUniquePubkeys.add(ADMIN_PUBKEY);
+
+        referencedDiscussions.forEach((discussion) => {
+          // 会話作成者を追加
+          auditUniquePubkeys.add(discussion.authorPubkey);
+          // モデレーターを追加
+          discussion.moderators.forEach((mod) => auditUniquePubkeys.add(mod.pubkey));
+        });
+
+        const auditProfilePromises = Array.from(auditUniquePubkeys).map(
+          async (pubkey) => {
+            const profileEvent = await nostrService.getProfile(pubkey);
+            if (profileEvent) {
+              try {
+                const profile = JSON.parse(profileEvent.content);
+                return [pubkey, { name: profile.name || profile.display_name }];
+              } catch {
+                return [pubkey, {}];
+              }
+            }
+            return [pubkey, {}];
+          }
+        );
+
+        const auditProfileResults = await Promise.all(auditProfilePromises);
+        const auditProfilesMap = Object.fromEntries(auditProfileResults);
+        
+        // プロファイルをメイン状態に統合（監査ログデータと合わせる）
+        setProfiles(prevProfiles => ({
+          ...prevProfiles,
+          ...auditProfilesMap
+        }));
+      }
+
       // 監査ログデータを設定
       setAuditPosts(listPosts);
       setAuditApprovals(listApprovals);
@@ -285,6 +324,7 @@ export default function DiscussionsPage() {
         posts: listPosts.length,
         approvals: listApprovals.length,
         referencedDiscussions: referencedDiscussions.length,
+        profilesLoaded: shouldLoadAuditProfiles,
       });
     } catch (error) {
       logger.error("Failed to load audit data:", error);
@@ -487,14 +527,8 @@ export default function DiscussionsPage() {
                   <AuditTimeline
                     items={auditItems}
                     profiles={profiles}
-                    viewerPubkey={user.pubkey}
-                    shouldLoadProfiles={auditReferencedDiscussions.some(
-                      (d) =>
-                        user.pubkey === d.authorPubkey ||
-                        d.moderators.some((m) => m.pubkey === user.pubkey)
-                    )}
-                    conversationAuditMode={true}
                     referencedDiscussions={auditReferencedDiscussions}
+                    conversationAuditMode={true}
                   />
                 )}
               </div>

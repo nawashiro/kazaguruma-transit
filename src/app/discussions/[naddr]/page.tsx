@@ -130,11 +130,10 @@ export default function DiscussionDetailPage() {
         return;
       }
 
-      const [discussionEvents, approvalsEvents] =
-        await Promise.all([
-          nostrService.getDiscussions(discussionInfo.authorPubkey),
-          nostrService.getApprovals(discussionInfo.discussionId),
-        ]);
+      const [discussionEvents, approvalsEvents] = await Promise.all([
+        nostrService.getDiscussions(discussionInfo.authorPubkey),
+        nostrService.getApprovals(discussionInfo.discussionId),
+      ]);
 
       const parsedDiscussion = discussionEvents
         .map(parseDiscussionEvent)
@@ -338,9 +337,19 @@ export default function DiscussionDetailPage() {
 
   const runConsensusAnalysis = useCallback(async () => {
     if (evaluations.length < 5 || approvedPosts.length < 2) {
+      logger.log("コンセンサス分析をスキップ", {
+        evaluations: evaluations.length,
+        approvedPosts: approvedPosts.length,
+        minRequired: { evaluations: 5, approvedPosts: 2 },
+      });
       setAnalysisResult(null);
       return;
     }
+
+    logger.log("コンセンサス分析開始", {
+      evaluations: evaluations.length,
+      approvedPosts: approvedPosts.length,
+    });
 
     setIsAnalyzing(true);
     try {
@@ -358,10 +367,8 @@ export default function DiscussionDetailPage() {
   }, [evaluations, approvedPosts]);
 
   useEffect(() => {
-    if (evaluations.length > 0 && approvedPosts.length > 0) {
-      runConsensusAnalysis();
-    }
-  }, [runConsensusAnalysis, evaluations.length, approvedPosts.length]);
+    runConsensusAnalysis();
+  }, [runConsensusAnalysis]);
 
   const postsWithStats = useMemo(
     () => combinePostsWithStats(approvedPosts, evaluations),

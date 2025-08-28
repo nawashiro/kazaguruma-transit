@@ -97,20 +97,19 @@ export default function DiscussionsPage() {
       );
 
       // 会話一覧管理用のデータを取得
-      const [
-        discussionListEvents,
-        discussionListApprovals,
-      ] = await Promise.all([
-        nostrService.getEvents([
-          {
-            kinds: [34550],
-            authors: [discussionInfo.authorPubkey],
-            "#d": [discussionInfo.dTag],
-            limit: 1,
-          },
-        ]),
-        nostrService.getApprovals(discussionInfo.discussionId),
-      ]);
+      const [discussionListEvents, discussionListApprovals] = await Promise.all(
+        [
+          nostrService.getEvents([
+            {
+              kinds: [34550],
+              authors: [discussionInfo.authorPubkey],
+              "#d": [discussionInfo.dTag],
+              limit: 1,
+            },
+          ]),
+          nostrService.getApprovals(discussionInfo.discussionId),
+        ]
+      );
 
       const discussionListMeta =
         discussionListEvents.length > 0

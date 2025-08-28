@@ -748,7 +748,7 @@ export default function DiscussionDetailPage() {
                           .map((item) => (
                             <div
                               key={item.postId}
-                              className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                              className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 break-all"
                             >
                               <div className="card-body p-4">
                                 <div className="flex items-start justify-between mb-2">
@@ -805,7 +805,7 @@ export default function DiscussionDetailPage() {
                           group.comments.map((item) => (
                             <div
                               key={item.postId}
-                              className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                              className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 break-all"
                             >
                               <div className="card-body p-4">
                                 <div className="flex items-start justify-between mb-2">

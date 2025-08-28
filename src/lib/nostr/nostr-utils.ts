@@ -103,10 +103,13 @@ export function parseEvaluationEvent(event: Event): PostEvaluation | null {
   if (event.kind !== 7) return null;
 
   const postId = event.tags.find((tag) => tag[0] === "e")?.[1];
-  const rawRating = event.tags.find((tag) => tag[0] === "rating")?.[1];
   const discussionId = event.tags.find((tag) => tag[0] === "a")?.[1];
 
-  if (!postId || !rawRating) return null;
+  if (!postId) return null;
+
+  // NIP-25: contentから評価を取得（ratingタグは使用しない）
+  const rawRating = event.content?.trim();
+  if (!rawRating) return null;
 
   // "-" 以外は全て "+" として扱う
   const rating = rawRating === "-" ? "-" : "+";

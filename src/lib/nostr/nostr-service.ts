@@ -350,7 +350,6 @@ export class NostrService {
   ): Omit<Event, "id" | "sig" | "pubkey"> {
     const tags: string[][] = [
       ["e", targetEventId],
-      ["rating", rating],
     ];
 
     if (discussionId) {

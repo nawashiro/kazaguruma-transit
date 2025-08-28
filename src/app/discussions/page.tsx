@@ -287,7 +287,9 @@ export default function DiscussionsPage() {
           // 会話作成者を追加
           auditUniquePubkeys.add(discussion.authorPubkey);
           // モデレーターを追加
-          discussion.moderators.forEach((mod) => auditUniquePubkeys.add(mod.pubkey));
+          discussion.moderators.forEach((mod) =>
+            auditUniquePubkeys.add(mod.pubkey)
+          );
         });
 
         const auditProfilePromises = Array.from(auditUniquePubkeys).map(
@@ -307,11 +309,11 @@ export default function DiscussionsPage() {
 
         const auditProfileResults = await Promise.all(auditProfilePromises);
         const auditProfilesMap = Object.fromEntries(auditProfileResults);
-        
+
         // プロファイルをメイン状態に統合（監査ログデータと合わせる）
-        setProfiles(prevProfiles => ({
+        setProfiles((prevProfiles) => ({
           ...prevProfiles,
-          ...auditProfilesMap
+          ...auditProfilesMap,
         }));
       }
 
@@ -460,9 +462,20 @@ export default function DiscussionsPage() {
                                   {formatRelativeTime(discussion.createdAt)}
                                 </time>
                               </div>
-                              <span className="badge badge-outline badge-sm">
-                                {discussion.moderators.length + 1} モデレーター
-                              </span>
+                              <div className="flex items-center gap-2">
+                                {(user.pubkey === discussion.authorPubkey ||
+                                  discussion.moderators.some(
+                                    (m) => m.pubkey === user.pubkey
+                                  )) && (
+                                  <p className="badge badge-primary badge-sm">
+                                    <span>参加中</span>
+                                  </p>
+                                )}
+                                <p className="text-sm">
+                                  {discussion.moderators.length + 1}
+                                  モデレーター
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>

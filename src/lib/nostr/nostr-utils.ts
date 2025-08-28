@@ -103,12 +103,13 @@ export function parseEvaluationEvent(event: Event): PostEvaluation | null {
   if (event.kind !== 7) return null;
 
   const postId = event.tags.find((tag) => tag[0] === "e")?.[1];
-  const rating = event.tags.find((tag) => tag[0] === "rating")?.[1] as
-    | "+"
-    | "-";
+  const rawRating = event.tags.find((tag) => tag[0] === "rating")?.[1];
   const discussionId = event.tags.find((tag) => tag[0] === "a")?.[1];
 
-  if (!postId || !rating || (rating !== "+" && rating !== "-")) return null;
+  if (!postId || !rawRating) return null;
+
+  // "-" 以外は全て "+" として扱う
+  const rating = rawRating === "-" ? "-" : "+";
 
   return {
     id: event.id,

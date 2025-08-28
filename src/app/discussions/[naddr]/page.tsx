@@ -163,8 +163,7 @@ export default function DiscussionDetailPage() {
 
       const postIds = parsedPosts.map((post) => post.id);
       const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-        postIds,
-        discussionInfo.discussionId
+        postIds
       );
 
       const parsedEvaluations = evaluationsEvents
@@ -259,8 +258,7 @@ export default function DiscussionDetailPage() {
 
       const postIds = parsedPosts.map((post) => post.id);
       const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-        postIds,
-        discussionInfo.discussionId
+        postIds
       );
 
       const parsedEvaluations = evaluationsEvents

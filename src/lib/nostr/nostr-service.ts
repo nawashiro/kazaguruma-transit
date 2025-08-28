@@ -234,23 +234,18 @@ export class NostrService {
   }
 
   async getEvaluationsForPosts(
-    postIds: string[],
-    discussionId?: string
+    postIds: string[]
   ): Promise<Event[]> {
     if (postIds.length === 0) {
       return [];
     }
 
-    const filters: Filter = {
+    const filter: Filter = {
       kinds: [7],
       "#e": postIds,
     };
 
-    if (discussionId) {
-      filters["#a"] = [discussionId];
-    }
-
-    return this.getEvents([filters]);
+    return this.getEvents([filter]);
   }
 
   async getDiscussionRequests(adminPubkey: string): Promise<Event[]> {

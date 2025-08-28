@@ -94,8 +94,7 @@ export function BusStopDiscussion({
       // Step 3: 承認された投稿のIDのみに対する評価を取得
       const approvedPostIds = parsedPosts.map((p) => p.id);
       const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-        approvedPostIds,
-        config.busStopDiscussionId
+        approvedPostIds
       );
 
       const parsedEvaluations = evaluationsEvents

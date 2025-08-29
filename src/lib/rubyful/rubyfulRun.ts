@@ -1,13 +1,15 @@
 import { logger } from "@/utils/logger";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 
-// Rubyfulライブラリのグローバル型定義
+// Rubyful v2のグローバル型定義
 declare global {
   interface Window {
-    RubyfulJsApp?: {
-      refPaths?: string[];
-      defaultDisplay?: boolean;
-      manualLoadProcess?: () => void;
+    RubyfulV2?: {
+      init: (config: {
+        selector?: string;
+        defaultDisplay?: boolean;
+      }) => void;
+      toggle?: () => void;
     };
   }
 }
@@ -33,7 +35,7 @@ const getRubyfulSetting = (): boolean => {
 };
 
 /**
- * Rubyfulライブラリを初期化し、ルビ表示機能を管理するフック
+ * Rubyful v2ライブラリを管理するフック（簡素化版）
  * @param trigger - 再実行のトリガーとなる依存配列
  * @param isLoaded - Rubyfulライブラリが読み込み完了したかどうか
  */
@@ -41,96 +43,25 @@ export const useRubyfulRun = (trigger: unknown[], isLoaded: boolean) => {
   // ルビ表示の状態管理（初期値はローカルストレージから読み込み）
   const [isRubyVisible, setIsRubyVisible] = useState(() => getRubyfulSetting());
 
-  // ルビ表示切り替えハンドラーをuseCallbackで最適化
-  const handleToggleRuby = useCallback(() => {
-    setIsRubyVisible((prevState) => {
-      const newRubyState = !prevState;
-
-      // Rubyfulライブラリの設定も同時に更新
-      if (window.RubyfulJsApp) {
-        window.RubyfulJsApp.defaultDisplay = newRubyState;
-      }
-
-      return newRubyState;
-    });
-  }, []);
-
   useEffect(() => {
-    let isCleanedUp = false;
-    let currentButton: HTMLElement | null = null;
+    // Rubyful v2が読み込まれていない場合はスキップ
+    if (!isLoaded) return;
 
-    const run = async () => {
-      // Rubyfulライブラリが未読み込みまたは既にクリーンアップ済みの場合は処理をスキップ
-      if (!isLoaded || isCleanedUp) return;
-
+    try {
+      // Rubyful v2はMutationObserverで自動的にDOM変更を監視するため
+      // 手動でのDOM操作や複雑な初期化処理は不要
+      logger.info("Rubyful v2 is managing ruby text automatically");
+      
+      // ローカルストレージの設定を保存
       try {
-        // 安全にDOM要素を削除
-        const existingButtons = document.querySelectorAll(".rubyfuljs-button, #rubyful-button-container");
-        existingButtons.forEach(button => {
-          try {
-            if (button.parentNode) {
-              button.parentNode.removeChild(button);
-            }
-          } catch (e) {
-            // DOM操作の競合を回避
-          }
-        });
-
-        if (isCleanedUp) return;
-
-        // Rubyfulライブラリの設定
-        window.RubyfulJsApp = {
-          refPaths: ["//*[contains(@class,'ruby-text')]"],
-          defaultDisplay: isRubyVisible,
-          ...window.RubyfulJsApp,
-        };
-
-        // Rubyfulの手動初期化実行
-        await window.RubyfulJsApp.manualLoadProcess?.();
-
-        if (isCleanedUp) return;
-
-        // ルビ表示切り替えボタンにイベントリスナーを設定
-        const rubyfulButtons = document.getElementsByClassName("rubyfuljs-button");
-
-        if (rubyfulButtons.length > 0) {
-          // 最初のボタンのみにイベントリスナーを設定
-          const firstButton = rubyfulButtons[0] as HTMLElement;
-          currentButton = firstButton;
-          firstButton.addEventListener("click", handleToggleRuby);
-
-          // 重複したボタンがあれば安全に削除
-          for (let i = 1; i < rubyfulButtons.length; i++) {
-            try {
-              const button = rubyfulButtons[i];
-              if (button.parentNode) {
-                button.parentNode.removeChild(button);
-              }
-            } catch (e) {
-              // DOM操作の競合を回避
-            }
-          }
-        }
+        localStorage.setItem("isRubyOn", isRubyVisible.toString());
       } catch (error) {
-        logger.error("Rubyfulの初期化中にエラーが発生しました:", error);
+        logger.warn("ローカルストレージへの保存に失敗しました:", error);
       }
-    };
-
-    run();
-
-    // 適切なクリーンアップ処理
-    return () => {
-      isCleanedUp = true;
-      if (currentButton) {
-        try {
-          currentButton.removeEventListener("click", handleToggleRuby);
-        } catch (e) {
-          // イベントリスナー削除の競合を回避
-        }
-        currentButton = null;
-      }
-    };
-  }, [trigger, handleToggleRuby, isLoaded, isRubyVisible]);
+    } catch (error) {
+      logger.error("Rubyful v2の処理中にエラーが発生しました:", error);
+    }
+  }, [trigger, isLoaded, isRubyVisible]);
 
   return { isRubyVisible };
 };

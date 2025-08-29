@@ -33,47 +33,30 @@ export default function SidebarLayout({
         <RubyfulInitializer isLoaded={isLoaded} />
       </Suspense>
 
-      {/* ルビを表示 */}
+      {/* Rubyful v2 */}
       <Script
-        src="https://rubyfuljs.s3.ap-northeast-1.amazonaws.com/rubyful.js"
+        src="https://rubyful-v2.s3.ap-northeast-1.amazonaws.com/v2/rubyful.js?t=20250507022654"
         strategy="afterInteractive"
         onLoad={() => {
-          logger.log("Rubyful.js loaded");
+          logger.log("Rubyful v2 loaded");
           setIsLoaded(true);
+
+          // RubyfulV2の初期化
+          (window as any).RubyfulV2?.init({
+            selector: ".ruby-text",
+            defaultDisplay: true,
+            styles: {
+              toggleButtonClass: "my-toggle",
+              toggleButtonText: {
+                on: "ルビ ON",
+                off: "ルビ OFF",
+              },
+            },
+          });
 
           const style = document.createElement("style");
           style.innerHTML = `
-          button.rubyfuljs-button.is-customized {
-            background-color: var(--color-primary);
-            color: var(--color-primary-content);
-            box-shadow: none;
-            border: 2px solid color-mix(in oklab, var(--color-primary), rgb(0, 0, 0) calc(5%));
-          }
-          .rubyfuljs-tooltip, .rubyfuljs-tooltip-close-button {
-            background-color: var(--color-base-100);
-            border: 1px solid var(--color-base-content);
-          }
-          rt {
-            margin-bottom: .30rem;
-            margin-top: .30rem;
-            font-size: 70%;
-            color: var(--color-secondary-content);
-          }
-          .alert-error rt {
-            color: var(--color-error-content);
-          }
-          .alert-success rt {
-            color: var(--color-success-content);
-          }
-          .btn-primary rt {
-            color: var(--color-primary-content);
-          }
-          .btn-warning rt{
-            color: var(--color-warning-content);
-          }
-          .btn:is(:disabled, [disabled], .btn-disabled) rt {
-            color: color-mix(in oklch, var(--color-base-content) 20%, rgba(0, 0, 0, 0));
-          }
+          
           `;
           document.body.appendChild(style);
         }}

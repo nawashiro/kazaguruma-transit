@@ -104,3 +104,39 @@ textarea:focus-visible {
 .menu span {
   white-space: nowrap;
 }
+
+/* === ruby === */
+
+.my-toggle {
+  padding: 4px 8px;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: var(--color-primary);
+  color: var(--color-primary-content);
+  box-shadow: none;
+  border: 2px solid
+    color-mix(in oklab, var(--color-primary), rgb(0, 0, 0) calc(5%));
+  border-radius: var(--radius-md);
+}
+rt {
+  margin-bottom: 0.3rem;
+  margin-top: 0.3rem;
+  font-size: 70%;
+  color: var(--color-secondary-content);
+}
+.alert-error rt {
+  color: var(--color-error-content);
+}
+.alert-success rt {
+  color: var(--color-success-content);
+}
+.btn-primary rt {
+  color: var(--color-primary-content);
+}
+.btn-warning rt {
+  color: var(--color-warning-content);
+}
+.btn:is(:disabled, [disabled], .btn-disabled) rt {
+  color: color-mix(in oklch, var(--color-base-content) 20%, rgba(0, 0, 0, 0));
+}

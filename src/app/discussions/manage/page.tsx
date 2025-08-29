@@ -74,19 +74,13 @@ export default function DiscussionManagePage() {
             try {
               const naddr = buildNaddrFromRef(qTag[1]);
               return (
-                <div
-                  key={index}
-                  className="text-sm text-gray-400 italic ruby-text"
-                >
+                <div key={index} className="text-sm text-gray-400 italic">
                   会話が見つかりません。参照: {naddr}
                 </div>
               );
             } catch {
               return (
-                <div
-                  key={index}
-                  className="text-sm text-gray-400 italic ruby-text"
-                >
+                <div key={index} className="text-sm text-gray-400 italic">
                   無効な参照形式。参照: {qTag[1]}
                 </div>
               );
@@ -95,15 +89,15 @@ export default function DiscussionManagePage() {
 
           const naddr = buildNaddrFromRef(qTag[1]);
           return (
-            <div key={index} className="ruby-text">
+            <div key={index} className="">
               <Link
                 href={`/discussions/${naddr}`}
                 className="block hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-3 -m-3 transition-colors"
               >
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 ruby-text">
                   {referencedDiscussion.title}
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
                   {referencedDiscussion.description.length > 100
                     ? `${referencedDiscussion.description.slice(0, 100)}...`
                     : referencedDiscussion.description}
@@ -363,14 +357,14 @@ export default function DiscussionManagePage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 ruby-text">
+      <div className="mb-8">
         <Link
           href="/discussions"
           className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
         >
-          <span>← 会話一覧に戻る</span>
+          <span className="ruby-text">← 会話一覧に戻る</span>
         </Link>
-        <h1 className="text-3xl font-bold">投稿承認管理</h1>
+        <h1 className="text-3xl font-bold ruby-text">投稿承認管理</h1>
         {discussion && (
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             {discussion.title}
@@ -382,14 +376,14 @@ export default function DiscussionManagePage() {
         <button
           aria-selected={activeTab === "pending"}
           aria-label="承認待ちタブを開く"
-          className={`join-item btn ruby-text ${
+          className={`join-item btn  ${
             activeTab === "pending" ? "btn-active btn-primary" : "false"
           }`}
           name="tab-options"
           role="tab"
           onClick={() => setActiveTab("pending")}
         >
-          <span>承認待ち</span>
+          <span className="ruby-text">承認待ち</span>
           {pendingPosts.length > 0 && (
             <span className="badge badge-warning badge-sm ml-1">
               {pendingPosts.length}
@@ -399,14 +393,14 @@ export default function DiscussionManagePage() {
         <button
           aria-selected={activeTab === "approved"}
           aria-label="承認済みタブを開く"
-          className={`join-item btn ruby-text ${
+          className={`join-item btn  ${
             activeTab === "approved" ? "btn-active btn-primary" : "false"
           }`}
           name="tab-options"
           role="tab"
           onClick={() => setActiveTab("approved")}
         >
-          <span>承認済み</span>
+          <span className="ruby-text">承認済み</span>
           {approvedPosts.length > 0 && (
             <span className="badge badge-success badge-sm ml-1">
               {approvedPosts.length}
@@ -452,7 +446,7 @@ export default function DiscussionManagePage() {
                             disabled={approvingIds.has(post.id)}
                             className="ml-4 btn btn-primary rounded-full dark:rounded-sm"
                           >
-                            <span>
+                            <span className="ruby-text">
                               {approvingIds.has(post.id) ? "" : "承認"}
                             </span>
                           </button>
@@ -464,7 +458,7 @@ export default function DiscussionManagePage() {
               ) : (
                 <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="card-body">
-                    <div className="text-center py-8 ruby-text">
+                    <div className="text-center py-8">
                       <CheckBadgeIcon
                         aria-label="承認待ちなし"
                         className="mx-auto h-12 w-12 text-gray-400"
@@ -504,17 +498,20 @@ export default function DiscussionManagePage() {
                             {renderQTagReferences(post)}
                           </div>
                           <div className="flex gap-2 ml-4">
-                            {post.approved && post.approvedBy?.includes(user.pubkey || '') && (
-                              <button
-                                onClick={() => handleRevokeApproval(post)}
-                                disabled={revokingIds.has(post.id)}
-                                className="btn btn-warning rounded-full dark:rounded-sm"
-                              >
-                                <span>
-                                  {revokingIds.has(post.id) ? "" : "承認を撤回"}
-                                </span>
-                              </button>
-                            )}
+                            {post.approved &&
+                              post.approvedBy?.includes(user.pubkey || "") && (
+                                <button
+                                  onClick={() => handleRevokeApproval(post)}
+                                  disabled={revokingIds.has(post.id)}
+                                  className="btn btn-warning rounded-full dark:rounded-sm"
+                                >
+                                  <span className="ruby-text">
+                                    {revokingIds.has(post.id)
+                                      ? ""
+                                      : "承認を撤回"}
+                                  </span>
+                                </button>
+                              )}
                           </div>
                         </div>
                       </div>
@@ -529,7 +526,7 @@ export default function DiscussionManagePage() {
               ) : (
                 <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="card-body">
-                    <div className="text-center py-8 ruby-text">
+                    <div className="text-center py-8">
                       <CheckBadgeIcon
                         aria-label="承認済みなし"
                         className="mx-auto h-12 w-12 text-gray-400"

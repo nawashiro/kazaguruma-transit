@@ -357,7 +357,7 @@ export default function DiscussionsPage() {
       <div className="mb-8 ruby-text">
         <h1 className="text-3xl font-bold mb-4">意見交換</h1>
         <p className="text-gray-600 dark:text-gray-400">
-          風ぐるまの利用体験について意見交換を行う場所です。
+          意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。
         </p>
       </div>
 
@@ -433,7 +433,7 @@ export default function DiscussionsPage() {
                   ))}
                 </div>
               ) : discussions.length > 0 ? (
-                <div className="space-y-4 ruby-text">
+                <div className="space-y-4">
                   {discussions.map((discussion) => (
                     <article key={discussion.id}>
                       <Link
@@ -444,10 +444,10 @@ export default function DiscussionsPage() {
                       >
                         <div className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
                           <div className="card-body p-4">
-                            <h3 className="card-title text-lg">
+                            <h3 className="card-title text-lg ruby-text">
                               <span>{discussion.title}</span>
                             </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-gray-600 dark:text-gray-400 ruby-text">
                               {discussion.description.length > 70
                                 ? `${discussion.description.slice(0, 70)}...`
                                 : discussion.description}

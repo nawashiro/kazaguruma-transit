@@ -239,6 +239,7 @@ export default function DiscussionManagePage() {
         event: signedEvent,
       };
 
+      // 楽観的な更新
       setApprovals((prev) => [...prev, newApproval]);
       setPosts((prev) =>
         prev.map((p) =>
@@ -285,7 +286,7 @@ export default function DiscussionManagePage() {
         throw new Error("Failed to publish revocation to relays");
       }
 
-      // 楽観的な更新 - 承認を削除
+      // 楽観的な更新
       setApprovals((prev) => prev.filter((a) => a.id !== approval.id));
       setPosts((prev) =>
         prev.map((p) =>
@@ -503,11 +504,7 @@ export default function DiscussionManagePage() {
                             {renderQTagReferences(post)}
                           </div>
                           <div className="flex gap-2 ml-4">
-                            {approvals.some(
-                              (a) =>
-                                a.postId === post.id &&
-                                a.moderatorPubkey === user.pubkey
-                            ) && (
+                            {post.approved && post.approvedBy?.includes(user.pubkey || '') && (
                               <button
                                 onClick={() => handleRevokeApproval(post)}
                                 disabled={revokingIds.has(post.id)}

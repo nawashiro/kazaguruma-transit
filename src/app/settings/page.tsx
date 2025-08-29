@@ -101,10 +101,12 @@ export default function SettingsPage() {
   // Check if discussions are enabled and render accordingly
   if (!isDiscussionsEnabled()) {
     return (
-      <div className="container mx-auto px-4 py-8 ruby-text">
+      <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">設定</h1>
-          <p className="text-gray-600">この機能は現在利用できません。</p>
+          <h1 className="text-2xl font-bold mb-4 ruby-text">設定</h1>
+          <p className="text-gray-600 ruby-text">
+            この機能は現在利用できません。
+          </p>
         </div>
       </div>
     );
@@ -284,7 +286,7 @@ export default function SettingsPage() {
                             d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                           />
                         </svg>
-                        ログアウト
+                        <span className="ruby-text">ログアウト</span>
                       </>
                     )}
                   </button>
@@ -306,7 +308,7 @@ export default function SettingsPage() {
                       d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                     />
                   </svg>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2 ruby-text">
                     ログインしていません
                   </h3>
                 </div>
@@ -394,7 +396,6 @@ export default function SettingsPage() {
                                 {discussion.description}
                               </p>
                               <p className="text-gray-500 mt-2">
-                                作成日:{" "}
                                 {formatRelativeTime(discussion.createdAt)}
                               </p>
                             </div>
@@ -445,7 +446,7 @@ export default function SettingsPage() {
                       href="/discussions/create"
                       className="btn btn-primary rounded-full dark:rounded-sm"
                     >
-                      <span>会話を作成する</span>
+                      <span className="ruby-text">会話を作成する</span>
                     </Link>
                   </div>
                 )}
@@ -455,14 +456,16 @@ export default function SettingsPage() {
         )}
 
         <div className="mt-8">
-          <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 ruby-text">
+          <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="card-body">
-              <h2 className="card-title mb-4">プライバシー</h2>
+              <h2 className="card-title mb-4 ruby-text">プライバシー</h2>
 
               <div className="space-y-4">
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                  <h3 className="font-medium mb-2">データの保存について</h3>
-                  <ul className="space-y-1 list-disc list-inside">
+                  <h3 className="font-medium mb-2 ruby-text">
+                    データの保存について
+                  </h3>
+                  <ul className="space-y-1 list-disc list-inside ruby-text">
                     <li>
                       あなたの投稿と評価はNostrプロトコルを通じて分散保存されます
                     </li>
@@ -475,8 +478,8 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                  <h3 className="font-medium mb-2">匿名性について</h3>
-                  <ul className="space-y-1 list-disc list-inside">
+                  <h3 className="font-medium mb-2 ruby-text">匿名性について</h3>
+                  <ul className="space-y-1 list-disc list-inside ruby-text">
                     <li>
                       メールアドレスやデバイス情報などの個人情報は送信されません
                     </li>
@@ -502,14 +505,14 @@ export default function SettingsPage() {
                 className="btn btn-outline rounded-full dark:rounded-sm"
                 onClick={() => setShowDeleteConfirm(null)}
               >
-                キャンセル
+                <span className="ruby-text">キャンセル</span>
               </button>
               <button
                 onClick={() => handleDeleteDiscussion(showDeleteConfirm)}
                 className="btn btn-error rounded-full dark:rounded-sm"
                 disabled={isDeletingDiscussion}
               >
-                削除
+                <span className="ruby-text">削除</span>
               </button>
             </div>
           </div>

@@ -553,15 +553,15 @@ export default function DiscussionDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 ruby-text">
+      <div className="mb-8">
         <Link
           href="/discussions"
           className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
         >
-          <span>← 会話一覧に戻る</span>
+          <span className="ruby-text">← 会話一覧に戻る</span>
         </Link>
 
-        <h1 className="text-3xl font-bold mb-4">{discussion.title}</h1>
+        <h1 className="text-3xl font-bold mb-4 ruby-text">{discussion.title}</h1>
 
         {/* Only show aside if user is creator or moderator */}
         {(user.pubkey === discussion.authorPubkey ||
@@ -571,9 +571,9 @@ export default function DiscussionDetailPage() {
               あなたは
               {/* Priority: Creator > Moderator. Show creator if user is the author, otherwise show moderator */}
               {user.pubkey === discussion.authorPubkey ? (
-                <span>作成者</span>
+                <span className="ruby-text">作成者</span>
               ) : (
-                <span>モデレーター</span>
+                <span className="ruby-text">モデレーター</span>
               )}
               です。
             </p>
@@ -584,7 +584,7 @@ export default function DiscussionDetailPage() {
                   href={`/discussions/${naddrParam}/edit`}
                   className="btn btn-primary rounded-full dark:rounded-sm min-h-8 h-fit"
                 >
-                  <span>会話を編集</span>
+                  <span className="ruby-text">会話を編集</span>
                 </Link>
               )}
               <ModeratorCheck
@@ -596,7 +596,7 @@ export default function DiscussionDetailPage() {
                   href={`/discussions/${naddrParam}/approve`}
                   className="btn btn-primary rounded-full dark:rounded-sm min-h-8 h-fit"
                 >
-                  <span>投稿承認管理</span>
+                  <span className="ruby-text">投稿承認管理</span>
                 </Link>
               </ModeratorCheck>
             </div>
@@ -604,7 +604,7 @@ export default function DiscussionDetailPage() {
         )}
 
         {discussion.description.split("\n").map((line, idx) => (
-          <p key={idx} className="text-gray-600 dark:text-gray-400">
+          <p key={idx} className="text-gray-600 dark:text-gray-400 ruby-text">
             {line}
           </p>
         ))}
@@ -621,7 +621,7 @@ export default function DiscussionDetailPage() {
           area-selected={activeTab === "main" ? "true" : "false"}
           onClick={() => setActiveTab("main")}
         >
-          <span>会話</span>
+          <span className="ruby-text">会話</span>
         </button>
         <button
           className={`join-item btn ruby-text ${
@@ -636,7 +636,7 @@ export default function DiscussionDetailPage() {
             loadAuditData();
           }}
         >
-          <span>監査ログ</span>
+          <span className="ruby-text">監査ログ</span>
         </button>
       </nav>
 

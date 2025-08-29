@@ -1,6 +1,7 @@
 "use client";
 
 import React, { ReactNode } from "react";
+import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
 
 interface CarouselCardProps {
   id: string;
@@ -29,24 +30,23 @@ export default function CarouselCard({
         <div
           className={`card bg-base-100 w-full shadow-sm overflow-hidden ${className}`}
         >
-          <div className="card-body">
+          <div className="card-body ruby-text">
             {title && <h2 className="card-title inline">{title}</h2>}
             {children}
-
             <div className="card-actions justify-between mt-4">
               <a
                 href={`#${prevSlideId}`}
                 className="btn btn-primary btn-circle"
-                aria-label="前のスライドに移動"
               >
-                ❮
+                <ArrowLeftIcon height="1rem" width="1rem" />
+                <span className="sr-only">前のスライドに移動</span>
               </a>
               <a
                 href={`#${nextSlideId}`}
                 className="btn btn-primary btn-circle"
-                aria-label="次のスライドに移動"
               >
-                ❯
+                <ArrowRightIcon height="1rem" width="1rem" />
+                <span className="sr-only">次のスライドに移動</span>
               </a>
             </div>
           </div>

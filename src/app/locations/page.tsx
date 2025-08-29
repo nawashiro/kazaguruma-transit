@@ -655,7 +655,7 @@ export default function LocationsPage() {
           </div>
         )}
 
-        <div className="md:flex md:justify-center ruby-text">
+        <div className="md:flex md:justify-center">
           <div className="carousel w-full md:max-w-3xl">
             {/* お悩みハンドブックへのリンクカード */}
             <CarouselCard

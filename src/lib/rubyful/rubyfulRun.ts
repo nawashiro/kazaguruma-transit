@@ -5,10 +5,7 @@ import { useEffect, useState } from "react";
 declare global {
   interface Window {
     RubyfulV2?: {
-      init: (config: {
-        selector?: string;
-        defaultDisplay?: boolean;
-      }) => void;
+      init: (config: { selector?: string; defaultDisplay?: boolean }) => void;
       toggle?: () => void;
     };
   }
@@ -42,16 +39,18 @@ const getRubyfulSetting = (): boolean => {
 export const useRubyfulRun = (trigger: unknown[], isLoaded: boolean) => {
   // ルビ表示の状態管理（初期値はローカルストレージから読み込み）
   const [isRubyVisible, setIsRubyVisible] = useState(() => getRubyfulSetting());
-
+  /*
   useEffect(() => {
     // Rubyful v2が読み込まれていない場合はスキップ
     if (!isLoaded) return;
 
     try {
-      // Rubyful v2はMutationObserverで自動的にDOM変更を監視するため
-      // 手動でのDOM操作や複雑な初期化処理は不要
-      logger.info("Rubyful v2 is managing ruby text automatically");
-      
+      const needRubyElements = document.getElementsByClassName("ruby-text");
+
+      for (let i = 0; needRubyElements.length; i++) {
+        console.log(needRubyElements[i]);
+      }
+
       // ローカルストレージの設定を保存
       try {
         localStorage.setItem("isRubyOn", isRubyVisible.toString());
@@ -61,7 +60,7 @@ export const useRubyfulRun = (trigger: unknown[], isLoaded: boolean) => {
     } catch (error) {
       logger.error("Rubyful v2の処理中にエラーが発生しました:", error);
     }
-  }, [trigger, isLoaded, isRubyVisible]);
+  }, [trigger, isLoaded, isRubyVisible]);*/
 
   return { isRubyVisible };
 };

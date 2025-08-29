@@ -45,6 +45,7 @@ export default function SidebarLayout({
           (window as any).RubyfulV2?.init({
             selector: ".ruby-text",
             defaultDisplay: true,
+            observeChanges: true,
             styles: {
               toggleButtonClass: "my-toggle",
               toggleButtonText: {
@@ -53,12 +54,6 @@ export default function SidebarLayout({
               },
             },
           });
-
-          const style = document.createElement("style");
-          style.innerHTML = `
-          
-          `;
-          document.body.appendChild(style);
         }}
       />
       <SkipToContent />

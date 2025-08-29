@@ -31,7 +31,7 @@ export function EvaluationComponent({
 
     // 初回のみシャッフル、その後は順序を保持
     return isRandomOrder ? shuffleArray(availablePosts) : availablePosts;
-  }, [posts.length, userEvaluations.size, isRandomOrder]);
+  }, [posts, userEvaluations, isRandomOrder]);
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (evaluatingPost) return;
@@ -151,7 +151,10 @@ export function EvaluationComponent({
           role="document"
         >
           {(currentPost.content || "").split("\n").map((line, index) => (
-            <p key={index} className="mb-2 last:mb-0 ruby-text">
+            <p
+              key={index}
+              className="mb-2 last:mb-0 ruby-text text-balance break-all"
+            >
               {line || "\u00A0"}
             </p>
           ))}

@@ -231,9 +231,12 @@ export default function Home() {
     setRouteInfo(null);
   };
 
-  const handleLocationSuggestionsLoadingChange = useCallback((loading: boolean) => {
-    setIsLocationSuggestionsLoading(loading);
-  }, []);
+  const handleLocationSuggestionsLoadingChange = useCallback(
+    (loading: boolean) => {
+      setIsLocationSuggestionsLoading(loading);
+    },
+    []
+  );
 
   const handleDateTimeSelected = (formData: TransitFormData) => {
     setSelectedDateTime(formData.dateTime || "");
@@ -717,7 +720,7 @@ export default function Home() {
         <div aria-live="polite" className="space-y-4">
           {renderMainContent()}
         </div>
-        <Card bodyClassName="text-center text-xs ruby-text">
+        <Card bodyClassName="text-center ruby-text">
           <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
           <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>
           <p>

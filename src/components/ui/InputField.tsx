@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useId } from "react";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 interface InputFieldProps {
   label: string;
@@ -84,9 +85,7 @@ export default function InputField({
           className="text-error text-sm font-medium leading-relaxed"
           role="alert"
         >
-          <span className="mr-1" aria-hidden="true">
-            ⚠️
-          </span>
+          <ExclamationTriangleIcon className="w-4 h-4 inline mr-1" aria-hidden="true" />
           {error}
         </div>
       )}

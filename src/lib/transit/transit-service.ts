@@ -15,7 +15,7 @@ import { logger } from "@/utils/logger";
 import { TimeTableRouter } from "./route-algorithm";
 import { TRANSIT_PARAMS } from "./transit-params";
 
-// TimeTableRouteResult interface from route-algorithm.ts
+// route-algorithm.ts の TimeTableRouteResult インターフェース
 interface TimeTableRouteResult {
   nodes: Array<{
     stopId: string;
@@ -42,7 +42,7 @@ interface StopLocation {
   stopName: string;
 }
 
-// 内部で使用するRouteJourney interface - represents a complete journey
+// 内部で使用するRouteJourney インターフェース - 完全な移動経路を表現
 interface RouteJourney {
   departureTime: string;
   arrivalTime: string;
@@ -52,7 +52,7 @@ interface RouteJourney {
   transferInfo?: TransferInfo;
 }
 
-// RouteSegment interface - represents a segment of a journey
+// RouteSegment インターフェース - 移動経路のセグメントを表現
 interface RouteSegment {
   type: "transit" | "transfer" | "wait";
   departureTime: string;
@@ -77,7 +77,7 @@ interface RouteSegment {
   transferInfo?: TransferInfo;
 }
 
-// TransferInfo interface - represents information about a transfer
+// TransferInfo インターフェース - 乗り換え情報を表現
 interface TransferInfo {
   fromStop: {
     id: string;

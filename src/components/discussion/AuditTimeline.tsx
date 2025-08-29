@@ -1,16 +1,65 @@
 "use client";
 
-import React, { useState } from "react";
-import type { AuditTimelineItem } from "@/types/discussion";
+import React, { useState, useMemo } from "react";
+import Link from "next/link";
+import {
+  ChatBubbleLeftRightIcon,
+  PlusIcon,
+  TrashIcon,
+  PencilIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  InformationCircleIcon,
+} from "@heroicons/react/24/outline";
+import { XMarkIcon } from "@heroicons/react/24/solid";
+import type { AuditTimelineItem, Discussion } from "@/types/discussion";
 import { formatRelativeTime, hexToNpub } from "@/lib/nostr/nostr-utils";
+import { buildNaddrFromRef } from "@/lib/nostr/naddr-utils";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface AuditTimelineProps {
   items: AuditTimelineItem[];
   profiles?: Record<string, { name?: string }>;
+  referencedDiscussions?: Discussion[];
+  conversationAuditMode?: boolean;
 }
 
-export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
+export function AuditTimeline({
+  items,
+  profiles = {},
+  referencedDiscussions = [],
+  conversationAuditMode = false,
+}: AuditTimelineProps) {
+  // qタグから参照されている会話を検索
+  const findReferencedDiscussion = (qRef: string): Discussion | null => {
+    return (
+      referencedDiscussions.find((d) => {
+        const expectedRef = `34550:${d.authorPubkey}:${d.dTag}`;
+        return expectedRef === qRef;
+      }) || null
+    );
+  };
+
+  // qタグを持つアイテムかどうかを判断
+  const hasQTag = (item: AuditTimelineItem): boolean => {
+    if (item.type !== "post-submitted" && item.type !== "post-approved")
+      return false;
+    const qTags = item.event?.tags?.filter((tag) => tag[0] === "q") || [];
+    return qTags.some((qTag) => qTag[1] && qTag[1].startsWith("34550:"));
+  };
+
+  // 会話監査モードに基づいてアイテムをフィルタリング
+  const filteredItems = useMemo(() => {
+    if (!conversationAuditMode) return items;
+    return items.filter((item) => {
+      // 承認イベントは常に含める
+      if (item.type === "post-approved") return true;
+      // その他のイベントはqタグの有無で判断
+      return hasQTag(item);
+    });
+  }, [items, conversationAuditMode]);
+
   // 投稿IDと承認状況のマッピングを作成
   const getApprovalStatus = (item: AuditTimelineItem) => {
     if (item.type !== "post-submitted") return null;
@@ -30,9 +79,136 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
     null
   );
 
+  // 参照された会話の作成者またはモデレーターかどうかを判断
+  const isActorFromReferencedConversation = (actorPubkey: string) => {
+    return referencedDiscussions.some(
+      (discussion) =>
+        discussion.authorPubkey === actorPubkey ||
+        discussion.moderators.some((mod) => mod.pubkey === actorPubkey)
+    );
+  };
+
+  const getActorDisplayName = (actorPubkey: string) => {
+    // 参照された会話の作成者・モデレーターの名前を表示
+    if (isActorFromReferencedConversation(actorPubkey)) {
+      return profiles[actorPubkey]?.name;
+    }
+    return null;
+  };
+
+  const getActorBadge = (actorPubkey: string) => {
+    // 参照された会話での役割を表示
+    const referencedConversation = referencedDiscussions.find(
+      (discussion) => discussion.authorPubkey === actorPubkey
+    );
+
+    if (referencedConversation) {
+      return "作成者";
+    }
+
+    const isModeratorInReferencedConversation = referencedDiscussions.some(
+      (discussion) =>
+        discussion.moderators.some((mod) => mod.pubkey === actorPubkey)
+    );
+
+    if (isModeratorInReferencedConversation) {
+      return "モデレーター";
+    }
+
+    return null;
+  };
+
+  // qタグ引用をレンダリング（会話一覧風）
+  const renderQTagReferences = (item: AuditTimelineItem) => {
+    if (item.type !== "post-submitted" && item.type !== "post-approved")
+      return null;
+
+    let qTags: string[][] = [];
+
+    switch (item.type) {
+      case "post-submitted":
+        // post-submitted の場合は event.tags から直接取得
+        qTags = item.event?.tags?.filter((tag) => tag[0] === "q") || [];
+        break;
+
+      case "post-approved":
+        // post-approved の場合は content 内の承認された投稿のqタグを取得
+        try {
+          const approvedPost = JSON.parse(item.event.content);
+          if (approvedPost.tags) {
+            qTags = approvedPost.tags.filter((tag: string[]) => tag[0] === "q");
+          }
+        } catch {
+          // JSON パースに失敗した場合は空配列
+          qTags = [];
+        }
+        break;
+
+      default:
+        qTags = [];
+        break;
+    }
+
+    if (qTags.length === 0) return null;
+
+    return (
+      <div className="space-y-3">
+        {qTags.map((qTag, index) => {
+          if (!qTag[1] || !qTag[1].startsWith("34550:")) return null;
+
+          const referencedDiscussion = findReferencedDiscussion(qTag[1]);
+          if (!referencedDiscussion) {
+            // 内部参照形式をnaddr形式に変換してユーザーに表示
+            try {
+              const naddr = buildNaddrFromRef(qTag[1]);
+              return (
+                <div
+                  key={index}
+                  className="text-sm text-gray-400 italic ruby-text"
+                >
+                  会話が見つかりません。参照: {naddr}
+                </div>
+              );
+            } catch {
+              return (
+                <div
+                  key={index}
+                  className="text-sm text-gray-400 italic ruby-text"
+                >
+                  無効な参照形式。参照: {qTag[1]}
+                </div>
+              );
+            }
+          }
+
+          const naddr = buildNaddrFromRef(qTag[1]);
+          return (
+            <div key={index} className="ruby-text">
+              <Link
+                href={`/discussions/${naddr}`}
+                className="block hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-3 -m-3 transition-colors"
+              >
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  {referencedDiscussion.title}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  {referencedDiscussion.description.length > 100
+                    ? `${referencedDiscussion.description.slice(0, 100)}...`
+                    : referencedDiscussion.description}
+                </p>
+              </Link>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   useRubyfulRun([selectedEvent], true);
 
   const getDetailContent = (item: AuditTimelineItem) => {
+    const qTagContent = renderQTagReferences(item);
+
     switch (item.type) {
       case "discussion-request":
         // リクエストの場合、contentを表示
@@ -43,26 +219,38 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
         ) : null;
 
       case "post-submitted":
-        // 投稿提出の場合、contentを表示
-        return item.event.content ? (
-          <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm ruby-text">
-            <div className="whitespace-pre-wrap">{item.event.content}</div>
-          </div>
-        ) : null;
+        // 投稿提出の場合、qタグ引用とcontentを表示
 
-      case "post-approved":
-        // 承認の場合、承認された投稿の内容を表示
-        try {
-          const approvedPost = JSON.parse(item.event.content);
+        if (qTagContent) {
+          return qTagContent;
+        } else {
           return (
             <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm ruby-text">
               <div className="whitespace-pre-wrap">
-                {approvedPost.content || "内容なし"}
+                {item.event.content || "内容なし"}
               </div>
             </div>
           );
+        }
+
+      case "post-approved":
+        // 承認の場合、qタグ引用と承認された投稿の内容を表示
+        try {
+          const approvedPost = JSON.parse(item.event.content);
+
+          if (qTagContent) {
+            return qTagContent;
+          } else {
+            return (
+              <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-sm ruby-text">
+                <div className="whitespace-pre-wrap">
+                  {approvedPost.content || "内容なし"}
+                </div>
+              </div>
+            );
+          }
         } catch {
-          return null;
+          return qTagContent;
         }
 
       default:
@@ -70,29 +258,23 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
     }
   };
 
-  if (items.length === 0) {
+  if (filteredItems.length === 0) {
     return (
       <div className="text-center py-8 ruby-text">
-        <svg
+        <ClockIcon
           className="mx-auto h-12 w-12 text-gray-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
           aria-label="履歴なし"
           role="img"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+        />
         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
-          履歴がありません
+          {conversationAuditMode
+            ? "会話関連の履歴がありません"
+            : "履歴がありません"}
         </h3>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          まだ操作履歴がありません。
+          {conversationAuditMode
+            ? "会話を参照する投稿履歴がありません。"
+            : "まだ操作履歴がありません。"}
         </p>
       </div>
     );
@@ -101,124 +283,19 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
   const getIconByType = (type: AuditTimelineItem["type"]) => {
     switch (type) {
       case "discussion-request":
-        return (
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-          </svg>
-        );
+        return <ChatBubbleLeftRightIcon className="w-4 h-4" aria-hidden="true" />;
       case "discussion-created":
-        return (
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-            />
-          </svg>
-        );
+        return <PlusIcon className="w-4 h-4" aria-hidden="true" />;
       case "discussion-deleted":
-        return (
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
-        );
+        return <TrashIcon className="w-4 h-4" aria-hidden="true" />;
       case "post-submitted":
-        return (
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-            />
-          </svg>
-        );
+        return <PencilIcon className="w-4 h-4" aria-hidden="true" />;
       case "post-approved":
-        return (
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        );
+        return <CheckCircleIcon className="w-4 h-4" aria-hidden="true" />;
       case "post-rejected":
-        return (
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        );
+        return <XCircleIcon className="w-4 h-4" aria-hidden="true" />;
       default:
-        return (
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        );
+        return <InformationCircleIcon className="w-4 h-4" aria-hidden="true" />;
     }
   };
 
@@ -248,7 +325,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
         role="list"
         aria-label="監査タイムライン"
       >
-        {items.map((item, index) => (
+        {filteredItems.map((item, index) => (
           <li key={item.id} role="listitem">
             {index != 0 && <hr />}
 
@@ -270,33 +347,42 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
                   {formatRelativeTime(item.timestamp)}
                 </time>
               </p>
-              <div className="timeline-box">
-                {profiles[item.actorPubkey]?.name && (
-                  <p className="text-sm ruby-text">
-                    {profiles[item.actorPubkey].name}
-                  </p>
+              <div className="timeline-box break-all">
+                {getActorDisplayName(item.actorPubkey) && (
+                  <div className="flex items-center gap-2 mb-1">
+                    {getActorBadge(item.actorPubkey) && (
+                      <span className="badge badge-neutral badge-sm">
+                        {getActorBadge(item.actorPubkey)}
+                      </span>
+                    )}
+                    <span className="text-sm ruby-text">
+                      {getActorDisplayName(item.actorPubkey)}
+                    </span>
+                  </div>
                 )}
-                <div className="join items-start mb-2">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {`${hexToNpub(item.actorPubkey).slice(0, 12)}...`}
-                  </span>
+
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {`${hexToNpub(item.actorPubkey).slice(0, 12)}...`}
+                </span>
+
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 ruby-text">
+                    {item.description}
+                  </p>
                   {item.type === "post-submitted" &&
                     (() => {
                       const approvalStatus = getApprovalStatus(item);
                       return approvalStatus === "approved" ? (
-                        <span className="badge badge-primary badge-sm ml-2">
+                        <span className="badge badge-primary badge-sm">
                           承認済み
                         </span>
                       ) : (
-                        <span className="badge badge-warning badge-sm ml-2">
+                        <span className="badge badge-warning badge-sm">
                           未承認
                         </span>
                       );
                     })()}
                 </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2 ruby-text">
-                  {item.description}
-                </p>
                 {getDetailContent(item)}
                 <button
                   onClick={() => setSelectedEvent(item)}
@@ -309,7 +395,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
               </div>
             </div>
 
-            {index < items.length - 1 && <hr />}
+            {index < filteredItems.length - 1 && <hr />}
           </li>
         ))}
       </ul>
@@ -336,7 +422,7 @@ export function AuditTimeline({ items, profiles = {} }: AuditTimelineProps) {
                 type="button"
                 aria-label="モーダルを閉じる"
               >
-                ✕
+                <XMarkIcon className="w-4 h-4" />
               </button>
             </div>
 

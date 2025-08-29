@@ -94,8 +94,7 @@ export function BusStopDiscussion({
       // Step 3: 承認された投稿のIDのみに対する評価を取得
       const approvedPostIds = parsedPosts.map((p) => p.id);
       const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-        approvedPostIds,
-        config.busStopDiscussionId
+        approvedPostIds
       );
 
       const parsedEvaluations = evaluationsEvents
@@ -251,7 +250,7 @@ export function BusStopDiscussion({
                 disabled={isSubmitting}
                 maxLength={280}
               />
-              <div className="text-xs text-gray-500 mt-1 ruby-text">
+              <div className="text-gray-500 mt-1 ruby-text">
                 {postForm.content.length}/280文字
               </div>
             </div>

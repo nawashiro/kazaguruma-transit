@@ -29,13 +29,36 @@ function parseRelays(relayString: string) {
   }));
 }
 
-function parseModerators(moderatorString: string): string[] {
-  if (!moderatorString) return [];
+// Removed parseModerators function as NEXT_PUBLIC_MODERATORS is no longer used
 
-  return moderatorString
-    .split(",")
-    .map((mod) => mod.trim())
-    .filter((mod) => mod.length === 64); // Valid pubkey length
+export function getBusStopDiscussionConfig(): { naddr: string | null } {
+  const naddrString = process.env.NEXT_PUBLIC_BUS_STOP_DISCUSSION_ID;
+  
+  if (!naddrString) {
+    return { naddr: null };
+  }
+
+  // Validate naddr format
+  if (!naddrString.startsWith('naddr1')) {
+    throw new Error('Invalid naddr format');
+  }
+
+  return { naddr: naddrString };
+}
+
+export function getDiscussionListConfig(): { naddr: string | null; kind: number; enabled: boolean } {
+  const naddrString = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
+  
+  if (!naddrString) {
+    return { naddr: null, kind: 34550, enabled: false };
+  }
+
+  // Validate naddr format
+  if (!naddrString.startsWith('naddr1')) {
+    throw new Error('Invalid naddr format for discussion list');
+  }
+
+  return { naddr: naddrString, kind: 34550, enabled: true };
 }
 
 export function getDiscussionConfig(): DiscussionConfig {
@@ -43,7 +66,7 @@ export function getDiscussionConfig(): DiscussionConfig {
   const adminPubkey = process.env.NEXT_PUBLIC_ADMIN_PUBKEY || "";
   const busStopDiscussionIdPart =
     process.env.NEXT_PUBLIC_BUS_STOP_DISCUSSION_ID || "";
-  const moderatorString = process.env.NEXT_PUBLIC_MODERATORS || "";
+  // NEXT_PUBLIC_MODERATORS removed - moderators are now managed per discussion
   const relayString =
     process.env.NEXT_PUBLIC_NOSTR_RELAYS ||
     "wss://relay.damus.io,wss://relay.nostr.band,wss://nos.lol";
@@ -54,7 +77,7 @@ export function getDiscussionConfig(): DiscussionConfig {
     busStopDiscussionId: adminPubkey
       ? buildDiscussionId(getAdminPubkeyHex(), busStopDiscussionIdPart)
       : "",
-    moderators: parseModerators(moderatorString),
+    moderators: [], // Global moderators removed
     relays: parseRelays(relayString),
   };
 }
@@ -94,11 +117,7 @@ export function validateDiscussionConfig(): string[] {
     errors.push("At least one Nostr relay must be configured");
   }
 
-  config.moderators.forEach((mod, index) => {
-    if (mod.length !== 64) {
-      errors.push(`Moderator ${index + 1} public key must be 64 characters`);
-    }
-  });
+  // Global moderators validation removed - moderators are now managed per discussion
 
   return errors;
 }

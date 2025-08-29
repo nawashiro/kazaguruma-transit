@@ -49,7 +49,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
         isDeparture,
       });
     }
-  }, [initialStopId, isDeparture, dateTime]);
+  }, [initialStopId, isDeparture, dateTime, notifyParent]);
 
   const handleChange = (newDateTime: string, newIsDeparture: boolean) => {
     setDateTime(newDateTime);

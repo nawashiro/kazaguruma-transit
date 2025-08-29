@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { XMarkIcon } from "@heroicons/react/24/solid";
 import { KeyLocation } from "@/utils/addressLoader";
 
 interface LocationDetailModalProps {
@@ -40,7 +41,7 @@ export default function LocationDetailModal({
             className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
             aria-label="閉じる"
           >
-            ✕
+            <XMarkIcon className="w-4 h-4" />
           </button>
         </form>
 
@@ -87,7 +88,7 @@ export default function LocationDetailModal({
         {/* 著作権情報 */}
         <div className="mt-6 bg-base-100 p-3 rounded-lg ruby-text">
           <h4 className="font-semibold text-sm mb-2 ">提供情報</h4>
-          <div className="text-xs space-y-2">
+          <div className="space-y-2 text-sm">
             <p className="/90">座標データ提供: {location.nodeCopyright}</p>
 
             {location.imageCopyright && (

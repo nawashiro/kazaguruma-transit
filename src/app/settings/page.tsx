@@ -3,23 +3,100 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
-import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
-import { hexToNpub } from "@/lib/nostr/nostr-utils";
+import {
+  isDiscussionsEnabled,
+  getNostrServiceConfig,
+} from "@/lib/config/discussion-config";
+import {
+  hexToNpub,
+  parseDiscussionEvent,
+  formatRelativeTime,
+} from "@/lib/nostr/nostr-utils";
+import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
+import { createNostrService } from "@/lib/nostr/nostr-service";
 import { LoginModal } from "@/components/discussion/LoginModal";
 import Button from "@/components/ui/Button";
 import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
+
+const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function SettingsPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [myDiscussions, setMyDiscussions] = useState<Discussion[]>([]);
+  const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
+    null
+  );
+  const [isDeletingDiscussion, setIsDeletingDiscussion] = useState(false);
 
-  const { user, logout, isLoading, error } = useAuth();
+  const { user, logout, isLoading, error, signEvent } = useAuth();
 
   useRubyfulRun([isLoading], !isLoading);
+
+  const loadMyDiscussions = useCallback(async () => {
+    if (!user.isLoggedIn || !user.pubkey) return;
+
+    setIsLoadingDiscussions(true);
+    try {
+      const discussionEvents = await nostrService.getDiscussions(user.pubkey);
+      const parsedDiscussions = discussionEvents
+        .map(parseDiscussionEvent)
+        .filter((d): d is Discussion => d !== null)
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+      setMyDiscussions(parsedDiscussions);
+    } catch (error) {
+      logger.error("Failed to load user discussions:", error);
+    } finally {
+      setIsLoadingDiscussions(false);
+    }
+  }, [user.isLoggedIn, user.pubkey]);
+
+  useEffect(() => {
+    if (user.isLoggedIn && isDiscussionsEnabled()) {
+      loadMyDiscussions();
+    }
+  }, [user.isLoggedIn, loadMyDiscussions]);
+
+  const handleDeleteDiscussion = async (discussionId: string) => {
+    if (!user.isLoggedIn || !signEvent) return;
+
+    const discussion = myDiscussions.find((d) => d.id === discussionId);
+    if (!discussion?.event?.id) return;
+
+    setIsDeletingDiscussion(true);
+    try {
+      const deleteEvent = {
+        kind: 5,
+        content: "",
+        tags: [["e", discussion.event.id]],
+        pubkey: user.pubkey,
+        created_at: Math.floor(Date.now() / 1000),
+      };
+
+      const signedEvent = await signEvent(deleteEvent);
+      const published = await nostrService.publishSignedEvent(signedEvent);
+
+      if (!published) {
+        throw new Error("Failed to publish delete event to relays");
+      }
+
+      // 削除した会話をリストから除去
+      setMyDiscussions((prev) => prev.filter((d) => d.id !== discussionId));
+      setShowDeleteConfirm(null);
+    } catch (error) {
+      logger.error("Failed to delete discussion:", error);
+    } finally {
+      setIsDeletingDiscussion(false);
+    }
+  };
 
   // Check if discussions are enabled and render accordingly
   if (!isDiscussionsEnabled()) {
@@ -100,7 +177,7 @@ export default function SettingsPage() {
                       </span>
                     </label>
                     <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <span className="font-mono text-xs break-all flex-1">
+                      <span className="font-mono break-all flex-1">
                         {user.pubkey ? hexToNpub(user.pubkey) : "N/A"}
                       </span>
                       {user.pubkey && (
@@ -278,6 +355,105 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* 自作会話一覧セクション */}
+        {user.isLoggedIn && (
+          <div className="mt-8">
+            <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="card-body">
+                <h2 className="card-title mb-4 ruby-text">
+                  <span>あなたが作った会話の一覧</span>
+                </h2>
+
+                {isLoadingDiscussions ? (
+                  <div className="animate-pulse space-y-4">
+                    {[...Array(2)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-16 bg-gray-200 dark:bg-gray-700 rounded"
+                      ></div>
+                    ))}
+                  </div>
+                ) : myDiscussions.length > 0 ? (
+                  <div className="space-y-4">
+                    {myDiscussions.map((discussion) => {
+                      const naddr = buildNaddrFromDiscussion(discussion);
+                      return (
+                        <div
+                          key={discussion.id}
+                          className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <Link
+                                href={`/discussions/${naddr}`}
+                                className="text-lg font-semibold dark:text-blue-400 dark:hover:text-blue-300 ruby-text"
+                              >
+                                {discussion.title}
+                              </Link>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ruby-text">
+                                {discussion.description}
+                              </p>
+                              <p className="text-gray-500 mt-2">
+                                作成日:{" "}
+                                {formatRelativeTime(discussion.createdAt)}
+                              </p>
+                            </div>
+                            <div className="flex gap-2 ml-4">
+                              <Link
+                                href={`/discussions/${naddr}/edit`}
+                                className="btn btn-outline btn-sm rounded-full dark:rounded-sm"
+                              >
+                                編集
+                              </Link>
+                              <button
+                                onClick={() =>
+                                  setShowDeleteConfirm(discussion.id)
+                                }
+                                className="btn btn-error btn-outline btn-sm rounded-full dark:rounded-sm"
+                                disabled={isDeletingDiscussion}
+                              >
+                                削除
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 ruby-text">
+                    <svg
+                      className="mx-auto h-12 w-12 text-gray-400 mb-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                      />
+                    </svg>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                      まだ会話を作成していません
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                      新しい会話を作成して、地域の話題について話し合いましょう。
+                    </p>
+                    <Link
+                      href="/discussions/create"
+                      className="btn btn-primary rounded-full dark:rounded-sm"
+                    >
+                      <span>会話を作成する</span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mt-8">
           <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 ruby-text">
             <div className="card-body">
@@ -312,6 +488,33 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* 削除確認ダイアログ */}
+      {showDeleteConfirm && (
+        <dialog open className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg ruby-text">会話の削除</h3>
+            <p className="py-4 ruby-text">
+              この会話を削除しますか？この操作は取り消せません。
+            </p>
+            <div className="modal-action">
+              <button
+                className="btn btn-outline rounded-full dark:rounded-sm"
+                onClick={() => setShowDeleteConfirm(null)}
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={() => handleDeleteDiscussion(showDeleteConfirm)}
+                className="btn btn-error rounded-full dark:rounded-sm"
+                disabled={isDeletingDiscussion}
+              >
+                削除
+              </button>
+            </div>
+          </div>
+        </dialog>
+      )}
 
       <LoginModal
         isOpen={showLoginModal}

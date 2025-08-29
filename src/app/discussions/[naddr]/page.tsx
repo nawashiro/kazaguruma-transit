@@ -9,7 +9,6 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   isDiscussionsEnabled,
-  buildDiscussionId,
   getNostrServiceConfig,
 } from "@/lib/config/discussion-config";
 import { LoginModal } from "@/components/discussion/LoginModal";
@@ -29,6 +28,7 @@ import {
   formatRelativeTime,
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
+import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import {
   evaluationService,
   EvaluationAnalysisResult,
@@ -50,7 +50,7 @@ const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function DiscussionDetailPage() {
   const params = useParams();
-  const discussionId = params.id as string;
+  const naddrParam = params.naddr as string;
 
   const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
   const [consensusTab, setConsensusTab] = useState<string>("group-consensus");
@@ -69,6 +69,15 @@ export default function DiscussionDetailPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 監査ログ用の独立した状態
+  const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
+  const [auditApprovals, setAuditApprovals] = useState<PostApproval[]>([]);
+  const [auditEvaluations, setAuditEvaluations] = useState<PostEvaluation[]>(
+    []
+  );
+  const [isAuditLoading, setIsAuditLoading] = useState(false);
+  const [isAuditLoaded, setIsAuditLoaded] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState("");
@@ -84,41 +93,51 @@ export default function DiscussionDetailPage() {
 
   const { user, signEvent } = useAuth();
 
+  // Parse naddr and extract discussion info
+  const discussionInfo = useMemo(() => {
+    if (!naddrParam) return null;
+    return extractDiscussionFromNaddr(naddrParam);
+  }, [naddrParam]);
+
   // Rubyfulライブラリ対応
   useRubyfulRun(
-    [discussion, posts, approvals, evaluations, consensusTab],
+    [
+      discussion,
+      posts,
+      approvals,
+      evaluations,
+      auditPosts,
+      auditApprovals,
+      auditEvaluations,
+      consensusTab,
+    ],
     isLoaded
   );
 
+  // メイン画面専用のデータ取得
   const loadData = useCallback(async () => {
-    if (!isDiscussionsEnabled()) return;
+    if (!isDiscussionsEnabled() || !discussionInfo) return;
     setIsLoading(true);
     try {
-      // テストモードの場合はテストデータを使用
-      if (isTestMode(discussionId)) {
+      // Check if this is test mode (for backward compatibility)
+      if (isTestMode(discussionInfo.dTag)) {
         const testData = await loadTestData();
         setDiscussion(testData.discussion);
         setPosts(testData.posts);
-        setApprovals([]); // テストデータでは承認データは空
+        setApprovals([]);
         setEvaluations(testData.evaluations);
-        setProfiles({}); // テストデータではプロファイルは空
+        setProfiles({});
         return;
       }
 
-      const [discussionEvents, postsEvents, approvalsEvents] =
-        await Promise.all([
-          nostrService.getDiscussions(ADMIN_PUBKEY),
-          nostrService.getDiscussionPosts(
-            buildDiscussionId(ADMIN_PUBKEY, discussionId)
-          ),
-          nostrService.getApprovals(
-            buildDiscussionId(ADMIN_PUBKEY, discussionId)
-          ),
-        ]);
+      const [discussionEvents, approvalsEvents] = await Promise.all([
+        nostrService.getDiscussions(discussionInfo.authorPubkey),
+        nostrService.getApprovals(discussionInfo.discussionId),
+      ]);
 
       const parsedDiscussion = discussionEvents
         .map(parseDiscussionEvent)
-        .find((d) => d && d.dTag === discussionId);
+        .find((d) => d && d.dTag === discussionInfo.dTag);
 
       if (!parsedDiscussion) {
         throw new Error("Discussion not found");
@@ -128,16 +147,22 @@ export default function DiscussionDetailPage() {
         .map(parseApprovalEvent)
         .filter((a): a is PostApproval => a !== null);
 
-      const parsedPosts = postsEvents
-        .map((event) => parsePostEvent(event, parsedApprovals))
+      // 承認イベントから投稿データを復元
+      const parsedPosts = parsedApprovals
+        .map((approval) => {
+          try {
+            const approvedPost = JSON.parse(approval.event.content);
+            return parsePostEvent(approvedPost, [approval]);
+          } catch {
+            return null;
+          }
+        })
         .filter((p): p is DiscussionPost => p !== null)
         .sort((a, b) => b.createdAt - a.createdAt);
 
-      // すべての投稿に対するすべての評価を取得
       const postIds = parsedPosts.map((post) => post.id);
       const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-        postIds,
-        buildDiscussionId(ADMIN_PUBKEY, discussionId)
+        postIds
       );
 
       const parsedEvaluations = evaluationsEvents
@@ -149,7 +174,7 @@ export default function DiscussionDetailPage() {
       setApprovals(parsedApprovals);
       setEvaluations(parsedEvaluations);
 
-      // 承認者・管理者のプロファイル取得（投稿者は除外）
+      // Profile loading logic - load profiles for discussion creators and moderators
       const uniquePubkeys = new Set<string>();
       parsedApprovals.forEach((approval) =>
         uniquePubkeys.add(approval.moderatorPubkey)
@@ -161,34 +186,100 @@ export default function DiscussionDetailPage() {
         );
       }
 
-      const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
-        const profileEvent = await nostrService.getProfile(pubkey);
-        if (profileEvent) {
-          try {
-            const profile = JSON.parse(profileEvent.content);
-            return [pubkey, { name: profile.name || profile.display_name }];
-          } catch {
+      if (uniquePubkeys.size > 0) {
+        const profilePromises = Array.from(uniquePubkeys).map(
+          async (pubkey) => {
+            const profileEvent = await nostrService.getProfile(pubkey);
+            if (profileEvent) {
+              try {
+                const profile = JSON.parse(profileEvent.content);
+                return [pubkey, { name: profile.name || profile.display_name }];
+              } catch {
+                return [pubkey, {}];
+              }
+            }
             return [pubkey, {}];
           }
-        }
-        return [pubkey, {}];
-      });
+        );
 
-      const profileResults = await Promise.all(profilePromises);
-      const profilesMap = Object.fromEntries(profileResults);
-      setProfiles(profilesMap);
+        const profileResults = await Promise.all(profilePromises);
+        const profilesMap = Object.fromEntries(profileResults);
+        setProfiles(profilesMap);
+      } else {
+        setProfiles({});
+      }
     } catch (error) {
       logger.error("Failed to load discussion:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [discussionId]);
+  }, [discussionInfo]);
+
+  // 監査ログ専用のデータ取得
+  const loadAuditData = useCallback(async () => {
+    if (
+      !isDiscussionsEnabled() ||
+      !discussionInfo ||
+      isAuditLoaded ||
+      isAuditLoading
+    )
+      return;
+
+    setIsAuditLoading(true);
+    try {
+      // Check if this is test mode (for backward compatibility)
+      if (isTestMode(discussionInfo.dTag)) {
+        const testData = await loadTestData();
+        setAuditPosts(testData.posts);
+        setAuditApprovals([]);
+        setAuditEvaluations(testData.evaluations);
+        setIsAuditLoaded(true);
+        return;
+      }
+
+      const [postsEvents, approvalsEvents] = await Promise.all([
+        nostrService.getDiscussionPosts(discussionInfo.discussionId),
+        nostrService.getApprovals(discussionInfo.discussionId),
+      ]);
+
+      const parsedApprovals = approvalsEvents
+        .map(parseApprovalEvent)
+        .filter((a): a is PostApproval => a !== null);
+
+      const parsedPosts = postsEvents
+        .map((event) => parsePostEvent(event, parsedApprovals))
+        .filter((p): p is DiscussionPost => p !== null);
+
+      const postIds = parsedPosts.map((post) => post.id);
+      const evaluationsEvents = await nostrService.getEvaluationsForPosts(
+        postIds
+      );
+
+      const parsedEvaluations = evaluationsEvents
+        .map(parseEvaluationEvent)
+        .filter((e): e is PostEvaluation => e !== null);
+
+      setAuditPosts(parsedPosts);
+      setAuditApprovals(parsedApprovals);
+      setAuditEvaluations(parsedEvaluations);
+      setIsAuditLoaded(true);
+
+      logger.info("Audit data loaded:", {
+        posts: parsedPosts.length,
+        approvals: parsedApprovals.length,
+        evaluations: parsedEvaluations.length,
+      });
+    } catch (error) {
+      logger.error("Failed to load audit data:", error);
+    } finally {
+      setIsAuditLoading(false);
+    }
+  }, [discussionInfo, isAuditLoaded, isAuditLoading]);
 
   const loadUserEvaluations = useCallback(async () => {
-    if (!user.pubkey || !isDiscussionsEnabled()) return;
+    if (!user.pubkey || !isDiscussionsEnabled() || !discussionInfo) return;
 
-    // テストモードの場合はユーザー評価をスキップ
-    if (isTestMode(discussionId)) {
+    if (isTestMode(discussionInfo.dTag)) {
       setUserEvaluations(new Set());
       return;
     }
@@ -204,7 +295,7 @@ export default function DiscussionDetailPage() {
     } catch (error) {
       logger.error("Failed to load user evaluations:", error);
     }
-  }, [user.pubkey, discussionId]);
+  }, [user.pubkey, discussionInfo]);
 
   const loadBusStops = useCallback(async () => {
     try {
@@ -219,18 +310,17 @@ export default function DiscussionDetailPage() {
       }
     } catch (error) {
       logger.error("Failed to load bus stops:", error);
-      // エラー時はフォールバックとして空配列を設定
       setBusStops([]);
     }
   }, []);
 
   useEffect(() => {
-    if (isDiscussionsEnabled()) {
+    if (isDiscussionsEnabled() && discussionInfo) {
       loadData();
       loadBusStops();
     }
     setIsLoaded(true);
-  }, [loadData, loadBusStops]);
+  }, [loadData, loadBusStops, discussionInfo]);
 
   useEffect(() => {
     if (user.pubkey && isDiscussionsEnabled()) {
@@ -240,12 +330,21 @@ export default function DiscussionDetailPage() {
 
   const approvedPosts = useMemo(() => posts.filter((p) => p.approved), [posts]);
 
-  // コンセンサス分析を実行
   const runConsensusAnalysis = useCallback(async () => {
     if (evaluations.length < 5 || approvedPosts.length < 2) {
+      logger.log("コンセンサス分析をスキップ", {
+        evaluations: evaluations.length,
+        approvedPosts: approvedPosts.length,
+        minRequired: { evaluations: 5, approvedPosts: 2 },
+      });
       setAnalysisResult(null);
       return;
     }
+
+    logger.log("コンセンサス分析開始", {
+      evaluations: evaluations.length,
+      approvedPosts: approvedPosts.length,
+    });
 
     setIsAnalyzing(true);
     try {
@@ -262,23 +361,43 @@ export default function DiscussionDetailPage() {
     }
   }, [evaluations, approvedPosts]);
 
-  // 評価データまたは承認済み投稿が変更された時にコンセンサス分析を実行
   useEffect(() => {
-    if (evaluations.length > 0 && approvedPosts.length > 0) {
-      runConsensusAnalysis();
-    }
-  }, [runConsensusAnalysis, evaluations.length, approvedPosts.length]);
+    runConsensusAnalysis();
+  }, [runConsensusAnalysis]);
+
   const postsWithStats = useMemo(
     () => combinePostsWithStats(approvedPosts, evaluations),
     [approvedPosts, evaluations]
   );
   const auditItems = useMemo(
     () =>
-      createAuditTimeline(discussion ? [discussion] : [], [], posts, approvals),
-    [discussion, posts, approvals]
+      createAuditTimeline(
+        discussion ? [discussion] : [],
+        [],
+        auditPosts,
+        auditApprovals
+      ),
+    [discussion, auditPosts, auditApprovals]
   );
 
-  // ディスカッションが有効になっているかどうか確認し、それに応じて表示
+  // Check for invalid naddr
+  if (!discussionInfo) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">無効な会話URL</h1>
+          <p className="text-gray-600 mb-4">指定された会話URLが無効です。</p>
+          <Link
+            href="/discussions"
+            className="btn btn-primary rounded-full dark:rounded-sm"
+          >
+            会話一覧に戻る
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!isDiscussionsEnabled()) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -296,8 +415,7 @@ export default function DiscussionDetailPage() {
       return;
     }
 
-    // テストモードの場合は投稿を無効化
-    if (isTestMode(discussionId)) {
+    if (isTestMode(discussionInfo.dTag)) {
       setErrors(["テストモードでは投稿できません"]);
       return;
     }
@@ -329,7 +447,6 @@ export default function DiscussionDetailPage() {
       setSelectedRoute("");
       setShowPreview(false);
 
-      // 楽観的な投稿の更新を作成する
       const newPost = {
         id: signedEvent.id,
         content: postForm.content.trim(),
@@ -358,8 +475,7 @@ export default function DiscussionDetailPage() {
       return;
     }
 
-    // テストモードの場合は評価を無効化
-    if (isTestMode(discussionId)) {
+    if (isTestMode(discussionInfo.dTag)) {
       return;
     }
 
@@ -379,7 +495,6 @@ export default function DiscussionDetailPage() {
 
       setUserEvaluations((prev) => new Set([...prev, postId]));
 
-      // 楽観的な評価の更新を作成する
       const newEvaluation = {
         id: signedEvent.id,
         postId,
@@ -425,7 +540,10 @@ export default function DiscussionDetailPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">会話が見つかりません</h1>
-          <Link href="/discussions" className="btn btn-primary">
+          <Link
+            href="/discussions"
+            className="btn btn-primary rounded-full dark:rounded-sm"
+          >
             会話一覧に戻る
           </Link>
         </div>
@@ -436,27 +554,55 @@ export default function DiscussionDetailPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 ruby-text">
-        <div className="flex items-center gap-4 mb-4">
-          <Link
-            href="/discussions"
-            className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
-          >
-            <span>← 会話一覧に戻る</span>
-          </Link>
-          <ModeratorCheck
-            moderators={discussion.moderators.map((m) => m.pubkey)}
-            adminPubkey={ADMIN_PUBKEY}
-            userPubkey={user.pubkey}
-          >
-            <Link
-              href={`/discussions/${discussionId}/approve`}
-              className="btn btn-outline btn-sm rounded-full dark:rounded-sm min-h-8 h-fit"
-            >
-              <span>投稿承認管理</span>
-            </Link>
-          </ModeratorCheck>
-        </div>
-        <h1 className="text-3xl font-bold mb-2">{discussion.title}</h1>
+        <Link
+          href="/discussions"
+          className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
+        >
+          <span>← 会話一覧に戻る</span>
+        </Link>
+
+        <h1 className="text-3xl font-bold mb-4">{discussion.title}</h1>
+
+        {/* Only show aside if user is creator or moderator */}
+        {(user.pubkey === discussion.authorPubkey ||
+          discussion.moderators.some((m) => m.pubkey === user.pubkey)) && (
+          <aside className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4">
+            <p className="mb-4">
+              あなたは
+              {/* Priority: Creator > Moderator. Show creator if user is the author, otherwise show moderator */}
+              {user.pubkey === discussion.authorPubkey ? (
+                <span>作成者</span>
+              ) : (
+                <span>モデレーター</span>
+              )}
+              です。
+            </p>
+
+            <div className="flex items-center gap-4">
+              {user.pubkey === discussion.authorPubkey && (
+                <Link
+                  href={`/discussions/${naddrParam}/edit`}
+                  className="btn btn-primary rounded-full dark:rounded-sm min-h-8 h-fit"
+                >
+                  <span>会話を編集</span>
+                </Link>
+              )}
+              <ModeratorCheck
+                moderators={discussion.moderators.map((m) => m.pubkey)}
+                adminPubkey={ADMIN_PUBKEY}
+                userPubkey={user.pubkey}
+              >
+                <Link
+                  href={`/discussions/${naddrParam}/approve`}
+                  className="btn btn-primary rounded-full dark:rounded-sm min-h-8 h-fit"
+                >
+                  <span>投稿承認管理</span>
+                </Link>
+              </ModeratorCheck>
+            </div>
+          </aside>
+        )}
+
         {discussion.description.split("\n").map((line, idx) => (
           <p key={idx} className="text-gray-600 dark:text-gray-400">
             {line}
@@ -485,7 +631,10 @@ export default function DiscussionDetailPage() {
           aria-label="監査ログを開く"
           role="tab"
           area-selected={activeTab === "audit" ? "true" : "false"}
-          onClick={() => setActiveTab("audit")}
+          onClick={() => {
+            setActiveTab("audit");
+            loadAuditData();
+          }}
         >
           <span>監査ログ</span>
         </button>
@@ -594,7 +743,7 @@ export default function DiscussionDetailPage() {
                           .map((item) => (
                             <div
                               key={item.postId}
-                              className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                              className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 break-all"
                             >
                               <div className="card-body p-4">
                                 <div className="flex items-start justify-between mb-2">
@@ -624,7 +773,7 @@ export default function DiscussionDetailPage() {
                                     </p>
                                   )}
                                 </div>
-                                <div className="text-xs text-gray-500 mt-2">
+                                <div className="text-gray-500 mt-2">
                                   {formatRelativeTime(
                                     item.post?.createdAt || 0
                                   )}
@@ -651,7 +800,7 @@ export default function DiscussionDetailPage() {
                           group.comments.map((item) => (
                             <div
                               key={item.postId}
-                              className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                              className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 break-all"
                             >
                               <div className="card-body p-4">
                                 <div className="flex items-start justify-between mb-2">
@@ -695,7 +844,7 @@ export default function DiscussionDetailPage() {
                                     </p>
                                   )}
                                 </div>
-                                <div className="text-xs text-gray-500 mt-2">
+                                <div className="text-gray-500 mt-2">
                                   {formatRelativeTime(
                                     item.post?.createdAt || 0
                                   )}
@@ -756,7 +905,7 @@ export default function DiscussionDetailPage() {
                           maxLength={280}
                           autoComplete="off"
                         />
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-gray-500 mt-1">
                           {postForm.content.length}/280文字
                         </div>
                       </div>
@@ -851,7 +1000,22 @@ export default function DiscussionDetailPage() {
             </h2>
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
-                <AuditTimeline items={auditItems} profiles={profiles} />
+                {isAuditLoading ? (
+                  <div className="animate-pulse space-y-4">
+                    {[...Array(5)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-16 bg-gray-200 dark:bg-gray-700 rounded"
+                      ></div>
+                    ))}
+                  </div>
+                ) : (
+                  <AuditTimeline
+                    items={auditItems}
+                    profiles={profiles}
+                    referencedDiscussions={discussion ? [discussion] : []}
+                  />
+                )}
               </div>
             </div>
           </section>

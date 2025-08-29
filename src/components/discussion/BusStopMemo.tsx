@@ -80,8 +80,7 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
       // Step 3: 承認された投稿のIDのみに対する評価を取得
       const approvedPostIds = parsedPosts.map((p) => p.id);
       const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-        approvedPostIds,
-        config.busStopDiscussionId
+        approvedPostIds
       );
 
       const parsedEvaluations = evaluationsEvents
@@ -187,8 +186,7 @@ export async function getBusStopMemoData(
 
     const approvedPostIds = parsedPosts.map((p) => p.id);
     const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-      approvedPostIds,
-      config.busStopDiscussionId
+      approvedPostIds
     );
 
     const parsedEvaluations = evaluationsEvents

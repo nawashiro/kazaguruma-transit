@@ -45,7 +45,8 @@ export function parsePostEvent(
   event: Event,
   approvals: PostApproval[] = []
 ): DiscussionPost | null {
-  if (event.kind !== 1111) return null;
+  // NIP-72後方互換性: kind:1とkind:1111の両方をサポート
+  if (event.kind !== 1111 && event.kind !== 1) return null;
 
   const discussionTag = event.tags.find(
     (tag) => tag[0] === "a" || tag[0] === "A"
@@ -102,12 +103,16 @@ export function parseEvaluationEvent(event: Event): PostEvaluation | null {
   if (event.kind !== 7) return null;
 
   const postId = event.tags.find((tag) => tag[0] === "e")?.[1];
-  const rating = event.tags.find((tag) => tag[0] === "rating")?.[1] as
-    | "+"
-    | "-";
   const discussionId = event.tags.find((tag) => tag[0] === "a")?.[1];
 
-  if (!postId || !rating || (rating !== "+" && rating !== "-")) return null;
+  if (!postId) return null;
+
+  // NIP-25: contentから評価を取得（ratingタグは使用しない）
+  const rawRating = event.content?.trim();
+  if (!rawRating) return null;
+
+  // "-" 以外は全て "+" として扱う
+  const rating = rawRating === "-" ? "-" : "+";
 
   return {
     id: event.id,
@@ -308,7 +313,11 @@ export function formatRelativeTime(timestamp: number): string {
   if (diff < 604800) return `${Math.floor(diff / 86400)}日前`;
 
   const date = new Date(timestamp * 1000);
-  return date.toLocaleDateString("ja-JP");
+  return date.toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
 }
 
 export function validateDiscussionForm(data: {
@@ -397,6 +406,60 @@ export function isValidNpub(npub: string): boolean {
   } catch {
     return false;
   }
+}
+
+// spec_v2.md要件: 承認されたユーザー作成会話のパース
+export function parseApprovedUserDiscussion(
+  userDiscussion: Event,
+  approvalEvent: Event,
+  approvedAt: number
+): Discussion | null {
+  const baseDiscussion = parseDiscussionEvent(userDiscussion);
+  if (!baseDiscussion) return null;
+
+  // 承認情報を追加
+  return {
+    ...baseDiscussion,
+    approvedAt,
+    approvalReference: `34550:${approvalEvent.pubkey}:${approvalEvent.tags.find(tag => tag[0] === "d")?.[1] || ""}`,
+  };
+}
+
+// spec_v2.md要件: 会話承認イベントのパース
+export function parseDiscussionApprovalEvent(event: Event): {
+  id: string;
+  dTag: string;
+  title: string;
+  description: string;
+  references: string[];
+  authorPubkey: string;
+  createdAt: number;
+  event: Event;
+} | null {
+  if (event.kind !== 34550) return null;
+
+  const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
+  const name = event.tags.find((tag) => tag[0] === "name")?.[1];
+  const description = event.tags.find((tag) => tag[0] === "description")?.[1];
+
+  if (!dTag) return null;
+
+  // NIP-18 qタグから引用を抽出
+  const references = event.tags
+    .filter((tag) => tag[0] === "q")
+    .map((tag) => tag[1])
+    .filter(Boolean);
+
+  return {
+    id: `34550:${event.pubkey}:${dTag}`,
+    dTag,
+    title: name || dTag,
+    description: description || event.content,
+    references,
+    authorPubkey: event.pubkey,
+    createdAt: event.created_at,
+    event,
+  };
 }
 
 // Environment variable utilities - assumes env vars are stored as npub

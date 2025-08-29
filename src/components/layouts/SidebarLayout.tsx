@@ -124,13 +124,13 @@ export default function SidebarLayout({
         <div id="main-content" className="flex-grow p-4" tabIndex={-1}>
           {children}
         </div>
-        <footer className="flex flex-col md:flex-row px-4 py-2 justify-center md:justify-between ruby-text">
+        <footer className="flex flex-col md:flex-row px-4 py-2 justify-center md:justify-between">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 md:w-auto">
             <a
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"
               target="_blank"
               rel="noopener noreferrer"
-              className="link text-sm /60 hover:underline inline-block mx-2"
+              className="link text-sm /60 hover:underline inline-block mx-2 ruby-text"
             >
               利用規約
             </a>
@@ -138,7 +138,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80b2a6d4d045e850407c"
               target="_blank"
               rel="noopener noreferrer"
-              className="link text-sm /60 hover:underline inline-block mx-2"
+              className="link text-sm /60 hover:underline inline-block mx-2 ruby-text"
             >
               プライバシーポリシー
             </a>
@@ -146,7 +146,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80d0ba82d66f451b9ff1"
               target="_blank"
               rel="noopener noreferrer"
-              className="link text-sm /60 hover:underline inline-block mx-2"
+              className="link text-sm /60 hover:underline inline-block mx-2 ruby-text"
             >
               クッキーポリシー
             </a>

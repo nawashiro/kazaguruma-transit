@@ -56,14 +56,27 @@ export const useRubyfulRun = (trigger: unknown[], isLoaded: boolean) => {
   }, []);
 
   useEffect(() => {
+    let isCleanedUp = false;
+    let currentButton: HTMLElement | null = null;
+
     const run = async () => {
-      // Rubyfulライブラリが未読み込みの場合は処理をスキップ
-      if (!isLoaded) return;
+      // Rubyfulライブラリが未読み込みまたは既にクリーンアップ済みの場合は処理をスキップ
+      if (!isLoaded || isCleanedUp) return;
 
       try {
-        // 既存のRubyfulボタンを全て削除（重複防止）
+        // 安全にDOM要素を削除
         const existingButtons = document.querySelectorAll(".rubyfuljs-button, #rubyful-button-container");
-        existingButtons.forEach(button => button.remove());
+        existingButtons.forEach(button => {
+          try {
+            if (button.parentNode) {
+              button.parentNode.removeChild(button);
+            }
+          } catch (e) {
+            // DOM操作の競合を回避
+          }
+        });
+
+        if (isCleanedUp) return;
 
         // Rubyfulライブラリの設定
         window.RubyfulJsApp = {
@@ -75,25 +88,28 @@ export const useRubyfulRun = (trigger: unknown[], isLoaded: boolean) => {
         // Rubyfulの手動初期化実行
         await window.RubyfulJsApp.manualLoadProcess?.();
 
+        if (isCleanedUp) return;
+
         // ルビ表示切り替えボタンにイベントリスナーを設定
         const rubyfulButtons = document.getElementsByClassName("rubyfuljs-button");
 
         if (rubyfulButtons.length > 0) {
           // 最初のボタンのみにイベントリスナーを設定
           const firstButton = rubyfulButtons[0] as HTMLElement;
+          currentButton = firstButton;
           firstButton.addEventListener("click", handleToggleRuby);
 
-          // 重複したボタンがあれば削除
+          // 重複したボタンがあれば安全に削除
           for (let i = 1; i < rubyfulButtons.length; i++) {
-            rubyfulButtons[i].remove();
-          }
-
-          // クリーンアップ関数でイベントリスナーを削除
-          return () => {
-            if (firstButton) {
-              firstButton.removeEventListener("click", handleToggleRuby);
+            try {
+              const button = rubyfulButtons[i];
+              if (button.parentNode) {
+                button.parentNode.removeChild(button);
+              }
+            } catch (e) {
+              // DOM操作の競合を回避
             }
-          };
+          }
         }
       } catch (error) {
         logger.error("Rubyfulの初期化中にエラーが発生しました:", error);
@@ -101,6 +117,19 @@ export const useRubyfulRun = (trigger: unknown[], isLoaded: boolean) => {
     };
 
     run();
+
+    // 適切なクリーンアップ処理
+    return () => {
+      isCleanedUp = true;
+      if (currentButton) {
+        try {
+          currentButton.removeEventListener("click", handleToggleRuby);
+        } catch (e) {
+          // イベントリスナー削除の競合を回避
+        }
+        currentButton = null;
+      }
+    };
   }, [trigger, handleToggleRuby, isLoaded, isRubyVisible]);
 
   return { isRubyVisible };

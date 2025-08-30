@@ -45,14 +45,19 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
   }, []);
 
   useEffect(() => {
+    const sleep = (time: number) =>
+      new Promise((resolve) => setTimeout(resolve, time)); //timeはミリ秒
+    const rubyProcess = async (current: HTMLDivElement) => {
+      // コンテナ内の.ruby-text要素のみを処理
+      const rubyElements = current.querySelectorAll(".ruby-text");
+      for (let i = 0; i < rubyElements.length; i++) {
+        await (window as any).RubyfulV2.processElement(rubyElements[i]);
+        await sleep(100);
+      }
+    };
     if (!loading && categories.length > 0 && containerRef.current) {
       if (typeof window !== "undefined" && (window as any).RubyfulV2) {
-        // コンテナ内の.ruby-text要素のみを処理
-        const rubyElements =
-          containerRef.current!.querySelectorAll(".ruby-text");
-        rubyElements.forEach((element) => {
-          (window as any).RubyfulV2.processElement(element);
-        });
+        rubyProcess(containerRef.current);
       }
     }
   }, [loading, categories]);
@@ -135,7 +140,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
             <button
               key={category.category}
               id={categoryId}
-              className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium ruby-text
+              className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium
                 ${
                   isActive
                     ? "btn-primary border-primary text-primary-content"
@@ -150,7 +155,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
                 isActive ? "閉じる" : "開く"
               }`}
             >
-              {category.category}
+              <span className="ruby-text">{category.category}</span>
             </button>
           );
         })}

@@ -20,6 +20,7 @@ import {
 import Card from "@/components/ui/Card";
 import CarouselCard from "@/components/ui/CarouselCard";
 import Button from "@/components/ui/Button";
+import RubyWrapper from "@/components/ui/RubyWrapper";
 
 // 2点間の距離を計算する関数（ハーバーサイン公式）
 const calculateDistance = (
@@ -427,7 +428,6 @@ export default function LocationsPage() {
     );
   };
 
-
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -588,7 +588,7 @@ export default function LocationsPage() {
             ))}
           </div>
         </Card>
-
+        <RubyWrapper observe={[activeCategory]} />
         {activeCategory && (
           <div className="animate-fadeIn mb-6">
             {geoJsonLoading && (

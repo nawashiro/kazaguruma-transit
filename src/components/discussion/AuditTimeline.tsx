@@ -203,7 +203,6 @@ export function AuditTimeline({
     );
   };
 
-
   const getDetailContent = (item: AuditTimelineItem) => {
     const qTagContent = renderQTagReferences(item);
 
@@ -259,11 +258,7 @@ export function AuditTimeline({
   if (filteredItems.length === 0) {
     return (
       <div className="text-center py-8 ruby-text">
-        <ClockIcon
-          className="mx-auto h-12 w-12 text-gray-400"
-          aria-label="履歴なし"
-          role="img"
-        />
+        <ClockIcon className="mx-auto h-12 w-12 text-gray-400" />
         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
           {conversationAuditMode
             ? "会話関連の履歴がありません"
@@ -281,7 +276,9 @@ export function AuditTimeline({
   const getIconByType = (type: AuditTimelineItem["type"]) => {
     switch (type) {
       case "discussion-request":
-        return <ChatBubbleLeftRightIcon className="w-4 h-4" aria-hidden="true" />;
+        return (
+          <ChatBubbleLeftRightIcon className="w-4 h-4" aria-hidden="true" />
+        );
       case "discussion-created":
         return <PlusIcon className="w-4 h-4" aria-hidden="true" />;
       case "discussion-deleted":
@@ -332,8 +329,6 @@ export function AuditTimeline({
                 className={`w-8 h-8 rounded-full flex items-center justify-center ${getColorByType(
                   item.type
                 )}`}
-                role="img"
-                aria-label={`${item.type}アイコン`}
               >
                 {getIconByType(item.type)}
               </div>

@@ -56,8 +56,6 @@ export function EvaluationComponent({
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
-          aria-label="評価完了"
-          role="img"
         >
           <path
             strokeLinecap="round"
@@ -94,8 +92,6 @@ export function EvaluationComponent({
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
-          aria-label="評価完了"
-          role="img"
         >
           <path
             strokeLinecap="round"

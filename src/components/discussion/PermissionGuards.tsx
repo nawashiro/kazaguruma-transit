@@ -79,8 +79,6 @@ export function PermissionError({ type, message }: PermissionErrorProps) {
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
-        aria-label="アクセス権限なし"
-        role="img"
       >
         <path
           strokeLinecap="round"

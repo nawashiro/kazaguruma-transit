@@ -15,9 +15,7 @@ interface LocationSuggestionsProps {
   onLocationSelected: (location: Location) => void;
 }
 
-function LocationSuggestions({
-  onLocationSelected,
-}: LocationSuggestionsProps) {
+function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
   const [categories, setCategories] = useState<AddressCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,16 +46,14 @@ function LocationSuggestions({
 
   useEffect(() => {
     if (!loading && categories.length > 0 && containerRef.current) {
-      const processRubyText = () => {
-        if (typeof window !== 'undefined' && (window as any).RubyfulV2) {
-          (window as any).RubyfulV2.processElement(containerRef.current);
-        }
-      };
-
-      // Rubyful処理を少し遅らせて確実にDOMが更新されてから実行
-      const timeoutId = setTimeout(processRubyText, 100);
-
-      return () => clearTimeout(timeoutId);
+      if (typeof window !== "undefined" && (window as any).RubyfulV2) {
+        // コンテナ内の.ruby-text要素のみを処理
+        const rubyElements =
+          containerRef.current!.querySelectorAll(".ruby-text");
+        rubyElements.forEach((element) => {
+          (window as any).RubyfulV2.processElement(element);
+        });
+      }
     }
   }, [loading, categories]);
 
@@ -139,7 +135,7 @@ function LocationSuggestions({
             <button
               key={category.category}
               id={categoryId}
-              className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium
+              className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium ruby-text
                 ${
                   isActive
                     ? "btn-primary border-primary text-primary-content"
@@ -154,7 +150,7 @@ function LocationSuggestions({
                 isActive ? "閉じる" : "開く"
               }`}
             >
-              <span className="ruby-text">{category.category}</span>
+              {category.category}
             </button>
           );
         })}

@@ -140,3 +140,6 @@ rt {
 .btn:is(:disabled, [disabled], .btn-disabled) rt {
   color: color-mix(in oklch, var(--color-base-content) 20%, rgba(0, 0, 0, 0));
 }
+.rtHidden rt {
+  visibility: hidden;
+}

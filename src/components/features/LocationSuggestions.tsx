@@ -44,23 +44,33 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
     fetchAddressData();
   }, []);
 
+  const [isRtDisplay, setIsRtDisplay] = useState(false);
+
   useEffect(() => {
-    const sleep = (time: number) =>
-      new Promise((resolve) => setTimeout(resolve, time)); //timeはミリ秒
-    const rubyProcess = async (current: HTMLDivElement) => {
-      // コンテナ内の.ruby-text要素のみを処理
-      const rubyElements = current.querySelectorAll(".ruby-text");
-      for (let i = 0; i < rubyElements.length; i++) {
-        await (window as any).RubyfulV2.processElement(rubyElements[i]);
-        await sleep(100);
-      }
-    };
-    if (!loading && categories.length > 0 && containerRef.current) {
+    if (
+      !loading &&
+      categories.length > 0 &&
+      containerRef.current &&
+      !isRtDisplay
+    ) {
       if (typeof window !== "undefined" && (window as any).RubyfulV2) {
+        const sleep = (time: number) =>
+          new Promise((resolve) => setTimeout(resolve, time));
+
+        const rubyProcess = async (current: HTMLDivElement) => {
+          // コンテナ内の.ruby-text要素のみを処理
+          const rubyElements = current.querySelectorAll(".ruby-text");
+          for (let i = 0; i < rubyElements.length; i++) {
+            await (window as any).RubyfulV2.processElement(rubyElements[i]);
+            await sleep(100);
+          }
+          setIsRtDisplay(true);
+        };
+
         rubyProcess(containerRef.current);
       }
     }
-  }, [loading, categories]);
+  }, [loading, categories, isRtDisplay]);
 
   const handleLocationSelect = (location: AddressLocation) => {
     onLocationSelected(convertToLocation(location));
@@ -115,7 +125,11 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
   }
 
   return (
-    <div data-testid={sectionId} ref={containerRef}>
+    <div
+      data-testid={sectionId}
+      ref={containerRef}
+      className={isRtDisplay ? "" : "rtHidden"}
+    >
       <label
         htmlFor={categoryListId}
         className="label label-text font-medium text-foreground ruby-text inline"

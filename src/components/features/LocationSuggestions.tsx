@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId, memo, useRef } from "react";
+import { useState, useEffect, useId, memo } from "react";
 import { Location } from "@/types/core";
 import {
   AddressCategory,
@@ -10,6 +10,7 @@ import {
 } from "@/utils/addressLoader";
 import { logger } from "@/utils/logger";
 import Card from "@/components/ui/Card";
+import RubyWrapper from "@/components/ui/RubyWrapper";
 
 interface LocationSuggestionsProps {
   onLocationSelected: (location: Location) => void;
@@ -24,7 +25,6 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
   const categoryListId = `category-list-${uniqueId}`;
   const locationListId = `location-list-${uniqueId}`;
   const sectionId = `location-section-${uniqueId}`;
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchAddressData() {
@@ -43,34 +43,6 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
 
     fetchAddressData();
   }, []);
-
-  const [isRtDisplay, setIsRtDisplay] = useState(false);
-
-  useEffect(() => {
-    if (
-      !loading &&
-      categories.length > 0 &&
-      containerRef.current &&
-      !isRtDisplay
-    ) {
-      if (typeof window !== "undefined" && (window as any).RubyfulV2) {
-        const sleep = (time: number) =>
-          new Promise((resolve) => setTimeout(resolve, time));
-
-        const rubyProcess = async (current: HTMLDivElement) => {
-          // コンテナ内の.ruby-text要素のみを処理
-          const rubyElements = current.querySelectorAll(".ruby-text");
-          for (let i = 0; i < rubyElements.length; i++) {
-            await (window as any).RubyfulV2.processElement(rubyElements[i]);
-            await sleep(100);
-          }
-          setIsRtDisplay(true);
-        };
-
-        rubyProcess(containerRef.current);
-      }
-    }
-  }, [loading, categories, isRtDisplay]);
 
   const handleLocationSelect = (location: AddressLocation) => {
     onLocationSelected(convertToLocation(location));
@@ -125,11 +97,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
   }
 
   return (
-    <div
-      data-testid={sectionId}
-      ref={containerRef}
-      className={isRtDisplay ? "" : "rtHidden"}
-    >
+    <RubyWrapper data-testid={sectionId}>
       <label
         htmlFor={categoryListId}
         className="label label-text font-medium text-foreground ruby-text inline"
@@ -237,7 +205,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
-    </div>
+    </RubyWrapper>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId, memo } from "react";
+import { useState, useEffect, useId, memo, useRef } from "react";
 import { Location } from "@/types/core";
 import {
   AddressCategory,
@@ -13,12 +13,10 @@ import Card from "@/components/ui/Card";
 
 interface LocationSuggestionsProps {
   onLocationSelected: (location: Location) => void;
-  onLoadingChange?: (loading: boolean) => void;
 }
 
 function LocationSuggestions({
   onLocationSelected,
-  onLoadingChange,
 }: LocationSuggestionsProps) {
   const [categories, setCategories] = useState<AddressCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,12 +26,12 @@ function LocationSuggestions({
   const categoryListId = `category-list-${uniqueId}`;
   const locationListId = `location-list-${uniqueId}`;
   const sectionId = `location-section-${uniqueId}`;
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchAddressData() {
       try {
         setLoading(true);
-        onLoadingChange?.(true);
         const data = await loadAddressData();
         setCategories(data);
         setError(null);
@@ -42,12 +40,26 @@ function LocationSuggestions({
         logger.error(err);
       } finally {
         setLoading(false);
-        onLoadingChange?.(false);
       }
     }
 
     fetchAddressData();
-  }, [onLoadingChange]);
+  }, []);
+
+  useEffect(() => {
+    if (!loading && categories.length > 0 && containerRef.current) {
+      const processRubyText = () => {
+        if (typeof window !== 'undefined' && (window as any).RubyfulV2) {
+          (window as any).RubyfulV2.processElement(containerRef.current);
+        }
+      };
+
+      // Rubyful処理を少し遅らせて確実にDOMが更新されてから実行
+      const timeoutId = setTimeout(processRubyText, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [loading, categories]);
 
   const handleLocationSelect = (location: AddressLocation) => {
     onLocationSelected(convertToLocation(location));
@@ -60,7 +72,6 @@ function LocationSuggestions({
       setActiveCategory(category);
     }
   };
-
 
   if (loading) {
     return (
@@ -103,7 +114,7 @@ function LocationSuggestions({
   }
 
   return (
-    <div data-testid={sectionId}>
+    <div data-testid={sectionId} ref={containerRef}>
       <label
         htmlFor={categoryListId}
         className="label label-text font-medium text-foreground ruby-text inline"
@@ -128,7 +139,7 @@ function LocationSuggestions({
             <button
               key={category.category}
               id={categoryId}
-              className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium ruby-text
+              className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium
                 ${
                   isActive
                     ? "btn-primary border-primary text-primary-content"
@@ -143,7 +154,7 @@ function LocationSuggestions({
                 isActive ? "閉じる" : "開く"
               }`}
             >
-              <p>{category.category}</p>
+              <span className="ruby-text">{category.category}</span>
             </button>
           );
         })}

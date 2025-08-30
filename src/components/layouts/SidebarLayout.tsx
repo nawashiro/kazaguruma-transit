@@ -1,31 +1,23 @@
 "use client";
 
-import { useState } from "react";
 import Sidebar from "./Sidebar";
 import ThemeToggle from "../ui/ThemeToggle";
 import SkipToContent from "../ui/SkipToContent";
 import Script from "next/script";
 import { logger } from "@/utils/logger";
 
-
 export default function SidebarLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [, setIsLoaded] = useState(false);
-
   return (
     <div className="drawer lg:drawer-open">
-
       {/* Rubyful v2 */}
       <Script
         src="https://rubyful-v2.s3.ap-northeast-1.amazonaws.com/v2/rubyful.js?t=20250507022654"
         strategy="afterInteractive"
         onLoad={() => {
-          logger.log("Rubyful v2 loaded");
-          setIsLoaded(true);
-
           // RubyfulV2の初期化
           (window as any).RubyfulV2?.init({
             selector: ".ruby-text",
@@ -39,6 +31,8 @@ export default function SidebarLayout({
               },
             },
           });
+
+          logger.log("Rubyful v2 loaded");
         }}
       />
       <SkipToContent />

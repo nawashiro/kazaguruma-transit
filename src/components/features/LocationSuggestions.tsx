@@ -10,7 +10,6 @@ import {
 } from "@/utils/addressLoader";
 import { logger } from "@/utils/logger";
 import Card from "@/components/ui/Card";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface LocationSuggestionsProps {
   onLocationSelected: (location: Location) => void;
@@ -62,7 +61,6 @@ function LocationSuggestions({
     }
   };
 
-  useRubyfulRun([loading], !loading);
 
   if (loading) {
     return (

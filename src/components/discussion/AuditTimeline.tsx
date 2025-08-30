@@ -16,7 +16,6 @@ import { XMarkIcon } from "@heroicons/react/24/solid";
 import type { AuditTimelineItem, Discussion } from "@/types/discussion";
 import { formatRelativeTime, hexToNpub } from "@/lib/nostr/nostr-utils";
 import { buildNaddrFromRef } from "@/lib/nostr/naddr-utils";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 
 interface AuditTimelineProps {
   items: AuditTimelineItem[];
@@ -204,7 +203,6 @@ export function AuditTimeline({
     );
   };
 
-  useRubyfulRun([selectedEvent], true);
 
   const getDetailContent = (item: AuditTimelineItem) => {
     const qTagContent = renderQTagReferences(item);

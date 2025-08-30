@@ -19,7 +19,6 @@ import {
 } from "../../utils/clientGeoUtils";
 import Card from "@/components/ui/Card";
 import CarouselCard from "@/components/ui/CarouselCard";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import Button from "@/components/ui/Button";
 
 // 2点間の距離を計算する関数（ハーバーサイン公式）
@@ -90,7 +89,7 @@ export default function LocationsPage() {
   >(null);
 
   // すべてのデータ読み込み状態の管理（Rubyful実行タイミング制御用）
-  const [allDataLoaded, setAllDataLoaded] = useState(false);
+  const [, setAllDataLoaded] = useState(false);
 
   useEffect(() => {
     async function fetchLocationData() {
@@ -428,18 +427,6 @@ export default function LocationsPage() {
     );
   };
 
-  useRubyfulRun(
-    [
-      allDataLoaded,
-      error,
-      currentPosition,
-      searchError,
-      isModalOpen,
-      locationsSorted,
-      geoJsonLoading,
-    ],
-    allDataLoaded && !geoJsonLoading
-  );
 
   if (loading) {
     return (

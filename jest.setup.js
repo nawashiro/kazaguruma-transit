@@ -77,9 +77,3 @@ jest.mock("@/utils/logger", () => ({
   },
 }));
 
-// rubyfulRunの共通モック設定
-jest.mock("@/lib/rubyful/rubyfulRun", () => ({
-  useRubyfulRun: jest.fn(() => ({
-    isRubyVisible: true,
-  })),
-}));

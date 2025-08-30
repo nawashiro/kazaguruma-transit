@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import { logger } from "@/utils/logger";
 
 interface LoginModalProps {
@@ -57,7 +56,6 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     }
   };
 
-  useRubyfulRun([mode], true);
 
   if (!isOpen) return null;
 

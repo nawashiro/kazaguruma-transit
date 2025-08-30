@@ -34,7 +34,6 @@ import {
   EvaluationAnalysisResult,
 } from "@/lib/evaluation/evaluation-service";
 import Button from "@/components/ui/Button";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
   Discussion,
   DiscussionPost,
@@ -56,7 +55,7 @@ export default function DiscussionDetailPage() {
   const [consensusTab, setConsensusTab] = useState<string>("group-consensus");
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [posts, setPosts] = useState<DiscussionPost[]>([]);
-  const [approvals, setApprovals] = useState<PostApproval[]>([]);
+  const [, setApprovals] = useState<PostApproval[]>([]);
   const [evaluations, setEvaluations] = useState<PostEvaluation[]>([]);
   const [profiles, setProfiles] = useState<Record<string, { name?: string }>>(
     {}
@@ -73,7 +72,7 @@ export default function DiscussionDetailPage() {
   // 監査ログ用の独立した状態
   const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
   const [auditApprovals, setAuditApprovals] = useState<PostApproval[]>([]);
-  const [auditEvaluations, setAuditEvaluations] = useState<PostEvaluation[]>(
+  const [, setAuditEvaluations] = useState<PostEvaluation[]>(
     []
   );
   const [isAuditLoading, setIsAuditLoading] = useState(false);
@@ -89,7 +88,6 @@ export default function DiscussionDetailPage() {
   const [busStops, setBusStops] = useState<
     { route: string; stops: string[] }[]
   >([]);
-  const [isLoaded, setIsLoaded] = useState(false);
 
   const { user, signEvent } = useAuth();
 
@@ -99,20 +97,6 @@ export default function DiscussionDetailPage() {
     return extractDiscussionFromNaddr(naddrParam);
   }, [naddrParam]);
 
-  // Rubyfulライブラリ対応
-  useRubyfulRun(
-    [
-      discussion,
-      posts,
-      approvals,
-      evaluations,
-      auditPosts,
-      auditApprovals,
-      auditEvaluations,
-      consensusTab,
-    ],
-    isLoaded
-  );
 
   // メイン画面専用のデータ取得
   const loadData = useCallback(async () => {
@@ -319,7 +303,6 @@ export default function DiscussionDetailPage() {
       loadData();
       loadBusStops();
     }
-    setIsLoaded(true);
   }, [loadData, loadBusStops, discussionInfo]);
 
   useEffect(() => {

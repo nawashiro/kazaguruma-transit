@@ -24,7 +24,6 @@ import {
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
   Discussion,
   DiscussionPost,
@@ -46,7 +45,6 @@ export default function PostApprovalPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
-  const [isLoaded, setIsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
 
   const { user, signEvent } = useAuth();
@@ -57,8 +55,6 @@ export default function PostApprovalPage() {
     return extractDiscussionFromNaddr(naddrParam);
   }, [naddrParam]);
 
-  // Rubyfulライブラリ対応
-  useRubyfulRun([discussion, posts, approvals], isLoaded);
 
   const loadData = useCallback(async () => {
     if (!isDiscussionsEnabled() || !discussionInfo) return;
@@ -102,7 +98,6 @@ export default function PostApprovalPage() {
     if (isDiscussionsEnabled() && discussionInfo) {
       loadData();
     }
-    setIsLoaded(true);
   }, [loadData, discussionInfo]);
 
   const handleApprovePost = async (post: DiscussionPost) => {

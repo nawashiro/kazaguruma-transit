@@ -22,7 +22,6 @@ import {
   extractDiscussionFromNaddr,
 } from "@/lib/nostr/naddr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
   Discussion,
   DiscussionPost,
@@ -40,7 +39,6 @@ export default function DiscussionsPage() {
     {}
   );
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoaded, setIsLoaded] = useState(false);
 
   // 監査ログ用の独立した状態
   const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
@@ -194,14 +192,11 @@ export default function DiscussionsPage() {
     }
   }, [user.pubkey]);
 
-  // Rubyfulライブラリ対応
-  useRubyfulRun([discussions], isLoaded);
 
   useEffect(() => {
     if (isDiscussionsEnabled()) {
       loadData();
     }
-    setIsLoaded(true);
   }, [loadData]);
 
   // ディスカッション機能が有効になっているか確認し、それに応じて表示を切り替える

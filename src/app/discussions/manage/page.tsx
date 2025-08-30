@@ -23,7 +23,6 @@ import {
   extractDiscussionFromNaddr,
   buildNaddrFromRef,
 } from "@/lib/nostr/naddr-utils";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
   Discussion,
   DiscussionPost,
@@ -43,7 +42,6 @@ export default function DiscussionManagePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
-  const [isLoaded, setIsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
 
   const { user, signEvent } = useAuth();
@@ -192,17 +190,11 @@ export default function DiscussionManagePage() {
     }
   }, [discussionInfo]);
 
-  // Rubyfulライブラリ対応
-  useRubyfulRun(
-    [discussion, posts, approvals, referencedDiscussions],
-    isLoaded
-  );
 
   useEffect(() => {
     if (isDiscussionsEnabled() && discussionInfo) {
       loadData();
     }
-    setIsLoaded(true);
   }, [loadData, discussionInfo]);
 
   const handleApprovePost = async (post: DiscussionPost) => {

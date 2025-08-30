@@ -19,7 +19,6 @@ import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import { LoginModal } from "@/components/discussion/LoginModal";
 import Button from "@/components/ui/Button";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 
@@ -38,7 +37,6 @@ export default function SettingsPage() {
 
   const { user, logout, isLoading, error, signEvent } = useAuth();
 
-  useRubyfulRun([isLoading], !isLoading);
 
   const loadMyDiscussions = useCallback(async () => {
     if (!user.isLoggedIn || !user.pubkey) return;

@@ -19,7 +19,6 @@ import type {
   PostEvaluation,
   PostWithStats,
 } from "@/types/discussion";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import { logger } from "@/utils/logger";
 
 interface BusStopMemoProps {
@@ -43,7 +42,6 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
     [config.relays]
   );
 
-  useRubyfulRun([topPostsByStop.size], true);
 
   const loadMemoData = useCallback(async () => {
     if (busStops.length === 0) {

@@ -41,9 +41,6 @@ jest.mock('@/lib/nostr/naddr-utils', () => ({
   }),
 }));
 
-jest.mock('@/lib/rubyful/rubyfulRun', () => ({
-  useRubyfulRun: () => null,
-}));
 
 jest.mock('@/lib/nostr/nostr-utils', () => ({
   parseDiscussionEvent: jest.fn(),

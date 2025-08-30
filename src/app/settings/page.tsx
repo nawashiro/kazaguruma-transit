@@ -159,9 +159,9 @@ export default function SettingsPage() {
             {user.isLoggedIn ? (
               <div className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div className="ruby-text">
+                  <div>
                     <label className="label">
-                      <span className="label-text font-medium">ユーザー名</span>
+                      <span className="label-text font-medium ruby-text">ユーザー名</span>
                     </label>
                     <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <span className="text-sm">
@@ -236,7 +236,7 @@ export default function SettingsPage() {
 
                 <div className="divider"></div>
 
-                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg ruby-text">
+                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                   <div className="flex items-start gap-3">
                     <svg
                       className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0"
@@ -251,7 +251,7 @@ export default function SettingsPage() {
                         d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    <div className="text-sm text-blue-800 dark:text-blue-200">
+                    <div className="text-sm text-blue-800 dark:text-blue-200 ruby-text">
                       <p className="font-medium mb-1">認証について</p>
                       <p>
                         あなたのアカウントはパスキーで保護されています。
@@ -420,7 +420,7 @@ export default function SettingsPage() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-8 ruby-text">
+                  <div className="text-center py-8">
                     <svg
                       className="mx-auto h-12 w-12 text-gray-400 mb-4"
                       fill="none"
@@ -434,10 +434,10 @@ export default function SettingsPage() {
                         d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                       />
                     </svg>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2 ruby-text">
                       まだ会話を作成していません
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    <p className="text-gray-600 dark:text-gray-400 mb-4 ruby-text">
                       新しい会話を作成して、地域の話題について話し合いましょう。
                     </p>
                     <Link

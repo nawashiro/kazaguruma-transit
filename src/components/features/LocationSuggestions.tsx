@@ -97,7 +97,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
   }
 
   return (
-    <RubyWrapper data-testid={sectionId}>
+    <div data-testid={sectionId}>
       <label
         htmlFor={categoryListId}
         className="label label-text font-medium text-foreground ruby-text inline"
@@ -205,7 +205,9 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
-    </RubyWrapper>
+
+      <RubyWrapper />
+    </div>
   );
 }
 

@@ -1,43 +1,30 @@
 "use client";
 
-import { useState, useEffect, useRef, ReactNode } from "react";
+import { useState, useEffect } from "react";
 
 interface RubyWrapperProps {
-  children: ReactNode;
   className?: string;
   delay?: number;
 }
 
-export default function RubyWrapper({
-  children,
-  delay = 100,
-}: RubyWrapperProps) {
-  const [isRubyProcessed, setIsRubyProcessed] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+export default function RubyWrapper({ delay = 500 }: RubyWrapperProps) {
+  const [isRubyText, setIsRubyText] = useState(false);
 
   useEffect(() => {
-    if (containerRef.current && !isRubyProcessed) {
-      if (typeof window !== "undefined" && (window as any).RubyfulV2) {
-        const sleep = (time: number) =>
-          new Promise((resolve) => setTimeout(resolve, time));
+    if (typeof window !== "undefined" && (window as any).RubyfulV2) {
+      const sleep = (time: number) =>
+        new Promise((resolve) => setTimeout(resolve, time));
 
-        const rubyProcess = async (current: HTMLDivElement) => {
-          const rubyElements = current.querySelectorAll(".ruby-text");
-          for (let i = 0; i < rubyElements.length; i++) {
-            await (window as any).RubyfulV2.processElement(rubyElements[i]);
-            await sleep(delay);
-          }
-          setIsRubyProcessed(true);
-        };
+      const rubyProcess = async () => {
+        await sleep(delay);
+        await setIsRubyText(true);
+      };
 
-        rubyProcess(containerRef.current);
-      }
+      rubyProcess();
     }
-  }, [delay, isRubyProcessed]);
+  }, [delay]);
 
   return (
-    <div ref={containerRef} className={`${!isRubyProcessed ? "rtHidden" : ""}`}>
-      {children}
-    </div>
+    isRubyText && <span className="ruby-text hidden">漢字にルビを振る</span>
   );
 }

@@ -7,15 +7,13 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
-import { AuditTimeline } from "@/components/discussion/AuditTimeline";
+import { AuditLogSection } from "@/components/discussion/AuditLogSection";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parseDiscussionEvent,
   parsePostEvent,
   parseApprovalEvent,
-  createAuditTimeline,
   formatRelativeTime,
-  getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import {
   buildNaddrFromDiscussion,
@@ -29,25 +27,15 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 
-const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function DiscussionsPage() {
   const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, { name?: string }>>(
-    {}
-  );
   const [isLoading, setIsLoading] = useState(true);
 
-  // 監査ログ用の独立した状態
-  const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
-  const [auditApprovals, setAuditApprovals] = useState<PostApproval[]>([]);
-  const [auditReferencedDiscussions, setAuditReferencedDiscussions] = useState<
-    Discussion[]
-  >([]);
-  const [isAuditLoading, setIsAuditLoading] = useState(false);
-  const [isAuditLoaded, setIsAuditLoaded] = useState(false);
+  // AuditLogSectionコンポーネントの参照
+  const auditLogSectionRef = React.useRef<{ loadAuditData: () => void }>(null);
 
   const { user } = useAuth();
 
@@ -149,7 +137,7 @@ export default function DiscussionsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user.pubkey]);
+  }, []);
 
 
   useEffect(() => {
@@ -170,135 +158,13 @@ export default function DiscussionsPage() {
     );
   }
 
-  // 監査ログ専用のデータ取得
-  const loadAuditData = async () => {
-    if (isAuditLoaded || isAuditLoading) return;
-
-    setIsAuditLoading(true);
-
-    try {
-      const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
-      if (!discussionListNaddr) {
-        logger.error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is not configured");
-        throw new Error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is not configured");
-      }
-
-      const discussionInfo = extractDiscussionFromNaddr(discussionListNaddr);
-      if (!discussionInfo) {
-        throw new Error("Invalid DISCUSSION_LIST_NADDR format");
-      }
-
-      logger.info(
-        "Loading audit data for discussionId:",
-        discussionInfo.discussionId
-      );
-
-      // 監査ログ用のデータを取得
-      const [discussionListPosts, discussionListApprovals] = await Promise.all([
-        nostrService.getDiscussionPosts(discussionInfo.discussionId),
-        nostrService.getApprovals(discussionInfo.discussionId),
-      ]);
-
-      const listApprovals = discussionListApprovals
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
-      const listPosts = discussionListPosts
-        .map((event) => parsePostEvent(event, listApprovals))
-        .filter((p): p is DiscussionPost => p !== null);
-
-      // qタグから参照されている個別会話のIDを収集（重複排除）
-      const individualDiscussionRefs = new Set<string>();
-      listPosts.forEach((post) => {
-        const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
-        qTags.forEach((qTag) => {
-          if (qTag[1] && qTag[1].startsWith("34550:")) {
-            individualDiscussionRefs.add(qTag[1]);
-          }
-        });
-      });
-
-      // 参照されている個別会話のkind:34550を取得
-      let referencedDiscussions: Discussion[] = [];
-      if (individualDiscussionRefs.size > 0) {
-        const individualDiscussions =
-          await nostrService.getReferencedUserDiscussions(
-            Array.from(individualDiscussionRefs)
-          );
-        referencedDiscussions = individualDiscussions
-          .map(parseDiscussionEvent)
-          .filter((d): d is Discussion => d !== null);
-      }
-
-
-      // 監査ログ用プロファイル取得（作成者・モデレーターのみ）
-      const uniquePubkeys = new Set<string>();
-      
-      // 参照された会話の作成者とモデレーターのプロファイルを収集
-      referencedDiscussions.forEach((discussion) => {
-        uniquePubkeys.add(discussion.authorPubkey);
-        discussion.moderators.forEach((mod) =>
-          uniquePubkeys.add(mod.pubkey)
-        );
-      });
-
-      if (uniquePubkeys.size > 0) {
-        const profilePromises = Array.from(uniquePubkeys).map(
-          async (pubkey) => {
-            const profileEvent = await nostrService.getProfile([pubkey]);
-            if (profileEvent) {
-              try {
-                const profile = JSON.parse(profileEvent.content);
-                return [pubkey, { name: profile.name || profile.display_name }];
-              } catch {
-                return [pubkey, {}];
-              }
-            }
-            return [pubkey, {}];
-          }
-        );
-
-        const profileResults = await Promise.all(profilePromises);
-        const profilesMap = Object.fromEntries(profileResults);
-        setProfiles(profilesMap);
-      } else {
-        setProfiles({});
-      }
-
-      // 監査ログデータを設定
-      setAuditPosts(listPosts);
-      setAuditApprovals(listApprovals);
-      setAuditReferencedDiscussions(referencedDiscussions);
-      setIsAuditLoaded(true);
-
-      logger.info("Audit data loaded:", {
-        posts: listPosts.length,
-        approvals: listApprovals.length,
-        referencedDiscussions: referencedDiscussions.length,
-        profilesLoaded: uniquePubkeys.size,
-      });
-    } catch (error) {
-      logger.error("Failed to load audit data:", error);
-    } finally {
-      setIsAuditLoading(false);
-    }
-  };
-
   // 監査ログタブがアクティブになった時のデータ取得
   const handleTabChange = (tab: "main" | "audit") => {
     setActiveTab(tab);
     if (tab === "audit") {
-      loadAuditData();
+      auditLogSectionRef.current?.loadAuditData();
     }
   };
-
-  // spec_v2.md要件: リクエスト機能は完全オミット
-  const auditItems = createAuditTimeline(
-    auditReferencedDiscussions,
-    [],
-    auditPosts,
-    auditApprovals
-  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -467,35 +333,14 @@ export default function DiscussionsPage() {
         </main>
       ) : (
         <main role="tabpanel" aria-labelledby="audit-tab">
-          <section aria-labelledby="audit-log-heading">
-            <h2
-              id="audit-log-heading"
-              className="text-xl font-semibold mb-4 ruby-text"
-            >
-              監査ログ
-            </h2>
-            <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="card-body">
-                {isAuditLoading ? (
-                  <div className="animate-pulse space-y-4">
-                    {[...Array(5)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-16 bg-gray-200 dark:bg-gray-700 rounded"
-                      ></div>
-                    ))}
-                  </div>
-                ) : (
-                  <AuditTimeline
-                    items={auditItems}
-                    profiles={profiles}
-                    referencedDiscussions={auditReferencedDiscussions}
-                    conversationAuditMode={true}
-                  />
-                )}
-              </div>
-            </div>
-          </section>
+          <AuditLogSection
+            ref={auditLogSectionRef}
+            discussion={null}
+            discussionInfo={null}
+            conversationAuditMode={true}
+            referencedDiscussions={[]}
+            isDiscussionList={true}
+          />
         </main>
       )}
 

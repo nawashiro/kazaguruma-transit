@@ -6,6 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. When appropriate, broaden the scope of inquiry beyond the stated assumptions to think through unconvenitional opportunities, risks, and pattern-matching to widen the aperture of solutions
 3. Before calling anything "done" or "working", take a second look at it ("red team" it) to critically analyze that you really are done or it really is working
 
+## 会話
+
+会話は日本語で行う。
+
+## TDD
+
+Follow TDD principles. First, write the tests. Avoid writing tests for things that don't exist in the specification (e.g., don't create a test for "the administrator role does not exist"). Ensure all tests pass. If something is known to work, you may remove overly complex tests that fail. Run tsc, lint, test, and build; fix errors until none remain.
+
 ## Project Overview
 
 This is an unofficial web application for Chiyoda Ward's welfare transit "Kazaguruma" (風ぐるま). It provides route planning and timetable information for the local bus service.
@@ -81,6 +89,29 @@ Two search strategies:
 2. **Speed-prioritized search**: Considers multiple nearby stops for optimal routes
 3. Supports direct routes and transfers (max 2 transfers, 3-hour time window)
 
+### Component Architecture
+
+- **Pages** (`src/app/`): Next.js App Router pages with nested layouts
+- **Components** (`src/components/`): Organized by category
+  - `features/`: Feature-specific components (route display, selectors, modals)
+  - `layouts/`: Layout components (sidebar, analytics, structured data)
+  - `ui/`: Reusable UI components (buttons, cards, inputs)
+  - `discussion/`: Nostr-based discussion system components
+- **Libraries** (`src/lib/`): Business logic and utilities
+  - `transit/`: Route planning and transit data management
+  - `nostr/`: Nostr protocol implementation and utilities
+  - `discussion/`: Discussion permission system and user flows
+  - `evaluation/`: Consensus analysis algorithms
+  - `db/`: Database abstraction and Prisma integration
+  - `maps/`: Google Maps integration
+
+### State Management
+
+- React hooks for local component state
+- Singleton pattern for TransitService
+- Independent data loading for audit logs vs main content
+- Session-based authentication via iron-session
+
 ## Development Setup
 
 1. Create `transit-config.json` in project root (see `transit-config.json.example`)
@@ -91,6 +122,7 @@ Two search strategies:
    - `NEXT_PUBLIC_DISCUSSIONS_ENABLED` (optional, for discussion features)
    - `NEXT_PUBLIC_ADMIN_PUBKEY` (optional, for discussion admin)
    - `NEXT_PUBLIC_NOSTR_RELAYS` (optional, for Nostr relays)
+   - `NEXT_PUBLIC_DISCUSSION_LIST_NADDR` (required for discussion list page)
 3. The app auto-generates Prisma client and imports GTFS data on build
 
 ## Testing
@@ -102,32 +134,33 @@ Two search strategies:
 ## File Structure Notes
 
 - Components use TypeScript with strict typing
-- Ruby text support for Japanese text rendering
+- Ruby text support for Japanese text rendering (`ruby-text` CSS class)
 - PDF export functionality for route information
 - Google Maps integration for location services
 - Analytics with Google Analytics 4
 
 ## Important Patterns
 
+### Component Design
+
 - Singleton pattern for TransitService
 - Error boundaries and loading states
 - Accessible UI with ARIA labels
-- Rate limiting on API endpoints
-- Structured data for SEO
+- Forward refs for reusable components (e.g., AuditLogSection)
+- Separation of main content and audit log data flows
 
-The codebase follows Japanese naming conventions and includes extensive Japanese comments and UI text.
+### Styling
 
-## UI
+- Tailwind + DaisyUI with custom button rounding: `rounded-full dark:rounded-sm`
+- Images from external URLs use `<img>` instead of Next.js `<Image>`
+- Japanese text rendered with `ruby-text` class for proper formatting
 
-The UI uses Tailwind + DaisyUI5.
+### Data Loading
 
-## img
-
-Images may be loaded from an external URL. In this case, Image cannot be used and img is used.
-
-## btn
-
-Rounding by cupcake in daisyui may not work so `rounded-full dark:rounded-sm` is used.
+- Independent audit log components with ref-based trigger functions
+- Test mode support via `isTestMode()` checks
+- Profile loading limited to creators and moderators only
+- Conversation audit mode filtering for timeline displays
 
 ## Discussion Features
 
@@ -137,17 +170,18 @@ This app includes Nostr-based decentralized discussion functionality:
 - **NIP-25 Reactions**: Uses kind:7 events for post evaluations (content-based, not rating tags)
 - **Consensus Analysis**: Implements Polis algorithm for analyzing group consensus on posts
 - **Permission System**: Creator and moderator-based access control (no global admin for discussions)
+- **Audit Log System**: Reusable AuditLogSection component with conversation/list mode support
 
 ### Key Protocols
 
 - Posts use kind:1111 (community posts) with backward compatibility for kind:1
 - Evaluations use kind:7 with content field ("-" for negative, anything else as positive)
 - Approval system stores original post data in approval event content
+- Discussion list management uses NADDR-based references for individual conversations
 
-## TDD
+### Discussion Architecture
 
-Follow TDD principles. First, write the tests. Avoid writing tests for things that don't exist in the specification (e.g., don't create a test for "the administrator role does not exist"). Ensure all tests pass. If something is known to work, you may remove overly complex tests that fail. Run syntax check, lint, test, and build; fix errors until none remain.
-
-## 会話
-
-会話は日本語で行う。
+- **Individual Discussion Pages** (`/discussions/[naddr]`): Full discussion interface with posts, evaluations, and consensus analysis
+- **Discussion List Page** (`/discussions`): Overview of all discussions with audit logs for cross-conversation activity
+- **AuditLogSection Component**: Shared component handling audit timeline with support for both individual discussions and discussion list contexts
+- **Profile Loading Strategy**: Collects profiles only for creators and moderators, not general post authors

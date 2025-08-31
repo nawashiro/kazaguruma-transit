@@ -14,7 +14,7 @@ import {
 import { LoginModal } from "@/components/discussion/LoginModal";
 import { PostPreview } from "@/components/discussion/PostPreview";
 import { EvaluationComponent } from "@/components/discussion/EvaluationComponent";
-import { AuditTimeline } from "@/components/discussion/AuditTimeline";
+import { AuditLogSection } from "@/components/discussion/AuditLogSection";
 import { ModeratorCheck } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
@@ -23,7 +23,6 @@ import {
   parseApprovalEvent,
   parseEvaluationEvent,
   combinePostsWithStats,
-  createAuditTimeline,
   validatePostForm,
   formatRelativeTime,
   getAdminPubkeyHex,
@@ -37,14 +36,12 @@ import Button from "@/components/ui/Button";
 import type {
   Discussion,
   DiscussionPost,
-  NostrProfile,
   PostApproval,
   PostEvaluation,
   PostFormData,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
-import { NostrEvent } from "nosskey-sdk";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
@@ -59,9 +56,6 @@ export default function DiscussionDetailPage() {
   const [posts, setPosts] = useState<DiscussionPost[]>([]);
   const [, setApprovals] = useState<PostApproval[]>([]);
   const [evaluations, setEvaluations] = useState<PostEvaluation[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, { name?: string }>>(
-    {}
-  );
   const [userEvaluations, setUserEvaluations] = useState<Set<string>>(
     new Set()
   );
@@ -71,12 +65,8 @@ export default function DiscussionDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 監査ログ用の独立した状態
-  const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
-  const [auditApprovals, setAuditApprovals] = useState<PostApproval[]>([]);
-  const [, setAuditEvaluations] = useState<PostEvaluation[]>([]);
-  const [isAuditLoading, setIsAuditLoading] = useState(false);
-  const [isAuditLoaded, setIsAuditLoaded] = useState(false);
+  // AuditLogSectionコンポーネントの参照
+  const auditLogSectionRef = React.useRef<{ loadAuditData: () => void }>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState("");
@@ -167,85 +157,6 @@ export default function DiscussionDetailPage() {
     }
   }, [discussionInfo]);
 
-  // 監査ログ専用のデータ取得
-  const loadAuditData = useCallback(async () => {
-    if (
-      !isDiscussionsEnabled() ||
-      !discussionInfo ||
-      !discussion ||
-      isAuditLoaded ||
-      isAuditLoading
-    )
-      return;
-
-    setIsAuditLoading(true);
-    try {
-      // Check if this is test mode (for backward compatibility)
-      if (isTestMode(discussionInfo.dTag)) {
-        const testData = await loadTestData();
-        setAuditPosts(testData.posts);
-        setAuditApprovals([]);
-        setAuditEvaluations(testData.evaluations);
-        setIsAuditLoaded(true);
-        return;
-      }
-
-      const [postsEvents, approvalsEvents] = await Promise.all([
-        nostrService.getDiscussionPosts(discussionInfo.discussionId),
-        nostrService.getApprovals(discussionInfo.discussionId),
-      ]);
-
-      const parsedApprovals = approvalsEvents
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
-      const parsedPosts = postsEvents
-        .map((event) => parsePostEvent(event, parsedApprovals))
-        .filter((p): p is DiscussionPost => p !== null);
-
-      setAuditPosts(parsedPosts);
-      setAuditApprovals(parsedApprovals);
-
-      // 監査ログ用プロファイル取得（作成者・モデレーターのみ）
-      const uniquePubkeys = new Set<string>();
-
-      // 会話の作成者とモデレーターのプロファイルを収集
-      if (discussion) {
-        uniquePubkeys.add(discussion.authorPubkey);
-        discussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
-      }
-
-      logger.log("mod", uniquePubkeys);
-
-      if (uniquePubkeys.size > 0) {
-        const eventPromises = await nostrService.getProfile([...uniquePubkeys]);
-
-        const profilePromises = eventPromises.map((event: NostrEvent) => {
-          const profile: NostrProfile = JSON.parse(event.content);
-          const pubkey: string = event.pubkey || "";
-          return [pubkey, { name: profile?.name }];
-        });
-
-        const profilesMap = Object.fromEntries(profilePromises);
-
-        setProfiles(profilesMap);
-      } else {
-        setProfiles({});
-      }
-
-      setIsAuditLoaded(true);
-
-      logger.info("Audit data loaded:", {
-        posts: parsedPosts.length,
-        approvals: parsedApprovals.length,
-        profilesLoaded: uniquePubkeys.size,
-      });
-    } catch (error) {
-      logger.error("Failed to load audit data:", error);
-    } finally {
-      setIsAuditLoading(false);
-    }
-  }, [discussionInfo, discussion, isAuditLoaded, isAuditLoading]);
 
   const loadUserEvaluations = useCallback(async () => {
     if (!user.pubkey || !isDiscussionsEnabled() || !discussionInfo) return;
@@ -338,16 +249,6 @@ export default function DiscussionDetailPage() {
   const postsWithStats = useMemo(
     () => combinePostsWithStats(approvedPosts, evaluations),
     [approvedPosts, evaluations]
-  );
-  const auditItems = useMemo(
-    () =>
-      createAuditTimeline(
-        discussion ? [discussion] : [],
-        [],
-        auditPosts,
-        auditApprovals
-      ),
-    [discussion, auditPosts, auditApprovals]
   );
 
   // Check for invalid naddr
@@ -605,7 +506,7 @@ export default function DiscussionDetailPage() {
           area-selected={activeTab === "audit" ? "true" : "false"}
           onClick={() => {
             setActiveTab("audit");
-            loadAuditData();
+            auditLogSectionRef.current?.loadAuditData();
           }}
         >
           <span className="ruby-text">監査ログ</span>
@@ -963,34 +864,13 @@ export default function DiscussionDetailPage() {
         </main>
       ) : (
         <main role="tabpanel" aria-labelledby="audit-tab">
-          <section aria-labelledby="audit-screen-heading">
-            <h2
-              id="audit-screen-heading"
-              className="text-xl font-semibold mb-4 ruby-text"
-            >
-              監査画面
-            </h2>
-            <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="card-body">
-                {isAuditLoading ? (
-                  <div className="animate-pulse space-y-4">
-                    {[...Array(5)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-16 bg-gray-200 dark:bg-gray-700 rounded"
-                      ></div>
-                    ))}
-                  </div>
-                ) : (
-                  <AuditTimeline
-                    items={auditItems}
-                    profiles={profiles}
-                    referencedDiscussions={discussion ? [discussion] : []}
-                  />
-                )}
-              </div>
-            </div>
-          </section>
+          <AuditLogSection
+            ref={auditLogSectionRef}
+            discussion={discussion}
+            discussionInfo={discussionInfo}
+            conversationAuditMode={false}
+            referencedDiscussions={discussion ? [discussion] : []}
+          />
         </main>
       )}
 

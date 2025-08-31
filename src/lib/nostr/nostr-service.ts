@@ -98,16 +98,15 @@ export class NostrService {
     }
   }
 
-  async getProfile(pubkey: string): Promise<Event | null> {
+  async getProfile(pubkeys: string[]): Promise<Event[]> {
     const events = await this.getEvents([
       {
         kinds: [0],
-        authors: [pubkey],
-        limit: 1,
+        authors: pubkeys,
       },
     ]);
 
-    return events[0] || null;
+    return events;
   }
 
   async getDiscussions(adminPubkey: string): Promise<Event[]> {
@@ -117,21 +116,46 @@ export class NostrService {
         authors: [adminPubkey],
       },
     ]);
-    
+
     // replaceable eventの重複を除去（同じdTagで最新のもののみを保持）
     const eventsByDTag = new Map<string, Event>();
-    
+
     for (const event of events) {
       const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
       if (!dTag) continue;
-      
+
       const existing = eventsByDTag.get(dTag);
       if (!existing || event.created_at > existing.created_at) {
         eventsByDTag.set(dTag, event);
       }
     }
-    
+
     return Array.from(eventsByDTag.values());
+  }
+
+  async getDiscussion(pubkey: string, dTag: string): Promise<Event> {
+    const events = await this.getEvents([
+      {
+        kinds: [34550],
+        authors: [pubkey],
+        "#d": [dTag],
+      },
+    ]);
+
+    // replaceable eventの重複を除去（同じdTagで最新のもののみを保持）
+    const eventsByDTag = new Map<string, Event>();
+
+    for (const event of events) {
+      const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
+      if (!dTag) continue;
+
+      const existing = eventsByDTag.get(dTag);
+      if (!existing || event.created_at > existing.created_at) {
+        eventsByDTag.set(dTag, event);
+      }
+    }
+
+    return Array.from(eventsByDTag.values())[0];
   }
 
   async getDiscussionPosts(
@@ -144,12 +168,7 @@ export class NostrService {
       // バス停ごとに個別のフィルタを作成（kind:1111とkind:1の両方）
       busStopTags.forEach((busStopTag) => {
         filters.push({
-          kinds: [1111],
-          "#a": [discussionId],
-          "#t": [busStopTag],
-        });
-        filters.push({
-          kinds: [1],
+          kinds: [1111, 1],
           "#a": [discussionId],
           "#t": [busStopTag],
         });
@@ -157,11 +176,7 @@ export class NostrService {
     } else {
       // バス停指定なしの場合は全投稿を取得（kind:1111とkind:1の両方）
       filters.push({
-        kinds: [1111],
-        "#a": [discussionId],
-      });
-      filters.push({
-        kinds: [1],
+        kinds: [1111, 1],
         "#a": [discussionId],
       });
     }
@@ -233,9 +248,7 @@ export class NostrService {
     return this.getEvents([filters]);
   }
 
-  async getEvaluationsForPosts(
-    postIds: string[]
-  ): Promise<Event[]> {
+  async getEvaluationsForPosts(postIds: string[]): Promise<Event[]> {
     if (postIds.length === 0) {
       return [];
     }
@@ -286,19 +299,21 @@ export class NostrService {
   ): Omit<Event, "id" | "sig" | "pubkey"> {
     // Convert discussionId from naddr to hex format if needed
     let discussionHexId = discussionId;
-    if (discussionId.startsWith('naddr1')) {
+    if (discussionId.startsWith("naddr1")) {
       try {
         const decoded = naddrDecode(discussionId);
         discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
       } catch (error) {
-        logger.error('Failed to decode discussion naddr:', error);
-        throw new Error(`Invalid discussion naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        logger.error("Failed to decode discussion naddr:", error);
+        throw new Error(
+          `Invalid discussion naddr: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
     }
 
-    const tags: string[][] = [
-      ["a", discussionHexId],
-    ];
+    const tags: string[][] = [["a", discussionHexId]];
 
     if (busStopTag) {
       tags.push(["t", busStopTag]);
@@ -318,13 +333,17 @@ export class NostrService {
   ): Omit<Event, "id" | "sig" | "pubkey"> {
     // Convert discussionId from naddr to hex format if needed
     let discussionHexId = discussionId;
-    if (discussionId.startsWith('naddr1')) {
+    if (discussionId.startsWith("naddr1")) {
       try {
         const decoded = naddrDecode(discussionId);
         discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
       } catch (error) {
-        logger.error('Failed to decode discussion naddr:', error);
-        throw new Error(`Invalid discussion naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        logger.error("Failed to decode discussion naddr:", error);
+        throw new Error(
+          `Invalid discussion naddr: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
     }
 
@@ -348,20 +367,22 @@ export class NostrService {
     rating: "+" | "-",
     discussionId?: string
   ): Omit<Event, "id" | "sig" | "pubkey"> {
-    const tags: string[][] = [
-      ["e", targetEventId],
-    ];
+    const tags: string[][] = [["e", targetEventId]];
 
     if (discussionId) {
       // Convert discussionId from naddr to hex format if needed
       let discussionHexId = discussionId;
-      if (discussionId.startsWith('naddr1')) {
+      if (discussionId.startsWith("naddr1")) {
         try {
-            const decoded = naddrDecode(discussionId);
+          const decoded = naddrDecode(discussionId);
           discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
         } catch (error) {
-          logger.error('Failed to decode discussion naddr:', error);
-          throw new Error(`Invalid discussion naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          logger.error("Failed to decode discussion naddr:", error);
+          throw new Error(
+            `Invalid discussion naddr: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`
+          );
         }
       }
       tags.push(["a", discussionHexId]);
@@ -396,9 +417,7 @@ export class NostrService {
     approvalEventId: string,
     discussionId?: string
   ): Omit<Event, "id" | "sig" | "pubkey"> {
-    const tags: string[][] = [
-      ["e", approvalEventId]
-    ];
+    const tags: string[][] = [["e", approvalEventId]];
 
     if (discussionId) {
       tags.push(["h", discussionId]);
@@ -441,41 +460,41 @@ export class NostrService {
     }
 
     const events = await this.getEvents([filter]);
-    
+
     // 承認リストのみを取得（qタグを含むもの）
-    const approvalEvents = events.filter(event => 
-      event.tags.some(tag => tag[0] === "q")
+    const approvalEvents = events.filter((event) =>
+      event.tags.some((tag) => tag[0] === "q")
     );
-    
+
     // replaceable eventの重複を除去
     const eventsByDTag = new Map<string, Event>();
-    
+
     for (const event of approvalEvents) {
       const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
       if (!dTag) continue;
-      
+
       const existing = eventsByDTag.get(dTag);
       if (!existing || event.created_at > existing.created_at) {
         eventsByDTag.set(dTag, event);
       }
     }
-    
+
     return Array.from(eventsByDTag.values());
   }
 
   // Get single event by hex ID (format: "kind:pubkey:identifier")
   async getEventByNaddr(hexId: string): Promise<Event | null> {
     try {
-      const parts = hexId.split(':');
+      const parts = hexId.split(":");
       if (parts.length !== 3) {
-        throw new Error('Invalid hex ID format');
+        throw new Error("Invalid hex ID format");
       }
-      
+
       const [kindStr, pubkey, identifier] = parts;
       const kind = parseInt(kindStr, 10);
-      
+
       if (isNaN(kind)) {
-        throw new Error('Invalid kind in hex ID');
+        throw new Error("Invalid kind in hex ID");
       }
 
       const filter: Filter = {
@@ -488,13 +507,15 @@ export class NostrService {
       const events = await this.getEvents([filter]);
       return events.length > 0 ? events[0] : null;
     } catch (error) {
-      logger.error('Failed to get event by naddr:', error);
+      logger.error("Failed to get event by naddr:", error);
       return null;
     }
   }
 
   // Get profiles for multiple pubkeys
-  async getProfiles(pubkeys: string[]): Promise<Record<string, { name?: string; display_name?: string }>> {
+  async getProfiles(
+    pubkeys: string[]
+  ): Promise<Record<string, { name?: string; display_name?: string }>> {
     try {
       if (pubkeys.length === 0) {
         return {};
@@ -507,9 +528,10 @@ export class NostrService {
       };
 
       const events = await this.getEvents([filter]);
-      const profiles: Record<string, { name?: string; display_name?: string }> = {};
+      const profiles: Record<string, { name?: string; display_name?: string }> =
+        {};
 
-      events.forEach(event => {
+      events.forEach((event) => {
         try {
           const content = JSON.parse(event.content);
           profiles[event.pubkey] = {
@@ -517,13 +539,13 @@ export class NostrService {
             display_name: content.display_name,
           };
         } catch (error) {
-          logger.error('Failed to parse profile content:', error);
+          logger.error("Failed to parse profile content:", error);
         }
       });
 
       return profiles;
     } catch (error) {
-      logger.error('Failed to get profiles:', error);
+      logger.error("Failed to get profiles:", error);
       return {};
     }
   }
@@ -536,10 +558,10 @@ export class NostrService {
 
     // 引用形式: "34550:pubkey:dTag" を解析
     const filters: Filter[] = [];
-    
+
     for (const ref of references) {
-      const parts = ref.split(':');
-      if (parts.length === 3 && parts[0] === '34550') {
+      const parts = ref.split(":");
+      if (parts.length === 3 && parts[0] === "34550") {
         const [, pubkey, dTag] = parts;
         filters.push({
           kinds: [34550],
@@ -555,21 +577,21 @@ export class NostrService {
     }
 
     const events = await this.getEvents(filters);
-    
+
     // 最新のreplaceable eventのみを保持
     const eventsByRef = new Map<string, Event>();
-    
+
     for (const event of events) {
       const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
       if (!dTag) continue;
-      
+
       const ref = `34550:${event.pubkey}:${dTag}`;
       const existing = eventsByRef.get(ref);
       if (!existing || event.created_at > existing.created_at) {
         eventsByRef.set(ref, event);
       }
     }
-    
+
     return Array.from(eventsByRef.values());
   }
 
@@ -577,21 +599,26 @@ export class NostrService {
   async getApprovedUserDiscussions(
     adminPubkey: string,
     options: { limit?: number; until?: number } = {}
-  ): Promise<{
-    userDiscussion: Event;
-    approvalEvent: Event;
-    approvedAt: number;
-  }[]> {
+  ): Promise<
+    {
+      userDiscussion: Event;
+      approvalEvent: Event;
+      approvedAt: number;
+    }[]
+  > {
     try {
       // 1. 管理者の承認イベントを取得（ページネーション対応）
-      const approvalEvents = await this.getAdminApprovalEvents(adminPubkey, options);
-      
+      const approvalEvents = await this.getAdminApprovalEvents(
+        adminPubkey,
+        options
+      );
+
       // 2. すべてのqタグから引用を抽出
       const allReferences: string[] = [];
       const approvalMap = new Map<string, Event>();
-      
+
       for (const approvalEvent of approvalEvents) {
-        const qTags = approvalEvent.tags.filter(tag => tag[0] === "q");
+        const qTags = approvalEvent.tags.filter((tag) => tag[0] === "q");
         for (const qTag of qTags) {
           if (qTag[1]) {
             allReferences.push(qTag[1]);
@@ -599,24 +626,26 @@ export class NostrService {
           }
         }
       }
-      
+
       // 3. 引用されたユーザー会話を取得
-      const userDiscussions = await this.getReferencedUserDiscussions(allReferences);
-      
+      const userDiscussions = await this.getReferencedUserDiscussions(
+        allReferences
+      );
+
       // 4. 承認情報と組み合わせ
       const result: {
         userDiscussion: Event;
         approvalEvent: Event;
         approvedAt: number;
       }[] = [];
-      
+
       for (const userDiscussion of userDiscussions) {
         const dTag = userDiscussion.tags.find((tag) => tag[0] === "d")?.[1];
         if (!dTag) continue;
-        
+
         const ref = `34550:${userDiscussion.pubkey}:${dTag}`;
         const approvalEvent = approvalMap.get(ref);
-        
+
         if (approvalEvent) {
           result.push({
             userDiscussion,
@@ -625,10 +654,9 @@ export class NostrService {
           });
         }
       }
-      
+
       // 承認日時順にソート
       return result.sort((a, b) => b.approvedAt - a.approvedAt);
-      
     } catch (error) {
       logger.error("Failed to get approved user discussions:", error);
       return [];
@@ -643,13 +671,17 @@ export class NostrService {
     try {
       // Convert naddr to hex format for NIP-72 compliance
       let discussionListHex = discussionListNaddr;
-      if (discussionListNaddr.startsWith('naddr1')) {
+      if (discussionListNaddr.startsWith("naddr1")) {
         try {
-            const decoded = naddrDecode(discussionListNaddr);
+          const decoded = naddrDecode(discussionListNaddr);
           discussionListHex = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
         } catch (error) {
-          logger.error('Failed to decode discussion list naddr:', error);
-          throw new Error(`Invalid discussion list naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          logger.error("Failed to decode discussion list naddr:", error);
+          throw new Error(
+            `Invalid discussion list naddr: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`
+          );
         }
       }
 
@@ -663,7 +695,7 @@ export class NostrService {
           kinds: [1], // NIP-72後方互換性: kind:1もサポート
           "#a": [discussionListHex],
           limit: options.limit || 50,
-        }
+        },
       ];
 
       if (options.until) {
@@ -706,11 +738,11 @@ export class NostrService {
 
       // 2. 管理者の承認イベントを取得
       const approvalEvents = await this.getAdminApprovalEvents(adminPubkey);
-      
+
       // 3. 承認済みの会話IDを抽出
       const approvedRefs = new Set<string>();
       for (const approvalEvent of approvalEvents) {
-        const qTags = approvalEvent.tags.filter(tag => tag[0] === "q");
+        const qTags = approvalEvent.tags.filter((tag) => tag[0] === "q");
         for (const qTag of qTags) {
           if (qTag[1]) {
             approvedRefs.add(qTag[1]);
@@ -719,32 +751,31 @@ export class NostrService {
       }
 
       // 4. 承認されていない会話をフィルタリング
-      const pendingDiscussions = allUserDiscussions.filter(event => {
+      const pendingDiscussions = allUserDiscussions.filter((event) => {
         if (event.pubkey === adminPubkey) return false; // 管理者作成は除外
-        
+
         const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
         if (!dTag) return false;
-        
+
         const ref = `34550:${event.pubkey}:${dTag}`;
         return !approvedRefs.has(ref);
       });
 
       // 最新のreplaceable eventのみを保持
       const eventsByRef = new Map<string, Event>();
-      
+
       for (const event of pendingDiscussions) {
         const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
         if (!dTag) continue;
-        
+
         const ref = `34550:${event.pubkey}:${dTag}`;
         const existing = eventsByRef.get(ref);
         if (!existing || event.created_at > existing.created_at) {
           eventsByRef.set(ref, event);
         }
       }
-      
+
       return Array.from(eventsByRef.values());
-      
     } catch (error) {
       logger.error("Failed to get pending user discussions:", error);
       return [];
@@ -758,7 +789,7 @@ export class NostrService {
   ): Omit<Event, "id" | "sig" | "pubkey"> {
     const approvalDTag = approvalId || `approval-${Date.now()}`;
     const ref = `34550:${userDiscussion.authorPubkey}:${userDiscussion.dTag}`;
-    
+
     const tags: string[][] = [
       ["d", approvalDTag],
       ["name", "承認済み会話リスト"],
@@ -774,7 +805,6 @@ export class NostrService {
     };
   }
 
-
   // spec_v2.md要件: 承認撤回イベントの作成
   createApprovalRevocationEvent(
     approvalEventId: string
@@ -786,7 +816,6 @@ export class NostrService {
       content: "delete",
     };
   }
-
 
   disconnect(): void {
     this.pool.close(this.relays);

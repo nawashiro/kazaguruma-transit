@@ -37,12 +37,14 @@ import Button from "@/components/ui/Button";
 import type {
   Discussion,
   DiscussionPost,
+  NostrProfile,
   PostApproval,
   PostEvaluation,
   PostFormData,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
+import { NostrEvent } from "nosskey-sdk";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
@@ -72,9 +74,7 @@ export default function DiscussionDetailPage() {
   // 監査ログ用の独立した状態
   const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
   const [auditApprovals, setAuditApprovals] = useState<PostApproval[]>([]);
-  const [, setAuditEvaluations] = useState<PostEvaluation[]>(
-    []
-  );
+  const [, setAuditEvaluations] = useState<PostEvaluation[]>([]);
   const [isAuditLoading, setIsAuditLoading] = useState(false);
   const [isAuditLoaded, setIsAuditLoaded] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -89,6 +89,10 @@ export default function DiscussionDetailPage() {
     { route: string; stops: string[] }[]
   >([]);
 
+  useEffect(() => {
+    logger.log("discussion", discussion);
+  });
+
   const { user, signEvent } = useAuth();
 
   // Parse naddr and extract discussion info
@@ -96,7 +100,6 @@ export default function DiscussionDetailPage() {
     if (!naddrParam) return null;
     return extractDiscussionFromNaddr(naddrParam);
   }, [naddrParam]);
-
 
   // メイン画面専用のデータ取得
   const loadData = useCallback(async () => {
@@ -110,18 +113,18 @@ export default function DiscussionDetailPage() {
         setPosts(testData.posts);
         setApprovals([]);
         setEvaluations(testData.evaluations);
-        setProfiles({});
         return;
       }
 
-      const [discussionEvents, approvalsEvents] = await Promise.all([
-        nostrService.getDiscussions(discussionInfo.authorPubkey),
+      const [discussionEvent, approvalsEvents] = await Promise.all([
+        nostrService.getDiscussion(
+          discussionInfo.authorPubkey,
+          discussionInfo.dTag
+        ),
         nostrService.getApprovals(discussionInfo.discussionId),
       ]);
 
-      const parsedDiscussion = discussionEvents
-        .map(parseDiscussionEvent)
-        .find((d) => d && d.dTag === discussionInfo.dTag);
+      const parsedDiscussion = parseDiscussionEvent(discussionEvent);
 
       if (!parsedDiscussion) {
         throw new Error("Discussion not found");
@@ -157,41 +160,6 @@ export default function DiscussionDetailPage() {
       setPosts(parsedPosts);
       setApprovals(parsedApprovals);
       setEvaluations(parsedEvaluations);
-
-      // Profile loading logic - load profiles for discussion creators and moderators
-      const uniquePubkeys = new Set<string>();
-      parsedApprovals.forEach((approval) =>
-        uniquePubkeys.add(approval.moderatorPubkey)
-      );
-      if (parsedDiscussion) {
-        uniquePubkeys.add(parsedDiscussion.authorPubkey);
-        parsedDiscussion.moderators.forEach((mod) =>
-          uniquePubkeys.add(mod.pubkey)
-        );
-      }
-
-      if (uniquePubkeys.size > 0) {
-        const profilePromises = Array.from(uniquePubkeys).map(
-          async (pubkey) => {
-            const profileEvent = await nostrService.getProfile(pubkey);
-            if (profileEvent) {
-              try {
-                const profile = JSON.parse(profileEvent.content);
-                return [pubkey, { name: profile.name || profile.display_name }];
-              } catch {
-                return [pubkey, {}];
-              }
-            }
-            return [pubkey, {}];
-          }
-        );
-
-        const profileResults = await Promise.all(profilePromises);
-        const profilesMap = Object.fromEntries(profileResults);
-        setProfiles(profilesMap);
-      } else {
-        setProfiles({});
-      }
     } catch (error) {
       logger.error("Failed to load discussion:", error);
     } finally {
@@ -204,6 +172,7 @@ export default function DiscussionDetailPage() {
     if (
       !isDiscussionsEnabled() ||
       !discussionInfo ||
+      !discussion ||
       isAuditLoaded ||
       isAuditLoading
     )
@@ -234,31 +203,49 @@ export default function DiscussionDetailPage() {
         .map((event) => parsePostEvent(event, parsedApprovals))
         .filter((p): p is DiscussionPost => p !== null);
 
-      const postIds = parsedPosts.map((post) => post.id);
-      const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-        postIds
-      );
-
-      const parsedEvaluations = evaluationsEvents
-        .map(parseEvaluationEvent)
-        .filter((e): e is PostEvaluation => e !== null);
-
       setAuditPosts(parsedPosts);
       setAuditApprovals(parsedApprovals);
-      setAuditEvaluations(parsedEvaluations);
+
+      // 監査ログ用プロファイル取得（作成者・モデレーターのみ）
+      const uniquePubkeys = new Set<string>();
+
+      // 会話の作成者とモデレーターのプロファイルを収集
+      if (discussion) {
+        uniquePubkeys.add(discussion.authorPubkey);
+        discussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
+      }
+
+      logger.log("mod", uniquePubkeys);
+
+      if (uniquePubkeys.size > 0) {
+        const eventPromises = await nostrService.getProfile([...uniquePubkeys]);
+
+        const profilePromises = eventPromises.map((event: NostrEvent) => {
+          const profile: NostrProfile = JSON.parse(event.content);
+          const pubkey: string = event.pubkey || "";
+          return [pubkey, { name: profile?.name }];
+        });
+
+        const profilesMap = Object.fromEntries(profilePromises);
+
+        setProfiles(profilesMap);
+      } else {
+        setProfiles({});
+      }
+
       setIsAuditLoaded(true);
 
       logger.info("Audit data loaded:", {
         posts: parsedPosts.length,
         approvals: parsedApprovals.length,
-        evaluations: parsedEvaluations.length,
+        profilesLoaded: uniquePubkeys.size,
       });
     } catch (error) {
       logger.error("Failed to load audit data:", error);
     } finally {
       setIsAuditLoading(false);
     }
-  }, [discussionInfo, isAuditLoaded, isAuditLoading]);
+  }, [discussionInfo, discussion, isAuditLoaded, isAuditLoading]);
 
   const loadUserEvaluations = useCallback(async () => {
     if (!user.pubkey || !isDiscussionsEnabled() || !discussionInfo) return;
@@ -544,7 +531,9 @@ export default function DiscussionDetailPage() {
           <span className="ruby-text">← 会話一覧に戻る</span>
         </Link>
 
-        <h1 className="text-3xl font-bold mb-4 ruby-text">{discussion.title}</h1>
+        <h1 className="text-3xl font-bold mb-4 ruby-text">
+          {discussion.title}
+        </h1>
 
         {/* Only show aside if user is creator or moderator */}
         {(user.pubkey === discussion.authorPubkey ||

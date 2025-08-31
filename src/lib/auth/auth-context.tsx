@@ -67,7 +67,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const loadProfile = useCallback(
     async (pubkey: string) => {
       try {
-        const profileEvent = await nostrService.getProfile(pubkey);
+        const profileEvent = await nostrService.getProfile([pubkey]);
         if (profileEvent) {
           const profile = parseProfileEvent(profileEvent);
           setUser((prev) => ({ ...prev, profile }));

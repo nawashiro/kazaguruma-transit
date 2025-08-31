@@ -381,7 +381,6 @@ export function AuditTimeline({
                   onClick={() => setSelectedEvent(item)}
                   className="btn btn-sm btn-outline rounded-full dark:rounded-sm mt-2 ruby-text h-fit min-h-8"
                   type="button"
-                  aria-label={`${item.type}の技術情報を表示`}
                 >
                   <span>技術情報</span>
                 </button>

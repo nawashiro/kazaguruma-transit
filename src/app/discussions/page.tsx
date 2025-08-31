@@ -140,47 +140,6 @@ export default function DiscussionsPage() {
       // 会話一覧データを設定
       setDiscussions(parsedIndividualDiscussions);
 
-      // プロファイル取得（管理者・モデレーターのみ）
-      const shouldLoadProfiles = user.pubkey === ADMIN_PUBKEY;
-
-      if (shouldLoadProfiles) {
-        const uniquePubkeys = new Set<string>();
-        uniquePubkeys.add(ADMIN_PUBKEY);
-
-        parsedIndividualDiscussions.forEach((discussion) => {
-          if (
-            discussion.authorPubkey === ADMIN_PUBKEY ||
-            discussion.moderators.some(
-              (m) => m.pubkey === discussion.authorPubkey
-            )
-          ) {
-            uniquePubkeys.add(discussion.authorPubkey);
-          }
-          discussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
-        });
-
-        const profilePromises = Array.from(uniquePubkeys).map(
-          async (pubkey) => {
-            const profileEvent = await nostrService.getProfile(pubkey);
-            if (profileEvent) {
-              try {
-                const profile = JSON.parse(profileEvent.content);
-                return [pubkey, { name: profile.name || profile.display_name }];
-              } catch {
-                return [pubkey, {}];
-              }
-            }
-            return [pubkey, {}];
-          }
-        );
-
-        const profileResults = await Promise.all(profilePromises);
-        const profilesMap = Object.fromEntries(profileResults);
-        setProfiles(profilesMap);
-      } else {
-        setProfiles({});
-      }
-
       logger.info("Individual discussions loaded:", {
         count: parsedIndividualDiscussions.length,
         discussions: parsedIndividualDiscussions.map((d) => d.title),
@@ -271,25 +230,22 @@ export default function DiscussionsPage() {
           .filter((d): d is Discussion => d !== null);
       }
 
-      // 監査ログ用のプロファイル取得（参照された会話の作成者・モデレーターのみ）
-      const shouldLoadAuditProfiles = user.pubkey === ADMIN_PUBKEY;
 
-      if (shouldLoadAuditProfiles && referencedDiscussions.length > 0) {
-        const auditUniquePubkeys = new Set<string>();
-        auditUniquePubkeys.add(ADMIN_PUBKEY);
+      // 監査ログ用プロファイル取得（作成者・モデレーターのみ）
+      const uniquePubkeys = new Set<string>();
+      
+      // 参照された会話の作成者とモデレーターのプロファイルを収集
+      referencedDiscussions.forEach((discussion) => {
+        uniquePubkeys.add(discussion.authorPubkey);
+        discussion.moderators.forEach((mod) =>
+          uniquePubkeys.add(mod.pubkey)
+        );
+      });
 
-        referencedDiscussions.forEach((discussion) => {
-          // 会話作成者を追加
-          auditUniquePubkeys.add(discussion.authorPubkey);
-          // モデレーターを追加
-          discussion.moderators.forEach((mod) =>
-            auditUniquePubkeys.add(mod.pubkey)
-          );
-        });
-
-        const auditProfilePromises = Array.from(auditUniquePubkeys).map(
+      if (uniquePubkeys.size > 0) {
+        const profilePromises = Array.from(uniquePubkeys).map(
           async (pubkey) => {
-            const profileEvent = await nostrService.getProfile(pubkey);
+            const profileEvent = await nostrService.getProfile([pubkey]);
             if (profileEvent) {
               try {
                 const profile = JSON.parse(profileEvent.content);
@@ -302,14 +258,11 @@ export default function DiscussionsPage() {
           }
         );
 
-        const auditProfileResults = await Promise.all(auditProfilePromises);
-        const auditProfilesMap = Object.fromEntries(auditProfileResults);
-
-        // プロファイルをメイン状態に統合（監査ログデータと合わせる）
-        setProfiles((prevProfiles) => ({
-          ...prevProfiles,
-          ...auditProfilesMap,
-        }));
+        const profileResults = await Promise.all(profilePromises);
+        const profilesMap = Object.fromEntries(profileResults);
+        setProfiles(profilesMap);
+      } else {
+        setProfiles({});
       }
 
       // 監査ログデータを設定
@@ -322,7 +275,7 @@ export default function DiscussionsPage() {
         posts: listPosts.length,
         approvals: listApprovals.length,
         referencedDiscussions: referencedDiscussions.length,
-        profilesLoaded: shouldLoadAuditProfiles,
+        profilesLoaded: uniquePubkeys.size,
       });
     } catch (error) {
       logger.error("Failed to load audit data:", error);

@@ -67,10 +67,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const loadProfile = useCallback(
     async (pubkey: string) => {
       try {
-        const profileEvent = await nostrService.getProfile([pubkey]);
+        const profileEvents = await nostrService.getProfile([pubkey]);
+        const profileEvent = profileEvents[0];
         if (profileEvent) {
           const profile = parseProfileEvent(profileEvent);
-          setUser((prev) => ({ ...prev, profile }));
+          if (profile) {
+            setUser((prev) => ({ ...prev, profile }));
+          }
         }
       } catch (error) {
         logger.error("Failed to load profile:", error);

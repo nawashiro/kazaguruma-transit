@@ -30,7 +30,7 @@
     "ml-kmeans": "^6.0.0",
     "ml-matrix": "^6.12.1",
     "ml-pca": "^4.1.1",
-    "next": "^15.3.1",
+    "next": "^15.3.8",
     "next-iron-session": "^4.2.0",
     "nosskey-sdk": "^0.0.2",
     "nostr-tools": "^2.16.1",

@@ -67,24 +67,34 @@ export default function DiscussionsPage() {
         discussionInfo.discussionId
       );
 
-      // 会話一覧管理用のデータを取得
-      const discussionListEvents = await nostrService.getEventsOnEose([
+      let listMetaFound = false;
+      const discussionMetaCleanup = nostrService.streamEventsOnEvent(
+        [
+          {
+            kinds: [34550],
+            authors: [discussionInfo.authorPubkey],
+            "#d": [discussionInfo.dTag],
+            limit: 1,
+          },
+        ],
         {
-          kinds: [34550],
-          authors: [discussionInfo.authorPubkey],
-          "#d": [discussionInfo.dTag],
-          limit: 1,
-        },
-      ]);
-
-      const discussionListMeta =
-        discussionListEvents.length > 0
-          ? parseDiscussionEvent(discussionListEvents[0])
-          : null;
-
-      if (!discussionListMeta) {
-        throw new Error("Discussion list metadata not found");
-      }
+          onEvent: (events) => {
+            const discussionListMeta = events
+              .map(parseDiscussionEvent)
+              .find((meta) => meta && meta.dTag === discussionInfo.dTag);
+            if (discussionListMeta) {
+              listMetaFound = true;
+            }
+          },
+          onEose: () => {
+            if (!listMetaFound) {
+              logger.error("Discussion list metadata not found");
+              setDiscussions([]);
+              setIsLoading(false);
+            }
+          },
+        }
+      );
 
       const updateFromApprovals = async (events: Event[]) => {
         approvalEventsRef.current = events;
@@ -147,6 +157,8 @@ export default function DiscussionsPage() {
           onEose: updateFromApprovals,
         }
       );
+      // Ensure meta stream cleaned after approvals start
+      discussionMetaCleanup();
     } catch (error) {
       logger.error("Failed to load discussion list:", error);
       setDiscussions([]);

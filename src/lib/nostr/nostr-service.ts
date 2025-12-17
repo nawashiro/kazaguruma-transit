@@ -81,8 +81,10 @@ export class NostrService {
   ): () => void {
     const collected: Event[] = [];
     let closed = false;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let subscription: { close: () => void } | undefined;
 
-    const subscription = this.pool.subscribeMany(this.relays, filters, {
+    subscription = this.pool.subscribeMany(this.relays, filters, {
       onevent: (event: Event) => {
         if (closed) return;
 
@@ -96,24 +98,28 @@ export class NostrService {
       oneose: () => {
         if (closed) return;
         closed = true;
-        clearTimeout(timeoutId);
-        subscription.close();
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        subscription?.close();
         onEose?.(dedupeAndSortEvents(collected));
       },
     });
 
-    const timeoutId = setTimeout(() => {
+    timeoutId = setTimeout(() => {
       if (closed) return;
       closed = true;
-      subscription.close();
+      subscription?.close();
       onEose?.(dedupeAndSortEvents(collected));
     }, timeoutMs ?? this.config.defaultTimeout);
 
     return () => {
       if (closed) return;
       closed = true;
-      clearTimeout(timeoutId);
-      subscription.close();
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      subscription?.close();
     };
   }
 

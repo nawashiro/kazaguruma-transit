@@ -51,6 +51,7 @@ export function BusStopDiscussion({
   const postsEventsRef = useRef<Event[]>([]);
   const approvalEventsRef = useRef<Event[]>([]);
   const approvalsStreamCleanupRef = useRef<() => void>();
+  const approvalsForDiscussionCleanupRef = useRef<() => void>();
 
   const { user, signEvent } = useAuth();
   const config = useMemo(() => getDiscussionConfig(), []);
@@ -64,72 +65,102 @@ export function BusStopDiscussion({
     [config.relays]
   );
 
-  const loadData = useCallback(async () => {
+  const updateFromEvents = useCallback(
+    async (
+      postEvents: Event[],
+      approvalsEvents: Event[],
+      fetchEvaluations: boolean
+    ) => {
+      const parsedApprovals = approvalsEvents
+        .map(parseApprovalEvent)
+        .filter((a): a is PostApproval => a !== null);
+
+      const parsedPosts = postEvents
+        .map((event) => parsePostEvent(event, parsedApprovals))
+        .filter((p): p is DiscussionPost => p !== null)
+        .filter(
+          (p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag)
+        );
+
+      setPosts(parsedPosts);
+      if (!fetchEvaluations || parsedPosts.length === 0) {
+        return;
+      }
+
+      const approvedPostIds = parsedPosts.map((p) => p.id);
+      const evaluationsEvents = await nostrService.getEvaluationsForPosts(
+        approvedPostIds
+      );
+
+      const parsedEvaluations = evaluationsEvents
+        .map(parseEvaluationEvent)
+        .filter((e): e is PostEvaluation => e !== null);
+      setEvaluations(parsedEvaluations);
+    },
+    [busStops, nostrService]
+  );
+
+  const startStreaming = useCallback(() => {
     if (busStops.length === 0) {
       return;
     }
 
     approvalsStreamCleanupRef.current?.();
+    approvalsForDiscussionCleanupRef.current?.();
+    postsEventsRef.current = [];
     approvalEventsRef.current = [];
 
-    try {
-      const postsEvents = await nostrService.getDiscussionPosts(
-        config.busStopDiscussionId,
-        busStops
-      );
-      postsEventsRef.current = postsEvents;
+    const postFilters =
+      busStops.length > 0
+        ? busStops.map((stop) => ({
+            kinds: [1111, 1],
+            "#a": [config.busStopDiscussionId],
+            "#t": [stop],
+          }))
+        : [
+            {
+              kinds: [1111, 1],
+              "#a": [config.busStopDiscussionId],
+            },
+          ];
 
-      const updateFromApprovals = async (
-        approvalsEvents: Event[],
-        fetchEvaluations: boolean
-      ) => {
-        const parsedApprovals = approvalsEvents
-          .map(parseApprovalEvent)
-          .filter((a): a is PostApproval => a !== null);
+    const postStream = nostrService.streamEventsOnEvent(postFilters, {
+      onEvent: (events) => {
+        postsEventsRef.current = events;
+        updateFromEvents(events, approvalEventsRef.current, false);
+      },
+      onEose: (events) => {
+        postsEventsRef.current = events;
+        updateFromEvents(events, approvalEventsRef.current, true);
+      },
+      timeoutMs: config.defaultTimeout ?? 5000,
+    });
 
-        const parsedPosts = postsEventsRef.current
-          .map((event) => parsePostEvent(event, parsedApprovals))
-          .filter((p): p is DiscussionPost => p !== null)
-          .filter(
-            (p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag)
-          );
+    const approvalsStream = nostrService.streamApprovals(
+      config.busStopDiscussionId,
+      {
+        onEvent: (events) => {
+          approvalEventsRef.current = events;
+          updateFromEvents(postsEventsRef.current, events, false);
+        },
+        onEose: (events) => {
+          approvalEventsRef.current = events;
+          updateFromEvents(postsEventsRef.current, events, true);
+        },
+        timeoutMs: config.defaultTimeout ?? 5000,
+      }
+    );
 
-        setPosts(parsedPosts);
-        if (fetchEvaluations) {
-          const approvedPostIds = parsedPosts.map((p) => p.id);
-          const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-            approvedPostIds
-          );
-
-          const parsedEvaluations = evaluationsEvents
-            .map(parseEvaluationEvent)
-            .filter((e): e is PostEvaluation => e !== null);
-          setEvaluations(parsedEvaluations);
-        }
-      };
-
-      // Start streaming approvals for fetched posts
-      approvalsStreamCleanupRef.current = nostrService.streamApprovalsForPosts(
-        postsEventsRef.current.map((event) => event.id),
-        config.busStopDiscussionId,
-        {
-          onEvent: (events) => {
-            approvalEventsRef.current = events;
-            updateFromApprovals(events, false);
-          },
-          onEose: (events) => {
-            approvalEventsRef.current = events;
-            updateFromApprovals(events, true);
-          },
-        }
-      );
-
-      // initial empty approvals
-      await updateFromApprovals([], false);
-    } catch (error) {
-      logger.error("Failed to load bus stop discussion:", error);
-    }
-  }, [busStops, config.busStopDiscussionId, nostrService]);
+    approvalsStreamCleanupRef.current = postStream;
+    approvalsForDiscussionCleanupRef.current = approvalsStream;
+    updateFromEvents([], [], false);
+  }, [
+    busStops,
+    config.busStopDiscussionId,
+    config.defaultTimeout,
+    nostrService,
+    updateFromEvents,
+  ]);
 
   const loadUserEvaluations = useCallback(async () => {
     if (!user.pubkey) return;
@@ -149,13 +180,14 @@ export function BusStopDiscussion({
 
   useEffect(() => {
     if (discussionsEnabled) {
-      loadData();
+      startStreaming();
     }
 
     return () => {
       approvalsStreamCleanupRef.current?.();
+      approvalsForDiscussionCleanupRef.current?.();
     };
-  }, [discussionsEnabled, loadData]);
+  }, [discussionsEnabled, startStreaming]);
 
   useEffect(() => {
     if (user.pubkey) {
@@ -194,7 +226,7 @@ export function BusStopDiscussion({
 
       setPostForm({ content: "", busStopTag: busStops[0] || "" });
       setShowPreview(false);
-      await loadData();
+      startStreaming();
     } catch (error) {
       logger.error("Failed to submit post:", error);
       setErrors(["投稿の送信に失敗しました"]);
@@ -224,7 +256,7 @@ export function BusStopDiscussion({
       }
 
       setUserEvaluations((prev) => new Set([...prev, postId]));
-      await loadData();
+      startStreaming();
     } catch (error) {
       logger.error("Failed to evaluate post:", error);
     }

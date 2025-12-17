@@ -72,59 +72,97 @@ export default function PostApprovalPage() {
     setPosts(parsedPosts);
   }, []);
 
-  const loadData = useCallback(async () => {
+  const startStreaming = useCallback(() => {
     if (!isDiscussionsEnabled() || !discussionInfo) return;
     setIsLoading(true);
     approvalStreamCleanupRef.current?.();
     approvalEventsRef.current = [];
     postsEventsRef.current = [];
-    try {
-      const [discussionEvents, postsEvents] = await Promise.all([
-        nostrService.getDiscussions(discussionInfo.authorPubkey),
-        nostrService.getDiscussionPosts(discussionInfo.discussionId),
-      ]);
 
-      postsEventsRef.current = postsEvents;
-
-      const parsedDiscussion = discussionEvents
-        .map(parseDiscussionEvent)
-        .find((d) => d && d.dTag === discussionInfo.dTag);
-
-      if (!parsedDiscussion) {
-        throw new Error("Discussion not found");
-      }
-
-      setDiscussion(parsedDiscussion);
-      rebuildFromEvents();
-
-      approvalStreamCleanupRef.current = nostrService.streamApprovals(
-        discussionInfo.discussionId,
+    const discussionStream = nostrService.streamEventsOnEvent(
+      [
         {
-          onEvent: (events) => {
-            approvalEventsRef.current = events;
-            rebuildFromEvents();
-          },
-          onEose: (events) => {
-            approvalEventsRef.current = events;
-            rebuildFromEvents();
+          kinds: [34550],
+          authors: [discussionInfo.authorPubkey],
+          "#d": [discussionInfo.dTag],
+          limit: 1,
+        },
+      ],
+      {
+        onEvent: (events) => {
+          const parsedDiscussion = events
+            .map(parseDiscussionEvent)
+            .find((d) => d && d.dTag === discussionInfo.dTag);
+          if (parsedDiscussion) {
+            setDiscussion(parsedDiscussion);
             setIsLoading(false);
-          },
-        }
-      );
-    } catch (error) {
-      logger.error("Failed to load discussion:", error);
-      setIsLoading(false);
-    }
-  }, [discussionInfo, rebuildFromEvents]);
+          }
+        },
+        onEose: (events) => {
+          const parsedDiscussion = events
+            .map(parseDiscussionEvent)
+            .find((d) => d && d.dTag === discussionInfo.dTag);
+          if (parsedDiscussion) {
+            setDiscussion(parsedDiscussion);
+          }
+          setIsLoading(false);
+        },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
+      }
+    );
+
+    const postsStream = nostrService.streamEventsOnEvent(
+      [
+        {
+          kinds: [1111, 1],
+          "#a": [discussionInfo.discussionId],
+        },
+      ],
+      {
+        onEvent: (events) => {
+          postsEventsRef.current = events;
+          rebuildFromEvents();
+        },
+        onEose: (events) => {
+          postsEventsRef.current = events;
+          rebuildFromEvents();
+          setIsLoading(false);
+        },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
+      }
+    );
+
+    const approvalsStream = nostrService.streamApprovals(
+      discussionInfo.discussionId,
+      {
+        onEvent: (events) => {
+          approvalEventsRef.current = events;
+          rebuildFromEvents();
+        },
+        onEose: (events) => {
+          approvalEventsRef.current = events;
+          rebuildFromEvents();
+          setIsLoading(false);
+        },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
+      }
+    );
+
+    approvalStreamCleanupRef.current = () => {
+      discussionStream();
+      postsStream();
+      approvalsStream();
+    };
+  }, [discussionInfo, nostrServiceConfig.defaultTimeout, rebuildFromEvents]);
 
   useEffect(() => {
     if (isDiscussionsEnabled() && discussionInfo) {
-      loadData();
+      startStreaming();
     }
     return () => {
       approvalStreamCleanupRef.current?.();
     };
-  }, [loadData, discussionInfo]);
+  }, [startStreaming, discussionInfo]);
 
   const handleApprovePost = async (post: DiscussionPost) => {
     if (!user.isLoggedIn || !discussion) return;

@@ -22,7 +22,8 @@ import { logger } from "@/utils/logger";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
 import { NostrEvent } from "nosskey-sdk";
 
-const nostrService = createNostrService(getNostrServiceConfig());
+const nostrServiceConfig = getNostrServiceConfig();
+const nostrService = createNostrService(nostrServiceConfig);
 
 interface AuditLogSectionProps {
   discussion: Discussion | null;
@@ -57,24 +58,25 @@ export const AuditLogSection = React.forwardRef<
   );
   const [localReferencedDiscussions, setLocalReferencedDiscussions] = useState<Discussion[]>([]);
   const approvalStreamCleanupRef = useRef<() => void>();
+  const postStreamCleanupRef = useRef<() => void>();
+  const approvalEventsRef = useRef<any[]>([]);
+  const postEventsRef = useRef<any[]>([]);
 
   // 個別会話ページ用のデータ取得
   const loadIndividualAuditData = useCallback(async () => {
     if (!discussionInfo || !discussion) return;
 
     approvalStreamCleanupRef.current?.();
+    postStreamCleanupRef.current?.();
     setIsAuditLoading(true);
 
-    const postsEvents = await nostrService.getDiscussionPosts(
-      discussionInfo.discussionId
-    );
-
     const updateFromApprovals = (approvalsEvents: any[]) => {
+      approvalEventsRef.current = approvalsEvents;
       const parsedApprovals = approvalsEvents
         .map(parseApprovalEvent)
         .filter((a): a is PostApproval => a !== null);
 
-      const parsedPosts = postsEvents
+      const parsedPosts = postEventsRef.current
         .map((event) => parsePostEvent(event, parsedApprovals))
         .filter((p): p is DiscussionPost => p !== null);
 
@@ -83,7 +85,25 @@ export const AuditLogSection = React.forwardRef<
       setLocalReferencedDiscussions(referencedDiscussions);
     };
 
-    updateFromApprovals([]);
+    const postsStream = nostrService.streamEventsOnEvent(
+      [
+        {
+          kinds: [1111, 1],
+          "#a": [discussionInfo.discussionId],
+        },
+      ],
+      {
+        onEvent: (events) => {
+          postEventsRef.current = events;
+          updateFromApprovals(approvalEventsRef.current);
+        },
+        onEose: (events) => {
+          postEventsRef.current = events;
+          updateFromApprovals(approvalEventsRef.current);
+        },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
+      }
+    );
 
     approvalStreamCleanupRef.current = nostrService.streamApprovals(
       discussionInfo.discussionId,
@@ -94,8 +114,12 @@ export const AuditLogSection = React.forwardRef<
           setIsAuditLoaded(true);
           setIsAuditLoading(false);
         },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
       }
     );
+
+    postStreamCleanupRef.current = postsStream;
+    updateFromApprovals([]);
 
     // 監査ログ用プロファイル取得（作成者・モデレーターのみ）
     const uniquePubkeys = new Set<string>();
@@ -143,18 +167,16 @@ export const AuditLogSection = React.forwardRef<
     }
 
     approvalStreamCleanupRef.current?.();
+    postStreamCleanupRef.current?.();
     setIsAuditLoading(true);
 
-    const discussionListPosts = await nostrService.getDiscussionPosts(
-      listDiscussionInfo.discussionId
-    );
-
     const updateFromApprovals = async (approvalsEvents: any[]) => {
+      approvalEventsRef.current = approvalsEvents;
       const listApprovals = approvalsEvents
         .map(parseApprovalEvent)
         .filter((a): a is PostApproval => a !== null);
 
-      const listPosts = discussionListPosts
+      const listPosts = postEventsRef.current
         .map((event) => parsePostEvent(event, listApprovals))
         .filter((p): p is DiscussionPost => p !== null);
 
@@ -215,6 +237,26 @@ export const AuditLogSection = React.forwardRef<
       }
     };
 
+    const postStream = nostrService.streamEventsOnEvent(
+      [
+        {
+          kinds: [1111, 1],
+          "#a": [listDiscussionInfo.discussionId],
+        },
+      ],
+      {
+        onEvent: (events) => {
+          postEventsRef.current = events;
+          updateFromApprovals(approvalEventsRef.current);
+        },
+        onEose: (events) => {
+          postEventsRef.current = events;
+          updateFromApprovals(approvalEventsRef.current);
+        },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
+      }
+    );
+
     approvalStreamCleanupRef.current = nostrService.streamApprovals(
       listDiscussionInfo.discussionId,
       {
@@ -224,8 +266,11 @@ export const AuditLogSection = React.forwardRef<
           setIsAuditLoaded(true);
           setIsAuditLoading(false);
         },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
       }
     );
+
+    postStreamCleanupRef.current = postStream;
 
     logger.info("Discussion list audit data streaming started");
   }, []);

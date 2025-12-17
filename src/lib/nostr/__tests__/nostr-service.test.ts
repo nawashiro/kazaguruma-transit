@@ -135,6 +135,25 @@ describe("NostrService event retrieval", () => {
     expect(onEose).toHaveBeenCalledTimes(1);
   });
 
+  it("streamEventsOnEvent survives synchronous EOSE", () => {
+    mockSubscribeMany.mockImplementation((_, __, handlers) => {
+      handlers.oneose?.();
+      return { close: mockClose };
+    });
+
+    const service = new NostrService(config);
+    const onEose = jest.fn();
+
+    expect(() =>
+      service.streamEventsOnEvent([{ kinds: [1] }], {
+        onEvent: jest.fn(),
+        onEose,
+      })
+    ).not.toThrow();
+
+    expect(onEose).toHaveBeenCalledWith([]);
+  });
+
   it("streamApprovals delegates to streaming with expected filters", () => {
     const service = new NostrService(config);
     const spy = jest

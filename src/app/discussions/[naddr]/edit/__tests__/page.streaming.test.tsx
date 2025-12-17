@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionEditPage from "../page";
+import type { StreamEventsOptions } from "@/lib/nostr/nostr-service";
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr-test" }),
@@ -90,12 +91,14 @@ describe("DiscussionEditPage streaming", () => {
   });
 
   it("streams discussion metadata and renders form without waiting for EOSE", async () => {
-    let streamHandlers: any;
+    let streamHandlers: StreamEventsOptions | undefined;
 
-    serviceMock.streamEventsOnEvent.mockImplementation((_filters, handlers) => {
+    serviceMock.streamEventsOnEvent.mockImplementation(
+      (_filters: unknown, handlers: StreamEventsOptions) => {
       streamHandlers = handlers;
       return () => {};
-    });
+    }
+    );
 
     render(<DiscussionEditPage />);
 
@@ -118,8 +121,13 @@ describe("DiscussionEditPage streaming", () => {
       sig: "sig",
     };
 
+    const handlers = streamHandlers;
+    if (!handlers) {
+      throw new Error("streamHandlers not initialized");
+    }
+
     await act(async () => {
-      streamHandlers.onEvent?.([mockEvent], mockEvent);
+      handlers.onEvent?.([mockEvent], mockEvent);
     });
 
     await waitFor(() =>

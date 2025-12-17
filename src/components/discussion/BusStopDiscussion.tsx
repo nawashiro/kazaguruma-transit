@@ -50,8 +50,8 @@ export function BusStopDiscussion({
   const [errors, setErrors] = useState<string[]>([]);
   const postsEventsRef = useRef<Event[]>([]);
   const approvalEventsRef = useRef<Event[]>([]);
-  const approvalsStreamCleanupRef = useRef<() => void>();
-  const approvalsForDiscussionCleanupRef = useRef<() => void>();
+  const approvalsStreamCleanupRef = useRef<(() => void) | null>(null);
+  const approvalsForDiscussionCleanupRef = useRef<(() => void) | null>(null);
 
   const { user, signEvent } = useAuth();
   const config = useMemo(() => getDiscussionConfig(), []);

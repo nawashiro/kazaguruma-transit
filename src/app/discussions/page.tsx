@@ -38,7 +38,7 @@ export default function DiscussionsPage() {
   // AuditLogSectionコンポーネントの参照
   const auditLogSectionRef = React.useRef<{ loadAuditData: () => void }>(null);
   const approvalEventsRef = useRef<Event[]>([]);
-  const approvalStreamCleanupRef = useRef<(() => void) | undefined>();
+  const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
 
   const { user } = useAuth();
 
@@ -48,7 +48,7 @@ export default function DiscussionsPage() {
     setIsLoading(true);
     approvalEventsRef.current = [];
     approvalStreamCleanupRef.current?.();
-    approvalStreamCleanupRef.current = undefined;
+    approvalStreamCleanupRef.current = null;
 
     try {
       const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
@@ -176,7 +176,7 @@ export default function DiscussionsPage() {
 
     return () => {
       approvalStreamCleanupRef.current?.();
-      approvalStreamCleanupRef.current = undefined;
+      approvalStreamCleanupRef.current = null;
     };
   }, [loadData]);
 

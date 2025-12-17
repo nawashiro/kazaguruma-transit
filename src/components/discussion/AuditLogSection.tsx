@@ -57,8 +57,8 @@ export const AuditLogSection = React.forwardRef<
     {}
   );
   const [localReferencedDiscussions, setLocalReferencedDiscussions] = useState<Discussion[]>([]);
-  const approvalStreamCleanupRef = useRef<() => void>();
-  const postStreamCleanupRef = useRef<() => void>();
+  const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
+  const postStreamCleanupRef = useRef<(() => void) | null>(null);
   const approvalEventsRef = useRef<any[]>([]);
   const postEventsRef = useRef<any[]>([]);
 

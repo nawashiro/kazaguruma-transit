@@ -36,7 +36,7 @@ export default function SettingsPage() {
     null
   );
   const [isDeletingDiscussion, setIsDeletingDiscussion] = useState(false);
-  const discussionsStreamCleanupRef = useRef<() => void>();
+  const discussionsStreamCleanupRef = useRef<(() => void) | null>(null);
 
   const { user, logout, isLoading, error, signEvent } = useAuth();
 
@@ -53,7 +53,7 @@ export default function SettingsPage() {
   const startStreamingDiscussions = useCallback(() => {
     if (!user.isLoggedIn || !user.pubkey || !isDiscussionsEnabled()) {
       discussionsStreamCleanupRef.current?.();
-      discussionsStreamCleanupRef.current = undefined;
+      discussionsStreamCleanupRef.current = null;
       setIsLoadingDiscussions(false);
       setMyDiscussions([]);
       return;
@@ -93,7 +93,7 @@ export default function SettingsPage() {
 
     return () => {
       discussionsStreamCleanupRef.current?.();
-      discussionsStreamCleanupRef.current = undefined;
+      discussionsStreamCleanupRef.current = null;
     };
   }, [startStreamingDiscussions]);
 

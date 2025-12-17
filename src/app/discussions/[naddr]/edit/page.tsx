@@ -54,7 +54,7 @@ export default function DiscussionEditPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string>("");
-  const discussionStreamCleanupRef = useRef<() => void>();
+  const discussionStreamCleanupRef = useRef<(() => void) | null>(null);
 
   const discussionInfo = useMemo(() => {
     if (!naddrParam) return null;
@@ -129,7 +129,7 @@ export default function DiscussionEditPage() {
 
     return () => {
       discussionStreamCleanupRef.current?.();
-      discussionStreamCleanupRef.current = undefined;
+      discussionStreamCleanupRef.current = null;
     };
   }, [startStreamingDiscussion]);
 

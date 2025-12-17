@@ -34,7 +34,8 @@ import { CheckBadgeIcon } from "@heroicons/react/24/outline";
 import type { Event } from "nostr-tools";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
-const nostrService = createNostrService(getNostrServiceConfig());
+const nostrServiceConfig = getNostrServiceConfig();
+const nostrService = createNostrService(nostrServiceConfig);
 
 export default function PostApprovalPage() {
   const params = useParams();
@@ -49,7 +50,7 @@ export default function PostApprovalPage() {
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
   const postsEventsRef = useRef<Event[]>([]);
   const approvalEventsRef = useRef<Event[]>([]);
-  const approvalStreamCleanupRef = useRef<() => void>();
+  const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
 
   const { user, signEvent } = useAuth();
 

@@ -27,16 +27,20 @@ jest.mock("@/lib/nostr/naddr-utils", () => ({
   }),
 }));
 
-const serviceMock = {
-  streamEventsOnEvent: jest.fn(() => () => {}),
-  streamApprovals: jest.fn(() => () => {}),
-  getDiscussionPosts: jest.fn(),
-  getDiscussions: jest.fn(),
-};
+jest.mock("@/lib/nostr/nostr-service", () => {
+  const serviceMock = {
+    streamEventsOnEvent: jest.fn(() => () => {}),
+    streamApprovals: jest.fn(() => () => {}),
+    getDiscussionPosts: jest.fn(),
+    getDiscussions: jest.fn(),
+  };
+  return {
+    createNostrService: () => serviceMock,
+    __mock: serviceMock,
+  };
+});
 
-jest.mock("@/lib/nostr/nostr-service", () => ({
-  createNostrService: () => serviceMock,
-}));
+const { __mock: serviceMock } = jest.requireMock("@/lib/nostr/nostr-service");
 
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseDiscussionEvent: () => ({

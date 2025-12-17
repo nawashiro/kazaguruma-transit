@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import SettingsPage from "../page";
+import type { StreamEventsOptions } from "@/lib/nostr/nostr-service";
 
 jest.mock("next/link", () => ({
   __esModule: true,
@@ -89,12 +90,14 @@ describe("SettingsPage streaming discussions", () => {
   });
 
   it("streams user discussions and renders on first event without waiting for EOSE", async () => {
-    let streamHandlers: any;
+    let streamHandlers: StreamEventsOptions | undefined;
 
-    serviceMock.streamEventsOnEvent.mockImplementation((_filters, handlers) => {
-      streamHandlers = handlers;
-      return () => {};
-    });
+    serviceMock.streamEventsOnEvent.mockImplementation(
+      (_filters: unknown, handlers: StreamEventsOptions) => {
+        streamHandlers = handlers;
+        return () => {};
+      }
+    );
 
     expect(typeof SettingsPage).toBe("function");
 
@@ -118,8 +121,13 @@ describe("SettingsPage streaming discussions", () => {
       sig: "sig",
     };
 
+    const handlers = streamHandlers;
+    if (!handlers) {
+      throw new Error("streamHandlers not initialized");
+    }
+
     await act(async () => {
-      streamHandlers.onEvent?.([mockEvent], mockEvent);
+      handlers.onEvent?.([mockEvent], mockEvent);
     });
 
     await waitFor(() =>

@@ -1,4 +1,5 @@
 import type { NostrServiceConfig } from "@/lib/nostr/nostr-service";
+import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import { getAdminPubkeyHex } from "../nostr/nostr-utils";
 
 const DISCUSSION_KIND = 34550;
@@ -8,6 +9,7 @@ export interface DiscussionConfig {
   adminPubkey: string;
   busStopDiscussionId: string;
   moderators: string[];
+  defaultTimeout: number;
   relays: {
     url: string;
     read: boolean;
@@ -17,6 +19,32 @@ export interface DiscussionConfig {
 
 export function buildDiscussionId(adminPubkey: string, idPart: string): string {
   return `${DISCUSSION_KIND}:${adminPubkey}:${idPart}`;
+}
+
+function resolveDiscussionId(
+  discussionIdOrNaddr: string,
+  adminPubkey: string
+): string {
+  if (!discussionIdOrNaddr) return "";
+
+  if (discussionIdOrNaddr.startsWith("naddr1")) {
+    const discussionInfo = extractDiscussionFromNaddr(discussionIdOrNaddr);
+    if (!discussionInfo) {
+      throw new Error("Invalid discussion naddr format");
+    }
+    return discussionInfo.discussionId;
+  }
+
+  // Already in kind:pubkey:dTag format
+  if (discussionIdOrNaddr.includes(":")) {
+    return discussionIdOrNaddr;
+  }
+
+  if (!adminPubkey) {
+    return "";
+  }
+
+  return buildDiscussionId(adminPubkey, discussionIdOrNaddr);
 }
 
 function parseRelays(relayString: string) {
@@ -33,14 +61,14 @@ function parseRelays(relayString: string) {
 
 export function getBusStopDiscussionConfig(): { naddr: string | null } {
   const naddrString = process.env.NEXT_PUBLIC_BUS_STOP_DISCUSSION_ID;
-  
+
   if (!naddrString) {
     return { naddr: null };
   }
 
   // Validate naddr format
-  if (!naddrString.startsWith('naddr1')) {
-    throw new Error('Invalid naddr format');
+  if (!naddrString.startsWith("naddr1")) {
+    throw new Error("Invalid naddr format");
   }
 
   return { naddr: naddrString };
@@ -48,14 +76,14 @@ export function getBusStopDiscussionConfig(): { naddr: string | null } {
 
 export function getDiscussionListConfig(): { naddr: string | null; kind: number; enabled: boolean } {
   const naddrString = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
-  
+
   if (!naddrString) {
     return { naddr: null, kind: 34550, enabled: false };
   }
 
   // Validate naddr format
-  if (!naddrString.startsWith('naddr1')) {
-    throw new Error('Invalid naddr format for discussion list');
+  if (!naddrString.startsWith("naddr1")) {
+    throw new Error("Invalid naddr format for discussion list");
   }
 
   return { naddr: naddrString, kind: 34550, enabled: true };
@@ -63,7 +91,7 @@ export function getDiscussionListConfig(): { naddr: string | null; kind: number;
 
 export function getDiscussionConfig(): DiscussionConfig {
   const enabled = process.env.NEXT_PUBLIC_DISCUSSIONS_ENABLED === "true";
-  const adminPubkey = process.env.NEXT_PUBLIC_ADMIN_PUBKEY || "";
+  const adminPubkey = getAdminPubkeyHex();
   const busStopDiscussionIdPart =
     process.env.NEXT_PUBLIC_BUS_STOP_DISCUSSION_ID || "";
   // NEXT_PUBLIC_MODERATORS removed - moderators are now managed per discussion
@@ -71,13 +99,20 @@ export function getDiscussionConfig(): DiscussionConfig {
     process.env.NEXT_PUBLIC_NOSTR_RELAYS ||
     "wss://relay.damus.io,wss://relay.nostr.band,wss://nos.lol";
 
+  const busStopDiscussionId = resolveDiscussionId(
+    busStopDiscussionIdPart,
+    adminPubkey
+  );
+
+  const parsedTimeout = Number(process.env.NEXT_PUBLIC_NOSTR_TIMEOUT_MS);
+  const defaultTimeout = Number.isFinite(parsedTimeout) ? parsedTimeout : 5000;
+
   return {
     enabled,
     adminPubkey,
-    busStopDiscussionId: adminPubkey
-      ? buildDiscussionId(getAdminPubkeyHex(), busStopDiscussionIdPart)
-      : "",
+    busStopDiscussionId,
     moderators: [], // Global moderators removed
+    defaultTimeout,
     relays: parseRelays(relayString),
   };
 }
@@ -87,7 +122,7 @@ export function getNostrServiceConfig(): NostrServiceConfig {
 
   return {
     relays: config.relays,
-    defaultTimeout: 5000,
+    defaultTimeout: config.defaultTimeout,
   };
 }
 

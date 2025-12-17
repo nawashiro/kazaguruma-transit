@@ -3,6 +3,21 @@ import type { PWKBlob } from "nosskey-sdk";
 import { logger } from "@/utils/logger";
 import { naddrDecode } from "@/lib/nostr/naddr-utils";
 
+const normalizeEvents = (events: Event[]): Event[] => {
+  const eventsById = new Map<string, Event>();
+
+  for (const event of events) {
+    const existing = eventsById.get(event.id);
+    if (!existing || event.created_at > existing.created_at) {
+      eventsById.set(event.id, event);
+    }
+  }
+
+  return Array.from(eventsById.values()).sort(
+    (a, b) => b.created_at - a.created_at
+  );
+};
+
 export interface NostrRelayConfig {
   url: string;
   read: boolean;
@@ -27,39 +42,69 @@ export class NostrService {
       .map((relay) => relay.url);
   }
 
-  async getEvents(filters: Filter[]): Promise<Event[]> {
+  async getOnEose(filters: Filter[], timeoutMs?: number): Promise<Event[]> {
     try {
-      // Handle multiple filters by making multiple queries and combining results
-      const allEvents: Event[] = [];
-      for (const filter of filters) {
-        const events = await this.pool.querySync(this.relays, filter);
-        allEvents.push(...(events || []));
-      }
-      // Remove duplicates by ID
-      const uniqueEvents = allEvents.filter(
-        (event, index, self) =>
-          self.findIndex((e) => e.id === event.id) === index
-      );
-      return uniqueEvents;
+      const collected: Event[] = [];
+
+      return await new Promise((resolve) => {
+        const subscription = this.pool.subscribeMany(this.relays, filters, {
+          onevent: (event) => {
+            collected.push(event);
+          },
+          oneose: () => {
+            clearTimeout(timer);
+            subscription.close();
+            resolve(normalizeEvents(collected));
+          },
+        });
+
+        const timer = setTimeout(() => {
+          subscription.close();
+          resolve(normalizeEvents(collected));
+        }, timeoutMs ?? this.config.defaultTimeout);
+      });
     } catch (error) {
-      logger.error("Failed to get events:", error);
+      logger.error("Failed to get events on EOSE:", error);
       return [];
     }
   }
 
-  async subscribeToEvents(
+  async getOnEvent(
     filters: Filter[],
-    onEvent: (event: Event) => void,
-    onEose?: () => void
+    onEvent: (events: Event[]) => void,
+    options: { timeoutMs?: number; onEose?: (events: Event[]) => void } = {}
   ): Promise<() => void> {
+    const collected: Event[] = [];
+    const timeout = options.timeoutMs ?? this.config.defaultTimeout;
+
     const subscription = this.pool.subscribeMany(this.relays, filters, {
-      onevent: onEvent,
-      oneose: onEose,
+      onevent: (event) => {
+        collected.push(event);
+        const normalized = normalizeEvents(collected);
+        collected.length = 0;
+        collected.push(...normalized);
+        onEvent([...normalized]);
+      },
+      oneose: () => {
+        clearTimeout(timer);
+        if (options.onEose) {
+          options.onEose(normalizeEvents(collected));
+        }
+      },
     });
 
+    const timer = setTimeout(() => {
+      subscription.close();
+    }, timeout);
+
     return () => {
+      clearTimeout(timer);
       subscription.close();
     };
+  }
+
+  async getEvents(filters: Filter[]): Promise<Event[]> {
+    return this.getOnEose(filters);
   }
 
   async publishEvent(
@@ -184,13 +229,30 @@ export class NostrService {
     return this.getEvents(filters);
   }
 
-  async getApprovals(discussionId: string): Promise<Event[]> {
-    return this.getEvents([
+  async getApprovalsOnEose(discussionId: string): Promise<Event[]> {
+    return this.getOnEose([
       {
         kinds: [4550],
         "#a": [discussionId],
       },
     ]);
+  }
+
+  async streamApprovals(
+    discussionId: string,
+    onEvent: (events: Event[]) => void,
+    options: { timeoutMs?: number; onEose?: (events: Event[]) => void } = {}
+  ): Promise<() => void> {
+    return this.getOnEvent(
+      [
+        {
+          kinds: [4550],
+          "#a": [discussionId],
+        },
+      ],
+      onEvent,
+      options
+    );
   }
 
   async getApprovalsForPosts(

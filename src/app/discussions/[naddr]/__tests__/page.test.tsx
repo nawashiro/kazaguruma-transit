@@ -27,7 +27,7 @@ jest.mock('@/lib/nostr/nostr-service', () => ({
       created_at: Math.floor(Date.now() / 1000),
     }]),
     getDiscussionPosts: jest.fn().mockResolvedValue([]),
-    getApprovals: jest.fn().mockResolvedValue([]),
+    getApprovalsOnEose: jest.fn().mockResolvedValue([]),
     getEvaluationsForPosts: jest.fn().mockResolvedValue([]),
     getProfile: jest.fn().mockResolvedValue(null),
   }),

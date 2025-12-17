@@ -3,7 +3,8 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import type { Event } from "nostr-tools";
 import Link from "next/link";
 import { CheckBadgeIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -40,6 +41,7 @@ export default function DiscussionManagePage() {
     Discussion[]
   >([]);
   const [isLoading, setIsLoading] = useState(true);
+  const approvalsStreamCleanup = useRef<(() => void) | null>(null);
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
@@ -133,12 +135,10 @@ export default function DiscussionManagePage() {
     if (!isDiscussionsEnabled() || !discussionInfo) return;
     setIsLoading(true);
     try {
-      const [discussionEvents, postsEvents, approvalsEvents] =
-        await Promise.all([
-          nostrService.getDiscussions(discussionInfo.authorPubkey),
-          nostrService.getDiscussionPosts(discussionInfo.discussionId),
-          nostrService.getApprovals(discussionInfo.discussionId),
-        ]);
+      const [discussionEvents, postsEvents] = await Promise.all([
+        nostrService.getDiscussions(discussionInfo.authorPubkey),
+        nostrService.getDiscussionPosts(discussionInfo.discussionId),
+      ]);
 
       const parsedDiscussion = discussionEvents
         .map(parseDiscussionEvent)
@@ -148,12 +148,8 @@ export default function DiscussionManagePage() {
         throw new Error("Discussion not found");
       }
 
-      const parsedApprovals = approvalsEvents
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
       const parsedPosts = postsEvents
-        .map((event) => parsePostEvent(event, parsedApprovals))
+        .map((event) => parsePostEvent(event, []))
         .filter((p): p is DiscussionPost => p !== null)
         .sort((a, b) => b.createdAt - a.createdAt);
 
@@ -181,7 +177,40 @@ export default function DiscussionManagePage() {
 
       setDiscussion(parsedDiscussion);
       setPosts(parsedPosts);
-      setApprovals(parsedApprovals);
+      approvalsStreamCleanup.current?.();
+      approvalsStreamCleanup.current = await nostrService.streamApprovals(
+        discussionInfo.discussionId,
+        (approvalEvents: Event[]) => {
+          const parsedApprovals = approvalEvents
+            .map(parseApprovalEvent)
+            .filter((a): a is PostApproval => a !== null);
+
+          setApprovals(parsedApprovals);
+          setPosts((prev) =>
+            prev
+              .map((event) => parsePostEvent(event.event ?? event, parsedApprovals))
+              .filter((p): p is DiscussionPost => p !== null)
+              .sort((a, b) => b.createdAt - a.createdAt)
+          );
+        },
+        {
+          onEose: (approvalEvents: Event[]) => {
+            const parsedApprovals = approvalEvents
+              .map(parseApprovalEvent)
+              .filter((a): a is PostApproval => a !== null);
+
+            setApprovals(parsedApprovals);
+            setPosts((prev) =>
+              prev
+                .map((event) =>
+                  parsePostEvent(event.event ?? event, parsedApprovals)
+                )
+                .filter((p): p is DiscussionPost => p !== null)
+                .sort((a, b) => b.createdAt - a.createdAt)
+            );
+          },
+        }
+      );
       setReferencedDiscussions(referencedDiscussionsData);
     } catch (error) {
       logger.error("Failed to load discussion:", error);
@@ -196,6 +225,12 @@ export default function DiscussionManagePage() {
       loadData();
     }
   }, [loadData, discussionInfo]);
+
+  useEffect(() => {
+    return () => {
+      approvalsStreamCleanup.current?.();
+    };
+  }, []);
 
   const handleApprovePost = async (post: DiscussionPost) => {
     if (!user.isLoggedIn || !discussion) return;
@@ -324,6 +359,16 @@ export default function DiscussionManagePage() {
           <h1 className="text-2xl font-bold mb-4">投稿管理</h1>
           <p className="text-gray-600">この機能は現在利用できません。</p>
         </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !discussion) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <p className="text-center text-gray-600 dark:text-gray-300">
+          ロード中です…
+        </p>
       </div>
     );
   }

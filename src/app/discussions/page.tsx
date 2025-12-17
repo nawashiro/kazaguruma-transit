@@ -4,6 +4,7 @@
 export const dynamic = "force-dynamic";
 
 import React, { useState, useEffect, useCallback } from "react";
+import type { Event } from "nostr-tools";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
@@ -32,6 +33,9 @@ const nostrService = createNostrService(getNostrServiceConfig());
 export default function DiscussionsPage() {
   const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
+  const approvalsRef = React.useRef<PostApproval[]>([]);
+  const discussionRefs = React.useRef<Map<string, Discussion>>(new Map());
+  const streamCleanup = React.useRef<(() => void) | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // AuditLogSectionコンポーネントの参照
@@ -61,20 +65,14 @@ export default function DiscussionsPage() {
         discussionInfo.discussionId
       );
 
-      // 会話一覧管理用のデータを取得
-      const [discussionListEvents, discussionListApprovals] = await Promise.all(
-        [
-          nostrService.getEvents([
-            {
-              kinds: [34550],
-              authors: [discussionInfo.authorPubkey],
-              "#d": [discussionInfo.dTag],
-              limit: 1,
-            },
-          ]),
-          nostrService.getApprovals(discussionInfo.discussionId),
-        ]
-      );
+      const discussionListEvents = await nostrService.getEvents([
+        {
+          kinds: [34550],
+          authors: [discussionInfo.authorPubkey],
+          "#d": [discussionInfo.dTag],
+          limit: 1,
+        },
+      ]);
 
       const discussionListMeta =
         discussionListEvents.length > 0
@@ -85,53 +83,78 @@ export default function DiscussionsPage() {
         throw new Error("Discussion list metadata not found");
       }
 
-      // 承認されたkind:1111投稿を特定
-      const listApprovals = discussionListApprovals
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
+      const handleApprovalsUpdate = async (approvalEvents: Event[]) => {
+        const listApprovals = approvalEvents
+          .map(parseApprovalEvent)
+          .filter((a): a is PostApproval => a !== null);
 
-      // 承認イベントから投稿データを復元
-      const listPosts = listApprovals
-        .map((approval) => {
-          try {
-            const approvedPost = JSON.parse(approval.event.content);
-            return parsePostEvent(approvedPost, [approval]);
-          } catch {
-            return null;
-          }
-        })
-        .filter((p): p is DiscussionPost => p !== null)
-        .sort((a, b) => b.createdAt - a.createdAt);
+        approvalsRef.current = listApprovals;
 
-      // 承認されたkind:1111のqタグから個別会話のnaddrを取得（重複排除）
-      const individualDiscussionRefs = new Set<string>();
-      listPosts.forEach((post) => {
-        const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
-        qTags.forEach((qTag) => {
-          if (qTag[1] && qTag[1].startsWith("34550:")) {
-            individualDiscussionRefs.add(qTag[1]);
-          }
+        const listPosts = listApprovals
+          .map((approval) => {
+            try {
+              const approvedPost = JSON.parse(approval.event.content);
+              return parsePostEvent(approvedPost, [approval]);
+            } catch {
+              return null;
+            }
+          })
+          .filter((p): p is DiscussionPost => p !== null)
+          .sort((a, b) => b.createdAt - a.createdAt);
+
+        const individualDiscussionRefs = new Set<string>();
+        listPosts.forEach((post) => {
+          const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
+          qTags.forEach((qTag) => {
+            if (qTag[1] && qTag[1].startsWith("34550:")) {
+              individualDiscussionRefs.add(qTag[1]);
+            }
+          });
         });
-      });
 
-      // 個別会話のkind:34550を取得
-      const individualDiscussions =
-        await nostrService.getReferencedUserDiscussions(
-          Array.from(individualDiscussionRefs)
+        const missingRefs = Array.from(individualDiscussionRefs).filter(
+          (ref) => !discussionRefs.current.has(ref)
         );
 
-      const parsedIndividualDiscussions = individualDiscussions
-        .map(parseDiscussionEvent)
-        .filter((d): d is Discussion => d !== null)
-        .sort((a, b) => b.createdAt - a.createdAt);
+        if (missingRefs.length > 0) {
+          const individualDiscussions =
+            await nostrService.getReferencedUserDiscussions(missingRefs);
 
-      // 会話一覧データを設定
-      setDiscussions(parsedIndividualDiscussions);
+          individualDiscussions
+            .map(parseDiscussionEvent)
+            .filter((d): d is Discussion => d !== null)
+            .forEach((d) => {
+              discussionRefs.current.set(
+                `${d.kind}:${d.authorPubkey}:${d.dTag}`,
+                d
+              );
+            });
+        }
 
-      logger.info("Individual discussions loaded:", {
-        count: parsedIndividualDiscussions.length,
-        discussions: parsedIndividualDiscussions.map((d) => d.title),
-      });
+        const parsedIndividualDiscussions = Array.from(
+          discussionRefs.current.values()
+        ).sort((a, b) => b.createdAt - a.createdAt);
+
+        setDiscussions(parsedIndividualDiscussions);
+
+        logger.info("Individual discussions updated:", {
+          count: parsedIndividualDiscussions.length,
+          discussions: parsedIndividualDiscussions.map((d) => d.title),
+        });
+      };
+
+      streamCleanup.current?.();
+      streamCleanup.current = await nostrService.streamApprovals(
+        discussionInfo.discussionId,
+        (events) => {
+          handleApprovalsUpdate(events);
+        },
+        {
+          onEose: (events) => {
+            handleApprovalsUpdate(events);
+          },
+        }
+      );
     } catch (error) {
       logger.error("Failed to load discussion list:", error);
     } finally {
@@ -145,6 +168,12 @@ export default function DiscussionsPage() {
       loadData();
     }
   }, [loadData]);
+
+  useEffect(() => {
+    return () => {
+      streamCleanup.current?.();
+    };
+  }, []);
 
   // ディスカッション機能が有効になっているか確認し、それに応じて表示を切り替える
   if (!isDiscussionsEnabled()) {

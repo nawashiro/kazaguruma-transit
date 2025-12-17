@@ -3,7 +3,7 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
@@ -21,8 +21,10 @@ import { LoginModal } from "@/components/discussion/LoginModal";
 import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
+import type { Event } from "nostr-tools";
 
-const nostrService = createNostrService(getNostrServiceConfig());
+const nostrServiceConfig = getNostrServiceConfig();
+const nostrService = createNostrService(nostrServiceConfig);
 
 export default function SettingsPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -34,34 +36,66 @@ export default function SettingsPage() {
     null
   );
   const [isDeletingDiscussion, setIsDeletingDiscussion] = useState(false);
+  const discussionsStreamCleanupRef = useRef<() => void>();
 
   const { user, logout, isLoading, error, signEvent } = useAuth();
 
 
-  const loadMyDiscussions = useCallback(async () => {
-    if (!user.isLoggedIn || !user.pubkey) return;
+  const updateDiscussions = useCallback((events: Event[]) => {
+    const parsedDiscussions = events
+      .map(parseDiscussionEvent)
+      .filter((d): d is Discussion => d !== null)
+      .sort((a, b) => b.createdAt - a.createdAt);
 
-    setIsLoadingDiscussions(true);
-    try {
-      const discussionEvents = await nostrService.getDiscussions(user.pubkey);
-      const parsedDiscussions = discussionEvents
-        .map(parseDiscussionEvent)
-        .filter((d): d is Discussion => d !== null)
-        .sort((a, b) => b.createdAt - a.createdAt);
+    setMyDiscussions(parsedDiscussions);
+  }, []);
 
-      setMyDiscussions(parsedDiscussions);
-    } catch (error) {
-      logger.error("Failed to load user discussions:", error);
-    } finally {
+  const startStreamingDiscussions = useCallback(() => {
+    if (!user.isLoggedIn || !user.pubkey || !isDiscussionsEnabled()) {
+      discussionsStreamCleanupRef.current?.();
+      discussionsStreamCleanupRef.current = undefined;
       setIsLoadingDiscussions(false);
+      setMyDiscussions([]);
+      return;
     }
-  }, [user.isLoggedIn, user.pubkey]);
+
+    discussionsStreamCleanupRef.current?.();
+    setIsLoadingDiscussions(true);
+
+    discussionsStreamCleanupRef.current = nostrService.streamEventsOnEvent(
+      [
+        {
+          kinds: [34550],
+          authors: [user.pubkey],
+        },
+      ],
+      {
+        onEvent: (events) => {
+          updateDiscussions(events);
+          setIsLoadingDiscussions(false);
+        },
+        onEose: (events) => {
+          updateDiscussions(events);
+          setIsLoadingDiscussions(false);
+        },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
+      }
+    );
+  }, [
+    updateDiscussions,
+    user.isLoggedIn,
+    user.pubkey,
+    nostrServiceConfig.defaultTimeout,
+  ]);
 
   useEffect(() => {
-    if (user.isLoggedIn && isDiscussionsEnabled()) {
-      loadMyDiscussions();
-    }
-  }, [user.isLoggedIn, loadMyDiscussions]);
+    startStreamingDiscussions();
+
+    return () => {
+      discussionsStreamCleanupRef.current?.();
+      discussionsStreamCleanupRef.current = undefined;
+    };
+  }, [startStreamingDiscussions]);
 
   const handleDeleteDiscussion = async (discussionId: string) => {
     if (!user.isLoggedIn || !signEvent) return;

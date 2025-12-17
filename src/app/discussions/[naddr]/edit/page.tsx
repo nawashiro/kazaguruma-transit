@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
@@ -22,9 +22,11 @@ import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
+import type { Event } from "nostr-tools";
 
 // const ADMIN_PUBKEY = getAdminPubkeyHex(); // eslint-disable-line @typescript-eslint/no-unused-vars
-const nostrService = createNostrService(getNostrServiceConfig());
+const nostrServiceConfig = getNostrServiceConfig();
+const nostrService = createNostrService(nostrServiceConfig);
 
 interface EditFormData {
   title: string;
@@ -52,6 +54,7 @@ export default function DiscussionEditPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string>("");
+  const discussionStreamCleanupRef = useRef<() => void>();
 
   const discussionInfo = useMemo(() => {
     if (!naddrParam) return null;
@@ -62,20 +65,16 @@ export default function DiscussionEditPage() {
     return discussion && user.pubkey === discussion.authorPubkey;
   }, [discussion, user.pubkey]);
 
-  const loadDiscussion = useCallback(async () => {
-    if (!isDiscussionsEnabled() || !discussionInfo) return;
+  const applyDiscussionEvents = useCallback(
+    (events: Event[]) => {
+      if (!discussionInfo) return;
 
-    setIsLoading(true);
-    try {
-      const discussionEvents = await nostrService.getDiscussions(
-        discussionInfo.authorPubkey
-      );
-      const parsedDiscussion = discussionEvents
+      const parsedDiscussion = events
         .map(parseDiscussionEvent)
         .find((d) => d && d.dTag === discussionInfo.dTag);
 
       if (!parsedDiscussion) {
-        throw new Error("Discussion not found");
+        return;
       }
 
       setDiscussion(parsedDiscussion);
@@ -84,18 +83,55 @@ export default function DiscussionEditPage() {
         description: parsedDiscussion.description,
         moderators: parsedDiscussion.moderators.map((m) => m.pubkey), // npub形式に変換が必要
       });
-    } catch (error) {
-      logger.error("Failed to load discussion:", error);
-    } finally {
+    },
+    [discussionInfo]
+  );
+
+  const startStreamingDiscussion = useCallback(() => {
+    discussionStreamCleanupRef.current?.();
+
+    if (!isDiscussionsEnabled() || !discussionInfo) {
       setIsLoading(false);
+      return;
     }
-  }, [discussionInfo]);
+
+    setIsLoading(true);
+
+    discussionStreamCleanupRef.current = nostrService.streamEventsOnEvent(
+      [
+        {
+          kinds: [34550],
+          authors: [discussionInfo.authorPubkey],
+          "#d": [discussionInfo.dTag],
+          limit: 1,
+        },
+      ],
+      {
+        onEvent: (events) => {
+          applyDiscussionEvents(events);
+          setIsLoading(false);
+        },
+        onEose: (events) => {
+          applyDiscussionEvents(events);
+          setIsLoading(false);
+        },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
+      }
+    );
+  }, [
+    discussionInfo,
+    applyDiscussionEvents,
+    nostrServiceConfig.defaultTimeout,
+  ]);
 
   useEffect(() => {
-    if (discussionInfo) {
-      loadDiscussion();
-    }
-  }, [loadDiscussion, discussionInfo]);
+    startStreamingDiscussion();
+
+    return () => {
+      discussionStreamCleanupRef.current?.();
+      discussionStreamCleanupRef.current = undefined;
+    };
+  }, [startStreamingDiscussion]);
 
   const handleSave = async () => {
     if (!user.isLoggedIn) {

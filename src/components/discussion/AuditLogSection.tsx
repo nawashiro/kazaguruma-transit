@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { AuditTimeline } from "@/components/discussion/AuditTimeline";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
@@ -56,44 +56,59 @@ export const AuditLogSection = React.forwardRef<
     {}
   );
   const [localReferencedDiscussions, setLocalReferencedDiscussions] = useState<Discussion[]>([]);
+  const approvalStreamCleanupRef = useRef<() => void>();
 
   // 個別会話ページ用のデータ取得
   const loadIndividualAuditData = useCallback(async () => {
     if (!discussionInfo || !discussion) return;
 
-    const [postsEvents, approvalsEvents] = await Promise.all([
-      nostrService.getDiscussionPosts(discussionInfo.discussionId),
-      nostrService.getApprovals(discussionInfo.discussionId),
-    ]);
+    approvalStreamCleanupRef.current?.();
+    setIsAuditLoading(true);
 
-    const parsedApprovals = approvalsEvents
-      .map(parseApprovalEvent)
-      .filter((a): a is PostApproval => a !== null);
+    const postsEvents = await nostrService.getDiscussionPosts(
+      discussionInfo.discussionId
+    );
 
-    const parsedPosts = postsEvents
-      .map((event) => parsePostEvent(event, parsedApprovals))
-      .filter((p): p is DiscussionPost => p !== null);
+    const updateFromApprovals = (approvalsEvents: any[]) => {
+      const parsedApprovals = approvalsEvents
+        .map(parseApprovalEvent)
+        .filter((a): a is PostApproval => a !== null);
 
-    setAuditPosts(parsedPosts);
-    setAuditApprovals(parsedApprovals);
-    setLocalReferencedDiscussions(referencedDiscussions);
+      const parsedPosts = postsEvents
+        .map((event) => parsePostEvent(event, parsedApprovals))
+        .filter((p): p is DiscussionPost => p !== null);
+
+      setAuditPosts(parsedPosts);
+      setAuditApprovals(parsedApprovals);
+      setLocalReferencedDiscussions(referencedDiscussions);
+    };
+
+    updateFromApprovals([]);
+
+    approvalStreamCleanupRef.current = nostrService.streamApprovals(
+      discussionInfo.discussionId,
+      {
+        onEvent: updateFromApprovals,
+        onEose: (events) => {
+          updateFromApprovals(events);
+          setIsAuditLoaded(true);
+          setIsAuditLoading(false);
+        },
+      }
+    );
 
     // 監査ログ用プロファイル取得（作成者・モデレーターのみ）
     const uniquePubkeys = new Set<string>();
 
-    // 会話の作成者とモデレーターのプロファイルを収集
     if (discussion) {
       uniquePubkeys.add(discussion.authorPubkey);
       discussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
     }
 
-    // 参照された会話の作成者とモデレーターのプロファイルも収集
     referencedDiscussions.forEach((refDiscussion) => {
       uniquePubkeys.add(refDiscussion.authorPubkey);
       refDiscussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
     });
-
-    logger.log("mod", uniquePubkeys);
 
     if (uniquePubkeys.size > 0) {
       const eventPromises = await nostrService.getProfile([...uniquePubkeys]);
@@ -111,11 +126,7 @@ export const AuditLogSection = React.forwardRef<
       setProfiles({});
     }
 
-    logger.info("Individual audit data loaded:", {
-      posts: parsedPosts.length,
-      approvals: parsedApprovals.length,
-      profilesLoaded: uniquePubkeys.size,
-    });
+    logger.info("Individual audit data loaded");
   }, [discussionInfo, discussion, referencedDiscussions]);
 
   // 会話一覧ページ用のデータ取得
@@ -131,87 +142,92 @@ export const AuditLogSection = React.forwardRef<
       throw new Error("Invalid DISCUSSION_LIST_NADDR format");
     }
 
-    // 監査ログ用のデータを取得
-    const [discussionListPosts, discussionListApprovals] = await Promise.all([
-      nostrService.getDiscussionPosts(listDiscussionInfo.discussionId),
-      nostrService.getApprovals(listDiscussionInfo.discussionId),
-    ]);
+    approvalStreamCleanupRef.current?.();
+    setIsAuditLoading(true);
 
-    const listApprovals = discussionListApprovals
-      .map(parseApprovalEvent)
-      .filter((a): a is PostApproval => a !== null);
+    const discussionListPosts = await nostrService.getDiscussionPosts(
+      listDiscussionInfo.discussionId
+    );
 
-    const listPosts = discussionListPosts
-      .map((event) => parsePostEvent(event, listApprovals))
-      .filter((p): p is DiscussionPost => p !== null);
+    const updateFromApprovals = async (approvalsEvents: any[]) => {
+      const listApprovals = approvalsEvents
+        .map(parseApprovalEvent)
+        .filter((a): a is PostApproval => a !== null);
 
-    // qタグから参照されている個別会話のIDを収集（重複排除）
-    const individualDiscussionRefs = new Set<string>();
-    listPosts.forEach((post) => {
-      const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
-      qTags.forEach((qTag) => {
-        if (qTag[1] && qTag[1].startsWith("34550:")) {
-          individualDiscussionRefs.add(qTag[1]);
-        }
-      });
-    });
+      const listPosts = discussionListPosts
+        .map((event) => parsePostEvent(event, listApprovals))
+        .filter((p): p is DiscussionPost => p !== null);
 
-    // 参照されている個別会話のkind:34550を取得
-    let localReferencedDiscussions: Discussion[] = [];
-    if (individualDiscussionRefs.size > 0) {
-      const individualDiscussions =
-        await nostrService.getReferencedUserDiscussions(
-          Array.from(individualDiscussionRefs)
-        );
-      localReferencedDiscussions = individualDiscussions
-        .map(parseDiscussionEvent)
-        .filter((d): d is Discussion => d !== null);
-    }
-
-    setAuditPosts(listPosts);
-    setAuditApprovals(listApprovals);
-    setLocalReferencedDiscussions(localReferencedDiscussions);
-
-    // 監査ログ用プロファイル取得（作成者・モデレーターのみ）
-    const uniquePubkeys = new Set<string>();
-    
-    // 参照された会話の作成者とモデレーターのプロファイルを収集
-    localReferencedDiscussions.forEach((discussion) => {
-      uniquePubkeys.add(discussion.authorPubkey);
-      discussion.moderators.forEach((mod) =>
-        uniquePubkeys.add(mod.pubkey)
-      );
-    });
-
-    if (uniquePubkeys.size > 0) {
-      const profilePromises = Array.from(uniquePubkeys).map(
-        async (pubkey) => {
-          const profileEvents = await nostrService.getProfile([pubkey]);
-          if (profileEvents && profileEvents.length > 0) {
-            try {
-              const profile = JSON.parse(profileEvents[0].content);
-              return [pubkey, { name: profile.name || profile.display_name }];
-            } catch {
-              return [pubkey, {}];
-            }
+      const individualDiscussionRefs = new Set<string>();
+      listPosts.forEach((post) => {
+        const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
+        qTags.forEach((qTag) => {
+          if (qTag[1] && qTag[1].startsWith("34550:")) {
+            individualDiscussionRefs.add(qTag[1]);
           }
-          return [pubkey, {}];
-        }
-      );
+        });
+      });
 
-      const profileResults = await Promise.all(profilePromises);
-      const profilesMap = Object.fromEntries(profileResults);
-      setProfiles(profilesMap);
-    } else {
-      setProfiles({});
-    }
+      let nextReferenced: Discussion[] = [];
+      if (individualDiscussionRefs.size > 0) {
+        const individualDiscussions =
+          await nostrService.getReferencedUserDiscussions(
+            Array.from(individualDiscussionRefs)
+          );
+        nextReferenced = individualDiscussions
+          .map(parseDiscussionEvent)
+          .filter((d): d is Discussion => d !== null);
+      }
 
-    logger.info("Discussion list audit data loaded:", {
-      posts: listPosts.length,
-      approvals: listApprovals.length,
-      referencedDiscussions: localReferencedDiscussions.length,
-      profilesLoaded: uniquePubkeys.size,
-    });
+      setAuditPosts(listPosts);
+      setAuditApprovals(listApprovals);
+      setLocalReferencedDiscussions(nextReferenced);
+
+      const uniquePubkeys = new Set<string>();
+      nextReferenced.forEach((discussion) => {
+        uniquePubkeys.add(discussion.authorPubkey);
+        discussion.moderators.forEach((mod) =>
+          uniquePubkeys.add(mod.pubkey)
+        );
+      });
+
+      if (uniquePubkeys.size > 0) {
+        const profilePromises = Array.from(uniquePubkeys).map(
+          async (pubkey) => {
+            const profileEvents = await nostrService.getProfile([pubkey]);
+            if (profileEvents && profileEvents.length > 0) {
+              try {
+                const profile = JSON.parse(profileEvents[0].content);
+                return [pubkey, { name: profile.name || profile.display_name }];
+              } catch {
+                return [pubkey, {}];
+              }
+            }
+            return [pubkey, {}];
+          }
+        );
+
+        const profileResults = await Promise.all(profilePromises);
+        const profilesMap = Object.fromEntries(profileResults);
+        setProfiles(profilesMap);
+      } else {
+        setProfiles({});
+      }
+    };
+
+    approvalStreamCleanupRef.current = nostrService.streamApprovals(
+      listDiscussionInfo.discussionId,
+      {
+        onEvent: updateFromApprovals,
+        onEose: (events) => {
+          updateFromApprovals(events);
+          setIsAuditLoaded(true);
+          setIsAuditLoading(false);
+        },
+      }
+    );
+
+    logger.info("Discussion list audit data streaming started");
   }, []);
 
   // 監査ログ専用のデータ取得
@@ -255,6 +271,12 @@ export const AuditLogSection = React.forwardRef<
       ),
     [isDiscussionList, localReferencedDiscussions, discussion, auditPosts, auditApprovals]
   );
+
+  useEffect(() => {
+    return () => {
+      approvalStreamCleanupRef.current?.();
+    };
+  }, []);
 
   // refを通じて外部からloadAuditDataを呼び出せるようにする
   React.useImperativeHandle(ref, () => ({

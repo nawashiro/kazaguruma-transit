@@ -3,7 +3,7 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -31,6 +31,7 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { CheckBadgeIcon } from "@heroicons/react/24/outline";
+import type { Event } from "nostr-tools";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
@@ -46,6 +47,9 @@ export default function PostApprovalPage() {
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
+  const postsEventsRef = useRef<Event[]>([]);
+  const approvalEventsRef = useRef<Event[]>([]);
+  const approvalStreamCleanupRef = useRef<() => void>();
 
   const { user, signEvent } = useAuth();
 
@@ -54,18 +58,33 @@ export default function PostApprovalPage() {
     if (!naddrParam) return null;
     return extractDiscussionFromNaddr(naddrParam);
   }, [naddrParam]);
+  const rebuildFromEvents = useCallback(() => {
+    const parsedApprovals = approvalEventsRef.current
+      .map(parseApprovalEvent)
+      .filter((a): a is PostApproval => a !== null);
 
+    const parsedPosts = postsEventsRef.current
+      .map((event) => parsePostEvent(event, parsedApprovals))
+      .filter((p): p is DiscussionPost => p !== null)
+      .sort((a, b) => b.createdAt - a.createdAt);
+
+    setApprovals(parsedApprovals);
+    setPosts(parsedPosts);
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!isDiscussionsEnabled() || !discussionInfo) return;
     setIsLoading(true);
+    approvalStreamCleanupRef.current?.();
+    approvalEventsRef.current = [];
+    postsEventsRef.current = [];
     try {
-      const [discussionEvents, postsEvents, approvalsEvents] =
-        await Promise.all([
-          nostrService.getDiscussions(discussionInfo.authorPubkey),
-          nostrService.getDiscussionPosts(discussionInfo.discussionId),
-          nostrService.getApprovals(discussionInfo.discussionId),
-        ]);
+      const [discussionEvents, postsEvents] = await Promise.all([
+        nostrService.getDiscussions(discussionInfo.authorPubkey),
+        nostrService.getDiscussionPosts(discussionInfo.discussionId),
+      ]);
+
+      postsEventsRef.current = postsEvents;
 
       const parsedDiscussion = discussionEvents
         .map(parseDiscussionEvent)
@@ -75,29 +94,36 @@ export default function PostApprovalPage() {
         throw new Error("Discussion not found");
       }
 
-      const parsedApprovals = approvalsEvents
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
-      const parsedPosts = postsEvents
-        .map((event) => parsePostEvent(event, parsedApprovals))
-        .filter((p): p is DiscussionPost => p !== null)
-        .sort((a, b) => b.createdAt - a.createdAt);
-
       setDiscussion(parsedDiscussion);
-      setPosts(parsedPosts);
-      setApprovals(parsedApprovals);
+      rebuildFromEvents();
+
+      approvalStreamCleanupRef.current = nostrService.streamApprovals(
+        discussionInfo.discussionId,
+        {
+          onEvent: (events) => {
+            approvalEventsRef.current = events;
+            rebuildFromEvents();
+          },
+          onEose: (events) => {
+            approvalEventsRef.current = events;
+            rebuildFromEvents();
+            setIsLoading(false);
+          },
+        }
+      );
     } catch (error) {
       logger.error("Failed to load discussion:", error);
-    } finally {
       setIsLoading(false);
     }
-  }, [discussionInfo]);
+  }, [discussionInfo, rebuildFromEvents]);
 
   useEffect(() => {
     if (isDiscussionsEnabled() && discussionInfo) {
       loadData();
     }
+    return () => {
+      approvalStreamCleanupRef.current?.();
+    };
   }, [loadData, discussionInfo]);
 
   const handleApprovePost = async (post: DiscussionPost) => {

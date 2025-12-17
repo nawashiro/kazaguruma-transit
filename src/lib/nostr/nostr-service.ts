@@ -3,6 +3,29 @@ import type { PWKBlob } from "nosskey-sdk";
 import { logger } from "@/utils/logger";
 import { naddrDecode } from "@/lib/nostr/naddr-utils";
 
+export const dedupeAndSortEvents = (events: Event[]): Event[] => {
+  const uniqueById = new Map<string, Event>();
+
+  events.forEach((event) => {
+    const existing = uniqueById.get(event.id);
+    if (!existing || event.created_at > existing.created_at) {
+      uniqueById.set(event.id, event);
+    }
+  });
+
+  return Array.from(uniqueById.values()).sort(
+    (a, b) => b.created_at - a.created_at
+  );
+};
+
+const mergeEvent = (current: Event[], incoming: Event): Event[] => {
+  if (current.some((event) => event.id === incoming.id)) {
+    return current;
+  }
+
+  return dedupeAndSortEvents([...current, incoming]);
+};
+
 export interface NostrRelayConfig {
   url: string;
   read: boolean;
@@ -12,6 +35,12 @@ export interface NostrRelayConfig {
 export interface NostrServiceConfig {
   relays: NostrRelayConfig[];
   defaultTimeout: number;
+}
+
+export interface StreamEventsOptions {
+  onEvent: (events: Event[], event: Event) => void;
+  onEose?: (events: Event[]) => void;
+  timeoutMs?: number;
 }
 
 export class NostrService {
@@ -27,24 +56,65 @@ export class NostrService {
       .map((relay) => relay.url);
   }
 
-  async getEvents(filters: Filter[]): Promise<Event[]> {
+  async getEventsOnEose(filters: Filter[]): Promise<Event[]> {
     try {
-      // Handle multiple filters by making multiple queries and combining results
       const allEvents: Event[] = [];
       for (const filter of filters) {
         const events = await this.pool.querySync(this.relays, filter);
         allEvents.push(...(events || []));
       }
-      // Remove duplicates by ID
-      const uniqueEvents = allEvents.filter(
-        (event, index, self) =>
-          self.findIndex((e) => e.id === event.id) === index
-      );
-      return uniqueEvents;
+
+      return dedupeAndSortEvents(allEvents);
     } catch (error) {
       logger.error("Failed to get events:", error);
       return [];
     }
+  }
+
+  async getEvents(filters: Filter[]): Promise<Event[]> {
+    return this.getEventsOnEose(filters);
+  }
+
+  streamEventsOnEvent(
+    filters: Filter[],
+    { onEvent, onEose, timeoutMs }: StreamEventsOptions
+  ): () => void {
+    const collected: Event[] = [];
+    let closed = false;
+
+    const subscription = this.pool.subscribeMany(this.relays, filters, {
+      onevent: (event: Event) => {
+        if (closed) return;
+
+        const updated = mergeEvent(collected, event);
+        if (updated === collected) return;
+
+        collected.length = 0;
+        collected.push(...updated);
+        onEvent([...collected], event);
+      },
+      oneose: () => {
+        if (closed) return;
+        closed = true;
+        clearTimeout(timeoutId);
+        subscription.close();
+        onEose?.(dedupeAndSortEvents(collected));
+      },
+    });
+
+    const timeoutId = setTimeout(() => {
+      if (closed) return;
+      closed = true;
+      subscription.close();
+      onEose?.(dedupeAndSortEvents(collected));
+    }, timeoutMs ?? this.config.defaultTimeout);
+
+    return () => {
+      if (closed) return;
+      closed = true;
+      clearTimeout(timeoutId);
+      subscription.close();
+    };
   }
 
   async subscribeToEvents(
@@ -181,16 +251,35 @@ export class NostrService {
       });
     }
 
-    return this.getEvents(filters);
+    return this.getEventsOnEose(filters);
   }
 
-  async getApprovals(discussionId: string): Promise<Event[]> {
-    return this.getEvents([
+  async getApprovalsOnEose(discussionId: string): Promise<Event[]> {
+    return this.getEventsOnEose([
       {
         kinds: [4550],
         "#a": [discussionId],
       },
     ]);
+  }
+
+  async getApprovals(discussionId: string): Promise<Event[]> {
+    return this.getApprovalsOnEose(discussionId);
+  }
+
+  streamApprovals(
+    discussionId: string,
+    options: StreamEventsOptions
+  ): () => void {
+    return this.streamEventsOnEvent(
+      [
+        {
+          kinds: [4550],
+          "#a": [discussionId],
+        },
+      ],
+      options
+    );
   }
 
   async getApprovalsForPosts(
@@ -201,13 +290,35 @@ export class NostrService {
       return [];
     }
 
-    return this.getEvents([
+    return this.getEventsOnEose([
       {
         kinds: [4550],
         "#a": [discussionId],
         "#e": postIds,
       },
     ]);
+  }
+
+  streamApprovalsForPosts(
+    postIds: string[],
+    discussionId: string,
+    options: StreamEventsOptions
+  ): () => void {
+    if (postIds.length === 0) {
+      options.onEose?.([]);
+      return () => {};
+    }
+
+    return this.streamEventsOnEvent(
+      [
+        {
+          kinds: [4550],
+          "#a": [discussionId],
+          "#e": postIds,
+        },
+      ],
+      options
+    );
   }
 
   async getEvaluations(

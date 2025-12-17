@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   getDiscussionConfig,
@@ -20,6 +20,7 @@ import type {
   PostWithStats,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
+import type { Event } from "nostr-tools";
 
 interface BusStopMemoProps {
   busStops: string[];
@@ -30,6 +31,9 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
   const [topPostsByStop, setTopPostsByStop] = useState<
     Map<string, PostWithStats>
   >(new Map());
+  const postsEventsRef = useRef<Event[]>([]);
+  const approvalEventsRef = useRef<Event[]>([]);
+  const approvalsStreamCleanupRef = useRef<() => void>();
 
   const config = useMemo(() => getDiscussionConfig(), []);
   const discussionsEnabled = useMemo(() => isDiscussionsEnabled(), []);
@@ -49,59 +53,79 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
       return;
     }
 
+    approvalsStreamCleanupRef.current?.();
+    approvalEventsRef.current = [];
+
     try {
       // Step 1: バス停タグ付きの投稿を取得
       const postsEvents = await nostrService.getDiscussionPosts(
         config.busStopDiscussionId,
         busStops
       );
+      postsEventsRef.current = postsEvents;
 
-      const postIds = postsEvents.map((event) => event.id);
+      const updateFromApprovals = async (
+        approvalsEvents: Event[],
+        fetchEvaluations: boolean
+      ) => {
+        const parsedApprovals = approvalsEvents
+          .map(parseApprovalEvent)
+          .filter((a): a is PostApproval => a !== null);
 
-      // Step 2: 該当する投稿に対する承認のみを取得
-      const approvalsEvents = await nostrService.getApprovalsForPosts(
-        postIds,
-        config.busStopDiscussionId
-      );
+        const parsedPosts = postsEventsRef.current
+          .map((event) => parsePostEvent(event, parsedApprovals))
+          .filter((p): p is DiscussionPost => p !== null)
+          .filter(
+            (p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag)
+          );
 
-      const parsedApprovals = approvalsEvents
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
+        let parsedEvaluations: PostEvaluation[] = [];
+        if (fetchEvaluations) {
+          const approvedPostIds = parsedPosts.map((p) => p.id);
+          const evaluationsEvents = await nostrService.getEvaluationsForPosts(
+            approvedPostIds
+          );
 
-      const parsedPosts = postsEvents
-        .map((event) => parsePostEvent(event, parsedApprovals))
-        .filter((p): p is DiscussionPost => p !== null)
-        .filter(
-          (p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag)
-        );
-
-      // Step 3: 承認された投稿のIDのみに対する評価を取得
-      const approvedPostIds = parsedPosts.map((p) => p.id);
-      const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-        approvedPostIds
-      );
-
-      const parsedEvaluations = evaluationsEvents
-        .map(parseEvaluationEvent)
-        .filter((e): e is PostEvaluation => e !== null);
-
-      const postsWithStats = combinePostsWithStats(
-        parsedPosts,
-        parsedEvaluations
-      );
-
-      // バス停ごとの最高評価投稿を取得
-      const topPostsMap = new Map<string, PostWithStats>();
-      busStops.forEach((stopName) => {
-        const stopPosts = postsWithStats.filter(
-          (p) => p.busStopTag === stopName
-        );
-        const sortedStopPosts = sortPostsByScore(stopPosts);
-        if (sortedStopPosts.length > 0) {
-          topPostsMap.set(stopName, sortedStopPosts[0]);
+          parsedEvaluations = evaluationsEvents
+            .map(parseEvaluationEvent)
+            .filter((e): e is PostEvaluation => e !== null);
         }
-      });
-      setTopPostsByStop(topPostsMap);
+
+        const postsWithStats = combinePostsWithStats(
+          parsedPosts,
+          parsedEvaluations
+        );
+
+        const topPostsMap = new Map<string, PostWithStats>();
+        busStops.forEach((stopName) => {
+          const stopPosts = postsWithStats.filter(
+            (p) => p.busStopTag === stopName
+          );
+          const sortedStopPosts = sortPostsByScore(stopPosts);
+          if (sortedStopPosts.length > 0) {
+            topPostsMap.set(stopName, sortedStopPosts[0]);
+          }
+        });
+        setTopPostsByStop(topPostsMap);
+      };
+
+      approvalsStreamCleanupRef.current =
+        nostrService.streamApprovalsForPosts(
+          postsEventsRef.current.map((event) => event.id),
+          config.busStopDiscussionId,
+          {
+            onEvent: (events) => {
+              approvalEventsRef.current = events;
+              updateFromApprovals(events, false);
+            },
+            onEose: (events) => {
+              approvalEventsRef.current = events;
+              updateFromApprovals(events, true);
+            },
+          }
+        );
+
+      await updateFromApprovals([], false);
     } catch (error) {
       logger.error("Failed to load bus stop memo:", error);
       setTopPostsByStop(new Map());
@@ -112,6 +136,10 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
     if (discussionsEnabled) {
       loadMemoData();
     }
+
+    return () => {
+      approvalsStreamCleanupRef.current?.();
+    };
   }, [discussionsEnabled, loadMemoData]);
 
   if (

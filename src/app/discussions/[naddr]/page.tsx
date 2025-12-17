@@ -111,7 +111,7 @@ export default function DiscussionDetailPage() {
           discussionInfo.authorPubkey,
           discussionInfo.dTag
         ),
-        nostrService.getApprovals(discussionInfo.discussionId),
+        nostrService.getApprovalsOnEose(discussionInfo.discussionId),
       ]);
 
       const parsedDiscussion = parseDiscussionEvent(discussionEvent);

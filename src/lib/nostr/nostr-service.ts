@@ -1,7 +1,7 @@
 import { SimplePool, Event, Filter, finalizeEvent } from "nostr-tools";
 import type { PWKBlob } from "nosskey-sdk";
 import { logger } from "@/utils/logger";
-import { naddrDecode } from "@/lib/nostr/naddr-utils";
+import { normalizeDiscussionId } from "@/lib/nostr/naddr-utils";
 
 export const dedupeAndSortEvents = (events: Event[]): Event[] => {
   const uniqueById = new Map<string, Event>();
@@ -24,6 +24,15 @@ const mergeEvent = (current: Event[], incoming: Event): Event[] => {
   }
 
   return dedupeAndSortEvents([...current, incoming]);
+};
+
+const normalizeDiscussionIdForRead = (discussionId: string): string | null => {
+  try {
+    return normalizeDiscussionId(discussionId);
+  } catch (error) {
+    logger.error("Invalid discussion id:", error);
+    return null;
+  }
 };
 
 export interface NostrRelayConfig {
@@ -238,6 +247,11 @@ export class NostrService {
     discussionId: string,
     busStopTags?: string[]
   ): Promise<Event[]> {
+    const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+    if (!normalizedDiscussionId) {
+      return [];
+    }
+
     const filters: Filter[] = [];
 
     if (busStopTags && busStopTags.length > 0) {
@@ -245,7 +259,7 @@ export class NostrService {
       busStopTags.forEach((busStopTag) => {
         filters.push({
           kinds: [1111, 1],
-          "#a": [discussionId],
+          "#a": [normalizedDiscussionId],
           "#t": [busStopTag],
         });
       });
@@ -253,7 +267,7 @@ export class NostrService {
       // バス停指定なしの場合は全投稿を取得（kind:1111とkind:1の両方）
       filters.push({
         kinds: [1111, 1],
-        "#a": [discussionId],
+        "#a": [normalizedDiscussionId],
       });
     }
 
@@ -261,10 +275,15 @@ export class NostrService {
   }
 
   async getApprovalsOnEose(discussionId: string): Promise<Event[]> {
+    const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+    if (!normalizedDiscussionId) {
+      return [];
+    }
+
     return this.getEventsOnEose([
       {
         kinds: [4550],
-        "#a": [discussionId],
+        "#a": [normalizedDiscussionId],
       },
     ]);
   }
@@ -277,11 +296,17 @@ export class NostrService {
     discussionId: string,
     options: StreamEventsOptions
   ): () => void {
+    const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+    if (!normalizedDiscussionId) {
+      options.onEose?.([]);
+      return () => {};
+    }
+
     return this.streamEventsOnEvent(
       [
         {
           kinds: [4550],
-          "#a": [discussionId],
+          "#a": [normalizedDiscussionId],
         },
       ],
       options
@@ -296,10 +321,15 @@ export class NostrService {
       return [];
     }
 
+    const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+    if (!normalizedDiscussionId) {
+      return [];
+    }
+
     return this.getEventsOnEose([
       {
         kinds: [4550],
-        "#a": [discussionId],
+        "#a": [normalizedDiscussionId],
         "#e": postIds,
       },
     ]);
@@ -315,11 +345,17 @@ export class NostrService {
       return () => {};
     }
 
+    const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+    if (!normalizedDiscussionId) {
+      options.onEose?.([]);
+      return () => {};
+    }
+
     return this.streamEventsOnEvent(
       [
         {
           kinds: [4550],
-          "#a": [discussionId],
+          "#a": [normalizedDiscussionId],
           "#e": postIds,
         },
       ],
@@ -337,7 +373,11 @@ export class NostrService {
     };
 
     if (discussionId) {
-      filters["#a"] = [discussionId];
+      const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+      if (!normalizedDiscussionId) {
+        return [];
+      }
+      filters["#a"] = [normalizedDiscussionId];
     }
 
     return this.getEvents([filters]);
@@ -359,7 +399,11 @@ export class NostrService {
     };
 
     if (discussionId) {
-      filters["#a"] = [discussionId];
+      const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+      if (!normalizedDiscussionId) {
+        return [];
+      }
+      filters["#a"] = [normalizedDiscussionId];
     }
 
     return this.getEvents([filters]);
@@ -414,20 +458,16 @@ export class NostrService {
     discussionId: string,
     busStopTag?: string
   ): Omit<Event, "id" | "sig" | "pubkey"> {
-    // Convert discussionId from naddr to hex format if needed
     let discussionHexId = discussionId;
-    if (discussionId.startsWith("naddr1")) {
-      try {
-        const decoded = naddrDecode(discussionId);
-        discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
-      } catch (error) {
-        logger.error("Failed to decode discussion naddr:", error);
-        throw new Error(
-          `Invalid discussion naddr: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        );
-      }
+    try {
+      discussionHexId = normalizeDiscussionId(discussionId);
+    } catch (error) {
+      logger.error("Failed to normalize discussion id:", error);
+      throw new Error(
+        `Invalid discussion id: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
 
     const tags: string[][] = [["a", discussionHexId]];
@@ -448,20 +488,16 @@ export class NostrService {
     postEvent: Event,
     discussionId: string
   ): Omit<Event, "id" | "sig" | "pubkey"> {
-    // Convert discussionId from naddr to hex format if needed
     let discussionHexId = discussionId;
-    if (discussionId.startsWith("naddr1")) {
-      try {
-        const decoded = naddrDecode(discussionId);
-        discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
-      } catch (error) {
-        logger.error("Failed to decode discussion naddr:", error);
-        throw new Error(
-          `Invalid discussion naddr: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        );
-      }
+    try {
+      discussionHexId = normalizeDiscussionId(discussionId);
+    } catch (error) {
+      logger.error("Failed to normalize discussion id:", error);
+      throw new Error(
+        `Invalid discussion id: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
 
     const tags: string[][] = [
@@ -487,22 +523,17 @@ export class NostrService {
     const tags: string[][] = [["e", targetEventId]];
 
     if (discussionId) {
-      // Convert discussionId from naddr to hex format if needed
-      let discussionHexId = discussionId;
-      if (discussionId.startsWith("naddr1")) {
-        try {
-          const decoded = naddrDecode(discussionId);
-          discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
-        } catch (error) {
-          logger.error("Failed to decode discussion naddr:", error);
-          throw new Error(
-            `Invalid discussion naddr: ${
-              error instanceof Error ? error.message : "Unknown error"
-            }`
-          );
-        }
+      try {
+        const discussionHexId = normalizeDiscussionId(discussionId);
+        tags.push(["a", discussionHexId]);
+      } catch (error) {
+        logger.error("Failed to normalize discussion id:", error);
+        throw new Error(
+          `Invalid discussion id: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
-      tags.push(["a", discussionHexId]);
     }
 
     return {
@@ -788,18 +819,15 @@ export class NostrService {
     try {
       // Convert naddr to hex format for NIP-72 compliance
       let discussionListHex = discussionListNaddr;
-      if (discussionListNaddr.startsWith("naddr1")) {
-        try {
-          const decoded = naddrDecode(discussionListNaddr);
-          discussionListHex = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
-        } catch (error) {
-          logger.error("Failed to decode discussion list naddr:", error);
-          throw new Error(
-            `Invalid discussion list naddr: ${
-              error instanceof Error ? error.message : "Unknown error"
-            }`
-          );
-        }
+      try {
+        discussionListHex = normalizeDiscussionId(discussionListNaddr);
+      } catch (error) {
+        logger.error("Failed to normalize discussion list id:", error);
+        throw new Error(
+          `Invalid discussion list id: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
 
       const filters: Filter[] = [

@@ -125,6 +125,51 @@ export function extractDiscussionFromNaddr(naddr: string): DiscussionInfo | null
   }
 }
 
+const DISCUSSION_ID_PATTERN = /^(\d+):([a-fA-F0-9]{64}):(.+)$/;
+const NOSTR_URI_PREFIX = 'nostr:';
+
+export function normalizeDiscussionId(value: string): string {
+  if (!value || typeof value !== 'string') {
+    throw new Error('Discussion id is required');
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error('Discussion id is required');
+  }
+
+  const withoutPrefix = trimmed.startsWith(NOSTR_URI_PREFIX)
+    ? trimmed.slice(NOSTR_URI_PREFIX.length)
+    : trimmed;
+
+  if (withoutPrefix.startsWith('naddr1')) {
+    const discussionInfo = extractDiscussionFromNaddr(withoutPrefix);
+    if (!discussionInfo) {
+      throw new Error('Invalid discussion naddr format');
+    }
+    return discussionInfo.discussionId;
+  }
+
+  const match = withoutPrefix.match(DISCUSSION_ID_PATTERN);
+  if (!match) {
+    throw new Error('Invalid discussion id format');
+  }
+
+  const kind = Number(match[1]);
+  const pubkey = match[2];
+  const dTag = match[3];
+
+  if (kind !== 34550) {
+    throw new Error('Invalid discussion id format');
+  }
+
+  if (!dTag || dTag.includes('naddr1') || dTag.includes(':')) {
+    throw new Error('Invalid discussion id format');
+  }
+
+  return `${kind}:${pubkey}:${dTag}`;
+}
+
 export function buildDiscussionNaddr(authorPubkey: string, dTag: string, relays?: string[]): string {
   try {
     const addr: AddressPointer = {

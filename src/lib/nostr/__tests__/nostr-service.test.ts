@@ -1,4 +1,5 @@
 import { NostrService, NostrServiceConfig } from "../nostr-service";
+import { naddrEncode } from "../naddr-utils";
 
 // Mocks for nostr-tools
 const mockQuerySync = jest.fn();
@@ -19,6 +20,12 @@ describe("NostrService event retrieval", () => {
   const config: NostrServiceConfig = {
     relays: [{ url: "wss://example", read: true, write: false }],
     defaultTimeout: 2000,
+  };
+  const discussionPointer = {
+    kind: 34550,
+    pubkey:
+      "c98215056966766d3aafb43471cc72d59a9dfd2885aad27a33da31685f7cfef8",
+    identifier: "-989250",
   };
 
   beforeEach(() => {
@@ -154,20 +161,46 @@ describe("NostrService event retrieval", () => {
     expect(onEose).toHaveBeenCalledWith([]);
   });
 
+  it("getApprovalsOnEose normalizes naddr before querying", async () => {
+    mockQuerySync.mockResolvedValueOnce([]);
+    const service = new NostrService(config);
+    const discussionNaddr = naddrEncode(discussionPointer);
+
+    await service.getApprovalsOnEose(discussionNaddr);
+
+    const filter = mockQuerySync.mock.calls[0][1];
+    expect(filter["#a"]).toEqual([
+      `34550:${discussionPointer.pubkey}:${discussionPointer.identifier}`,
+    ]);
+  });
+
+  it("getApprovalsOnEose rejects invalid discussion id without querying", async () => {
+    const service = new NostrService(config);
+    const invalidDiscussionId = `34550:${discussionPointer.pubkey}:naddr1invalid`;
+
+    const result = await service.getApprovalsOnEose(invalidDiscussionId);
+
+    expect(result).toEqual([]);
+    expect(mockQuerySync).not.toHaveBeenCalled();
+  });
+
   it("streamApprovals delegates to streaming with expected filters", () => {
     const service = new NostrService(config);
     const spy = jest
       .spyOn(service, "streamEventsOnEvent")
       .mockReturnValue(() => {});
+    const discussionNaddr = naddrEncode(discussionPointer);
 
     const onEvent = jest.fn();
-    service.streamApprovals("discussion-1", { onEvent });
+    service.streamApprovals(discussionNaddr, { onEvent });
 
     expect(spy).toHaveBeenCalledWith(
       [
         {
           kinds: [4550],
-          "#a": ["discussion-1"],
+          "#a": [
+            `34550:${discussionPointer.pubkey}:${discussionPointer.identifier}`,
+          ],
         },
       ],
       expect.objectContaining({ onEvent })
@@ -178,10 +211,11 @@ describe("NostrService event retrieval", () => {
     const service = new NostrService(config);
     const onEvent = jest.fn();
     const onEose = jest.fn();
+    const discussionId = `34550:${discussionPointer.pubkey}:${discussionPointer.identifier}`;
 
     const cleanup = service.streamApprovalsForPosts(
       [],
-      "discussion-1",
+      discussionId,
       {
         onEvent,
         onEose,

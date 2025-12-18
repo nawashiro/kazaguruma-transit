@@ -1,5 +1,5 @@
 import type { NostrServiceConfig } from "@/lib/nostr/nostr-service";
-import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
+import { normalizeDiscussionId } from "@/lib/nostr/naddr-utils";
 import { getAdminPubkeyHex } from "../nostr/nostr-utils";
 
 const DISCUSSION_KIND = 34550;
@@ -26,25 +26,21 @@ function resolveDiscussionId(
   adminPubkey: string
 ): string {
   if (!discussionIdOrNaddr) return "";
+  const trimmed = discussionIdOrNaddr.trim();
+  if (!trimmed) return "";
+  const normalizedInput = trimmed.startsWith("nostr:")
+    ? trimmed.slice("nostr:".length)
+    : trimmed;
 
-  if (discussionIdOrNaddr.startsWith("naddr1")) {
-    const discussionInfo = extractDiscussionFromNaddr(discussionIdOrNaddr);
-    if (!discussionInfo) {
-      throw new Error("Invalid discussion naddr format");
-    }
-    return discussionInfo.discussionId;
-  }
-
-  // Already in kind:pubkey:dTag format
-  if (discussionIdOrNaddr.includes(":")) {
-    return discussionIdOrNaddr;
+  if (normalizedInput.startsWith("naddr1") || normalizedInput.includes(":")) {
+    return normalizeDiscussionId(normalizedInput);
   }
 
   if (!adminPubkey) {
     return "";
   }
 
-  return buildDiscussionId(adminPubkey, discussionIdOrNaddr);
+  return buildDiscussionId(adminPubkey, normalizedInput);
 }
 
 function parseRelays(relayString: string) {

@@ -35,4 +35,22 @@ describe("getDiscussionConfig", () => {
       `34550:${discussionPointer.pubkey}:${discussionPointer.identifier}`
     );
   });
+
+  it("rejects invalid discussion id formats", async () => {
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_DISCUSSIONS_ENABLED: "true",
+      NEXT_PUBLIC_ADMIN_PUBKEY:
+        "c98215056966766d3aafb43471cc72d59a9dfd2885aad27a33da31685f7cfef8",
+      NEXT_PUBLIC_BUS_STOP_DISCUSSION_ID:
+        "34550:c98215056966766d3aafb43471cc72d59a9dfd2885aad27a33da31685f7cfef8:naddr1invalid",
+      NEXT_PUBLIC_NOSTR_RELAYS: "wss://relay.example",
+    };
+
+    const { getDiscussionConfig } = await import("../discussion-config");
+
+    expect(() => getDiscussionConfig()).toThrow(
+      "Invalid discussion id format"
+    );
+  });
 });

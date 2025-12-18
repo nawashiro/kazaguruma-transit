@@ -2,6 +2,8 @@ import React from "react";
 import { render, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { BusStopMemo } from "../BusStopMemo";
+import type { Event } from "nostr-tools";
+import type { StreamEventsOptions } from "@/lib/nostr/nostr-service";
 
 jest.mock("@/lib/config/discussion-config", () => ({
   getDiscussionConfig: () => ({
@@ -12,7 +14,9 @@ jest.mock("@/lib/config/discussion-config", () => ({
 }));
 
 const serviceMock = {
-  streamEventsOnEvent: jest.fn(() => () => {}),
+  streamEventsOnEvent: jest.fn<() => void, [unknown, StreamEventsOptions]>(
+    () => () => {}
+  ),
   streamApprovals: jest.fn(() => () => {}),
   streamApprovalsForPosts: jest.fn(() => () => {}),
   getDiscussionPosts: jest.fn(),
@@ -34,6 +38,29 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
 describe("BusStopMemo streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it("starts approvals streaming after posts EOSE", async () => {
+    serviceMock.streamEventsOnEvent.mockImplementationOnce(
+      (_filters, options) => {
+        const postEvents = [{ id: "post-1" }, { id: "post-2" }] as Event[];
+        options.onEose?.(postEvents);
+        return () => {};
+      }
+    );
+
+    render(<BusStopMemo busStops={["A"]} />);
+
+    await waitFor(() =>
+      expect(serviceMock.streamApprovalsForPosts).toHaveBeenCalled()
+    );
+
+    expect(serviceMock.streamApprovalsForPosts).toHaveBeenCalledWith(
+      ["post-1", "post-2"],
+      "discussion-1",
+      expect.any(Object)
+    );
+    expect(serviceMock.streamApprovals).not.toHaveBeenCalled();
   });
 
   it("streams memo data without blocking on EOSE fetch", async () => {

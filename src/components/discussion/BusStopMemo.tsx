@@ -33,8 +33,8 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
   >(new Map());
   const postsEventsRef = useRef<Event[]>([]);
   const approvalEventsRef = useRef<Event[]>([]);
+  const postsStreamCleanupRef = useRef<(() => void) | null>(null);
   const approvalsStreamCleanupRef = useRef<(() => void) | null>(null);
-  const approvalsForDiscussionCleanupRef = useRef<(() => void) | null>(null);
 
   const config = useMemo(() => getDiscussionConfig(), []);
   const discussionsEnabled = useMemo(() => isDiscussionsEnabled(), []);
@@ -103,8 +103,8 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
       return;
     }
 
+    postsStreamCleanupRef.current?.();
     approvalsStreamCleanupRef.current?.();
-    approvalsForDiscussionCleanupRef.current?.();
     approvalEventsRef.current = [];
     postsEventsRef.current = [];
 
@@ -130,27 +130,31 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
       onEose: (events) => {
         postsEventsRef.current = events;
         updateFromEvents(events, approvalEventsRef.current, true);
+        const postIds = events.map((event) => event.id);
+        if (postIds.length === 0) {
+          return;
+        }
+        approvalsStreamCleanupRef.current?.();
+        approvalsStreamCleanupRef.current = nostrService.streamApprovalsForPosts(
+          postIds,
+          config.busStopDiscussionId,
+          {
+            onEvent: (approvalEvents) => {
+              approvalEventsRef.current = approvalEvents;
+              updateFromEvents(postsEventsRef.current, approvalEvents, false);
+            },
+            onEose: (approvalEvents) => {
+              approvalEventsRef.current = approvalEvents;
+              updateFromEvents(postsEventsRef.current, approvalEvents, true);
+            },
+            timeoutMs: config.defaultTimeout ?? 5000,
+          }
+        );
       },
       timeoutMs: config.defaultTimeout ?? 5000,
     });
 
-    const approvalsStreamCleanup = nostrService.streamApprovals(
-      config.busStopDiscussionId,
-      {
-        onEvent: (events) => {
-          approvalEventsRef.current = events;
-          updateFromEvents(postsEventsRef.current, events, false);
-        },
-        onEose: (events) => {
-          approvalEventsRef.current = events;
-          updateFromEvents(postsEventsRef.current, events, true);
-        },
-        timeoutMs: config.defaultTimeout ?? 5000,
-      }
-    );
-
-    approvalsStreamCleanupRef.current = postStreamCleanup;
-    approvalsForDiscussionCleanupRef.current = approvalsStreamCleanup;
+    postsStreamCleanupRef.current = postStreamCleanup;
     updateFromEvents([], [], false);
   }, [
     busStops,
@@ -166,8 +170,8 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
     }
 
     return () => {
+      postsStreamCleanupRef.current?.();
       approvalsStreamCleanupRef.current?.();
-      approvalsForDiscussionCleanupRef.current?.();
     };
   }, [discussionsEnabled, loadMemoData]);
 

@@ -3,7 +3,7 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -42,6 +42,7 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
+import type { Event } from "nostr-tools";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
@@ -62,7 +63,8 @@ export default function DiscussionDetailPage() {
   const [analysisResult, setAnalysisResult] =
     useState<EvaluationAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDiscussionLoading, setIsDiscussionLoading] = useState(true);
+  const [isPostsLoading, setIsPostsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // AuditLogSectionコンポーネントの参照
@@ -78,6 +80,9 @@ export default function DiscussionDetailPage() {
   const [busStops, setBusStops] = useState<
     { route: string; stops: string[] }[]
   >([]);
+  const discussionStreamCleanupRef = useRef<(() => void) | null>(null);
+  const loadSequenceRef = useRef(0);
+  const analysisRunRef = useRef(false);
 
   useEffect(() => {
     logger.log("discussion", discussion);
@@ -92,70 +97,57 @@ export default function DiscussionDetailPage() {
   }, [naddrParam]);
 
   // メイン画面専用のデータ取得
-  const loadData = useCallback(async () => {
-    if (!isDiscussionsEnabled() || !discussionInfo) return;
-    setIsLoading(true);
-    try {
-      // Check if this is test mode (for backward compatibility)
-      if (isTestMode(discussionInfo.dTag)) {
-        const testData = await loadTestData();
-        setDiscussion(testData.discussion);
-        setPosts(testData.posts);
-        setApprovals([]);
-        setEvaluations(testData.evaluations);
-        return;
+  const loadApprovalsAndEvaluations = useCallback(
+    async (loadSequence: number) => {
+      if (!discussionInfo) return;
+      setIsPostsLoading(true);
+      try {
+        const approvalsEvents = await nostrService.getApprovalsOnEose(
+          discussionInfo.discussionId
+        );
+        if (loadSequenceRef.current !== loadSequence) return;
+
+        const parsedApprovals = approvalsEvents
+          .map(parseApprovalEvent)
+          .filter((a): a is PostApproval => a !== null);
+
+        // 承認イベントから投稿データを復元
+        const parsedPosts = parsedApprovals
+          .map((approval) => {
+            try {
+              const approvedPost = JSON.parse(approval.event.content);
+              return parsePostEvent(approvedPost, [approval]);
+            } catch {
+              return null;
+            }
+          })
+          .filter((p): p is DiscussionPost => p !== null)
+          .sort((a, b) => b.createdAt - a.createdAt);
+
+        setPosts(parsedPosts);
+        setApprovals(parsedApprovals);
+
+        const postIds = parsedPosts.map((post) => post.id);
+        const evaluationsEvents = await nostrService.getEvaluationsForPosts(
+          postIds
+        );
+        if (loadSequenceRef.current !== loadSequence) return;
+
+        const parsedEvaluations = evaluationsEvents
+          .map(parseEvaluationEvent)
+          .filter((e): e is PostEvaluation => e !== null);
+
+        setEvaluations(parsedEvaluations);
+      } catch (error) {
+        logger.error("Failed to load discussion:", error);
+      } finally {
+        if (loadSequenceRef.current === loadSequence) {
+          setIsPostsLoading(false);
+        }
       }
-
-      const [discussionEvent, approvalsEvents] = await Promise.all([
-        nostrService.getDiscussion(
-          discussionInfo.authorPubkey,
-          discussionInfo.dTag
-        ),
-        nostrService.getApprovalsOnEose(discussionInfo.discussionId),
-      ]);
-
-      const parsedDiscussion = parseDiscussionEvent(discussionEvent);
-
-      if (!parsedDiscussion) {
-        throw new Error("Discussion not found");
-      }
-
-      const parsedApprovals = approvalsEvents
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
-      // 承認イベントから投稿データを復元
-      const parsedPosts = parsedApprovals
-        .map((approval) => {
-          try {
-            const approvedPost = JSON.parse(approval.event.content);
-            return parsePostEvent(approvedPost, [approval]);
-          } catch {
-            return null;
-          }
-        })
-        .filter((p): p is DiscussionPost => p !== null)
-        .sort((a, b) => b.createdAt - a.createdAt);
-
-      const postIds = parsedPosts.map((post) => post.id);
-      const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-        postIds
-      );
-
-      const parsedEvaluations = evaluationsEvents
-        .map(parseEvaluationEvent)
-        .filter((e): e is PostEvaluation => e !== null);
-
-      setDiscussion(parsedDiscussion);
-      setPosts(parsedPosts);
-      setApprovals(parsedApprovals);
-      setEvaluations(parsedEvaluations);
-    } catch (error) {
-      logger.error("Failed to load discussion:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [discussionInfo]);
+    },
+    [discussionInfo]
+  );
 
 
   const loadUserEvaluations = useCallback(async () => {
@@ -197,11 +189,85 @@ export default function DiscussionDetailPage() {
   }, []);
 
   useEffect(() => {
-    if (isDiscussionsEnabled() && discussionInfo) {
-      loadData();
+    if (!isDiscussionsEnabled() || !discussionInfo) return;
+    const loadSequence = ++loadSequenceRef.current;
+    analysisRunRef.current = false;
+    setDiscussion(null);
+    setPosts([]);
+    setApprovals([]);
+    setEvaluations([]);
+    setAnalysisResult(null);
+    setIsDiscussionLoading(true);
+    setIsPostsLoading(true);
+
+    discussionStreamCleanupRef.current?.();
+    discussionStreamCleanupRef.current = null;
+
+    if (isTestMode(discussionInfo.dTag)) {
+      loadTestData()
+        .then((testData) => {
+          if (loadSequenceRef.current !== loadSequence) return;
+          setDiscussion(testData.discussion);
+          setPosts(testData.posts);
+          setEvaluations(testData.evaluations);
+        })
+        .catch((error) => {
+          logger.error("Failed to load discussion:", error);
+        })
+        .finally(() => {
+          if (loadSequenceRef.current === loadSequence) {
+            setIsDiscussionLoading(false);
+            setIsPostsLoading(false);
+          }
+        });
       loadBusStops();
+      return;
     }
-  }, [loadData, loadBusStops, discussionInfo]);
+
+    const pickLatestDiscussion = (events: Event[]) => {
+      const parsed = events
+        .map(parseDiscussionEvent)
+        .filter((d): d is Discussion => d !== null);
+
+      if (parsed.length === 0) {
+        return null;
+      }
+
+      return parsed.reduce((latest, current) =>
+        current.createdAt > latest.createdAt ? current : latest
+      );
+    };
+
+    discussionStreamCleanupRef.current = nostrService.streamDiscussionMeta(
+      discussionInfo.authorPubkey,
+      discussionInfo.dTag,
+      {
+        onEvent: (events) => {
+          if (loadSequenceRef.current !== loadSequence) return;
+          const latest = pickLatestDiscussion(events);
+          if (!latest) return;
+          setDiscussion(latest);
+          setIsDiscussionLoading(false);
+        },
+        onEose: (events) => {
+          if (loadSequenceRef.current !== loadSequence) return;
+          const latest = pickLatestDiscussion(events);
+          if (latest) {
+            setDiscussion(latest);
+          }
+          setIsDiscussionLoading(false);
+        },
+      }
+    );
+
+    loadApprovalsAndEvaluations(loadSequence);
+    loadBusStops();
+
+    return () => {
+      discussionStreamCleanupRef.current?.();
+      discussionStreamCleanupRef.current = null;
+    };
+  }, [discussionInfo, loadApprovalsAndEvaluations, loadBusStops]);
 
   useEffect(() => {
     if (user.pubkey && isDiscussionsEnabled()) {
@@ -243,8 +309,10 @@ export default function DiscussionDetailPage() {
   }, [evaluations, approvedPosts]);
 
   useEffect(() => {
+    if (isPostsLoading || analysisRunRef.current) return;
+    analysisRunRef.current = true;
     runConsensusAnalysis();
-  }, [runConsensusAnalysis]);
+  }, [isPostsLoading, runConsensusAnalysis]);
 
   const postsWithStats = useMemo(
     () => combinePostsWithStats(approvedPosts, evaluations),
@@ -387,7 +455,7 @@ export default function DiscussionDetailPage() {
     setPostForm((prev) => ({ ...prev, busStopTag: "" }));
   };
 
-  if (isLoading) {
+  if (isDiscussionLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="animate-pulse space-y-4">

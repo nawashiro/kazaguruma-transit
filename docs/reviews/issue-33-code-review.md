@@ -5,39 +5,46 @@
 - 期待: `#a` は `kind:pubkey:dTag` の hex 参照（例: `34550:...:-989250`）
 - 実際: `#a` に `...:naddr1...` が混入し、承認イベントが取得できない
 
+## 先に結論（最新コード前提）
+
+- `normalizeDiscussionId` を中心に、`naddr` からの正規化と誤形式の拒否が実装済みで、Issue の再現経路は縮小されています。
+- ただし、`#a` フィルタを UI で直接組み立てる箇所が複数あり、上流が壊れている場合の防波堤が不足しています。
+
 ## 主要な指摘（重大度順）
 
 ### High
-1) `resolveDiscussionId` が `:` を含む文字列を「既に正規化済み」とみなして無条件で通すため、`34550:pubkey:naddr1...` のような誤形式が温存される
-- 影響: UI 側が誤形式を生成した場合でも、正規化が一切行われず `#a` の検索が外れる
-- 参照: `src/lib/config/discussion-config.ts:24`
-
-2) 参照系の取得 API が `discussionId` を正規化せずそのまま `#a` フィルタに投入している
-- 影響: 呼び出し元が naddr/nostr URI/誤形式を渡すと、Issue 33 のように `#a` が壊れる
-- 不整合: `getCommunityPostsToDiscussionList` だけが naddr 変換済みで、他の取得系が放置されている
-- 参照: `src/lib/nostr/nostr-service.ts:240`, `src/lib/nostr/nostr-service.ts:263`, `src/lib/nostr/nostr-service.ts:276`, `src/lib/nostr/nostr-service.ts:291`, `src/lib/nostr/nostr-service.ts:330`, `src/lib/nostr/nostr-service.ts:783`
+該当なし（現行コードでは明確な再現経路を特定できず）
 
 ### Medium
-3) `discussionId` のフォーマット検証が読み取り側・解析側に無く、誤形式が連鎖的に伝播する
-- `parsePostEvent` / `parseApprovalEvent` は `discussionId` を「値があれば良い」と判断し、ID の妥当性を見ていない
-- 参照: `src/lib/nostr/nostr-utils.ts:32`, `src/lib/nostr/nostr-utils.ts:82`
+1) UI で `#a` を直接構築する経路があり、正規化の境界が曖昧
+- 現状は `getDiscussionConfig()` が正規化済みを返す前提だが、呼び出し側が誤った `discussionId` を渡した場合に UI でそのままフィルタを組み立てる経路が残る
+- 参照: `src/components/discussion/BusStopMemo.tsx`, `src/components/discussion/BusStopDiscussion.tsx`, `src/components/discussion/AuditLogSection.tsx`, `src/app/discussions/[naddr]/approve/page.tsx`, `src/app/discussions/manage/page.tsx`
 
-4) 仕様に対するテストが不足しており、`naddr` → `kind:pubkey:dTag` の変換漏れが検出できない
-- 変換の単体テストはあるが、`#a` フィルタに渡す値が正しい形式かを保証するテストが無い
-- 参照: `src/lib/nostr/__tests__/naddr-utils.test.ts`
+2) `parseDiscussionEvent` が `dTag` を検証せず `discussionId` を組み立てるため、異常値の伝播が起きうる
+- `event.tags` に `dTag` として誤形式が混入すると、そのまま `discussionId` として UI に流通し、別箇所で `#a` として利用される可能性がある
+- 参照: `src/lib/nostr/nostr-utils.ts`
 
-## 追加の懸念点（第三者視点）
+### Low
+3) `normalizeDiscussionId` が `:` / `naddr1` を含む `dTag` を拒否するため、NIP-33 の「自由な識別子」との互換性が下がる
+- ポリシーとしては妥当だが、将来 dTag に `:` を含めたい場合に「静かに失敗」しやすい
+- 参照: `src/lib/nostr/naddr-utils.ts`
 
-- 変換の責務がコンポーネント側に散在しているため、実装者が「どこで正規化されるか」を誤解しやすい
-- 正規化の責務がどこにも一元化されていないため、今後の修正でも同種のバグが再発しやすい
+4) 誤形式時の挙動がサイレントに空配列返却となり、障害検知が遅れる
+- `normalizeDiscussionIdForRead` のエラーをログのみで潰し、UI 上は「データが無い」に見える
+- 参照: `src/lib/nostr/nostr-service.ts`
+
+## 既存の良い点（確認済み）
+
+- `naddr` → `kind:pubkey:dTag` の正規化と `naddr` 混入の拒否が明示的にテストされている
+- 参照: `src/lib/config/__tests__/discussion-config.test.ts`, `src/lib/nostr/__tests__/nostr-service.test.ts`, `src/lib/nostr/__tests__/nostr-utils.test.ts`
 
 ## 推奨アクション（非実装レビュー提案）
 
-- `discussionId` を「読み取り API の入口で必ず正規化する」方針に統一し、naddr/nostr URI/誤形式を明示的に弾く
-- `resolveDiscussionId` で `kind:pubkey:dTag` の厳密検証を行い、`naddr1...` を含む形式をエラー扱いにする
-- `#a` フィルタに渡される値を検証するテスト（特にバス停検索／メモ表示の経路）を追加する
+- `#a` を構築する前に必ず `normalizeDiscussionId` を通す小さなユーティリティを作り、UI/サービスの境界を統一する
+- `parseDiscussionEvent` でも `normalizeDiscussionId` 相当の検証を追加し、異常値の流通を抑止する
+- サイレント失敗の経路に UI での警告（もしくはメトリクス）を追加し、早期発見できるようにする
 
 ## 質問/前提（確認が必要）
 
-- `NEXT_PUBLIC_BUS_STOP_DISCUSSION_ID` に `naddr` ではなく `nostr:naddr` を渡す運用は存在するか
-- 既存データに `dTag` として `naddr` 文字列が紛れ込んでいないか（既存イベントの棚卸し）
+- `dTag` に `:` を含む運用を将来許容する想定はあるか
+- `discussionId` を UI に渡す経路で「正規化済みを保証する契約」が明文化されているか

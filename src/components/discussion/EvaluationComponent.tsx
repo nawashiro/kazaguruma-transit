@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import type { PostWithStats } from "@/types/discussion";
 import { shuffleArray, filterUnevaluatedPosts } from "@/lib/nostr/nostr-utils";
 import { logger } from "@/utils/logger";
@@ -22,16 +22,51 @@ export function EvaluationComponent({
   title = "投稿を評価",
 }: EvaluationComponentProps) {
   const [evaluatingPost, setEvaluatingPost] = useState<string | null>(null);
+  const shuffledOrderRef = useRef<string[]>([]);
 
-  const limitedPosts = useMemo(() => {
+  const availablePosts = useMemo(() => {
     const availablePosts = filterUnevaluatedPosts(
       posts.filter((p) => p.approved),
       userEvaluations
     );
 
-    // 初回のみシャッフル、その後は順序を保持
-    return isRandomOrder ? shuffleArray(availablePosts) : availablePosts;
-  }, [posts, userEvaluations, isRandomOrder]);
+    return availablePosts;
+  }, [posts, userEvaluations]);
+
+  const limitedPosts = useMemo(() => {
+    if (!isRandomOrder) {
+      shuffledOrderRef.current = availablePosts.map((post) => post.id);
+      return availablePosts;
+    }
+
+    if (availablePosts.length === 0) {
+      shuffledOrderRef.current = [];
+      return [];
+    }
+
+    const availableMap = new Map(
+      availablePosts.map((post) => [post.id, post])
+    );
+    const availableIds = Array.from(availableMap.keys());
+    const availableSet = new Set(availableIds);
+    const existingOrder = shuffledOrderRef.current.filter((id) =>
+      availableSet.has(id)
+    );
+
+    let nextOrder = existingOrder;
+    if (existingOrder.length === 0) {
+      nextOrder = shuffleArray(availableIds);
+    } else if (existingOrder.length < availableIds.length) {
+      const existingSet = new Set(existingOrder);
+      const missingIds = availableIds.filter((id) => !existingSet.has(id));
+      nextOrder = [...existingOrder, ...shuffleArray(missingIds)];
+    }
+
+    shuffledOrderRef.current = nextOrder;
+    return nextOrder
+      .map((id) => availableMap.get(id))
+      .filter((post): post is PostWithStats => Boolean(post));
+  }, [availablePosts, isRandomOrder]);
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (evaluatingPost) return;

@@ -66,6 +66,16 @@ export default function DiscussionDetailPage() {
   const [isDiscussionLoading, setIsDiscussionLoading] = useState(true);
   const [isPostsLoading, setIsPostsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const renderInlineLoading = (label: string) => (
+    <div
+      className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 ruby-text"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="loading loading-spinner loading-sm" aria-hidden="true"></div>
+      <span>{label}</span>
+    </div>
+  );
 
   // AuditLogSectionコンポーネントの参照
   const auditLogSectionRef = React.useRef<{ loadAuditData: () => void }>(null);
@@ -595,12 +605,16 @@ export default function DiscussionDetailPage() {
               >
                 投稿を評価
               </h2>
-              <EvaluationComponent
-                posts={postsWithStats}
-                onEvaluate={handleEvaluate}
-                userEvaluations={userEvaluations}
-                isRandomOrder={true}
-              />
+              {isPostsLoading
+                ? renderInlineLoading("評価データを読み込み中...")
+                : (
+                  <EvaluationComponent
+                    posts={postsWithStats}
+                    onEvaluate={handleEvaluate}
+                    userEvaluations={userEvaluations}
+                    isRandomOrder={true}
+                  />
+                )}
             </section>
 
             <section aria-labelledby="opinion-groups-heading">
@@ -615,197 +629,203 @@ export default function DiscussionDetailPage() {
                 投票を統計処理して、意見はグループ分けされます。どのグループでも共通した意見が評価されます。
               </p>
 
-              {isAnalyzing && (
-                <div className="flex items-center justify-center p-4 mb-4">
-                  <div className="loading loading-spinner loading-md mr-2"></div>
-                  <span className="text-sm text-gray-600">
-                    コンセンサス分析中...
-                  </span>
-                </div>
-              )}
-
-              {analysisResult && !isAnalyzing ? (
+              {isPostsLoading ? (
+                renderInlineLoading("分析データを読み込み中...")
+              ) : (
                 <>
-                  <div
-                    className="flex flex-row flex-wrap gap-2 mb-4"
-                    role="tablist"
-                    aria-label="意見タブ"
-                  >
-                    <button
-                      className={`btn border px-3 py-1 h-auto min-h-0 rounded-md font-medium ruby-text ${
-                        consensusTab === "group-consensus"
-                          ? "btn-primary border-primary text-primary-content"
-                          : "btn-outline hover:border-primary/50 hover:bg-primary/5"
-                      }`}
-                      onClick={() => setConsensusTab("group-consensus")}
-                      role="tab"
-                      aria-selected={consensusTab === "group-consensus"}
-                      aria-label="共通の意見タブ"
-                    >
-                      <span>共通の意見</span>
-                    </button>
-                    {analysisResult.groupRepresentativeComments.map(
-                      (group, index) => (
+                  {isAnalyzing && (
+                    <div className="flex items-center justify-center p-4 mb-4">
+                      <div className="loading loading-spinner loading-md mr-2"></div>
+                      <span className="text-sm text-gray-600">
+                        コンセンサス分析中...
+                      </span>
+                    </div>
+                  )}
+
+                  {analysisResult && !isAnalyzing ? (
+                    <>
+                      <div
+                        className="flex flex-row flex-wrap gap-2 mb-4"
+                        role="tablist"
+                        aria-label="意見タブ"
+                      >
                         <button
-                          key={group.groupId}
-                          className={`btn border px-3 py-1 h-auto min-h-0 rounded-md font-medium ${
-                            consensusTab ===
-                            `group-${String.fromCharCode(97 + index)}`
+                          className={`btn border px-3 py-1 h-auto min-h-0 rounded-md font-medium ruby-text ${
+                            consensusTab === "group-consensus"
                               ? "btn-primary border-primary text-primary-content"
                               : "btn-outline hover:border-primary/50 hover:bg-primary/5"
                           }`}
-                          onClick={() =>
-                            setConsensusTab(
-                              `group-${String.fromCharCode(97 + index)}`
-                            )
-                          }
+                          onClick={() => setConsensusTab("group-consensus")}
                           role="tab"
-                          aria-selected={
-                            consensusTab ===
-                            `group-${String.fromCharCode(97 + index)}`
-                          }
-                          aria-label={`グループ ${String.fromCharCode(
-                            65 + index
-                          )}タブ`}
+                          aria-selected={consensusTab === "group-consensus"}
+                          aria-label="共通の意見タブ"
                         >
-                          <span>
-                            グループ {String.fromCharCode(65 + index)}
-                          </span>
+                          <span>共通の意見</span>
                         </button>
-                      )
-                    )}
-                  </div>
+                        {analysisResult.groupRepresentativeComments.map(
+                          (group, index) => (
+                            <button
+                              key={group.groupId}
+                              className={`btn border px-3 py-1 h-auto min-h-0 rounded-md font-medium ${
+                                consensusTab ===
+                                `group-${String.fromCharCode(97 + index)}`
+                                  ? "btn-primary border-primary text-primary-content"
+                                  : "btn-outline hover:border-primary/50 hover:bg-primary/5"
+                              }`}
+                              onClick={() =>
+                                setConsensusTab(
+                                  `group-${String.fromCharCode(97 + index)}`
+                                )
+                              }
+                              role="tab"
+                              aria-selected={
+                                consensusTab ===
+                                `group-${String.fromCharCode(97 + index)}`
+                              }
+                              aria-label={`グループ ${String.fromCharCode(
+                                65 + index
+                              )}タブ`}
+                            >
+                              <span>
+                                グループ {String.fromCharCode(65 + index)}
+                              </span>
+                            </button>
+                          )
+                        )}
+                      </div>
 
-                  {consensusTab === "group-consensus" ? (
-                    <div className="space-y-4">
-                      {analysisResult.groupAwareConsensus.length > 0 ? (
-                        analysisResult.groupAwareConsensus
-                          .slice(0, 5)
-                          .map((item) => (
-                            <div
-                              key={item.postId}
-                              className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 break-all"
-                            >
-                              <div className="card-body p-4">
-                                <div className="flex items-start justify-between mb-2">
-                                  <span className="badge badge-sm badge-primary">
-                                    {item.overallAgreePercentage}%の人が賛成
-                                  </span>
-                                </div>
-                                {item.post?.busStopTag && (
-                                  <div className="mb-2">
-                                    <span className="badge badge-outline badge-sm">
-                                      {item.post.busStopTag}
-                                    </span>
-                                  </div>
-                                )}
-                                <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
-                                  {item.post?.content ? (
-                                    item.post.content
-                                      .split("\n")
-                                      .map((line, i) => (
-                                        <p key={i} className="mb-1 last:mb-0">
-                                          {line || "\u00A0"}
-                                        </p>
-                                      ))
-                                  ) : (
-                                    <p className="text-gray-500">
-                                      コンテンツがありません
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="text-gray-500 mt-2">
-                                  {formatRelativeTime(
-                                    item.post?.createdAt || 0
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                      ) : (
-                        <p className="text-gray-600 dark:text-gray-400 ruby-text">
-                          コンセンサス意見がありません。
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {(() => {
-                        const groupIndex =
-                          consensusTab.charCodeAt(consensusTab.length - 1) - 97;
-                        const group =
-                          analysisResult.groupRepresentativeComments[
-                            groupIndex
-                          ];
-                        return group?.comments.length > 0 ? (
-                          group.comments.map((item) => (
-                            <div
-                              key={item.postId}
-                              className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 break-all"
-                            >
-                              <div className="card-body p-4">
-                                <div className="flex items-start justify-between mb-2">
-                                  <div className="flex gap-2">
-                                    {item.voteType == "agree" ? (
+                      {consensusTab === "group-consensus" ? (
+                        <div className="space-y-4">
+                          {analysisResult.groupAwareConsensus.length > 0 ? (
+                            analysisResult.groupAwareConsensus
+                              .slice(0, 5)
+                              .map((item) => (
+                                <div
+                                  key={item.postId}
+                                  className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 break-all"
+                                >
+                                  <div className="card-body p-4">
+                                    <div className="flex items-start justify-between mb-2">
                                       <span className="badge badge-sm badge-primary">
-                                        {String.fromCharCode(65 + groupIndex)}
-                                        のうち
-                                        {Math.round(item.agreeRatio * 100)}
-                                        %が賛成
+                                        {item.overallAgreePercentage}%の人が賛成
                                       </span>
-                                    ) : (
-                                      <span className="badge badge-sm badge-warning">
-                                        {String.fromCharCode(65 + groupIndex)}
-                                        のうち
-                                        {Math.round(item.disagreeRatio * 100)}
-                                        %が反対
-                                      </span>
+                                    </div>
+                                    {item.post?.busStopTag && (
+                                      <div className="mb-2">
+                                        <span className="badge badge-outline badge-sm">
+                                          {item.post.busStopTag}
+                                        </span>
+                                      </div>
                                     )}
-                                  </div>
-                                </div>
-                                {item.post?.busStopTag && (
-                                  <div className="mb-2">
-                                    <span className="badge badge-outline badge-sm">
-                                      {item.post.busStopTag}
-                                    </span>
-                                  </div>
-                                )}
-                                <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
-                                  {item.post?.content ? (
-                                    item.post.content
-                                      .split("\n")
-                                      .map((line, i) => (
-                                        <p key={i} className="mb-1 last:mb-0">
-                                          {line || "\u00A0"}
+                                    <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
+                                      {item.post?.content ? (
+                                        item.post.content
+                                          .split("\n")
+                                          .map((line, i) => (
+                                            <p key={i} className="mb-1 last:mb-0">
+                                              {line || "\u00A0"}
+                                            </p>
+                                          ))
+                                      ) : (
+                                        <p className="text-gray-500">
+                                          コンテンツがありません
                                         </p>
-                                      ))
-                                  ) : (
-                                    <p className="text-gray-500">
-                                      コンテンツがありません
-                                    </p>
-                                  )}
+                                      )}
+                                    </div>
+                                    <div className="text-gray-500 mt-2">
+                                      {formatRelativeTime(
+                                        item.post?.createdAt || 0
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="text-gray-500 mt-2">
-                                  {formatRelativeTime(
-                                    item.post?.createdAt || 0
-                                  )}
+                              ))
+                          ) : (
+                            <p className="text-gray-600 dark:text-gray-400 ruby-text">
+                              コンセンサス意見がありません。
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {(() => {
+                            const groupIndex =
+                              consensusTab.charCodeAt(consensusTab.length - 1) - 97;
+                            const group =
+                              analysisResult.groupRepresentativeComments[
+                                groupIndex
+                              ];
+                            return group?.comments.length > 0 ? (
+                              group.comments.map((item) => (
+                                <div
+                                  key={item.postId}
+                                  className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 break-all"
+                                >
+                                  <div className="card-body p-4">
+                                    <div className="flex items-start justify-between mb-2">
+                                      <div className="flex gap-2">
+                                        {item.voteType == "agree" ? (
+                                          <span className="badge badge-sm badge-primary">
+                                            {String.fromCharCode(65 + groupIndex)}
+                                            のうち
+                                            {Math.round(item.agreeRatio * 100)}
+                                            %が賛成
+                                          </span>
+                                        ) : (
+                                          <span className="badge badge-sm badge-warning">
+                                            {String.fromCharCode(65 + groupIndex)}
+                                            のうち
+                                            {Math.round(item.disagreeRatio * 100)}
+                                            %が反対
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {item.post?.busStopTag && (
+                                      <div className="mb-2">
+                                        <span className="badge badge-outline badge-sm">
+                                          {item.post.busStopTag}
+                                        </span>
+                                      </div>
+                                    )}
+                                    <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
+                                      {item.post?.content ? (
+                                        item.post.content
+                                          .split("\n")
+                                          .map((line, i) => (
+                                            <p key={i} className="mb-1 last:mb-0">
+                                              {line || "\u00A0"}
+                                            </p>
+                                          ))
+                                      ) : (
+                                        <p className="text-gray-500">
+                                          コンテンツがありません
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="text-gray-500 mt-2">
+                                      {formatRelativeTime(
+                                        item.post?.createdAt || 0
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-gray-600 dark:text-gray-400 ruby-text">
-                            このグループの代表的意見がありません。
-                          </p>
-                        );
-                      })()}
-                    </div>
+                              ))
+                            ) : (
+                              <p className="text-gray-600 dark:text-gray-400 ruby-text">
+                                このグループの代表的意見がありません。
+                              </p>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-gray-600 dark:text-gray-400">
+                      分析された投稿がまだありません。
+                    </p>
                   )}
                 </>
-              ) : (
-                <p className="text-gray-600 dark:text-gray-400">
-                  分析された投稿がまだありません。
-                </p>
               )}
             </section>
           </div>

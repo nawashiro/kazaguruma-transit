@@ -158,6 +158,66 @@ describe("DiscussionDetailPage streaming", () => {
     jest.clearAllMocks();
   });
 
+  it("shows loading state for evaluations until approvals EOSE completes", async () => {
+    let discussionHandlers: StreamEventsOptions | undefined;
+    let resolveApprovals: (events: any[]) => void;
+
+    const approvalsPromise = new Promise<any[]>((resolve) => {
+      resolveApprovals = resolve;
+    });
+
+    serviceMock.streamDiscussionMeta.mockImplementation(
+      (_pubkey: string, _dTag: string, handlers: StreamEventsOptions) => {
+        discussionHandlers = handlers;
+        return () => {};
+      }
+    );
+
+    serviceMock.getApprovalsOnEose.mockReturnValue(approvalsPromise);
+    serviceMock.getEvaluationsForPosts.mockResolvedValue([]);
+    serviceMock.getEvaluations.mockResolvedValue([]);
+
+    render(<DiscussionDetailPage />);
+
+    const discussionEvent = {
+      id: "discussion-1",
+      pubkey: "author",
+      kind: 34550,
+      created_at: 999,
+      tags: [
+        ["d", "demo"],
+        ["name", "Streamed Discussion"],
+      ],
+      content: "Streaming description",
+      sig: "sig",
+    };
+
+    await act(async () => {
+      discussionHandlers?.onEvent?.([discussionEvent], discussionEvent);
+    });
+
+    expect(
+      await screen.findByText("Streamed Discussion")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("評価データを読み込み中...")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Evaluation Component")
+    ).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveApprovals([]);
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText("評価データを読み込み中...")
+      ).not.toBeInTheDocument()
+    );
+    expect(screen.getByText("Evaluation Component")).toBeInTheDocument();
+  });
+
   it("renders metadata on event before approvals EOSE, then runs analysis once after EOSE flow", async () => {
     let discussionHandlers: StreamEventsOptions | undefined;
     let resolveApprovals: (events: any[]) => void;

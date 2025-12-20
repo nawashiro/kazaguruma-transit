@@ -64,14 +64,10 @@ export const AuditLogSection = React.forwardRef<
 
   // 個別会話ページ用のデータ取得
   const loadIndividualAuditData = useCallback(async () => {
-    if (!discussionInfo) return;
+    if (!discussionInfo || !discussion) return;
 
     approvalStreamCleanupRef.current?.();
     postStreamCleanupRef.current?.();
-    approvalEventsRef.current = [];
-    postEventsRef.current = [];
-    setAuditPosts([]);
-    setAuditApprovals([]);
     setIsAuditLoading(true);
 
     const updateFromApprovals = (approvalsEvents: any[]) => {
@@ -172,10 +168,6 @@ export const AuditLogSection = React.forwardRef<
 
     approvalStreamCleanupRef.current?.();
     postStreamCleanupRef.current?.();
-    approvalEventsRef.current = [];
-    postEventsRef.current = [];
-    setAuditPosts([]);
-    setAuditApprovals([]);
     setIsAuditLoading(true);
 
     const updateFromApprovals = async (approvalsEvents: any[]) => {
@@ -286,8 +278,6 @@ export const AuditLogSection = React.forwardRef<
   // 監査ログ専用のデータ取得
   const loadAuditData = useCallback(async () => {
     if (isAuditLoaded || isAuditLoading) return;
-
-    if (!isDiscussionList && !discussionInfo) return;
 
     setIsAuditLoading(true);
     try {

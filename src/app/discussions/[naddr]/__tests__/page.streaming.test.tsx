@@ -147,6 +147,35 @@ jest.mock("@/components/discussion/AuditTimeline", () => ({
   AuditTimeline: () => <div>Audit Timeline</div>,
 }));
 
+// eslint-disable-next-line no-var
+var loadAuditDataMock: jest.Mock;
+
+jest.mock("@/components/discussion/AuditLogSection", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const React = require("react");
+  loadAuditDataMock = jest.fn();
+
+  const AuditLogSection = React.forwardRef(function AuditLogSectionMock(
+    _props: Record<string, never>,
+    ref: React.ForwardedRef<{ loadAuditData: () => void }>
+  ) {
+    React.useImperativeHandle(ref, () => ({
+      loadAuditData: loadAuditDataMock,
+    }));
+    return <div>Audit Log Section</div>;
+  });
+
+  AuditLogSection.displayName = "AuditLogSectionMock";
+
+  return {
+    __esModule: true,
+    AuditLogSection,
+    __mock: {
+      loadAuditDataMock,
+    },
+  };
+});
+
 jest.mock("@/components/ui/Button", () => {
   return function MockButton({ children, ...props }: any) {
     return <button {...props}>{children}</button>;
@@ -156,6 +185,7 @@ jest.mock("@/components/ui/Button", () => {
 describe("DiscussionDetailPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    loadAuditDataMock?.mockClear();
   });
 
   it("shows loading state for evaluations until approvals EOSE completes", async () => {
@@ -216,6 +246,50 @@ describe("DiscussionDetailPage streaming", () => {
       ).not.toBeInTheDocument()
     );
     expect(screen.getByText("Evaluation Component")).toBeInTheDocument();
+  });
+
+  it("loads audit data after switching to the audit tab", async () => {
+    let discussionHandlers: StreamEventsOptions | undefined;
+
+    serviceMock.streamDiscussionMeta.mockImplementation(
+      (_pubkey: string, _dTag: string, handlers: StreamEventsOptions) => {
+        discussionHandlers = handlers;
+        return () => {};
+      }
+    );
+
+    serviceMock.getApprovalsOnEose.mockResolvedValue([]);
+    serviceMock.getEvaluationsForPosts.mockResolvedValue([]);
+    serviceMock.getEvaluations.mockResolvedValue([]);
+
+    render(<DiscussionDetailPage />);
+
+    const discussionEvent = {
+      id: "discussion-1",
+      pubkey: "author",
+      kind: 34550,
+      created_at: 999,
+      tags: [
+        ["d", "demo"],
+        ["name", "Streamed Discussion"],
+      ],
+      content: "Streaming description",
+      sig: "sig",
+    };
+
+    await act(async () => {
+      discussionHandlers?.onEvent?.([discussionEvent], discussionEvent);
+    });
+
+    expect(
+      await screen.findByText("Streamed Discussion")
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      screen.getByRole("tab", { name: "監査ログを開く" }).click();
+    });
+
+    await waitFor(() => expect(loadAuditDataMock).toHaveBeenCalledTimes(1));
   });
 
   it("renders metadata on event before approvals EOSE, then runs analysis once after EOSE flow", async () => {

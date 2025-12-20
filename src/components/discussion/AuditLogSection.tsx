@@ -320,6 +320,7 @@ export const AuditLogSection = React.forwardRef<
   useEffect(() => {
     return () => {
       approvalStreamCleanupRef.current?.();
+      postStreamCleanupRef.current?.();
     };
   }, []);
 

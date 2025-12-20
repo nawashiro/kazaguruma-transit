@@ -177,6 +177,12 @@ export default function DiscussionsPage() {
     };
   }, [loadData]);
 
+  useEffect(() => {
+    if (activeTab === "audit") {
+      auditLogSectionRef.current?.loadAuditData();
+    }
+  }, [activeTab]);
+
   // ディスカッション機能が有効になっているか確認し、それに応じて表示を切り替える
   if (!isDiscussionsEnabled()) {
     return (
@@ -192,9 +198,6 @@ export default function DiscussionsPage() {
   // 監査ログタブがアクティブになった時のデータ取得
   const handleTabChange = (tab: "main" | "audit") => {
     setActiveTab(tab);
-    if (tab === "audit") {
-      auditLogSectionRef.current?.loadAuditData();
-    }
   };
 
   return (
@@ -214,7 +217,7 @@ export default function DiscussionsPage() {
           name="tab-options"
           aria-label="意見交換タブを開く"
           role="tab"
-          area-selected={activeTab === "main" ? "true" : "false"}
+          aria-selected={activeTab === "main" ? "true" : "false"}
           onClick={() => handleTabChange("main")}
         >
           <span>意見交換</span>
@@ -226,7 +229,7 @@ export default function DiscussionsPage() {
           name="tab-options"
           aria-label="監査ログを開く"
           role="tab"
-          area-selected={activeTab === "audit" ? "true" : "false"}
+          aria-selected={activeTab === "audit" ? "true" : "false"}
           onClick={() => handleTabChange("audit")}
         >
           <span>監査ログ</span>

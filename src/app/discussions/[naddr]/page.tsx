@@ -285,6 +285,12 @@ export default function DiscussionDetailPage() {
     }
   }, [user.pubkey, loadUserEvaluations]);
 
+  useEffect(() => {
+    if (activeTab === "audit") {
+      auditLogSectionRef.current?.loadAuditData();
+    }
+  }, [activeTab]);
+
   const approvedPosts = useMemo(() => posts.filter((p) => p.approved), [posts]);
 
   const runConsensusAnalysis = useCallback(async () => {
@@ -569,7 +575,7 @@ export default function DiscussionDetailPage() {
           name="tab-options"
           aria-label="会話タブを開く"
           role="tab"
-          area-selected={activeTab === "main" ? "true" : "false"}
+          aria-selected={activeTab === "main" ? "true" : "false"}
           onClick={() => setActiveTab("main")}
         >
           <span className="ruby-text">会話</span>
@@ -581,10 +587,9 @@ export default function DiscussionDetailPage() {
           name="tab-options"
           aria-label="監査ログを開く"
           role="tab"
-          area-selected={activeTab === "audit" ? "true" : "false"}
+          aria-selected={activeTab === "audit" ? "true" : "false"}
           onClick={() => {
             setActiveTab("audit");
-            auditLogSectionRef.current?.loadAuditData();
           }}
         >
           <span className="ruby-text">監査ログ</span>

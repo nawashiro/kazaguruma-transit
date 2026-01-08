@@ -49,3 +49,4 @@ prisma/.temp/
 transit-config.json
 
 .gtfs/
+.codex/

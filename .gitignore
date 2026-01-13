@@ -50,3 +50,4 @@ transit-config.json
 
 .gtfs/
 .codex/
+.specify/*

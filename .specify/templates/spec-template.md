@@ -1,9 +1,11 @@
 # Feature Specification: [FEATURE NAME]
 
-**Feature Branch**: `[###-feature-name]`  
-**Created**: [DATE]  
-**Status**: Draft  
+**Feature Branch**: `[###-feature-name]`
+**Created**: [DATE]
+**Status**: Draft
 **Input**: User description: "$ARGUMENTS"
+
+> **Note**: この仕様は `.specify/memory/constitution.md` の原則に準拠して作成されています。特に、テスト駆動開発(TDD)、アクセシビリティ(WCAG 2.1 AA)、型安全性(TypeScript strict)を重視しています。
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -94,13 +96,6 @@
 
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
 - **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
-
-### Non-Functional Requirements *(mandatory)*
-
-- **NFR-001**: UI MUST meet accessibility and keyboard navigation needs.
-- **NFR-002**: Japanese text rendering and copy MUST remain clear and consistent.
-- **NFR-003**: Data integrity for GTFS/Prisma/Nostr changes MUST be preserved.
-- **NFR-004**: Changes MUST be testable with TDD-first test coverage.
 
 ### Key Entities *(include if feature involves data)*
 

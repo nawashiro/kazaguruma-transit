@@ -31,11 +31,31 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- Readability before cleverness (naming, explicit control flow, small functions)
-- Domain boundaries respected (`src/app`, `src/components`, `src/lib`)
-- TDD plan: tests written first and run in CI/local workflow
-- Accessibility + Japanese UX fidelity requirements identified
-- Data integrity: GTFS/Prisma/Nostr changes validated with migration notes
+この機能は `.specify/memory/constitution.md` の原則に準拠していることを確認してください:
+
+### 必須チェック項目
+
+- [ ] **明確な命名**: 新規作成される変数・関数・コンポーネント名は意図が明確か?
+- [ ] **シンプルなロジック**: 複雑なロジックは小さな関数に分解される設計か?
+- [ ] **構造化された整理**: ファイルは適切なディレクトリ(`src/lib/`, `src/components/`等)に配置されるか?
+- [ ] **型安全性**: TypeScript strict モードで型定義が明確か? `any` は使用されないか?
+- [ ] **テスト駆動開発**: テストファーストで開発される計画か? (仕様に基づくテストのみ)
+- [ ] **アクセシビリティ**: UIコンポーネントはWCAG 2.1 AA基準を満たすか? (ARIA属性、44px×44pxタッチターゲット)
+- [ ] **適切なコメント**: 「なぜ」を説明するコメント、JSDocが計画されているか?
+
+### 技術制約チェック
+
+- [ ] **パフォーマンス**: API応答は95パーセンタイルで200ms以内に収まる設計か?
+- [ ] **データベース**: Prisma ORMとSQLiteの制約内で実装可能か?
+- [ ] **Nostr統合**: 既存のNIP-72/NIP-25実装と整合性があるか? (ディスカッション機能の場合)
+
+### コミット前チェックリスト遵守
+
+実装完了時に以下がすべて成功することを確認する計画があるか?
+- [ ] `npx tsc --noEmit` - TypeScript型チェック
+- [ ] `npm run lint` - ESLint
+- [ ] `npm test` - Jestテスト
+- [ ] `npm run build` - ビルド確認
 
 ## Project Structure
 

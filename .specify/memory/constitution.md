@@ -1,76 +1,93 @@
-﻿<!--
+<!--
 Sync Impact Report
-- Version change: N/A (template) -> 0.1.0
-- Modified principles: Template placeholders -> I. Essential Rider Value; II. Type-Safe Code Quality; III. Test-First Discipline (Non-Negotiable); IV. Accessible, Consistent UX; V. Performance & Reliability Budgets
-- Added sections: None (filled existing template sections)
-- Removed sections: None
-- Templates requiring updates:
-  - updated .specify/templates/plan-template.md
-  - updated .specify/templates/spec-template.md
-  - updated .specify/templates/tasks-template.md
-- Follow-up TODOs:
-  - TODO(RATIFICATION_DATE): original adoption date not found in repo
+Version: N/A (template) -> 1.0.0
+Modified Principles:
+- Template placeholder -> I. Readability Before Cleverness
+- Template placeholder -> II. Domain Boundaries & Explicit Types
+- Template placeholder -> III. Test-First Discipline (NON-NEGOTIABLE)
+- Template placeholder -> IV. Accessibility & Japanese UX Fidelity
+- Template placeholder -> V. Data Integrity & Operational Visibility
+Added Sections:
+- Architecture & Data Constraints
+- Development Workflow & Quality Gates
+Removed Sections:
+- None
+Templates requiring updates:
+- ✅ .specify/templates/plan-template.md
+- ✅ .specify/templates/spec-template.md
+- ✅ .specify/templates/tasks-template.md
+- ⚠ .specify/templates/commands/*.md (directory missing)
+Follow-up TODOs:
+- TODO(RATIFICATION_DATE): Original adoption date not found in repo history.
 -->
-# Chiyoda Transit Demo Constitution
+# Kazaguruma Transit Constitution
 
 ## Core Principles
 
-### I. Essential Rider Value
-This product MUST prioritize a single best route for Kazaguruma riders with the
-minimum required inputs. New features MUST be justified by direct rider value and
-MUST not introduce unrelated transit noise or complex multi-route output.
+### I. Readability Before Cleverness
+Code MUST be readable without mental decoding: clear names, small functions,
+explicit control flow, and no surprising side effects. Prefer clarity over
+micro-optimizations; remove dead code; avoid one-letter variables outside short
+loops. Comments explain intent or constraints, not restated code. Rationale:
+transit logic and discussion flows are safety-critical for users and require
+fast onboarding and accurate reviews.
 
-### II. Type-Safe Code Quality
-All new code MUST use TypeScript with explicit types for API responses, forms, and
-shared models in `src/types`. Implicit `any` is forbidden. `npm run lint` and
-`npx tsc --noEmit` MUST pass with zero errors or warnings before merge.
+### II. Domain Boundaries & Explicit Types
+Domain logic MUST live in `src/lib`, feature UI in `src/components/features`,
+shared UI in `src/components/ui`, and routing/UI entrypoints in `src/app`.
+All public data shapes MUST be explicitly typed (no implicit `any`), and API
+contracts MUST be validated at boundaries. Rationale: strict boundaries keep
+transit, Nostr, and evaluation logic auditable and prevent UI-layer coupling.
 
-### III. Test-First Discipline (Non-Negotiable)
-Behavior changes MUST be driven by tests written before implementation using Jest
-and React Testing Library. Follow red-green-refactor and keep tests independent
-and user-journey focused. Any exception requires documented rationale in the
-spec/plan and a compensating validation step.
+### III. Test-First Discipline (NON-NEGOTIABLE)
+TDD is mandatory: write tests first, ensure they fail, then implement and
+refactor. Use Jest + React Testing Library and place tests alongside features
+in `__tests__` or `.test.ts(x)` files. Mock external services in `__mocks__/`
+or `src/__mocks__/`. Rationale: correctness in route planning and discussion
+permissions cannot be inferred by inspection alone.
 
-### IV. Accessible, Consistent UX
-User interfaces MUST follow WCAG 2.2 AA and WAI-ARIA guidance, with keyboard
-navigation and meaningful labels for all interactive elements. Use Tailwind +
-DaisyUI and the established component structure to preserve visual and behavioral
-consistency across screens.
+### IV. Accessibility & Japanese UX Fidelity
+All UI MUST be accessible: ARIA labels, keyboard navigation, focus states, and
+semantic elements are required. Japanese text rendering MUST respect `ruby-text`
+styling and layout, and user-facing copy MUST be clear and consistent with the
+service context. Rationale: the app serves the public and must be usable by a
+wide range of riders.
 
-### V. Performance & Reliability Budgets
-Each feature MUST define measurable performance targets (e.g., route search
-latency, API response time, UI render time) in its spec and MUST not regress them.
-Prefer simple, predictable algorithms; treat GTFS data as a cache and avoid heavy
-queries in user-facing request paths.
+### V. Data Integrity & Operational Visibility
+GTFS imports, Prisma schema changes, and Nostr protocol handling MUST be
+versioned and validated; breaking changes require migration notes. Errors and
+critical flows MUST be logged with enough context to debug route queries and
+discussion moderation. Rationale: data drift or silent failures directly harm
+user trust.
 
-## Quality & User Experience Standards
+## Architecture & Data Constraints
 
-- Use 2-space indentation and keep modules small, focused, and typed end-to-end.
-- UI components live in `src/components/ui`, features in `src/components/features`,
-  and layouts in `src/components/layouts`.
-- Accessibility checks are part of review; ARIA roles, labels, and focus order are
-  required for new UI.
-- UX copy and interaction patterns must remain consistent across pages.
+- Next.js App Router source lives in `src/app`, with feature UI in
+  `src/components/features` and shared UI in `src/components/ui`.
+- Domain services stay under `src/lib` (transit routing, discussions,
+  evaluation, Nostr integration).
+- Prisma + SQLite are the source of truth for GTFS data; imports run via
+  `scripts/import-gtfs.ts` during build/start.
+- External images use `<img>` (not Next `<Image>`) when required by remote URL
+  limitations.
 
-## Development Workflow & Verification
+## Development Workflow & Quality Gates
 
-- TDD flow: write failing tests, implement the minimum change, then refactor.
-- Required checks before merge: `npm run lint`, `npx tsc --noEmit`, `npm test`.
-- Run `npm run build` when changes touch Prisma, GTFS import, or production build
-  behavior.
-- Any deviation from this workflow must be recorded in the spec and reviewed.
+- Follow TDD: tests first, failing before implementation, then refactor.
+- Quality gates: `npx tsc --noEmit`, `npm run lint`, `npm test`, and
+  `npm run build` must pass before declaring work done.
+- Reviews MUST confirm readability, accessibility, and data-boundary compliance.
+- Use 2-space indentation, TypeScript-first patterns, and React function
+  components with hooks.
 
 ## Governance
+<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-- This constitution supersedes other guidelines when conflicts exist.
-- Amendments require updating this file, the Sync Impact Report, and related
-  templates; versioning follows semver (MAJOR for breaking governance changes,
-  MINOR for new or expanded rules, PATCH for clarifications).
-- Every PR/review MUST include a constitution compliance check, with any waiver
-  documented and approved in the feature spec.
+This constitution supersedes other guidance. Amendments require updating this
+file, a rationale in the change description, and a version bump per semver:
+MAJOR for incompatible principle changes, MINOR for new principles/sections,
+PATCH for clarifications. Each plan/spec MUST include a constitution check, and
+reviews MUST verify compliance. Runtime guidance lives in `AGENTS.md` and
+`CLAUDE.md`.
 
-**Version**: 0.1.0 | **Ratified**: TODO(RATIFICATION_DATE): original adoption date not found in repo | **Last Amended**: 2026-01-09
-
-
-
-
+**Version**: 1.0.0 | **Ratified**: TODO(RATIFICATION_DATE): Original adoption date not found in repo history. | **Last Amended**: 2026-01-13

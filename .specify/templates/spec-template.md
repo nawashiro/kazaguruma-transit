@@ -1,4 +1,4 @@
-﻿# Feature Specification: [FEATURE NAME]
+# Feature Specification: [FEATURE NAME]
 
 **Feature Branch**: `[###-feature-name]`  
 **Created**: [DATE]  
@@ -97,10 +97,10 @@
 
 ### Non-Functional Requirements *(mandatory)*
 
-- **NFR-001**: Feature MUST define measurable performance targets (e.g., latency, render time).
-- **NFR-002**: UI MUST meet WCAG 2.2 AA and WAI-ARIA requirements.
-- **NFR-003**: UX MUST match established Tailwind + DaisyUI patterns and layout structure.
-- **NFR-004**: Loading, empty, and error states MUST be specified for all user flows.
+- **NFR-001**: UI MUST meet accessibility and keyboard navigation needs.
+- **NFR-002**: Japanese text rendering and copy MUST remain clear and consistent.
+- **NFR-003**: Data integrity for GTFS/Prisma/Nostr changes MUST be preserved.
+- **NFR-004**: Changes MUST be testable with TDD-first test coverage.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -120,4 +120,3 @@
 - **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
-

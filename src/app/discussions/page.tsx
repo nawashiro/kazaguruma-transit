@@ -3,11 +3,11 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
-import { AuditLogSection } from "@/components/discussion/AuditLogSection";
+import { DiscussionTabLayout } from "@/components/discussion/DiscussionTabLayout";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parseDiscussionEvent,
@@ -31,12 +31,9 @@ import type { Event } from "nostr-tools";
 const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function DiscussionsPage() {
-  const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
-  const [discussions, setDiscussions] = useState<Discussion[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [discussions, setDiscussions] = React.useState<Discussion[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-  // AuditLogSectionコンポーネントの参照
-  const auditLogSectionRef = React.useRef<{ loadAuditData: () => void }>(null);
   const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
   const discussionStreamCleanupRef = useRef<(() => void) | null>(null);
   const loadSequenceRef = useRef(0);
@@ -177,12 +174,6 @@ export default function DiscussionsPage() {
     };
   }, [loadData]);
 
-  useEffect(() => {
-    if (activeTab === "audit") {
-      auditLogSectionRef.current?.loadAuditData();
-    }
-  }, [activeTab]);
-
   // ディスカッション機能が有効になっているか確認し、それに応じて表示を切り替える
   if (!isDiscussionsEnabled()) {
     return (
@@ -195,49 +186,17 @@ export default function DiscussionsPage() {
     );
   }
 
-  // 監査ログタブがアクティブになった時のデータ取得
-  const handleTabChange = (tab: "main" | "audit") => {
-    setActiveTab(tab);
-  };
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 ruby-text">
-        <h1 className="text-3xl font-bold mb-4">意見交換</h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。
-        </p>
-      </div>
+    <DiscussionTabLayout baseHref="/discussions">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8 ruby-text">
+          <h1 className="text-3xl font-bold mb-4">意見交換</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。
+          </p>
+        </div>
 
-      <nav role="tablist" className="join mb-6">
-        <button
-          className={`join-item btn ruby-text ${
-            activeTab === "main" && "btn-active btn-primary"
-          }`}
-          name="tab-options"
-          aria-label="意見交換タブを開く"
-          role="tab"
-          aria-selected={activeTab === "main" ? "true" : "false"}
-          onClick={() => handleTabChange("main")}
-        >
-          <span>意見交換</span>
-        </button>
-        <button
-          className={`join-item btn ruby-text ${
-            activeTab === "audit" && "btn-active btn-primary"
-          }`}
-          name="tab-options"
-          aria-label="監査ログを開く"
-          role="tab"
-          aria-selected={activeTab === "audit" ? "true" : "false"}
-          onClick={() => handleTabChange("audit")}
-        >
-          <span>監査ログ</span>
-        </button>
-      </nav>
-
-      {activeTab === "main" ? (
-        <main role="tabpanel" aria-labelledby="main-tab" className="space-y-6">
+        <main className="space-y-6">
           {/* 作成者またはモデレーターの場合のみ表示 */}
           {(discussions.some((d) => user.pubkey === d.authorPubkey) ||
             discussions.some((d) =>
@@ -365,20 +324,7 @@ export default function DiscussionsPage() {
             </section>
           </div>
         </main>
-      ) : (
-        <main role="tabpanel" aria-labelledby="audit-tab">
-          <AuditLogSection
-            ref={auditLogSectionRef}
-            discussion={null}
-            discussionInfo={null}
-            conversationAuditMode={true}
-            referencedDiscussions={[]}
-            isDiscussionList={true}
-          />
-        </main>
-      )}
-
-      {/* spec_v2.md要件: ログインモーダルも不要 */}
-    </div>
+      </div>
+    </DiscussionTabLayout>
   );
 }

@@ -185,3 +185,10 @@ This app includes Nostr-based decentralized discussion functionality:
 - **Discussion List Page** (`/discussions`): Overview of all discussions with audit logs for cross-conversation activity
 - **AuditLogSection Component**: Shared component handling audit timeline with support for both individual discussions and discussion list contexts
 - **Profile Loading Strategy**: Collects profiles only for creators and moderators, not general post authors
+
+## Active Technologies
+- TypeScript 5 (strict mode) + Next.js 15 (App Router), React 19, DaisyUI 5, Tailwind CSS 4, nostr-tools (001-audit-page-refactor)
+- N/A（Nostrリレーサーバーから直接取得） (001-audit-page-refactor)
+
+## Recent Changes
+- 001-audit-page-refactor: Added TypeScript 5 (strict mode) + Next.js 15 (App Router), React 19, DaisyUI 5, Tailwind CSS 4, nostr-tools

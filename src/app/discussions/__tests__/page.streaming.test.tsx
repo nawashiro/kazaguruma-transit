@@ -4,6 +4,11 @@ import "@testing-library/jest-dom";
 import DiscussionsPage from "../page";
 import type { StreamEventsOptions } from "@/lib/nostr/nostr-service";
 
+// Mock next/navigation
+jest.mock("next/navigation", () => ({
+  usePathname: () => "/discussions",
+}));
+
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => ({
     user: { pubkey: "viewer", isLoggedIn: true },

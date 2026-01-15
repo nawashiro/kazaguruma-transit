@@ -26,7 +26,7 @@ const nostrServiceConfig = getNostrServiceConfig();
 const nostrService = createNostrService(nostrServiceConfig);
 
 interface AuditLogSectionProps {
-  discussion: Discussion | null;
+  discussion?: Discussion | null;
   discussionInfo: {
     discussionId: string;
     authorPubkey: string;
@@ -35,17 +35,19 @@ interface AuditLogSectionProps {
   conversationAuditMode?: boolean;
   referencedDiscussions?: Discussion[];
   isDiscussionList?: boolean; // 会話一覧ページかどうかを示すフラグ
+  loadDiscussionIndependently?: boolean; // 監査ページで独自にkind:34550を取得するフラグ
 }
 
 export const AuditLogSection = React.forwardRef<
   { loadAuditData: () => void },
   AuditLogSectionProps
 >(({
-  discussion,
+  discussion: discussionProp,
   discussionInfo,
   conversationAuditMode = false,
   referencedDiscussions = [],
   isDiscussionList = false,
+  loadDiscussionIndependently = false,
 }, ref) => {
   // 監査ログ用の独立した状態
   const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
@@ -53,18 +55,73 @@ export const AuditLogSection = React.forwardRef<
   const [, setAuditEvaluations] = useState<PostEvaluation[]>([]);
   const [isAuditLoading, setIsAuditLoading] = useState(false);
   const [isAuditLoaded, setIsAuditLoaded] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<Record<string, { name?: string }>>(
     {}
   );
   const [localReferencedDiscussions, setLocalReferencedDiscussions] = useState<Discussion[]>([]);
+  // 独自に取得したDiscussion
+  const [independentDiscussion, setIndependentDiscussion] = useState<Discussion | null>(null);
   const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
   const postStreamCleanupRef = useRef<(() => void) | null>(null);
   const approvalEventsRef = useRef<any[]>([]);
   const postEventsRef = useRef<any[]>([]);
 
+  // 使用するdiscussionを決定（独自取得した場合はそちらを優先）
+  const discussion = loadDiscussionIndependently ? independentDiscussion : (discussionProp ?? null);
+
+  /**
+   * kind:34550（Discussion）を独自に取得する
+   * FR-016: 監査ページはメイン画面に依存せず独自にDiscussionを取得する
+   */
+  const loadDiscussionForAudit = useCallback(async (): Promise<Discussion | null> => {
+    if (!discussionInfo) return null;
+
+    try {
+      logger.info("Loading discussion independently for audit page", {
+        discussionId: discussionInfo.discussionId,
+      });
+
+      // getReferencedUserDiscussionsを使用してkind:34550を取得
+      const discussionEvents = await nostrService.getReferencedUserDiscussions([
+        discussionInfo.discussionId,
+      ]);
+
+      if (discussionEvents && discussionEvents.length > 0) {
+        const parsed = parseDiscussionEvent(discussionEvents[0]);
+        if (parsed) {
+          logger.info("Discussion loaded independently", { id: parsed.id });
+          return parsed;
+        }
+      }
+
+      logger.warn("No discussion found for audit page", {
+        discussionId: discussionInfo.discussionId,
+      });
+      return null;
+    } catch (error) {
+      logger.error("Failed to load discussion for audit page:", error);
+      return null;
+    }
+  }, [discussionInfo]);
+
   // 個別会話ページ用のデータ取得
   const loadIndividualAuditData = useCallback(async () => {
-    if (!discussionInfo || !discussion) return;
+    if (!discussionInfo) return;
+
+    // loadDiscussionIndependentlyがtrueの場合、先にDiscussionを取得
+    let currentDiscussion = discussion;
+    if (loadDiscussionIndependently && !currentDiscussion) {
+      currentDiscussion = await loadDiscussionForAudit();
+      if (currentDiscussion) {
+        setIndependentDiscussion(currentDiscussion);
+      }
+    }
+
+    if (!currentDiscussion) {
+      logger.warn("No discussion available for audit data loading");
+      return;
+    }
 
     approvalStreamCleanupRef.current?.();
     postStreamCleanupRef.current?.();
@@ -124,9 +181,9 @@ export const AuditLogSection = React.forwardRef<
     // 監査ログ用プロファイル取得（作成者・モデレーターのみ）
     const uniquePubkeys = new Set<string>();
 
-    if (discussion) {
-      uniquePubkeys.add(discussion.authorPubkey);
-      discussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
+    if (currentDiscussion) {
+      uniquePubkeys.add(currentDiscussion.authorPubkey);
+      currentDiscussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
     }
 
     referencedDiscussions.forEach((refDiscussion) => {
@@ -151,7 +208,7 @@ export const AuditLogSection = React.forwardRef<
     }
 
     logger.info("Individual audit data loaded");
-  }, [discussionInfo, discussion, referencedDiscussions]);
+  }, [discussionInfo, discussion, referencedDiscussions, loadDiscussionIndependently, loadDiscussionForAudit]);
 
   // 会話一覧ページ用のデータ取得
   const loadDiscussionListAuditData = useCallback(async () => {
@@ -275,12 +332,23 @@ export const AuditLogSection = React.forwardRef<
     logger.info("Discussion list audit data streaming started");
   }, []);
 
-  // 監査ログ専用のデータ取得
+  /**
+   * 監査ログ専用のデータ取得
+   * エラーハンドリングとログ出力を含む（FR-007, FR-008, FR-009, FR-010）
+   */
   const loadAuditData = useCallback(async () => {
     if (isAuditLoaded || isAuditLoading) return;
 
     setIsAuditLoading(true);
+    setAuditError(null);
+
     try {
+      logger.info("Starting audit data loading", {
+        isDiscussionList,
+        loadDiscussionIndependently,
+        hasDiscussionInfo: !!discussionInfo,
+      });
+
       // Check if this is test mode (for backward compatibility)
       if (discussionInfo && isTestMode(discussionInfo.dTag)) {
         const testData = await loadTestData();
@@ -289,6 +357,7 @@ export const AuditLogSection = React.forwardRef<
         setAuditEvaluations(testData.evaluations);
         setLocalReferencedDiscussions([]);
         setIsAuditLoaded(true);
+        logger.info("Test mode audit data loaded");
         return;
       }
 
@@ -299,12 +368,32 @@ export const AuditLogSection = React.forwardRef<
       }
 
       setIsAuditLoaded(true);
+      logger.info("Audit data loading completed successfully");
     } catch (error) {
-      logger.error("Failed to load audit data:", error);
+      const errorMessage = error instanceof Error ? error.message : "不明なエラー";
+      logger.error("Failed to load audit data:", {
+        error: errorMessage,
+        isDiscussionList,
+        discussionId: discussionInfo?.discussionId,
+      });
+      setAuditError("データの取得に失敗しました。再試行してください。");
+      // FR-009: エラー時は空データを設定し、ローディング状態を終了
+      setAuditPosts([]);
+      setAuditApprovals([]);
     } finally {
       setIsAuditLoading(false);
     }
-  }, [discussionInfo, isAuditLoaded, isAuditLoading, isDiscussionList, loadDiscussionListAuditData, loadIndividualAuditData]);
+  }, [discussionInfo, isAuditLoaded, isAuditLoading, isDiscussionList, loadDiscussionListAuditData, loadIndividualAuditData, loadDiscussionIndependently]);
+
+  /**
+   * 再試行機能（FR-015）
+   */
+  const retryLoadAuditData = useCallback(() => {
+    setIsAuditLoaded(false);
+    setAuditError(null);
+    // 状態リセット後に次のレンダーで呼び出されるよう、直接は呼ばない
+    // useEffectで自動的にloadAuditDataが呼ばれる
+  }, []);
 
   const auditItems = useMemo(
     () =>
@@ -324,10 +413,41 @@ export const AuditLogSection = React.forwardRef<
     };
   }, []);
 
-  // refを通じて外部からloadAuditDataを呼び出せるようにする
+  // refを通じて外部からloadAuditDataと再試行を呼び出せるようにする
   React.useImperativeHandle(ref, () => ({
     loadAuditData,
-  }), [loadAuditData]);
+    retryLoadAuditData,
+  }), [loadAuditData, retryLoadAuditData]);
+
+  // エラー表示コンポーネント（FR-014, FR-015）
+  const renderError = () => (
+    <div className="alert alert-error" role="alert">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="stroke-current shrink-0 h-6 w-6"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      <span>{auditError}</span>
+      <button
+        className="btn btn-sm btn-outline"
+        onClick={() => {
+          retryLoadAuditData();
+          // 状態リセット後にloadAuditDataを呼ぶ
+          setTimeout(() => loadAuditData(), 0);
+        }}
+      >
+        再試行
+      </button>
+    </div>
+  );
 
   return (
     <section aria-labelledby="audit-screen-heading">
@@ -339,7 +459,9 @@ export const AuditLogSection = React.forwardRef<
       </h2>
       <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="card-body">
-          {isAuditLoading ? (
+          {auditError ? (
+            renderError()
+          ) : isAuditLoading ? (
             <div className="animate-pulse space-y-4">
               {[...Array(5)].map((_, i) => (
                 <div

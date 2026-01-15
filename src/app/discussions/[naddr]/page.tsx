@@ -14,7 +14,6 @@ import {
 import { LoginModal } from "@/components/discussion/LoginModal";
 import { PostPreview } from "@/components/discussion/PostPreview";
 import { EvaluationComponent } from "@/components/discussion/EvaluationComponent";
-import { AuditLogSection } from "@/components/discussion/AuditLogSection";
 import { ModeratorCheck } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
@@ -51,7 +50,6 @@ export default function DiscussionDetailPage() {
   const params = useParams();
   const naddrParam = params.naddr as string;
 
-  const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
   const [consensusTab, setConsensusTab] = useState<string>("group-consensus");
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [posts, setPosts] = useState<DiscussionPost[]>([]);
@@ -77,8 +75,6 @@ export default function DiscussionDetailPage() {
     </div>
   );
 
-  // AuditLogSectionコンポーネントの参照
-  const auditLogSectionRef = React.useRef<{ loadAuditData: () => void }>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState("");
@@ -284,12 +280,6 @@ export default function DiscussionDetailPage() {
       loadUserEvaluations();
     }
   }, [user.pubkey, loadUserEvaluations]);
-
-  useEffect(() => {
-    if (activeTab === "audit") {
-      auditLogSectionRef.current?.loadAuditData();
-    }
-  }, [activeTab]);
 
   const approvedPosts = useMemo(() => posts.filter((p) => p.approved), [posts]);
 
@@ -567,41 +557,9 @@ export default function DiscussionDetailPage() {
         ))}
       </div>
 
-      <nav role="tablist" aria-label="会話メニュー" className="join mb-6">
-        <button
-          className={`join-item btn ruby-text ${
-            activeTab === "main" && "btn-active btn-primary"
-          }`}
-          name="tab-options"
-          aria-label="会話タブを開く"
-          role="tab"
-          aria-selected={activeTab === "main" ? "true" : "false"}
-          onClick={() => setActiveTab("main")}
-        >
-          <span className="ruby-text">会話</span>
-        </button>
-        <button
-          className={`join-item btn ruby-text ${
-            activeTab === "audit" && "btn-active btn-primary"
-          }`}
-          name="tab-options"
-          aria-label="監査ログを開く"
-          role="tab"
-          aria-selected={activeTab === "audit" ? "true" : "false"}
-          onClick={() => {
-            setActiveTab("audit");
-          }}
-        >
-          <span className="ruby-text">監査ログ</span>
-        </button>
-      </nav>
+      {/* タブナビゲーションはlayout.tsxに移動 */}
 
-      {activeTab === "main" ? (
-        <main
-          role="tabpanel"
-          aria-labelledby="main-tab"
-          className="grid lg:grid-cols-2 gap-8"
-        >
+      <main className="grid lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             <section aria-labelledby="evaluation-heading">
               <h2
@@ -955,17 +913,6 @@ export default function DiscussionDetailPage() {
             </section>
           </aside>
         </main>
-      ) : (
-        <main role="tabpanel" aria-labelledby="audit-tab">
-          <AuditLogSection
-            ref={auditLogSectionRef}
-            discussion={discussion}
-            discussionInfo={discussionInfo}
-            conversationAuditMode={false}
-            referencedDiscussions={discussion ? [discussion] : []}
-          />
-        </main>
-      )}
 
       <LoginModal
         isOpen={showLoginModal}

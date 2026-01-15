@@ -1,9 +1,11 @@
-﻿# Feature Specification: [FEATURE NAME]
+# Feature Specification: [FEATURE NAME]
 
-**Feature Branch**: `[###-feature-name]`  
-**Created**: [DATE]  
-**Status**: Draft  
+**Feature Branch**: `[###-feature-name]`
+**Created**: [DATE]
+**Status**: Draft
 **Input**: User description: "$ARGUMENTS"
+
+> **Note**: この仕様は `.specify/memory/constitution.md` の原則に準拠して作成されています。特に、テスト駆動開発(TDD)、アクセシビリティ(WCAG 2.1 AA)、型安全性(TypeScript strict)を重視しています。
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -95,13 +97,6 @@
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
 - **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
 
-### Non-Functional Requirements *(mandatory)*
-
-- **NFR-001**: Feature MUST define measurable performance targets (e.g., latency, render time).
-- **NFR-002**: UI MUST meet WCAG 2.2 AA and WAI-ARIA requirements.
-- **NFR-003**: UX MUST match established Tailwind + DaisyUI patterns and layout structure.
-- **NFR-004**: Loading, empty, and error states MUST be specified for all user flows.
-
 ### Key Entities *(include if feature involves data)*
 
 - **[Entity 1]**: [What it represents, key attributes without implementation]
@@ -120,4 +115,3 @@
 - **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
-

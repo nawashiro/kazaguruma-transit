@@ -1,4 +1,4 @@
-﻿# Implementation Plan: [FEATURE]
+# Implementation Plan: [FEATURE]
 
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
@@ -31,11 +31,31 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- [ ] Scope aligns to Essential Rider Value (single best route, minimal inputs).
-- [ ] Type safety plan covers typed API/forms and no implicit any.
-- [ ] Test plan follows TDD with Jest/RTL; exceptions documented.
-- [ ] UX plan covers WCAG 2.2 AA, ARIA, and DaisyUI/Tailwind consistency.
-- [ ] Performance targets defined and measurable in spec.
+この機能は `.specify/memory/constitution.md` の原則に準拠していることを確認してください:
+
+### 必須チェック項目
+
+- [ ] **明確な命名**: 新規作成される変数・関数・コンポーネント名は意図が明確か?
+- [ ] **シンプルなロジック**: 複雑なロジックは小さな関数に分解される設計か?
+- [ ] **構造化された整理**: ファイルは適切なディレクトリ(`src/lib/`, `src/components/`等)に配置されるか?
+- [ ] **型安全性**: TypeScript strict モードで型定義が明確か? `any` は使用されないか?
+- [ ] **テスト駆動開発**: テストファーストで開発される計画か? (仕様に基づくテストのみ)
+- [ ] **アクセシビリティ**: UIコンポーネントはWCAG 2.1 AA基準を満たすか? (ARIA属性、44px×44pxタッチターゲット)
+- [ ] **適切なコメント**: 「なぜ」を説明するコメント、JSDocが計画されているか?
+
+### 技術制約チェック
+
+- [ ] **パフォーマンス**: API応答は95パーセンタイルで200ms以内に収まる設計か?
+- [ ] **データベース**: Prisma ORMとSQLiteの制約内で実装可能か?
+- [ ] **Nostr統合**: 既存のNIP-72/NIP-25実装と整合性があるか? (ディスカッション機能の場合)
+
+### コミット前チェックリスト遵守
+
+実装完了時に以下がすべて成功することを確認する計画があるか?
+- [ ] `npx tsc --noEmit` - TypeScript型チェック
+- [ ] `npm run lint` - ESLint
+- [ ] `npm test` - Jestテスト
+- [ ] `npm run build` - ビルド確認
 
 ## Project Structure
 
@@ -43,12 +63,12 @@
 
 ```text
 specs/[###-feature]/
-笏懌楳笏 plan.md              # This file (/speckit.plan command output)
-笏懌楳笏 research.md          # Phase 0 output (/speckit.plan command)
-笏懌楳笏 data-model.md        # Phase 1 output (/speckit.plan command)
-笏懌楳笏 quickstart.md        # Phase 1 output (/speckit.plan command)
-笏懌楳笏 contracts/           # Phase 1 output (/speckit.plan command)
-笏披楳笏 tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+├── plan.md              # This file (/speckit.plan command output)
+├── research.md          # Phase 0 output (/speckit.plan command)
+├── data-model.md        # Phase 1 output (/speckit.plan command)
+├── quickstart.md        # Phase 1 output (/speckit.plan command)
+├── contracts/           # Phase 1 output (/speckit.plan command)
+└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
 ```
 
 ### Source Code (repository root)
@@ -62,37 +82,37 @@ specs/[###-feature]/
 ```text
 # [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-笏懌楳笏 models/
-笏懌楳笏 services/
-笏懌楳笏 cli/
-笏披楳笏 lib/
+├── models/
+├── services/
+├── cli/
+└── lib/
 
 tests/
-笏懌楳笏 contract/
-笏懌楳笏 integration/
-笏披楳笏 unit/
+├── contract/
+├── integration/
+└── unit/
 
 # [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
 backend/
-笏懌楳笏 src/
-笏・  笏懌楳笏 models/
-笏・  笏懌楳笏 services/
-笏・  笏披楳笏 api/
-笏披楳笏 tests/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
 
 frontend/
-笏懌楳笏 src/
-笏・  笏懌楳笏 components/
-笏・  笏懌楳笏 pages/
-笏・  笏披楳笏 services/
-笏披楳笏 tests/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
 
 # [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
 api/
-笏披楳笏 [same as backend above]
+└── [same as backend above]
 
 ios/ or android/
-笏披楳笏 [platform-specific structure: feature modules, UI flows, platform tests]
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
 **Structure Decision**: [Document the selected structure and reference the real
@@ -106,4 +126,3 @@ directories captured above]
 |-----------|------------|-------------------------------------|
 | [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
 | [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
-

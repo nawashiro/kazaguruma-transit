@@ -19,6 +19,7 @@ jest.mock('@/lib/config/discussion-config', () => ({
 
 jest.mock('@/lib/nostr/nostr-service', () => ({
   createNostrService: () => ({
+    streamDiscussionMeta: jest.fn(),
     getDiscussions: jest.fn().mockResolvedValue([{
       id: 'test-event-id',
       pubkey: 'test-author-pubkey',
@@ -28,7 +29,9 @@ jest.mock('@/lib/nostr/nostr-service', () => ({
     }]),
     getDiscussionPosts: jest.fn().mockResolvedValue([]),
     getApprovals: jest.fn().mockResolvedValue([]),
+    getApprovalsOnEose: jest.fn().mockResolvedValue([]),
     getEvaluationsForPosts: jest.fn().mockResolvedValue([]),
+    getEvaluations: jest.fn().mockResolvedValue([]),
     getProfile: jest.fn().mockResolvedValue(null),
   }),
 }));

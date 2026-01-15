@@ -243,6 +243,24 @@ export class NostrService {
     return Array.from(eventsByDTag.values())[0];
   }
 
+  streamDiscussionMeta(
+    pubkey: string,
+    dTag: string,
+    options: StreamEventsOptions
+  ): () => void {
+    return this.streamEventsOnEvent(
+      [
+        {
+          kinds: [34550],
+          authors: [pubkey],
+          "#d": [dTag],
+          limit: 1,
+        },
+      ],
+      options
+    );
+  }
+
   async getDiscussionPosts(
     discussionId: string,
     busStopTags?: string[]
@@ -741,6 +759,38 @@ export class NostrService {
     }
 
     return Array.from(eventsByRef.values());
+  }
+
+  streamReferencedUserDiscussions(
+    references: string[],
+    options: StreamEventsOptions
+  ): () => void {
+    if (references.length === 0) {
+      options.onEose?.([]);
+      return () => {};
+    }
+
+    const filters: Filter[] = [];
+
+    for (const ref of references) {
+      const parts = ref.split(":");
+      if (parts.length === 3 && parts[0] === "34550") {
+        const [, pubkey, dTag] = parts;
+        filters.push({
+          kinds: [34550],
+          authors: [pubkey],
+          "#d": [dTag],
+          limit: 1,
+        });
+      }
+    }
+
+    if (filters.length === 0) {
+      options.onEose?.([]);
+      return () => {};
+    }
+
+    return this.streamEventsOnEvent(filters, options);
   }
 
   // spec_v2.md要件: NIP-72承認システムでの承認済みユーザー会話取得

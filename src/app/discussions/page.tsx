@@ -3,11 +3,11 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
-import { AuditLogSection } from "@/components/discussion/AuditLogSection";
+import { DiscussionTabLayout } from "@/components/discussion/DiscussionTabLayout";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parseDiscussionEvent,
@@ -31,24 +31,25 @@ import type { Event } from "nostr-tools";
 const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function DiscussionsPage() {
-  const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
-  const [discussions, setDiscussions] = useState<Discussion[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [discussions, setDiscussions] = React.useState<Discussion[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-  // AuditLogSectionコンポーネントの参照
-  const auditLogSectionRef = React.useRef<{ loadAuditData: () => void }>(null);
-  const approvalEventsRef = useRef<Event[]>([]);
   const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
+  const discussionStreamCleanupRef = useRef<(() => void) | null>(null);
+  const loadSequenceRef = useRef(0);
 
   const { user } = useAuth();
 
   // 会話一覧専用のデータ取得
   const loadData = useCallback(async () => {
     if (!isDiscussionsEnabled()) return;
+    const loadSequence = ++loadSequenceRef.current;
     setIsLoading(true);
-    approvalEventsRef.current = [];
+    setDiscussions([]);
     approvalStreamCleanupRef.current?.();
     approvalStreamCleanupRef.current = null;
+    discussionStreamCleanupRef.current?.();
+    discussionStreamCleanupRef.current = null;
 
     try {
       const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
@@ -67,39 +68,25 @@ export default function DiscussionsPage() {
         discussionInfo.discussionId
       );
 
-      let listMetaFound = false;
-      const discussionMetaCleanup = nostrService.streamEventsOnEvent(
-        [
-          {
-            kinds: [34550],
-            authors: [discussionInfo.authorPubkey],
-            "#d": [discussionInfo.dTag],
-            limit: 1,
-          },
-        ],
-        {
-          onEvent: (events) => {
-            const discussionListMeta = events
-              .map(parseDiscussionEvent)
-              .find((meta) => meta && meta.dTag === discussionInfo.dTag);
-            if (discussionListMeta) {
-              listMetaFound = true;
-            }
-          },
-          onEose: () => {
-            if (!listMetaFound) {
-              logger.error("Discussion list metadata not found");
-              setDiscussions([]);
-              setIsLoading(false);
-            }
-          },
-        }
-      );
+      const parseDiscussionsFromEvents = (events: Event[]) => {
+        const parsed = events
+          .map(parseDiscussionEvent)
+          .filter((d): d is Discussion => d !== null);
+        const latestById = new Map<string, Discussion>();
+        parsed.forEach((discussion) => {
+          const existing = latestById.get(discussion.id);
+          if (!existing || discussion.createdAt > existing.createdAt) {
+            latestById.set(discussion.id, discussion);
+          }
+        });
+
+        return Array.from(latestById.values()).sort(
+          (a, b) => b.createdAt - a.createdAt
+        );
+      };
 
       const updateFromApprovals = async (events: Event[]) => {
-        approvalEventsRef.current = events;
-        const snapshot = events;
-
+        if (loadSequenceRef.current !== loadSequence) return;
         const listApprovals = events
           .map(parseApprovalEvent)
           .filter((a): a is PostApproval => a !== null);
@@ -126,23 +113,30 @@ export default function DiscussionsPage() {
           });
         });
 
-        let parsedIndividualDiscussions: Discussion[] = [];
+        const parsedIndividualDiscussions: Discussion[] = [];
         if (individualDiscussionRefs.size > 0) {
-          const individualDiscussions =
-            await nostrService.getReferencedUserDiscussions(
-              Array.from(individualDiscussionRefs)
+          discussionStreamCleanupRef.current?.();
+          discussionStreamCleanupRef.current =
+            nostrService.streamReferencedUserDiscussions(
+              Array.from(individualDiscussionRefs),
+              {
+                onEvent: (discussionEvents) => {
+                  if (loadSequenceRef.current !== loadSequence) return;
+                  const parsed = parseDiscussionsFromEvents(discussionEvents);
+                  if (parsed.length > 0) {
+                    setDiscussions(parsed);
+                    setIsLoading(false);
+                  }
+                },
+                onEose: (discussionEvents) => {
+                  if (loadSequenceRef.current !== loadSequence) return;
+                  const parsed = parseDiscussionsFromEvents(discussionEvents);
+                  setDiscussions(parsed);
+                  setIsLoading(false);
+                },
+              }
             );
-          if (approvalEventsRef.current !== snapshot) {
-            return;
-          }
 
-          parsedIndividualDiscussions = individualDiscussions
-            .map(parseDiscussionEvent)
-            .filter((d): d is Discussion => d !== null)
-            .sort((a, b) => b.createdAt - a.createdAt);
-        }
-
-        if (approvalEventsRef.current !== snapshot) {
           return;
         }
 
@@ -153,12 +147,10 @@ export default function DiscussionsPage() {
       approvalStreamCleanupRef.current = nostrService.streamApprovals(
         discussionInfo.discussionId,
         {
-          onEvent: updateFromApprovals,
           onEose: updateFromApprovals,
+          onEvent: () => {},
         }
       );
-      // Ensure meta stream cleaned after approvals start
-      discussionMetaCleanup();
     } catch (error) {
       logger.error("Failed to load discussion list:", error);
       setDiscussions([]);
@@ -177,6 +169,8 @@ export default function DiscussionsPage() {
     return () => {
       approvalStreamCleanupRef.current?.();
       approvalStreamCleanupRef.current = null;
+      discussionStreamCleanupRef.current?.();
+      discussionStreamCleanupRef.current = null;
     };
   }, [loadData]);
 
@@ -192,52 +186,17 @@ export default function DiscussionsPage() {
     );
   }
 
-  // 監査ログタブがアクティブになった時のデータ取得
-  const handleTabChange = (tab: "main" | "audit") => {
-    setActiveTab(tab);
-    if (tab === "audit") {
-      auditLogSectionRef.current?.loadAuditData();
-    }
-  };
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 ruby-text">
-        <h1 className="text-3xl font-bold mb-4">意見交換</h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。
-        </p>
-      </div>
+    <DiscussionTabLayout baseHref="/discussions">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8 ruby-text">
+          <h1 className="text-3xl font-bold mb-4">意見交換</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。
+          </p>
+        </div>
 
-      <nav role="tablist" className="join mb-6">
-        <button
-          className={`join-item btn ruby-text ${
-            activeTab === "main" && "btn-active btn-primary"
-          }`}
-          name="tab-options"
-          aria-label="意見交換タブを開く"
-          role="tab"
-          area-selected={activeTab === "main" ? "true" : "false"}
-          onClick={() => handleTabChange("main")}
-        >
-          <span>意見交換</span>
-        </button>
-        <button
-          className={`join-item btn ruby-text ${
-            activeTab === "audit" && "btn-active btn-primary"
-          }`}
-          name="tab-options"
-          aria-label="監査ログを開く"
-          role="tab"
-          area-selected={activeTab === "audit" ? "true" : "false"}
-          onClick={() => handleTabChange("audit")}
-        >
-          <span>監査ログ</span>
-        </button>
-      </nav>
-
-      {activeTab === "main" ? (
-        <main role="tabpanel" aria-labelledby="main-tab" className="space-y-6">
+        <main className="space-y-6">
           {/* 作成者またはモデレーターの場合のみ表示 */}
           {(discussions.some((d) => user.pubkey === d.authorPubkey) ||
             discussions.some((d) =>
@@ -365,20 +324,7 @@ export default function DiscussionsPage() {
             </section>
           </div>
         </main>
-      ) : (
-        <main role="tabpanel" aria-labelledby="audit-tab">
-          <AuditLogSection
-            ref={auditLogSectionRef}
-            discussion={null}
-            discussionInfo={null}
-            conversationAuditMode={true}
-            referencedDiscussions={[]}
-            isDiscussionList={true}
-          />
-        </main>
-      )}
-
-      {/* spec_v2.md要件: ログインモーダルも不要 */}
-    </div>
+      </div>
+    </DiscussionTabLayout>
   );
 }

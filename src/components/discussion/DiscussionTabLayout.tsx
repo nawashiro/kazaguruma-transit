@@ -351,8 +351,8 @@ export function DiscussionTabLayout({
         </div>
       )}
 
-      <div className="alert alert-info mb-8">
-        <InformationCircleIcon className="h-6 w-6"/>
+      <div className="alert mb-8">
+        <InformationCircleIcon className="h-6 w-6 text-info"/>
         <div>
           {isCreator ? (
             <>

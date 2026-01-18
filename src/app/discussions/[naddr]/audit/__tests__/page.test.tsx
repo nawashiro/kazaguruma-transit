@@ -66,10 +66,11 @@ describe("Discussion Detail Audit Page", () => {
     );
   });
 
-  it("renders heading for audit page", () => {
+  it("does not render heading (moved to layout)", () => {
     render(<AuditPage />);
 
-    // The heading should be visible
-    expect(screen.getByRole("heading")).toBeInTheDocument();
+    // The "監査ログ" heading should not be in the page content
+    // (It's now shown in the layout as the discussion title)
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
   });
 });

@@ -498,64 +498,45 @@ export default function DiscussionDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <Link
-          href="/discussions"
-          className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
-        >
-          <span className="ruby-text">← 会話一覧に戻る</span>
-        </Link>
-
-        <h1 className="text-3xl font-bold mb-4 ruby-text">
-          {discussion.title}
-        </h1>
-
-        {/* Only show aside if user is creator or moderator */}
-        {(user.pubkey === discussion.authorPubkey ||
-          discussion.moderators.some((m) => m.pubkey === user.pubkey)) && (
-          <aside className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4">
-            <p className="mb-4">
-              あなたは
-              {/* Priority: Creator > Moderator. Show creator if user is the author, otherwise show moderator */}
-              {user.pubkey === discussion.authorPubkey ? (
-                <span className="ruby-text">作成者</span>
-              ) : (
-                <span className="ruby-text">モデレーター</span>
-              )}
-              です。
-            </p>
-
-            <div className="flex items-center gap-4">
-              {user.pubkey === discussion.authorPubkey && (
-                <Link
-                  href={`/discussions/${naddrParam}/edit`}
-                  className="btn btn-primary rounded-full dark:rounded-sm min-h-8 h-fit"
-                >
-                  <span className="ruby-text">会話を編集</span>
-                </Link>
-              )}
-              <ModeratorCheck
-                moderators={discussion.moderators.map((m) => m.pubkey)}
-                adminPubkey={ADMIN_PUBKEY}
-                userPubkey={user.pubkey}
-              >
-                <Link
-                  href={`/discussions/${naddrParam}/approve`}
-                  className="btn btn-primary rounded-full dark:rounded-sm min-h-8 h-fit"
-                >
-                  <span className="ruby-text">投稿承認管理</span>
-                </Link>
-              </ModeratorCheck>
-            </div>
-          </aside>
-        )}
-
-        {discussion.description.split("\n").map((line, idx) => (
-          <p key={idx} className="text-gray-600 dark:text-gray-400 ruby-text">
-            {line}
+      {/* Only show aside if user is creator or moderator */}
+      {(user.pubkey === discussion.authorPubkey ||
+        discussion.moderators.some((m) => m.pubkey === user.pubkey)) && (
+        <aside className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-8">
+          <p className="mb-4">
+            あなたは
+            {/* Priority: Creator > Moderator. Show creator if user is the author, otherwise show moderator */}
+            {user.pubkey === discussion.authorPubkey ? (
+              <span className="ruby-text">作成者</span>
+            ) : (
+              <span className="ruby-text">モデレーター</span>
+            )}
+            です。
           </p>
-        ))}
-      </div>
+
+          <div className="flex items-center gap-4">
+            {user.pubkey === discussion.authorPubkey && (
+              <Link
+                href={`/discussions/${naddrParam}/edit`}
+                className="btn btn-primary rounded-full dark:rounded-sm min-h-8 h-fit"
+              >
+                <span className="ruby-text">会話を編集</span>
+              </Link>
+            )}
+            <ModeratorCheck
+              moderators={discussion.moderators.map((m) => m.pubkey)}
+              adminPubkey={ADMIN_PUBKEY}
+              userPubkey={user.pubkey}
+            >
+              <Link
+                href={`/discussions/${naddrParam}/approve`}
+                className="btn btn-primary rounded-full dark:rounded-sm min-h-8 h-fit"
+              >
+                <span className="ruby-text">投稿承認管理</span>
+              </Link>
+            </ModeratorCheck>
+          </div>
+        </aside>
+      )}
 
       {/* タブナビゲーションはlayout.tsxに移動 */}
 

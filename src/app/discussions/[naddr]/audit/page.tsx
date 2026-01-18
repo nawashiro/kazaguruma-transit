@@ -36,14 +36,11 @@ export default function AuditPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6 ruby-text">監査ログ</h1>
-      <AuditLogSection
-        ref={auditRef}
-        discussionInfo={discussionInfo}
-        loadDiscussionIndependently={true}
-        conversationAuditMode={true}
-      />
-    </div>
+    <AuditLogSection
+      ref={auditRef}
+      discussionInfo={discussionInfo}
+      loadDiscussionIndependently={true}
+      conversationAuditMode={true}
+    />
   );
 }

@@ -4,58 +4,25 @@ import "@testing-library/jest-dom";
 
 // Mock next/navigation
 const mockPathname = jest.fn();
-const mockParams = jest.fn();
 jest.mock("next/navigation", () => ({
   usePathname: () => mockPathname(),
-  useParams: () => mockParams(),
-}));
-
-// Mock Nostr services and utilities
-jest.mock("@/lib/nostr/nostr-service", () => ({
-  createNostrService: jest.fn(() => ({
-    streamDiscussionMeta: jest.fn(() => jest.fn()), // Returns cleanup function
-  })),
-}));
-jest.mock("@/lib/config/discussion-config", () => ({
-  getNostrServiceConfig: jest.fn(() => ({
-    relays: ["wss://relay.example.com"],
-  })),
-}));
-jest.mock("@/lib/test/test-data-loader", () => ({
-  loadTestData: jest.fn(),
-  isTestMode: jest.fn(() => false),
-}));
-jest.mock("@/lib/nostr/naddr-utils", () => ({
-  extractDiscussionFromNaddr: () => null, // Return null for basic tests
-}));
-jest.mock("@/lib/nostr/nostr-utils", () => ({
-  parseDiscussionEvent: jest.fn(() => null),
-}));
-jest.mock("@/utils/logger", () => ({
-  logger: {
-    error: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    debug: jest.fn(),
-  },
 }));
 
 // Import after mocking
-import { DiscussionTabLayout } from "../DiscussionTabLayout";
+import { DiscussionListTabLayout } from "../DiscussionListTabLayout";
 
-describe("DiscussionTabLayout", () => {
+describe("DiscussionListTabLayout", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockPathname.mockReturnValue("/discussions/naddr123");
-    mockParams.mockReturnValue({ naddr: "naddr123" });
+    mockPathname.mockReturnValue("/discussions");
   });
 
   describe("ARIA attributes", () => {
     it("renders tablist with proper role", () => {
       render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
+        <DiscussionListTabLayout baseHref="/discussions">
           <div>Content</div>
-        </DiscussionTabLayout>
+        </DiscussionListTabLayout>
       );
 
       const tablist = screen.getByRole("tablist");
@@ -63,12 +30,12 @@ describe("DiscussionTabLayout", () => {
     });
 
     it("renders tabs with proper role and aria-selected", () => {
-      mockPathname.mockReturnValue("/discussions/naddr123");
+      mockPathname.mockReturnValue("/discussions");
 
       render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
+        <DiscussionListTabLayout baseHref="/discussions">
           <div>Content</div>
-        </DiscussionTabLayout>
+        </DiscussionListTabLayout>
       );
 
       const tabs = screen.getAllByRole("tab");
@@ -80,12 +47,12 @@ describe("DiscussionTabLayout", () => {
     });
 
     it("marks audit tab as selected when on audit path", () => {
-      mockPathname.mockReturnValue("/discussions/naddr123/audit");
+      mockPathname.mockReturnValue("/discussions/audit");
 
       render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
+        <DiscussionListTabLayout baseHref="/discussions">
           <div>Content</div>
-        </DiscussionTabLayout>
+        </DiscussionListTabLayout>
       );
 
       const tabs = screen.getAllByRole("tab");
@@ -97,9 +64,9 @@ describe("DiscussionTabLayout", () => {
   describe("keyboard navigation", () => {
     it("handles ArrowRight key to focus next tab", () => {
       render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
+        <DiscussionListTabLayout baseHref="/discussions">
           <div>Content</div>
-        </DiscussionTabLayout>
+        </DiscussionListTabLayout>
       );
 
       const tabs = screen.getAllByRole("tab");
@@ -112,9 +79,9 @@ describe("DiscussionTabLayout", () => {
 
     it("handles ArrowLeft key to focus previous tab", () => {
       render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
+        <DiscussionListTabLayout baseHref="/discussions">
           <div>Content</div>
-        </DiscussionTabLayout>
+        </DiscussionListTabLayout>
       );
 
       const tabs = screen.getAllByRole("tab");
@@ -127,9 +94,9 @@ describe("DiscussionTabLayout", () => {
 
     it("handles Home key to focus first tab", () => {
       render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
+        <DiscussionListTabLayout baseHref="/discussions">
           <div>Content</div>
-        </DiscussionTabLayout>
+        </DiscussionListTabLayout>
       );
 
       const tabs = screen.getAllByRole("tab");
@@ -142,9 +109,9 @@ describe("DiscussionTabLayout", () => {
 
     it("handles End key to focus last tab", () => {
       render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
+        <DiscussionListTabLayout baseHref="/discussions">
           <div>Content</div>
-        </DiscussionTabLayout>
+        </DiscussionListTabLayout>
       );
 
       const tabs = screen.getAllByRole("tab");
@@ -157,9 +124,9 @@ describe("DiscussionTabLayout", () => {
 
     it("wraps around on ArrowRight from last tab", () => {
       render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
+        <DiscussionListTabLayout baseHref="/discussions">
           <div>Content</div>
-        </DiscussionTabLayout>
+        </DiscussionListTabLayout>
       );
 
       const tabs = screen.getAllByRole("tab");
@@ -172,9 +139,9 @@ describe("DiscussionTabLayout", () => {
 
     it("wraps around on ArrowLeft from first tab", () => {
       render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
+        <DiscussionListTabLayout baseHref="/discussions">
           <div>Content</div>
-        </DiscussionTabLayout>
+        </DiscussionListTabLayout>
       );
 
       const tabs = screen.getAllByRole("tab");
@@ -188,12 +155,12 @@ describe("DiscussionTabLayout", () => {
 
   describe("active state styling", () => {
     it("applies active class to main tab when on main path", () => {
-      mockPathname.mockReturnValue("/discussions/naddr123");
+      mockPathname.mockReturnValue("/discussions");
 
       render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
+        <DiscussionListTabLayout baseHref="/discussions">
           <div>Content</div>
-        </DiscussionTabLayout>
+        </DiscussionListTabLayout>
       );
 
       const tabs = screen.getAllByRole("tab");
@@ -202,12 +169,12 @@ describe("DiscussionTabLayout", () => {
     });
 
     it("applies active class to audit tab when on audit path", () => {
-      mockPathname.mockReturnValue("/discussions/naddr123/audit");
+      mockPathname.mockReturnValue("/discussions/audit");
 
       render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
+        <DiscussionListTabLayout baseHref="/discussions">
           <div>Content</div>
-        </DiscussionTabLayout>
+        </DiscussionListTabLayout>
       );
 
       const tabs = screen.getAllByRole("tab");
@@ -219,9 +186,9 @@ describe("DiscussionTabLayout", () => {
   describe("renders children", () => {
     it("renders children content", () => {
       render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
+        <DiscussionListTabLayout baseHref="/discussions">
           <div data-testid="child-content">Child Content</div>
-        </DiscussionTabLayout>
+        </DiscussionListTabLayout>
       );
 
       expect(screen.getByTestId("child-content")).toBeInTheDocument();
@@ -231,15 +198,70 @@ describe("DiscussionTabLayout", () => {
   describe("touch target size", () => {
     it("has minimum 44px height for touch targets", () => {
       render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
+        <DiscussionListTabLayout baseHref="/discussions">
           <div>Content</div>
-        </DiscussionTabLayout>
+        </DiscussionListTabLayout>
       );
 
       const tabs = screen.getAllByRole("tab");
       tabs.forEach((tab) => {
         expect(tab).toHaveClass("min-h-[44px]");
       });
+    });
+  });
+
+  describe("tab labels", () => {
+    it("displays correct tab labels for discussion list", () => {
+      render(
+        <DiscussionListTabLayout baseHref="/discussions">
+          <div>Content</div>
+        </DiscussionListTabLayout>
+      );
+
+      expect(screen.getByText("会話一覧")).toBeInTheDocument();
+      expect(screen.getByText("監査ログ")).toBeInTheDocument();
+    });
+  });
+
+  describe("header elements", () => {
+    it("displays title and description above tabs", () => {
+      render(
+        <DiscussionListTabLayout baseHref="/discussions">
+          <div>Content</div>
+        </DiscussionListTabLayout>
+      );
+
+      // タイトルが表示される
+      const title = screen.getByRole("heading", { level: 1, name: "意見交換" });
+      expect(title).toBeInTheDocument();
+
+      // 説明が表示される
+      expect(
+        screen.getByText(
+          "意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。"
+        )
+      ).toBeInTheDocument();
+    });
+
+    it("renders header elements before tab navigation", () => {
+      const { container } = render(
+        <DiscussionListTabLayout baseHref="/discussions">
+          <div>Content</div>
+        </DiscussionListTabLayout>
+      );
+
+      const title = screen.getByRole("heading", { level: 1 });
+      const tablist = screen.getByRole("tablist");
+
+      // タイトルがタブリストより前に表示される
+      const titleIndex = Array.from(container.querySelectorAll("*")).indexOf(
+        title
+      );
+      const tablistIndex = Array.from(container.querySelectorAll("*")).indexOf(
+        tablist
+      );
+
+      expect(titleIndex).toBeLessThan(tablistIndex);
     });
   });
 });

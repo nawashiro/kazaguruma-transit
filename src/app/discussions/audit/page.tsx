@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect } from "react";
 import { AuditLogSection } from "@/components/discussion/AuditLogSection";
-import { DiscussionTabLayout } from "@/components/discussion/DiscussionTabLayout";
+import { DiscussionListTabLayout } from "@/components/discussion/DiscussionListTabLayout";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 
 /**
@@ -32,34 +32,33 @@ export default function AuditPage() {
 
   if (!discussionListNaddr) {
     return (
-      <DiscussionTabLayout baseHref="/discussions">
+      <DiscussionListTabLayout baseHref="/discussions">
         <div className="alert alert-error">
           <span>会話一覧の設定が見つかりません。</span>
         </div>
-      </DiscussionTabLayout>
+      </DiscussionListTabLayout>
     );
   }
 
   if (!discussionInfo) {
     return (
-      <DiscussionTabLayout baseHref="/discussions">
+      <DiscussionListTabLayout baseHref="/discussions">
         <div className="alert alert-error">
           <span>無効な会話一覧アドレスです。</span>
         </div>
-      </DiscussionTabLayout>
+      </DiscussionListTabLayout>
     );
   }
 
   return (
-    <DiscussionTabLayout baseHref="/discussions">
+    <DiscussionListTabLayout baseHref="/discussions">
       <div>
-        <h1 className="text-2xl font-bold mb-6 ruby-text">監査ログ</h1>
         <AuditLogSection
           ref={auditRef}
           discussionInfo={discussionInfo}
           isDiscussionList={true}
         />
       </div>
-    </DiscussionTabLayout>
+    </DiscussionListTabLayout>
   );
 }

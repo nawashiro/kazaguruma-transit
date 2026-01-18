@@ -7,7 +7,7 @@ import React, { useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
-import { DiscussionTabLayout } from "@/components/discussion/DiscussionTabLayout";
+import { DiscussionListTabLayout } from "@/components/discussion/DiscussionListTabLayout";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parseDiscussionEvent,
@@ -187,15 +187,8 @@ export default function DiscussionsPage() {
   }
 
   return (
-    <DiscussionTabLayout baseHref="/discussions">
+    <DiscussionListTabLayout baseHref="/discussions">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 ruby-text">
-          <h1 className="text-3xl font-bold mb-4">意見交換</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。
-          </p>
-        </div>
-
         <main className="space-y-6">
           {/* 作成者またはモデレーターの場合のみ表示 */}
           {(discussions.some((d) => user.pubkey === d.authorPubkey) ||
@@ -325,6 +318,6 @@ export default function DiscussionsPage() {
           </div>
         </main>
       </div>
-    </DiscussionTabLayout>
+    </DiscussionListTabLayout>
   );
 }

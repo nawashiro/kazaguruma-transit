@@ -6,6 +6,14 @@ import type { StreamEventsOptions } from "@/lib/nostr/nostr-service";
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr-test" }),
+  usePathname: () => "/discussions/naddr-test",
+}));
+
+// Mock DiscussionTabLayout to isolate page logic from layout
+jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
+  DiscussionTabLayout: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="discussion-tab-layout">{children}</div>
+  ),
 }));
 
 jest.mock("@/lib/auth/auth-context", () => ({
@@ -196,11 +204,10 @@ describe("DiscussionDetailPage streaming", () => {
       discussionHandlers?.onEvent?.([discussionEvent], discussionEvent);
     });
 
+    // Title is now displayed in the layout, not in page content
+    // Check for loading state instead to verify streaming works
     expect(
-      await screen.findByText("Streamed Discussion")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("評価データを読み込み中...")
+      await screen.findByText("評価データを読み込み中...")
     ).toBeInTheDocument();
     expect(
       screen.queryByText("Evaluation Component")
@@ -269,9 +276,11 @@ describe("DiscussionDetailPage streaming", () => {
       discussionHandlers?.onEvent?.([discussionEvent], discussionEvent);
     });
 
-    expect(
-      await screen.findByText("Streamed Discussion")
-    ).toBeInTheDocument();
+    // Title is now in the layout, not page content
+    // Verify that evaluations haven't loaded yet (before EOSE)
+    await waitFor(() =>
+      expect(serviceMock.streamDiscussionMeta).toHaveBeenCalled()
+    );
     expect(serviceMock.getEvaluationsForPosts).not.toHaveBeenCalled();
 
     const approvalEvents = [

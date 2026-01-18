@@ -5,6 +5,7 @@ import "@testing-library/jest-dom";
 // Mock next/navigation
 jest.mock("next/navigation", () => ({
   usePathname: () => "/discussions/audit",
+  useParams: () => ({ naddr: undefined }), // No naddr for discussion list page
 }));
 
 // Mock naddr utils
@@ -14,6 +15,13 @@ jest.mock("@/lib/nostr/naddr-utils", () => ({
     authorPubkey: "list-admin",
     discussionId: "34550:list-admin:list",
   }),
+}));
+
+// Mock DiscussionListTabLayout
+jest.mock("@/components/discussion/DiscussionListTabLayout", () => ({
+  DiscussionListTabLayout: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="discussion-list-tab-layout">{children}</div>
+  ),
 }));
 
 // Mock AuditLogSection
@@ -66,11 +74,5 @@ describe("Discussion List Audit Page", () => {
     expect(screen.getByTestId("discussion-info")).toHaveTextContent(
       "34550:list-admin:list"
     );
-  });
-
-  it("renders heading for discussion list audit page", () => {
-    render(<AuditPage />);
-
-    expect(screen.getByRole("heading")).toBeInTheDocument();
   });
 });

@@ -14,7 +14,6 @@ import {
 import { LoginModal } from "@/components/discussion/LoginModal";
 import { PostPreview } from "@/components/discussion/PostPreview";
 import { EvaluationComponent } from "@/components/discussion/EvaluationComponent";
-import { ModeratorCheck } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parseDiscussionEvent,
@@ -24,7 +23,6 @@ import {
   combinePostsWithStats,
   validatePostForm,
   formatRelativeTime,
-  getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import {
@@ -43,7 +41,6 @@ import { logger } from "@/utils/logger";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
 import type { Event } from "nostr-tools";
 
-const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function DiscussionDetailPage() {
@@ -498,46 +495,6 @@ export default function DiscussionDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Only show aside if user is creator or moderator */}
-      {(user.pubkey === discussion.authorPubkey ||
-        discussion.moderators.some((m) => m.pubkey === user.pubkey)) && (
-        <aside className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-8">
-          <p className="mb-4">
-            あなたは
-            {/* Priority: Creator > Moderator. Show creator if user is the author, otherwise show moderator */}
-            {user.pubkey === discussion.authorPubkey ? (
-              <span className="ruby-text">作成者</span>
-            ) : (
-              <span className="ruby-text">モデレーター</span>
-            )}
-            です。
-          </p>
-
-          <div className="flex items-center gap-4">
-            {user.pubkey === discussion.authorPubkey && (
-              <Link
-                href={`/discussions/${naddrParam}/edit`}
-                className="btn btn-primary rounded-full dark:rounded-sm min-h-8 h-fit"
-              >
-                <span className="ruby-text">会話を編集</span>
-              </Link>
-            )}
-            <ModeratorCheck
-              moderators={discussion.moderators.map((m) => m.pubkey)}
-              adminPubkey={ADMIN_PUBKEY}
-              userPubkey={user.pubkey}
-            >
-              <Link
-                href={`/discussions/${naddrParam}/approve`}
-                className="btn btn-primary rounded-full dark:rounded-sm min-h-8 h-fit"
-              >
-                <span className="ruby-text">投稿承認管理</span>
-              </Link>
-            </ModeratorCheck>
-          </div>
-        </aside>
-      )}
-
       {/* タブナビゲーションはlayout.tsxに移動 */}
 
       <main className="grid lg:grid-cols-2 gap-8">

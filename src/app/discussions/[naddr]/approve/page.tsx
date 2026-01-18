@@ -307,12 +307,6 @@ export default function PostApprovalPage() {
     >
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 ruby-text">
-          <Link
-            href={`/discussions/${naddrParam}`}
-            className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
-          >
-            <span>← 会話に戻る</span>
-          </Link>
           <h1 className="text-3xl font-bold">投稿承認管理</h1>
           {discussion && (
             <p className="text-gray-600 dark:text-gray-400 mt-2">

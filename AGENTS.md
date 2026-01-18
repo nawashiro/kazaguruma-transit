@@ -36,3 +36,10 @@ Follow TDD principles. First, write the tests. Avoid writing tests for things th
 - Follow the existing short-prefix style (`add: ...`, `fix: ...`, `chore: ...`); keep messages imperative and scoped.
 - For PRs, include: what changed, why, and how to verify (commands/steps). Attach screenshots for UI tweaks and call out DB schema or GTFS data impacts.
 - Run `npm run lint` and `npm test` before requesting review; note any skipped checks or follow-up tasks in the PR description.
+
+## Active Technologies
+- TypeScript 5 + Next.js 15, React 19, Tailwind CSS 4, DaisyUI 5 (001-discussion-nav-tabs)
+- SQLite + Prisma ORM (既存) (001-discussion-nav-tabs)
+
+## Recent Changes
+- 001-discussion-nav-tabs: Added TypeScript 5 + Next.js 15, React 19, Tailwind CSS 4, DaisyUI 5

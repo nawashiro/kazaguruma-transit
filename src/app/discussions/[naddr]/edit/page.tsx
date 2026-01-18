@@ -344,12 +344,6 @@ export default function DiscussionEditPage() {
           <p className="text-gray-600 mb-4">
             この会話を編集する権限がありません。
           </p>
-          <Link
-            href={`/discussions/${naddrParam}`}
-            className="btn btn-primary rounded-full dark:rounded-sm"
-          >
-            会話に戻る
-          </Link>
         </div>
       </div>
     );
@@ -359,13 +353,6 @@ export default function DiscussionEditPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
-          <Link
-            href={`/discussions/${naddrParam}`}
-            className="btn btn-ghost btn-sm rounded-full dark:rounded-sm mb-4"
-          >
-            <span>← 会話に戻る</span>
-          </Link>
-
           <h1 className="text-3xl font-bold mb-6 ruby-text">会話を編集</h1>
         </div>
 

@@ -3,6 +3,7 @@
 import React, { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import { usePathname, useParams } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth/auth-context";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
 import { parseDiscussionEvent } from "@/lib/nostr/nostr-utils";
@@ -11,6 +12,13 @@ import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
 import { logger } from "@/utils/logger";
 import type { Discussion } from "@/types/discussion";
 import type { Event } from "nostr-tools";
+import {
+  canApprovePost,
+  canEditDiscussion,
+  isDiscussionCreator,
+} from "@/lib/discussion/permission-system";
+import { getAdminPubkeyHex, isModerator } from "@/lib/nostr/nostr-utils";
+import { InformationCircleIcon } from "@heroicons/react/24/outline";
 
 interface DiscussionTabLayoutProps {
   /** タブナビゲーションのベースURL（例: "/discussions" または "/discussions/[naddr]"） */
@@ -46,6 +54,7 @@ export function DiscussionTabLayout({
   const params = useParams();
   const naddr = params.naddr as string;
   const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const { user } = useAuth();
 
   // 会話データの状態 (T011)
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
@@ -59,6 +68,29 @@ export function DiscussionTabLayout({
     if (!naddr) return null;
     return extractDiscussionFromNaddr(naddr);
   }, [naddr]);
+
+  const adminPubkey = useMemo(() => getAdminPubkeyHex(), []);
+
+  const isCreator = useMemo(() => {
+    if (!discussion) return false;
+    return isDiscussionCreator(user?.pubkey, discussion);
+  }, [discussion, user?.pubkey]);
+
+  const isMod = useMemo(() => {
+    if (!discussion) return false;
+    const moderatorPubkeys = discussion.moderators.map((mod) => mod.pubkey);
+    return isModerator(user?.pubkey, moderatorPubkeys, adminPubkey);
+  }, [discussion, user?.pubkey, adminPubkey]);
+
+  const canApprove = useMemo(() => {
+    if (!discussion) return false;
+    return canApprovePost(user?.pubkey, discussion, adminPubkey);
+  }, [discussion, user?.pubkey, adminPubkey]);
+
+  const canEdit = useMemo(() => {
+    if (!discussion) return false;
+    return canEditDiscussion(user?.pubkey, discussion, adminPubkey);
+  }, [discussion, user?.pubkey, adminPubkey]);
 
   /**
    * 最新のディスカッションを選択 (T013, T040)
@@ -176,6 +208,8 @@ export function DiscussionTabLayout({
     normalizedPath === normalizedBase ||
     normalizedPath === `${normalizedBase}/`;
   const isAuditActive = normalizedPath === `${normalizedBase}/audit`;
+  const isApproveActive = normalizedPath === `${normalizedBase}/approve`;
+  const isEditActive = normalizedPath === `${normalizedBase}/edit`;
 
   const tabs = [
     {
@@ -188,6 +222,24 @@ export function DiscussionTabLayout({
       label: "監査ログ",
       isActive: isAuditActive,
     },
+    ...(canApprove
+      ? [
+        {
+          href: `${normalizedBase}/approve`,
+          label: "投稿承認管理",
+          isActive: isApproveActive,
+        },
+      ]
+      : []),
+    ...(canEdit
+      ? [
+        {
+          href: `${normalizedBase}/edit`,
+          label: "会話を編集",
+          isActive: isEditActive,
+        },
+      ]
+      : []),
   ];
 
   /**
@@ -299,6 +351,39 @@ export function DiscussionTabLayout({
         </div>
       )}
 
+      <div className="alert alert-info mb-8">
+        <InformationCircleIcon className="h-6 w-6"/>
+        <div>
+          {isCreator ? (
+            <>
+              <p className="font-semibold ruby-text">あなたは作成者です。</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1 ruby-text">
+                <li>ユーザーとして、新しい意見を投稿できます。</li>
+                <li>モデレーターとして、投稿を承認できます。</li>
+                <li>
+                  作成者として、会話を編集できます（説明を書く、モデレーターを指名するなど）。
+                </li>
+              </ul>
+            </>
+          ) : isMod ? (
+            <>
+              <p className="font-semibold ruby-text">あなたはモデレーターです。</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1 ruby-text">
+                <li>ユーザーとして、新しい意見を投稿できます。</li>
+                <li>モデレーターとして、投稿を承認できます。</li>
+              </ul>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold ruby-text">あなたはユーザーです。</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1 ruby-text">
+                <li>ユーザーとして、新しい意見を投稿できます。</li>
+              </ul>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* タブナビゲーション（既存） */}
       <nav role="tablist" className="join mb-6" aria-label="ページナビゲーション">
         {tabs.map((tab, index) => (
@@ -322,6 +407,8 @@ export function DiscussionTabLayout({
 
       {/* 子コンテンツ */}
       {children}
+
+
     </div>
   );
 }

@@ -4,6 +4,9 @@
 // learn more: https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom";
 
+// localStorage mock for testing browser storage
+import "jest-localstorage-mock";
+
 // TextEncoder/TextDecoder polyfill for crypto libraries
 import { TextEncoder, TextDecoder } from 'util';
 global.TextEncoder = TextEncoder;

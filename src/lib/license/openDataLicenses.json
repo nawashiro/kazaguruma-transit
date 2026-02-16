@@ -1,0 +1,23 @@
+[
+  {
+    "id": "chiyoda-main-facilities",
+    "name": "千代田区主要施設座標データ",
+    "licenseName": "ODbL 1.0",
+    "licenseUrl": "https://opendatacommons.org/licenses/odbl/",
+    "sourceUrl": "https://github.com/nawashiro/chiyoda_city_main_facilities"
+  },
+  {
+    "id": "chiyoda-town-geojson",
+    "name": "千代田区町名 geojson",
+    "licenseName": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.ja",
+    "sourceUrl": "https://github.com/nawashiro/chiyoda_city_town_geojson"
+  },
+  {
+    "id": "kazaguruma-gtfs",
+    "name": "千代田区地域福祉交通「風ぐるま」GTFSデータ",
+    "licenseName": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "sourceUrl": "https://ckan.odpt.org/dataset/hitachi_automobile_transportation_chiyoda_alllines"
+  }
+]

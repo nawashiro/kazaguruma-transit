@@ -17,10 +17,10 @@
 
 **Purpose**: 実装前の共通準備
 
-- [ ] T001 Create license module directories for implementation in `src/lib/license/` and `src/lib/license/__tests__/`
-- [ ] T002 Create open-data source file scaffold in `src/lib/license/openDataLicenses.json`
-- [ ] T003 [P] Create license domain type scaffold in `src/types/license.ts`
-- [ ] T004 [P] Create API test target directory for license endpoint in `src/app/api/__tests__/`
+- [X] T001 Create license module directories for implementation in `src/lib/license/` and `src/lib/license/__tests__/`
+- [X] T002 Create open-data source file scaffold in `src/lib/license/openDataLicenses.json`
+- [X] T003 [P] Create license domain type scaffold in `src/types/license.ts`
+- [X] T004 [P] Create API test target directory for license endpoint in `src/app/api/__tests__/`
 
 ---
 
@@ -30,15 +30,15 @@
 
 **⚠️ CRITICAL**: このフェーズ完了前にユーザーストーリー実装へ進まない
 
-- [ ] T005 [P] Add contract test for `GET /api/licenses` response shape in `src/app/api/__tests__/licenses.route.contract.test.ts`
-- [ ] T006 [P] Add unit tests for required project metadata parsing in `src/lib/license/__tests__/projectMetadata.required.test.ts`
-- [ ] T007 [P] Add unit tests for open-data JSON loader baseline behavior in `src/lib/license/__tests__/openDataLicenses.loader.test.ts`
-- [ ] T008 Implement shared license domain types from data-model in `src/types/license.ts`
-- [ ] T009 Implement project metadata parser with required-field validation in `src/lib/license/projectMetadata.ts`
-- [ ] T010 Implement open-data JSON loader entrypoint in `src/lib/license/openDataLicenses.ts`
-- [ ] T011 Implement dependency license loader entrypoint in `src/lib/license/dependencyLicenses.ts`
-- [ ] T012 Implement payload aggregator service for API and page consumption in `src/lib/license/licensePayload.ts`
-- [ ] T013 Implement baseline `GET /api/licenses` route wiring in `src/app/api/licenses/route.ts`
+- [X] T005 [P] Add contract test for `GET /api/licenses` response shape in `src/app/api/__tests__/licenses.route.contract.test.ts`
+- [X] T006 [P] Add unit tests for required project metadata parsing in `src/lib/license/__tests__/projectMetadata.required.test.ts`
+- [X] T007 [P] Add unit tests for open-data JSON loader baseline behavior in `src/lib/license/__tests__/openDataLicenses.loader.test.ts`
+- [X] T008 Implement shared license domain types from data-model in `src/types/license.ts`
+- [X] T009 Implement project metadata parser with required-field validation in `src/lib/license/projectMetadata.ts`
+- [X] T010 Implement open-data JSON loader entrypoint in `src/lib/license/openDataLicenses.ts`
+- [X] T011 Implement dependency license loader entrypoint in `src/lib/license/dependencyLicenses.ts`
+- [X] T012 Implement payload aggregator service for API and page consumption in `src/lib/license/licensePayload.ts`
+- [X] T013 Implement baseline `GET /api/licenses` route wiring in `src/app/api/licenses/route.ts`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -52,15 +52,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T014 [P] [US1] Add page rendering test for three section headings in `src/app/license/__tests__/page.sections.test.tsx`
-- [ ] T015 [P] [US1] Add API integration test for section-wise payload mapping in `src/app/api/__tests__/licenses.sections.integration.test.ts`
+- [X] T014 [P] [US1] Add page rendering test for three section headings in `src/app/license/__tests__/page.sections.test.tsx`
+- [X] T015 [P] [US1] Add API integration test for section-wise payload mapping in `src/app/api/__tests__/licenses.sections.integration.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T016 [US1] Refactor license page to consume aggregated API payload in `src/app/license/page.tsx`
-- [ ] T017 [US1] Implement DaisyUI-first section layouts (Card/List/Divider/Badge) in `src/app/license/page.tsx`
-- [ ] T018 [US1] Add accessibility labels and safe external-link attributes in `src/app/license/page.tsx`
-- [ ] T019 [US1] Implement required-field fallback display handling in `src/lib/license/licensePayload.ts`
+- [X] T016 [US1] Refactor license page to consume aggregated API payload in `src/app/license/page.tsx`
+- [X] T017 [US1] Implement DaisyUI-first section layouts (Card/List/Divider/Badge) in `src/app/license/page.tsx`
+- [X] T018 [US1] Add accessibility labels and safe external-link attributes in `src/app/license/page.tsx`
+- [X] T019 [US1] Implement required-field fallback display handling in `src/lib/license/licensePayload.ts`
 
 **Checkpoint**: User Story 1 is independently functional and testable
 
@@ -74,14 +74,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T020 [P] [US2] Add unit tests for author/repository/funding normalization in `src/lib/license/__tests__/projectMetadata.optionalFields.test.ts`
-- [ ] T021 [P] [US2] Add page test for conditional repository/funding rendering in `src/app/license/__tests__/page.software-metadata.test.tsx`
+- [X] T020 [P] [US2] Add unit tests for author/repository/funding normalization in `src/lib/license/__tests__/projectMetadata.optionalFields.test.ts`
+- [X] T021 [P] [US2] Add page test for conditional repository/funding rendering in `src/app/license/__tests__/page.software-metadata.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Implement optional metadata normalization rules for package.json variants in `src/lib/license/projectMetadata.ts`
-- [ ] T023 [US2] Extend software payload mapping for repository/funding fields in `src/lib/license/licensePayload.ts`
-- [ ] T024 [US2] Render repository/funding as conditional DaisyUI list items in `src/app/license/page.tsx`
+- [X] T022 [US2] Implement optional metadata normalization rules for package.json variants in `src/lib/license/projectMetadata.ts`
+- [X] T023 [US2] Extend software payload mapping for repository/funding fields in `src/lib/license/licensePayload.ts`
+- [X] T024 [US2] Render repository/funding as conditional DaisyUI list items in `src/app/license/page.tsx`
 
 **Checkpoint**: User Stories 1 and 2 both work independently
 
@@ -95,17 +95,17 @@
 
 ### Tests for User Story 3
 
-- [ ] T025 [P] [US3] Add unit tests for open-data schema validation and duplicate detection in `src/lib/license/__tests__/openDataLicenses.validation.test.ts`
-- [ ] T026 [P] [US3] Add integration tests for dependency license ingestion defaults in `src/lib/license/__tests__/dependencyLicenses.integration.test.ts`
-- [ ] T027 [P] [US3] Add API integration test for combined openData/dependencies payload in `src/app/api/__tests__/licenses.combined.integration.test.ts`
+- [X] T025 [P] [US3] Add unit tests for open-data schema validation and duplicate detection in `src/lib/license/__tests__/openDataLicenses.validation.test.ts`
+- [X] T026 [P] [US3] Add integration tests for dependency license ingestion defaults in `src/lib/license/__tests__/dependencyLicenses.integration.test.ts`
+- [X] T027 [P] [US3] Add API integration test for combined openData/dependencies payload in `src/app/api/__tests__/licenses.combined.integration.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T028 [US3] Migrate hardcoded open-data entries into managed JSON source in `src/lib/license/openDataLicenses.json`
-- [ ] T029 [US3] Implement open-data normalization and id uniqueness checks in `src/lib/license/openDataLicenses.ts`
-- [ ] T030 [US3] Implement webpack-license-plugin output reader using default scope behavior in `src/lib/license/dependencyLicenses.ts`
-- [ ] T031 [US3] Configure webpack-license-plugin output generation in `next.config.ts`
-- [ ] T032 [US3] Implement unknown-license fallback mapping for dependencies in `src/lib/license/licensePayload.ts`
+- [X] T028 [US3] Migrate hardcoded open-data entries into managed JSON source in `src/lib/license/openDataLicenses.json`
+- [X] T029 [US3] Implement open-data normalization and id uniqueness checks in `src/lib/license/openDataLicenses.ts`
+- [X] T030 [US3] Implement webpack-license-plugin output reader using default scope behavior in `src/lib/license/dependencyLicenses.ts`
+- [X] T031 [US3] Configure webpack-license-plugin output generation in `next.config.ts`
+- [X] T032 [US3] Implement unknown-license fallback mapping for dependencies in `src/lib/license/licensePayload.ts`
 
 **Checkpoint**: All user stories are independently functional
 
@@ -115,10 +115,10 @@
 
 **Purpose**: 複数ストーリー横断の最終調整
 
-- [ ] T033 [P] Update license feature operation notes and maintenance flow in `docs/license-page.md`
-- [ ] T034 [P] Add regression rendering test for three-section stability in `src/app/license/__tests__/page.regression.test.tsx`
-- [ ] T035 Align API contract and implementation fields in `specs/005-license-page-autogen/contracts/license-api.openapi.yaml`
-- [ ] T036 Run full verification checklist and record results in `specs/005-license-page-autogen/quickstart.md`
+- [X] T033 [P] Update license feature operation notes and maintenance flow in `docs/license-page.md`
+- [X] T034 [P] Add regression rendering test for three-section stability in `src/app/license/__tests__/page.regression.test.tsx`
+- [X] T035 Align API contract and implementation fields in `specs/005-license-page-autogen/contracts/license-api.openapi.yaml`
+- [X] T036 Run full verification checklist and record results in `specs/005-license-page-autogen/quickstart.md`
 
 ---
 

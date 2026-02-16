@@ -47,3 +47,10 @@ npm run build
 - Spec の FR-001〜FR-011 を満たす
 - `specs/005-license-page-autogen/contracts/license-api.openapi.yaml` と実装が一致する
 - 4つの検証コマンドがすべて成功する
+
+## Validation Log (2026-02-16)
+
+- `npx tsc --noEmit`: PASS
+- `npm run lint`: PASS (existing repository warnings only)
+- `npm test -- --runInBand`: PASS
+- `npm run build`: PASS

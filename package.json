@@ -1,6 +1,18 @@
 {
   "name": "kazaguruma-transit",
-  "version": "0.1.0",
+  "version": "1.1.0",
+  "author": {
+    "name": "Nawashiro"
+  },
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nawashiro/kazaguruma-transit"
+  },
+  "funding": [
+    "https://ko-fi.com/nawashiro",
+    "https://github.com/sponsors/nawashiro"
+  ],
   "private": true,
   "type": "module",
   "scripts": {
@@ -41,7 +53,8 @@
     "react-ga4": "^2.1.0",
     "react-to-print": "^3.0.5",
     "transit-departures-widget": "^2.5.4",
-    "tsx": "^4.19.3"
+    "tsx": "^4.19.3",
+    "webpack-license-plugin": "^4.5.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

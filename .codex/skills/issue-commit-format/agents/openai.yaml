@@ -1,0 +1,3 @@
+display_name: Issue Commit Format
+short_description: Commit with issue-linked subject and detailed body
+default_prompt: Review the diff and commit using '#<issue> <prefix>: <descriptive English message>' with a detailed body.

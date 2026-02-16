@@ -1,6 +1,6 @@
 ---
 name: issue-commit-format
-description: Review git diff and create commits using issue-linked subject format with a detailed body. Use when the user asks to commit with a specific issue number and a required subject pattern like '#<issue> <prefix>: <descriptive English message>'.
+description: Review git diff and create commits message.
 ---
 
 # Issue Commit Format
@@ -19,7 +19,7 @@ Use this workflow to commit changes with a strict issue-linked message format.
 3. Stage only intended files.
 4. Create commit subject in this exact pattern:
 `#<issue-number> <prefix>: <descriptive English commit message>`
-5. Add a detailed commit body describing:
+5. Add a detailed commit body describing（日本語で記載する）:
 - What changed
 - Why it changed
 - Scope/impact

@@ -40,6 +40,8 @@ Follow TDD principles. First, write the tests. Avoid writing tests for things th
 ## Active Technologies
 - TypeScript 5 + Next.js 15, React 19, Tailwind CSS 4, DaisyUI 5 (001-discussion-nav-tabs)
 - SQLite + Prisma ORM (既存) (001-discussion-nav-tabs)
+- TypeScript 5, React 19, Next.js 15 (App Router) + DaisyUI 5, Tailwind CSS 4, webpack-license-plugin（導入パッケージライセンス収集）, Prisma（既存） (005-license-page-autogen)
+- 既存SQLite（本機能では新規永続化なし）、`package.json`、オープンデータ用JSONファイル (005-license-page-autogen)
 
 ## Recent Changes
 - 001-discussion-nav-tabs: Added TypeScript 5 + Next.js 15, React 19, Tailwind CSS 4, DaisyUI 5

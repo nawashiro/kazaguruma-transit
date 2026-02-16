@@ -5,7 +5,19 @@
 import "@testing-library/jest-dom";
 
 // localStorage mock for testing browser storage
-import "jest-localstorage-mock";
+const store = {};
+global.localStorage = {
+  getItem: (key) => (key in store ? store[key] : null),
+  setItem: (key, value) => {
+    store[key] = String(value);
+  },
+  removeItem: (key) => {
+    delete store[key];
+  },
+  clear: () => {
+    Object.keys(store).forEach((key) => delete store[key]);
+  },
+};
 
 // TextEncoder/TextDecoder polyfill for crypto libraries
 import { TextEncoder, TextDecoder } from 'util';

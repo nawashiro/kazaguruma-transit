@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { LoginModal } from "./LoginModal";
 import { PostPreview } from "./PostPreview";
@@ -24,6 +24,7 @@ import type {
   PostFormData,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
+import type { Event } from "nostr-tools";
 
 interface BusStopDiscussionProps {
   busStops: string[];
@@ -47,6 +48,10 @@ export function BusStopDiscussion({
     busStopTag: busStops[0] || "",
   });
   const [errors, setErrors] = useState<string[]>([]);
+  const postsEventsRef = useRef<Event[]>([]);
+  const approvalEventsRef = useRef<Event[]>([]);
+  const approvalsStreamCleanupRef = useRef<(() => void) | null>(null);
+  const approvalsForDiscussionCleanupRef = useRef<(() => void) | null>(null);
 
   const { user, signEvent } = useAuth();
   const config = useMemo(() => getDiscussionConfig(), []);
@@ -60,38 +65,28 @@ export function BusStopDiscussion({
     [config.relays]
   );
 
-  const loadData = useCallback(async () => {
-    if (busStops.length === 0) {
-      return;
-    }
-
-    try {
-      // Step 1: バス停タグ付きの投稿を取得
-      const postsEvents = await nostrService.getDiscussionPosts(
-        config.busStopDiscussionId,
-        busStops
-      );
-
-      const postIds = postsEvents.map((event) => event.id);
-
-      // Step 2: 該当する投稿に対する承認のみを取得（通信量削減）
-      const approvalsEvents = await nostrService.getApprovalsForPosts(
-        postIds,
-        config.busStopDiscussionId
-      );
-
+  const updateFromEvents = useCallback(
+    async (
+      postEvents: Event[],
+      approvalsEvents: Event[],
+      fetchEvaluations: boolean
+    ) => {
       const parsedApprovals = approvalsEvents
         .map(parseApprovalEvent)
         .filter((a): a is PostApproval => a !== null);
 
-      const parsedPosts = postsEvents
+      const parsedPosts = postEvents
         .map((event) => parsePostEvent(event, parsedApprovals))
         .filter((p): p is DiscussionPost => p !== null)
         .filter(
           (p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag)
         );
 
-      // Step 3: 承認された投稿のIDのみに対する評価を取得
+      setPosts(parsedPosts);
+      if (!fetchEvaluations || parsedPosts.length === 0) {
+        return;
+      }
+
       const approvedPostIds = parsedPosts.map((p) => p.id);
       const evaluationsEvents = await nostrService.getEvaluationsForPosts(
         approvedPostIds
@@ -100,13 +95,72 @@ export function BusStopDiscussion({
       const parsedEvaluations = evaluationsEvents
         .map(parseEvaluationEvent)
         .filter((e): e is PostEvaluation => e !== null);
-
-      setPosts(parsedPosts);
       setEvaluations(parsedEvaluations);
-    } catch (error) {
-      logger.error("Failed to load bus stop discussion:", error);
+    },
+    [busStops, nostrService]
+  );
+
+  const startStreaming = useCallback(() => {
+    if (busStops.length === 0) {
+      return;
     }
-  }, [busStops, config.busStopDiscussionId, nostrService]);
+
+    approvalsStreamCleanupRef.current?.();
+    approvalsForDiscussionCleanupRef.current?.();
+    postsEventsRef.current = [];
+    approvalEventsRef.current = [];
+
+    const postFilters =
+      busStops.length > 0
+        ? busStops.map((stop) => ({
+            kinds: [1111, 1],
+            "#a": [config.busStopDiscussionId],
+            "#t": [stop],
+          }))
+        : [
+            {
+              kinds: [1111, 1],
+              "#a": [config.busStopDiscussionId],
+            },
+          ];
+
+    const postStream = nostrService.streamEventsOnEvent(postFilters, {
+      onEvent: (events) => {
+        postsEventsRef.current = events;
+        updateFromEvents(events, approvalEventsRef.current, false);
+      },
+      onEose: (events) => {
+        postsEventsRef.current = events;
+        updateFromEvents(events, approvalEventsRef.current, true);
+      },
+      timeoutMs: config.defaultTimeout ?? 5000,
+    });
+
+    const approvalsStream = nostrService.streamApprovals(
+      config.busStopDiscussionId,
+      {
+        onEvent: (events) => {
+          approvalEventsRef.current = events;
+          updateFromEvents(postsEventsRef.current, events, false);
+        },
+        onEose: (events) => {
+          approvalEventsRef.current = events;
+          updateFromEvents(postsEventsRef.current, events, true);
+        },
+        timeoutMs: config.defaultTimeout ?? 5000,
+      }
+    );
+
+    approvalsStreamCleanupRef.current = postStream;
+    approvalsForDiscussionCleanupRef.current = approvalsStream;
+    updateFromEvents([], [], false);
+  }, [
+    busStops,
+    config.busStopDiscussionId,
+    config.defaultTimeout,
+    nostrService,
+    updateFromEvents,
+  ]);
 
   const loadUserEvaluations = useCallback(async () => {
     if (!user.pubkey) return;
@@ -126,9 +180,14 @@ export function BusStopDiscussion({
 
   useEffect(() => {
     if (discussionsEnabled) {
-      loadData();
+      startStreaming();
     }
-  }, [discussionsEnabled, loadData]);
+
+    return () => {
+      approvalsStreamCleanupRef.current?.();
+      approvalsForDiscussionCleanupRef.current?.();
+    };
+  }, [discussionsEnabled, startStreaming]);
 
   useEffect(() => {
     if (user.pubkey) {
@@ -167,7 +226,7 @@ export function BusStopDiscussion({
 
       setPostForm({ content: "", busStopTag: busStops[0] || "" });
       setShowPreview(false);
-      await loadData();
+      startStreaming();
     } catch (error) {
       logger.error("Failed to submit post:", error);
       setErrors(["投稿の送信に失敗しました"]);
@@ -197,7 +256,7 @@ export function BusStopDiscussion({
       }
 
       setUserEvaluations((prev) => new Set([...prev, postId]));
-      await loadData();
+      startStreaming();
     } catch (error) {
       logger.error("Failed to evaluate post:", error);
     }

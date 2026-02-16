@@ -19,8 +19,8 @@ import {
 } from "../../utils/clientGeoUtils";
 import Card from "@/components/ui/Card";
 import CarouselCard from "@/components/ui/CarouselCard";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import Button from "@/components/ui/Button";
+import RubyWrapper from "@/components/ui/RubyWrapper";
 
 // 2点間の距離を計算する関数（ハーバーサイン公式）
 const calculateDistance = (
@@ -90,7 +90,7 @@ export default function LocationsPage() {
   >(null);
 
   // すべてのデータ読み込み状態の管理（Rubyful実行タイミング制御用）
-  const [allDataLoaded, setAllDataLoaded] = useState(false);
+  const [, setAllDataLoaded] = useState(false);
 
   useEffect(() => {
     async function fetchLocationData() {
@@ -428,19 +428,6 @@ export default function LocationsPage() {
     );
   };
 
-  useRubyfulRun(
-    [
-      allDataLoaded,
-      error,
-      currentPosition,
-      searchError,
-      isModalOpen,
-      locationsSorted,
-      geoJsonLoading,
-    ],
-    allDataLoaded && !geoJsonLoading
-  );
-
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -601,7 +588,7 @@ export default function LocationsPage() {
             ))}
           </div>
         </Card>
-
+        <RubyWrapper observe={[activeCategory]} />
         {activeCategory && (
           <div className="animate-fadeIn mb-6">
             {geoJsonLoading && (
@@ -655,7 +642,7 @@ export default function LocationsPage() {
           </div>
         )}
 
-        <div className="md:flex md:justify-center ruby-text">
+        <div className="md:flex md:justify-center">
           <div className="carousel w-full md:max-w-3xl">
             {/* お悩みハンドブックへのリンクカード */}
             <CarouselCard

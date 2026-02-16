@@ -10,17 +10,13 @@ import {
 } from "@/utils/addressLoader";
 import { logger } from "@/utils/logger";
 import Card from "@/components/ui/Card";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import RubyWrapper from "@/components/ui/RubyWrapper";
 
 interface LocationSuggestionsProps {
   onLocationSelected: (location: Location) => void;
-  onLoadingChange?: (loading: boolean) => void;
 }
 
-function LocationSuggestions({
-  onLocationSelected,
-  onLoadingChange,
-}: LocationSuggestionsProps) {
+function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
   const [categories, setCategories] = useState<AddressCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +30,6 @@ function LocationSuggestions({
     async function fetchAddressData() {
       try {
         setLoading(true);
-        onLoadingChange?.(true);
         const data = await loadAddressData();
         setCategories(data);
         setError(null);
@@ -43,12 +38,11 @@ function LocationSuggestions({
         logger.error(err);
       } finally {
         setLoading(false);
-        onLoadingChange?.(false);
       }
     }
 
     fetchAddressData();
-  }, [onLoadingChange]);
+  }, []);
 
   const handleLocationSelect = (location: AddressLocation) => {
     onLocationSelected(convertToLocation(location));
@@ -61,8 +55,6 @@ function LocationSuggestions({
       setActiveCategory(category);
     }
   };
-
-  useRubyfulRun([loading], !loading);
 
   if (loading) {
     return (
@@ -130,7 +122,7 @@ function LocationSuggestions({
             <button
               key={category.category}
               id={categoryId}
-              className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium ruby-text
+              className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium
                 ${
                   isActive
                     ? "btn-primary border-primary text-primary-content"
@@ -145,7 +137,7 @@ function LocationSuggestions({
                 isActive ? "閉じる" : "開く"
               }`}
             >
-              <p>{category.category}</p>
+              <span className="ruby-text">{category.category}</span>
             </button>
           );
         })}
@@ -213,6 +205,8 @@ function LocationSuggestions({
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
+
+      <RubyWrapper />
     </div>
   );
 }

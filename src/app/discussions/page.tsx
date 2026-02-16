@@ -3,60 +3,53 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
-import { AuditTimeline } from "@/components/discussion/AuditTimeline";
+import { DiscussionListTabLayout } from "@/components/discussion/DiscussionListTabLayout";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parseDiscussionEvent,
   parsePostEvent,
   parseApprovalEvent,
-  createAuditTimeline,
   formatRelativeTime,
-  getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import {
   buildNaddrFromDiscussion,
   extractDiscussionFromNaddr,
 } from "@/lib/nostr/naddr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
   Discussion,
   DiscussionPost,
   PostApproval,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
+import type { Event } from "nostr-tools";
 
-const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
 
 export default function DiscussionsPage() {
-  const [activeTab, setActiveTab] = useState<"main" | "audit">("main");
-  const [discussions, setDiscussions] = useState<Discussion[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, { name?: string }>>(
-    {}
-  );
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [discussions, setDiscussions] = React.useState<Discussion[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-  // 監査ログ用の独立した状態
-  const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
-  const [auditApprovals, setAuditApprovals] = useState<PostApproval[]>([]);
-  const [auditReferencedDiscussions, setAuditReferencedDiscussions] = useState<
-    Discussion[]
-  >([]);
-  const [isAuditLoading, setIsAuditLoading] = useState(false);
-  const [isAuditLoaded, setIsAuditLoaded] = useState(false);
+  const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
+  const discussionStreamCleanupRef = useRef<(() => void) | null>(null);
+  const loadSequenceRef = useRef(0);
 
   const { user } = useAuth();
 
   // 会話一覧専用のデータ取得
   const loadData = useCallback(async () => {
     if (!isDiscussionsEnabled()) return;
+    const loadSequence = ++loadSequenceRef.current;
     setIsLoading(true);
+    setDiscussions([]);
+    approvalStreamCleanupRef.current?.();
+    approvalStreamCleanupRef.current = null;
+    discussionStreamCleanupRef.current?.();
+    discussionStreamCleanupRef.current = null;
 
     try {
       const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
@@ -75,133 +68,110 @@ export default function DiscussionsPage() {
         discussionInfo.discussionId
       );
 
-      // 会話一覧管理用のデータを取得
-      const [discussionListEvents, discussionListApprovals] = await Promise.all(
-        [
-          nostrService.getEvents([
-            {
-              kinds: [34550],
-              authors: [discussionInfo.authorPubkey],
-              "#d": [discussionInfo.dTag],
-              limit: 1,
-            },
-          ]),
-          nostrService.getApprovals(discussionInfo.discussionId),
-        ]
-      );
-
-      const discussionListMeta =
-        discussionListEvents.length > 0
-          ? parseDiscussionEvent(discussionListEvents[0])
-          : null;
-
-      if (!discussionListMeta) {
-        throw new Error("Discussion list metadata not found");
-      }
-
-      // 承認されたkind:1111投稿を特定
-      const listApprovals = discussionListApprovals
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
-      // 承認イベントから投稿データを復元
-      const listPosts = listApprovals
-        .map((approval) => {
-          try {
-            const approvedPost = JSON.parse(approval.event.content);
-            return parsePostEvent(approvedPost, [approval]);
-          } catch {
-            return null;
-          }
-        })
-        .filter((p): p is DiscussionPost => p !== null)
-        .sort((a, b) => b.createdAt - a.createdAt);
-
-      // 承認されたkind:1111のqタグから個別会話のnaddrを取得（重複排除）
-      const individualDiscussionRefs = new Set<string>();
-      listPosts.forEach((post) => {
-        const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
-        qTags.forEach((qTag) => {
-          if (qTag[1] && qTag[1].startsWith("34550:")) {
-            individualDiscussionRefs.add(qTag[1]);
+      const parseDiscussionsFromEvents = (events: Event[]) => {
+        const parsed = events
+          .map(parseDiscussionEvent)
+          .filter((d): d is Discussion => d !== null);
+        const latestById = new Map<string, Discussion>();
+        parsed.forEach((discussion) => {
+          const existing = latestById.get(discussion.id);
+          if (!existing || discussion.createdAt > existing.createdAt) {
+            latestById.set(discussion.id, discussion);
           }
         });
-      });
 
-      // 個別会話のkind:34550を取得
-      const individualDiscussions =
-        await nostrService.getReferencedUserDiscussions(
-          Array.from(individualDiscussionRefs)
+        return Array.from(latestById.values()).sort(
+          (a, b) => b.createdAt - a.createdAt
         );
+      };
 
-      const parsedIndividualDiscussions = individualDiscussions
-        .map(parseDiscussionEvent)
-        .filter((d): d is Discussion => d !== null)
-        .sort((a, b) => b.createdAt - a.createdAt);
+      const updateFromApprovals = async (events: Event[]) => {
+        if (loadSequenceRef.current !== loadSequence) return;
+        const listApprovals = events
+          .map(parseApprovalEvent)
+          .filter((a): a is PostApproval => a !== null);
 
-      // 会話一覧データを設定
-      setDiscussions(parsedIndividualDiscussions);
-
-      // プロファイル取得（管理者・モデレーターのみ）
-      const shouldLoadProfiles = user.pubkey === ADMIN_PUBKEY;
-
-      if (shouldLoadProfiles) {
-        const uniquePubkeys = new Set<string>();
-        uniquePubkeys.add(ADMIN_PUBKEY);
-
-        parsedIndividualDiscussions.forEach((discussion) => {
-          if (
-            discussion.authorPubkey === ADMIN_PUBKEY ||
-            discussion.moderators.some(
-              (m) => m.pubkey === discussion.authorPubkey
-            )
-          ) {
-            uniquePubkeys.add(discussion.authorPubkey);
-          }
-          discussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
-        });
-
-        const profilePromises = Array.from(uniquePubkeys).map(
-          async (pubkey) => {
-            const profileEvent = await nostrService.getProfile(pubkey);
-            if (profileEvent) {
-              try {
-                const profile = JSON.parse(profileEvent.content);
-                return [pubkey, { name: profile.name || profile.display_name }];
-              } catch {
-                return [pubkey, {}];
-              }
+        const listPosts = listApprovals
+          .map((approval) => {
+            try {
+              const approvedPost = JSON.parse(approval.event.content);
+              return parsePostEvent(approvedPost, [approval]);
+            } catch {
+              return null;
             }
-            return [pubkey, {}];
-          }
-        );
+          })
+          .filter((p): p is DiscussionPost => p !== null)
+          .sort((a, b) => b.createdAt - a.createdAt);
 
-        const profileResults = await Promise.all(profilePromises);
-        const profilesMap = Object.fromEntries(profileResults);
-        setProfiles(profilesMap);
-      } else {
-        setProfiles({});
-      }
+        const individualDiscussionRefs = new Set<string>();
+        listPosts.forEach((post) => {
+          const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
+          qTags.forEach((qTag) => {
+            if (qTag[1] && qTag[1].startsWith("34550:")) {
+              individualDiscussionRefs.add(qTag[1]);
+            }
+          });
+        });
 
-      logger.info("Individual discussions loaded:", {
-        count: parsedIndividualDiscussions.length,
-        discussions: parsedIndividualDiscussions.map((d) => d.title),
-      });
+        const parsedIndividualDiscussions: Discussion[] = [];
+        if (individualDiscussionRefs.size > 0) {
+          discussionStreamCleanupRef.current?.();
+          discussionStreamCleanupRef.current =
+            nostrService.streamReferencedUserDiscussions(
+              Array.from(individualDiscussionRefs),
+              {
+                onEvent: (discussionEvents) => {
+                  if (loadSequenceRef.current !== loadSequence) return;
+                  const parsed = parseDiscussionsFromEvents(discussionEvents);
+                  if (parsed.length > 0) {
+                    setDiscussions(parsed);
+                    setIsLoading(false);
+                  }
+                },
+                onEose: (discussionEvents) => {
+                  if (loadSequenceRef.current !== loadSequence) return;
+                  const parsed = parseDiscussionsFromEvents(discussionEvents);
+                  setDiscussions(parsed);
+                  setIsLoading(false);
+                },
+              }
+            );
+
+          return;
+        }
+
+        setDiscussions(parsedIndividualDiscussions);
+        setIsLoading(false);
+      };
+
+      approvalStreamCleanupRef.current = nostrService.streamApprovals(
+        discussionInfo.discussionId,
+        {
+          onEose: updateFromApprovals,
+          onEvent: () => {},
+        }
+      );
     } catch (error) {
       logger.error("Failed to load discussion list:", error);
-    } finally {
+      setDiscussions([]);
       setIsLoading(false);
+    } finally {
+      logger.info("Finished loading discussion list");
     }
-  }, [user.pubkey]);
+  }, []);
 
-  // Rubyfulライブラリ対応
-  useRubyfulRun([discussions], isLoaded);
 
   useEffect(() => {
     if (isDiscussionsEnabled()) {
       loadData();
     }
-    setIsLoaded(true);
+
+    return () => {
+      approvalStreamCleanupRef.current?.();
+      approvalStreamCleanupRef.current = null;
+      discussionStreamCleanupRef.current?.();
+      discussionStreamCleanupRef.current = null;
+    };
   }, [loadData]);
 
   // ディスカッション機能が有効になっているか確認し、それに応じて表示を切り替える
@@ -216,180 +186,10 @@ export default function DiscussionsPage() {
     );
   }
 
-  // 監査ログ専用のデータ取得
-  const loadAuditData = async () => {
-    if (isAuditLoaded || isAuditLoading) return;
-
-    setIsAuditLoading(true);
-
-    try {
-      const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
-      if (!discussionListNaddr) {
-        logger.error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is not configured");
-        throw new Error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is not configured");
-      }
-
-      const discussionInfo = extractDiscussionFromNaddr(discussionListNaddr);
-      if (!discussionInfo) {
-        throw new Error("Invalid DISCUSSION_LIST_NADDR format");
-      }
-
-      logger.info(
-        "Loading audit data for discussionId:",
-        discussionInfo.discussionId
-      );
-
-      // 監査ログ用のデータを取得
-      const [discussionListPosts, discussionListApprovals] = await Promise.all([
-        nostrService.getDiscussionPosts(discussionInfo.discussionId),
-        nostrService.getApprovals(discussionInfo.discussionId),
-      ]);
-
-      const listApprovals = discussionListApprovals
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
-      const listPosts = discussionListPosts
-        .map((event) => parsePostEvent(event, listApprovals))
-        .filter((p): p is DiscussionPost => p !== null);
-
-      // qタグから参照されている個別会話のIDを収集（重複排除）
-      const individualDiscussionRefs = new Set<string>();
-      listPosts.forEach((post) => {
-        const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
-        qTags.forEach((qTag) => {
-          if (qTag[1] && qTag[1].startsWith("34550:")) {
-            individualDiscussionRefs.add(qTag[1]);
-          }
-        });
-      });
-
-      // 参照されている個別会話のkind:34550を取得
-      let referencedDiscussions: Discussion[] = [];
-      if (individualDiscussionRefs.size > 0) {
-        const individualDiscussions =
-          await nostrService.getReferencedUserDiscussions(
-            Array.from(individualDiscussionRefs)
-          );
-        referencedDiscussions = individualDiscussions
-          .map(parseDiscussionEvent)
-          .filter((d): d is Discussion => d !== null);
-      }
-
-      // 監査ログ用のプロファイル取得（参照された会話の作成者・モデレーターのみ）
-      const shouldLoadAuditProfiles = user.pubkey === ADMIN_PUBKEY;
-
-      if (shouldLoadAuditProfiles && referencedDiscussions.length > 0) {
-        const auditUniquePubkeys = new Set<string>();
-        auditUniquePubkeys.add(ADMIN_PUBKEY);
-
-        referencedDiscussions.forEach((discussion) => {
-          // 会話作成者を追加
-          auditUniquePubkeys.add(discussion.authorPubkey);
-          // モデレーターを追加
-          discussion.moderators.forEach((mod) =>
-            auditUniquePubkeys.add(mod.pubkey)
-          );
-        });
-
-        const auditProfilePromises = Array.from(auditUniquePubkeys).map(
-          async (pubkey) => {
-            const profileEvent = await nostrService.getProfile(pubkey);
-            if (profileEvent) {
-              try {
-                const profile = JSON.parse(profileEvent.content);
-                return [pubkey, { name: profile.name || profile.display_name }];
-              } catch {
-                return [pubkey, {}];
-              }
-            }
-            return [pubkey, {}];
-          }
-        );
-
-        const auditProfileResults = await Promise.all(auditProfilePromises);
-        const auditProfilesMap = Object.fromEntries(auditProfileResults);
-
-        // プロファイルをメイン状態に統合（監査ログデータと合わせる）
-        setProfiles((prevProfiles) => ({
-          ...prevProfiles,
-          ...auditProfilesMap,
-        }));
-      }
-
-      // 監査ログデータを設定
-      setAuditPosts(listPosts);
-      setAuditApprovals(listApprovals);
-      setAuditReferencedDiscussions(referencedDiscussions);
-      setIsAuditLoaded(true);
-
-      logger.info("Audit data loaded:", {
-        posts: listPosts.length,
-        approvals: listApprovals.length,
-        referencedDiscussions: referencedDiscussions.length,
-        profilesLoaded: shouldLoadAuditProfiles,
-      });
-    } catch (error) {
-      logger.error("Failed to load audit data:", error);
-    } finally {
-      setIsAuditLoading(false);
-    }
-  };
-
-  // 監査ログタブがアクティブになった時のデータ取得
-  const handleTabChange = (tab: "main" | "audit") => {
-    setActiveTab(tab);
-    if (tab === "audit") {
-      loadAuditData();
-    }
-  };
-
-  // spec_v2.md要件: リクエスト機能は完全オミット
-  const auditItems = createAuditTimeline(
-    auditReferencedDiscussions,
-    [],
-    auditPosts,
-    auditApprovals
-  );
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 ruby-text">
-        <h1 className="text-3xl font-bold mb-4">意見交換</h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          風ぐるまの利用体験について意見交換を行う場所です。
-        </p>
-      </div>
-
-      <nav role="tablist" className="join mb-6">
-        <button
-          className={`join-item btn ruby-text ${
-            activeTab === "main" && "btn-active btn-primary"
-          }`}
-          name="tab-options"
-          aria-label="意見交換タブを開く"
-          role="tab"
-          area-selected={activeTab === "main" ? "true" : "false"}
-          onClick={() => handleTabChange("main")}
-        >
-          <span>意見交換</span>
-        </button>
-        <button
-          className={`join-item btn ruby-text ${
-            activeTab === "audit" && "btn-active btn-primary"
-          }`}
-          name="tab-options"
-          aria-label="監査ログを開く"
-          role="tab"
-          area-selected={activeTab === "audit" ? "true" : "false"}
-          onClick={() => handleTabChange("audit")}
-        >
-          <span>監査ログ</span>
-        </button>
-      </nav>
-
-      {activeTab === "main" ? (
-        <main role="tabpanel" aria-labelledby="main-tab" className="space-y-6">
+    <DiscussionListTabLayout baseHref="/discussions">
+      <div className="container mx-auto px-4 py-8">
+        <main className="space-y-6">
           {/* 作成者またはモデレーターの場合のみ表示 */}
           {(discussions.some((d) => user.pubkey === d.authorPubkey) ||
             discussions.some((d) =>
@@ -433,7 +233,7 @@ export default function DiscussionsPage() {
                   ))}
                 </div>
               ) : discussions.length > 0 ? (
-                <div className="space-y-4 ruby-text">
+                <div className="space-y-4">
                   {discussions.map((discussion) => (
                     <article key={discussion.id}>
                       <Link
@@ -444,10 +244,10 @@ export default function DiscussionsPage() {
                       >
                         <div className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
                           <div className="card-body p-4">
-                            <h3 className="card-title text-lg">
+                            <h3 className="card-title text-lg ruby-text">
                               <span>{discussion.title}</span>
                             </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-gray-600 dark:text-gray-400 ruby-text">
                               {discussion.description.length > 70
                                 ? `${discussion.description.slice(0, 70)}...`
                                 : discussion.description}
@@ -517,41 +317,7 @@ export default function DiscussionsPage() {
             </section>
           </div>
         </main>
-      ) : (
-        <main role="tabpanel" aria-labelledby="audit-tab">
-          <section aria-labelledby="audit-log-heading">
-            <h2
-              id="audit-log-heading"
-              className="text-xl font-semibold mb-4 ruby-text"
-            >
-              監査ログ
-            </h2>
-            <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="card-body">
-                {isAuditLoading ? (
-                  <div className="animate-pulse space-y-4">
-                    {[...Array(5)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-16 bg-gray-200 dark:bg-gray-700 rounded"
-                      ></div>
-                    ))}
-                  </div>
-                ) : (
-                  <AuditTimeline
-                    items={auditItems}
-                    profiles={profiles}
-                    referencedDiscussions={auditReferencedDiscussions}
-                    conversationAuditMode={true}
-                  />
-                )}
-              </div>
-            </div>
-          </section>
-        </main>
-      )}
-
-      {/* spec_v2.md要件: ログインモーダルも不要 */}
-    </div>
+      </div>
+    </DiscussionListTabLayout>
   );
 }

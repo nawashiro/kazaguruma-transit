@@ -1,81 +1,50 @@
 "use client";
 
-import { useState, Suspense } from "react";
 import Sidebar from "./Sidebar";
 import ThemeToggle from "../ui/ThemeToggle";
 import SkipToContent from "../ui/SkipToContent";
 import Script from "next/script";
 import { logger } from "@/utils/logger";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
-
-// useSearchParams()を使用する部分を別コンポーネントに分離
-function RubyfulInitializer({ isLoaded }: { isLoaded: boolean }) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  useRubyfulRun([pathname, searchParams, isLoaded], isLoaded);
-
-  return null;
-}
+import { loadRubyPreference, saveRubyPreference, observeRubyToggle } from "@/lib/preferences/ruby-preference";
 
 export default function SidebarLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [isLoaded, setIsLoaded] = useState(false);
-
   return (
     <div className="drawer lg:drawer-open">
-      {/* Suspenseで囲まれたRubyful初期化 */}
-      <Suspense fallback={null}>
-        <RubyfulInitializer isLoaded={isLoaded} />
-      </Suspense>
-
-      {/* ルビを表示 */}
+      {/* Rubyful v2 */}
       <Script
-        src="https://rubyfuljs.s3.ap-northeast-1.amazonaws.com/rubyful.js"
+        src="https://rubyful-v2.s3.ap-northeast-1.amazonaws.com/v2/rubyful.js?t=20250507022654"
         strategy="afterInteractive"
         onLoad={() => {
-          logger.log("Rubyful.js loaded");
-          setIsLoaded(true);
+          // localStorageから設定を読み込む
+          const savedPreference = loadRubyPreference();
 
-          const style = document.createElement("style");
-          style.innerHTML = `
-          button.rubyfuljs-button.is-customized {
-            background-color: var(--color-primary);
-            color: var(--color-primary-content);
-            box-shadow: none;
-            border: 2px solid color-mix(in oklab, var(--color-primary), rgb(0, 0, 0) calc(5%));
-          }
-          .rubyfuljs-tooltip, .rubyfuljs-tooltip-close-button {
-            background-color: var(--color-base-100);
-            border: 1px solid var(--color-base-content);
-          }
-          rt {
-            margin-bottom: .30rem;
-            margin-top: .30rem;
-            font-size: 70%;
-            color: var(--color-secondary-content);
-          }
-          .alert-error rt {
-            color: var(--color-error-content);
-          }
-          .alert-success rt {
-            color: var(--color-success-content);
-          }
-          .btn-primary rt {
-            color: var(--color-primary-content);
-          }
-          .btn-warning rt{
-            color: var(--color-warning-content);
-          }
-          .btn:is(:disabled, [disabled], .btn-disabled) rt {
-            color: color-mix(in oklch, var(--color-base-content) 20%, rgba(0, 0, 0, 0));
-          }
-          `;
-          document.body.appendChild(style);
+          // RubyfulV2の初期化
+          (window as any).RubyfulV2?.init({
+            selector: ".ruby-text",
+            defaultDisplay: savedPreference,
+            observeChanges: true,
+            styles: {
+              toggleButtonClass: "my-toggle",
+              toggleButtonText: {
+                on: "ルビ ON",
+                off: "ルビ OFF",
+              },
+            },
+          });
+
+          // トグル状態変更の監視を開始
+          // observeRubyToggleは内部でボタンの生成を待つリトライ機能を持つ
+          observeRubyToggle((newState) => {
+            logger.log('Ruby toggle callback called with state:', newState);
+            const saved = saveRubyPreference(newState);
+            logger.log('Save result:', saved);
+          });
+
+          logger.log("Rubyful v2 loaded with saved preference");
         }}
       />
       <SkipToContent />
@@ -124,13 +93,13 @@ export default function SidebarLayout({
         <div id="main-content" className="flex-grow p-4" tabIndex={-1}>
           {children}
         </div>
-        <footer className="flex flex-col md:flex-row px-4 py-2 justify-center md:justify-between ruby-text">
+        <footer className="flex flex-col md:flex-row px-4 py-2 justify-center md:justify-between">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 md:w-auto">
             <a
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"
               target="_blank"
               rel="noopener noreferrer"
-              className="link text-sm /60 hover:underline inline-block mx-2"
+              className="link text-sm /60 hover:underline inline-block mx-2 ruby-text"
             >
               利用規約
             </a>
@@ -138,7 +107,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80b2a6d4d045e850407c"
               target="_blank"
               rel="noopener noreferrer"
-              className="link text-sm /60 hover:underline inline-block mx-2"
+              className="link text-sm /60 hover:underline inline-block mx-2 ruby-text"
             >
               プライバシーポリシー
             </a>
@@ -146,7 +115,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80d0ba82d66f451b9ff1"
               target="_blank"
               rel="noopener noreferrer"
-              className="link text-sm /60 hover:underline inline-block mx-2"
+              className="link text-sm /60 hover:underline inline-block mx-2 ruby-text"
             >
               クッキーポリシー
             </a>

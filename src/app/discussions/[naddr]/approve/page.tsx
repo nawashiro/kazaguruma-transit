@@ -3,7 +3,7 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -24,7 +24,6 @@ import {
   getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import type {
   Discussion,
   DiscussionPost,
@@ -32,9 +31,11 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { CheckBadgeIcon } from "@heroicons/react/24/outline";
+import type { Event } from "nostr-tools";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
-const nostrService = createNostrService(getNostrServiceConfig());
+const nostrServiceConfig = getNostrServiceConfig();
+const nostrService = createNostrService(nostrServiceConfig);
 
 export default function PostApprovalPage() {
   const params = useParams();
@@ -46,8 +47,10 @@ export default function PostApprovalPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
-  const [isLoaded, setIsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
+  const postsEventsRef = useRef<Event[]>([]);
+  const approvalEventsRef = useRef<Event[]>([]);
+  const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
 
   const { user, signEvent } = useAuth();
 
@@ -56,54 +59,111 @@ export default function PostApprovalPage() {
     if (!naddrParam) return null;
     return extractDiscussionFromNaddr(naddrParam);
   }, [naddrParam]);
+  const rebuildFromEvents = useCallback(() => {
+    const parsedApprovals = approvalEventsRef.current
+      .map(parseApprovalEvent)
+      .filter((a): a is PostApproval => a !== null);
 
-  // Rubyfulライブラリ対応
-  useRubyfulRun([discussion, posts, approvals], isLoaded);
+    const parsedPosts = postsEventsRef.current
+      .map((event) => parsePostEvent(event, parsedApprovals))
+      .filter((p): p is DiscussionPost => p !== null)
+      .sort((a, b) => b.createdAt - a.createdAt);
 
-  const loadData = useCallback(async () => {
+    setApprovals(parsedApprovals);
+    setPosts(parsedPosts);
+  }, []);
+
+  const startStreaming = useCallback(() => {
     if (!isDiscussionsEnabled() || !discussionInfo) return;
     setIsLoading(true);
-    try {
-      const [discussionEvents, postsEvents, approvalsEvents] =
-        await Promise.all([
-          nostrService.getDiscussions(discussionInfo.authorPubkey),
-          nostrService.getDiscussionPosts(discussionInfo.discussionId),
-          nostrService.getApprovals(discussionInfo.discussionId),
-        ]);
+    approvalStreamCleanupRef.current?.();
+    approvalEventsRef.current = [];
+    postsEventsRef.current = [];
 
-      const parsedDiscussion = discussionEvents
-        .map(parseDiscussionEvent)
-        .find((d) => d && d.dTag === discussionInfo.dTag);
-
-      if (!parsedDiscussion) {
-        throw new Error("Discussion not found");
+    const discussionStream = nostrService.streamEventsOnEvent(
+      [
+        {
+          kinds: [34550],
+          authors: [discussionInfo.authorPubkey],
+          "#d": [discussionInfo.dTag],
+          limit: 1,
+        },
+      ],
+      {
+        onEvent: (events) => {
+          const parsedDiscussion = events
+            .map(parseDiscussionEvent)
+            .find((d) => d && d.dTag === discussionInfo.dTag);
+          if (parsedDiscussion) {
+            setDiscussion(parsedDiscussion);
+            setIsLoading(false);
+          }
+        },
+        onEose: (events) => {
+          const parsedDiscussion = events
+            .map(parseDiscussionEvent)
+            .find((d) => d && d.dTag === discussionInfo.dTag);
+          if (parsedDiscussion) {
+            setDiscussion(parsedDiscussion);
+          }
+          setIsLoading(false);
+        },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
       }
+    );
 
-      const parsedApprovals = approvalsEvents
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
+    const postsStream = nostrService.streamEventsOnEvent(
+      [
+        {
+          kinds: [1111, 1],
+          "#a": [discussionInfo.discussionId],
+        },
+      ],
+      {
+        onEvent: (events) => {
+          postsEventsRef.current = events;
+          rebuildFromEvents();
+        },
+        onEose: (events) => {
+          postsEventsRef.current = events;
+          rebuildFromEvents();
+          setIsLoading(false);
+        },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
+      }
+    );
 
-      const parsedPosts = postsEvents
-        .map((event) => parsePostEvent(event, parsedApprovals))
-        .filter((p): p is DiscussionPost => p !== null)
-        .sort((a, b) => b.createdAt - a.createdAt);
+    const approvalsStream = nostrService.streamApprovals(
+      discussionInfo.discussionId,
+      {
+        onEvent: (events) => {
+          approvalEventsRef.current = events;
+          rebuildFromEvents();
+        },
+        onEose: (events) => {
+          approvalEventsRef.current = events;
+          rebuildFromEvents();
+          setIsLoading(false);
+        },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
+      }
+    );
 
-      setDiscussion(parsedDiscussion);
-      setPosts(parsedPosts);
-      setApprovals(parsedApprovals);
-    } catch (error) {
-      logger.error("Failed to load discussion:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [discussionInfo]);
+    approvalStreamCleanupRef.current = () => {
+      discussionStream();
+      postsStream();
+      approvalsStream();
+    };
+  }, [discussionInfo, nostrServiceConfig.defaultTimeout, rebuildFromEvents]);
 
   useEffect(() => {
     if (isDiscussionsEnabled() && discussionInfo) {
-      loadData();
+      startStreaming();
     }
-    setIsLoaded(true);
-  }, [loadData, discussionInfo]);
+    return () => {
+      approvalStreamCleanupRef.current?.();
+    };
+  }, [startStreaming, discussionInfo]);
 
   const handleApprovePost = async (post: DiscussionPost) => {
     if (!user.isLoggedIn || !discussion) return;
@@ -247,12 +307,6 @@ export default function PostApprovalPage() {
     >
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 ruby-text">
-          <Link
-            href={`/discussions/${naddrParam}`}
-            className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
-          >
-            <span>← 会話に戻る</span>
-          </Link>
           <h1 className="text-3xl font-bold">投稿承認管理</h1>
           {discussion && (
             <p className="text-gray-600 dark:text-gray-400 mt-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import DateTimeSelector from "@/components/features/DateTimeSelector";
 import OriginSelector from "@/components/features/OriginSelector";
 import DestinationSelector from "@/components/features/DestinationSelector";
@@ -13,7 +13,6 @@ import { TransitFormData, Location } from "@/types/core";
 import { logger } from "@/utils/logger";
 import RateLimitModal from "@/components/features/RateLimitModal";
 import FirstVisitGuideModal from "@/components/features/FirstVisitGuideModal";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import {
   BusStopDiscussion,
   BusStopMemo,
@@ -130,9 +129,6 @@ export default function Home() {
   const [isDeparture, setIsDeparture] = useState<boolean>(true);
   const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
   const [prioritizeSpeed, setPrioritizeSpeed] = useState<boolean>(false);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isLocationSuggestionsLoading, setIsLocationSuggestionsLoading] =
-    useState(true);
   const [memoData, setMemoData] = useState<Map<string, PostWithStats>>(
     new Map()
   );
@@ -175,15 +171,12 @@ export default function Home() {
         }
       }
 
-      // 全ての初期化処理完了後にisInitializedをtrueに設定
-      setIsInitialized(true);
+      // 全ての初期化処理完了
     };
 
     initializeApp();
   }, []);
 
-  // isLoadedの計算 - 初期化処理とLocationSuggestionsのローディングが完了したとき
-  const isLoaded = isInitialized && !isLocationSuggestionsLoading;
 
   // routeInfoが更新されたときにメモデータを取得
   useEffect(() => {
@@ -215,7 +208,6 @@ export default function Home() {
     }
   }, [routeInfo]);
 
-  useRubyfulRun([selectedOrigin, selectedDestination, routeInfo], isLoaded);
 
   const handleOriginSelected = (location: Location) => {
     setSelectedOrigin(location);
@@ -231,12 +223,6 @@ export default function Home() {
     setRouteInfo(null);
   };
 
-  const handleLocationSuggestionsLoadingChange = useCallback(
-    (loading: boolean) => {
-      setIsLocationSuggestionsLoading(loading);
-    },
-    []
-  );
 
   const handleDateTimeSelected = (formData: TransitFormData) => {
     setSelectedDateTime(formData.dateTime || "");
@@ -504,9 +490,6 @@ export default function Home() {
   const renderDestinationSelection = () => (
     <DestinationSelector
       onDestinationSelected={handleDestinationSelected}
-      onLocationSuggestionsLoadingChange={
-        handleLocationSuggestionsLoadingChange
-      }
     />
   );
 

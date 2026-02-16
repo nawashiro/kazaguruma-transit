@@ -39,7 +39,9 @@ export async function loadAddressData(): Promise<AddressCategory[]> {
     const response = await fetch(
       `https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@${version}/kazaguruma_json_min/main_facilities.json`
     );
-    if (!response.ok) {
+    if (response.ok) {
+      logger.log("住所データを読み込みました");
+    } else {
       throw new Error("住所データの取得に失敗しました");
     }
     const data = await response.json();

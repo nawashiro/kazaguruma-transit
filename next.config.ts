@@ -1,7 +1,17 @@
 import type { NextConfig } from "next";
+import WebpackLicensePlugin from "webpack-license-plugin";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.plugins.push(
+        new WebpackLicensePlugin({
+          outputFilename: "../public/licenses/dependencies.json",
+        })
+      );
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

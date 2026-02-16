@@ -3,7 +3,13 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import Link from "next/link";
 import { CheckBadgeIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -23,7 +29,7 @@ import {
   extractDiscussionFromNaddr,
   buildNaddrFromRef,
 } from "@/lib/nostr/naddr-utils";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
+import type { Event } from "nostr-tools";
 import type {
   Discussion,
   DiscussionPost,
@@ -31,7 +37,8 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 
-const nostrService = createNostrService(getNostrServiceConfig());
+const nostrServiceConfig = getNostrServiceConfig();
+const nostrService = createNostrService(nostrServiceConfig);
 
 export default function DiscussionManagePage() {
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
@@ -43,8 +50,11 @@ export default function DiscussionManagePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
-  const [isLoaded, setIsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
+
+  const postEventsRef = useRef<Event[]>([]);
+  const approvalEventsRef = useRef<Event[]>([]);
+  const streamCleanupRef = useRef<(() => void)[]>([]);
 
   const { user, signEvent } = useAuth();
 
@@ -74,19 +84,13 @@ export default function DiscussionManagePage() {
             try {
               const naddr = buildNaddrFromRef(qTag[1]);
               return (
-                <div
-                  key={index}
-                  className="text-sm text-gray-400 italic ruby-text"
-                >
+                <div key={index} className="text-sm text-gray-400 italic">
                   会話が見つかりません。参照: {naddr}
                 </div>
               );
             } catch {
               return (
-                <div
-                  key={index}
-                  className="text-sm text-gray-400 italic ruby-text"
-                >
+                <div key={index} className="text-sm text-gray-400 italic">
                   無効な参照形式。参照: {qTag[1]}
                 </div>
               );
@@ -95,15 +99,15 @@ export default function DiscussionManagePage() {
 
           const naddr = buildNaddrFromRef(qTag[1]);
           return (
-            <div key={index} className="ruby-text">
+            <div key={index} className="">
               <Link
                 href={`/discussions/${naddr}`}
                 className="block hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-3 -m-3 transition-colors"
               >
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 ruby-text">
                   {referencedDiscussion.title}
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
                   {referencedDiscussion.description.length > 100
                     ? `${referencedDiscussion.description.slice(0, 100)}...`
                     : referencedDiscussion.description}
@@ -137,79 +141,168 @@ export default function DiscussionManagePage() {
     return extractDiscussionFromNaddr(discussionListNaddr);
   }, []);
 
-  const loadData = useCallback(async () => {
-    if (!isDiscussionsEnabled() || !discussionInfo) return;
-    setIsLoading(true);
-    try {
-      const [discussionEvents, postsEvents, approvalsEvents] =
-        await Promise.all([
-          nostrService.getDiscussions(discussionInfo.authorPubkey),
-          nostrService.getDiscussionPosts(discussionInfo.discussionId),
-          nostrService.getApprovals(discussionInfo.discussionId),
-        ]);
-
-      const parsedDiscussion = discussionEvents
-        .map(parseDiscussionEvent)
-        .find((d) => d && d.dTag === discussionInfo.dTag);
-
-      if (!parsedDiscussion) {
-        throw new Error("Discussion not found");
-      }
-
-      const parsedApprovals = approvalsEvents
+  const rebuildFromEvents = useCallback(
+    (postEvents: Event[], approvalEvents: Event[]) => {
+      const parsedApprovals = approvalEvents
         .map(parseApprovalEvent)
         .filter((a): a is PostApproval => a !== null);
 
-      const parsedPosts = postsEvents
+      const parsedPosts = postEvents
         .map((event) => parsePostEvent(event, parsedApprovals))
         .filter((p): p is DiscussionPost => p !== null)
         .sort((a, b) => b.createdAt - a.createdAt);
 
-      // qタグから参照されている個別会話のkind:34550を取得
-      const individualDiscussionRefs: string[] = [];
-      parsedPosts.forEach((post) => {
-        const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
-        qTags.forEach((qTag) => {
-          if (qTag[1] && qTag[1].startsWith("34550:")) {
-            individualDiscussionRefs.push(qTag[1]);
-          }
-        });
-      });
-
-      let referencedDiscussionsData: Discussion[] = [];
-      if (individualDiscussionRefs.length > 0) {
-        const individualDiscussions =
-          await nostrService.getReferencedUserDiscussions(
-            individualDiscussionRefs
-          );
-        referencedDiscussionsData = individualDiscussions
-          .map(parseDiscussionEvent)
-          .filter((d): d is Discussion => d !== null);
-      }
-
-      setDiscussion(parsedDiscussion);
-      setPosts(parsedPosts);
       setApprovals(parsedApprovals);
-      setReferencedDiscussions(referencedDiscussionsData);
-    } catch (error) {
-      logger.error("Failed to load discussion:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [discussionInfo]);
-
-  // Rubyfulライブラリ対応
-  useRubyfulRun(
-    [discussion, posts, approvals, referencedDiscussions],
-    isLoaded
+      setPosts(parsedPosts);
+    },
+    []
   );
 
-  useEffect(() => {
-    if (isDiscussionsEnabled() && discussionInfo) {
-      loadData();
+  const startStreaming = useCallback(() => {
+    streamCleanupRef.current.forEach((stop) => stop());
+    streamCleanupRef.current = [];
+    postEventsRef.current = [];
+    approvalEventsRef.current = [];
+    setDiscussion(null);
+    setPosts([]);
+    setApprovals([]);
+    setIsLoading(true);
+
+    if (!isDiscussionsEnabled() || !discussionInfo) {
+      setIsLoading(false);
+      return;
     }
-    setIsLoaded(true);
-  }, [loadData, discussionInfo]);
+
+    const discussionStream = nostrService.streamEventsOnEvent(
+      [
+        {
+          kinds: [34550],
+          authors: [discussionInfo.authorPubkey],
+          "#d": [discussionInfo.dTag],
+          limit: 1,
+        },
+      ],
+      {
+        onEvent: (events) => {
+          const parsedDiscussion = events
+            .map(parseDiscussionEvent)
+            .find((d) => d && d.dTag === discussionInfo.dTag);
+          if (parsedDiscussion) {
+            setDiscussion(parsedDiscussion);
+            setIsLoading(false);
+          }
+        },
+        onEose: (events) => {
+          const parsedDiscussion = events
+            .map(parseDiscussionEvent)
+            .find((d) => d && d.dTag === discussionInfo.dTag);
+          if (parsedDiscussion) {
+            setDiscussion(parsedDiscussion);
+          }
+          setIsLoading(false);
+        },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
+      }
+    );
+
+    const postStream = nostrService.streamEventsOnEvent(
+      [
+        {
+          kinds: [1111, 1],
+          "#a": [discussionInfo.discussionId],
+        },
+      ],
+      {
+        onEvent: (events) => {
+          postEventsRef.current = events;
+          rebuildFromEvents(events, approvalEventsRef.current);
+        },
+        onEose: (events) => {
+          postEventsRef.current = events;
+          rebuildFromEvents(events, approvalEventsRef.current);
+        },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
+      }
+    );
+
+    const approvalStream = nostrService.streamEventsOnEvent(
+      [
+        {
+          kinds: [4550],
+          "#a": [discussionInfo.discussionId],
+        },
+      ],
+      {
+        onEvent: (events) => {
+          approvalEventsRef.current = events;
+          rebuildFromEvents(postEventsRef.current, events);
+        },
+        onEose: (events) => {
+          approvalEventsRef.current = events;
+          rebuildFromEvents(postEventsRef.current, events);
+        },
+        timeoutMs: nostrServiceConfig.defaultTimeout,
+      }
+    );
+
+    streamCleanupRef.current = [
+      discussionStream,
+      postStream,
+      approvalStream,
+    ];
+  }, [discussionInfo, rebuildFromEvents]);
+
+  useEffect(() => {
+    startStreaming();
+
+    return () => {
+      streamCleanupRef.current.forEach((stop) => stop());
+      streamCleanupRef.current = [];
+    };
+  }, [startStreaming]);
+
+  useEffect(() => {
+    const qTagRefs = new Set<string>();
+    posts.forEach((post) => {
+      const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
+      qTags.forEach((qTag) => {
+        if (qTag[1] && qTag[1].startsWith("34550:")) {
+          qTagRefs.add(qTag[1]);
+        }
+      });
+    });
+
+    if (qTagRefs.size === 0) {
+      setReferencedDiscussions([]);
+      return;
+    }
+
+    let cancelled = false;
+    const loadReferencedDiscussions = async () => {
+      try {
+        const individualDiscussions =
+          await nostrService.getReferencedUserDiscussions(
+            Array.from(qTagRefs)
+          );
+        if (cancelled) return;
+
+        const parsed = individualDiscussions
+          .map(parseDiscussionEvent)
+          .filter((d): d is Discussion => d !== null);
+        setReferencedDiscussions(parsed);
+      } catch (error) {
+        if (!cancelled) {
+          logger.error("Failed to load referenced discussions:", error);
+        }
+      }
+    };
+
+    loadReferencedDiscussions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [posts]);
 
   const handleApprovePost = async (post: DiscussionPost) => {
     if (!user.isLoggedIn || !discussion) return;
@@ -239,6 +332,7 @@ export default function DiscussionManagePage() {
         event: signedEvent,
       };
 
+      // 楽観的な更新
       setApprovals((prev) => [...prev, newApproval]);
       setPosts((prev) =>
         prev.map((p) =>
@@ -285,7 +379,7 @@ export default function DiscussionManagePage() {
         throw new Error("Failed to publish revocation to relays");
       }
 
-      // 楽観的な更新 - 承認を削除
+      // 楽観的な更新
       setApprovals((prev) => prev.filter((a) => a.id !== approval.id));
       setPosts((prev) =>
         prev.map((p) =>
@@ -341,6 +435,27 @@ export default function DiscussionManagePage() {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <Link
+            href="/discussions"
+            className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
+          >
+            <span className="ruby-text">← 会話一覧に戻る</span>
+          </Link>
+          <h1 className="text-3xl font-bold ruby-text">投稿承認管理</h1>
+        </div>
+        <div className="animate-pulse space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   // qタグ引用があるもののみをフィルタリング
   const postsWithQTags = posts.filter((post) => {
     const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
@@ -362,14 +477,14 @@ export default function DiscussionManagePage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 ruby-text">
+      <div className="mb-8">
         <Link
           href="/discussions"
           className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
         >
-          <span>← 会話一覧に戻る</span>
+          <span className="ruby-text">← 会話一覧に戻る</span>
         </Link>
-        <h1 className="text-3xl font-bold">投稿承認管理</h1>
+        <h1 className="text-3xl font-bold ruby-text">投稿承認管理</h1>
         {discussion && (
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             {discussion.title}
@@ -381,14 +496,14 @@ export default function DiscussionManagePage() {
         <button
           aria-selected={activeTab === "pending"}
           aria-label="承認待ちタブを開く"
-          className={`join-item btn ruby-text ${
+          className={`join-item btn  ${
             activeTab === "pending" ? "btn-active btn-primary" : "false"
           }`}
           name="tab-options"
           role="tab"
           onClick={() => setActiveTab("pending")}
         >
-          <span>承認待ち</span>
+          <span className="ruby-text">承認待ち</span>
           {pendingPosts.length > 0 && (
             <span className="badge badge-warning badge-sm ml-1">
               {pendingPosts.length}
@@ -398,14 +513,14 @@ export default function DiscussionManagePage() {
         <button
           aria-selected={activeTab === "approved"}
           aria-label="承認済みタブを開く"
-          className={`join-item btn ruby-text ${
+          className={`join-item btn  ${
             activeTab === "approved" ? "btn-active btn-primary" : "false"
           }`}
           name="tab-options"
           role="tab"
           onClick={() => setActiveTab("approved")}
         >
-          <span>承認済み</span>
+          <span className="ruby-text">承認済み</span>
           {approvedPosts.length > 0 && (
             <span className="badge badge-success badge-sm ml-1">
               {approvedPosts.length}
@@ -414,143 +529,131 @@ export default function DiscussionManagePage() {
         </button>
       </nav>
 
-      {isLoading ? (
-        <div className="animate-pulse space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="h-24 bg-gray-200 dark:bg-gray-700 rounded"
-            ></div>
-          ))}
-        </div>
-      ) : (
-        <main aria-labelledby={`${activeTab}-tab`} role="tabpanel">
-          {activeTab === "pending" && (
-            <section aria-labelledby="pending-posts-heading">
-              <h2
-                id="pending-posts-heading"
-                className="text-xl font-semibold mb-4 ruby-text"
-              >
-                承認待ち投稿
-              </h2>
+      <main aria-labelledby={`${activeTab}-tab`} role="tabpanel">
+        {activeTab === "pending" && (
+          <section aria-labelledby="pending-posts-heading">
+            <h2
+              id="pending-posts-heading"
+              className="text-xl font-semibold mb-4 ruby-text"
+            >
+              承認待ち投稿
+            </h2>
 
-              {pendingPosts.length > 0 ? (
-                <div className="space-y-4">
-                  {pendingPosts.map((post) => (
-                    <div
-                      key={post.id}
-                      className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
-                    >
-                      <div className="card-body p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            {renderQTagReferences(post)}
-                          </div>
-                          <button
-                            onClick={() => handleApprovePost(post)}
-                            disabled={approvingIds.has(post.id)}
-                            className="ml-4 btn btn-primary rounded-full dark:rounded-sm"
-                          >
-                            <span>
-                              {approvingIds.has(post.id) ? "" : "承認"}
-                            </span>
-                          </button>
+            {pendingPosts.length > 0 ? (
+              <div className="space-y-4">
+                {pendingPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="card-body p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          {renderQTagReferences(post)}
                         </div>
+                        <button
+                          onClick={() => handleApprovePost(post)}
+                          disabled={approvingIds.has(post.id)}
+                          className="ml-4 btn btn-primary rounded-full dark:rounded-sm"
+                        >
+                          <span className="ruby-text">
+                            {approvingIds.has(post.id) ? "" : "承認"}
+                          </span>
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
-                  <div className="card-body">
-                    <div className="text-center py-8 ruby-text">
-                      <CheckBadgeIcon
-                        aria-label="承認待ちなし"
-                        className="mx-auto h-12 w-12 text-gray-400"
-                      />
-                      <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
-                        承認待ちの投稿はありません
-                      </h3>
-                      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                        新しい投稿が投稿されると、ここに表示されます。
-                      </p>
-                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="card-body">
+                  <div className="text-center py-8">
+                    <CheckBadgeIcon
+                      aria-label="承認待ちなし"
+                      className="mx-auto h-12 w-12 text-gray-400"
+                    />
+                    <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                      承認待ちの投稿はありません
+                    </h3>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                      新しい投稿が投稿されると、ここに表示されます。
+                    </p>
                   </div>
                 </div>
-              )}
-            </section>
-          )}
+              </div>
+            )}
+          </section>
+        )}
 
-          {activeTab === "approved" && (
-            <section aria-labelledby="approved-posts-heading">
-              <h2
-                id="approved-posts-heading"
-                className="text-xl font-semibold mb-4 ruby-text"
-              >
-                承認済み投稿
-              </h2>
+        {activeTab === "approved" && (
+          <section aria-labelledby="approved-posts-heading">
+            <h2
+              id="approved-posts-heading"
+              className="text-xl font-semibold mb-4 ruby-text"
+            >
+              承認済み投稿
+            </h2>
 
-              {approvedPosts.length > 0 ? (
-                <div className="space-y-4">
-                  {approvedPosts.slice(0, 10).map((post) => (
-                    <div
-                      key={post.id}
-                      className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 opacity-75"
-                    >
-                      <div className="card-body p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            {renderQTagReferences(post)}
-                          </div>
-                          <div className="flex gap-2 ml-4">
-                            {approvals.some(
-                              (a) =>
-                                a.postId === post.id &&
-                                a.moderatorPubkey === user.pubkey
-                            ) && (
+            {approvedPosts.length > 0 ? (
+              <div className="space-y-4">
+                {approvedPosts.slice(0, 10).map((post) => (
+                  <div
+                    key={post.id}
+                    className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 opacity-75"
+                  >
+                    <div className="card-body p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          {renderQTagReferences(post)}
+                        </div>
+                        <div className="flex gap-2 ml-4">
+                          {post.approved &&
+                            post.approvedBy?.includes(user.pubkey || "") && (
                               <button
                                 onClick={() => handleRevokeApproval(post)}
                                 disabled={revokingIds.has(post.id)}
                                 className="btn btn-warning rounded-full dark:rounded-sm"
                               >
-                                <span>
-                                  {revokingIds.has(post.id) ? "" : "承認を撤回"}
+                                <span className="ruby-text">
+                                  {revokingIds.has(post.id)
+                                    ? ""
+                                    : "承認を撤回"}
                                 </span>
                               </button>
                             )}
-                          </div>
                         </div>
                       </div>
                     </div>
-                  ))}
-                  {approvedPosts.length > 10 && (
-                    <p className="text-center text-gray-500 text-sm">
-                      最新10件を表示中（全{approvedPosts.length}件）
+                  </div>
+                ))}
+                {approvedPosts.length > 10 && (
+                  <p className="text-center text-gray-500 text-sm">
+                    最新10件を表示中（全{approvedPosts.length}件）
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="card-body">
+                  <div className="text-center py-8">
+                    <CheckBadgeIcon
+                      aria-label="承認済みなし"
+                      className="mx-auto h-12 w-12 text-gray-400"
+                    />
+                    <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                      承認済みの投稿はありません
+                    </h3>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                      投稿が承認されると、ここに表示されます。
                     </p>
-                  )}
-                </div>
-              ) : (
-                <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
-                  <div className="card-body">
-                    <div className="text-center py-8 ruby-text">
-                      <CheckBadgeIcon
-                        aria-label="承認済みなし"
-                        className="mx-auto h-12 w-12 text-gray-400"
-                      />
-                      <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
-                        承認済みの投稿はありません
-                      </h3>
-                      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                        投稿が承認されると、ここに表示されます。
-                      </p>
-                    </div>
                   </div>
                 </div>
-              )}
-            </section>
-          )}
-        </main>
-      )}
+              </div>
+            )}
+          </section>
+        )}
+      </main>
     </div>
   );
 }

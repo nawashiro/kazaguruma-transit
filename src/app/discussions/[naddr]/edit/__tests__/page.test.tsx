@@ -28,6 +28,7 @@ jest.mock('@/lib/config/discussion-config', () => ({
 
 jest.mock('@/lib/nostr/nostr-service', () => ({
   createNostrService: () => ({
+    streamEventsOnEvent: jest.fn(() => jest.fn()),
     getDiscussions: jest.fn().mockResolvedValue([{
       id: 'test-event-id',
       pubkey: 'test-user-pubkey',
@@ -113,5 +114,16 @@ describe.skip('DiscussionEditPage - ID Field Restrictions', () => {
     
     // Should have moderators field
     expect(screen.getByText(/モデレーター/)).toBeInTheDocument();
+  });
+});
+
+describe('DiscussionEditPage - Back Link Removal', () => {
+  it('does not render "会話に戻る" link', async () => {
+    render(<DiscussionEditPage />);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(screen.queryByText('会話に戻る')).not.toBeInTheDocument();
+    expect(screen.queryByText('← 会話に戻る')).not.toBeInTheDocument();
   });
 });

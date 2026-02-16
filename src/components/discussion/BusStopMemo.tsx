@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   getDiscussionConfig,
@@ -19,8 +19,8 @@ import type {
   PostEvaluation,
   PostWithStats,
 } from "@/types/discussion";
-import { useRubyfulRun } from "@/lib/rubyful/rubyfulRun";
 import { logger } from "@/utils/logger";
+import type { Event } from "nostr-tools";
 
 interface BusStopMemoProps {
   busStops: string[];
@@ -31,6 +31,10 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
   const [topPostsByStop, setTopPostsByStop] = useState<
     Map<string, PostWithStats>
   >(new Map());
+  const postsEventsRef = useRef<Event[]>([]);
+  const approvalEventsRef = useRef<Event[]>([]);
+  const postsStreamCleanupRef = useRef<(() => void) | null>(null);
+  const approvalsStreamCleanupRef = useRef<(() => void) | null>(null);
 
   const config = useMemo(() => getDiscussionConfig(), []);
   const discussionsEnabled = useMemo(() => isDiscussionsEnabled(), []);
@@ -43,56 +47,41 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
     [config.relays]
   );
 
-  useRubyfulRun([topPostsByStop.size], true);
 
-  const loadMemoData = useCallback(async () => {
-    if (busStops.length === 0) {
-      setTopPostsByStop(new Map());
-      return;
-    }
-
-    try {
-      // Step 1: バス停タグ付きの投稿を取得
-      const postsEvents = await nostrService.getDiscussionPosts(
-        config.busStopDiscussionId,
-        busStops
-      );
-
-      const postIds = postsEvents.map((event) => event.id);
-
-      // Step 2: 該当する投稿に対する承認のみを取得
-      const approvalsEvents = await nostrService.getApprovalsForPosts(
-        postIds,
-        config.busStopDiscussionId
-      );
-
+  const updateFromEvents = useCallback(
+    async (
+      postEvents: Event[],
+      approvalsEvents: Event[],
+      fetchEvaluations: boolean
+    ) => {
       const parsedApprovals = approvalsEvents
         .map(parseApprovalEvent)
         .filter((a): a is PostApproval => a !== null);
 
-      const parsedPosts = postsEvents
+      const parsedPosts = postEvents
         .map((event) => parsePostEvent(event, parsedApprovals))
         .filter((p): p is DiscussionPost => p !== null)
         .filter(
           (p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag)
         );
 
-      // Step 3: 承認された投稿のIDのみに対する評価を取得
-      const approvedPostIds = parsedPosts.map((p) => p.id);
-      const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-        approvedPostIds
-      );
+      let parsedEvaluations: PostEvaluation[] = [];
+      if (fetchEvaluations && parsedPosts.length > 0) {
+        const approvedPostIds = parsedPosts.map((p) => p.id);
+        const evaluationsEvents = await nostrService.getEvaluationsForPosts(
+          approvedPostIds
+        );
 
-      const parsedEvaluations = evaluationsEvents
-        .map(parseEvaluationEvent)
-        .filter((e): e is PostEvaluation => e !== null);
+        parsedEvaluations = evaluationsEvents
+          .map(parseEvaluationEvent)
+          .filter((e): e is PostEvaluation => e !== null);
+      }
 
       const postsWithStats = combinePostsWithStats(
         parsedPosts,
         parsedEvaluations
       );
 
-      // バス停ごとの最高評価投稿を取得
       const topPostsMap = new Map<string, PostWithStats>();
       busStops.forEach((stopName) => {
         const stopPosts = postsWithStats.filter(
@@ -104,16 +93,86 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
         }
       });
       setTopPostsByStop(topPostsMap);
-    } catch (error) {
-      logger.error("Failed to load bus stop memo:", error);
+    },
+    [busStops, nostrService]
+  );
+
+  const loadMemoData = useCallback(() => {
+    if (busStops.length === 0) {
       setTopPostsByStop(new Map());
+      return;
     }
-  }, [busStops, config.busStopDiscussionId, nostrService]);
+
+    postsStreamCleanupRef.current?.();
+    approvalsStreamCleanupRef.current?.();
+    approvalEventsRef.current = [];
+    postsEventsRef.current = [];
+
+    const postFilters =
+      busStops.length > 0
+        ? busStops.map((stop) => ({
+            kinds: [1111, 1],
+            "#a": [config.busStopDiscussionId],
+            "#t": [stop],
+          }))
+        : [
+            {
+              kinds: [1111, 1],
+              "#a": [config.busStopDiscussionId],
+            },
+          ];
+
+    const postStreamCleanup = nostrService.streamEventsOnEvent(postFilters, {
+      onEvent: (events) => {
+        postsEventsRef.current = events;
+        updateFromEvents(events, approvalEventsRef.current, false);
+      },
+      onEose: (events) => {
+        postsEventsRef.current = events;
+        updateFromEvents(events, approvalEventsRef.current, true);
+        const postIds = events.map((event) => event.id);
+        if (postIds.length === 0) {
+          return;
+        }
+        approvalsStreamCleanupRef.current?.();
+        approvalsStreamCleanupRef.current = nostrService.streamApprovalsForPosts(
+          postIds,
+          config.busStopDiscussionId,
+          {
+            onEvent: (approvalEvents) => {
+              approvalEventsRef.current = approvalEvents;
+              updateFromEvents(postsEventsRef.current, approvalEvents, false);
+            },
+            onEose: (approvalEvents) => {
+              approvalEventsRef.current = approvalEvents;
+              updateFromEvents(postsEventsRef.current, approvalEvents, true);
+            },
+            timeoutMs: config.defaultTimeout ?? 5000,
+          }
+        );
+      },
+      timeoutMs: config.defaultTimeout ?? 5000,
+    });
+
+    postsStreamCleanupRef.current = postStreamCleanup;
+    updateFromEvents([], [], false);
+  }, [
+    busStops,
+    config.busStopDiscussionId,
+    config.defaultTimeout,
+    nostrService,
+    updateFromEvents,
+  ]);
 
   useEffect(() => {
     if (discussionsEnabled) {
       loadMemoData();
     }
+
+    return () => {
+      postsStreamCleanupRef.current?.();
+      approvalsStreamCleanupRef.current?.();
+    };
   }, [discussionsEnabled, loadMemoData]);
 
   if (

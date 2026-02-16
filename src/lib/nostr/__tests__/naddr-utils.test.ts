@@ -12,6 +12,7 @@ import {
   buildDiscussionNaddr,
   isValidNaddr,
   generateDiscussionId,
+  normalizeDiscussionId,
 } from '../naddr-utils';
 import type { AddressPointer } from '../naddr-utils';
 
@@ -365,6 +366,46 @@ describe('naddr utilities', () => {
     test('should support NIP-18 q tag format', () => {
       const discussionInfo = extractDiscussionFromNaddr(naddrEncode(validAddressPointer));
       expect(discussionInfo?.discussionId).toMatch(/^34550:[a-fA-F0-9]{64}:.+$/);
+    });
+  });
+
+  describe('normalizeDiscussionId', () => {
+    test('should normalize naddr to kind:pubkey:dTag', () => {
+      const naddr = naddrEncode(validAddressPointer);
+
+      const result = normalizeDiscussionId(naddr);
+
+      expect(result).toBe(
+        `34550:${validAddressPointer.pubkey}:${validAddressPointer.identifier}`
+      );
+    });
+
+    test('should normalize nostr:naddr to kind:pubkey:dTag', () => {
+      const naddr = naddrEncode(validAddressPointer);
+
+      const result = normalizeDiscussionId(`nostr:${naddr}`);
+
+      expect(result).toBe(
+        `34550:${validAddressPointer.pubkey}:${validAddressPointer.identifier}`
+      );
+    });
+
+    test('should accept valid discussion id', () => {
+      const discussionId = `34550:${validAddressPointer.pubkey}:${validAddressPointer.identifier}`;
+
+      const result = normalizeDiscussionId(discussionId);
+
+      expect(result).toBe(discussionId);
+    });
+
+    test('should reject discussion id containing naddr in dTag', () => {
+      const invalid = `34550:${validAddressPointer.pubkey}:naddr1invalid`;
+
+      expect(() => normalizeDiscussionId(invalid)).toThrow();
+    });
+
+    test('should reject malformed discussion id', () => {
+      expect(() => normalizeDiscussionId('34550:invalid')).toThrow();
     });
   });
 

@@ -1,7 +1,39 @@
 import { SimplePool, Event, Filter, finalizeEvent } from "nostr-tools";
 import type { PWKBlob } from "nosskey-sdk";
 import { logger } from "@/utils/logger";
-import { naddrDecode } from "@/lib/nostr/naddr-utils";
+import { normalizeDiscussionId } from "@/lib/nostr/naddr-utils";
+
+export const dedupeAndSortEvents = (events: Event[]): Event[] => {
+  const uniqueById = new Map<string, Event>();
+
+  events.forEach((event) => {
+    const existing = uniqueById.get(event.id);
+    if (!existing || event.created_at > existing.created_at) {
+      uniqueById.set(event.id, event);
+    }
+  });
+
+  return Array.from(uniqueById.values()).sort(
+    (a, b) => b.created_at - a.created_at
+  );
+};
+
+const mergeEvent = (current: Event[], incoming: Event): Event[] => {
+  if (current.some((event) => event.id === incoming.id)) {
+    return current;
+  }
+
+  return dedupeAndSortEvents([...current, incoming]);
+};
+
+const normalizeDiscussionIdForRead = (discussionId: string): string | null => {
+  try {
+    return normalizeDiscussionId(discussionId);
+  } catch (error) {
+    logger.error("Invalid discussion id:", error);
+    return null;
+  }
+};
 
 export interface NostrRelayConfig {
   url: string;
@@ -12,6 +44,12 @@ export interface NostrRelayConfig {
 export interface NostrServiceConfig {
   relays: NostrRelayConfig[];
   defaultTimeout: number;
+}
+
+export interface StreamEventsOptions {
+  onEvent: (events: Event[], event: Event) => void;
+  onEose?: (events: Event[]) => void;
+  timeoutMs?: number;
 }
 
 export class NostrService {
@@ -27,24 +65,71 @@ export class NostrService {
       .map((relay) => relay.url);
   }
 
-  async getEvents(filters: Filter[]): Promise<Event[]> {
+  async getEventsOnEose(filters: Filter[]): Promise<Event[]> {
     try {
-      // Handle multiple filters by making multiple queries and combining results
       const allEvents: Event[] = [];
       for (const filter of filters) {
         const events = await this.pool.querySync(this.relays, filter);
         allEvents.push(...(events || []));
       }
-      // Remove duplicates by ID
-      const uniqueEvents = allEvents.filter(
-        (event, index, self) =>
-          self.findIndex((e) => e.id === event.id) === index
-      );
-      return uniqueEvents;
+
+      return dedupeAndSortEvents(allEvents);
     } catch (error) {
       logger.error("Failed to get events:", error);
       return [];
     }
+  }
+
+  async getEvents(filters: Filter[]): Promise<Event[]> {
+    return this.getEventsOnEose(filters);
+  }
+
+  streamEventsOnEvent(
+    filters: Filter[],
+    { onEvent, onEose, timeoutMs }: StreamEventsOptions
+  ): () => void {
+    const collected: Event[] = [];
+    let closed = false;
+    const timeoutRef: { id?: ReturnType<typeof setTimeout> } = {};
+    const subscriptionRef: { sub?: ReturnType<SimplePool["subscribeMany"]> } =
+      {};
+    subscriptionRef.sub = this.pool.subscribeMany(this.relays, filters, {
+      onevent: (event: Event) => {
+        if (closed) return;
+
+        const updated = mergeEvent(collected, event);
+        if (updated === collected) return;
+
+        collected.length = 0;
+        collected.push(...updated);
+        onEvent([...collected], event);
+      },
+      oneose: () => {
+        if (closed) return;
+        closed = true;
+        if (timeoutRef.id) {
+          clearTimeout(timeoutRef.id);
+        }
+        subscriptionRef.sub?.close();
+        onEose?.(dedupeAndSortEvents(collected));
+      },
+    });
+
+    timeoutRef.id = setTimeout(() => {
+      if (closed) return;
+      closed = true;
+      subscriptionRef.sub?.close();
+      onEose?.(dedupeAndSortEvents(collected));
+    }, timeoutMs ?? this.config.defaultTimeout);
+
+    return () => {
+      if (closed) return;
+      closed = true;
+      if (timeoutRef.id) {
+        clearTimeout(timeoutRef.id);
+      }
+      subscriptionRef.sub?.close();
+    };
   }
 
   async subscribeToEvents(
@@ -98,16 +183,15 @@ export class NostrService {
     }
   }
 
-  async getProfile(pubkey: string): Promise<Event | null> {
+  async getProfile(pubkeys: string[]): Promise<Event[]> {
     const events = await this.getEvents([
       {
         kinds: [0],
-        authors: [pubkey],
-        limit: 1,
+        authors: pubkeys,
       },
     ]);
 
-    return events[0] || null;
+    return events;
   }
 
   async getDiscussions(adminPubkey: string): Promise<Event[]> {
@@ -117,65 +201,134 @@ export class NostrService {
         authors: [adminPubkey],
       },
     ]);
-    
+
     // replaceable eventの重複を除去（同じdTagで最新のもののみを保持）
     const eventsByDTag = new Map<string, Event>();
-    
+
     for (const event of events) {
       const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
       if (!dTag) continue;
-      
+
       const existing = eventsByDTag.get(dTag);
       if (!existing || event.created_at > existing.created_at) {
         eventsByDTag.set(dTag, event);
       }
     }
-    
+
     return Array.from(eventsByDTag.values());
+  }
+
+  async getDiscussion(pubkey: string, dTag: string): Promise<Event> {
+    const events = await this.getEvents([
+      {
+        kinds: [34550],
+        authors: [pubkey],
+        "#d": [dTag],
+      },
+    ]);
+
+    // replaceable eventの重複を除去（同じdTagで最新のもののみを保持）
+    const eventsByDTag = new Map<string, Event>();
+
+    for (const event of events) {
+      const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
+      if (!dTag) continue;
+
+      const existing = eventsByDTag.get(dTag);
+      if (!existing || event.created_at > existing.created_at) {
+        eventsByDTag.set(dTag, event);
+      }
+    }
+
+    return Array.from(eventsByDTag.values())[0];
+  }
+
+  streamDiscussionMeta(
+    pubkey: string,
+    dTag: string,
+    options: StreamEventsOptions
+  ): () => void {
+    return this.streamEventsOnEvent(
+      [
+        {
+          kinds: [34550],
+          authors: [pubkey],
+          "#d": [dTag],
+          limit: 1,
+        },
+      ],
+      options
+    );
   }
 
   async getDiscussionPosts(
     discussionId: string,
     busStopTags?: string[]
   ): Promise<Event[]> {
+    const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+    if (!normalizedDiscussionId) {
+      return [];
+    }
+
     const filters: Filter[] = [];
 
     if (busStopTags && busStopTags.length > 0) {
       // バス停ごとに個別のフィルタを作成（kind:1111とkind:1の両方）
       busStopTags.forEach((busStopTag) => {
         filters.push({
-          kinds: [1111],
-          "#a": [discussionId],
-          "#t": [busStopTag],
-        });
-        filters.push({
-          kinds: [1],
-          "#a": [discussionId],
+          kinds: [1111, 1],
+          "#a": [normalizedDiscussionId],
           "#t": [busStopTag],
         });
       });
     } else {
       // バス停指定なしの場合は全投稿を取得（kind:1111とkind:1の両方）
       filters.push({
-        kinds: [1111],
-        "#a": [discussionId],
-      });
-      filters.push({
-        kinds: [1],
-        "#a": [discussionId],
+        kinds: [1111, 1],
+        "#a": [normalizedDiscussionId],
       });
     }
 
-    return this.getEvents(filters);
+    return this.getEventsOnEose(filters);
+  }
+
+  async getApprovalsOnEose(discussionId: string): Promise<Event[]> {
+    const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+    if (!normalizedDiscussionId) {
+      return [];
+    }
+
+    return this.getEventsOnEose([
+      {
+        kinds: [4550],
+        "#a": [normalizedDiscussionId],
+      },
+    ]);
   }
 
   async getApprovals(discussionId: string): Promise<Event[]> {
-    return this.getEvents([
-      {
-        kinds: [4550],
-        "#a": [discussionId],
-      },
-    ]);
+    return this.getApprovalsOnEose(discussionId);
+  }
+
+  streamApprovals(
+    discussionId: string,
+    options: StreamEventsOptions
+  ): () => void {
+    const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+    if (!normalizedDiscussionId) {
+      options.onEose?.([]);
+      return () => {};
+    }
+
+    return this.streamEventsOnEvent(
+      [
+        {
+          kinds: [4550],
+          "#a": [normalizedDiscussionId],
+        },
+      ],
+      options
+    );
   }
 
   async getApprovalsForPosts(
@@ -186,13 +339,46 @@ export class NostrService {
       return [];
     }
 
-    return this.getEvents([
+    const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+    if (!normalizedDiscussionId) {
+      return [];
+    }
+
+    return this.getEventsOnEose([
       {
         kinds: [4550],
-        "#a": [discussionId],
+        "#a": [normalizedDiscussionId],
         "#e": postIds,
       },
     ]);
+  }
+
+  streamApprovalsForPosts(
+    postIds: string[],
+    discussionId: string,
+    options: StreamEventsOptions
+  ): () => void {
+    if (postIds.length === 0) {
+      options.onEose?.([]);
+      return () => {};
+    }
+
+    const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+    if (!normalizedDiscussionId) {
+      options.onEose?.([]);
+      return () => {};
+    }
+
+    return this.streamEventsOnEvent(
+      [
+        {
+          kinds: [4550],
+          "#a": [normalizedDiscussionId],
+          "#e": postIds,
+        },
+      ],
+      options
+    );
   }
 
   async getEvaluations(
@@ -205,7 +391,11 @@ export class NostrService {
     };
 
     if (discussionId) {
-      filters["#a"] = [discussionId];
+      const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+      if (!normalizedDiscussionId) {
+        return [];
+      }
+      filters["#a"] = [normalizedDiscussionId];
     }
 
     return this.getEvents([filters]);
@@ -227,15 +417,17 @@ export class NostrService {
     };
 
     if (discussionId) {
-      filters["#a"] = [discussionId];
+      const normalizedDiscussionId = normalizeDiscussionIdForRead(discussionId);
+      if (!normalizedDiscussionId) {
+        return [];
+      }
+      filters["#a"] = [normalizedDiscussionId];
     }
 
     return this.getEvents([filters]);
   }
 
-  async getEvaluationsForPosts(
-    postIds: string[]
-  ): Promise<Event[]> {
+  async getEvaluationsForPosts(postIds: string[]): Promise<Event[]> {
     if (postIds.length === 0) {
       return [];
     }
@@ -284,21 +476,19 @@ export class NostrService {
     discussionId: string,
     busStopTag?: string
   ): Omit<Event, "id" | "sig" | "pubkey"> {
-    // Convert discussionId from naddr to hex format if needed
     let discussionHexId = discussionId;
-    if (discussionId.startsWith('naddr1')) {
-      try {
-        const decoded = naddrDecode(discussionId);
-        discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
-      } catch (error) {
-        logger.error('Failed to decode discussion naddr:', error);
-        throw new Error(`Invalid discussion naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
+    try {
+      discussionHexId = normalizeDiscussionId(discussionId);
+    } catch (error) {
+      logger.error("Failed to normalize discussion id:", error);
+      throw new Error(
+        `Invalid discussion id: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
 
-    const tags: string[][] = [
-      ["a", discussionHexId],
-    ];
+    const tags: string[][] = [["a", discussionHexId]];
 
     if (busStopTag) {
       tags.push(["t", busStopTag]);
@@ -316,16 +506,16 @@ export class NostrService {
     postEvent: Event,
     discussionId: string
   ): Omit<Event, "id" | "sig" | "pubkey"> {
-    // Convert discussionId from naddr to hex format if needed
     let discussionHexId = discussionId;
-    if (discussionId.startsWith('naddr1')) {
-      try {
-        const decoded = naddrDecode(discussionId);
-        discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
-      } catch (error) {
-        logger.error('Failed to decode discussion naddr:', error);
-        throw new Error(`Invalid discussion naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
+    try {
+      discussionHexId = normalizeDiscussionId(discussionId);
+    } catch (error) {
+      logger.error("Failed to normalize discussion id:", error);
+      throw new Error(
+        `Invalid discussion id: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
 
     const tags: string[][] = [
@@ -348,23 +538,20 @@ export class NostrService {
     rating: "+" | "-",
     discussionId?: string
   ): Omit<Event, "id" | "sig" | "pubkey"> {
-    const tags: string[][] = [
-      ["e", targetEventId],
-    ];
+    const tags: string[][] = [["e", targetEventId]];
 
     if (discussionId) {
-      // Convert discussionId from naddr to hex format if needed
-      let discussionHexId = discussionId;
-      if (discussionId.startsWith('naddr1')) {
-        try {
-            const decoded = naddrDecode(discussionId);
-          discussionHexId = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
-        } catch (error) {
-          logger.error('Failed to decode discussion naddr:', error);
-          throw new Error(`Invalid discussion naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
+      try {
+        const discussionHexId = normalizeDiscussionId(discussionId);
+        tags.push(["a", discussionHexId]);
+      } catch (error) {
+        logger.error("Failed to normalize discussion id:", error);
+        throw new Error(
+          `Invalid discussion id: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
-      tags.push(["a", discussionHexId]);
     }
 
     return {
@@ -396,9 +583,7 @@ export class NostrService {
     approvalEventId: string,
     discussionId?: string
   ): Omit<Event, "id" | "sig" | "pubkey"> {
-    const tags: string[][] = [
-      ["e", approvalEventId]
-    ];
+    const tags: string[][] = [["e", approvalEventId]];
 
     if (discussionId) {
       tags.push(["h", discussionId]);
@@ -441,41 +626,41 @@ export class NostrService {
     }
 
     const events = await this.getEvents([filter]);
-    
+
     // 承認リストのみを取得（qタグを含むもの）
-    const approvalEvents = events.filter(event => 
-      event.tags.some(tag => tag[0] === "q")
+    const approvalEvents = events.filter((event) =>
+      event.tags.some((tag) => tag[0] === "q")
     );
-    
+
     // replaceable eventの重複を除去
     const eventsByDTag = new Map<string, Event>();
-    
+
     for (const event of approvalEvents) {
       const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
       if (!dTag) continue;
-      
+
       const existing = eventsByDTag.get(dTag);
       if (!existing || event.created_at > existing.created_at) {
         eventsByDTag.set(dTag, event);
       }
     }
-    
+
     return Array.from(eventsByDTag.values());
   }
 
   // Get single event by hex ID (format: "kind:pubkey:identifier")
   async getEventByNaddr(hexId: string): Promise<Event | null> {
     try {
-      const parts = hexId.split(':');
+      const parts = hexId.split(":");
       if (parts.length !== 3) {
-        throw new Error('Invalid hex ID format');
+        throw new Error("Invalid hex ID format");
       }
-      
+
       const [kindStr, pubkey, identifier] = parts;
       const kind = parseInt(kindStr, 10);
-      
+
       if (isNaN(kind)) {
-        throw new Error('Invalid kind in hex ID');
+        throw new Error("Invalid kind in hex ID");
       }
 
       const filter: Filter = {
@@ -488,13 +673,15 @@ export class NostrService {
       const events = await this.getEvents([filter]);
       return events.length > 0 ? events[0] : null;
     } catch (error) {
-      logger.error('Failed to get event by naddr:', error);
+      logger.error("Failed to get event by naddr:", error);
       return null;
     }
   }
 
   // Get profiles for multiple pubkeys
-  async getProfiles(pubkeys: string[]): Promise<Record<string, { name?: string; display_name?: string }>> {
+  async getProfiles(
+    pubkeys: string[]
+  ): Promise<Record<string, { name?: string; display_name?: string }>> {
     try {
       if (pubkeys.length === 0) {
         return {};
@@ -507,9 +694,10 @@ export class NostrService {
       };
 
       const events = await this.getEvents([filter]);
-      const profiles: Record<string, { name?: string; display_name?: string }> = {};
+      const profiles: Record<string, { name?: string; display_name?: string }> =
+        {};
 
-      events.forEach(event => {
+      events.forEach((event) => {
         try {
           const content = JSON.parse(event.content);
           profiles[event.pubkey] = {
@@ -517,13 +705,13 @@ export class NostrService {
             display_name: content.display_name,
           };
         } catch (error) {
-          logger.error('Failed to parse profile content:', error);
+          logger.error("Failed to parse profile content:", error);
         }
       });
 
       return profiles;
     } catch (error) {
-      logger.error('Failed to get profiles:', error);
+      logger.error("Failed to get profiles:", error);
       return {};
     }
   }
@@ -536,10 +724,10 @@ export class NostrService {
 
     // 引用形式: "34550:pubkey:dTag" を解析
     const filters: Filter[] = [];
-    
+
     for (const ref of references) {
-      const parts = ref.split(':');
-      if (parts.length === 3 && parts[0] === '34550') {
+      const parts = ref.split(":");
+      if (parts.length === 3 && parts[0] === "34550") {
         const [, pubkey, dTag] = parts;
         filters.push({
           kinds: [34550],
@@ -555,43 +743,80 @@ export class NostrService {
     }
 
     const events = await this.getEvents(filters);
-    
+
     // 最新のreplaceable eventのみを保持
     const eventsByRef = new Map<string, Event>();
-    
+
     for (const event of events) {
       const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
       if (!dTag) continue;
-      
+
       const ref = `34550:${event.pubkey}:${dTag}`;
       const existing = eventsByRef.get(ref);
       if (!existing || event.created_at > existing.created_at) {
         eventsByRef.set(ref, event);
       }
     }
-    
+
     return Array.from(eventsByRef.values());
+  }
+
+  streamReferencedUserDiscussions(
+    references: string[],
+    options: StreamEventsOptions
+  ): () => void {
+    if (references.length === 0) {
+      options.onEose?.([]);
+      return () => {};
+    }
+
+    const filters: Filter[] = [];
+
+    for (const ref of references) {
+      const parts = ref.split(":");
+      if (parts.length === 3 && parts[0] === "34550") {
+        const [, pubkey, dTag] = parts;
+        filters.push({
+          kinds: [34550],
+          authors: [pubkey],
+          "#d": [dTag],
+          limit: 1,
+        });
+      }
+    }
+
+    if (filters.length === 0) {
+      options.onEose?.([]);
+      return () => {};
+    }
+
+    return this.streamEventsOnEvent(filters, options);
   }
 
   // spec_v2.md要件: NIP-72承認システムでの承認済みユーザー会話取得
   async getApprovedUserDiscussions(
     adminPubkey: string,
     options: { limit?: number; until?: number } = {}
-  ): Promise<{
-    userDiscussion: Event;
-    approvalEvent: Event;
-    approvedAt: number;
-  }[]> {
+  ): Promise<
+    {
+      userDiscussion: Event;
+      approvalEvent: Event;
+      approvedAt: number;
+    }[]
+  > {
     try {
       // 1. 管理者の承認イベントを取得（ページネーション対応）
-      const approvalEvents = await this.getAdminApprovalEvents(adminPubkey, options);
-      
+      const approvalEvents = await this.getAdminApprovalEvents(
+        adminPubkey,
+        options
+      );
+
       // 2. すべてのqタグから引用を抽出
       const allReferences: string[] = [];
       const approvalMap = new Map<string, Event>();
-      
+
       for (const approvalEvent of approvalEvents) {
-        const qTags = approvalEvent.tags.filter(tag => tag[0] === "q");
+        const qTags = approvalEvent.tags.filter((tag) => tag[0] === "q");
         for (const qTag of qTags) {
           if (qTag[1]) {
             allReferences.push(qTag[1]);
@@ -599,24 +824,26 @@ export class NostrService {
           }
         }
       }
-      
+
       // 3. 引用されたユーザー会話を取得
-      const userDiscussions = await this.getReferencedUserDiscussions(allReferences);
-      
+      const userDiscussions = await this.getReferencedUserDiscussions(
+        allReferences
+      );
+
       // 4. 承認情報と組み合わせ
       const result: {
         userDiscussion: Event;
         approvalEvent: Event;
         approvedAt: number;
       }[] = [];
-      
+
       for (const userDiscussion of userDiscussions) {
         const dTag = userDiscussion.tags.find((tag) => tag[0] === "d")?.[1];
         if (!dTag) continue;
-        
+
         const ref = `34550:${userDiscussion.pubkey}:${dTag}`;
         const approvalEvent = approvalMap.get(ref);
-        
+
         if (approvalEvent) {
           result.push({
             userDiscussion,
@@ -625,10 +852,9 @@ export class NostrService {
           });
         }
       }
-      
+
       // 承認日時順にソート
       return result.sort((a, b) => b.approvedAt - a.approvedAt);
-      
     } catch (error) {
       logger.error("Failed to get approved user discussions:", error);
       return [];
@@ -643,14 +869,15 @@ export class NostrService {
     try {
       // Convert naddr to hex format for NIP-72 compliance
       let discussionListHex = discussionListNaddr;
-      if (discussionListNaddr.startsWith('naddr1')) {
-        try {
-            const decoded = naddrDecode(discussionListNaddr);
-          discussionListHex = `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
-        } catch (error) {
-          logger.error('Failed to decode discussion list naddr:', error);
-          throw new Error(`Invalid discussion list naddr: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
+      try {
+        discussionListHex = normalizeDiscussionId(discussionListNaddr);
+      } catch (error) {
+        logger.error("Failed to normalize discussion list id:", error);
+        throw new Error(
+          `Invalid discussion list id: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
 
       const filters: Filter[] = [
@@ -663,7 +890,7 @@ export class NostrService {
           kinds: [1], // NIP-72後方互換性: kind:1もサポート
           "#a": [discussionListHex],
           limit: options.limit || 50,
-        }
+        },
       ];
 
       if (options.until) {
@@ -706,11 +933,11 @@ export class NostrService {
 
       // 2. 管理者の承認イベントを取得
       const approvalEvents = await this.getAdminApprovalEvents(adminPubkey);
-      
+
       // 3. 承認済みの会話IDを抽出
       const approvedRefs = new Set<string>();
       for (const approvalEvent of approvalEvents) {
-        const qTags = approvalEvent.tags.filter(tag => tag[0] === "q");
+        const qTags = approvalEvent.tags.filter((tag) => tag[0] === "q");
         for (const qTag of qTags) {
           if (qTag[1]) {
             approvedRefs.add(qTag[1]);
@@ -719,32 +946,31 @@ export class NostrService {
       }
 
       // 4. 承認されていない会話をフィルタリング
-      const pendingDiscussions = allUserDiscussions.filter(event => {
+      const pendingDiscussions = allUserDiscussions.filter((event) => {
         if (event.pubkey === adminPubkey) return false; // 管理者作成は除外
-        
+
         const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
         if (!dTag) return false;
-        
+
         const ref = `34550:${event.pubkey}:${dTag}`;
         return !approvedRefs.has(ref);
       });
 
       // 最新のreplaceable eventのみを保持
       const eventsByRef = new Map<string, Event>();
-      
+
       for (const event of pendingDiscussions) {
         const dTag = event.tags.find((tag) => tag[0] === "d")?.[1];
         if (!dTag) continue;
-        
+
         const ref = `34550:${event.pubkey}:${dTag}`;
         const existing = eventsByRef.get(ref);
         if (!existing || event.created_at > existing.created_at) {
           eventsByRef.set(ref, event);
         }
       }
-      
+
       return Array.from(eventsByRef.values());
-      
     } catch (error) {
       logger.error("Failed to get pending user discussions:", error);
       return [];
@@ -758,7 +984,7 @@ export class NostrService {
   ): Omit<Event, "id" | "sig" | "pubkey"> {
     const approvalDTag = approvalId || `approval-${Date.now()}`;
     const ref = `34550:${userDiscussion.authorPubkey}:${userDiscussion.dTag}`;
-    
+
     const tags: string[][] = [
       ["d", approvalDTag],
       ["name", "承認済み会話リスト"],
@@ -774,7 +1000,6 @@ export class NostrService {
     };
   }
 
-
   // spec_v2.md要件: 承認撤回イベントの作成
   createApprovalRevocationEvent(
     approvalEventId: string
@@ -786,7 +1011,6 @@ export class NostrService {
       content: "delete",
     };
   }
-
 
   disconnect(): void {
     this.pool.close(this.relays);

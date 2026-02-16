@@ -203,6 +203,17 @@ export interface LoadingState {
   error: string | null
 }
 
+/**
+ * 監査ページ固有の状態を表す
+ * LoadingStateを拡張し、データ取得完了フラグと再試行可能フラグを追加
+ */
+export interface AuditPageState extends LoadingState {
+  /** データ取得が完了したかどうか */
+  isLoaded: boolean
+  /** 再試行可能なエラーかどうか */
+  isRetryable: boolean
+}
+
 export interface DiscussionError extends Error {
   code: 'RELAY_ERROR' | 'AUTH_ERROR' | 'VALIDATION_ERROR' | 'PERMISSION_ERROR'
   details?: Record<string, unknown>

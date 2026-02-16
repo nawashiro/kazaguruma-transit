@@ -4,6 +4,21 @@
 // learn more: https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom";
 
+// localStorage mock for testing browser storage
+const store = {};
+global.localStorage = {
+  getItem: (key) => (key in store ? store[key] : null),
+  setItem: (key, value) => {
+    store[key] = String(value);
+  },
+  removeItem: (key) => {
+    delete store[key];
+  },
+  clear: () => {
+    Object.keys(store).forEach((key) => delete store[key]);
+  },
+};
+
 // TextEncoder/TextDecoder polyfill for crypto libraries
 import { TextEncoder, TextDecoder } from 'util';
 global.TextEncoder = TextEncoder;
@@ -77,9 +92,3 @@ jest.mock("@/utils/logger", () => ({
   },
 }));
 
-// rubyfulRunの共通モック設定
-jest.mock("@/lib/rubyful/rubyfulRun", () => ({
-  useRubyfulRun: jest.fn(() => ({
-    isRubyVisible: true,
-  })),
-}));

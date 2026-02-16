@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 import { KeyLocation } from "@/utils/addressLoader";
+import RubyWrapper from "../ui/RubyWrapper";
 
 interface LocationDetailModalProps {
   location: KeyLocation | null;
@@ -74,13 +75,9 @@ export default function LocationDetailModal({
               href={location.uri}
               target="_blank"
               rel="noopener noreferrer"
-              className="link"
+              className="link ruby-text"
             >
-              ウェブサイトを
-              <ruby>
-                見<rt>み</rt>
-              </ruby>
-              る
+              ウェブサイトを見る
             </a>
           </div>
         )}
@@ -136,6 +133,7 @@ export default function LocationDetailModal({
       <form method="dialog" className="modal-backdrop">
         <button>閉じる</button>
       </form>
+      <RubyWrapper />
     </dialog>
   );
 }

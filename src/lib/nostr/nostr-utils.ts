@@ -12,6 +12,18 @@ import type {
   AuditTimelineItem,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
+import { normalizeDiscussionId } from "@/lib/nostr/naddr-utils";
+
+const normalizeDiscussionIdForParse = (
+  discussionId: string
+): string | null => {
+  try {
+    return normalizeDiscussionId(discussionId);
+  } catch (error) {
+    logger.warn("Invalid discussion id in event:", error);
+    return null;
+  }
+};
 
 export function parseDiscussionEvent(event: Event): Discussion | null {
   if (event.kind !== 34550) return null;
@@ -54,6 +66,8 @@ export function parsePostEvent(
   const busStopTag = event.tags.find((tag) => tag[0] === "t")?.[1];
 
   if (!discussionTag) return null;
+  const normalizedDiscussionId = normalizeDiscussionIdForParse(discussionTag);
+  if (!normalizedDiscussionId) return null;
 
   const postApprovals = approvals.filter(
     (approval) => approval.postId === event.id
@@ -69,7 +83,7 @@ export function parsePostEvent(
     id: event.id,
     content: event.content,
     authorPubkey: event.pubkey,
-    discussionId: discussionTag,
+    discussionId: normalizedDiscussionId,
     busStopTag,
     createdAt: event.created_at,
     approved,
@@ -87,13 +101,15 @@ export function parseApprovalEvent(event: Event): PostApproval | null {
   const postAuthorPubkey = event.tags.find((tag) => tag[0] === "p")?.[1];
 
   if (!discussionTag || !postId || !postAuthorPubkey) return null;
+  const normalizedDiscussionId = normalizeDiscussionIdForParse(discussionTag);
+  if (!normalizedDiscussionId) return null;
 
   return {
     id: event.id,
     postId,
     postAuthorPubkey,
     moderatorPubkey: event.pubkey,
-    discussionId: discussionTag,
+    discussionId: normalizedDiscussionId,
     createdAt: event.created_at,
     event,
   };
@@ -106,6 +122,12 @@ export function parseEvaluationEvent(event: Event): PostEvaluation | null {
   const discussionId = event.tags.find((tag) => tag[0] === "a")?.[1];
 
   if (!postId) return null;
+  let normalizedDiscussionId: string | undefined;
+  if (discussionId) {
+    const normalized = normalizeDiscussionIdForParse(discussionId);
+    if (!normalized) return null;
+    normalizedDiscussionId = normalized;
+  }
 
   // NIP-25: contentから評価を取得（ratingタグは使用しない）
   const rawRating = event.content?.trim();
@@ -119,7 +141,7 @@ export function parseEvaluationEvent(event: Event): PostEvaluation | null {
     postId,
     evaluatorPubkey: event.pubkey,
     rating,
-    discussionId,
+    discussionId: normalizedDiscussionId,
     createdAt: event.created_at,
     event,
   };

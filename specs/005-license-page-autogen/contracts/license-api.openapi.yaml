@@ -1,0 +1,109 @@
+openapi: 3.0.3
+info:
+  title: License Page Aggregation API
+  version: 1.0.0
+  description: Aggregated license metadata for software, open-data, and dependencies.
+paths:
+  /api/licenses:
+    get:
+      summary: Get aggregated license sections
+      operationId: getLicenses
+      responses:
+        '200':
+          description: Aggregated license payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicensePagePayload'
+        '500':
+          description: Failed to aggregate license metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+components:
+  schemas:
+    ProjectMetadata:
+      type: object
+      required: [name, version, license, author]
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        license:
+          type: string
+        author:
+          type: string
+        repository:
+          type: string
+          format: uri
+        funding:
+          type: array
+          items:
+            type: string
+            format: uri
+        homepage:
+          type: string
+          format: uri
+        description:
+          type: string
+    OpenDataLicenseEntry:
+      type: object
+      required: [id, name, licenseName]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        provider:
+          type: string
+        licenseName:
+          type: string
+        licenseUrl:
+          type: string
+          format: uri
+        sourceUrl:
+          type: string
+          format: uri
+        description:
+          type: string
+    DependencyLicenseEntry:
+      type: object
+      required: [packageName, version, license]
+      properties:
+        packageName:
+          type: string
+        version:
+          type: string
+        license:
+          type: string
+        author:
+          type: string
+        repository:
+          type: string
+          format: uri
+        homepage:
+          type: string
+          format: uri
+    LicensePagePayload:
+      type: object
+      required: [software, openData, dependencies, generatedAt]
+      properties:
+        software:
+          $ref: '#/components/schemas/ProjectMetadata'
+        openData:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpenDataLicenseEntry'
+        dependencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/DependencyLicenseEntry'
+        generatedAt:
+          type: string
+          format: date-time

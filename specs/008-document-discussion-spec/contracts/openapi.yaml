@@ -1,0 +1,545 @@
+openapi: 3.1.0
+info:
+  title: Discussion Feature Logical API Contract
+  version: 0.1.0
+  description: |
+    NDKベース実装へ移行するdiscussion機能の論理API契約。
+    実装はNostr relay通信だが、UIユースケース単位でREST契約として定義する。
+    モデレーター昇格確定はNIP-72に従い kind:34550 の更新（pタグの moderator 追加/除去）で表現し、
+    昇格専用の承認イベントは定義しない。
+    Mnemonic表示はBIP39日本語語彙を使用し、先頭3フレーズのみを返す。
+servers:
+  - url: https://example.local
+paths:
+  /discussions:
+    get:
+      summary: 会話一覧取得（承認済みのみ）
+      parameters:
+        - in: query
+          name: cursor
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscussionListResponse"
+    post:
+      summary: 会話作成
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDiscussionRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Discussion"
+  /discussions/{discussionId}:
+    get:
+      summary: 会話詳細取得
+      parameters:
+        - $ref: "#/components/parameters/DiscussionId"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscussionDetailResponse"
+    patch:
+      summary: 会話編集（作成者のみ）
+      parameters:
+        - $ref: "#/components/parameters/DiscussionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDiscussionRequest"
+      responses:
+        "200":
+          description: Updated
+    delete:
+      summary: 会話削除（作成者のみ）
+      parameters:
+        - $ref: "#/components/parameters/DiscussionId"
+      responses:
+        "204":
+          description: Deleted
+  /discussions/{discussionId}/listing-requests:
+    post:
+      summary: 会話一覧掲載申請（作成者のみ、kind:1111）
+      parameters:
+        - $ref: "#/components/parameters/DiscussionId"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingRequest"
+  /discussions/{discussionId}/posts:
+    post:
+      summary: 投稿作成
+      parameters:
+        - $ref: "#/components/parameters/DiscussionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePostRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscussionPost"
+  /discussions/{discussionId}/posts/{postId}/approvals:
+    post:
+      summary: 投稿承認（モデレーター/作成者）
+      parameters:
+        - $ref: "#/components/parameters/DiscussionId"
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "201":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostApproval"
+  /discussions/{discussionId}/posts/{postId}/approvals/{approvalId}:
+    delete:
+      summary: 投稿承認撤回（承認者本人、NIP-09 kind:5）
+      parameters:
+        - $ref: "#/components/parameters/DiscussionId"
+        - $ref: "#/components/parameters/PostId"
+        - $ref: "#/components/parameters/ApprovalId"
+      responses:
+        "204":
+          description: Revoked
+  /discussions/{discussionId}/posts/{postId}/evaluations:
+    post:
+      summary: 投稿評価（NIP-25）
+      parameters:
+        - $ref: "#/components/parameters/DiscussionId"
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEvaluationRequest"
+      responses:
+        "201":
+          description: Evaluated
+  /discussions/{discussionId}/promotion-requests:
+    get:
+      summary: モデレーター昇格申請一覧取得（会話編集画面、全ユーザー閲覧可）
+      parameters:
+        - $ref: "#/components/parameters/DiscussionId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/LimitTen"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionRequestPageResponse"
+    post:
+      summary: モデレーター昇格申請（一般ユーザー、kind:1111 + t=moderator-request）
+      parameters:
+        - $ref: "#/components/parameters/DiscussionId"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionRequest"
+  /discussions/{discussionId}/promotion-requests/{requestId}/decision:
+    post:
+      summary: モデレーター昇格審査（作成者のみ、kind:34550更新）
+      parameters:
+        - $ref: "#/components/parameters/DiscussionId"
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [approved, unapproved]
+      responses:
+        "200":
+          description: Decided (discussion definition updated)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [discussion, promotionRequest]
+                properties:
+                  discussion:
+                    $ref: "#/components/schemas/Discussion"
+                  promotionRequest:
+                    $ref: "#/components/schemas/PromotionRequest"
+  /audits/list:
+    get:
+      summary: 会話一覧監査ログ取得（10件単位）
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/LimitTen"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAuditPageResponse"
+  /audits/discussions/{discussionId}:
+    get:
+      summary: 会話詳細監査ログ取得（10件単位）
+      parameters:
+        - $ref: "#/components/parameters/DiscussionId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/LimitTen"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscussionAuditPageResponse"
+components:
+  parameters:
+    DiscussionId:
+      in: path
+      name: discussionId
+      required: true
+      schema: { type: string, format: uuid }
+    PostId:
+      in: path
+      name: postId
+      required: true
+      schema: { type: string }
+    ApprovalId:
+      in: path
+      name: approvalId
+      required: true
+      schema: { type: string }
+    RequestId:
+      in: path
+      name: requestId
+      required: true
+      schema: { type: string }
+    Cursor:
+      in: query
+      name: cursor
+      schema: { type: string }
+    LimitTen:
+      in: query
+      name: limit
+      schema: { type: integer, enum: [10], default: 10 }
+  schemas:
+    Discussion:
+      type: object
+      required: [uuid, naddr, title, description, creatorPubkey, createdAt]
+      properties:
+        uuid: { type: string, format: uuid }
+        naddr: { type: string }
+        title: { type: string }
+        description: { type: string }
+        creatorPubkey: { type: string }
+        creatorMnemonic: { type: string }
+        moderatorPubkeys:
+          type: array
+          items: { type: string }
+        createdAt: { type: integer }
+    DiscussionPost:
+      type: object
+      required: [id, discussionRef, authorPubkey, content, createdAt, approvalStatus]
+      properties:
+        id: { type: string }
+        sourceEventKind:
+          type: integer
+          enum: [1, 1111]
+        discussionRef: { type: string }
+        authorPubkey: { type: string }
+        authorMnemonic: { type: string }
+        content: { type: string, minLength: 1, maxLength: 280 }
+        tags:
+          type: object
+          properties:
+            t:
+              type: array
+              items: { type: string }
+            q:
+              type: array
+              items: { type: string }
+        createdAt: { type: integer }
+        approvalStatus:
+          type: string
+          enum: [pending, approved, revoked]
+    PostApproval:
+      type: object
+      required: [id, postId, approverPubkey, createdAt]
+      properties:
+        id: { type: string }
+        postId: { type: string }
+        approverPubkey: { type: string }
+        approverMnemonic: { type: string }
+        createdAt: { type: integer }
+    ListingRequest:
+      type: object
+      required: [id, eventKind, discussionRef, discussionListRef, requesterPubkey, qRef, status, createdAt]
+      properties:
+        id: { type: string }
+        eventKind:
+          type: integer
+          enum: [1111]
+        discussionRef: { type: string }
+        discussionListRef:
+          type: string
+          description: a tag (会話一覧コミュニティ参照)
+        requesterPubkey: { type: string }
+        content:
+          type: string
+          description: nostr:naddr... 形式
+        qRef:
+          type: string
+          description: q tag (34550:pubkey:identifier)
+        tags:
+          type: object
+          properties:
+            a: { type: string, description: discussion list community hex ref }
+            p: { type: string, description: discussion list owner pubkey }
+            k: { type: string, enum: ["34550"] }
+            q: { type: string, description: 34550:pubkey:identifier 参照 }
+        status:
+          type: string
+          enum: [pending, approved, revoked]
+        createdAt: { type: integer }
+    PromotionRequest:
+      type: object
+      required: [id, eventKind, discussionRef, discussionTag, applicantPubkey, recipientPubkey, requestTypeTag, requestState, isActive, createdAt]
+      properties:
+        id: { type: string }
+        eventKind:
+          type: integer
+          enum: [1111]
+        discussionRef: { type: string }
+        discussionTag:
+          type: string
+          description: a tag (対象会話参照)
+        recipientPubkey:
+          type: string
+          description: p tag (会話作成者公開鍵)
+        requestTypeTag:
+          type: string
+          enum: [moderator-request]
+          description: t tag
+        applicantPubkey: { type: string }
+        applicantMnemonic: { type: string }
+        requestState:
+          type: string
+          enum: [requested-unapproved, requested-approved]
+        isActive:
+          type: boolean
+        createdAt: { type: integer }
+    ListAuditTimelineItem:
+      type: object
+      required: [id, scope, type, actorPubkey, actorMnemonic, timestamp]
+      properties:
+        id: { type: string }
+        scope:
+          type: string
+          enum: [list]
+        type:
+          type: string
+          enum:
+            - listing-requested
+            - promotion-requested
+        actorPubkey: { type: string }
+        actorMnemonic:
+          type: string
+          description: BIP39日本語 mnemonic (先頭3フレーズ)
+        targetRef: { type: string, nullable: true }
+        timestamp: { type: integer }
+        revokeEventRef:
+          type: string
+          nullable: true
+          description: NIP-09 kind:5 event id
+        approvalState:
+          type: string
+          enum: [unapproved, approved]
+        approvedByPubkey:
+          type: string
+          nullable: true
+        approvedByMnemonic:
+          type: string
+          nullable: true
+          description: BIP39日本語 mnemonic (先頭3フレーズ)
+    DiscussionAuditTimelineItem:
+      type: object
+      required: [id, scope, discussionRef, type, actorPubkey, actorMnemonic, timestamp]
+      properties:
+        id: { type: string }
+        scope:
+          type: string
+          enum: [discussion]
+        discussionRef: { type: string }
+        type:
+          type: string
+          enum:
+            - post-submitted
+            - promotion-requested
+        actorPubkey: { type: string }
+        actorMnemonic:
+          type: string
+          description: BIP39日本語 mnemonic (先頭3フレーズ)
+        targetRef: { type: string, nullable: true }
+        timestamp: { type: integer }
+        revokeEventRef:
+          type: string
+          nullable: true
+          description: NIP-09 kind:5 event id
+        approvalState:
+          type: string
+          enum: [unapproved, approved]
+        approvedByPubkey:
+          type: string
+          nullable: true
+        approvedByMnemonic:
+          type: string
+          nullable: true
+          description: BIP39日本語 mnemonic (先頭3フレーズ)
+    DiscussionListResponse:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Discussion" }
+        nextCursor: { type: string, nullable: true }
+    DiscussionDetailResponse:
+      type: object
+      required: [discussion, posts, consensusAnalysis]
+      properties:
+        discussion: { $ref: "#/components/schemas/Discussion" }
+        posts:
+          type: array
+          items: { $ref: "#/components/schemas/DiscussionPost" }
+        consensusAnalysis:
+          $ref: "#/components/schemas/ConsensusAnalysis"
+    ListAuditPageResponse:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ListAuditTimelineItem" }
+        nextCursor: { type: string, nullable: true }
+    DiscussionAuditPageResponse:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/DiscussionAuditTimelineItem" }
+        nextCursor: { type: string, nullable: true }
+    PromotionRequestPageResponse:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PromotionRequest" }
+        nextCursor: { type: string, nullable: true }
+    CreateDiscussionRequest:
+      type: object
+      required: [title, description]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: string, minLength: 1, maxLength: 500 }
+    UpdateDiscussionRequest:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: string, minLength: 1, maxLength: 500 }
+        moderatorPubkeys:
+          type: array
+          items: { type: string }
+    CreatePostRequest:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 280 }
+        busStopTag: { type: string, nullable: true }
+    CreateEvaluationRequest:
+      type: object
+      required: [rating]
+      properties:
+        rating:
+          type: string
+          enum: ["+", "-"]
+    ConsensusAnalysis:
+      type: object
+      description: FR-008 合意形成分析（既存EvaluationServiceの返却モデル）
+      required: [groupAwareConsensus, groupRepresentativeComments]
+      properties:
+        groupAwareConsensus:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupAwareConsensusItem"
+        groupRepresentativeComments:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupRepresentativeCommentsGroup"
+    GroupAwareConsensusItem:
+      type: object
+      required: [postId, consensusScore, overallAgreePercentage]
+      properties:
+        postId: { type: string }
+        consensusScore: { type: number }
+        overallAgreePercentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+    GroupRepresentativeCommentsGroup:
+      type: object
+      required: [groupId, comments]
+      properties:
+        groupId: { type: integer }
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/RepresentativeCommentItem"
+    RepresentativeCommentItem:
+      type: object
+      required:
+        [postId, representativenessScore, zScore, pValue, voteType, agreeRatio, disagreeRatio]
+      properties:
+        postId: { type: string }
+        representativenessScore: { type: number }
+        zScore: { type: number }
+        pValue: { type: number }
+        voteType:
+          type: string
+          enum: [agree, disagree]
+        agreeRatio: { type: number }
+        disagreeRatio: { type: number }

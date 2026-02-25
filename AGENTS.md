@@ -36,3 +36,10 @@ Follow TDD principles. First, write the tests. Avoid writing tests for things th
 - Follow the existing short-prefix style (`add: ...`, `fix: ...`, `chore: ...`); keep messages imperative and scoped.
 - For PRs, include: what changed, why, and how to verify (commands/steps). Attach screenshots for UI tweaks and call out DB schema or GTFS data impacts.
 - Run `npm run lint` and `npm test` before requesting review; note any skipped checks or follow-up tasks in the PR description.
+
+## Active Technologies
+- TypeScript 5.x (strict), React 19, Next.js 15 App Router + `@nostr-dev-kit/ndk`, `nosskey-sdk`, DaisyUI 5 + Tailwind CSS 4, Prisma/SQLite（既存） (008-document-discussion-spec)
+- Nostr relay群（イベント本体）、ブラウザローカル（Passkey/PWKキャッシュ）、SQLite（GTFS等既存アプリデータ） (008-document-discussion-spec)
+
+## Recent Changes
+- 008-document-discussion-spec: Added TypeScript 5.x (strict), React 19, Next.js 15 App Router + `@nostr-dev-kit/ndk`, `nosskey-sdk`, DaisyUI 5 + Tailwind CSS 4, Prisma/SQLite（既存）

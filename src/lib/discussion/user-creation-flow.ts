@@ -24,6 +24,7 @@ export interface CreationFlowParams {
   adminPubkey: string;
   signEvent: (event: Record<string, unknown>) => Promise<NostrEventDTO>;
   publishEvent: (event: NostrEventDTO) => Promise<boolean>;
+  publishListingRequest?: boolean;
 }
 
 export interface CreationFlowResult {
@@ -192,6 +193,25 @@ export function createDiscussionListingRequest(
   };
 }
 
+export function createModeratorPromotionRequestEvent(
+  discussionRef: string,
+  creatorPubkey: string,
+  applicantPubkey: string,
+  content = ""
+): NostrEventDraft {
+  return {
+    kind: 1111,
+    content: content.trim(),
+    tags: [
+      ["a", discussionRef],
+      ["p", creatorPubkey],
+      ["t", "moderator-request"],
+    ],
+    pubkey: applicantPubkey,
+    created_at: Math.floor(Date.now() / 1000),
+  };
+}
+
 export async function processDiscussionCreationFlow(
   params: CreationFlowParams
 ): Promise<CreationFlowResult> {
@@ -246,32 +266,34 @@ export async function processDiscussionCreationFlow(
       kind: 34550,
     });
 
-    const listingRequest = createDiscussionListingRequest(
-      params.formData,
-      discussionNaddr,
-      params.adminPubkey,
-      params.userPubkey
-    );
-
-    let signedListingRequest: NostrEventDTO;
-    try {
-      signedListingRequest = await params.signEvent(
-        listingRequest as unknown as Record<string, unknown>
+    if (params.publishListingRequest !== false) {
+      const listingRequest = createDiscussionListingRequest(
+        params.formData,
+        discussionNaddr,
+        params.adminPubkey,
+        params.userPubkey
       );
-    } catch (error) {
-      logger.error("Failed to sign listing request:", error);
-      return {
-        success: false,
-        errors: ["掲載リクエストの署名に失敗しました"],
-      };
-    }
 
-    const requestPublished = await params.publishEvent(signedListingRequest);
-    if (!requestPublished) {
-      return {
-        success: false,
-        errors: ["掲載リクエストの送信に失敗しました"],
-      };
+      let signedListingRequest: NostrEventDTO;
+      try {
+        signedListingRequest = await params.signEvent(
+          listingRequest as unknown as Record<string, unknown>
+        );
+      } catch (error) {
+        logger.error("Failed to sign listing request:", error);
+        return {
+          success: false,
+          errors: ["掲載リクエストの署名に失敗しました"],
+        };
+      }
+
+      const requestPublished = await params.publishEvent(signedListingRequest);
+      if (!requestPublished) {
+        return {
+          success: false,
+          errors: ["掲載リクエストの送信に失敗しました"],
+        };
+      }
     }
 
     const successMessage = `

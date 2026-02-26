@@ -1,5 +1,6 @@
 import { NostrService, NostrServiceConfig } from "../nostr-service";
 import { naddrEncode } from "../naddr-utils";
+import { createDiscussionListingRequest } from "@/lib/discussion/user-creation-flow";
 import fs from "fs";
 import path from "path";
 
@@ -244,5 +245,42 @@ describe("Foundation regression checks", () => {
       const content = fs.readFileSync(absolutePath, "utf-8");
       expect(content).not.toMatch(/from\s+["']nostr-tools["']/);
     }
+  });
+});
+
+describe("US2 listing request contract", () => {
+  it("creates listing request event as kind:1111 with a/q tags", () => {
+    const adminPubkey = "a".repeat(64);
+    const userPubkey = "b".repeat(64);
+    process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR = naddrEncode({
+      kind: 34550,
+      pubkey: adminPubkey,
+      identifier: "discussion-list",
+    });
+    const discussionNaddr = naddrEncode({
+      kind: 34550,
+      pubkey: userPubkey,
+      identifier: "created-discussion",
+    });
+
+    const event = createDiscussionListingRequest(
+      {
+        title: "title",
+        description: "description",
+        moderators: [],
+        dTag: "created-discussion",
+      },
+      discussionNaddr,
+      adminPubkey,
+      userPubkey
+    );
+
+    expect(event.kind).toBe(1111);
+    expect(event.tags).toEqual(
+      expect.arrayContaining([
+        ["a", `34550:${adminPubkey}:discussion-list`],
+        ["q", `34550:${userPubkey}:created-discussion`],
+      ])
+    );
   });
 });

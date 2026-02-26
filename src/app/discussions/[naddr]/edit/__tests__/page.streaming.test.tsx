@@ -62,6 +62,7 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   })),
   isValidNpub: () => true,
   npubToHex: (npub: string) => npub,
+  getAdminPubkeyHex: () => "a".repeat(64),
   formatRelativeTime: () => "now",
 }));
 
@@ -91,13 +92,13 @@ describe("DiscussionEditPage streaming", () => {
   });
 
   it("streams discussion metadata and renders form without waiting for EOSE", async () => {
-    let streamHandlers: StreamEventsOptions | undefined;
+    const streamHandlers: StreamEventsOptions[] = [];
 
     serviceMock.streamEventsOnEvent.mockImplementation(
       (_filters: unknown, handlers: StreamEventsOptions) => {
-      streamHandlers = handlers;
-      return () => {};
-    }
+        streamHandlers.push(handlers);
+        return () => {};
+      }
     );
 
     render(<DiscussionEditPage />);
@@ -121,7 +122,7 @@ describe("DiscussionEditPage streaming", () => {
       sig: "sig",
     };
 
-    const handlers = streamHandlers;
+    const handlers = streamHandlers[0];
     if (!handlers) {
       throw new Error("streamHandlers not initialized");
     }

@@ -12,8 +12,8 @@ import {
   getNostrServiceConfig,
 } from "@/lib/config/discussion-config";
 import {
-  ModeratorCheck,
-  PermissionError,
+  buildDisabledActionState,
+  DisabledReasonText,
 } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
@@ -22,6 +22,7 @@ import {
   parseApprovalEvent,
   formatRelativeTime,
   getAdminPubkeyHex,
+  isModerator,
 } from "@/lib/nostr/nostr-utils";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import type {
@@ -166,7 +167,14 @@ export default function PostApprovalPage() {
   }, [startStreaming, discussionInfo]);
 
   const handleApprovePost = async (post: DiscussionPost) => {
-    if (!user.isLoggedIn || !discussion) return;
+    const canModerate = discussion
+      ? isModerator(
+          user.pubkey,
+          discussion.moderators.map((m) => m.pubkey),
+          ADMIN_PUBKEY
+        ) || user.pubkey === discussion.authorPubkey
+      : false;
+    if (!user.isLoggedIn || !discussion || !canModerate) return;
 
     setApprovingIds((prev) => new Set([...prev, post.id]));
     try {
@@ -218,7 +226,14 @@ export default function PostApprovalPage() {
   };
 
   const handleRevokeApproval = async (post: DiscussionPost) => {
-    if (!user.isLoggedIn || !discussion) return;
+    const canModerate = discussion
+      ? isModerator(
+          user.pubkey,
+          discussion.moderators.map((m) => m.pubkey),
+          ADMIN_PUBKEY
+        ) || user.pubkey === discussion.authorPubkey
+      : false;
+    if (!user.isLoggedIn || !discussion || !canModerate) return;
 
     const approval = approvals.find(
       (a) => a.postId === post.id && a.moderatorPubkey === user.pubkey
@@ -297,14 +312,20 @@ export default function PostApprovalPage() {
 
   const pendingPosts = posts.filter((post) => !post.approved);
   const approvedPosts = posts.filter((post) => post.approved);
+  const hasApprovalPermission = Boolean(
+    discussion &&
+      (user.pubkey === discussion.authorPubkey ||
+        isModerator(
+          user.pubkey,
+          discussion.moderators.map((m) => m.pubkey),
+          ADMIN_PUBKEY
+        ))
+  );
+  const permissionReason = !user.isLoggedIn
+    ? "承認操作にはログインが必要です。"
+    : "この会話の作成者またはモデレーターのみ承認操作できます。";
 
   return (
-    <ModeratorCheck
-      moderators={discussion?.moderators.map((m) => m.pubkey) || []}
-      adminPubkey={ADMIN_PUBKEY}
-      userPubkey={user.pubkey}
-      fallback={<PermissionError type="moderator" />}
-    >
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 ruby-text">
           <Link
@@ -405,7 +426,10 @@ export default function PostApprovalPage() {
                             </div>
                             <button
                               onClick={() => handleApprovePost(post)}
-                              disabled={approvingIds.has(post.id)}
+                              disabled={
+                                approvingIds.has(post.id) ||
+                                !hasApprovalPermission
+                              }
                               className="ml-4 btn btn-primary rounded-full dark:rounded-sm"
                             >
                               <span>
@@ -413,6 +437,12 @@ export default function PostApprovalPage() {
                               </span>
                             </button>
                           </div>
+                          <DisabledReasonText
+                            state={buildDisabledActionState(
+                              hasApprovalPermission,
+                              permissionReason
+                            )}
+                          />
                           <div className="text-gray-500">
                             {formatRelativeTime(post.createdAt)}
                           </div>
@@ -476,25 +506,52 @@ export default function PostApprovalPage() {
                               </div>
                             </div>
                             <div className="flex gap-2 ml-4">
-                              {approvals.some(
-                                (a) =>
-                                  a.postId === post.id &&
-                                  a.moderatorPubkey === user.pubkey
-                              ) && (
-                                <button
-                                  onClick={() => handleRevokeApproval(post)}
-                                  disabled={revokingIds.has(post.id)}
-                                  className="btn btn-warning rounded-full dark:rounded-sm"
-                                >
-                                  <span>
-                                    {revokingIds.has(post.id)
-                                      ? ""
-                                      : "承認を撤回"}
-                                  </span>
-                                </button>
-                              )}
+                              {(() => {
+                                const hasOwnApproval = approvals.some(
+                                  (a) =>
+                                    a.postId === post.id &&
+                                    a.moderatorPubkey === user.pubkey
+                                );
+                                const revokeAllowed =
+                                  hasApprovalPermission && hasOwnApproval;
+                                return (
+                                  <button
+                                    onClick={() => handleRevokeApproval(post)}
+                                    disabled={
+                                      revokingIds.has(post.id) || !revokeAllowed
+                                    }
+                                    className="btn btn-warning rounded-full dark:rounded-sm"
+                                  >
+                                    <span>
+                                      {revokingIds.has(post.id)
+                                        ? ""
+                                        : "承認を撤回"}
+                                    </span>
+                                  </button>
+                                );
+                              })()}
                             </div>
                           </div>
+                          {(() => {
+                            const hasOwnApproval = approvals.some(
+                              (a) =>
+                                a.postId === post.id &&
+                                a.moderatorPubkey === user.pubkey
+                            );
+                            const revokeAllowed =
+                              hasApprovalPermission && hasOwnApproval;
+                            const revokeReason = !hasApprovalPermission
+                              ? permissionReason
+                              : "自分が行った承認のみ撤回できます。";
+                            return (
+                              <DisabledReasonText
+                                state={buildDisabledActionState(
+                                  revokeAllowed,
+                                  revokeReason
+                                )}
+                              />
+                            );
+                          })()}
                           <div className="text-gray-500">
                             承認:{" "}
                             {formatRelativeTime(
@@ -533,6 +590,5 @@ export default function PostApprovalPage() {
           </main>
         )}
       </div>
-    </ModeratorCheck>
   );
 }

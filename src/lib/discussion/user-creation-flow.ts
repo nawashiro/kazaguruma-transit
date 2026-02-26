@@ -33,6 +33,37 @@ export interface CreationFlowResult {
   successMessage?: string;
 }
 
+const toDiscussionCoordinate = (discussionIdOrNaddr: string): string => {
+  if (discussionIdOrNaddr.startsWith("naddr1")) {
+    const decoded = naddrDecode(discussionIdOrNaddr);
+    return `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
+  }
+  return discussionIdOrNaddr;
+};
+
+export function createDiscussionPostEvent(
+  content: string,
+  discussionIdOrNaddr: string,
+  busStopTag?: string
+): NostrEventDraft {
+  const discussionCoordinate = toDiscussionCoordinate(discussionIdOrNaddr);
+  const tags: string[][] = [["a", discussionCoordinate]];
+  if (busStopTag) {
+    tags.push(["t", busStopTag]);
+  }
+
+  return {
+    kind: 1111,
+    content: content.trim(),
+    tags,
+    created_at: Math.floor(Date.now() / 1000),
+  };
+}
+
+export function isReadableDiscussionPostKind(kind: number): boolean {
+  return kind === 1111 || kind === 1;
+}
+
 export function validateDiscussionCreationForm(
   form: DiscussionCreationForm
 ): ValidationResult {

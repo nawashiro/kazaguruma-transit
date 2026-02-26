@@ -1,3 +1,10 @@
+import {
+  createNostrService,
+  type NostrService,
+  type NostrServiceConfig,
+  type StreamEventsOptions,
+} from "@/lib/nostr/nostr-service";
+
 export interface NostrEventDraft {
   kind: number;
   content: string;
@@ -17,8 +24,8 @@ export interface NdkSubscription {
 }
 
 export interface NdkSubscribeHandlers {
-  onEvent: (event: NostrEventDTO) => void;
-  onEose?: () => void;
+  onEvent: (events: NostrEventDTO[], event: NostrEventDTO) => void;
+  onEose?: (events: NostrEventDTO[]) => void;
 }
 
 export interface NdkEventFilter {
@@ -27,6 +34,8 @@ export interface NdkEventFilter {
   "#a"?: string[];
   "#e"?: string[];
   "#p"?: string[];
+  "#d"?: string[];
+  "#t"?: string[];
   since?: number;
   until?: number;
   limit?: number;
@@ -71,3 +80,61 @@ export class UnconfiguredDiscussionNdkGateway implements DiscussionNdkGateway {
     return false;
   }
 }
+
+const toLegacyStreamOptions = (
+  handlers: NdkSubscribeHandlers
+): StreamEventsOptions => ({
+  onEvent: (events, event) =>
+    handlers.onEvent(
+      events as unknown as NostrEventDTO[],
+      event as unknown as NostrEventDTO
+    ),
+  onEose: (events) => handlers.onEose?.(events as unknown as NostrEventDTO[]),
+});
+
+export class LegacyNostrServiceDiscussionNdkGateway
+  implements DiscussionNdkGateway
+{
+  constructor(private readonly service: NostrService) {}
+
+  async connect(): Promise<void> {
+    return;
+  }
+
+  async disconnect(): Promise<void> {
+    this.service.disconnect();
+  }
+
+  async query(filters: NdkEventFilter[]): Promise<NostrEventDTO[]> {
+    return (await this.service.getEventsOnEose(
+      filters as Parameters<NostrService["getEventsOnEose"]>[0]
+    )) as unknown as NostrEventDTO[];
+  }
+
+  subscribe(
+    filters: NdkEventFilter[],
+    handlers: NdkSubscribeHandlers
+  ): NdkSubscription {
+    const close = this.service.streamEventsOnEvent(
+      filters as Parameters<NostrService["streamEventsOnEvent"]>[0],
+      toLegacyStreamOptions(handlers)
+    );
+    return { close };
+  }
+
+  async sign(event: NostrEventDraft): Promise<NostrEventDTO> {
+    void event;
+    throw new Error("Legacy gateway cannot sign directly");
+  }
+
+  async publish(event: NostrEventDTO): Promise<boolean> {
+    return this.service.publishSignedEvent(
+      event as Parameters<NostrService["publishSignedEvent"]>[0]
+    );
+  }
+}
+
+export const createDiscussionNdkGateway = (
+  config: NostrServiceConfig
+): DiscussionNdkGateway =>
+  new LegacyNostrServiceDiscussionNdkGateway(createNostrService(config));

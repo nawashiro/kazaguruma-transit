@@ -42,12 +42,15 @@ export function BusStopDiscussion({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginReason, setLoginReason] = useState<string>("");
   const [showPreview, setShowPreview] = useState(false);
   const [postForm, setPostForm] = useState<PostFormData>({
     content: "",
     busStopTag: busStops[0] || "",
   });
   const [errors, setErrors] = useState<string[]>([]);
+  const [isStreamLoading, setIsStreamLoading] = useState(false);
+  const [streamError, setStreamError] = useState<string | null>(null);
   const postsEventsRef = useRef<Event[]>([]);
   const approvalEventsRef = useRef<Event[]>([]);
   const approvalsStreamCleanupRef = useRef<(() => void) | null>(null);
@@ -71,31 +74,38 @@ export function BusStopDiscussion({
       approvalsEvents: Event[],
       fetchEvaluations: boolean
     ) => {
-      const parsedApprovals = approvalsEvents
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
+      try {
+        const parsedApprovals = approvalsEvents
+          .map(parseApprovalEvent)
+          .filter((a): a is PostApproval => a !== null);
 
-      const parsedPosts = postEvents
-        .map((event) => parsePostEvent(event, parsedApprovals))
-        .filter((p): p is DiscussionPost => p !== null)
-        .filter(
-          (p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag)
+        const parsedPosts = postEvents
+          .map((event) => parsePostEvent(event, parsedApprovals))
+          .filter((p): p is DiscussionPost => p !== null)
+          .filter(
+            (p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag)
+          );
+
+        setPosts(parsedPosts);
+        if (!fetchEvaluations || parsedPosts.length === 0) {
+          return;
+        }
+
+        const approvedPostIds = parsedPosts.map((p) => p.id);
+        const evaluationsEvents = await nostrService.getEvaluationsForPosts(
+          approvedPostIds
         );
 
-      setPosts(parsedPosts);
-      if (!fetchEvaluations || parsedPosts.length === 0) {
-        return;
+        const parsedEvaluations = evaluationsEvents
+          .map(parseEvaluationEvent)
+          .filter((e): e is PostEvaluation => e !== null);
+        setEvaluations(parsedEvaluations);
+      } catch (error) {
+        logger.error("Failed to update discussion stream data:", error);
+        setStreamError("投稿データの読み込みに失敗しました。");
+      } finally {
+        setIsStreamLoading(false);
       }
-
-      const approvedPostIds = parsedPosts.map((p) => p.id);
-      const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-        approvedPostIds
-      );
-
-      const parsedEvaluations = evaluationsEvents
-        .map(parseEvaluationEvent)
-        .filter((e): e is PostEvaluation => e !== null);
-      setEvaluations(parsedEvaluations);
     },
     [busStops, nostrService]
   );
@@ -109,6 +119,8 @@ export function BusStopDiscussion({
     approvalsForDiscussionCleanupRef.current?.();
     postsEventsRef.current = [];
     approvalEventsRef.current = [];
+    setIsStreamLoading(true);
+    setStreamError(null);
 
     const postFilters =
       busStops.length > 0
@@ -197,6 +209,7 @@ export function BusStopDiscussion({
 
   const handlePostSubmit = async () => {
     if (!user.isLoggedIn) {
+      setLoginReason("投稿するにはログインが必要です。");
       setShowLoginModal(true);
       return;
     }
@@ -237,6 +250,7 @@ export function BusStopDiscussion({
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (!user.isLoggedIn) {
+      setLoginReason("投稿を評価するにはログインが必要です。");
       setShowLoginModal(true);
       return;
     }
@@ -287,6 +301,19 @@ export function BusStopDiscussion({
       {/* Post form */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
         <h3 className="text-lg font-medium mb-4 ruby-text">バス停メモを投稿</h3>
+        {isStreamLoading && (
+          <div className="loading loading-spinner loading-sm mb-3" aria-label="読み込み中"></div>
+        )}
+        {streamError && (
+          <div className="alert alert-error mb-3" role="alert">
+            <span>{streamError}</span>
+          </div>
+        )}
+        {!isStreamLoading && !streamError && postsWithStats.length === 0 && (
+          <p className="text-sm text-gray-600 dark:text-gray-400 ruby-text mb-3">
+            承認済みの投稿はまだありません。
+          </p>
+        )}
 
         {!showPreview ? (
           <div className="space-y-4">
@@ -372,7 +399,11 @@ export function BusStopDiscussion({
 
       <LoginModal
         isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
+        reason={loginReason}
+        onClose={() => {
+          setShowLoginModal(false);
+          setLoginReason("");
+        }}
       />
     </div>
   );

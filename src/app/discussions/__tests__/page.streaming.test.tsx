@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionsPage from "../page";
-import type { StreamEventsOptions } from "@/lib/nostr/nostr-service";
+import type { NdkSubscribeHandlers } from "@/lib/nostr/discussion-ndk-gateway";
 
 // Mock next/navigation
 jest.mock("next/navigation", () => ({
@@ -29,20 +29,19 @@ jest.mock("@/lib/nostr/naddr-utils", () => ({
   buildNaddrFromDiscussion: () => "naddr1test",
 }));
 
-jest.mock("@/lib/nostr/nostr-service", () => {
-  const serviceMock = {
-    streamApprovals: jest.fn(),
-    streamReferencedUserDiscussions: jest.fn(),
-    streamEventsOnEvent: jest.fn(),
+jest.mock("@/lib/nostr/discussion-ndk-gateway", () => {
+  const gatewayMock = {
+    subscribe: jest.fn(),
   };
-
   return {
-    createNostrService: () => serviceMock,
-    __mock: serviceMock,
+    createDiscussionNdkGateway: () => gatewayMock,
+    __mock: gatewayMock,
   };
 });
 
-const { __mock: serviceMock } = jest.requireMock("@/lib/nostr/nostr-service");
+const { __mock: gatewayMock } = jest.requireMock(
+  "@/lib/nostr/discussion-ndk-gateway"
+);
 
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseDiscussionEvent: jest.fn((event) => ({
@@ -95,29 +94,32 @@ describe("DiscussionsPage streaming", () => {
   });
 
   it("waits for approvals EOSE before streaming discussions and renders OnEvent updates", async () => {
-    let approvalHandlers: StreamEventsOptions | undefined;
-    let discussionHandlers: StreamEventsOptions | undefined;
+    let approvalHandlers: NdkSubscribeHandlers | undefined;
+    let discussionHandlers: NdkSubscribeHandlers | undefined;
 
-    serviceMock.streamApprovals.mockImplementation(
-      (_discussionId: string, handlers: StreamEventsOptions) => {
-        approvalHandlers = handlers;
-        return () => {};
-      }
-    );
-
-    serviceMock.streamReferencedUserDiscussions.mockImplementation(
-      (_refs: string[], handlers: StreamEventsOptions) => {
-        discussionHandlers = handlers;
-        return () => {};
-      }
-    );
+    gatewayMock.subscribe
+      .mockImplementationOnce(
+        (_filters: unknown, handlers: NdkSubscribeHandlers) => {
+          approvalHandlers = handlers;
+          return { close: () => undefined };
+        }
+      )
+      .mockImplementationOnce(
+        (_filters: unknown, handlers: NdkSubscribeHandlers) => {
+          discussionHandlers = handlers;
+          return { close: () => undefined };
+        }
+      );
 
     render(<DiscussionsPage />);
 
     await waitFor(() =>
-      expect(serviceMock.streamApprovals).toHaveBeenCalled()
+      expect(gatewayMock.subscribe).toHaveBeenCalled()
     );
-    expect(serviceMock.streamEventsOnEvent).not.toHaveBeenCalled();
+    expect(gatewayMock.subscribe).toHaveBeenCalledWith(
+      [{ kinds: [4550], "#a": ["34550:admin:list"] }],
+      expect.any(Object)
+    );
 
     const approvalEvent = {
       id: "approval-1",
@@ -135,8 +137,16 @@ describe("DiscussionsPage streaming", () => {
       approvalHandlers?.onEose?.([approvalEvent]);
     });
 
-    expect(serviceMock.streamReferencedUserDiscussions).toHaveBeenCalledWith(
-      ["34550:author:demo"],
+    expect(gatewayMock.subscribe).toHaveBeenNthCalledWith(
+      2,
+      [
+        {
+          kinds: [34550],
+          authors: ["author"],
+          "#d": ["demo"],
+          limit: 1,
+        },
+      ],
       expect.any(Object)
     );
 

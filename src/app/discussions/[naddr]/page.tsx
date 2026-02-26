@@ -17,6 +17,10 @@ import { EvaluationComponent } from "@/components/discussion/EvaluationComponent
 import { ModeratorCheck } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
+  createDiscussionNdkGateway,
+  type NostrEventDTO,
+} from "@/lib/nostr/discussion-ndk-gateway";
+import {
   parseDiscussionEvent,
   parsePostEvent,
   parseApprovalEvent,
@@ -41,10 +45,10 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
-import type { Event } from "nostr-tools";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
+const discussionGateway = createDiscussionNdkGateway(getNostrServiceConfig());
 
 export default function DiscussionDetailPage() {
   const params = useParams();
@@ -63,6 +67,7 @@ export default function DiscussionDetailPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDiscussionLoading, setIsDiscussionLoading] = useState(true);
   const [isPostsLoading, setIsPostsLoading] = useState(true);
+  const [postsLoadError, setPostsLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const renderInlineLoading = (label: string) => (
     <div
@@ -76,6 +81,7 @@ export default function DiscussionDetailPage() {
   );
 
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginReason, setLoginReason] = useState<string>("");
   const [showPreview, setShowPreview] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState("");
   const [postForm, setPostForm] = useState<PostFormData>({
@@ -108,9 +114,13 @@ export default function DiscussionDetailPage() {
       if (!discussionInfo) return;
       setIsPostsLoading(true);
       try {
-        const approvalsEvents = await nostrService.getApprovalsOnEose(
-          discussionInfo.discussionId
-        );
+        setPostsLoadError(null);
+        const approvalsEvents = await discussionGateway.query([
+          {
+            kinds: [4550],
+            "#a": [discussionInfo.discussionId],
+          },
+        ]);
         if (loadSequenceRef.current !== loadSequence) return;
 
         const parsedApprovals = approvalsEvents
@@ -134,9 +144,15 @@ export default function DiscussionDetailPage() {
         setApprovals(parsedApprovals);
 
         const postIds = parsedPosts.map((post) => post.id);
-        const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-          postIds
-        );
+        const evaluationsEvents =
+          postIds.length > 0
+            ? await discussionGateway.query([
+                {
+                  kinds: [7],
+                  "#e": postIds,
+                },
+              ])
+            : [];
         if (loadSequenceRef.current !== loadSequence) return;
 
         const parsedEvaluations = evaluationsEvents
@@ -146,6 +162,7 @@ export default function DiscussionDetailPage() {
         setEvaluations(parsedEvaluations);
       } catch (error) {
         logger.error("Failed to load discussion:", error);
+        setPostsLoadError("投稿・評価データの取得に失敗しました。");
       } finally {
         if (loadSequenceRef.current === loadSequence) {
           setIsPostsLoading(false);
@@ -230,7 +247,7 @@ export default function DiscussionDetailPage() {
       return;
     }
 
-    const pickLatestDiscussion = (events: Event[]) => {
+    const pickLatestDiscussion = (events: NostrEventDTO[]) => {
       const parsed = events
         .map(parseDiscussionEvent)
         .filter((d): d is Discussion => d !== null);
@@ -244,9 +261,15 @@ export default function DiscussionDetailPage() {
       );
     };
 
-    discussionStreamCleanupRef.current = nostrService.streamDiscussionMeta(
-      discussionInfo.authorPubkey,
-      discussionInfo.dTag,
+    discussionStreamCleanupRef.current = discussionGateway.subscribe(
+      [
+        {
+          kinds: [34550],
+          authors: [discussionInfo.authorPubkey],
+          "#d": [discussionInfo.dTag],
+          limit: 1,
+        },
+      ],
       {
         onEvent: (events) => {
           if (loadSequenceRef.current !== loadSequence) return;
@@ -264,7 +287,7 @@ export default function DiscussionDetailPage() {
           setIsDiscussionLoading(false);
         },
       }
-    );
+    ).close;
 
     loadApprovalsAndEvaluations(loadSequence);
     loadBusStops();
@@ -356,6 +379,7 @@ export default function DiscussionDetailPage() {
 
   const handlePostSubmit = async () => {
     if (!user.isLoggedIn || !discussion) {
+      setLoginReason("投稿するにはログインが必要です。");
       setShowLoginModal(true);
       return;
     }
@@ -416,6 +440,7 @@ export default function DiscussionDetailPage() {
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (!user.isLoggedIn || !discussion) {
+      setLoginReason("投稿を評価するにはログインが必要です。");
       setShowLoginModal(true);
       return;
     }
@@ -551,7 +576,11 @@ export default function DiscussionDetailPage() {
               </h2>
               {isPostsLoading
                 ? renderInlineLoading("評価データを読み込み中...")
-                : (
+                : postsLoadError ? (
+                  <div className="alert alert-error" role="alert">
+                    <span>{postsLoadError}</span>
+                  </div>
+                ) : (
                   <EvaluationComponent
                     posts={postsWithStats}
                     onEvaluate={handleEvaluate}
@@ -575,6 +604,10 @@ export default function DiscussionDetailPage() {
 
               {isPostsLoading ? (
                 renderInlineLoading("分析データを読み込み中...")
+              ) : postsLoadError ? (
+                <div className="alert alert-error" role="alert">
+                  <span>{postsLoadError}</span>
+                </div>
               ) : (
                 <>
                   {isAnalyzing && (
@@ -897,7 +930,11 @@ export default function DiscussionDetailPage() {
 
       <LoginModal
         isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
+        reason={loginReason}
+        onClose={() => {
+          setShowLoginModal(false);
+          setLoginReason("");
+        }}
       />
     </div>
   );

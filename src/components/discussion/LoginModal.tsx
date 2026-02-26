@@ -7,9 +7,10 @@ import { logger } from "@/utils/logger";
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
+  reason?: string;
 }
 
-export function LoginModal({ isOpen, onClose }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
   const [mode, setMode] = useState<"login" | "create">("create");
   const [username, setUsername] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -131,6 +132,11 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 ruby-text">
                 新しいパスキーが作成され、あなたのデバイスに安全に保存されます。端末の生体認証またはPINを使用してください。
               </p>
+              {reason && (
+                <p className="alert alert-info text-sm ruby-text mt-3">
+                  {reason}
+                </p>
+              )}
             </div>
 
             <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 mb-4 text-blue-800 dark:text-blue-200 ruby-text">
@@ -300,6 +306,11 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 ruby-text">
                 保存されているパスキーを使用してログインします。端末の生体認証またはPINを使用してください。
               </p>
+              {reason && (
+                <p className="alert alert-info text-sm ruby-text mt-3">
+                  {reason}
+                </p>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">

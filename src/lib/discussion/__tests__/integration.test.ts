@@ -7,7 +7,9 @@ import { jest } from '@jest/globals';
 import { 
   processDiscussionCreationFlow,
   type CreationFlowParams,
-  type DiscussionCreationForm
+  type DiscussionCreationForm,
+  createDiscussionPostEvent,
+  isReadableDiscussionPostKind,
 } from '../user-creation-flow';
 import { 
   buildNaddrFromDiscussion,
@@ -369,5 +371,29 @@ describe("Foundation regression checks", () => {
       "post-submitted",
       "promotion-requested",
     ]);
+  });
+});
+
+describe("US1 service flow checks", () => {
+  it("creates discussion post event with kind:1111 and discussion a-tag", () => {
+    const event = createDiscussionPostEvent(
+      "投稿本文",
+      "34550:author:demo",
+      "bus-stop-a"
+    );
+
+    expect(event.kind).toBe(1111);
+    expect(event.tags).toEqual(
+      expect.arrayContaining([
+        ["a", "34550:author:demo"],
+        ["t", "bus-stop-a"],
+      ])
+    );
+  });
+
+  it("allows reading both kind:1111 and kind:1 posts for backward compatibility", () => {
+    expect(isReadableDiscussionPostKind(1111)).toBe(true);
+    expect(isReadableDiscussionPostKind(1)).toBe(true);
+    expect(isReadableDiscussionPostKind(7)).toBe(false);
   });
 });

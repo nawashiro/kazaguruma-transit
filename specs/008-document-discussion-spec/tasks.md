@@ -52,19 +52,19 @@
 
 ### Tests for User Story 1 (write first, must fail first)
 
-- [ ] T014 [P] [US1] 会話一覧/詳細の表示契約テストを追加する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/__tests__/page.streaming.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`
-- [ ] T015 [P] [US1] 投稿作成・評価フローのサービステストを追加する in `/root/nawashiro/kazaguruma-transit/src/lib/discussion/__tests__/integration.test.ts`
-- [ ] T016 [P] [US1] 承認済み投稿のみ評価対象かつ既存FR-008（合意形成分析）表示を維持するUIテストを追加する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/__tests__/EvaluationComponent.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`
+- [X] T014 [P] [US1] 会話一覧/詳細の表示契約テストを追加する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/__tests__/page.streaming.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`
+- [X] T015 [P] [US1] 投稿作成・評価フローのサービステストを追加する in `/root/nawashiro/kazaguruma-transit/src/lib/discussion/__tests__/integration.test.ts`
+- [X] T016 [P] [US1] 承認済み投稿のみ評価対象かつ既存FR-008（合意形成分析）表示を維持するUIテストを追加する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/__tests__/EvaluationComponent.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] 会話一覧の取得ロジックをNDK境界経由へ移行する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/page.tsx`
-- [ ] T018 [US1] 会話詳細の取得ロジックをNDK境界経由へ移行しつつ既存FR-008分析呼び出し（`evaluationService.analyzeConsensus`）を再利用する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/page.tsx`
-- [ ] T019 [P] [US1] 投稿作成のイベント組み立て（kind:1111優先、kind:1後方互換読取）を実装する in `/root/nawashiro/kazaguruma-transit/src/lib/discussion/user-creation-flow.ts`
-- [ ] T020 [P] [US1] 投稿評価（NIP-25 kind:7）の送信処理を実装する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/EvaluationComponent.tsx`
-- [ ] T021 [US1] 会話詳細の投稿表示で承認済みのみ表示するフィルタを実装する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/BusStopDiscussion.tsx`
-- [ ] T022 [US1] 未ログイン時の投稿/評価操作にログイン導線を統一する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/LoginModal.tsx`
-- [ ] T023 [US1] ローディング/空/エラー状態を会話一覧・詳細・合意形成分析表示に適用する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/DiscussionTabLayout.tsx` `/root/nawashiro/kazaguruma-transit/src/components/discussion/BusStopDiscussion.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/page.tsx`
+- [X] T017 [US1] 会話一覧の取得ロジックをNDK境界経由へ移行する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/page.tsx`
+- [X] T018 [US1] 会話詳細の取得ロジックをNDK境界経由へ移行しつつ既存FR-008分析呼び出し（`evaluationService.analyzeConsensus`）を再利用する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/page.tsx`
+- [X] T019 [P] [US1] 投稿作成のイベント組み立て（kind:1111優先、kind:1後方互換読取）を実装する in `/root/nawashiro/kazaguruma-transit/src/lib/discussion/user-creation-flow.ts`
+- [X] T020 [P] [US1] 投稿評価（NIP-25 kind:7）の送信処理を実装する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/EvaluationComponent.tsx`
+- [X] T021 [US1] 会話詳細の投稿表示で承認済みのみ表示するフィルタを実装する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/BusStopDiscussion.tsx`
+- [X] T022 [US1] 未ログイン時の投稿/評価操作にログイン導線を統一する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/LoginModal.tsx`
+- [X] T023 [US1] ローディング/空/エラー状態を会話一覧・詳細・合意形成分析表示に適用する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/DiscussionTabLayout.tsx` `/root/nawashiro/kazaguruma-transit/src/components/discussion/BusStopDiscussion.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/page.tsx`
 
 **Checkpoint**: US1 should be fully functional and independently testable
 

@@ -8,7 +8,10 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import { DiscussionListTabLayout } from "@/components/discussion/DiscussionListTabLayout";
-import { createNostrService } from "@/lib/nostr/nostr-service";
+import {
+  createDiscussionNdkGateway,
+  type NostrEventDTO,
+} from "@/lib/nostr/discussion-ndk-gateway";
 import {
   parseDiscussionEvent,
   parsePostEvent,
@@ -26,13 +29,13 @@ import type {
   PostApproval,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import type { Event } from "nostr-tools";
 
-const nostrService = createNostrService(getNostrServiceConfig());
+const discussionGateway = createDiscussionNdkGateway(getNostrServiceConfig());
 
 export default function DiscussionsPage() {
   const [discussions, setDiscussions] = React.useState<Discussion[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
   const discussionStreamCleanupRef = useRef<(() => void) | null>(null);
@@ -45,6 +48,7 @@ export default function DiscussionsPage() {
     if (!isDiscussionsEnabled()) return;
     const loadSequence = ++loadSequenceRef.current;
     setIsLoading(true);
+    setLoadError(null);
     setDiscussions([]);
     approvalStreamCleanupRef.current?.();
     approvalStreamCleanupRef.current = null;
@@ -68,7 +72,7 @@ export default function DiscussionsPage() {
         discussionInfo.discussionId
       );
 
-      const parseDiscussionsFromEvents = (events: Event[]) => {
+      const parseDiscussionsFromEvents = (events: NostrEventDTO[]) => {
         const parsed = events
           .map(parseDiscussionEvent)
           .filter((d): d is Discussion => d !== null);
@@ -85,7 +89,7 @@ export default function DiscussionsPage() {
         );
       };
 
-      const updateFromApprovals = async (events: Event[]) => {
+      const updateFromApprovals = async (events: NostrEventDTO[]) => {
         if (loadSequenceRef.current !== loadSequence) return;
         const listApprovals = events
           .map(parseApprovalEvent)
@@ -115,27 +119,49 @@ export default function DiscussionsPage() {
 
         const parsedIndividualDiscussions: Discussion[] = [];
         if (individualDiscussionRefs.size > 0) {
+          const discussionFilters = Array.from(individualDiscussionRefs)
+            .map((ref) => {
+              const parts = ref.split(":");
+              if (parts.length !== 3 || parts[0] !== "34550") {
+                return null;
+              }
+              const [, pubkey, dTag] = parts;
+              return {
+                kinds: [34550],
+                authors: [pubkey],
+                "#d": [dTag],
+                limit: 1,
+              };
+            })
+            .filter((filter): filter is NonNullable<typeof filter> =>
+              Boolean(filter)
+            );
+
           discussionStreamCleanupRef.current?.();
-          discussionStreamCleanupRef.current =
-            nostrService.streamReferencedUserDiscussions(
-              Array.from(individualDiscussionRefs),
-              {
-                onEvent: (discussionEvents) => {
-                  if (loadSequenceRef.current !== loadSequence) return;
-                  const parsed = parseDiscussionsFromEvents(discussionEvents);
-                  if (parsed.length > 0) {
-                    setDiscussions(parsed);
-                    setIsLoading(false);
-                  }
-                },
-                onEose: (discussionEvents) => {
-                  if (loadSequenceRef.current !== loadSequence) return;
-                  const parsed = parseDiscussionsFromEvents(discussionEvents);
+          if (discussionFilters.length === 0) {
+            setDiscussions([]);
+            setIsLoading(false);
+            return;
+          }
+          discussionStreamCleanupRef.current = discussionGateway.subscribe(
+            discussionFilters,
+            {
+              onEvent: (discussionEvents) => {
+                if (loadSequenceRef.current !== loadSequence) return;
+                const parsed = parseDiscussionsFromEvents(discussionEvents);
+                if (parsed.length > 0) {
                   setDiscussions(parsed);
                   setIsLoading(false);
-                },
-              }
-            );
+                }
+              },
+              onEose: (discussionEvents) => {
+                if (loadSequenceRef.current !== loadSequence) return;
+                const parsed = parseDiscussionsFromEvents(discussionEvents);
+                setDiscussions(parsed);
+                setIsLoading(false);
+              },
+            }
+          ).close;
 
           return;
         }
@@ -144,15 +170,21 @@ export default function DiscussionsPage() {
         setIsLoading(false);
       };
 
-      approvalStreamCleanupRef.current = nostrService.streamApprovals(
-        discussionInfo.discussionId,
+      approvalStreamCleanupRef.current = discussionGateway.subscribe(
+        [
+          {
+            kinds: [4550],
+            "#a": [discussionInfo.discussionId],
+          },
+        ],
         {
           onEose: updateFromApprovals,
-          onEvent: () => {},
+          onEvent: () => undefined,
         }
-      );
+      ).close;
     } catch (error) {
       logger.error("Failed to load discussion list:", error);
+      setLoadError("会話一覧の取得に失敗しました。時間をおいて再度お試しください。");
       setDiscussions([]);
       setIsLoading(false);
     } finally {
@@ -231,6 +263,10 @@ export default function DiscussionsPage() {
                       <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
                     </div>
                   ))}
+                </div>
+              ) : loadError ? (
+                <div className="alert alert-error" role="alert">
+                  <span>{loadError}</span>
                 </div>
               ) : discussions.length > 0 ? (
                 <div className="space-y-4">

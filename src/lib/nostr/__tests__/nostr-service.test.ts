@@ -1,5 +1,7 @@
 import { NostrService, NostrServiceConfig } from "../nostr-service";
 import { naddrEncode } from "../naddr-utils";
+import fs from "fs";
+import path from "path";
 
 // Mocks for nostr-tools
 const mockQuerySync = jest.fn();
@@ -225,5 +227,22 @@ describe("NostrService event retrieval", () => {
     expect(onEvent).not.toHaveBeenCalled();
     expect(onEose).toHaveBeenCalledWith([]);
     expect(typeof cleanup).toBe("function");
+  });
+});
+
+describe("Foundation regression checks", () => {
+  it("does not import nostr-tools outside src/lib/nostr in foundational targets", () => {
+    const projectRoot = process.cwd();
+    const targets = [
+      "src/lib/auth/auth-context.tsx",
+      "src/lib/discussion/user-creation-flow.ts",
+      "src/types/discussion.ts",
+    ];
+
+    for (const target of targets) {
+      const absolutePath = path.join(projectRoot, target);
+      const content = fs.readFileSync(absolutePath, "utf-8");
+      expect(content).not.toMatch(/from\s+["']nostr-tools["']/);
+    }
   });
 });

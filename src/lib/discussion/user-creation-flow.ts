@@ -1,4 +1,7 @@
-import type { Event } from "nostr-tools";
+import type {
+  NostrEventDraft,
+  NostrEventDTO,
+} from "@/lib/nostr/discussion-ndk-gateway";
 import { isValidNpub, npubToHex } from "@/lib/nostr/nostr-utils";
 import { naddrEncode, naddrDecode } from "@/lib/nostr/naddr-utils";
 import { logger } from "@/utils/logger";
@@ -19,8 +22,8 @@ export interface CreationFlowParams {
   formData: DiscussionCreationForm;
   userPubkey: string;
   adminPubkey: string;
-  signEvent: (event: Partial<Event>) => Promise<Event>;
-  publishEvent: (event: Event) => Promise<boolean>;
+  signEvent: (event: Record<string, unknown>) => Promise<NostrEventDTO>;
+  publishEvent: (event: NostrEventDTO) => Promise<boolean>;
 }
 
 export interface CreationFlowResult {
@@ -77,7 +80,7 @@ export function validateDiscussionCreationForm(
 export function createDiscussionCreationEvent(
   form: DiscussionCreationForm,
   userPubkey: string
-): Partial<Event> {
+): NostrEventDraft {
   // ID is now required and validated above, so we can safely use it
   const dTag = form.dTag!.trim();
 
@@ -108,7 +111,7 @@ export function createDiscussionListingRequest(
   discussionNaddr: string,
   adminPubkey: string,
   userPubkey: string
-): Partial<Event> {
+): NostrEventDraft {
   const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
   if (!discussionListNaddr) {
     throw new Error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is required");
@@ -175,9 +178,11 @@ export async function processDiscussionCreationFlow(
       params.userPubkey
     );
 
-    let signedDiscussionEvent: Event;
+    let signedDiscussionEvent: NostrEventDTO;
     try {
-      signedDiscussionEvent = await params.signEvent(discussionEvent);
+      signedDiscussionEvent = await params.signEvent(
+        discussionEvent as unknown as Record<string, unknown>
+      );
     } catch (error) {
       logger.error("Failed to sign discussion event:", error);
       return {
@@ -217,9 +222,11 @@ export async function processDiscussionCreationFlow(
       params.userPubkey
     );
 
-    let signedListingRequest: Event;
+    let signedListingRequest: NostrEventDTO;
     try {
-      signedListingRequest = await params.signEvent(listingRequest);
+      signedListingRequest = await params.signEvent(
+        listingRequest as unknown as Record<string, unknown>
+      );
     } catch (error) {
       logger.error("Failed to sign listing request:", error);
       return {

@@ -20,6 +20,12 @@ import {
   getVisibleProfileInfo 
 } from '../permission-system';
 import type { Discussion } from '../../../types/discussion';
+import { formatBip39JapaneseMnemonicPreviewFromPubkey } from '../../nostr/mnemonic-utils';
+import {
+  mapDiscussionAuditTimeline,
+  mapListAuditTimeline,
+} from '../audit-timeline-mapper';
+import type { NostrEventDTO } from '../../nostr/discussion-ndk-gateway';
 
 // Mock dependencies
 jest.mock('../../nostr/nostr-service');
@@ -288,5 +294,80 @@ describe('Discussion System Integration', () => {
       const unauthApprovePermission = canApprovePost(null, mockDiscussion, mockAdminPubkey);
       expect(unauthApprovePermission).toBe(false);
     });
+  });
+});
+
+describe("Foundation regression checks", () => {
+  it("formats pubkey mnemonic as BIP39 Japanese 3-word preview", () => {
+    const pubkey =
+      "f".repeat(64);
+    const mnemonic = formatBip39JapaneseMnemonicPreviewFromPubkey(pubkey);
+    const words = mnemonic.split(" ");
+
+    expect(words).toHaveLength(3);
+    expect(words.every((word) => word.length > 0)).toBe(true);
+  });
+
+  it("maps list audit events to requested-only timeline types", () => {
+    const listingEvent: NostrEventDTO = {
+      id: "listing-1",
+      kind: 1111,
+      pubkey: "a".repeat(64),
+      created_at: 100,
+      tags: [
+        ["a", "34550:creator:list"],
+        ["q", "34550:creator:discussion"],
+      ],
+      content: "nostr:naddr1example",
+      sig: "s".repeat(128),
+    };
+    const promotionEvent: NostrEventDTO = {
+      id: "promotion-1",
+      kind: 1111,
+      pubkey: "b".repeat(64),
+      created_at: 90,
+      tags: [
+        ["a", "34550:creator:discussion"],
+        ["t", "moderator-request"],
+      ],
+      content: "",
+      sig: "s".repeat(128),
+    };
+
+    const result = mapListAuditTimeline([listingEvent, promotionEvent]);
+    expect(result.map((item) => item.type)).toEqual([
+      "listing-requested",
+      "promotion-requested",
+    ]);
+  });
+
+  it("maps discussion audit events to submitted/requested only", () => {
+    const postEvent: NostrEventDTO = {
+      id: "post-1",
+      kind: 1111,
+      pubkey: "c".repeat(64),
+      created_at: 100,
+      tags: [["a", "34550:creator:discussion"]],
+      content: "hello",
+      sig: "s".repeat(128),
+    };
+    const promotionEvent: NostrEventDTO = {
+      id: "promotion-2",
+      kind: 1111,
+      pubkey: "d".repeat(64),
+      created_at: 99,
+      tags: [
+        ["a", "34550:creator:discussion"],
+        ["t", "moderator-request"],
+      ],
+      content: "",
+      sig: "s".repeat(128),
+    };
+
+    const result = mapDiscussionAuditTimeline([postEvent, promotionEvent]);
+    expect(result.map((item) => item.type)).toEqual([
+      "post-submitted",
+      "promotion-requested",
+    ]);
   });
 });

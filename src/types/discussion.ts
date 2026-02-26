@@ -1,5 +1,5 @@
-import type { Event } from 'nostr-tools'
 import type { PWKBlob } from 'nosskey-sdk'
+import type { NostrEventDTO } from '@/lib/nostr/discussion-ndk-gateway'
 
 export interface NostrProfile {
   name?: string
@@ -21,7 +21,7 @@ export interface Discussion {
   moderators: DiscussionModerator[]
   authorPubkey: string
   createdAt: number
-  event: Event
+  event: NostrEventDTO
   // spec_v2.md要件: 承認システム対応
   approvedAt?: number
   approvalReference?: string
@@ -37,7 +37,7 @@ export interface DiscussionPost {
   approved: boolean
   approvedBy?: string[]
   approvedAt?: number
-  event: Event
+  event: NostrEventDTO
 }
 
 export interface PostApproval {
@@ -47,7 +47,7 @@ export interface PostApproval {
   moderatorPubkey: string
   discussionId: string
   createdAt: number
-  event: Event
+  event: NostrEventDTO
 }
 
 export interface PostEvaluation {
@@ -57,7 +57,7 @@ export interface PostEvaluation {
   rating: '+' | '-'
   discussionId?: string
   createdAt: number
-  event: Event
+  event: NostrEventDTO
 }
 
 export interface DiscussionRequest {
@@ -67,7 +67,7 @@ export interface DiscussionRequest {
   requesterPubkey: string
   adminPubkey: string
   createdAt: number
-  event: Event
+  event: NostrEventDTO
 }
 
 export interface EvaluationStats {
@@ -131,7 +131,7 @@ export interface AuditTimelineItem {
   actorName?: string
   targetId?: string
   description: string
-  event: Event
+  event: NostrEventDTO
 }
 
 export interface BusStop {
@@ -162,7 +162,7 @@ export interface DiscussionRequestFormData {
   description: string
 }
 
-export interface NostrEventWithProfile extends Event {
+export interface NostrEventWithProfile extends NostrEventDTO {
   profile?: NostrProfile
 }
 
@@ -212,6 +212,31 @@ export interface AuditPageState extends LoadingState {
   isLoaded: boolean
   /** 再試行可能なエラーかどうか */
   isRetryable: boolean
+}
+
+export interface ListAuditTimelineDTO {
+  id: string
+  type: 'listing-requested' | 'promotion-requested'
+  actorPubkey: string
+  actorMnemonic: string
+  timestamp: number
+  targetRef?: string
+  approvalState: 'unapproved' | 'approved'
+  approvedByPubkey?: string
+  approvedByMnemonic?: string
+}
+
+export interface DiscussionAuditTimelineDTO {
+  id: string
+  type: 'post-submitted' | 'promotion-requested'
+  actorPubkey: string
+  actorMnemonic: string
+  discussionRef?: string
+  timestamp: number
+  targetRef?: string
+  approvalState: 'unapproved' | 'approved'
+  approvedByPubkey?: string
+  approvedByMnemonic?: string
 }
 
 export interface DiscussionError extends Error {

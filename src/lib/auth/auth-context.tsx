@@ -13,7 +13,7 @@ import type { UserAuth } from "@/types/discussion";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import { parseProfileEvent } from "@/lib/nostr/nostr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
-import type { Event } from "nostr-tools";
+import type { NostrEventDTO } from "@/lib/nostr/discussion-ndk-gateway";
 import { logger } from "@/utils/logger";
 
 interface PWKEvent {
@@ -28,7 +28,7 @@ interface AuthContextType {
   login: () => Promise<void>;
   createAccount: (username?: string) => Promise<void>;
   logout: () => void;
-  signEvent: (event: Record<string, unknown>) => Promise<Event>;
+  signEvent: (event: Record<string, unknown>) => Promise<NostrEventDTO>;
   refreshProfile: () => Promise<void>;
   isLoading: boolean;
   error: string | null;
@@ -263,7 +263,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const signedEvent = (await pwkManager.signEventWithPWK(
         profileEvent,
         pwk
-      )) as unknown as Event;
+      )) as unknown as NostrEventDTO;
       await nostrService.publishSignedEvent(signedEvent);
     } catch (error) {
       logger.error("Failed to publish profile:", error);
@@ -283,7 +283,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
   };
 
-  const signEvent = async (event: Record<string, unknown>): Promise<Event> => {
+  const signEvent = async (
+    event: Record<string, unknown>
+  ): Promise<NostrEventDTO> => {
     if (!user.pwk) {
       throw new Error("Not logged in");
     }
@@ -292,7 +294,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const signedEvent = (await pwkManager.signEventWithPWK(
         event as unknown as PWKEvent,
         user.pwk
-      )) as unknown as Event;
+      )) as unknown as NostrEventDTO;
       return signedEvent;
     } catch (error) {
       logger.error("Failed to sign event:", error);

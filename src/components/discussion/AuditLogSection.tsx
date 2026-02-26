@@ -250,6 +250,9 @@ export const AuditLogSection = React.forwardRef<
       return Array.from(byId.values()).sort((a, b) => b.created_at - a.created_at);
     };
 
+    const normalizePageSize = (events: Event[]): Event[] =>
+      events.slice(0, AUDIT_PAGE_SIZE);
+
     const loadAuditData = useCallback(async () => {
       if (isAuditLoaded || isAuditLoading) return;
 
@@ -277,16 +280,17 @@ export const AuditLogSection = React.forwardRef<
         }
 
         const page = await fetchAuditEventsPage();
-        setAuditEvents(page);
-        await applyAuditEvents(page, baseDiscussion);
+        const normalizedPage = normalizePageSize(page);
+        setAuditEvents(normalizedPage);
+        await applyAuditEvents(normalizedPage, baseDiscussion);
 
-        if (page.length > 0) {
-          const oldest = Math.min(...page.map((event) => event.created_at));
+        if (normalizedPage.length > 0) {
+          const oldest = Math.min(...normalizedPage.map((event) => event.created_at));
           setNextUntil(oldest - 1);
         } else {
           setNextUntil(null);
         }
-        setHasMore(page.length === AUDIT_PAGE_SIZE);
+        setHasMore(page.length >= AUDIT_PAGE_SIZE);
         setIsAuditLoaded(true);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "不明なエラー";
@@ -317,16 +321,19 @@ export const AuditLogSection = React.forwardRef<
       try {
         const baseDiscussion = discussion;
         const page = await fetchAuditEventsPage(nextUntil);
-        const merged = mergeEvents(auditEvents, page);
+        const normalizedPage = normalizePageSize(page);
+        const merged = mergeEvents(auditEvents, normalizedPage);
         setAuditEvents(merged);
         await applyAuditEvents(merged, baseDiscussion);
 
-        if (page.length > 0) {
-          const oldest = Math.min(...page.map((event) => event.created_at));
+        if (normalizedPage.length > 0) {
+          const oldest = Math.min(...normalizedPage.map((event) => event.created_at));
           setNextUntil(oldest - 1);
         }
         if (page.length < AUDIT_PAGE_SIZE) {
           setHasMore(false);
+        } else {
+          setHasMore(true);
         }
         setVisibleCount((prev) => prev + AUDIT_PAGE_SIZE);
       } catch (error) {

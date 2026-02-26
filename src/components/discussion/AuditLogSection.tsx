@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { AuditTimeline } from "@/components/discussion/AuditTimeline";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
@@ -20,10 +20,12 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
+import type { Event } from "nostr-tools";
 import { NostrEvent } from "nosskey-sdk";
 
 const nostrServiceConfig = getNostrServiceConfig();
 const nostrService = createNostrService(nostrServiceConfig);
+const AUDIT_PAGE_SIZE = 10;
 
 interface AuditLogSectionProps {
   discussion?: Discussion | null;
@@ -34,488 +36,447 @@ interface AuditLogSectionProps {
   } | null;
   conversationAuditMode?: boolean;
   referencedDiscussions?: Discussion[];
-  isDiscussionList?: boolean; // 会話一覧ページかどうかを示すフラグ
-  loadDiscussionIndependently?: boolean; // 監査ページで独自にkind:34550を取得するフラグ
+  isDiscussionList?: boolean;
+  loadDiscussionIndependently?: boolean;
   initialVisibleCount?: number;
 }
 
 export const AuditLogSection = React.forwardRef<
-  { loadAuditData: () => void },
+  { loadAuditData: () => void; retryLoadAuditData: () => void },
   AuditLogSectionProps
->(({
-  discussion: discussionProp,
-  discussionInfo,
-  conversationAuditMode = false,
-  referencedDiscussions = [],
-  isDiscussionList = false,
-  loadDiscussionIndependently = false,
-  initialVisibleCount = 10,
-}, ref) => {
-  // 監査ログ用の独立した状態
-  const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
-  const [auditApprovals, setAuditApprovals] = useState<PostApproval[]>([]);
-  const [, setAuditEvaluations] = useState<PostEvaluation[]>([]);
-  const [isAuditLoading, setIsAuditLoading] = useState(false);
-  const [isAuditLoaded, setIsAuditLoaded] = useState(false);
-  const [auditError, setAuditError] = useState<string | null>(null);
-  const [visibleCount, setVisibleCount] = useState(initialVisibleCount);
-  const [profiles, setProfiles] = useState<Record<string, { name?: string }>>(
-    {}
-  );
-  const [localReferencedDiscussions, setLocalReferencedDiscussions] = useState<Discussion[]>([]);
-  // 独自に取得したDiscussion
-  const [independentDiscussion, setIndependentDiscussion] = useState<Discussion | null>(null);
-  const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
-  const postStreamCleanupRef = useRef<(() => void) | null>(null);
-  const approvalEventsRef = useRef<any[]>([]);
-  const postEventsRef = useRef<any[]>([]);
+>(
+  (
+    {
+      discussion: discussionProp,
+      discussionInfo,
+      conversationAuditMode = false,
+      referencedDiscussions = [],
+      isDiscussionList = false,
+      loadDiscussionIndependently = false,
+      initialVisibleCount = AUDIT_PAGE_SIZE,
+    },
+    ref
+  ) => {
+    const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
+    const [auditApprovals, setAuditApprovals] = useState<PostApproval[]>([]);
+    const [, setAuditEvaluations] = useState<PostEvaluation[]>([]);
+    const [isAuditLoading, setIsAuditLoading] = useState(false);
+    const [isAuditLoaded, setIsAuditLoaded] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [auditError, setAuditError] = useState<string | null>(null);
+    const [visibleCount, setVisibleCount] = useState(initialVisibleCount);
+    const [profiles, setProfiles] = useState<Record<string, { name?: string }>>(
+      {}
+    );
+    const [localReferencedDiscussions, setLocalReferencedDiscussions] = useState<
+      Discussion[]
+    >([]);
+    const [independentDiscussion, setIndependentDiscussion] =
+      useState<Discussion | null>(null);
+    const [auditEvents, setAuditEvents] = useState<Event[]>([]);
+    const [nextUntil, setNextUntil] = useState<number | null>(null);
+    const [hasMore, setHasMore] = useState(false);
 
-  // 使用するdiscussionを決定（独自取得した場合はそちらを優先）
-  const discussion = loadDiscussionIndependently ? independentDiscussion : (discussionProp ?? null);
+    const discussion = loadDiscussionIndependently
+      ? independentDiscussion
+      : discussionProp ?? null;
 
-  /**
-   * kind:34550（Discussion）を独自に取得する
-   * FR-016: 監査ページはメイン画面に依存せず独自にDiscussionを取得する
-   */
-  const loadDiscussionForAudit = useCallback(async (): Promise<Discussion | null> => {
-    if (!discussionInfo) return null;
-
-    try {
-      logger.info("Loading discussion independently for audit page", {
-        discussionId: discussionInfo.discussionId,
-      });
-
-      // getReferencedUserDiscussionsを使用してkind:34550を取得
-      const discussionEvents = await nostrService.getReferencedUserDiscussions([
-        discussionInfo.discussionId,
-      ]);
-
-      if (discussionEvents && discussionEvents.length > 0) {
-        const parsed = parseDiscussionEvent(discussionEvents[0]);
-        if (parsed) {
-          logger.info("Discussion loaded independently", { id: parsed.id });
-          return parsed;
+    const getAuditDiscussionRef = useCallback(() => {
+      if (isDiscussionList) {
+        const listNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
+        if (!listNaddr) {
+          throw new Error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is not configured");
         }
+        const extracted = extractDiscussionFromNaddr(listNaddr);
+        if (!extracted) {
+          throw new Error("Invalid DISCUSSION_LIST_NADDR format");
+        }
+        return extracted;
       }
-
-      logger.warn("No discussion found for audit page", {
-        discussionId: discussionInfo.discussionId,
-      });
-      return null;
-    } catch (error) {
-      logger.error("Failed to load discussion for audit page:", error);
-      return null;
-    }
-  }, [discussionInfo]);
-
-  // 個別会話ページ用のデータ取得
-  const loadIndividualAuditData = useCallback(async () => {
-    if (!discussionInfo) return;
-
-    // loadDiscussionIndependentlyがtrueの場合、先にDiscussionを取得
-    let currentDiscussion = discussion;
-    if (loadDiscussionIndependently && !currentDiscussion) {
-      currentDiscussion = await loadDiscussionForAudit();
-      if (currentDiscussion) {
-        setIndependentDiscussion(currentDiscussion);
+      if (!discussionInfo) {
+        throw new Error("Discussion info is not available");
       }
-    }
+      return discussionInfo;
+    }, [discussionInfo, isDiscussionList]);
 
-    if (!currentDiscussion) {
-      logger.warn("No discussion available for audit data loading");
-      return;
-    }
+    const loadDiscussionForAudit = useCallback(async (): Promise<Discussion | null> => {
+      if (!discussionInfo) return null;
 
-    approvalStreamCleanupRef.current?.();
-    postStreamCleanupRef.current?.();
-    setIsAuditLoading(true);
+      try {
+        const discussionEvents = await nostrService.getReferencedUserDiscussions([
+          discussionInfo.discussionId,
+        ]);
 
-    const updateFromApprovals = (approvalsEvents: any[]) => {
-      approvalEventsRef.current = approvalsEvents;
-      const parsedApprovals = approvalsEvents
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
-      const parsedPosts = postEventsRef.current
-        .map((event) => parsePostEvent(event, parsedApprovals))
-        .filter((p): p is DiscussionPost => p !== null);
-
-      setAuditPosts(parsedPosts);
-      setAuditApprovals(parsedApprovals);
-      setLocalReferencedDiscussions(referencedDiscussions);
-    };
-
-    const postsStream = nostrService.streamEventsOnEvent(
-      [
-        {
-          kinds: [1111, 1],
-          "#a": [discussionInfo.discussionId],
-        },
-      ],
-      {
-        onEvent: (events) => {
-          postEventsRef.current = events;
-          updateFromApprovals(approvalEventsRef.current);
-        },
-        onEose: (events) => {
-          postEventsRef.current = events;
-          updateFromApprovals(approvalEventsRef.current);
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
+        if (discussionEvents && discussionEvents.length > 0) {
+          return parseDiscussionEvent(discussionEvents[0]);
+        }
+        return null;
+      } catch (error) {
+        logger.error("Failed to load discussion for audit page:", error);
+        return null;
       }
+    }, [discussionInfo]);
+
+    const fetchAuditEventsPage = useCallback(
+      async (until?: number): Promise<Event[]> => {
+        const targetDiscussion = getAuditDiscussionRef();
+        const filter: {
+          kinds: number[];
+          "#a": string[];
+          limit: number;
+          until?: number;
+        } = {
+          kinds: [1111, 1, 4550],
+          "#a": [targetDiscussion.discussionId],
+          limit: AUDIT_PAGE_SIZE,
+        };
+
+        if (typeof until === "number") {
+          filter.until = until;
+        }
+
+        return await nostrService.getEventsOnEose([filter]);
+      },
+      [getAuditDiscussionRef]
     );
 
-    approvalStreamCleanupRef.current = nostrService.streamApprovals(
-      discussionInfo.discussionId,
-      {
-        onEvent: updateFromApprovals,
-        onEose: (events) => {
-          updateFromApprovals(events);
-          setIsAuditLoaded(true);
-          setIsAuditLoading(false);
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
-      }
-    );
+    const updateProfiles = useCallback(
+      async (baseDiscussion: Discussion | null, posts: DiscussionPost[]) => {
+        if (isDiscussionList) {
+          const refs = new Set<string>();
+          posts.forEach((post) => {
+            const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
+            qTags.forEach((qTag) => {
+              if (qTag[1] && qTag[1].startsWith("34550:")) {
+                refs.add(qTag[1]);
+              }
+            });
+          });
 
-    postStreamCleanupRef.current = postsStream;
-    updateFromApprovals([]);
-
-    // 監査ログ用プロファイル取得（作成者・モデレーターのみ）
-    const uniquePubkeys = new Set<string>();
-
-    if (currentDiscussion) {
-      uniquePubkeys.add(currentDiscussion.authorPubkey);
-      currentDiscussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
-    }
-
-    referencedDiscussions.forEach((refDiscussion) => {
-      uniquePubkeys.add(refDiscussion.authorPubkey);
-      refDiscussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
-    });
-
-    if (uniquePubkeys.size > 0) {
-      const eventPromises = await nostrService.getProfile([...uniquePubkeys]);
-
-      const profilePromises = eventPromises.map((event: NostrEvent) => {
-        const profile: NostrProfile = JSON.parse(event.content);
-        const pubkey: string = event.pubkey || "";
-        return [pubkey, { name: profile?.name }];
-      });
-
-      const profilesMap = Object.fromEntries(profilePromises);
-
-      setProfiles(profilesMap);
-    } else {
-      setProfiles({});
-    }
-
-    logger.info("Individual audit data loaded");
-  }, [discussionInfo, discussion, referencedDiscussions, loadDiscussionIndependently, loadDiscussionForAudit]);
-
-  // 会話一覧ページ用のデータ取得
-  const loadDiscussionListAuditData = useCallback(async () => {
-    const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
-    if (!discussionListNaddr) {
-      logger.error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is not configured");
-      throw new Error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is not configured");
-    }
-
-    const listDiscussionInfo = extractDiscussionFromNaddr(discussionListNaddr);
-    if (!listDiscussionInfo) {
-      throw new Error("Invalid DISCUSSION_LIST_NADDR format");
-    }
-
-    approvalStreamCleanupRef.current?.();
-    postStreamCleanupRef.current?.();
-    setIsAuditLoading(true);
-
-    const updateFromApprovals = async (approvalsEvents: any[]) => {
-      approvalEventsRef.current = approvalsEvents;
-      const listApprovals = approvalsEvents
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
-      const listPosts = postEventsRef.current
-        .map((event) => parsePostEvent(event, listApprovals))
-        .filter((p): p is DiscussionPost => p !== null);
-
-      const individualDiscussionRefs = new Set<string>();
-      listPosts.forEach((post) => {
-        const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
-        qTags.forEach((qTag) => {
-          if (qTag[1] && qTag[1].startsWith("34550:")) {
-            individualDiscussionRefs.add(qTag[1]);
+          let nextReferenced: Discussion[] = [];
+          if (refs.size > 0) {
+            const discussionEvents = await nostrService.getReferencedUserDiscussions(
+              Array.from(refs)
+            );
+            nextReferenced = discussionEvents
+              .map(parseDiscussionEvent)
+              .filter((d): d is Discussion => d !== null);
           }
-        });
-      });
+          setLocalReferencedDiscussions(nextReferenced);
 
-      let nextReferenced: Discussion[] = [];
-      if (individualDiscussionRefs.size > 0) {
-        const individualDiscussions =
-          await nostrService.getReferencedUserDiscussions(
-            Array.from(individualDiscussionRefs)
-          );
-        nextReferenced = individualDiscussions
-          .map(parseDiscussionEvent)
-          .filter((d): d is Discussion => d !== null);
-      }
+          const uniquePubkeys = new Set<string>();
+          nextReferenced.forEach((refDiscussion) => {
+            uniquePubkeys.add(refDiscussion.authorPubkey);
+            refDiscussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
+          });
 
-      setAuditPosts(listPosts);
-      setAuditApprovals(listApprovals);
-      setLocalReferencedDiscussions(nextReferenced);
+          if (uniquePubkeys.size === 0) {
+            setProfiles({});
+            return;
+          }
 
-      const uniquePubkeys = new Set<string>();
-      nextReferenced.forEach((discussion) => {
-        uniquePubkeys.add(discussion.authorPubkey);
-        discussion.moderators.forEach((mod) =>
-          uniquePubkeys.add(mod.pubkey)
-        );
-      });
-
-      if (uniquePubkeys.size > 0) {
-        const profilePromises = Array.from(uniquePubkeys).map(
-          async (pubkey) => {
+          const profilePromises = Array.from(uniquePubkeys).map(async (pubkey) => {
             const profileEvents = await nostrService.getProfile([pubkey]);
             if (profileEvents && profileEvents.length > 0) {
               try {
-                const profile = JSON.parse(profileEvents[0].content);
-                return [pubkey, { name: profile.name || profile.display_name }];
+                const profile: NostrProfile = JSON.parse(profileEvents[0].content);
+                return [pubkey, { name: profile.name || (profile as { display_name?: string }).display_name }];
               } catch {
                 return [pubkey, {}];
               }
             }
             return [pubkey, {}];
+          });
+          setProfiles(Object.fromEntries(await Promise.all(profilePromises)));
+          return;
+        }
+
+        setLocalReferencedDiscussions(referencedDiscussions);
+
+        const uniquePubkeys = new Set<string>();
+        if (baseDiscussion) {
+          uniquePubkeys.add(baseDiscussion.authorPubkey);
+          baseDiscussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
+        }
+        referencedDiscussions.forEach((refDiscussion) => {
+          uniquePubkeys.add(refDiscussion.authorPubkey);
+          refDiscussion.moderators.forEach((mod) => uniquePubkeys.add(mod.pubkey));
+        });
+
+        if (uniquePubkeys.size === 0) {
+          setProfiles({});
+          return;
+        }
+
+        const profileEvents = await nostrService.getProfile([...uniquePubkeys]);
+        const profileEntries = profileEvents.map((event: NostrEvent) => {
+          try {
+            const profile: NostrProfile = JSON.parse(event.content);
+            return [event.pubkey || "", { name: profile?.name }];
+          } catch {
+            return [event.pubkey || "", {}];
           }
-        );
-
-        const profileResults = await Promise.all(profilePromises);
-        const profilesMap = Object.fromEntries(profileResults);
-        setProfiles(profilesMap);
-      } else {
-        setProfiles({});
-      }
-    };
-
-    const postStream = nostrService.streamEventsOnEvent(
-      [
-        {
-          kinds: [1111, 1],
-          "#a": [listDiscussionInfo.discussionId],
-        },
-      ],
-      {
-        onEvent: (events) => {
-          postEventsRef.current = events;
-          updateFromApprovals(approvalEventsRef.current);
-        },
-        onEose: (events) => {
-          postEventsRef.current = events;
-          updateFromApprovals(approvalEventsRef.current);
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
-      }
+        });
+        setProfiles(Object.fromEntries(profileEntries));
+      },
+      [isDiscussionList, referencedDiscussions]
     );
 
-    approvalStreamCleanupRef.current = nostrService.streamApprovals(
-      listDiscussionInfo.discussionId,
-      {
-        onEvent: updateFromApprovals,
-        onEose: (events) => {
-          updateFromApprovals(events);
+    const applyAuditEvents = useCallback(
+      async (events: Event[], baseDiscussion: Discussion | null) => {
+        const parsedApprovals = events
+          .map(parseApprovalEvent)
+          .filter((approval): approval is PostApproval => approval !== null);
+
+        const parsedPosts = events
+          .map((event) => parsePostEvent(event, parsedApprovals))
+          .filter((post): post is DiscussionPost => post !== null);
+
+        setAuditApprovals(parsedApprovals);
+        setAuditPosts(parsedPosts);
+        await updateProfiles(baseDiscussion, parsedPosts);
+      },
+      [updateProfiles]
+    );
+
+    const mergeEvents = (current: Event[], incoming: Event[]): Event[] => {
+      const byId = new Map<string, Event>();
+      [...current, ...incoming].forEach((event) => {
+        const existing = byId.get(event.id);
+        if (!existing || event.created_at > existing.created_at) {
+          byId.set(event.id, event);
+        }
+      });
+      return Array.from(byId.values()).sort((a, b) => b.created_at - a.created_at);
+    };
+
+    const loadAuditData = useCallback(async () => {
+      if (isAuditLoaded || isAuditLoading) return;
+
+      setIsAuditLoading(true);
+      setAuditError(null);
+      setVisibleCount(initialVisibleCount);
+
+      try {
+        let baseDiscussion = discussion;
+        if (!isDiscussionList && loadDiscussionIndependently && !baseDiscussion) {
+          baseDiscussion = await loadDiscussionForAudit();
+          if (baseDiscussion) {
+            setIndependentDiscussion(baseDiscussion);
+          }
+        }
+
+        if (discussionInfo && isTestMode(discussionInfo.dTag)) {
+          const testData = await loadTestData();
+          setAuditPosts(testData.posts);
+          setAuditApprovals([]);
+          setAuditEvaluations(testData.evaluations);
+          setLocalReferencedDiscussions([]);
           setIsAuditLoaded(true);
-          setIsAuditLoading(false);
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
+          return;
+        }
+
+        const page = await fetchAuditEventsPage();
+        setAuditEvents(page);
+        await applyAuditEvents(page, baseDiscussion);
+
+        if (page.length > 0) {
+          const oldest = Math.min(...page.map((event) => event.created_at));
+          setNextUntil(oldest - 1);
+        } else {
+          setNextUntil(null);
+        }
+        setHasMore(page.length === AUDIT_PAGE_SIZE);
+        setIsAuditLoaded(true);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "不明なエラー";
+        logger.error("Failed to load audit data:", errorMessage);
+        setAuditError("データの取得に失敗しました。再試行してください。");
+        setAuditPosts([]);
+        setAuditApprovals([]);
+      } finally {
+        setIsAuditLoading(false);
       }
+    }, [
+      applyAuditEvents,
+      discussion,
+      discussionInfo,
+      fetchAuditEventsPage,
+      initialVisibleCount,
+      isAuditLoaded,
+      isAuditLoading,
+      isDiscussionList,
+      loadDiscussionForAudit,
+      loadDiscussionIndependently,
+    ]);
+
+    const loadMoreAuditData = useCallback(async () => {
+      if (isAuditLoading || isLoadingMore || !hasMore || nextUntil === null) return;
+
+      setIsLoadingMore(true);
+      try {
+        const baseDiscussion = discussion;
+        const page = await fetchAuditEventsPage(nextUntil);
+        const merged = mergeEvents(auditEvents, page);
+        setAuditEvents(merged);
+        await applyAuditEvents(merged, baseDiscussion);
+
+        if (page.length > 0) {
+          const oldest = Math.min(...page.map((event) => event.created_at));
+          setNextUntil(oldest - 1);
+        }
+        if (page.length < AUDIT_PAGE_SIZE) {
+          setHasMore(false);
+        }
+        setVisibleCount((prev) => prev + AUDIT_PAGE_SIZE);
+      } catch (error) {
+        logger.error("Failed to load more audit data:", error);
+        setAuditError("データの取得に失敗しました。再試行してください。");
+      } finally {
+        setIsLoadingMore(false);
+      }
+    }, [
+      applyAuditEvents,
+      auditEvents,
+      discussion,
+      fetchAuditEventsPage,
+      hasMore,
+      isAuditLoading,
+      isLoadingMore,
+      nextUntil,
+    ]);
+
+    const retryLoadAuditData = useCallback(() => {
+      setIsAuditLoaded(false);
+      setAuditError(null);
+      setAuditEvents([]);
+      setNextUntil(null);
+      setHasMore(false);
+      setVisibleCount(initialVisibleCount);
+    }, [initialVisibleCount]);
+
+    const auditItems = useMemo(
+      () =>
+        createAuditTimeline(
+          isDiscussionList
+            ? localReferencedDiscussions
+            : discussion
+              ? [discussion]
+              : [],
+          [],
+          auditPosts,
+          auditApprovals
+        ),
+      [
+        auditApprovals,
+        auditPosts,
+        discussion,
+        isDiscussionList,
+        localReferencedDiscussions,
+      ]
     );
 
-    postStreamCleanupRef.current = postStream;
+    const visibleAuditItems = useMemo(
+      () => auditItems.slice(0, visibleCount),
+      [auditItems, visibleCount]
+    );
 
-    logger.info("Discussion list audit data streaming started");
-  }, []);
+    useEffect(() => {
+      return () => {
+        // reserved for future cancellation hooks
+      };
+    }, []);
 
-  /**
-   * 監査ログ専用のデータ取得
-   * エラーハンドリングとログ出力を含む（FR-007, FR-008, FR-009, FR-010）
-   */
-  const loadAuditData = useCallback(async () => {
-    if (isAuditLoaded || isAuditLoading) return;
+    React.useImperativeHandle(
+      ref,
+      () => ({
+        loadAuditData,
+        retryLoadAuditData,
+      }),
+      [loadAuditData, retryLoadAuditData]
+    );
 
-    setIsAuditLoading(true);
-    setAuditError(null);
-    setVisibleCount(initialVisibleCount);
-
-    try {
-      logger.info("Starting audit data loading", {
-        isDiscussionList,
-        loadDiscussionIndependently,
-        hasDiscussionInfo: !!discussionInfo,
-      });
-
-      // Check if this is test mode (for backward compatibility)
-      if (discussionInfo && isTestMode(discussionInfo.dTag)) {
-        const testData = await loadTestData();
-        setAuditPosts(testData.posts);
-        setAuditApprovals([]);
-        setAuditEvaluations(testData.evaluations);
-        setLocalReferencedDiscussions([]);
-        setIsAuditLoaded(true);
-        logger.info("Test mode audit data loaded");
-        return;
-      }
-
-      if (isDiscussionList) {
-        await loadDiscussionListAuditData();
-      } else {
-        await loadIndividualAuditData();
-      }
-
-      setIsAuditLoaded(true);
-      logger.info("Audit data loading completed successfully");
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "不明なエラー";
-      logger.error("Failed to load audit data:", {
-        error: errorMessage,
-        isDiscussionList,
-        discussionId: discussionInfo?.discussionId,
-      });
-      setAuditError("データの取得に失敗しました。再試行してください。");
-      // FR-009: エラー時は空データを設定し、ローディング状態を終了
-      setAuditPosts([]);
-      setAuditApprovals([]);
-    } finally {
-      setIsAuditLoading(false);
-    }
-  }, [discussionInfo, isAuditLoaded, isAuditLoading, isDiscussionList, loadDiscussionListAuditData, loadIndividualAuditData, loadDiscussionIndependently, initialVisibleCount]);
-
-  /**
-   * 再試行機能（FR-015）
-   */
-  const retryLoadAuditData = useCallback(() => {
-    setIsAuditLoaded(false);
-    setAuditError(null);
-    // 状態リセット後に次のレンダーで呼び出されるよう、直接は呼ばない
-    // useEffectで自動的にloadAuditDataが呼ばれる
-  }, []);
-
-  const auditItems = useMemo(
-    () =>
-      createAuditTimeline(
-        isDiscussionList ? localReferencedDiscussions : (discussion ? [discussion] : []),
-        [],
-        auditPosts,
-        auditApprovals
-      ),
-    [isDiscussionList, localReferencedDiscussions, discussion, auditPosts, auditApprovals]
-  );
-  const dedupedAuditItems = useMemo(() => {
-    const byId = new Map<string, typeof auditItems[number]>();
-    auditItems.forEach((item) => {
-      const existing = byId.get(item.id);
-      if (!existing || item.timestamp > existing.timestamp) {
-        byId.set(item.id, item);
-      }
-    });
-    return Array.from(byId.values()).sort((a, b) => b.timestamp - a.timestamp);
-  }, [auditItems]);
-  const visibleAuditItems = useMemo(
-    () => dedupedAuditItems.slice(0, visibleCount),
-    [dedupedAuditItems, visibleCount]
-  );
-  const hasMoreAuditItems = dedupedAuditItems.length > visibleCount;
-
-  useEffect(() => {
-    return () => {
-      approvalStreamCleanupRef.current?.();
-      postStreamCleanupRef.current?.();
-    };
-  }, []);
-
-  // refを通じて外部からloadAuditDataと再試行を呼び出せるようにする
-  React.useImperativeHandle(ref, () => ({
-    loadAuditData,
-    retryLoadAuditData,
-  }), [loadAuditData, retryLoadAuditData]);
-
-  // エラー表示コンポーネント（FR-014, FR-015）
-  const renderError = () => (
-    <div className="alert alert-error" role="alert">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="stroke-current shrink-0 h-6 w-6"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
-      <span>{auditError}</span>
-      <button
-        className="btn btn-sm btn-outline"
-        onClick={() => {
-          retryLoadAuditData();
-          // 状態リセット後にloadAuditDataを呼ぶ
-          setTimeout(() => loadAuditData(), 0);
-        }}
-      >
-        再試行
-      </button>
-    </div>
-  );
-
-  return (
-    <section aria-labelledby="audit-screen-heading">
-      <h2
-        id="audit-screen-heading"
-        className="text-xl font-semibold mb-4 ruby-text"
-      >
-        監査画面
-      </h2>
-      <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div className="card-body">
-          {auditError ? (
-            renderError()
-          ) : isAuditLoading ? (
-            <div className="animate-pulse space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-16 bg-gray-200 dark:bg-gray-700 rounded"
-                ></div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <AuditTimeline
-                items={visibleAuditItems}
-                profiles={profiles}
-                referencedDiscussions={isDiscussionList ? localReferencedDiscussions : (referencedDiscussions.length > 0 ? referencedDiscussions : (discussion ? [discussion] : []))}
-                conversationAuditMode={conversationAuditMode}
-              />
-              <div className="flex justify-center">
-                <button
-                  className="btn btn-outline rounded-full dark:rounded-sm"
-                  onClick={() =>
-                    setVisibleCount((prev) =>
-                      Math.min(prev + 10, dedupedAuditItems.length)
-                    )
-                  }
-                  disabled={!hasMoreAuditItems}
-                >
-                  さらに過去10件を表示
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+    const renderError = () => (
+      <div className="alert alert-error" role="alert">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="stroke-current shrink-0 h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <span>{auditError}</span>
+        <button
+          className="btn btn-sm btn-outline"
+          onClick={() => {
+            retryLoadAuditData();
+            setTimeout(() => loadAuditData(), 0);
+          }}
+        >
+          再試行
+        </button>
       </div>
-    </section>
-  );
-});
+    );
+
+    return (
+      <section aria-labelledby="audit-screen-heading">
+        <h2
+          id="audit-screen-heading"
+          className="text-xl font-semibold mb-4 ruby-text"
+        >
+          監査画面
+        </h2>
+        <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="card-body">
+            {auditError ? (
+              renderError()
+            ) : isAuditLoading ? (
+              <div className="animate-pulse space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-16 bg-gray-200 dark:bg-gray-700 rounded"
+                  ></div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <AuditTimeline
+                  items={visibleAuditItems}
+                  profiles={profiles}
+                  referencedDiscussions={
+                    isDiscussionList
+                      ? localReferencedDiscussions
+                      : referencedDiscussions.length > 0
+                        ? referencedDiscussions
+                        : discussion
+                          ? [discussion]
+                          : []
+                  }
+                  conversationAuditMode={conversationAuditMode}
+                />
+                <div className="flex justify-center">
+                  <button
+                    className="btn btn-outline rounded-full dark:rounded-sm"
+                    onClick={loadMoreAuditData}
+                    disabled={!hasMore || isLoadingMore}
+                  >
+                    {isLoadingMore ? "読み込み中..." : "さらに過去10件を表示"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  }
+);
 
 AuditLogSection.displayName = "AuditLogSection";

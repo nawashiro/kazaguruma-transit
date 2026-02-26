@@ -15,7 +15,10 @@ import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 export default function AuditPage() {
   const params = useParams();
   const naddr = params.naddr as string;
-  const auditRef = useRef<{ loadAuditData: () => void }>(null);
+  const auditRef = useRef<{
+    loadAuditData: () => void;
+    retryLoadAuditData: () => void;
+  }>(null);
 
   // NADDRからdiscussionInfoを抽出
   const discussionInfo = extractDiscussionFromNaddr(naddr);

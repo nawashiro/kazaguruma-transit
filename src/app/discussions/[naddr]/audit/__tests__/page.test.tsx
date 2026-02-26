@@ -25,10 +25,14 @@ jest.mock("@/components/discussion/AuditLogSection", () => ({
       discussionInfo?: { discussionId: string };
       initialVisibleCount?: number;
     },
-    ref: React.Ref<{ loadAuditData: () => void }>
+    ref: React.Ref<{
+      loadAuditData: () => void;
+      retryLoadAuditData: () => void;
+    }>
   ) {
     React.useImperativeHandle(ref, () => ({
       loadAuditData: jest.fn(),
+      retryLoadAuditData: jest.fn(),
     }));
     return (
       <div data-testid="audit-log-section">

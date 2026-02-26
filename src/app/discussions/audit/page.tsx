@@ -13,7 +13,10 @@ import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
  * 収録リクエストと承認/却下がタイムラインに表示される
  */
 export default function AuditPage() {
-  const auditRef = useRef<{ loadAuditData: () => void }>(null);
+  const auditRef = useRef<{
+    loadAuditData: () => void;
+    retryLoadAuditData: () => void;
+  }>(null);
 
   // 環境変数から会話一覧のNADDRを取得
   const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;

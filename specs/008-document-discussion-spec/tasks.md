@@ -104,7 +104,7 @@
 ### Tests for User Story 3 (write first, must fail first)
 
 - [X] T033 [P] [US3] 承認画面の権限別UI（disabled + 理由文）テストを追加する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/approve/__tests__/page.streaming.test.tsx`
-- [ ] T034 [P] [US3] 会話一覧/詳細監査の通信クエリ10件制限テスト（`limit=10` と追加取得）を追加する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/__tests__/AuditLogSection.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/audit/__tests__/page.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/audit/__tests__/page.test.tsx`
+- [X] T034 [P] [US3] 会話一覧/詳細監査の通信クエリ10件制限テスト（`limit=10` と追加取得）を追加する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/__tests__/AuditLogSection.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/audit/__tests__/page.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/audit/__tests__/page.test.tsx`
 - [X] T035 [P] [US3] 会話編集画面のモデレーター管理表示/操作権限テストを追加する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/edit/__tests__/page.streaming.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/edit/__tests__/page.test.tsx`
 - [ ] T036 [P] [US3] 監査修飾（approvedByMnemonic: BIP39日本語3語）テストを追加する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/__tests__/AuditLogSection.test.tsx` `/root/nawashiro/kazaguruma-transit/src/lib/discussion/__tests__/integration.test.ts`
 
@@ -121,7 +121,7 @@
 - [ ] T045 [US3] 会話詳細監査を `post-submitted/promotion-requested` のみ表示にする in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/audit/page.tsx` `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx`
 - [ ] T046 [US3] 監査修飾情報（approvalState/approvedByPubkey/approvedByMnemonic）の導出を実装する in `/root/nawashiro/kazaguruma-transit/src/lib/discussion/audit-timeline-mapper.ts`
 - [ ] T047 [US3] 監査UIで承認者ニーモニック（BIP39日本語3語）を表示する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx` `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditTimeline.tsx`
-- [ ] T048 [US3] 監査ログの追加読込を通信再クエリ方式（`limit=10` + cursor/until）で実装し、見かけだけページネーションを排除する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx` `/root/nawashiro/kazaguruma-transit/src/lib/nostr/nostr-service.ts`
+- [X] T048 [US3] 監査ログの追加読込を通信再クエリ方式（`limit=10` + cursor/until）で実装し、見かけだけページネーションを排除する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx` `/root/nawashiro/kazaguruma-transit/src/lib/nostr/nostr-service.ts`
 
 **Checkpoint**: US3 should be fully functional and independently testable
 

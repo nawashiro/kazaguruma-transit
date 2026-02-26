@@ -3,7 +3,7 @@
 **Input**: Design documents from `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/`
 **Prerequisites**: plan.md (required), spec.md (required), research.md, data-model.md, contracts/, quickstart.md
 
-**Tests**: この機能はspec/planでTDDが明示されているため、各ユーザーストーリーで先行テストタスクを含める。
+**Tests**: spec.md でTDD重視が明示されているため、各ユーザーストーリーで先行テストタスクを含める。
 
 **Organization**: Tasks are grouped by user story so each story can be implemented and tested independently.
 
@@ -37,7 +37,7 @@
 - [X] T009 `src/lib/nostr` 外の `nostr-tools` 参照をNDK境界呼び出しへ置換する（auth/discussion/types） in `/root/nawashiro/kazaguruma-transit/src/lib/auth/auth-context.tsx` `/root/nawashiro/kazaguruma-transit/src/lib/discussion/user-creation-flow.ts` `/root/nawashiro/kazaguruma-transit/src/types/discussion.ts`
 - [X] T010 会話一覧監査/会話詳細監査のイベント種別最小化ルール（requested/submitted）を共通化する in `/root/nawashiro/kazaguruma-transit/src/lib/discussion/audit-timeline-mapper.ts`
 - [X] T011 [P] 権限なし操作の `disabled + 理由文` 表示ヘルパーを共通化する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/PermissionGuards.tsx`
-- [X] T012 [P] Foundationの回帰テスト（nostr-tools不使用、mnemonic表示ルール）を追加する in `/root/nawashiro/kazaguruma-transit/src/lib/nostr/__tests__/nostr-service.test.ts` `/root/nawashiro/kazaguruma-transit/src/lib/discussion/__tests__/integration.test.ts`
+- [X] T012 [P] Foundation回帰テスト（nostr-tools不使用、mnemonic表示ルール）を追加する in `/root/nawashiro/kazaguruma-transit/src/lib/nostr/__tests__/nostr-service.test.ts` `/root/nawashiro/kazaguruma-transit/src/lib/discussion/__tests__/integration.test.ts`
 - [X] T013 Foundation完了時点の型・lint・テストを通す in `/root/nawashiro/kazaguruma-transit` (run `npx tsc --noEmit && npm run lint && npm test`)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
@@ -54,17 +54,17 @@
 
 - [X] T014 [P] [US1] 会話一覧/詳細の表示契約テストを追加する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/__tests__/page.streaming.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`
 - [X] T015 [P] [US1] 投稿作成・評価フローのサービステストを追加する in `/root/nawashiro/kazaguruma-transit/src/lib/discussion/__tests__/integration.test.ts`
-- [X] T016 [P] [US1] 承認済み投稿のみ評価対象かつ既存FR-008（合意形成分析）表示を維持するUIテストを追加する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/__tests__/EvaluationComponent.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`
+- [X] T016 [P] [US1] 承認済み投稿のみ評価対象かつ既存FR-008表示維持のUIテストを追加する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/__tests__/EvaluationComponent.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`
 
 ### Implementation for User Story 1
 
 - [X] T017 [US1] 会話一覧の取得ロジックをNDK境界経由へ移行する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/page.tsx`
-- [X] T018 [US1] 会話詳細の取得ロジックをNDK境界経由へ移行しつつ既存FR-008分析呼び出し（`evaluationService.analyzeConsensus`）を再利用する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/page.tsx`
-- [X] T019 [P] [US1] 投稿作成のイベント組み立て（kind:1111優先、kind:1後方互換読取）を実装する in `/root/nawashiro/kazaguruma-transit/src/lib/discussion/user-creation-flow.ts`
-- [X] T020 [P] [US1] 投稿評価（NIP-25 kind:7）の送信処理を実装する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/EvaluationComponent.tsx`
+- [X] T018 [US1] 会話詳細の取得ロジックをNDK境界経由へ移行し既存FR-008分析呼び出しを再利用する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/page.tsx`
+- [X] T019 [P] [US1] 投稿作成イベント組み立て（kind:1111優先、kind:1後方互換読取）を実装する in `/root/nawashiro/kazaguruma-transit/src/lib/discussion/user-creation-flow.ts`
+- [X] T020 [P] [US1] 投稿評価（NIP-25 kind:7）送信処理を実装する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/EvaluationComponent.tsx`
 - [X] T021 [US1] 会話詳細の投稿表示で承認済みのみ表示するフィルタを実装する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/BusStopDiscussion.tsx`
 - [X] T022 [US1] 未ログイン時の投稿/評価操作にログイン導線を統一する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/LoginModal.tsx`
-- [X] T023 [US1] ローディング/空/エラー状態を会話一覧・詳細・合意形成分析表示に適用する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/DiscussionTabLayout.tsx` `/root/nawashiro/kazaguruma-transit/src/components/discussion/BusStopDiscussion.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/page.tsx`
+- [X] T023 [US1] ローディング/空/エラー状態を会話一覧・詳細・分析表示に適用する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/DiscussionTabLayout.tsx` `/root/nawashiro/kazaguruma-transit/src/components/discussion/BusStopDiscussion.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/page.tsx`
 
 **Checkpoint**: US1 should be fully functional and independently testable
 
@@ -97,31 +97,31 @@
 
 ## Phase 5: User Story 3 - 全ユーザー公開の承認・監査画面で役割に応じて操作する (Priority: P3)
 
-**Goal**: 承認/監査の全員閲覧、会話編集画面でのモデレーター申請管理、監査の修飾表示
+**Goal**: 承認/監査の全員閲覧、モデレーター申請管理、監査修飾表示、通信クエリ10件ページング
 
-**Independent Test**: 全員閲覧・権限制御・監査10件ページング・承認者ニーモニック修飾表示を確認
+**Independent Test**: 全員閲覧・権限制御・監査10件通信ページング・承認者ニーモニック修飾表示を確認
 
 ### Tests for User Story 3 (write first, must fail first)
 
 - [X] T033 [P] [US3] 承認画面の権限別UI（disabled + 理由文）テストを追加する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/approve/__tests__/page.streaming.test.tsx`
-- [ ] T034 [P] [US3] 会話一覧監査/会話詳細監査の10件ページングテストを追加する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/audit/__tests__/page.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/audit/__tests__/page.test.tsx`
-- [X] T035 [P] [US3] 会話編集画面のモデレーター管理表示/操作権限テストを追加する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/edit/__tests__/page.streaming.test.tsx`
-- [ ] T036 [P] [US3] 監査修飾（approvedByMnemonic: BIP39日本語3語）テストを追加する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/__tests__/AuditLogSection.test.tsx`
+- [ ] T034 [P] [US3] 会話一覧/詳細監査の通信クエリ10件制限テスト（`limit=10` と追加取得）を追加する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/__tests__/AuditLogSection.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/audit/__tests__/page.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/audit/__tests__/page.test.tsx`
+- [X] T035 [P] [US3] 会話編集画面のモデレーター管理表示/操作権限テストを追加する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/edit/__tests__/page.streaming.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/edit/__tests__/page.test.tsx`
+- [ ] T036 [P] [US3] 監査修飾（approvedByMnemonic: BIP39日本語3語）テストを追加する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/__tests__/AuditLogSection.test.tsx` `/root/nawashiro/kazaguruma-transit/src/lib/discussion/__tests__/integration.test.ts`
 
 ### Implementation for User Story 3
 
 - [X] T037 [US3] 承認画面を全ユーザー閲覧可能にし承認操作は権限者のみに制御する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/approve/page.tsx`
-- [ ] T038 [US3] 権限なしユーザー向けの操作不能UI（disabled + 理由文）を全承認操作に適用する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/PermissionGuards.tsx`
-- [X] T039 [US3] モデレーター昇格申請の作成（kind:1111 + a/p + t=moderator-request）を実装する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/edit/page.tsx`
+- [ ] T038 [US3] 権限なしユーザー向けの操作不能UI（disabled + 理由文）を全承認操作に適用する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/PermissionGuards.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/approve/page.tsx`
+- [X] T039 [US3] モデレーター昇格申請の作成（kind:1111 + a/p + t=moderator-request）を実装する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/edit/page.tsx` `/root/nawashiro/kazaguruma-transit/src/lib/discussion/user-creation-flow.ts`
 - [X] T040 [US3] 会話編集画面で昇格申請一覧取得API連携を実装する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/edit/page.tsx`
-- [ ] T041 [US3] 会話編集画面で現在モデレーター一覧（BIP39日本語3語）表示を実装する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/DiscussionTabLayout.tsx`
+- [ ] T041 [US3] 会話編集画面で現在モデレーター一覧（BIP39日本語3語）表示を実装する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/DiscussionTabLayout.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/edit/page.tsx`
 - [X] T042 [US3] 会話作成者のみモデレーター追加/削除可能な操作制御を実装する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/edit/page.tsx`
 - [ ] T043 [US3] 昇格審査でkind:34550モデレーター集合更新（approved/unapproved）を実装する in `/root/nawashiro/kazaguruma-transit/src/lib/nostr/discussion-ndk-gateway.ts`
-- [ ] T044 [US3] 会話一覧監査を `listing-requested/promotion-requested` のみ表示にする in `/root/nawashiro/kazaguruma-transit/src/app/discussions/audit/page.tsx`
-- [ ] T045 [US3] 会話詳細監査を `post-submitted/promotion-requested` のみ表示にする in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/audit/page.tsx`
+- [ ] T044 [US3] 会話一覧監査を `listing-requested/promotion-requested` のみ表示にする in `/root/nawashiro/kazaguruma-transit/src/app/discussions/audit/page.tsx` `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx`
+- [ ] T045 [US3] 会話詳細監査を `post-submitted/promotion-requested` のみ表示にする in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/audit/page.tsx` `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx`
 - [ ] T046 [US3] 監査修飾情報（approvalState/approvedByPubkey/approvedByMnemonic）の導出を実装する in `/root/nawashiro/kazaguruma-transit/src/lib/discussion/audit-timeline-mapper.ts`
 - [ ] T047 [US3] 監査UIで承認者ニーモニック（BIP39日本語3語）を表示する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx` `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditTimeline.tsx`
-- [ ] T048 [US3] 会話一覧監査/詳細監査の「さらに過去10件」読み込みと重複排除を実装する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx`
+- [ ] T048 [US3] 監査ログの追加読込を通信再クエリ方式（`limit=10` + cursor/until）で実装し、見かけだけページネーションを排除する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx` `/root/nawashiro/kazaguruma-transit/src/lib/nostr/nostr-service.ts`
 
 **Checkpoint**: US3 should be fully functional and independently testable
 
@@ -133,7 +133,7 @@
 
 - [ ] T049 [P] ドキュメント整合（spec/plan/data-model/contracts/quickstart）を更新する in `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/spec.md` `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/plan.md` `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/data-model.md` `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/contracts/openapi.yaml` `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/quickstart.md`
 - [ ] T050 [P] `nostr-tools` 参照ゼロを再検証する in `/root/nawashiro/kazaguruma-transit` (run `rg -n "nostr-tools" src`)
-- [ ] T051 パフォーマンス観点（監査10件ページング、UI応答p95）の確認結果を記録する in `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/quickstart.md`
+- [ ] T051 監査10件通信ページングの負荷確認結果（取得件数ログを含む）を記録する in `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/quickstart.md`
 - [ ] T052 アクセシビリティ最終確認（disabled理由文、操作導線、44pxターゲット）を反映する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/PermissionGuards.tsx` `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx`
 - [ ] T053 型・lint・テスト・ビルドの最終検証を実施する in `/root/nawashiro/kazaguruma-transit` (run `npx tsc --noEmit && npm run lint && npm test && npm run build`)
 

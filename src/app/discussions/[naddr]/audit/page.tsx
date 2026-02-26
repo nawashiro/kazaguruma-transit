@@ -41,6 +41,7 @@ export default function AuditPage() {
       discussionInfo={discussionInfo}
       loadDiscussionIndependently={true}
       conversationAuditMode={true}
+      initialVisibleCount={10}
     />
   );
 }

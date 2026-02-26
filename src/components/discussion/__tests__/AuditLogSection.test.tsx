@@ -43,12 +43,19 @@ jest.mock("@/lib/nostr/nostr-service", () => {
 
 jest.mock("@/components/discussion/AuditTimeline", () => ({
   __esModule: true,
-  AuditTimeline: () => <div>Audit Timeline</div>,
+  AuditTimeline: ({ items }: { items: Array<{ id: string }> }) => (
+    <div>
+      <div data-testid="audit-timeline-count">{items.length}</div>
+      <div data-testid="audit-timeline-ids">{items.map((item) => item.id).join(",")}</div>
+      <div>Audit Timeline</div>
+    </div>
+  ),
 }));
 
 const { __mock: serviceMock } = jest.requireMock(
   "@/lib/nostr/nostr-service"
 );
+const nostrUtilsMock = jest.requireMock("@/lib/nostr/nostr-utils");
 
 describe("AuditLogSection", () => {
   beforeEach(() => {
@@ -261,5 +268,143 @@ describe("AuditLogSection", () => {
 
     expect(streamApprovalsCleanup).toHaveBeenCalledTimes(1);
     expect(streamPostsCleanup).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows latest 10 items first and loads 10 more on demand", async () => {
+    const streamPostsCleanup = jest.fn();
+    const streamApprovalsCleanup = jest.fn();
+    serviceMock.streamEventsOnEvent.mockImplementation(
+      (_filters: unknown, handlers: { onEose?: (events: unknown[]) => void }) => {
+        handlers.onEose?.([]);
+        return streamPostsCleanup;
+      }
+    );
+    serviceMock.streamApprovals.mockImplementation(
+      (_discussionId: string, handlers: { onEose?: (events: unknown[]) => void }) => {
+        handlers.onEose?.([]);
+        return streamApprovalsCleanup;
+      }
+    );
+    const timelineItems = Array.from({ length: 15 }).map((_, idx) => ({
+      id: `item-${idx + 1}`,
+      type: "post-submitted",
+      timestamp: 1000 - idx,
+      actorPubkey: "actor",
+      description: "desc",
+      event: { id: `event-${idx + 1}` },
+    }));
+    nostrUtilsMock.createAuditTimeline.mockReturnValue(timelineItems);
+
+    const ref = React.createRef<{ loadAuditData: () => void }>();
+    render(
+      <AuditLogSection
+        ref={ref}
+        discussion={{
+          id: "34550:pubkey:dtag",
+          dTag: "dtag",
+          title: "Test Discussion",
+          description: "",
+          moderators: [],
+          authorPubkey: "pubkey",
+          createdAt: 1234567890,
+          event: {} as any,
+        }}
+        discussionInfo={{
+          discussionId: "34550:pubkey:dtag",
+          authorPubkey: "pubkey",
+          dTag: "dtag",
+        }}
+        initialVisibleCount={10}
+      />
+    );
+
+    await act(async () => {
+      await ref.current?.loadAuditData();
+    });
+
+    expect(screen.getByTestId("audit-timeline-count")).toHaveTextContent("10");
+    expect(screen.getByRole("button", { name: "さらに過去10件を表示" })).toBeEnabled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "さらに過去10件を表示" }));
+    });
+
+    expect(screen.getByTestId("audit-timeline-count")).toHaveTextContent("15");
+    expect(screen.getByRole("button", { name: "さらに過去10件を表示" })).toBeDisabled();
+  });
+
+  it("deduplicates audit items by id when loading more", async () => {
+    const streamPostsCleanup = jest.fn();
+    const streamApprovalsCleanup = jest.fn();
+    serviceMock.streamEventsOnEvent.mockImplementation(
+      (_filters: unknown, handlers: { onEose?: (events: unknown[]) => void }) => {
+        handlers.onEose?.([]);
+        return streamPostsCleanup;
+      }
+    );
+    serviceMock.streamApprovals.mockImplementation(
+      (_discussionId: string, handlers: { onEose?: (events: unknown[]) => void }) => {
+        handlers.onEose?.([]);
+        return streamApprovalsCleanup;
+      }
+    );
+    nostrUtilsMock.createAuditTimeline.mockReturnValue([
+      {
+        id: "duplicate-item",
+        type: "post-submitted",
+        timestamp: 1000,
+        actorPubkey: "actor",
+        description: "new",
+        event: { id: "new" },
+      },
+      {
+        id: "duplicate-item",
+        type: "post-submitted",
+        timestamp: 900,
+        actorPubkey: "actor",
+        description: "old",
+        event: { id: "old" },
+      },
+      {
+        id: "unique-item",
+        type: "post-submitted",
+        timestamp: 800,
+        actorPubkey: "actor",
+        description: "unique",
+        event: { id: "unique" },
+      },
+    ]);
+
+    const ref = React.createRef<{ loadAuditData: () => void }>();
+    render(
+      <AuditLogSection
+        ref={ref}
+        discussion={{
+          id: "34550:pubkey:dtag",
+          dTag: "dtag",
+          title: "Test Discussion",
+          description: "",
+          moderators: [],
+          authorPubkey: "pubkey",
+          createdAt: 1234567890,
+          event: {} as any,
+        }}
+        discussionInfo={{
+          discussionId: "34550:pubkey:dtag",
+          authorPubkey: "pubkey",
+          dTag: "dtag",
+        }}
+        initialVisibleCount={10}
+      />
+    );
+
+    await act(async () => {
+      await ref.current?.loadAuditData();
+    });
+
+    expect(screen.getByTestId("audit-timeline-count")).toHaveTextContent("2");
+    expect(screen.getByTestId("audit-timeline-ids")).toHaveTextContent(
+      "duplicate-item,unique-item"
+    );
   });
 });

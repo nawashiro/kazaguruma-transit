@@ -36,6 +36,7 @@ interface AuditLogSectionProps {
   referencedDiscussions?: Discussion[];
   isDiscussionList?: boolean; // 会話一覧ページかどうかを示すフラグ
   loadDiscussionIndependently?: boolean; // 監査ページで独自にkind:34550を取得するフラグ
+  initialVisibleCount?: number;
 }
 
 export const AuditLogSection = React.forwardRef<
@@ -48,6 +49,7 @@ export const AuditLogSection = React.forwardRef<
   referencedDiscussions = [],
   isDiscussionList = false,
   loadDiscussionIndependently = false,
+  initialVisibleCount = 10,
 }, ref) => {
   // 監査ログ用の独立した状態
   const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
@@ -56,6 +58,7 @@ export const AuditLogSection = React.forwardRef<
   const [isAuditLoading, setIsAuditLoading] = useState(false);
   const [isAuditLoaded, setIsAuditLoaded] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(initialVisibleCount);
   const [profiles, setProfiles] = useState<Record<string, { name?: string }>>(
     {}
   );
@@ -341,6 +344,7 @@ export const AuditLogSection = React.forwardRef<
 
     setIsAuditLoading(true);
     setAuditError(null);
+    setVisibleCount(initialVisibleCount);
 
     try {
       logger.info("Starting audit data loading", {
@@ -383,7 +387,7 @@ export const AuditLogSection = React.forwardRef<
     } finally {
       setIsAuditLoading(false);
     }
-  }, [discussionInfo, isAuditLoaded, isAuditLoading, isDiscussionList, loadDiscussionListAuditData, loadIndividualAuditData, loadDiscussionIndependently]);
+  }, [discussionInfo, isAuditLoaded, isAuditLoading, isDiscussionList, loadDiscussionListAuditData, loadIndividualAuditData, loadDiscussionIndependently, initialVisibleCount]);
 
   /**
    * 再試行機能（FR-015）
@@ -405,6 +409,21 @@ export const AuditLogSection = React.forwardRef<
       ),
     [isDiscussionList, localReferencedDiscussions, discussion, auditPosts, auditApprovals]
   );
+  const dedupedAuditItems = useMemo(() => {
+    const byId = new Map<string, typeof auditItems[number]>();
+    auditItems.forEach((item) => {
+      const existing = byId.get(item.id);
+      if (!existing || item.timestamp > existing.timestamp) {
+        byId.set(item.id, item);
+      }
+    });
+    return Array.from(byId.values()).sort((a, b) => b.timestamp - a.timestamp);
+  }, [auditItems]);
+  const visibleAuditItems = useMemo(
+    () => dedupedAuditItems.slice(0, visibleCount),
+    [dedupedAuditItems, visibleCount]
+  );
+  const hasMoreAuditItems = dedupedAuditItems.length > visibleCount;
 
   useEffect(() => {
     return () => {
@@ -471,12 +490,27 @@ export const AuditLogSection = React.forwardRef<
               ))}
             </div>
           ) : (
-            <AuditTimeline
-              items={auditItems}
-              profiles={profiles}
-              referencedDiscussions={isDiscussionList ? localReferencedDiscussions : (referencedDiscussions.length > 0 ? referencedDiscussions : (discussion ? [discussion] : []))}
-              conversationAuditMode={conversationAuditMode}
-            />
+            <div className="space-y-4">
+              <AuditTimeline
+                items={visibleAuditItems}
+                profiles={profiles}
+                referencedDiscussions={isDiscussionList ? localReferencedDiscussions : (referencedDiscussions.length > 0 ? referencedDiscussions : (discussion ? [discussion] : []))}
+                conversationAuditMode={conversationAuditMode}
+              />
+              <div className="flex justify-center">
+                <button
+                  className="btn btn-outline rounded-full dark:rounded-sm"
+                  onClick={() =>
+                    setVisibleCount((prev) =>
+                      Math.min(prev + 10, dedupedAuditItems.length)
+                    )
+                  }
+                  disabled={!hasMoreAuditItems}
+                >
+                  さらに過去10件を表示
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>

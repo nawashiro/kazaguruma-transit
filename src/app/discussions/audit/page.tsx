@@ -57,6 +57,7 @@ export default function AuditPage() {
           ref={auditRef}
           discussionInfo={discussionInfo}
           isDiscussionList={true}
+          initialVisibleCount={10}
         />
       </div>
     </DiscussionListTabLayout>

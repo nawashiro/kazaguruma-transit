@@ -23,6 +23,7 @@ jest.mock("@/components/discussion/AuditLogSection", () => ({
     props: {
       loadDiscussionIndependently?: boolean;
       discussionInfo?: { discussionId: string };
+      initialVisibleCount?: number;
     },
     ref: React.Ref<{ loadAuditData: () => void }>
   ) {
@@ -36,6 +37,9 @@ jest.mock("@/components/discussion/AuditLogSection", () => ({
         </div>
         <div data-testid="discussion-info">
           {props.discussionInfo?.discussionId}
+        </div>
+        <div data-testid="initial-visible-count">
+          {props.initialVisibleCount}
         </div>
       </div>
     );
@@ -72,5 +76,12 @@ describe("Discussion Detail Audit Page", () => {
     // The "監査ログ" heading should not be in the page content
     // (It's now shown in the layout as the discussion title)
     expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+  });
+
+  it("sets initial visible count to 10 for pagination", () => {
+    render(<AuditPage />);
+    expect(screen.getByTestId("initial-visible-count")).toHaveTextContent(
+      "10"
+    );
   });
 });

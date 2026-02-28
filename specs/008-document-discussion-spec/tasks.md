@@ -33,12 +33,12 @@
 
 - [X] T006 NDK接続/購読/発行/署名の共通インターフェースを定義する in `/root/nawashiro/kazaguruma-transit/src/lib/nostr/discussion-ndk-gateway.ts`
 - [X] T007 [P] Nostrイベント→表示用DTO変換（list/detail audit共通）を実装する in `/root/nawashiro/kazaguruma-transit/src/lib/discussion/audit-timeline-mapper.ts`
-- [X] T008 [P] BIP39日本語ニーモニック先頭3フレーズ整形ユーティリティを実装する in `/root/nawashiro/kazaguruma-transit/src/lib/nostr/mnemonic-utils.ts`
-- [X] T009 `src/lib/nostr` 外の `nostr-tools` 参照をNDK境界呼び出しへ置換する（auth/discussion/types） in `/root/nawashiro/kazaguruma-transit/src/lib/auth/auth-context.tsx` `/root/nawashiro/kazaguruma-transit/src/lib/discussion/user-creation-flow.ts` `/root/nawashiro/kazaguruma-transit/src/types/discussion.ts`
+- [ ] T008 [P] BIP39日本語ニーモニック先頭3フレーズ整形ユーティリティを実装する in `/root/nawashiro/kazaguruma-transit/src/lib/nostr/mnemonic-utils.ts`
+- [ ] T009 `src/lib/nostr` 外の `nostr-tools` 参照をNDK境界呼び出しへ置換する（auth/discussion/types） in `/root/nawashiro/kazaguruma-transit/src/lib/auth/auth-context.tsx` `/root/nawashiro/kazaguruma-transit/src/lib/discussion/user-creation-flow.ts` `/root/nawashiro/kazaguruma-transit/src/types/discussion.ts`
 - [X] T010 会話一覧監査/会話詳細監査のイベント種別最小化ルール（requested/submitted）を共通化する in `/root/nawashiro/kazaguruma-transit/src/lib/discussion/audit-timeline-mapper.ts`
 - [X] T011 [P] 権限なし操作の `disabled + 理由文` 表示ヘルパーを共通化する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/PermissionGuards.tsx`
 - [X] T012 [P] Foundation回帰テスト（nostr-tools不使用、mnemonic表示ルール）を追加する in `/root/nawashiro/kazaguruma-transit/src/lib/nostr/__tests__/nostr-service.test.ts` `/root/nawashiro/kazaguruma-transit/src/lib/discussion/__tests__/integration.test.ts`
-- [X] T013 Foundation完了時点の型・lint・テストを通す in `/root/nawashiro/kazaguruma-transit` (run `npx tsc --noEmit && npm run lint && npm test`)
+- [ ] T013 Foundation完了時点の型・lint・テストを通す in `/root/nawashiro/kazaguruma-transit` (run `npx tsc --noEmit && npm run lint && npm test`)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 

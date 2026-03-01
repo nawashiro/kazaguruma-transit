@@ -10,7 +10,7 @@ import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
 import { logger } from "@/utils/logger";
 import type { Discussion } from "@/types/discussion";
-import type { Event } from "nostr-tools";
+import type { Event } from "@/lib/nostr/nostr-service";
 
 interface DiscussionTabLayoutProps {
   /** タブナビゲーションのベースURL（例: "/discussions" または "/discussions/[naddr]"） */

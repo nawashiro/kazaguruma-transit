@@ -32,7 +32,7 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { CheckBadgeIcon } from "@heroicons/react/24/outline";
-import type { Event } from "nostr-tools";
+import type { Event } from "@/lib/nostr/nostr-service";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrServiceConfig = getNostrServiceConfig();

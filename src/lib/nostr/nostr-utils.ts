@@ -1,5 +1,5 @@
-import type { Event } from "nostr-tools";
-import * as nip19 from "nostr-tools/nip19";
+import { nip19 } from "@nostr-dev-kit/ndk";
+import type { Event } from "@/lib/nostr/nostr-service";
 import type {
   Discussion,
   DiscussionPost,

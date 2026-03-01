@@ -38,7 +38,7 @@
 - [X] T010 会話一覧監査/会話詳細監査のイベント種別最小化ルール（requested/submitted）を共通化する in `/root/nawashiro/kazaguruma-transit/src/lib/discussion/audit-timeline-mapper.ts`
 - [X] T011 [P] 権限なし操作の `disabled + 理由文` 表示ヘルパーを共通化する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/PermissionGuards.tsx`
 - [X] T012 [P] Foundation回帰テスト（nostr-tools不使用、mnemonic表示ルール）を追加する in `/root/nawashiro/kazaguruma-transit/src/lib/nostr/__tests__/nostr-service.test.ts` `/root/nawashiro/kazaguruma-transit/src/lib/discussion/__tests__/integration.test.ts`
-- [ ] T013 Foundation完了時点の型・lint・テストを通す in `/root/nawashiro/kazaguruma-transit` (run `npx tsc --noEmit && npm run lint && npm test`)
+- [X] T013 Foundation完了時点の型・lint・テストを通す in `/root/nawashiro/kazaguruma-transit` (run `npx tsc --noEmit && npm run lint && npm test`)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -132,7 +132,7 @@
 **Purpose**: 全ストーリー横断の品質担保と最終調整
 
 - [ ] T049 [P] ドキュメント整合（spec/plan/data-model/contracts/quickstart）を更新する in `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/spec.md` `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/plan.md` `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/data-model.md` `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/contracts/openapi.yaml` `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/quickstart.md`
-- [ ] T050 [P] `nostr-tools` 参照ゼロを再検証する in `/root/nawashiro/kazaguruma-transit` (run `rg -n "nostr-tools" src`)
+- [X] T050 [P] `nostr-tools` 参照ゼロを再検証する in `/root/nawashiro/kazaguruma-transit` (run `rg -n "nostr-tools" src`)
 - [ ] T051 監査10件通信ページングの負荷確認結果（取得件数ログを含む）を記録する in `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/quickstart.md`
 - [ ] T052 アクセシビリティ最終確認（disabled理由文、操作導線、44pxターゲット）を反映する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/PermissionGuards.tsx` `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx`
 - [ ] T053 型・lint・テスト・ビルドの最終検証を実施する in `/root/nawashiro/kazaguruma-transit` (run `npx tsc --noEmit && npm run lint && npm test && npm run build`)

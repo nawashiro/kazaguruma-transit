@@ -20,7 +20,7 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
-import type { Event } from "nostr-tools";
+import type { Event } from "@/lib/nostr/nostr-service";
 import { NostrEvent } from "nosskey-sdk";
 
 const nostrServiceConfig = getNostrServiceConfig();

@@ -1,7 +1,15 @@
-import { SimplePool, Event, Filter, finalizeEvent } from "nostr-tools";
+import NDK, {
+  NDKEvent,
+  NDKPrivateKeySigner,
+  type NDKFilter,
+  type NostrEvent,
+} from "@nostr-dev-kit/ndk";
 import type { PWKBlob } from "nosskey-sdk";
 import { logger } from "@/utils/logger";
 import { normalizeDiscussionId } from "@/lib/nostr/naddr-utils";
+
+export type Event = NostrEvent & { id: string; sig: string; kind: number };
+export type Filter = NDKFilter<number>;
 
 export const dedupeAndSortEvents = (events: Event[]): Event[] => {
   const uniqueById = new Map<string, Event>();
@@ -53,24 +61,59 @@ export interface StreamEventsOptions {
 }
 
 export class NostrService {
-  private pool: SimplePool;
+  private ndk: NDK;
   private relays: string[];
+  private writeRelays: string[];
   private config: NostrServiceConfig;
+  private connectPromise?: Promise<void>;
 
   constructor(config: NostrServiceConfig) {
-    this.pool = new SimplePool();
     this.config = config;
     this.relays = config.relays
       .filter((relay) => relay.read)
       .map((relay) => relay.url);
+    this.writeRelays = config.relays
+      .filter((relay) => relay.write)
+      .map((relay) => relay.url);
+    this.ndk = new NDK({
+      explicitRelayUrls: Array.from(
+        new Set([...this.relays, ...this.writeRelays])
+      ),
+      autoConnectUserRelays: false,
+    });
+  }
+
+  private toRawEvent(event: NDKEvent): Event {
+    const raw = event.rawEvent();
+    return {
+      ...raw,
+      kind: Number(raw.kind),
+    };
+  }
+
+  private async ensureConnected(): Promise<void> {
+    if (!this.connectPromise) {
+      this.connectPromise = this.ndk.connect(this.config.defaultTimeout).catch(
+        (error) => {
+          this.connectPromise = undefined;
+          throw error;
+        }
+      );
+    }
+    await this.connectPromise;
   }
 
   async getEventsOnEose(filters: Filter[]): Promise<Event[]> {
     try {
+      await this.ensureConnected();
       const allEvents: Event[] = [];
       for (const filter of filters) {
-        const events = await this.pool.querySync(this.relays, filter);
-        allEvents.push(...(events || []));
+        const events = await this.ndk.fetchEvents(filter, {
+          closeOnEose: true,
+        });
+        allEvents.push(
+          ...Array.from(events).map((event) => this.toRawEvent(event))
+        );
       }
 
       return dedupeAndSortEvents(allEvents);
@@ -97,10 +140,10 @@ export class NostrService {
     let closed = false;
     let eoseCount = 0;
     const timeoutRef: { id?: ReturnType<typeof setTimeout> } = {};
-    const subscriptions: ReturnType<SimplePool["subscribeMany"]>[] = [];
+    const subscriptions: Array<{ stop: () => void }> = [];
 
     const closeSubscriptions = () => {
-      subscriptions.forEach((subscription) => subscription.close());
+      subscriptions.forEach((subscription) => subscription.stop());
     };
 
     const finalize = () => {
@@ -114,27 +157,38 @@ export class NostrService {
     };
 
     for (const filter of filters) {
-      const subscription = this.pool.subscribeMany(this.relays, filter, {
-        onevent: (event: Event) => {
-          if (closed) return;
+      const subscription = this.ndk.subscribe(
+        filter,
+        {
+          closeOnEose: true,
+          onEvent: (event) => {
+            if (closed) return;
 
-          const updated = mergeEvent(collected, event);
-          if (updated === collected) return;
+            const rawEvent = this.toRawEvent(event);
+            const updated = mergeEvent(collected, rawEvent);
+            if (updated === collected) return;
 
-          collected.length = 0;
-          collected.push(...updated);
-          onEvent([...collected], event);
+            collected.length = 0;
+            collected.push(...updated);
+            onEvent([...collected], rawEvent);
+          },
+          onEose: () => {
+            if (closed) return;
+            eoseCount += 1;
+            if (eoseCount >= filters.length) {
+              finalize();
+            }
+          },
         },
-        oneose: () => {
-          if (closed) return;
-          eoseCount += 1;
-          if (eoseCount >= filters.length) {
-            finalize();
-          }
-        },
-      });
+        true
+      );
       subscriptions.push(subscription);
     }
+
+    this.ensureConnected().catch((error) => {
+      logger.error("Failed to connect before streaming:", error);
+      finalize();
+    });
 
     timeoutRef.id = setTimeout(() => {
       finalize();
@@ -158,22 +212,32 @@ export class NostrService {
     let closed = false;
     let eoseCount = 0;
     const subscriptions = filters.map((filter) =>
-      this.pool.subscribeMany(this.relays, filter, {
-        onevent: onEvent,
-        oneose: () => {
-          if (closed) return;
-          eoseCount += 1;
-          if (eoseCount >= filters.length) {
-            onEose?.();
-          }
+      this.ndk.subscribe(
+        filter,
+        {
+          closeOnEose: true,
+          onEvent: (event) => onEvent(this.toRawEvent(event)),
+          onEose: () => {
+            if (closed) return;
+            eoseCount += 1;
+            if (eoseCount >= filters.length) {
+              onEose?.();
+            }
+          },
         },
-      })
+        true
+      )
     );
+
+    this.ensureConnected().catch((error) => {
+      logger.error("Failed to connect before subscribeToEvents:", error);
+      onEose?.();
+    });
 
     return () => {
       if (closed) return;
       closed = true;
-      subscriptions.forEach((subscription) => subscription.close());
+      subscriptions.forEach((subscription) => subscription.stop());
     };
   }
 
@@ -182,15 +246,18 @@ export class NostrService {
     secretKey: Uint8Array
   ): Promise<boolean> {
     try {
-      const signedEvent = finalizeEvent(event, secretKey);
-      const writeRelays = this.config.relays
-        .filter((relay) => relay.write)
-        .map((relay) => relay.url);
-
-      const promises = this.pool.publish(writeRelays, signedEvent);
-      const results = await Promise.allSettled(promises);
-
-      return results.some((result) => result.status === "fulfilled");
+      await this.ensureConnected();
+      const signer = new NDKPrivateKeySigner(Buffer.from(secretKey).toString("hex"));
+      const ndkEvent = new NDKEvent(this.ndk, {
+        ...event,
+        pubkey: signer.pubkey,
+      });
+      await ndkEvent.sign(signer);
+      const publishedToRelays = await ndkEvent.publish(
+        undefined,
+        this.config.defaultTimeout
+      );
+      return publishedToRelays.size > 0;
     } catch (error) {
       logger.error("Failed to publish event:", error);
       return false;
@@ -199,14 +266,13 @@ export class NostrService {
 
   async publishSignedEvent(signedEvent: Event): Promise<boolean> {
     try {
-      const writeRelays = this.config.relays
-        .filter((relay) => relay.write)
-        .map((relay) => relay.url);
-
-      const promises = this.pool.publish(writeRelays, signedEvent);
-      const results = await Promise.allSettled(promises);
-
-      return results.some((result) => result.status === "fulfilled");
+      await this.ensureConnected();
+      const ndkEvent = new NDKEvent(this.ndk, signedEvent);
+      const publishedToRelays = await ndkEvent.publish(
+        undefined,
+        this.config.defaultTimeout
+      );
+      return publishedToRelays.size > 0;
     } catch (error) {
       logger.error("Failed to publish signed event:", error);
       return false;
@@ -1043,7 +1109,8 @@ export class NostrService {
   }
 
   disconnect(): void {
-    this.pool.close(this.relays);
+    this.ndk.pool.relays.forEach((relay) => relay.disconnect());
+    this.connectPromise = undefined;
   }
 
   getPublicKeyFromPWK(pwk: PWKBlob): string {

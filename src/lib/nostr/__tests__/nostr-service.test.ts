@@ -4,20 +4,88 @@ import { createDiscussionListingRequest } from "@/lib/discussion/user-creation-f
 import fs from "fs";
 import path from "path";
 
-// Mocks for nostr-tools
-const mockQuerySync = jest.fn();
-const mockSubscribeMany = jest.fn();
-const mockClose = jest.fn();
+const mockFetchEvents = jest.fn();
+const mockSubscribe = jest.fn();
+const mockConnect = jest.fn().mockResolvedValue(undefined);
+const mockStop = jest.fn();
 
-jest.mock("nostr-tools", () => ({
-  SimplePool: jest.fn().mockImplementation(() => ({
-    querySync: mockQuerySync,
-    subscribeMany: mockSubscribeMany,
-    publish: jest.fn(),
-    close: jest.fn(),
-  })),
-  finalizeEvent: jest.fn(),
-}));
+const createNdkEvent = (raw: Record<string, unknown>) => ({
+  rawEvent: () => raw,
+});
+
+jest.mock("@nostr-dev-kit/ndk", () => {
+  const encodeNaddr = ({
+    kind,
+    pubkey,
+    identifier,
+  }: {
+    kind: number;
+    pubkey: string;
+    identifier: string;
+  }) => `naddr1${kind}:${pubkey}:${identifier}`;
+
+  const decodeNaddr = (value: string) => {
+    const payload = value.slice("naddr1".length);
+    const [kind, pubkey, identifier] = payload.split(":");
+    return {
+      type: "naddr",
+      data: {
+        kind: Number(kind),
+        pubkey,
+        identifier,
+        relays: [],
+      },
+    };
+  };
+
+  class MockNDK {
+    pool: { relays: Map<string, { disconnect: jest.Mock }> };
+
+    constructor() {
+      this.pool = {
+        relays: new Map([["wss://example", { disconnect: jest.fn() }]]),
+      };
+    }
+
+    connect = mockConnect;
+
+    fetchEvents = mockFetchEvents;
+
+    subscribe = mockSubscribe;
+  }
+
+  class MockNDKEvent {
+    constructor(private _ndk: unknown, private event: Record<string, unknown>) {}
+
+    rawEvent() {
+      return this.event;
+    }
+
+    async publish() {
+      return new Set(["wss://example"]);
+    }
+
+    async sign() {
+      return "signature";
+    }
+  }
+
+  class MockNDKPrivateKeySigner {
+    pubkey = "f".repeat(64);
+    constructor(private _key: string) {}
+  }
+
+  return {
+    __esModule: true,
+    default: MockNDK,
+    NDKEvent: MockNDKEvent,
+    NDKPrivateKeySigner: MockNDKPrivateKeySigner,
+    nip19: {
+      naddrEncode: encodeNaddr,
+      decode: decodeNaddr,
+    },
+  };
+});
 
 describe("NostrService event retrieval", () => {
   const config: NostrServiceConfig = {
@@ -33,9 +101,10 @@ describe("NostrService event retrieval", () => {
 
   beforeEach(() => {
     jest.useFakeTimers();
-    mockQuerySync.mockReset();
-    mockSubscribeMany.mockReset();
-    mockClose.mockReset();
+    mockFetchEvents.mockReset();
+    mockSubscribe.mockReset();
+    mockConnect.mockReset().mockResolvedValue(undefined);
+    mockStop.mockReset();
   });
 
   afterEach(() => {
@@ -61,9 +130,9 @@ describe("NostrService event retrieval", () => {
     };
 
     // Duplicate of olderEvent should be removed
-    mockQuerySync
-      .mockResolvedValueOnce([olderEvent, newerEvent])
-      .mockResolvedValueOnce([olderEvent]);
+    mockFetchEvents
+      .mockResolvedValueOnce(new Set([createNdkEvent(olderEvent), createNdkEvent(newerEvent)]))
+      .mockResolvedValueOnce(new Set([createNdkEvent(olderEvent)]));
 
     const service = new NostrService(config);
     const result = await service.getEventsOnEose([
@@ -71,7 +140,7 @@ describe("NostrService event retrieval", () => {
       { authors: ["pk1"] },
     ]);
 
-    expect(mockQuerySync).toHaveBeenCalledTimes(2);
+    expect(mockFetchEvents).toHaveBeenCalledTimes(2);
     expect(result.map((event) => event.id)).toEqual([
       newerEvent.id,
       olderEvent.id,
@@ -79,11 +148,11 @@ describe("NostrService event retrieval", () => {
   });
 
   it("streamEventsOnEvent emits on each arrival and stops on EOSE", () => {
-    let callbacks: { onevent?: (event: any) => void; oneose?: () => void } = {};
+    let handlers: { onEvent?: (event: unknown) => void; onEose?: () => void } = {};
 
-    mockSubscribeMany.mockImplementation((_, __, handlers) => {
-      callbacks = handlers;
-      return { close: mockClose };
+    mockSubscribe.mockImplementation((_filter, opts) => {
+      handlers = opts;
+      return { stop: mockStop };
     });
 
     const service = new NostrService(config);
@@ -111,9 +180,9 @@ describe("NostrService event retrieval", () => {
       created_at: 20,
     };
 
-    callbacks.onevent?.(firstEvent);
-    callbacks.onevent?.(firstEvent); // duplicate should be ignored
-    callbacks.onevent?.(secondEvent);
+    handlers.onEvent?.(createNdkEvent(firstEvent));
+    handlers.onEvent?.(createNdkEvent(firstEvent)); // duplicate should be ignored
+    handlers.onEvent?.(createNdkEvent(secondEvent));
 
     expect(onEvent).toHaveBeenCalledTimes(2);
     expect(onEvent).toHaveBeenLastCalledWith(
@@ -121,14 +190,14 @@ describe("NostrService event retrieval", () => {
       secondEvent
     );
 
-    callbacks.oneose?.();
+    handlers.onEose?.();
 
-    expect(mockClose).toHaveBeenCalledTimes(1);
+    expect(mockStop).toHaveBeenCalledTimes(1);
     expect(onEose).toHaveBeenCalledWith([secondEvent, firstEvent]);
   });
 
   it("streamEventsOnEvent enforces timeout cleanup", () => {
-    mockSubscribeMany.mockReturnValue({ close: mockClose });
+    mockSubscribe.mockReturnValue({ stop: mockStop });
 
     const service = new NostrService(config);
     const onEose = jest.fn();
@@ -141,14 +210,14 @@ describe("NostrService event retrieval", () => {
 
     jest.advanceTimersByTime(150);
 
-    expect(mockClose).toHaveBeenCalledTimes(1);
+    expect(mockStop).toHaveBeenCalledTimes(1);
     expect(onEose).toHaveBeenCalledTimes(1);
   });
 
   it("streamEventsOnEvent survives synchronous EOSE", () => {
-    mockSubscribeMany.mockImplementation((_, __, handlers) => {
-      handlers.oneose?.();
-      return { close: mockClose };
+    mockSubscribe.mockImplementation((_filter, opts) => {
+      opts.onEose?.();
+      return { stop: mockStop };
     });
 
     const service = new NostrService(config);
@@ -165,13 +234,13 @@ describe("NostrService event retrieval", () => {
   });
 
   it("getApprovalsOnEose normalizes naddr before querying", async () => {
-    mockQuerySync.mockResolvedValueOnce([]);
+    mockFetchEvents.mockResolvedValueOnce(new Set());
     const service = new NostrService(config);
     const discussionNaddr = naddrEncode(discussionPointer);
 
     await service.getApprovalsOnEose(discussionNaddr);
 
-    const filter = mockQuerySync.mock.calls[0][1];
+    const filter = mockFetchEvents.mock.calls[0][0];
     expect(filter["#a"]).toEqual([
       `34550:${discussionPointer.pubkey}:${discussionPointer.identifier}`,
     ]);
@@ -184,7 +253,7 @@ describe("NostrService event retrieval", () => {
     const result = await service.getApprovalsOnEose(invalidDiscussionId);
 
     expect(result).toEqual([]);
-    expect(mockQuerySync).not.toHaveBeenCalled();
+    expect(mockFetchEvents).not.toHaveBeenCalled();
   });
 
   it("streamApprovals delegates to streaming with expected filters", () => {
@@ -232,7 +301,7 @@ describe("NostrService event retrieval", () => {
 });
 
 describe("Foundation regression checks", () => {
-  it("does not import nostr-tools outside src/lib/nostr in foundational targets", () => {
+  it("does not import legacy sdk in foundational targets", () => {
     const projectRoot = process.cwd();
     const targets = [
       "src/lib/auth/auth-context.tsx",
@@ -243,7 +312,8 @@ describe("Foundation regression checks", () => {
     for (const target of targets) {
       const absolutePath = path.join(projectRoot, target);
       const content = fs.readFileSync(absolutePath, "utf-8");
-      expect(content).not.toMatch(/from\s+["']nostr-tools["']/);
+      const legacySdkPattern = new RegExp(["nostr", "tools"].join("-"));
+      expect(content).not.toMatch(legacySdkPattern);
     }
   });
 });

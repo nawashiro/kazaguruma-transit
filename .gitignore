@@ -29,6 +29,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -51,3 +52,11 @@ transit-config.json
 .gtfs/
 .codex/
 .claude/
+
+# common local/editor artifacts
+dist/
+*.tmp
+*.swp
+Thumbs.db
+.vscode/
+.idea/

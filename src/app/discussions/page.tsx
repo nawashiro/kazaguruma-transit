@@ -3,12 +3,15 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useEffect, useCallback, useRef } from "react";
+import React, { useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import { DiscussionListTabLayout } from "@/components/discussion/DiscussionListTabLayout";
-import { createNostrService } from "@/lib/nostr/nostr-service";
+import {
+  createDiscussionNdkGateway,
+  type NostrEventDTO,
+} from "@/lib/nostr/discussion-ndk-gateway";
 import {
   parseDiscussionEvent,
   parsePostEvent,
@@ -26,30 +29,23 @@ import type {
   PostApproval,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import type { Event } from "nostr-tools";
 
-const nostrService = createNostrService(getNostrServiceConfig());
+const nostrServiceConfig = getNostrServiceConfig();
+const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function DiscussionsPage() {
   const [discussions, setDiscussions] = React.useState<Discussion[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-
-  const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
-  const discussionStreamCleanupRef = useRef<(() => void) | null>(null);
-  const loadSequenceRef = useRef(0);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const { user } = useAuth();
 
   // 会話一覧専用のデータ取得
   const loadData = useCallback(async () => {
     if (!isDiscussionsEnabled()) return;
-    const loadSequence = ++loadSequenceRef.current;
     setIsLoading(true);
+    setLoadError(null);
     setDiscussions([]);
-    approvalStreamCleanupRef.current?.();
-    approvalStreamCleanupRef.current = null;
-    discussionStreamCleanupRef.current?.();
-    discussionStreamCleanupRef.current = null;
 
     try {
       const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
@@ -68,7 +64,7 @@ export default function DiscussionsPage() {
         discussionInfo.discussionId
       );
 
-      const parseDiscussionsFromEvents = (events: Event[]) => {
+      const parseDiscussionsFromEvents = (events: NostrEventDTO[]) => {
         const parsed = events
           .map(parseDiscussionEvent)
           .filter((d): d is Discussion => d !== null);
@@ -85,74 +81,97 @@ export default function DiscussionsPage() {
         );
       };
 
-      const updateFromApprovals = async (events: Event[]) => {
-        if (loadSequenceRef.current !== loadSequence) return;
-        const listApprovals = events
-          .map(parseApprovalEvent)
-          .filter((a): a is PostApproval => a !== null);
-
-        const listPosts = listApprovals
-          .map((approval) => {
-            try {
-              const approvedPost = JSON.parse(approval.event.content);
-              return parsePostEvent(approvedPost, [approval]);
-            } catch {
-              return null;
-            }
-          })
-          .filter((p): p is DiscussionPost => p !== null)
-          .sort((a, b) => b.createdAt - a.createdAt);
-
-        const individualDiscussionRefs = new Set<string>();
-        listPosts.forEach((post) => {
-          const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
-          qTags.forEach((qTag) => {
-            if (qTag[1] && qTag[1].startsWith("34550:")) {
-              individualDiscussionRefs.add(qTag[1]);
-            }
-          });
-        });
-
-        const parsedIndividualDiscussions: Discussion[] = [];
-        if (individualDiscussionRefs.size > 0) {
-          discussionStreamCleanupRef.current?.();
-          discussionStreamCleanupRef.current =
-            nostrService.streamReferencedUserDiscussions(
-              Array.from(individualDiscussionRefs),
-              {
-                onEvent: (discussionEvents) => {
-                  if (loadSequenceRef.current !== loadSequence) return;
-                  const parsed = parseDiscussionsFromEvents(discussionEvents);
-                  if (parsed.length > 0) {
-                    setDiscussions(parsed);
-                    setIsLoading(false);
-                  }
-                },
-                onEose: (discussionEvents) => {
-                  if (loadSequenceRef.current !== loadSequence) return;
-                  const parsed = parseDiscussionsFromEvents(discussionEvents);
-                  setDiscussions(parsed);
-                  setIsLoading(false);
-                },
-              }
-            );
-
-          return;
-        }
-
-        setDiscussions(parsedIndividualDiscussions);
-        setIsLoading(false);
-      };
-
-      approvalStreamCleanupRef.current = nostrService.streamApprovals(
-        discussionInfo.discussionId,
+      const approvalsResult = await discussionGateway.queryWithCompletion(
+        [
+          {
+            kinds: [4550],
+            "#a": [discussionInfo.discussionId],
+          },
+        ],
         {
-          onEose: updateFromApprovals,
-          onEvent: () => {},
+          idleTimeoutMs: nostrServiceConfig.defaultTimeout,
+          hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
         }
       );
+      logger.info("discussions-list approvals fetch completed", {
+        discussionId: discussionInfo.discussionId,
+        completionReason: approvalsResult.completionReason,
+        eventCount: approvalsResult.eventCount,
+        elapsedMs: approvalsResult.elapsedMs,
+      });
+
+      const listApprovals = approvalsResult.events
+        .map(parseApprovalEvent)
+        .filter((a): a is PostApproval => a !== null);
+
+      const listPosts = listApprovals
+        .map((approval) => {
+          try {
+            const approvedPost = JSON.parse(approval.event.content);
+            return parsePostEvent(approvedPost, [approval]);
+          } catch {
+            return null;
+          }
+        })
+        .filter((p): p is DiscussionPost => p !== null)
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+      const individualDiscussionRefs = new Set<string>();
+      listPosts.forEach((post) => {
+        const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
+        qTags.forEach((qTag) => {
+          if (qTag[1] && qTag[1].startsWith("34550:")) {
+            individualDiscussionRefs.add(qTag[1]);
+          }
+        });
+      });
+
+      if (individualDiscussionRefs.size === 0) {
+        setDiscussions([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const discussionFilters = Array.from(individualDiscussionRefs)
+        .map((ref) => {
+          const parts = ref.split(":");
+          if (parts.length !== 3 || parts[0] !== "34550") {
+            return null;
+          }
+          const [, pubkey, dTag] = parts;
+          return {
+            kinds: [34550],
+            authors: [pubkey],
+            "#d": [dTag],
+            limit: 1,
+          };
+        })
+        .filter((filter): filter is NonNullable<typeof filter> => Boolean(filter));
+
+      if (discussionFilters.length === 0) {
+        setDiscussions([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const discussionsResult = await discussionGateway.queryWithCompletion(
+        discussionFilters,
+        {
+          idleTimeoutMs: nostrServiceConfig.defaultTimeout,
+          hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
+        }
+      );
+      logger.info("discussions-list metadata fetch completed", {
+        discussionId: discussionInfo.discussionId,
+        completionReason: discussionsResult.completionReason,
+        eventCount: discussionsResult.eventCount,
+        elapsedMs: discussionsResult.elapsedMs,
+      });
+      setDiscussions(parseDiscussionsFromEvents(discussionsResult.events));
+      setIsLoading(false);
     } catch (error) {
       logger.error("Failed to load discussion list:", error);
+      setLoadError("会話一覧の取得に失敗しました。時間をおいて再度お試しください。");
       setDiscussions([]);
       setIsLoading(false);
     } finally {
@@ -165,13 +184,6 @@ export default function DiscussionsPage() {
     if (isDiscussionsEnabled()) {
       loadData();
     }
-
-    return () => {
-      approvalStreamCleanupRef.current?.();
-      approvalStreamCleanupRef.current = null;
-      discussionStreamCleanupRef.current?.();
-      discussionStreamCleanupRef.current = null;
-    };
   }, [loadData]);
 
   // ディスカッション機能が有効になっているか確認し、それに応じて表示を切り替える
@@ -231,6 +243,10 @@ export default function DiscussionsPage() {
                       <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
                     </div>
                   ))}
+                </div>
+              ) : loadError ? (
+                <div className="alert alert-error" role="alert">
+                  <span>{loadError}</span>
                 </div>
               ) : discussions.length > 0 ? (
                 <div className="space-y-4">

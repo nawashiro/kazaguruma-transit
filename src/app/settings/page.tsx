@@ -17,14 +17,19 @@ import {
 } from "@/lib/nostr/nostr-utils";
 import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
 import { createNostrService } from "@/lib/nostr/nostr-service";
+import { type CompletionReason } from "@/lib/nostr/nostr-service";
+import {
+  createDiscussionNdkGateway,
+  type NostrEventDTO,
+} from "@/lib/nostr/discussion-ndk-gateway";
 import { LoginModal } from "@/components/discussion/LoginModal";
 import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import type { Event } from "nostr-tools";
 
 const nostrServiceConfig = getNostrServiceConfig();
 const nostrService = createNostrService(nostrServiceConfig);
+const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function SettingsPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -32,16 +37,18 @@ export default function SettingsPage() {
   const [isCopied, setIsCopied] = useState(false);
   const [myDiscussions, setMyDiscussions] = useState<Discussion[]>([]);
   const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(false);
+  const [discussionsCompletionReason, setDiscussionsCompletionReason] =
+    useState<CompletionReason | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
     null
   );
   const [isDeletingDiscussion, setIsDeletingDiscussion] = useState(false);
-  const discussionsStreamCleanupRef = useRef<(() => void) | null>(null);
+  const loadSequenceRef = useRef(0);
 
   const { user, logout, isLoading, error, signEvent } = useAuth();
 
 
-  const updateDiscussions = useCallback((events: Event[]) => {
+  const updateDiscussions = useCallback((events: NostrEventDTO[]) => {
     const parsedDiscussions = events
       .map(parseDiscussionEvent)
       .filter((d): d is Discussion => d !== null)
@@ -50,52 +57,60 @@ export default function SettingsPage() {
     setMyDiscussions(parsedDiscussions);
   }, []);
 
-  const startStreamingDiscussions = useCallback(() => {
+  const loadDiscussions = useCallback(async () => {
+    const loadSequence = ++loadSequenceRef.current;
+
     if (!user.isLoggedIn || !user.pubkey || !isDiscussionsEnabled()) {
-      discussionsStreamCleanupRef.current?.();
-      discussionsStreamCleanupRef.current = null;
       setIsLoadingDiscussions(false);
+      setDiscussionsCompletionReason(null);
       setMyDiscussions([]);
       return;
     }
 
-    discussionsStreamCleanupRef.current?.();
     setIsLoadingDiscussions(true);
+    setDiscussionsCompletionReason(null);
 
-    discussionsStreamCleanupRef.current = nostrService.streamEventsOnEvent(
-      [
+    try {
+      const result = await discussionGateway.queryDiscussionsByAuthorWithCompletion(
+        user.pubkey,
         {
-          kinds: [34550],
-          authors: [user.pubkey],
-        },
-      ],
-      {
-        onEvent: (events) => {
-          updateDiscussions(events);
-          setIsLoadingDiscussions(false);
-        },
-        onEose: (events) => {
-          updateDiscussions(events);
-          setIsLoadingDiscussions(false);
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
+          idleTimeoutMs: nostrServiceConfig.defaultTimeout,
+          hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
+        }
+      );
+      if (loadSequenceRef.current !== loadSequence) return;
+
+      logger.info("settings discussions fetch completed", {
+        authorPubkey: user.pubkey,
+        completionReason: result.completionReason,
+        eventCount: result.eventCount,
+        elapsedMs: result.elapsedMs,
+      });
+
+      updateDiscussions(result.events);
+      setDiscussionsCompletionReason(result.completionReason);
+    } catch (error) {
+      if (loadSequenceRef.current !== loadSequence) return;
+      logger.error("Failed to load discussions in settings:", error);
+      setMyDiscussions([]);
+      setDiscussionsCompletionReason("hard-timeout");
+    } finally {
+      if (loadSequenceRef.current === loadSequence) {
+        setIsLoadingDiscussions(false);
       }
-    );
+    }
   }, [
     updateDiscussions,
     user.isLoggedIn,
     user.pubkey,
-    nostrServiceConfig.defaultTimeout,
   ]);
 
   useEffect(() => {
-    startStreamingDiscussions();
-
+    void loadDiscussions();
     return () => {
-      discussionsStreamCleanupRef.current?.();
-      discussionsStreamCleanupRef.current = null;
+      loadSequenceRef.current += 1;
     };
-  }, [startStreamingDiscussions]);
+  }, [loadDiscussions]);
 
   const handleDeleteDiscussion = async (discussionId: string) => {
     if (!user.isLoggedIn || !signEvent) return;
@@ -452,6 +467,23 @@ export default function SettingsPage() {
                         </div>
                       );
                     })}
+                  </div>
+                ) : discussionsCompletionReason === "idle-timeout" ||
+                  discussionsCompletionReason === "hard-timeout" ||
+                  discussionsCompletionReason === "cancelled" ? (
+                  <div className="alert alert-warning">
+                    <span className="ruby-text">
+                      会話データの取得に時間がかかっています（{discussionsCompletionReason}）。
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline"
+                      onClick={() => {
+                        void loadDiscussions();
+                      }}
+                    >
+                      再読み込み
+                    </button>
                   </div>
                 ) : (
                   <div className="text-center py-8">

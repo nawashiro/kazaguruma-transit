@@ -123,7 +123,9 @@ export function getNostrServiceConfig(): NostrServiceConfig {
 }
 
 export function isDiscussionsEnabled(): boolean {
-  return getDiscussionConfig().enabled;
+  const discussionEnabled = getDiscussionConfig().enabled;
+  const listEnabled = getDiscussionListConfig().enabled;
+  return discussionEnabled && listEnabled;
 }
 
 export function validateDiscussionConfig(): string[] {

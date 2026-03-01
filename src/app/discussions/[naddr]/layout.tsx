@@ -2,7 +2,6 @@
 
 import React from "react";
 import { useParams } from "next/navigation";
-import { AuthProvider } from "@/lib/auth/auth-context";
 import { DiscussionTabLayout } from "@/components/discussion/DiscussionTabLayout";
 
 /**
@@ -18,9 +17,5 @@ export default function DiscussionLayout({
   const naddr = params.naddr as string;
   const baseHref = `/discussions/${naddr}`;
 
-  return (
-    <AuthProvider>
-      <DiscussionTabLayout baseHref={baseHref}>{children}</DiscussionTabLayout>
-    </AuthProvider>
-  );
+  return <DiscussionTabLayout baseHref={baseHref}>{children}</DiscussionTabLayout>;
 }

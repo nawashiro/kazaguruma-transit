@@ -1,170 +1,109 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import DiscussionCreatePage from '../page';
+import React from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import DiscussionCreatePage from "../page";
 
-// Mock all the modules and hooks
-jest.mock('next/navigation', () => ({
+const pushMock = jest.fn();
+const processDiscussionCreationFlowMock = jest.fn();
+
+jest.mock("next/navigation", () => ({
   useRouter: () => ({
-    push: jest.fn(),
+    push: pushMock,
   }),
 }));
 
-jest.mock('@/lib/auth/auth-context', () => ({
-  useAuth: jest.fn(),
+jest.mock("@/lib/auth/auth-context", () => ({
+  useAuth: () => ({
+    user: {
+      pubkey: "f".repeat(64),
+      isLoggedIn: true,
+    },
+    signEvent: jest.fn(async () => ({
+      id: "signed-event-id",
+      kind: 1111,
+      pubkey: "f".repeat(64),
+      created_at: 1,
+      tags: [],
+      content: "",
+      sig: "s".repeat(128),
+    })),
+  }),
 }));
 
-jest.mock('@/lib/config/discussion-config', () => ({
+jest.mock("@/lib/config/discussion-config", () => ({
   isDiscussionsEnabled: () => true,
   getNostrServiceConfig: () => ({}),
 }));
 
-jest.mock('@/lib/nostr/nostr-service', () => ({
-  createNostrService: () => ({}),
+jest.mock("@/lib/nostr/nostr-service", () => ({
+  createNostrService: () => ({
+    publishSignedEvent: jest.fn(async () => true),
+  }),
 }));
 
-jest.mock('@/lib/discussion/user-creation-flow', () => ({
-  processDiscussionCreationFlow: jest.fn(),
+jest.mock("@/lib/discussion/user-creation-flow", () => ({
+  processDiscussionCreationFlow: (...args: unknown[]) =>
+    processDiscussionCreationFlowMock(...args),
 }));
 
-jest.mock('@/lib/nostr/nostr-utils', () => ({
-  getAdminPubkeyHex: () => 'admin-pubkey',
-  isValidNpub: () => true,
+jest.mock("@/lib/nostr/nostr-utils", () => ({
+  getAdminPubkeyHex: () => "a".repeat(64),
 }));
 
-jest.mock('@/components/discussion/LoginModal', () => {
-  return function MockLoginModal() {
-    return <div>Login Modal</div>;
-  };
-});
+jest.mock("@/components/discussion/LoginModal", () => ({
+  LoginModal: () => <div>Login Modal</div>,
+}));
 
-jest.mock('@/components/ui/Button', () => {
-  return function MockButton({ children, onClick, disabled, loading, ...props }: any) {
-    return (
-      <button onClick={onClick} disabled={disabled || loading} {...props}>
-        {loading ? 'Loading...' : children}
-      </button>
-    );
-  };
-});
-
-describe.skip('DiscussionCreatePage - ID Validation', () => {
-  const mockUseAuth = jest.requireMock('@/lib/auth/auth-context').useAuth as jest.MockedFunction<any>;
-  
+describe("DiscussionCreatePage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    mockUseAuth.mockReturnValue({
-      user: { 
-        pubkey: 'test-user-pubkey',
-        isLoggedIn: true 
+    Object.defineProperty(global, "crypto", {
+      value: {
+        randomUUID: () => "123e4567-e89b-12d3-a456-426614174000",
       },
-      signEvent: jest.fn(),
+      configurable: true,
     });
-  });
-
-  it('should show ID as required field', () => {
-    render(<DiscussionCreatePage />);
-    
-    // The field label should NOT say "（任意）" (optional)
-    expect(screen.getByText('会話ID *')).toBeInTheDocument();
-  });
-
-  it('should validate ID format: only lowercase alphanumeric and hyphens allowed', async () => {
-    render(<DiscussionCreatePage />);
-    
-    const titleInput = screen.getByLabelText('タイトル *');
-    const descriptionInput = screen.getByLabelText('説明 *');
-    const idInput = screen.getByLabelText('会話ID *');
-    const submitButton = screen.getByRole('button', { name: /会話を作成する/ });
-
-    // Fill in required fields
-    fireEvent.change(titleInput, { target: { value: 'Test Discussion' } });
-    fireEvent.change(descriptionInput, { target: { value: 'Test Description' } });
-    
-    // Test invalid characters (uppercase letters)
-    fireEvent.change(idInput, { target: { value: 'Test-ID' } });
-    fireEvent.click(submitButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText('IDは小文字英数字、ハイフンのみ使用できます')).toBeInTheDocument();
-    });
-  });
-
-  it('should validate ID format: no underscores allowed', async () => {
-    render(<DiscussionCreatePage />);
-    
-    const titleInput = screen.getByLabelText('タイトル *');
-    const descriptionInput = screen.getByLabelText('説明 *');
-    const idInput = screen.getByLabelText('会話ID *');
-    const submitButton = screen.getByRole('button', { name: /会話を作成する/ });
-
-    // Fill in required fields
-    fireEvent.change(titleInput, { target: { value: 'Test Discussion' } });
-    fireEvent.change(descriptionInput, { target: { value: 'Test Description' } });
-    
-    // Test invalid characters (underscores)
-    fireEvent.change(idInput, { target: { value: 'test_id' } });
-    fireEvent.click(submitButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText('IDは小文字英数字、ハイフンのみ使用できます')).toBeInTheDocument();
-    });
-  });
-
-  it('should accept valid ID format', async () => {
-    const mockProcessDiscussionCreationFlow = jest.requireMock('@/lib/discussion/user-creation-flow').processDiscussionCreationFlow;
-    mockProcessDiscussionCreationFlow.mockResolvedValue({
+    processDiscussionCreationFlowMock.mockResolvedValue({
       success: true,
-      discussionNaddr: 'test-naddr',
+      discussionNaddr: "naddr1created",
       errors: [],
-      successMessage: 'Success',
-    });
-
-    render(<DiscussionCreatePage />);
-    
-    const titleInput = screen.getByLabelText('タイトル *');
-    const descriptionInput = screen.getByLabelText('説明 *');
-    const idInput = screen.getByLabelText('会話ID *');
-    const submitButton = screen.getByRole('button', { name: /会話を作成する/ });
-
-    // Fill in required fields with valid data
-    fireEvent.change(titleInput, { target: { value: 'Test Discussion' } });
-    fireEvent.change(descriptionInput, { target: { value: 'Test Description' } });
-    fireEvent.change(idInput, { target: { value: 'valid-test-id-123' } });
-    
-    fireEvent.click(submitButton);
-    
-    await waitFor(() => {
-      expect(mockProcessDiscussionCreationFlow).toHaveBeenCalled();
+      successMessage:
+        "会話が作成されました。すぐに開始できます。URLを共有すれば、仲間を呼び込めます。",
     });
   });
 
-  it('should require ID field - show error when empty', async () => {
+  it("does not expose UUID/dTag input to user", () => {
     render(<DiscussionCreatePage />);
-    
-    const titleInput = screen.getByLabelText('タイトル *');
-    const descriptionInput = screen.getByLabelText('説明 *');
-    const submitButton = screen.getByRole('button', { name: /会話を作成する/ });
 
-    // Fill in other required fields but leave ID empty
-    fireEvent.change(titleInput, { target: { value: 'Test Discussion' } });
-    fireEvent.change(descriptionInput, { target: { value: 'Test Description' } });
-    
-    fireEvent.click(submitButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText('IDは必須です')).toBeInTheDocument();
-    });
+    expect(screen.queryByLabelText("会話ID *")).not.toBeInTheDocument();
   });
 
-  it('should show correct description text for ID field', () => {
+  it("creates discussion and shows success action with URL navigation", async () => {
     render(<DiscussionCreatePage />);
-    
-    // Should show updated description text (no mention of auto-generation)
-    expect(screen.getByText('小文字英数字、ハイフンのみ使用可能')).toBeInTheDocument();
-    
-    // Should NOT show mention of auto-generation since it's now required
-    expect(screen.queryByText(/自動生成/)).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("タイトル *"), {
+      target: { value: "US2 Test Title" },
+    });
+    fireEvent.change(screen.getByLabelText("説明 *"), {
+      target: { value: "US2 Test Description" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "会話を作成する" }));
+
+    await waitFor(() =>
+      expect(processDiscussionCreationFlowMock).toHaveBeenCalled()
+    );
+    expect(processDiscussionCreationFlowMock.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        publishListingRequest: false,
+      })
+    );
+    expect(processDiscussionCreationFlowMock.mock.calls[0][0].formData.dTag).toMatch(
+      /^discussion-/
+    );
+
+    expect(await screen.findByText("会話作成完了")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "会話を開始する" }));
+    expect(pushMock).toHaveBeenCalledWith("/discussions/naddr1created");
   });
 });

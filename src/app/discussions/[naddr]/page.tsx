@@ -15,9 +15,12 @@ import { LoginModal } from "@/components/discussion/LoginModal";
 import { PostPreview } from "@/components/discussion/PostPreview";
 import { EvaluationComponent } from "@/components/discussion/EvaluationComponent";
 import { ModeratorCheck } from "@/components/discussion/PermissionGuards";
+import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
-  parseDiscussionEvent,
+  createDiscussionNdkGateway,
+} from "@/lib/nostr/discussion-ndk-gateway";
+import {
   parsePostEvent,
   parseApprovalEvent,
   parseEvaluationEvent,
@@ -33,7 +36,6 @@ import {
 } from "@/lib/evaluation/evaluation-service";
 import Button from "@/components/ui/Button";
 import type {
-  Discussion,
   DiscussionPost,
   PostApproval,
   PostEvaluation,
@@ -41,17 +43,17 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
-import type { Event } from "nostr-tools";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
-const nostrService = createNostrService(getNostrServiceConfig());
+const nostrServiceConfig = getNostrServiceConfig();
+const nostrService = createNostrService(nostrServiceConfig);
+const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function DiscussionDetailPage() {
   const params = useParams();
   const naddrParam = params.naddr as string;
 
   const [consensusTab, setConsensusTab] = useState<string>("group-consensus");
-  const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [posts, setPosts] = useState<DiscussionPost[]>([]);
   const [, setApprovals] = useState<PostApproval[]>([]);
   const [evaluations, setEvaluations] = useState<PostEvaluation[]>([]);
@@ -61,8 +63,8 @@ export default function DiscussionDetailPage() {
   const [analysisResult, setAnalysisResult] =
     useState<EvaluationAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isDiscussionLoading, setIsDiscussionLoading] = useState(true);
   const [isPostsLoading, setIsPostsLoading] = useState(true);
+  const [postsLoadError, setPostsLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const renderInlineLoading = (label: string) => (
     <div
@@ -76,6 +78,7 @@ export default function DiscussionDetailPage() {
   );
 
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginReason, setLoginReason] = useState<string>("");
   const [showPreview, setShowPreview] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState("");
   const [postForm, setPostForm] = useState<PostFormData>({
@@ -86,7 +89,6 @@ export default function DiscussionDetailPage() {
   const [busStops, setBusStops] = useState<
     { route: string; stops: string[] }[]
   >([]);
-  const discussionStreamCleanupRef = useRef<(() => void) | null>(null);
   const loadSequenceRef = useRef(0);
   const analysisRunRef = useRef(false);
 
@@ -95,6 +97,10 @@ export default function DiscussionDetailPage() {
   });
 
   const { user, signEvent } = useAuth();
+  const discussionMeta = useDiscussionMeta();
+  const discussion = discussionMeta?.discussion ?? null;
+  const isDiscussionLoading = discussionMeta?.isLoading ?? false;
+  const discussionCompletionReason = discussionMeta?.completionReason ?? null;
 
   // Parse naddr and extract discussion info
   const discussionInfo = useMemo(() => {
@@ -108,9 +114,26 @@ export default function DiscussionDetailPage() {
       if (!discussionInfo) return;
       setIsPostsLoading(true);
       try {
-        const approvalsEvents = await nostrService.getApprovalsOnEose(
-          discussionInfo.discussionId
+        setPostsLoadError(null);
+        const approvalsResult = await discussionGateway.queryWithCompletion(
+          [
+            {
+              kinds: [4550],
+              "#a": [discussionInfo.discussionId],
+            },
+          ],
+          {
+            idleTimeoutMs: nostrServiceConfig.defaultTimeout,
+            hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
+          }
         );
+        logger.info("discussion-detail approvals fetch completed", {
+          discussionId: discussionInfo.discussionId,
+          completionReason: approvalsResult.completionReason,
+          eventCount: approvalsResult.eventCount,
+          elapsedMs: approvalsResult.elapsedMs,
+        });
+        const approvalsEvents = approvalsResult.events;
         if (loadSequenceRef.current !== loadSequence) return;
 
         const parsedApprovals = approvalsEvents
@@ -134,9 +157,36 @@ export default function DiscussionDetailPage() {
         setApprovals(parsedApprovals);
 
         const postIds = parsedPosts.map((post) => post.id);
-        const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-          postIds
-        );
+        const evaluationsResult =
+          postIds.length > 0
+            ? await discussionGateway.queryWithCompletion(
+                [
+                  {
+                    kinds: [7],
+                    "#e": postIds,
+                  },
+                ],
+                {
+                  idleTimeoutMs: nostrServiceConfig.defaultTimeout,
+                  hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
+                }
+              )
+            : {
+                events: [],
+                completionReason: "eose" as const,
+                eventCount: 0,
+                elapsedMs: 0,
+                startedAt: Date.now(),
+                lastEventAt: Date.now(),
+                eoseReceived: true,
+              };
+        logger.info("discussion-detail evaluations fetch completed", {
+          discussionId: discussionInfo.discussionId,
+          completionReason: evaluationsResult.completionReason,
+          eventCount: evaluationsResult.eventCount,
+          elapsedMs: evaluationsResult.elapsedMs,
+        });
+        const evaluationsEvents = evaluationsResult.events;
         if (loadSequenceRef.current !== loadSequence) return;
 
         const parsedEvaluations = evaluationsEvents
@@ -146,6 +196,7 @@ export default function DiscussionDetailPage() {
         setEvaluations(parsedEvaluations);
       } catch (error) {
         logger.error("Failed to load discussion:", error);
+        setPostsLoadError("投稿・評価データの取得に失敗しました。");
       } finally {
         if (loadSequenceRef.current === loadSequence) {
           setIsPostsLoading(false);
@@ -198,22 +249,16 @@ export default function DiscussionDetailPage() {
     if (!isDiscussionsEnabled() || !discussionInfo) return;
     const loadSequence = ++loadSequenceRef.current;
     analysisRunRef.current = false;
-    setDiscussion(null);
     setPosts([]);
     setApprovals([]);
     setEvaluations([]);
     setAnalysisResult(null);
-    setIsDiscussionLoading(true);
     setIsPostsLoading(true);
-
-    discussionStreamCleanupRef.current?.();
-    discussionStreamCleanupRef.current = null;
 
     if (isTestMode(discussionInfo.dTag)) {
       loadTestData()
         .then((testData) => {
           if (loadSequenceRef.current !== loadSequence) return;
-          setDiscussion(testData.discussion);
           setPosts(testData.posts);
           setEvaluations(testData.evaluations);
         })
@@ -222,7 +267,6 @@ export default function DiscussionDetailPage() {
         })
         .finally(() => {
           if (loadSequenceRef.current === loadSequence) {
-            setIsDiscussionLoading(false);
             setIsPostsLoading(false);
           }
         });
@@ -230,49 +274,8 @@ export default function DiscussionDetailPage() {
       return;
     }
 
-    const pickLatestDiscussion = (events: Event[]) => {
-      const parsed = events
-        .map(parseDiscussionEvent)
-        .filter((d): d is Discussion => d !== null);
-
-      if (parsed.length === 0) {
-        return null;
-      }
-
-      return parsed.reduce((latest, current) =>
-        current.createdAt > latest.createdAt ? current : latest
-      );
-    };
-
-    discussionStreamCleanupRef.current = nostrService.streamDiscussionMeta(
-      discussionInfo.authorPubkey,
-      discussionInfo.dTag,
-      {
-        onEvent: (events) => {
-          if (loadSequenceRef.current !== loadSequence) return;
-          const latest = pickLatestDiscussion(events);
-          if (!latest) return;
-          setDiscussion(latest);
-          setIsDiscussionLoading(false);
-        },
-        onEose: (events) => {
-          if (loadSequenceRef.current !== loadSequence) return;
-          const latest = pickLatestDiscussion(events);
-          if (latest) {
-            setDiscussion(latest);
-          }
-          setIsDiscussionLoading(false);
-        },
-      }
-    );
-
     loadApprovalsAndEvaluations(loadSequence);
     loadBusStops();
-
-    return () => {
-      discussionStreamCleanupRef.current?.();
-      discussionStreamCleanupRef.current = null;
-    };
   }, [discussionInfo, loadApprovalsAndEvaluations, loadBusStops]);
 
   useEffect(() => {
@@ -356,6 +359,7 @@ export default function DiscussionDetailPage() {
 
   const handlePostSubmit = async () => {
     if (!user.isLoggedIn || !discussion) {
+      setLoginReason("投稿するにはログインが必要です。");
       setShowLoginModal(true);
       return;
     }
@@ -416,6 +420,7 @@ export default function DiscussionDetailPage() {
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (!user.isLoggedIn || !discussion) {
+      setLoginReason("投稿を評価するにはログインが必要です。");
       setShowLoginModal(true);
       return;
     }
@@ -481,6 +486,30 @@ export default function DiscussionDetailPage() {
   }
 
   if (!discussion) {
+    if (
+      discussionCompletionReason === "idle-timeout" ||
+      discussionCompletionReason === "hard-timeout" ||
+      discussionCompletionReason === "cancelled"
+    ) {
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <div className="alert alert-warning mb-4" role="alert">
+            <span>
+              会話データの取得に時間がかかっています（{discussionCompletionReason}）。
+              受信待機中または relay 応答遅延の可能性があります。
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-outline rounded-full dark:rounded-sm"
+            onClick={() => window.location.reload()}
+          >
+            再読み込み
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
@@ -551,7 +580,11 @@ export default function DiscussionDetailPage() {
               </h2>
               {isPostsLoading
                 ? renderInlineLoading("評価データを読み込み中...")
-                : (
+                : postsLoadError ? (
+                  <div className="alert alert-error" role="alert">
+                    <span>{postsLoadError}</span>
+                  </div>
+                ) : (
                   <EvaluationComponent
                     posts={postsWithStats}
                     onEvaluate={handleEvaluate}
@@ -575,6 +608,10 @@ export default function DiscussionDetailPage() {
 
               {isPostsLoading ? (
                 renderInlineLoading("分析データを読み込み中...")
+              ) : postsLoadError ? (
+                <div className="alert alert-error" role="alert">
+                  <span>{postsLoadError}</span>
+                </div>
               ) : (
                 <>
                   {isAnalyzing && (
@@ -897,7 +934,11 @@ export default function DiscussionDetailPage() {
 
       <LoginModal
         isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
+        reason={loginReason}
+        onClose={() => {
+          setShowLoginModal(false);
+          setLoginReason("");
+        }}
       />
     </div>
   );

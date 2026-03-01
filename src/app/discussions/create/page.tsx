@@ -31,7 +31,6 @@ export default function DiscussionCreatePage() {
     title: "",
     description: "",
     moderators: [],
-    dTag: "",
   });
   const [moderatorInput, setModeratorInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,6 +38,9 @@ export default function DiscussionCreatePage() {
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [createdNaddr, setCreatedNaddr] = useState<string>("");
+
+  const createInternalDiscussionId = (): string =>
+    `discussion-${crypto.randomUUID().toLowerCase()}`;
 
   if (!isDiscussionsEnabled()) {
     return (
@@ -85,18 +87,6 @@ export default function DiscussionCreatePage() {
       }
     }
 
-    // ID is now required
-    if (!formData.dTag || !formData.dTag.trim()) {
-      errors.push("IDは必須です");
-    } else {
-      const dTagTrimmed = formData.dTag.trim();
-      if (dTagTrimmed.length < 3 || dTagTrimmed.length > 100) {
-        errors.push("IDは3文字以上100文字以内で入力してください");
-      } else if (!/^[a-z0-9-]+$/.test(dTagTrimmed)) {
-        errors.push("IDは小文字英数字、ハイフンのみ使用できます");
-      }
-    }
-
     if (errors.length > 0) {
       setErrors(errors);
       return;
@@ -110,6 +100,7 @@ export default function DiscussionCreatePage() {
       const formDataWithModerators = {
         ...formData,
         moderators,
+        dTag: createInternalDiscussionId(),
       };
 
       const result = await processDiscussionCreationFlow({
@@ -118,6 +109,7 @@ export default function DiscussionCreatePage() {
         adminPubkey: ADMIN_PUBKEY,
         signEvent,
         publishEvent: (event) => nostrService.publishSignedEvent(event),
+        publishListingRequest: false,
       });
 
       if (result.success && result.discussionNaddr) {
@@ -125,7 +117,7 @@ export default function DiscussionCreatePage() {
         setSuccessMessage(result.successMessage || "");
 
         // フォームをクリア
-        setFormData({ title: "", description: "", moderators: [], dTag: "" });
+        setFormData({ title: "", description: "", moderators: [] });
         setModeratorInput("");
       } else {
         setErrors(result.errors);
@@ -305,35 +297,6 @@ export default function DiscussionCreatePage() {
                 </div>
 
                 <div>
-                  <label htmlFor="dTag" className="label ruby-text">
-                    <span className="label-text">会話ID *</span>
-                  </label>
-                  <div className="text-gray-600 dark:text-gray-400 mb-2 ruby-text">
-                    小文字英数字、ハイフンのみ。
-                  </div>
-                  <input
-                    id="dTag"
-                    type="text"
-                    value={formData.dTag}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        dTag: e.target.value,
-                      }))
-                    }
-                    className="input input-bordered w-full"
-                    placeholder="chiyoda-kazaguruma-discussion"
-                    required
-                    disabled={isSubmitting}
-                    maxLength={100}
-                    autoComplete="off"
-                  />
-                  <div className="text-gray-500 mt-1">
-                    {formData.dTag?.length || 0}/100文字
-                  </div>
-                </div>
-
-                <div>
                   <label htmlFor="description" className="label ruby-text">
                     <span className="label-text">説明 *</span>
                   </label>
@@ -419,12 +382,11 @@ export default function DiscussionCreatePage() {
 
                 <Button
                   onClick={handleSubmit}
-                  fullWidth
+                  className="w-full"
                   disabled={
                     isSubmitting ||
                     !formData.title.trim() ||
-                    !formData.description.trim() ||
-                    !formData.dTag?.trim()
+                    !formData.description.trim()
                   }
                   loading={isSubmitting}
                 >

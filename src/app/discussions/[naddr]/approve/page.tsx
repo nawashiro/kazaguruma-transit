@@ -7,31 +7,31 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
 } from "@/lib/config/discussion-config";
 import {
-  ModeratorCheck,
-  PermissionError,
+  buildDisabledActionState,
+  DisabledReasonText,
 } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
-  parseDiscussionEvent,
   parsePostEvent,
   parseApprovalEvent,
   formatRelativeTime,
   getAdminPubkeyHex,
+  isModerator,
 } from "@/lib/nostr/nostr-utils";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import type {
-  Discussion,
   DiscussionPost,
   PostApproval,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { CheckBadgeIcon } from "@heroicons/react/24/outline";
-import type { Event } from "nostr-tools";
+import type { Event } from "@/lib/nostr/nostr-service";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrServiceConfig = getNostrServiceConfig();
@@ -40,8 +40,11 @@ const nostrService = createNostrService(nostrServiceConfig);
 export default function PostApprovalPage() {
   const params = useParams();
   const naddrParam = params.naddr as string;
+  const discussionMeta = useDiscussionMeta();
+  const discussion = discussionMeta?.discussion ?? null;
+  const isDiscussionLoading = discussionMeta?.isLoading ?? false;
+  const discussionCompletionReason = discussionMeta?.completionReason ?? null;
 
-  const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [posts, setPosts] = useState<DiscussionPost[]>([]);
   const [approvals, setApprovals] = useState<PostApproval[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,38 +82,6 @@ export default function PostApprovalPage() {
     approvalStreamCleanupRef.current?.();
     approvalEventsRef.current = [];
     postsEventsRef.current = [];
-
-    const discussionStream = nostrService.streamEventsOnEvent(
-      [
-        {
-          kinds: [34550],
-          authors: [discussionInfo.authorPubkey],
-          "#d": [discussionInfo.dTag],
-          limit: 1,
-        },
-      ],
-      {
-        onEvent: (events) => {
-          const parsedDiscussion = events
-            .map(parseDiscussionEvent)
-            .find((d) => d && d.dTag === discussionInfo.dTag);
-          if (parsedDiscussion) {
-            setDiscussion(parsedDiscussion);
-            setIsLoading(false);
-          }
-        },
-        onEose: (events) => {
-          const parsedDiscussion = events
-            .map(parseDiscussionEvent)
-            .find((d) => d && d.dTag === discussionInfo.dTag);
-          if (parsedDiscussion) {
-            setDiscussion(parsedDiscussion);
-          }
-          setIsLoading(false);
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
-      }
-    );
 
     const postsStream = nostrService.streamEventsOnEvent(
       [
@@ -150,7 +121,6 @@ export default function PostApprovalPage() {
     );
 
     approvalStreamCleanupRef.current = () => {
-      discussionStream();
       postsStream();
       approvalsStream();
     };
@@ -166,7 +136,14 @@ export default function PostApprovalPage() {
   }, [startStreaming, discussionInfo]);
 
   const handleApprovePost = async (post: DiscussionPost) => {
-    if (!user.isLoggedIn || !discussion) return;
+    const canModerate = discussion
+      ? isModerator(
+          user.pubkey,
+          discussion.moderators.map((m) => m.pubkey),
+          ADMIN_PUBKEY
+        ) || user.pubkey === discussion.authorPubkey
+      : false;
+    if (!user.isLoggedIn || !discussion || !canModerate) return;
 
     setApprovingIds((prev) => new Set([...prev, post.id]));
     try {
@@ -218,7 +195,14 @@ export default function PostApprovalPage() {
   };
 
   const handleRevokeApproval = async (post: DiscussionPost) => {
-    if (!user.isLoggedIn || !discussion) return;
+    const canModerate = discussion
+      ? isModerator(
+          user.pubkey,
+          discussion.moderators.map((m) => m.pubkey),
+          ADMIN_PUBKEY
+        ) || user.pubkey === discussion.authorPubkey
+      : false;
+    if (!user.isLoggedIn || !discussion || !canModerate) return;
 
     const approval = approvals.find(
       (a) => a.postId === post.id && a.moderatorPubkey === user.pubkey
@@ -297,14 +281,20 @@ export default function PostApprovalPage() {
 
   const pendingPosts = posts.filter((post) => !post.approved);
   const approvedPosts = posts.filter((post) => post.approved);
+  const hasApprovalPermission = Boolean(
+    discussion &&
+      (user.pubkey === discussion.authorPubkey ||
+        isModerator(
+          user.pubkey,
+          discussion.moderators.map((m) => m.pubkey),
+          ADMIN_PUBKEY
+        ))
+  );
+  const permissionReason = !user.isLoggedIn
+    ? "承認操作にはログインが必要です。"
+    : "この会話の作成者またはモデレーターのみ承認操作できます。";
 
   return (
-    <ModeratorCheck
-      moderators={discussion?.moderators.map((m) => m.pubkey) || []}
-      adminPubkey={ADMIN_PUBKEY}
-      userPubkey={user.pubkey}
-      fallback={<PermissionError type="moderator" />}
-    >
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 ruby-text">
           <Link
@@ -358,7 +348,7 @@ export default function PostApprovalPage() {
           </button>
         </nav>
 
-        {isLoading ? (
+        {isDiscussionLoading || isLoading ? (
           <div className="animate-pulse space-y-4">
             {[...Array(3)].map((_, i) => (
               <div
@@ -367,6 +357,21 @@ export default function PostApprovalPage() {
               ></div>
             ))}
           </div>
+        ) : !discussion ? (
+          discussionCompletionReason === "idle-timeout" ||
+          discussionCompletionReason === "hard-timeout" ||
+          discussionCompletionReason === "cancelled" ? (
+            <div className="alert alert-warning" role="alert">
+              <span>
+                会話データの取得に時間がかかっています（{discussionCompletionReason}）。
+                受信待機中または relay 応答遅延の可能性があります。
+              </span>
+            </div>
+          ) : (
+            <div className="alert alert-warning" role="alert">
+              <span>会話が見つかりません。</span>
+            </div>
+          )
         ) : (
           <main aria-labelledby={`${activeTab}-tab`} role="tabpanel">
             {activeTab === "pending" && (
@@ -405,7 +410,10 @@ export default function PostApprovalPage() {
                             </div>
                             <button
                               onClick={() => handleApprovePost(post)}
-                              disabled={approvingIds.has(post.id)}
+                              disabled={
+                                approvingIds.has(post.id) ||
+                                !hasApprovalPermission
+                              }
                               className="ml-4 btn btn-primary rounded-full dark:rounded-sm"
                             >
                               <span>
@@ -413,6 +421,12 @@ export default function PostApprovalPage() {
                               </span>
                             </button>
                           </div>
+                          <DisabledReasonText
+                            state={buildDisabledActionState(
+                              hasApprovalPermission,
+                              permissionReason
+                            )}
+                          />
                           <div className="text-gray-500">
                             {formatRelativeTime(post.createdAt)}
                           </div>
@@ -476,25 +490,52 @@ export default function PostApprovalPage() {
                               </div>
                             </div>
                             <div className="flex gap-2 ml-4">
-                              {approvals.some(
-                                (a) =>
-                                  a.postId === post.id &&
-                                  a.moderatorPubkey === user.pubkey
-                              ) && (
-                                <button
-                                  onClick={() => handleRevokeApproval(post)}
-                                  disabled={revokingIds.has(post.id)}
-                                  className="btn btn-warning rounded-full dark:rounded-sm"
-                                >
-                                  <span>
-                                    {revokingIds.has(post.id)
-                                      ? ""
-                                      : "承認を撤回"}
-                                  </span>
-                                </button>
-                              )}
+                              {(() => {
+                                const hasOwnApproval = approvals.some(
+                                  (a) =>
+                                    a.postId === post.id &&
+                                    a.moderatorPubkey === user.pubkey
+                                );
+                                const revokeAllowed =
+                                  hasApprovalPermission && hasOwnApproval;
+                                return (
+                                  <button
+                                    onClick={() => handleRevokeApproval(post)}
+                                    disabled={
+                                      revokingIds.has(post.id) || !revokeAllowed
+                                    }
+                                    className="btn btn-warning rounded-full dark:rounded-sm"
+                                  >
+                                    <span>
+                                      {revokingIds.has(post.id)
+                                        ? ""
+                                        : "承認を撤回"}
+                                    </span>
+                                  </button>
+                                );
+                              })()}
                             </div>
                           </div>
+                          {(() => {
+                            const hasOwnApproval = approvals.some(
+                              (a) =>
+                                a.postId === post.id &&
+                                a.moderatorPubkey === user.pubkey
+                            );
+                            const revokeAllowed =
+                              hasApprovalPermission && hasOwnApproval;
+                            const revokeReason = !hasApprovalPermission
+                              ? permissionReason
+                              : "自分が行った承認のみ撤回できます。";
+                            return (
+                              <DisabledReasonText
+                                state={buildDisabledActionState(
+                                  revokeAllowed,
+                                  revokeReason
+                                )}
+                              />
+                            );
+                          })()}
                           <div className="text-gray-500">
                             承認:{" "}
                             {formatRelativeTime(
@@ -533,6 +574,5 @@ export default function PostApprovalPage() {
           </main>
         )}
       </div>
-    </ModeratorCheck>
   );
 }

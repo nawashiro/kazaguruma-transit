@@ -1,4 +1,7 @@
-import type { Event } from "nostr-tools";
+import type {
+  NostrEventDraft,
+  NostrEventDTO,
+} from "@/lib/nostr/discussion-ndk-gateway";
 import { isValidNpub, npubToHex } from "@/lib/nostr/nostr-utils";
 import { naddrEncode, naddrDecode } from "@/lib/nostr/naddr-utils";
 import { logger } from "@/utils/logger";
@@ -19,8 +22,9 @@ export interface CreationFlowParams {
   formData: DiscussionCreationForm;
   userPubkey: string;
   adminPubkey: string;
-  signEvent: (event: Partial<Event>) => Promise<Event>;
-  publishEvent: (event: Event) => Promise<boolean>;
+  signEvent: (event: Record<string, unknown>) => Promise<NostrEventDTO>;
+  publishEvent: (event: NostrEventDTO) => Promise<boolean>;
+  publishListingRequest?: boolean;
 }
 
 export interface CreationFlowResult {
@@ -28,6 +32,37 @@ export interface CreationFlowResult {
   discussionNaddr?: string;
   errors: string[];
   successMessage?: string;
+}
+
+const toDiscussionCoordinate = (discussionIdOrNaddr: string): string => {
+  if (discussionIdOrNaddr.startsWith("naddr1")) {
+    const decoded = naddrDecode(discussionIdOrNaddr);
+    return `${decoded.kind}:${decoded.pubkey}:${decoded.identifier}`;
+  }
+  return discussionIdOrNaddr;
+};
+
+export function createDiscussionPostEvent(
+  content: string,
+  discussionIdOrNaddr: string,
+  busStopTag?: string
+): NostrEventDraft {
+  const discussionCoordinate = toDiscussionCoordinate(discussionIdOrNaddr);
+  const tags: string[][] = [["a", discussionCoordinate]];
+  if (busStopTag) {
+    tags.push(["t", busStopTag]);
+  }
+
+  return {
+    kind: 1111,
+    content: content.trim(),
+    tags,
+    created_at: Math.floor(Date.now() / 1000),
+  };
+}
+
+export function isReadableDiscussionPostKind(kind: number): boolean {
+  return kind === 1111 || kind === 1;
 }
 
 export function validateDiscussionCreationForm(
@@ -77,7 +112,7 @@ export function validateDiscussionCreationForm(
 export function createDiscussionCreationEvent(
   form: DiscussionCreationForm,
   userPubkey: string
-): Partial<Event> {
+): NostrEventDraft {
   // ID is now required and validated above, so we can safely use it
   const dTag = form.dTag!.trim();
 
@@ -108,7 +143,7 @@ export function createDiscussionListingRequest(
   discussionNaddr: string,
   adminPubkey: string,
   userPubkey: string
-): Partial<Event> {
+): NostrEventDraft {
   const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
   if (!discussionListNaddr) {
     throw new Error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is required");
@@ -158,6 +193,25 @@ export function createDiscussionListingRequest(
   };
 }
 
+export function createModeratorPromotionRequestEvent(
+  discussionRef: string,
+  creatorPubkey: string,
+  applicantPubkey: string,
+  content = ""
+): NostrEventDraft {
+  return {
+    kind: 1111,
+    content: content.trim(),
+    tags: [
+      ["a", discussionRef],
+      ["p", creatorPubkey],
+      ["t", "moderator-request"],
+    ],
+    pubkey: applicantPubkey,
+    created_at: Math.floor(Date.now() / 1000),
+  };
+}
+
 export async function processDiscussionCreationFlow(
   params: CreationFlowParams
 ): Promise<CreationFlowResult> {
@@ -175,9 +229,11 @@ export async function processDiscussionCreationFlow(
       params.userPubkey
     );
 
-    let signedDiscussionEvent: Event;
+    let signedDiscussionEvent: NostrEventDTO;
     try {
-      signedDiscussionEvent = await params.signEvent(discussionEvent);
+      signedDiscussionEvent = await params.signEvent(
+        discussionEvent as unknown as Record<string, unknown>
+      );
     } catch (error) {
       logger.error("Failed to sign discussion event:", error);
       return {
@@ -210,30 +266,34 @@ export async function processDiscussionCreationFlow(
       kind: 34550,
     });
 
-    const listingRequest = createDiscussionListingRequest(
-      params.formData,
-      discussionNaddr,
-      params.adminPubkey,
-      params.userPubkey
-    );
+    if (params.publishListingRequest !== false) {
+      const listingRequest = createDiscussionListingRequest(
+        params.formData,
+        discussionNaddr,
+        params.adminPubkey,
+        params.userPubkey
+      );
 
-    let signedListingRequest: Event;
-    try {
-      signedListingRequest = await params.signEvent(listingRequest);
-    } catch (error) {
-      logger.error("Failed to sign listing request:", error);
-      return {
-        success: false,
-        errors: ["掲載リクエストの署名に失敗しました"],
-      };
-    }
+      let signedListingRequest: NostrEventDTO;
+      try {
+        signedListingRequest = await params.signEvent(
+          listingRequest as unknown as Record<string, unknown>
+        );
+      } catch (error) {
+        logger.error("Failed to sign listing request:", error);
+        return {
+          success: false,
+          errors: ["掲載リクエストの署名に失敗しました"],
+        };
+      }
 
-    const requestPublished = await params.publishEvent(signedListingRequest);
-    if (!requestPublished) {
-      return {
-        success: false,
-        errors: ["掲載リクエストの送信に失敗しました"],
-      };
+      const requestPublished = await params.publishEvent(signedListingRequest);
+      if (!requestPublished) {
+        return {
+          success: false,
+          errors: ["掲載リクエストの送信に失敗しました"],
+        };
+      }
     }
 
     const successMessage = `

@@ -65,6 +65,18 @@ interface PermissionErrorProps {
   message?: string;
 }
 
+export interface DisabledActionState {
+  disabled: boolean;
+  reason?: string;
+}
+
+export function buildDisabledActionState(
+  allowed: boolean,
+  reason: string
+): DisabledActionState {
+  return allowed ? { disabled: false } : { disabled: true, reason };
+}
+
 export function PermissionError({ type, message }: PermissionErrorProps) {
   const defaultMessages = {
     admin: "この操作は管理者のみ実行できます。",
@@ -100,5 +112,27 @@ export function PermissionError({ type, message }: PermissionErrorProps) {
         会話一覧に戻る
       </Link>
     </div>
+  );
+}
+
+interface DisabledReasonTextProps {
+  state: DisabledActionState;
+  className?: string;
+  id?: string;
+}
+
+export function DisabledReasonText({
+  state,
+  className = "text-xs text-base-content/70 mt-1",
+  id,
+}: DisabledReasonTextProps) {
+  if (!state.disabled || !state.reason) {
+    return null;
+  }
+
+  return (
+    <p id={id} role="note" aria-live="polite" className={className}>
+      {state.reason}
+    </p>
   );
 }

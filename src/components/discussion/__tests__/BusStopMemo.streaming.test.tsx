@@ -2,7 +2,7 @@ import React from "react";
 import { render, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { BusStopMemo } from "../BusStopMemo";
-import type { Event } from "nostr-tools";
+import type { Event } from "@/lib/nostr/nostr-service";
 import type { StreamEventsOptions } from "@/lib/nostr/nostr-service";
 
 jest.mock("@/lib/config/discussion-config", () => ({

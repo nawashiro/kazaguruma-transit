@@ -29,7 +29,7 @@ import {
   extractDiscussionFromNaddr,
   buildNaddrFromRef,
 } from "@/lib/nostr/naddr-utils";
-import type { Event } from "nostr-tools";
+import type { Event } from "@/lib/nostr/nostr-service";
 import type {
   Discussion,
   DiscussionPost,

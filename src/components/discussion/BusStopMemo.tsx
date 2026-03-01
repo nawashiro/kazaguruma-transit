@@ -20,7 +20,7 @@ import type {
   PostWithStats,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import type { Event } from "nostr-tools";
+import type { Event } from "@/lib/nostr/nostr-service";
 
 interface BusStopMemoProps {
   busStops: string[];

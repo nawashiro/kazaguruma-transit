@@ -22,12 +22,14 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
+    "check:no-nostr-tools": "node -e \"const p=require('./package.json');const has=(p.dependencies&&p.dependencies['nostr-tools'])||(p.devDependencies&&p.devDependencies['nostr-tools']);if(has){console.error('nostr-tools dependency detected');process.exit(1)}console.log('OK: nostr-tools is not declared in package.json')\"",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "import-gtfs": "tsx scripts/import-gtfs.ts"
   },
   "dependencies": {
+    "@nostr-dev-kit/ndk": "latest",
     "@googlemaps/google-maps-services-js": "^3.4.1",
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.6.0",
@@ -45,7 +47,6 @@
     "next": "^15.3.8",
     "next-iron-session": "^4.2.0",
     "nosskey-sdk": "^0.0.2",
-    "nostr-tools": "^2.16.1",
     "pdf-lib": "^1.17.1",
     "puppeteer": "^24.6.1",
     "react": "^19.1.0",

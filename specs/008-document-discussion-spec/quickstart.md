@@ -85,3 +85,15 @@ UIはDaisyUI責務を優先し、独自UIの役割重複を禁止する。
 4. `npm test` 成功
 5. `npm run build` 成功
 6. 主要NIP契約テストが全件成功
+
+## Addendum (2026-03-01): 読込完了判定の検証
+
+- 初回読込でEOSE未着でも無期限待機しないことを確認する。
+- 受信状態を次の3種類で識別してログ出力する:
+  - 逐次受信中（イベント到着継続）
+  - 沈黙待機中（イベント未到着/長時間未更新）
+  - 完了（`completionReason` 付き）
+- `completionReason` は `eose` / `idle-timeout` / `hard-timeout` / `cancelled` を使用する。
+- `Not Found` は `completionReason` と受信件数に基づいて確定し、単純タイムアウトのみで確定しない。
+- 監査ログの 10件再クエリ要件（FR-021/FR-024）は従来どおり維持する。
+- 詳細運用は [`notes/eose-and-timeout-observability.md`](/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/notes/eose-and-timeout-observability.md) を参照。

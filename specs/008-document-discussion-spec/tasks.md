@@ -222,3 +222,16 @@ T044 / T045
    - Dev B: US2
    - Dev C: US3
 3. ストーリーごとに独立検証後に統合
+
+---
+
+## Addendum Tasks (2026-03-01): EOSE/Timeout Observability
+
+**Purpose**: EOSE未達/遅延時の誤判定を防ぎ、読込完了理由を明示する
+
+- [ ] T054 [P] `NostrService` に読込完了理由（`eose`/`idle-timeout`/`hard-timeout`/`cancelled`）を返すAPIを追加する in `/root/nawashiro/kazaguruma-transit/src/lib/nostr/nostr-service.ts`
+- [ ] T055 [P] EOSE未達時でも無期限待機しない取得テスト（沈黙タイムアウト/逐次受信継続の区別）を追加する in `/root/nawashiro/kazaguruma-transit/src/lib/nostr/__tests__/nostr-service.test.ts`
+- [ ] T056 会話詳細画面の `not found` 判定を `completionReason` ベースへ変更し、単純タイムアウト即確定を廃止する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/page.tsx`
+- [ ] T057 会話一覧監査/会話詳細監査の初回取得をEOSE単独依存にしない読込フローへ更新する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/audit/page.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/audit/page.tsx`
+- [ ] T058 [P] 読込状態ログ（`completionReason`, `eventCount`, `elapsedMs`）を一覧/詳細/監査で出力する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/page.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/page.tsx` `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx`
+- [ ] T059 Addendum追記内容と実装手順の整合を文書へ反映する in `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/quickstart.md` `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/plan.md` `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/spec.md`

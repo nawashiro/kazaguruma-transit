@@ -153,3 +153,12 @@ specs/008-document-discussion-spec/
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
 | N/A | N/A | N/A |
+
+## Addendum (2026-03-01): EOSE依存と読込完了判定
+
+- 既存本文は維持し、追記として運用方針を補足する。
+- 本機能の主要読取（一覧/詳細/監査初回表示）は「リアルタイム購読必須」を前提にしない。
+- relayごとのEOSE未送信/遅延を考慮し、`onEose` のみを完了条件にしない。
+- 取得完了は `completionReason`（`eose` / `idle-timeout` / `hard-timeout` / `cancelled`）を区別して扱う。
+- `Not Found` は単純タイムアウト直後に確定せず、沈黙タイムアウトと逐次受信継続を区別して判定する。
+- 詳細は [`notes/eose-and-timeout-observability.md`](/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/notes/eose-and-timeout-observability.md) を参照。

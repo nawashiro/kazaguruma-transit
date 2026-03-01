@@ -2,6 +2,7 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionEditPage from "../page";
+import type { Discussion } from "@/types/discussion";
 
 const authState = {
   user: {
@@ -50,6 +51,7 @@ const createModeratorDecisionDraftMock = jest.fn(() => ({
   created_at: 11,
   pubkey: "f".repeat(64),
 }));
+const mockUseDiscussionMeta = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr1discussion" }),
@@ -65,6 +67,10 @@ jest.mock("@/lib/auth/auth-context", () => ({
   }),
 }));
 
+jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
+  useDiscussionMeta: () => mockUseDiscussionMeta(),
+}));
+
 jest.mock("@/lib/config/discussion-config", () => ({
   isDiscussionsEnabled: () => true,
   getNostrServiceConfig: () => ({ defaultTimeout: 10 }),
@@ -74,6 +80,7 @@ jest.mock("@/lib/nostr/nostr-service", () => ({
   __mock: {
     publishSignedEvent: jest.fn(async () => true),
   },
+  getNostrServiceConfigKey: () => "test-config",
   createNostrService: () => ({
     streamEventsOnEvent: (filters: Array<{ kinds?: number[]; "#t"?: string[] }>, handlers: { onEose?: (events: unknown[]) => void }) => {
       const kinds = filters[0]?.kinds ?? [];
@@ -186,6 +193,31 @@ jest.mock("@/components/discussion/LoginModal", () => ({
 describe("DiscussionEditPage listing request", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    const layoutDiscussion: Discussion = {
+      id: "34550:f:test-discussion",
+      title: "Test Discussion",
+      description: "Test Description",
+      authorPubkey: "f".repeat(64),
+      dTag: "test-discussion",
+      moderators: [{ pubkey: "e".repeat(64) }],
+      createdAt: 1,
+      event: {
+        id: "discussion-event",
+        kind: 34550,
+        pubkey: "f".repeat(64),
+        created_at: 1,
+        tags: [["d", "test-discussion"]],
+        content: "Test Description",
+        sig: "s".repeat(128),
+      },
+    };
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: layoutDiscussion,
+      isLoading: false,
+      error: null,
+      completionReason: "eose",
+      reload: jest.fn(),
+    });
     authState.user = {
       pubkey: "f".repeat(64),
       isLoggedIn: true,

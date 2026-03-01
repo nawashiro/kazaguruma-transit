@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
@@ -17,7 +18,6 @@ import {
 } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
-  parseDiscussionEvent,
   parsePostEvent,
   parseApprovalEvent,
   formatRelativeTime,
@@ -26,7 +26,6 @@ import {
 } from "@/lib/nostr/nostr-utils";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import type {
-  Discussion,
   DiscussionPost,
   PostApproval,
 } from "@/types/discussion";
@@ -41,8 +40,11 @@ const nostrService = createNostrService(nostrServiceConfig);
 export default function PostApprovalPage() {
   const params = useParams();
   const naddrParam = params.naddr as string;
+  const discussionMeta = useDiscussionMeta();
+  const discussion = discussionMeta?.discussion ?? null;
+  const isDiscussionLoading = discussionMeta?.isLoading ?? false;
+  const discussionCompletionReason = discussionMeta?.completionReason ?? null;
 
-  const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [posts, setPosts] = useState<DiscussionPost[]>([]);
   const [approvals, setApprovals] = useState<PostApproval[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -80,38 +82,6 @@ export default function PostApprovalPage() {
     approvalStreamCleanupRef.current?.();
     approvalEventsRef.current = [];
     postsEventsRef.current = [];
-
-    const discussionStream = nostrService.streamEventsOnEvent(
-      [
-        {
-          kinds: [34550],
-          authors: [discussionInfo.authorPubkey],
-          "#d": [discussionInfo.dTag],
-          limit: 1,
-        },
-      ],
-      {
-        onEvent: (events) => {
-          const parsedDiscussion = events
-            .map(parseDiscussionEvent)
-            .find((d) => d && d.dTag === discussionInfo.dTag);
-          if (parsedDiscussion) {
-            setDiscussion(parsedDiscussion);
-            setIsLoading(false);
-          }
-        },
-        onEose: (events) => {
-          const parsedDiscussion = events
-            .map(parseDiscussionEvent)
-            .find((d) => d && d.dTag === discussionInfo.dTag);
-          if (parsedDiscussion) {
-            setDiscussion(parsedDiscussion);
-          }
-          setIsLoading(false);
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
-      }
-    );
 
     const postsStream = nostrService.streamEventsOnEvent(
       [
@@ -151,7 +121,6 @@ export default function PostApprovalPage() {
     );
 
     approvalStreamCleanupRef.current = () => {
-      discussionStream();
       postsStream();
       approvalsStream();
     };
@@ -379,7 +348,7 @@ export default function PostApprovalPage() {
           </button>
         </nav>
 
-        {isLoading ? (
+        {isDiscussionLoading || isLoading ? (
           <div className="animate-pulse space-y-4">
             {[...Array(3)].map((_, i) => (
               <div
@@ -388,6 +357,21 @@ export default function PostApprovalPage() {
               ></div>
             ))}
           </div>
+        ) : !discussion ? (
+          discussionCompletionReason === "idle-timeout" ||
+          discussionCompletionReason === "hard-timeout" ||
+          discussionCompletionReason === "cancelled" ? (
+            <div className="alert alert-warning" role="alert">
+              <span>
+                会話データの取得に時間がかかっています（{discussionCompletionReason}）。
+                受信待機中または relay 応答遅延の可能性があります。
+              </span>
+            </div>
+          ) : (
+            <div className="alert alert-warning" role="alert">
+              <span>会話が見つかりません。</span>
+            </div>
+          )
         ) : (
           <main aria-labelledby={`${activeTab}-tab`} role="tabpanel">
             {activeTab === "pending" && (

@@ -1,8 +1,11 @@
 import React from "react";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionEditPage from "../page";
 import type { StreamEventsOptions } from "@/lib/nostr/nostr-service";
+import type { Discussion } from "@/types/discussion";
+
+const mockUseDiscussionMeta = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr-test" }),
@@ -19,6 +22,10 @@ jest.mock("@/lib/auth/auth-context", () => ({
     },
     signEvent: jest.fn(),
   }),
+}));
+
+jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
+  useDiscussionMeta: () => mockUseDiscussionMeta(),
 }));
 
 jest.mock("@/lib/config/discussion-config", () => ({
@@ -43,6 +50,7 @@ jest.mock("@/lib/nostr/nostr-service", () => {
 
   return {
     createNostrService: () => serviceMock,
+    getNostrServiceConfigKey: () => "test-config",
     __mock: serviceMock,
   };
 });
@@ -89,14 +97,41 @@ jest.mock("@/components/ui/Button", () => {
 describe("DiscussionEditPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    const layoutDiscussion: Discussion = {
+      id: "34550:author:demo",
+      title: "Edit Me",
+      description: "Updated description",
+      authorPubkey: "author",
+      dTag: "demo",
+      moderators: [],
+      createdAt: 123,
+      event: {
+        id: "event-1",
+        pubkey: "author",
+        kind: 34550,
+        created_at: 123,
+        tags: [
+          ["d", "demo"],
+          ["name", "Edit Me"],
+          ["description", "desc"],
+        ],
+        content: "Updated description",
+        sig: "sig",
+      },
+    };
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: layoutDiscussion,
+      isLoading: false,
+      error: null,
+      completionReason: "eose",
+      reload: jest.fn(),
+    });
   });
 
   it("streams discussion metadata and renders form without waiting for EOSE", async () => {
-    const streamHandlers: StreamEventsOptions[] = [];
-
     serviceMock.streamEventsOnEvent.mockImplementation(
       (_filters: unknown, handlers: StreamEventsOptions) => {
-        streamHandlers.push(handlers);
+        handlers.onEose?.([]);
         return () => {};
       }
     );
@@ -107,29 +142,6 @@ describe("DiscussionEditPage streaming", () => {
       expect(serviceMock.streamEventsOnEvent).toHaveBeenCalled()
     );
     expect(serviceMock.getDiscussions).not.toHaveBeenCalled();
-
-    const mockEvent = {
-      id: "event-1",
-      pubkey: "author",
-      kind: 34550,
-      created_at: 123,
-      tags: [
-        ["d", "demo"],
-        ["name", "Edit Me"],
-        ["description", "desc"],
-      ],
-      content: "Updated description",
-      sig: "sig",
-    };
-
-    const handlers = streamHandlers[0];
-    if (!handlers) {
-      throw new Error("streamHandlers not initialized");
-    }
-
-    await act(async () => {
-      handlers.onEvent?.([mockEvent], mockEvent);
-    });
 
     await waitFor(() =>
       expect(screen.getByLabelText("タイトル *")).toHaveValue("Edit Me")

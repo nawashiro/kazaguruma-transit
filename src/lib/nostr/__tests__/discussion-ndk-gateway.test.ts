@@ -1,7 +1,9 @@
 import {
   LegacyNostrServiceDiscussionNdkGateway,
+  createDiscussionNdkGateway,
   type NostrEventDTO,
 } from "@/lib/nostr/discussion-ndk-gateway";
+import type { NostrServiceConfig } from "@/lib/nostr/nostr-service";
 
 describe("discussion-ndk-gateway moderator decision draft", () => {
   const createGateway = () =>
@@ -64,5 +66,19 @@ describe("discussion-ndk-gateway moderator decision draft", () => {
     expect(draft.tags).not.toEqual(
       expect.arrayContaining([["p", "mod-b", "", "moderator"]])
     );
+  });
+
+  it("createDiscussionNdkGateway reuses singleton for equivalent configs", () => {
+    const config: NostrServiceConfig = {
+      relays: [{ url: "wss://example", read: true, write: true }],
+      defaultTimeout: 3000,
+    };
+    const gatewayA = createDiscussionNdkGateway(config);
+    const gatewayB = createDiscussionNdkGateway({
+      relays: [{ url: "wss://example", read: true, write: true }],
+      defaultTimeout: 3000,
+    });
+
+    expect(gatewayA).toBe(gatewayB);
   });
 });

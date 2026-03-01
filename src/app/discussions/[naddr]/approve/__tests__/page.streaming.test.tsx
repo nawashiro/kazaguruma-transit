@@ -1,9 +1,11 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import PostApprovalPage from "../page";
+import type { Discussion } from "@/types/discussion";
 
 const useAuthMock = jest.fn();
+const mockUseDiscussionMeta = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr-test" }),
@@ -11,6 +13,10 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => useAuthMock(),
+}));
+
+jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
+  useDiscussionMeta: () => mockUseDiscussionMeta(),
 }));
 
 jest.mock("@/lib/config/discussion-config", () => ({
@@ -111,6 +117,34 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
 describe("PostApprovalPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    const layoutDiscussion: Discussion = {
+      id: "34550:author:tag",
+      title: "Title",
+      description: "desc",
+      authorPubkey: "author",
+      dTag: "tag",
+      moderators: [{ pubkey: "moderator-1" }],
+      createdAt: 1,
+      event: {
+        id: "discussion-event",
+        pubkey: "author",
+        kind: 34550,
+        created_at: 1,
+        tags: [
+          ["d", "tag"],
+          ["name", "Title"],
+        ],
+        content: "desc",
+        sig: "sig",
+      },
+    };
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: layoutDiscussion,
+      isLoading: false,
+      error: null,
+      completionReason: "eose",
+      reload: jest.fn(),
+    });
   });
 
   it("uses streaming APIs instead of blocking fetches", async () => {
@@ -151,7 +185,7 @@ describe("PostApprovalPage streaming", () => {
     render(<PostApprovalPage />);
 
     const approvedTab = await screen.findByRole("tab", { name: "承認済みタブを開く" });
-    approvedTab.click();
+    fireEvent.click(approvedTab);
 
     const revokeButton = await screen.findByRole("button", { name: "承認を撤回" });
     expect(revokeButton).toBeDisabled();

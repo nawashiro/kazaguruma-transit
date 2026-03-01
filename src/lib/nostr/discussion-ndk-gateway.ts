@@ -1,5 +1,6 @@
 import {
   createNostrService,
+  getNostrServiceConfigKey,
   type CompletionReason,
   type ReadEventsOptions,
   type NostrService,
@@ -290,7 +291,20 @@ export class LegacyNostrServiceDiscussionNdkGateway
   }
 }
 
+const gatewaySingletons = new Map<string, DiscussionNdkGateway>();
+
 export const createDiscussionNdkGateway = (
   config: NostrServiceConfig
-): DiscussionNdkGateway =>
-  new LegacyNostrServiceDiscussionNdkGateway(createNostrService(config));
+): DiscussionNdkGateway => {
+  const cacheKey = getNostrServiceConfigKey(config);
+  const existing = gatewaySingletons.get(cacheKey);
+  if (existing) {
+    return existing;
+  }
+
+  const gateway = new LegacyNostrServiceDiscussionNdkGateway(
+    createNostrService(config)
+  );
+  gatewaySingletons.set(cacheKey, gateway);
+  return gateway;
+};

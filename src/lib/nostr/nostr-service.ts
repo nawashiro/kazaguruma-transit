@@ -1260,8 +1260,30 @@ export class NostrService {
   }
 }
 
+const serviceSingletons = new Map<string, NostrService>();
+
+export const getNostrServiceConfigKey = (config: NostrServiceConfig): string => {
+  const normalizedRelays = config.relays.map((relay) => ({
+    url: relay.url,
+    read: relay.read,
+    write: relay.write,
+  }));
+  return JSON.stringify({
+    relays: normalizedRelays,
+    defaultTimeout: config.defaultTimeout,
+  });
+};
+
 export const createNostrService = (
   config: NostrServiceConfig
 ): NostrService => {
-  return new NostrService(config);
+  const cacheKey = getNostrServiceConfigKey(config);
+  const existing = serviceSingletons.get(cacheKey);
+  if (existing) {
+    return existing;
+  }
+
+  const service = new NostrService(config);
+  serviceSingletons.set(cacheKey, service);
+  return service;
 };

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
@@ -18,7 +19,6 @@ import {
 } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
-  parseDiscussionEvent,
   isValidNpub,
   npubToHex,
   getAdminPubkeyHex,
@@ -66,6 +66,10 @@ export default function DiscussionEditPage() {
   const router = useRouter();
   const naddrParam = params.naddr as string;
   const { user, signEvent } = useAuth();
+  const discussionMeta = useDiscussionMeta();
+  const layoutDiscussion = discussionMeta?.discussion ?? null;
+  const isDiscussionLoading = discussionMeta?.isLoading ?? false;
+  const discussionCompletionReason = discussionMeta?.completionReason ?? null;
 
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [formData, setFormData] = useState<EditFormData>({
@@ -95,7 +99,6 @@ export default function DiscussionEditPage() {
   >(
     null
   );
-  const discussionStreamCleanupRef = useRef<(() => void) | null>(null);
   const promotionRequestStreamCleanupRef = useRef<(() => void) | null>(null);
 
   const discussionInfo = useMemo(() => {
@@ -107,30 +110,28 @@ export default function DiscussionEditPage() {
     return discussion && user.pubkey === discussion.authorPubkey;
   }, [discussion, user.pubkey]);
 
-  const applyDiscussionEvents = useCallback(
-    (events: Event[]) => {
-      if (!discussionInfo) return;
-
-      const parsedDiscussion = events
-        .map(parseDiscussionEvent)
-        .find((d) => d && d.dTag === discussionInfo.dTag);
-
-      if (!parsedDiscussion) {
-        return;
-      }
-
-      setDiscussion(parsedDiscussion);
-      setFormData({
-        title: parsedDiscussion.title,
-        description: parsedDiscussion.description,
-        moderators: parsedDiscussion.moderators.map((m) => m.pubkey), // npub形式に変換が必要
+  useEffect(() => {
+    if (layoutDiscussion) {
+      setDiscussion((prev) => {
+        if (prev?.id === layoutDiscussion.id) {
+          return prev;
+        }
+        return layoutDiscussion;
       });
-    },
-    [discussionInfo]
-  );
+      setFormData({
+        title: layoutDiscussion.title,
+        description: layoutDiscussion.description,
+        moderators: layoutDiscussion.moderators.map((m) => m.pubkey),
+      });
+      return;
+    }
+
+    if (!isDiscussionLoading) {
+      setDiscussion(null);
+    }
+  }, [layoutDiscussion, isDiscussionLoading]);
 
   const startStreamingDiscussion = useCallback(() => {
-    discussionStreamCleanupRef.current?.();
     promotionRequestStreamCleanupRef.current?.();
 
     if (!isDiscussionsEnabled() || !discussionInfo) {
@@ -139,28 +140,6 @@ export default function DiscussionEditPage() {
     }
 
     setIsLoading(true);
-
-    discussionStreamCleanupRef.current = nostrService.streamEventsOnEvent(
-      [
-        {
-          kinds: [34550],
-          authors: [discussionInfo.authorPubkey],
-          "#d": [discussionInfo.dTag],
-          limit: 1,
-        },
-      ],
-      {
-        onEvent: (events) => {
-          applyDiscussionEvents(events);
-          setIsLoading(false);
-        },
-        onEose: (events) => {
-          applyDiscussionEvents(events);
-          setIsLoading(false);
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
-      }
-    );
 
     promotionRequestStreamCleanupRef.current = nostrService.streamEventsOnEvent(
       [
@@ -187,6 +166,7 @@ export default function DiscussionEditPage() {
             }))
             .sort((a, b) => b.createdAt - a.createdAt);
           setPromotionRequests(requests);
+          setIsLoading(false);
         },
         onEose: (events) => {
           const requests = events
@@ -203,13 +183,13 @@ export default function DiscussionEditPage() {
             }))
             .sort((a, b) => b.createdAt - a.createdAt);
           setPromotionRequests(requests);
+          setIsLoading(false);
         },
         timeoutMs: nostrServiceConfig.defaultTimeout,
       }
     );
   }, [
     discussionInfo,
-    applyDiscussionEvents,
     nostrServiceConfig.defaultTimeout,
   ]);
 
@@ -217,8 +197,6 @@ export default function DiscussionEditPage() {
     startStreamingDiscussion();
 
     return () => {
-      discussionStreamCleanupRef.current?.();
-      discussionStreamCleanupRef.current = null;
       promotionRequestStreamCleanupRef.current?.();
       promotionRequestStreamCleanupRef.current = null;
     };
@@ -557,7 +535,7 @@ export default function DiscussionEditPage() {
     );
   }
 
-  if (isLoading) {
+  if (isDiscussionLoading || isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="animate-pulse space-y-4">
@@ -569,6 +547,30 @@ export default function DiscussionEditPage() {
   }
 
   if (!discussion) {
+    if (
+      discussionCompletionReason === "idle-timeout" ||
+      discussionCompletionReason === "hard-timeout" ||
+      discussionCompletionReason === "cancelled"
+    ) {
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <div className="alert alert-warning mb-4" role="alert">
+            <span>
+              会話データの取得に時間がかかっています（{discussionCompletionReason}）。
+              受信待機中または relay 応答遅延の可能性があります。
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-outline rounded-full dark:rounded-sm"
+            onClick={() => window.location.reload()}
+          >
+            再読み込み
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">

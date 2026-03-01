@@ -3,6 +3,7 @@
 import React, { useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { AuditLogSection } from "@/components/discussion/AuditLogSection";
+import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 
 /**
@@ -10,11 +11,13 @@ import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
  * URL: /discussions/[naddr]/audit
  *
  * FR-001: 独立したページとして提供
- * FR-016: メイン画面に依存せず独自にkind:34550を取得
+ * metadata は [naddr] layout の useDiscussionMeta を利用して共有する
  */
 export default function AuditPage() {
   const params = useParams();
   const naddr = params.naddr as string;
+  const discussionMeta = useDiscussionMeta();
+  const discussion = discussionMeta?.discussion ?? null;
   const auditRef = useRef<{
     loadAuditData: () => void;
     retryLoadAuditData: () => void;
@@ -41,8 +44,8 @@ export default function AuditPage() {
   return (
     <AuditLogSection
       ref={auditRef}
+      discussion={discussion}
       discussionInfo={discussionInfo}
-      loadDiscussionIndependently={true}
       conversationAuditMode={true}
       initialVisibleCount={10}
     />

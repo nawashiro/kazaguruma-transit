@@ -1,4 +1,8 @@
-import { NostrService, NostrServiceConfig } from "../nostr-service";
+import {
+  NostrService,
+  NostrServiceConfig,
+  createNostrService,
+} from "../nostr-service";
 import { naddrEncode } from "../naddr-utils";
 import { createDiscussionListingRequest } from "@/lib/discussion/user-creation-flow";
 import fs from "fs";
@@ -369,6 +373,16 @@ describe("NostrService event retrieval", () => {
     expect(onEvent).not.toHaveBeenCalled();
     expect(onEose).toHaveBeenCalledWith([]);
     expect(typeof cleanup).toBe("function");
+  });
+
+  it("createNostrService reuses singleton for equivalent configs", () => {
+    const serviceA = createNostrService(config);
+    const serviceB = createNostrService({
+      relays: [{ url: "wss://example", read: true, write: false }],
+      defaultTimeout: 2000,
+    });
+
+    expect(serviceA).toBe(serviceB);
   });
 });
 

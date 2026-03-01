@@ -1,8 +1,7 @@
 import React from "react";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionsPage from "../page";
-import type { NdkSubscribeHandlers } from "@/lib/nostr/discussion-ndk-gateway";
 
 // Mock next/navigation
 jest.mock("next/navigation", () => ({
@@ -31,7 +30,7 @@ jest.mock("@/lib/nostr/naddr-utils", () => ({
 
 jest.mock("@/lib/nostr/discussion-ndk-gateway", () => {
   const gatewayMock = {
-    subscribe: jest.fn(),
+    queryWithCompletion: jest.fn(),
   };
   return {
     createDiscussionNdkGateway: () => gatewayMock,
@@ -93,34 +92,7 @@ describe("DiscussionsPage streaming", () => {
     process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR = "naddr1discussionlist";
   });
 
-  it("waits for approvals EOSE before streaming discussions and renders OnEvent updates", async () => {
-    let approvalHandlers: NdkSubscribeHandlers | undefined;
-    let discussionHandlers: NdkSubscribeHandlers | undefined;
-
-    gatewayMock.subscribe
-      .mockImplementationOnce(
-        (_filters: unknown, handlers: NdkSubscribeHandlers) => {
-          approvalHandlers = handlers;
-          return { close: () => undefined };
-        }
-      )
-      .mockImplementationOnce(
-        (_filters: unknown, handlers: NdkSubscribeHandlers) => {
-          discussionHandlers = handlers;
-          return { close: () => undefined };
-        }
-      );
-
-    render(<DiscussionsPage />);
-
-    await waitFor(() =>
-      expect(gatewayMock.subscribe).toHaveBeenCalled()
-    );
-    expect(gatewayMock.subscribe).toHaveBeenCalledWith(
-      [{ kinds: [4550], "#a": ["34550:admin:list"] }],
-      expect.any(Object)
-    );
-
+  it("loads approvals then referenced discussions via completion-aware query", async () => {
     const approvalEvent = {
       id: "approval-1",
       pubkey: "mod",
@@ -132,24 +104,6 @@ describe("DiscussionsPage streaming", () => {
       }),
       sig: "sig",
     };
-
-    await act(async () => {
-      approvalHandlers?.onEose?.([approvalEvent]);
-    });
-
-    expect(gatewayMock.subscribe).toHaveBeenNthCalledWith(
-      2,
-      [
-        {
-          kinds: [34550],
-          authors: ["author"],
-          "#d": ["demo"],
-          limit: 1,
-        },
-      ],
-      expect.any(Object)
-    );
-
     const discussionEvent = {
       id: "discussion-1",
       pubkey: "author",
@@ -162,10 +116,48 @@ describe("DiscussionsPage streaming", () => {
       content: "Streaming description",
       sig: "sig",
     };
+    gatewayMock.queryWithCompletion
+      .mockResolvedValueOnce({
+        events: [approvalEvent],
+        completionReason: "eose",
+        eventCount: 1,
+        elapsedMs: 10,
+        startedAt: 1000,
+        lastEventAt: 1000,
+        eoseReceived: true,
+      })
+      .mockResolvedValueOnce({
+        events: [discussionEvent],
+        completionReason: "eose",
+        eventCount: 1,
+        elapsedMs: 10,
+        startedAt: 1000,
+        lastEventAt: 1000,
+        eoseReceived: true,
+      });
 
-    await act(async () => {
-      discussionHandlers?.onEvent?.([discussionEvent], discussionEvent);
-    });
+    render(<DiscussionsPage />);
+
+    await waitFor(() =>
+      expect(gatewayMock.queryWithCompletion).toHaveBeenCalled()
+    );
+    expect(gatewayMock.queryWithCompletion).toHaveBeenNthCalledWith(
+      1,
+      [{ kinds: [4550], "#a": ["34550:admin:list"] }],
+      { idleTimeoutMs: 500, hardTimeoutMs: 1500 }
+    );
+    expect(gatewayMock.queryWithCompletion).toHaveBeenNthCalledWith(
+      2,
+      [
+        {
+          kinds: [34550],
+          authors: ["author"],
+          "#d": ["demo"],
+          limit: 1,
+        },
+      ],
+      { idleTimeoutMs: 500, hardTimeoutMs: 1500 }
+    );
 
     expect(
       await screen.findByText("Streamed Discussion")

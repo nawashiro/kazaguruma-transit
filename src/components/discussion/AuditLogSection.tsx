@@ -23,7 +23,7 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
-import type { Event } from "@/lib/nostr/nostr-service";
+import type { Event, EventFetchCompletion } from "@/lib/nostr/nostr-service";
 import { NostrEvent } from "nosskey-sdk";
 
 const nostrServiceConfig = getNostrServiceConfig();
@@ -60,8 +60,6 @@ export const AuditLogSection = React.forwardRef<
     },
     ref
   ) => {
-    const [auditPosts, setAuditPosts] = useState<DiscussionPost[]>([]);
-    const [auditApprovals, setAuditApprovals] = useState<PostApproval[]>([]);
     const [, setAuditEvaluations] = useState<PostEvaluation[]>([]);
     const [isAuditLoading, setIsAuditLoading] = useState(false);
     const [isAuditLoaded, setIsAuditLoaded] = useState(false);
@@ -121,7 +119,7 @@ export const AuditLogSection = React.forwardRef<
     }, [discussionInfo]);
 
     const fetchAuditEventsPage = useCallback(
-      async (until?: number): Promise<Event[]> => {
+      async (until?: number): Promise<EventFetchCompletion> => {
         const targetDiscussion = getAuditDiscussionRef();
         const filter: {
           kinds: number[];
@@ -138,7 +136,10 @@ export const AuditLogSection = React.forwardRef<
           filter.until = until;
         }
 
-        return await nostrService.getEventsOnEose([filter]);
+        return await nostrService.getEventsWithCompletion([filter], {
+          idleTimeoutMs: nostrServiceConfig.defaultTimeout,
+          hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
+        });
       },
       [getAuditDiscussionRef]
     );
@@ -235,8 +236,6 @@ export const AuditLogSection = React.forwardRef<
           .map((event) => parsePostEvent(event, parsedApprovals))
           .filter((post): post is DiscussionPost => post !== null);
 
-        setAuditApprovals(parsedApprovals);
-        setAuditPosts(parsedPosts);
         await updateProfiles(baseDiscussion, parsedPosts);
       },
       [updateProfiles]
@@ -274,16 +273,20 @@ export const AuditLogSection = React.forwardRef<
 
         if (discussionInfo && isTestMode(discussionInfo.dTag)) {
           const testData = await loadTestData();
-          setAuditPosts(testData.posts);
-          setAuditApprovals([]);
           setAuditEvaluations(testData.evaluations);
           setLocalReferencedDiscussions([]);
           setIsAuditLoaded(true);
           return;
         }
 
-        const page = await fetchAuditEventsPage();
-        const normalizedPage = normalizePageSize(page);
+        const pageResult = await fetchAuditEventsPage();
+        logger.info("audit-log initial fetch completed", {
+          discussionId: discussionInfo?.discussionId,
+          completionReason: pageResult.completionReason,
+          eventCount: pageResult.eventCount,
+          elapsedMs: pageResult.elapsedMs,
+        });
+        const normalizedPage = normalizePageSize(pageResult.events);
         setAuditEvents(normalizedPage);
         await applyAuditEvents(normalizedPage, baseDiscussion);
 
@@ -293,14 +296,12 @@ export const AuditLogSection = React.forwardRef<
         } else {
           setNextUntil(null);
         }
-        setHasMore(page.length >= AUDIT_PAGE_SIZE);
+        setHasMore(pageResult.events.length >= AUDIT_PAGE_SIZE);
         setIsAuditLoaded(true);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "不明なエラー";
         logger.error("Failed to load audit data:", errorMessage);
         setAuditError("データの取得に失敗しました。再試行してください。");
-        setAuditPosts([]);
-        setAuditApprovals([]);
       } finally {
         setIsAuditLoading(false);
       }
@@ -323,8 +324,14 @@ export const AuditLogSection = React.forwardRef<
       setIsLoadingMore(true);
       try {
         const baseDiscussion = discussion;
-        const page = await fetchAuditEventsPage(nextUntil);
-        const normalizedPage = normalizePageSize(page);
+        const pageResult = await fetchAuditEventsPage(nextUntil);
+        logger.info("audit-log load more completed", {
+          discussionId: discussionInfo?.discussionId,
+          completionReason: pageResult.completionReason,
+          eventCount: pageResult.eventCount,
+          elapsedMs: pageResult.elapsedMs,
+        });
+        const normalizedPage = normalizePageSize(pageResult.events);
         const merged = mergeEvents(auditEvents, normalizedPage);
         setAuditEvents(merged);
         await applyAuditEvents(merged, baseDiscussion);
@@ -333,7 +340,7 @@ export const AuditLogSection = React.forwardRef<
           const oldest = Math.min(...normalizedPage.map((event) => event.created_at));
           setNextUntil(oldest - 1);
         }
-        if (page.length < AUDIT_PAGE_SIZE) {
+        if (pageResult.events.length < AUDIT_PAGE_SIZE) {
           setHasMore(false);
         } else {
           setHasMore(true);

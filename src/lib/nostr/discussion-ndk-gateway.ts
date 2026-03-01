@@ -1,5 +1,7 @@
 import {
   createNostrService,
+  type CompletionReason,
+  type ReadEventsOptions,
   type NostrService,
   type NostrServiceConfig,
   type StreamEventsOptions,
@@ -41,10 +43,24 @@ export interface NdkEventFilter {
   limit?: number;
 }
 
+export interface NdkQueryCompletion {
+  events: NostrEventDTO[];
+  completionReason: CompletionReason;
+  eventCount: number;
+  elapsedMs: number;
+  startedAt: number;
+  lastEventAt: number;
+  eoseReceived: boolean;
+}
+
 export interface DiscussionNdkGateway {
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   query: (filters: NdkEventFilter[]) => Promise<NostrEventDTO[]>;
+  queryWithCompletion: (
+    filters: NdkEventFilter[],
+    options?: ReadEventsOptions
+  ) => Promise<NdkQueryCompletion>;
   subscribe: (
     filters: NdkEventFilter[],
     handlers: NdkSubscribeHandlers
@@ -64,6 +80,19 @@ export class UnconfiguredDiscussionNdkGateway implements DiscussionNdkGateway {
 
   async query(): Promise<NostrEventDTO[]> {
     return [];
+  }
+
+  async queryWithCompletion(): Promise<NdkQueryCompletion> {
+    const now = Date.now();
+    return {
+      events: [],
+      completionReason: "hard-timeout",
+      eventCount: 0,
+      elapsedMs: 0,
+      startedAt: now,
+      lastEventAt: now,
+      eoseReceived: false,
+    };
   }
 
   subscribe(): NdkSubscription {
@@ -109,6 +138,20 @@ export class LegacyNostrServiceDiscussionNdkGateway
     return (await this.service.getEventsOnEose(
       filters as Parameters<NostrService["getEventsOnEose"]>[0]
     )) as unknown as NostrEventDTO[];
+  }
+
+  async queryWithCompletion(
+    filters: NdkEventFilter[],
+    options?: ReadEventsOptions
+  ): Promise<NdkQueryCompletion> {
+    const completion = await this.service.getEventsWithCompletion(
+      filters as Parameters<NostrService["getEventsWithCompletion"]>[0],
+      options
+    );
+    return {
+      ...completion,
+      events: completion.events as unknown as NostrEventDTO[],
+    };
   }
 
   subscribe(

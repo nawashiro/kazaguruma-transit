@@ -62,7 +62,7 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
 
 jest.mock("@/lib/nostr/nostr-service", () => {
   const serviceMock = {
-    getEventsOnEose: jest.fn(),
+    getEventsWithCompletion: jest.fn(),
     getProfile: jest.fn().mockResolvedValue([]),
     getReferencedUserDiscussions: jest.fn().mockResolvedValue([]),
   };
@@ -115,6 +115,16 @@ const createPostEvent = (id: string, createdAt: number): TestEvent => ({
   sig: `sig-${id}`,
 });
 
+const withCompletion = (events: TestEvent[]) => ({
+  events,
+  completionReason: "eose",
+  eventCount: events.length,
+  elapsedMs: 10,
+  startedAt: 1000,
+  lastEventAt: 1000,
+  eoseReceived: true,
+});
+
 const createApprovalEvent = (
   id: string,
   createdAt: number,
@@ -145,7 +155,9 @@ describe("AuditLogSection", () => {
     const firstPage = Array.from({ length: 10 }, (_, i) =>
       createPostEvent(`event-${i + 1}`, 200 - i)
     );
-    serviceMock.getEventsOnEose.mockResolvedValueOnce(firstPage);
+    serviceMock.getEventsWithCompletion.mockResolvedValueOnce(
+      withCompletion(firstPage)
+    );
 
     const ref = React.createRef<{
       loadAuditData: () => void;
@@ -177,14 +189,20 @@ describe("AuditLogSection", () => {
       await ref.current?.loadAuditData();
     });
 
-    expect(serviceMock.getEventsOnEose).toHaveBeenCalledTimes(1);
-    expect(serviceMock.getEventsOnEose).toHaveBeenCalledWith([
+    expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(1);
+    expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledWith(
+      [
+        {
+          kinds: [1111, 1, 4550],
+          "#a": ["34550:test-pubkey:test-dtag"],
+          limit: 10,
+        },
+      ],
       {
-        kinds: [1111, 1, 4550],
-        "#a": ["34550:test-pubkey:test-dtag"],
-        limit: 10,
-      },
-    ]);
+        idleTimeoutMs: 500,
+        hardTimeoutMs: 1500,
+      }
+    );
     expect(screen.getByTestId("audit-timeline-count")).toHaveTextContent("10");
     expect(screen.getByRole("button", { name: "さらに過去10件を表示" })).toBeEnabled();
   });
@@ -198,9 +216,9 @@ describe("AuditLogSection", () => {
       createPostEvent("event-12", 188),
       createPostEvent("event-13", 187),
     ];
-    serviceMock.getEventsOnEose
-      .mockResolvedValueOnce(firstPage)
-      .mockResolvedValueOnce(secondPage);
+    serviceMock.getEventsWithCompletion
+      .mockResolvedValueOnce(withCompletion(firstPage))
+      .mockResolvedValueOnce(withCompletion(secondPage));
 
     const ref = React.createRef<{
       loadAuditData: () => void;
@@ -236,15 +254,22 @@ describe("AuditLogSection", () => {
       fireEvent.click(screen.getByRole("button", { name: "さらに過去10件を表示" }));
     });
 
-    expect(serviceMock.getEventsOnEose).toHaveBeenCalledTimes(2);
-    expect(serviceMock.getEventsOnEose).toHaveBeenNthCalledWith(2, [
+    expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(2);
+    expect(serviceMock.getEventsWithCompletion).toHaveBeenNthCalledWith(
+      2,
+      [
+        {
+          kinds: [1111, 1, 4550],
+          "#a": ["34550:test-pubkey:test-dtag"],
+          limit: 10,
+          until: 190,
+        },
+      ],
       {
-        kinds: [1111, 1, 4550],
-        "#a": ["34550:test-pubkey:test-dtag"],
-        limit: 10,
-        until: 190,
-      },
-    ]);
+        idleTimeoutMs: 500,
+        hardTimeoutMs: 1500,
+      }
+    );
     expect(screen.getByTestId("audit-timeline-count")).toHaveTextContent("13");
     expect(screen.getByRole("button", { name: "さらに過去10件を表示" })).toBeDisabled();
   });
@@ -268,9 +293,9 @@ describe("AuditLogSection", () => {
       createPostEvent("older-2", 189),
     ];
 
-    serviceMock.getEventsOnEose
-      .mockResolvedValueOnce(firstPage)
-      .mockResolvedValueOnce(secondPage);
+    serviceMock.getEventsWithCompletion
+      .mockResolvedValueOnce(withCompletion(firstPage))
+      .mockResolvedValueOnce(withCompletion(secondPage));
 
     const ref = React.createRef<{
       loadAuditData: () => void;
@@ -323,7 +348,9 @@ describe("AuditLogSection", () => {
       createPostEvent("event-approved", 200),
       createApprovalEvent("approval-1", 201, "event-approved", approverPubkey),
     ];
-    serviceMock.getEventsOnEose.mockResolvedValueOnce(events);
+    serviceMock.getEventsWithCompletion.mockResolvedValueOnce(
+      withCompletion(events)
+    );
 
     const ref = React.createRef<{
       loadAuditData: () => void;

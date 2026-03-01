@@ -10,6 +10,26 @@ import { normalizeDiscussionId } from "@/lib/nostr/naddr-utils";
 
 export type Event = NostrEvent & { id: string; sig: string; kind: number };
 export type Filter = NDKFilter<number>;
+export type CompletionReason =
+  | "eose"
+  | "idle-timeout"
+  | "hard-timeout"
+  | "cancelled";
+
+export interface EventFetchCompletion {
+  events: Event[];
+  completionReason: CompletionReason;
+  eventCount: number;
+  elapsedMs: number;
+  startedAt: number;
+  lastEventAt: number;
+  eoseReceived: boolean;
+}
+
+export interface ReadEventsOptions {
+  idleTimeoutMs?: number;
+  hardTimeoutMs?: number;
+}
 
 export const dedupeAndSortEvents = (events: Event[]): Event[] => {
   const uniqueById = new Map<string, Event>();
@@ -103,20 +123,138 @@ export class NostrService {
     await this.connectPromise;
   }
 
-  async getEventsOnEose(filters: Filter[]): Promise<Event[]> {
-    try {
-      await this.ensureConnected();
-      const allEvents: Event[] = [];
-      for (const filter of filters) {
-        const events = await this.ndk.fetchEvents(filter, {
-          closeOnEose: true,
+  private collectEventsWithCompletion(
+    filters: Filter[],
+    options: ReadEventsOptions = {}
+  ): Promise<EventFetchCompletion> {
+    if (filters.length === 0) {
+      const now = Date.now();
+      return Promise.resolve({
+        events: [],
+        completionReason: "eose",
+        eventCount: 0,
+        elapsedMs: 0,
+        startedAt: now,
+        lastEventAt: now,
+        eoseReceived: true,
+      });
+    }
+
+    const idleTimeoutMs = options.idleTimeoutMs ?? this.config.defaultTimeout;
+    const hardTimeoutMs = Math.max(
+      options.hardTimeoutMs ?? this.config.defaultTimeout * 3,
+      idleTimeoutMs + 1
+    );
+
+    return new Promise((resolve) => {
+      const startedAt = Date.now();
+      let lastEventAt = startedAt;
+      let closed = false;
+      let eoseCount = 0;
+      let eoseReceived = false;
+      const collected: Event[] = [];
+      const subscriptions: Array<{ stop: () => void }> = [];
+      const timerRefs: {
+        idle?: ReturnType<typeof setTimeout>;
+        hard?: ReturnType<typeof setTimeout>;
+      } = {};
+
+      const closeSubscriptions = () => {
+        subscriptions.forEach((subscription) => subscription.stop());
+      };
+
+      const finalize = (completionReason: CompletionReason) => {
+        if (closed) return;
+        closed = true;
+        if (timerRefs.idle) clearTimeout(timerRefs.idle);
+        if (timerRefs.hard) clearTimeout(timerRefs.hard);
+        closeSubscriptions();
+
+        const events = dedupeAndSortEvents(collected);
+        resolve({
+          events,
+          completionReason,
+          eventCount: events.length,
+          elapsedMs: Date.now() - startedAt,
+          startedAt,
+          lastEventAt,
+          eoseReceived,
         });
-        allEvents.push(
-          ...Array.from(events).map((event) => this.toRawEvent(event))
+      };
+
+      const resetIdleTimer = () => {
+        if (timerRefs.idle) clearTimeout(timerRefs.idle);
+        timerRefs.idle = setTimeout(() => finalize("idle-timeout"), idleTimeoutMs);
+      };
+
+      timerRefs.hard = setTimeout(() => finalize("hard-timeout"), hardTimeoutMs);
+      resetIdleTimer();
+
+      for (const filter of filters) {
+        const subscription = this.ndk.subscribe(
+          filter,
+          {
+            closeOnEose: true,
+            onEvent: (event) => {
+              if (closed) return;
+
+              lastEventAt = Date.now();
+              resetIdleTimer();
+
+              const rawEvent = this.toRawEvent(event);
+              const updated = mergeEvent(collected, rawEvent);
+              if (updated === collected) return;
+
+              collected.length = 0;
+              collected.push(...updated);
+            },
+            onEose: () => {
+              if (closed) return;
+              eoseCount += 1;
+              if (eoseCount >= filters.length) {
+                eoseReceived = true;
+                finalize("eose");
+              }
+            },
+          },
+          true
         );
+        subscriptions.push(subscription);
       }
 
-      return dedupeAndSortEvents(allEvents);
+      this.ensureConnected().catch((error) => {
+        logger.error("Failed to connect before reading events:", error);
+        finalize("hard-timeout");
+      });
+    });
+  }
+
+  async getEventsWithCompletion(
+    filters: Filter[],
+    options: ReadEventsOptions = {}
+  ): Promise<EventFetchCompletion> {
+    try {
+      await this.ensureConnected();
+      return await this.collectEventsWithCompletion(filters, options);
+    } catch (error) {
+      logger.error("Failed to get events with completion:", error);
+      const now = Date.now();
+      return {
+        events: [],
+        completionReason: "hard-timeout",
+        eventCount: 0,
+        elapsedMs: 0,
+        startedAt: now,
+        lastEventAt: now,
+        eoseReceived: false,
+      };
+    }
+  }
+
+  async getEventsOnEose(filters: Filter[]): Promise<Event[]> {
+    try {
+      const { events } = await this.getEventsWithCompletion(filters);
+      return events;
     } catch (error) {
       logger.error("Failed to get events:", error);
       return [];

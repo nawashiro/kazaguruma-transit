@@ -2,7 +2,6 @@ import React from "react";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionDetailPage from "../page";
-import type { NdkSubscribeHandlers } from "@/lib/nostr/discussion-ndk-gateway";
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr-test" }),
@@ -54,8 +53,7 @@ const { __mock: serviceMock } = jest.requireMock("@/lib/nostr/nostr-service");
 
 jest.mock("@/lib/nostr/discussion-ndk-gateway", () => {
   const gatewayMock = {
-    subscribe: jest.fn(),
-    query: jest.fn(),
+    queryWithCompletion: jest.fn(),
   };
   return {
     createDiscussionNdkGateway: () => gatewayMock,
@@ -176,30 +174,25 @@ jest.mock("@/components/ui/Button", () => {
 });
 
 describe("DiscussionDetailPage streaming", () => {
+  const withCompletion = (events: any[]) => ({
+    events,
+    completionReason: "eose",
+    eventCount: events.length,
+    elapsedMs: 10,
+    startedAt: 1000,
+    lastEventAt: 1000,
+    eoseReceived: true,
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it("shows loading state for evaluations until approvals EOSE completes", async () => {
-    let discussionHandlers: NdkSubscribeHandlers | undefined;
-    let resolveApprovals: (events: any[]) => void;
-
-    const approvalsPromise = new Promise<any[]>((resolve) => {
+    let resolveApprovals: (result: ReturnType<typeof withCompletion>) => void;
+    const approvalsPromise = new Promise<ReturnType<typeof withCompletion>>((resolve) => {
       resolveApprovals = resolve;
     });
-
-    gatewayMock.subscribe.mockImplementation(
-      (_filters: unknown, handlers: NdkSubscribeHandlers) => {
-        discussionHandlers = handlers;
-        return { close: () => undefined };
-      }
-    );
-    gatewayMock.query
-      .mockReturnValueOnce(approvalsPromise)
-      .mockResolvedValueOnce([]);
-    serviceMock.getEvaluations.mockResolvedValue([]);
-
-    render(<DiscussionDetailPage />);
 
     const discussionEvent = {
       id: "discussion-1",
@@ -214,9 +207,19 @@ describe("DiscussionDetailPage streaming", () => {
       sig: "sig",
     };
 
-    await act(async () => {
-      discussionHandlers?.onEvent?.([discussionEvent], discussionEvent);
+    gatewayMock.queryWithCompletion.mockImplementation((filters: Array<{ kinds?: number[] }>) => {
+      const kinds = filters[0]?.kinds ?? [];
+      if (kinds.includes(34550)) {
+        return Promise.resolve(withCompletion([discussionEvent]));
+      }
+      if (kinds.includes(4550)) {
+        return approvalsPromise;
+      }
+      return Promise.resolve(withCompletion([]));
     });
+    serviceMock.getEvaluations.mockResolvedValue([]);
+
+    render(<DiscussionDetailPage />);
 
     // Title is now displayed in the layout, not in page content
     // Check for loading state instead to verify streaming works
@@ -228,7 +231,7 @@ describe("DiscussionDetailPage streaming", () => {
     ).not.toBeInTheDocument();
 
     await act(async () => {
-      resolveApprovals([]);
+      resolveApprovals(withCompletion([]));
     });
 
     await waitFor(() =>
@@ -243,35 +246,10 @@ describe("DiscussionDetailPage streaming", () => {
   // because tab toggle has been replaced by URL-based navigation to /discussions/[naddr]/audit
 
   it("renders metadata on event before approvals EOSE, then runs analysis once after EOSE flow", async () => {
-    let discussionHandlers: NdkSubscribeHandlers | undefined;
-    let resolveApprovals: (events: any[]) => void;
-
-    const approvalsPromise = new Promise<any[]>((resolve) => {
+    let resolveApprovals: (result: ReturnType<typeof withCompletion>) => void;
+    const approvalsPromise = new Promise<ReturnType<typeof withCompletion>>((resolve) => {
       resolveApprovals = resolve;
     });
-
-    gatewayMock.subscribe.mockImplementation(
-      (_filters: unknown, handlers: NdkSubscribeHandlers) => {
-        discussionHandlers = handlers;
-        return { close: () => undefined };
-      }
-    );
-    gatewayMock.query
-      .mockReturnValueOnce(approvalsPromise)
-      .mockResolvedValueOnce([
-      { id: "eval-1", pubkey: "u1", tags: [["e", "post-1"]], created_at: 1 },
-      { id: "eval-2", pubkey: "u2", tags: [["e", "post-1"]], created_at: 2 },
-      { id: "eval-3", pubkey: "u3", tags: [["e", "post-2"]], created_at: 3 },
-      { id: "eval-4", pubkey: "u4", tags: [["e", "post-2"]], created_at: 4 },
-      { id: "eval-5", pubkey: "u5", tags: [["e", "post-1"]], created_at: 5 },
-    ]);
-    serviceMock.getEvaluations.mockResolvedValue([]);
-
-    render(<DiscussionDetailPage />);
-
-    await waitFor(() =>
-      expect(gatewayMock.subscribe).toHaveBeenCalled()
-    );
 
     const discussionEvent = {
       id: "discussion-1",
@@ -286,16 +264,39 @@ describe("DiscussionDetailPage streaming", () => {
       sig: "sig",
     };
 
-    await act(async () => {
-      discussionHandlers?.onEvent?.([discussionEvent], discussionEvent);
+    gatewayMock.queryWithCompletion.mockImplementation((filters: Array<{ kinds?: number[] }>) => {
+      const kinds = filters[0]?.kinds ?? [];
+      if (kinds.includes(34550)) {
+        return Promise.resolve(withCompletion([discussionEvent]));
+      }
+      if (kinds.includes(4550)) {
+        return approvalsPromise;
+      }
+      if (kinds.includes(7)) {
+        return Promise.resolve(withCompletion([
+          { id: "eval-1", pubkey: "u1", tags: [["e", "post-1"]], created_at: 1 },
+          { id: "eval-2", pubkey: "u2", tags: [["e", "post-1"]], created_at: 2 },
+          { id: "eval-3", pubkey: "u3", tags: [["e", "post-2"]], created_at: 3 },
+          { id: "eval-4", pubkey: "u4", tags: [["e", "post-2"]], created_at: 4 },
+          { id: "eval-5", pubkey: "u5", tags: [["e", "post-1"]], created_at: 5 },
+        ]));
+      }
+      return Promise.resolve(withCompletion([]));
     });
+    serviceMock.getEvaluations.mockResolvedValue([]);
+
+    render(<DiscussionDetailPage />);
+
+    await waitFor(() =>
+      expect(gatewayMock.queryWithCompletion).toHaveBeenCalled()
+    );
 
     // Title is now in the layout, not page content
     // Verify that evaluations haven't loaded yet (before EOSE)
     await waitFor(() =>
-      expect(gatewayMock.subscribe).toHaveBeenCalled()
+      expect(gatewayMock.queryWithCompletion).toHaveBeenCalled()
     );
-    expect(gatewayMock.query).toHaveBeenCalledTimes(1);
+    expect(gatewayMock.queryWithCompletion).toHaveBeenCalledTimes(2);
 
     const approvalEvents = [
       {
@@ -319,10 +320,12 @@ describe("DiscussionDetailPage streaming", () => {
     ];
 
     await act(async () => {
-      resolveApprovals(approvalEvents);
+      resolveApprovals(withCompletion(approvalEvents));
     });
 
-    await waitFor(() => expect(gatewayMock.query).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(gatewayMock.queryWithCompletion).toHaveBeenCalledTimes(3)
+    );
 
     expect(screen.getByText("意見グループ")).toBeInTheDocument();
   });

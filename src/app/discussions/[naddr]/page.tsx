@@ -47,8 +47,9 @@ import { logger } from "@/utils/logger";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
-const nostrService = createNostrService(getNostrServiceConfig());
-const discussionGateway = createDiscussionNdkGateway(getNostrServiceConfig());
+const nostrServiceConfig = getNostrServiceConfig();
+const nostrService = createNostrService(nostrServiceConfig);
+const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function DiscussionDetailPage() {
   const params = useParams();
@@ -67,6 +68,9 @@ export default function DiscussionDetailPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDiscussionLoading, setIsDiscussionLoading] = useState(true);
   const [isPostsLoading, setIsPostsLoading] = useState(true);
+  const [discussionCompletionReason, setDiscussionCompletionReason] = useState<
+    "eose" | "idle-timeout" | "hard-timeout" | "cancelled" | null
+  >(null);
   const [postsLoadError, setPostsLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const renderInlineLoading = (label: string) => (
@@ -92,7 +96,6 @@ export default function DiscussionDetailPage() {
   const [busStops, setBusStops] = useState<
     { route: string; stops: string[] }[]
   >([]);
-  const discussionStreamCleanupRef = useRef<(() => void) | null>(null);
   const loadSequenceRef = useRef(0);
   const analysisRunRef = useRef(false);
 
@@ -115,12 +118,25 @@ export default function DiscussionDetailPage() {
       setIsPostsLoading(true);
       try {
         setPostsLoadError(null);
-        const approvalsEvents = await discussionGateway.query([
+        const approvalsResult = await discussionGateway.queryWithCompletion(
+          [
+            {
+              kinds: [4550],
+              "#a": [discussionInfo.discussionId],
+            },
+          ],
           {
-            kinds: [4550],
-            "#a": [discussionInfo.discussionId],
-          },
-        ]);
+            idleTimeoutMs: nostrServiceConfig.defaultTimeout,
+            hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
+          }
+        );
+        logger.info("discussion-detail approvals fetch completed", {
+          discussionId: discussionInfo.discussionId,
+          completionReason: approvalsResult.completionReason,
+          eventCount: approvalsResult.eventCount,
+          elapsedMs: approvalsResult.elapsedMs,
+        });
+        const approvalsEvents = approvalsResult.events;
         if (loadSequenceRef.current !== loadSequence) return;
 
         const parsedApprovals = approvalsEvents
@@ -144,15 +160,36 @@ export default function DiscussionDetailPage() {
         setApprovals(parsedApprovals);
 
         const postIds = parsedPosts.map((post) => post.id);
-        const evaluationsEvents =
+        const evaluationsResult =
           postIds.length > 0
-            ? await discussionGateway.query([
+            ? await discussionGateway.queryWithCompletion(
+                [
+                  {
+                    kinds: [7],
+                    "#e": postIds,
+                  },
+                ],
                 {
-                  kinds: [7],
-                  "#e": postIds,
-                },
-              ])
-            : [];
+                  idleTimeoutMs: nostrServiceConfig.defaultTimeout,
+                  hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
+                }
+              )
+            : {
+                events: [],
+                completionReason: "eose" as const,
+                eventCount: 0,
+                elapsedMs: 0,
+                startedAt: Date.now(),
+                lastEventAt: Date.now(),
+                eoseReceived: true,
+              };
+        logger.info("discussion-detail evaluations fetch completed", {
+          discussionId: discussionInfo.discussionId,
+          completionReason: evaluationsResult.completionReason,
+          eventCount: evaluationsResult.eventCount,
+          elapsedMs: evaluationsResult.elapsedMs,
+        });
+        const evaluationsEvents = evaluationsResult.events;
         if (loadSequenceRef.current !== loadSequence) return;
 
         const parsedEvaluations = evaluationsEvents
@@ -222,9 +259,7 @@ export default function DiscussionDetailPage() {
     setAnalysisResult(null);
     setIsDiscussionLoading(true);
     setIsPostsLoading(true);
-
-    discussionStreamCleanupRef.current?.();
-    discussionStreamCleanupRef.current = null;
+    setDiscussionCompletionReason(null);
 
     if (isTestMode(discussionInfo.dTag)) {
       loadTestData()
@@ -261,41 +296,38 @@ export default function DiscussionDetailPage() {
       );
     };
 
-    discussionStreamCleanupRef.current = discussionGateway.subscribe(
-      [
+    void (async () => {
+      const discussionResult = await discussionGateway.queryWithCompletion(
+        [
+          {
+            kinds: [34550],
+            authors: [discussionInfo.authorPubkey],
+            "#d": [discussionInfo.dTag],
+            limit: 1,
+          },
+        ],
         {
-          kinds: [34550],
-          authors: [discussionInfo.authorPubkey],
-          "#d": [discussionInfo.dTag],
-          limit: 1,
-        },
-      ],
-      {
-        onEvent: (events) => {
-          if (loadSequenceRef.current !== loadSequence) return;
-          const latest = pickLatestDiscussion(events);
-          if (!latest) return;
-          setDiscussion(latest);
-          setIsDiscussionLoading(false);
-        },
-        onEose: (events) => {
-          if (loadSequenceRef.current !== loadSequence) return;
-          const latest = pickLatestDiscussion(events);
-          if (latest) {
-            setDiscussion(latest);
-          }
-          setIsDiscussionLoading(false);
-        },
+          idleTimeoutMs: nostrServiceConfig.defaultTimeout,
+          hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
+        }
+      );
+      if (loadSequenceRef.current !== loadSequence) return;
+      logger.info("discussion-detail metadata fetch completed", {
+        discussionId: discussionInfo.discussionId,
+        completionReason: discussionResult.completionReason,
+        eventCount: discussionResult.eventCount,
+        elapsedMs: discussionResult.elapsedMs,
+      });
+      const latest = pickLatestDiscussion(discussionResult.events);
+      if (latest) {
+        setDiscussion(latest);
       }
-    ).close;
+      setDiscussionCompletionReason(discussionResult.completionReason);
+      setIsDiscussionLoading(false);
+    })();
 
     loadApprovalsAndEvaluations(loadSequence);
     loadBusStops();
-
-    return () => {
-      discussionStreamCleanupRef.current?.();
-      discussionStreamCleanupRef.current = null;
-    };
   }, [discussionInfo, loadApprovalsAndEvaluations, loadBusStops]);
 
   useEffect(() => {
@@ -506,6 +538,30 @@ export default function DiscussionDetailPage() {
   }
 
   if (!discussion) {
+    if (
+      discussionCompletionReason === "idle-timeout" ||
+      discussionCompletionReason === "hard-timeout" ||
+      discussionCompletionReason === "cancelled"
+    ) {
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <div className="alert alert-warning mb-4" role="alert">
+            <span>
+              会話データの取得に時間がかかっています（{discussionCompletionReason}）。
+              受信待機中または relay 応答遅延の可能性があります。
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-outline rounded-full dark:rounded-sm"
+            onClick={() => window.location.reload()}
+          >
+            再読み込み
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">

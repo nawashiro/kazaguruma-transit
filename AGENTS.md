@@ -36,12 +36,9 @@ Follow TDD principles. First, write the tests. Avoid writing tests for things th
 - Follow the existing short-prefix style (`add: ...`, `fix: ...`, `chore: ...`); keep messages imperative and scoped.
 - For PRs, include: what changed, why, and how to verify (commands/steps). Attach screenshots for UI tweaks and call out DB schema or GTFS data impacts.
 - Run `npm run lint` and `npm test` before requesting review; note any skipped checks or follow-up tasks in the PR description.
-
 ## Active Technologies
-- TypeScript 5 + Next.js 15, React 19, Tailwind CSS 4, DaisyUI 5 (001-discussion-nav-tabs)
-- SQLite + Prisma ORM (既存) (001-discussion-nav-tabs)
 - TypeScript 5, React 19, Next.js 15 (App Router) + DaisyUI 5, Tailwind CSS 4, webpack-license-plugin（導入パッケージライセンス収集）, Prisma（既存） (005-license-page-autogen)
 - 既存SQLite（本機能では新規永続化なし）、`package.json`、オープンデータ用JSONファイル (005-license-page-autogen)
 
 ## Recent Changes
-- 001-discussion-nav-tabs: Added TypeScript 5 + Next.js 15, React 19, Tailwind CSS 4, DaisyUI 5
+- 005-license-page-autogen: Added TypeScript 5, React 19, Next.js 15 (App Router), DaisyUI 5, Tailwind CSS 4, and webpack-license-plugin based license aggregation

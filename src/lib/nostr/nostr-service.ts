@@ -88,47 +88,60 @@ export class NostrService {
     filters: Filter[],
     { onEvent, onEose, timeoutMs }: StreamEventsOptions
   ): () => void {
+    if (filters.length === 0) {
+      onEose?.([]);
+      return () => {};
+    }
+
     const collected: Event[] = [];
     let closed = false;
+    let eoseCount = 0;
     const timeoutRef: { id?: ReturnType<typeof setTimeout> } = {};
-    const subscriptionRef: { sub?: ReturnType<SimplePool["subscribeMany"]> } =
-      {};
-    subscriptionRef.sub = this.pool.subscribeMany(this.relays, filters, {
-      onevent: (event: Event) => {
-        if (closed) return;
+    const subscriptions: ReturnType<SimplePool["subscribeMany"]>[] = [];
 
-        const updated = mergeEvent(collected, event);
-        if (updated === collected) return;
+    const closeSubscriptions = () => {
+      subscriptions.forEach((subscription) => subscription.close());
+    };
 
-        collected.length = 0;
-        collected.push(...updated);
-        onEvent([...collected], event);
-      },
-      oneose: () => {
-        if (closed) return;
-        closed = true;
-        if (timeoutRef.id) {
-          clearTimeout(timeoutRef.id);
-        }
-        subscriptionRef.sub?.close();
-        onEose?.(dedupeAndSortEvents(collected));
-      },
-    });
-
-    timeoutRef.id = setTimeout(() => {
-      if (closed) return;
-      closed = true;
-      subscriptionRef.sub?.close();
-      onEose?.(dedupeAndSortEvents(collected));
-    }, timeoutMs ?? this.config.defaultTimeout);
-
-    return () => {
+    const finalize = () => {
       if (closed) return;
       closed = true;
       if (timeoutRef.id) {
         clearTimeout(timeoutRef.id);
       }
-      subscriptionRef.sub?.close();
+      closeSubscriptions();
+      onEose?.(dedupeAndSortEvents(collected));
+    };
+
+    for (const filter of filters) {
+      const subscription = this.pool.subscribeMany(this.relays, filter, {
+        onevent: (event: Event) => {
+          if (closed) return;
+
+          const updated = mergeEvent(collected, event);
+          if (updated === collected) return;
+
+          collected.length = 0;
+          collected.push(...updated);
+          onEvent([...collected], event);
+        },
+        oneose: () => {
+          if (closed) return;
+          eoseCount += 1;
+          if (eoseCount >= filters.length) {
+            finalize();
+          }
+        },
+      });
+      subscriptions.push(subscription);
+    }
+
+    timeoutRef.id = setTimeout(() => {
+      finalize();
+    }, timeoutMs ?? this.config.defaultTimeout);
+
+    return () => {
+      finalize();
     };
   }
 
@@ -137,13 +150,30 @@ export class NostrService {
     onEvent: (event: Event) => void,
     onEose?: () => void
   ): Promise<() => void> {
-    const subscription = this.pool.subscribeMany(this.relays, filters, {
-      onevent: onEvent,
-      oneose: onEose,
-    });
+    if (filters.length === 0) {
+      onEose?.();
+      return () => {};
+    }
+
+    let closed = false;
+    let eoseCount = 0;
+    const subscriptions = filters.map((filter) =>
+      this.pool.subscribeMany(this.relays, filter, {
+        onevent: onEvent,
+        oneose: () => {
+          if (closed) return;
+          eoseCount += 1;
+          if (eoseCount >= filters.length) {
+            onEose?.();
+          }
+        },
+      })
+    );
 
     return () => {
-      subscription.close();
+      if (closed) return;
+      closed = true;
+      subscriptions.forEach((subscription) => subscription.close());
     };
   }
 

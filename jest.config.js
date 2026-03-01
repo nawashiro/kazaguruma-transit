@@ -15,7 +15,7 @@ const customJestConfig = {
   },
   testPathIgnorePatterns: ["/node_modules/", "/.next/"],
   transformIgnorePatterns: [
-    "/node_modules/(?!(uncrypto|iron-session|next-auth)/)",
+    "/node_modules/(?!(uncrypto|iron-session|next-auth|nostr-tools|@noble\\/hashes|@scure\\/bip39)/)",
   ],
 };
 

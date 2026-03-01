@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { wordlist as bip39JapaneseWordlist } from "@scure/bip39/wordlists/japanese";
+import { bip39JapaneseWordlist } from "@/lib/nostr/bip39-japanese-wordlist";
 
 const PREVIEW_WORD_COUNT = 3;
 
@@ -28,4 +28,3 @@ export function formatBip39JapaneseMnemonicPreviewFromPubkey(
 
   return words.join(" ");
 }
-

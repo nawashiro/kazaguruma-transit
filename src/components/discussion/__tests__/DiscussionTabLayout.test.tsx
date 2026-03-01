@@ -12,6 +12,7 @@ jest.mock("next/navigation", () => ({
 
 // Mock Nostr services and utilities
 jest.mock("@/lib/nostr/nostr-service", () => ({
+  getNostrServiceConfigKey: jest.fn(() => "test-config-key"),
   createNostrService: jest.fn(() => ({
     streamDiscussionMeta: jest.fn(() => jest.fn()), // Returns cleanup function
   })),

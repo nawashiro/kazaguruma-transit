@@ -18,6 +18,7 @@ jest.mock('@/lib/config/discussion-config', () => ({
 }));
 
 jest.mock('@/lib/nostr/nostr-service', () => ({
+  getNostrServiceConfigKey: () => 'test-config-key',
   createNostrService: () => ({
     streamDiscussionMeta: jest.fn(),
     getDiscussions: jest.fn().mockResolvedValue([{

@@ -57,6 +57,10 @@ export interface DiscussionNdkGateway {
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   query: (filters: NdkEventFilter[]) => Promise<NostrEventDTO[]>;
+  queryDiscussionsByAuthorWithCompletion: (
+    authorPubkey: string,
+    options?: ReadEventsOptions
+  ) => Promise<NdkQueryCompletion>;
   queryWithCompletion: (
     filters: NdkEventFilter[],
     options?: ReadEventsOptions
@@ -80,6 +84,19 @@ export class UnconfiguredDiscussionNdkGateway implements DiscussionNdkGateway {
 
   async query(): Promise<NostrEventDTO[]> {
     return [];
+  }
+
+  async queryDiscussionsByAuthorWithCompletion(): Promise<NdkQueryCompletion> {
+    const now = Date.now();
+    return {
+      events: [],
+      completionReason: "hard-timeout",
+      eventCount: 0,
+      elapsedMs: 0,
+      startedAt: now,
+      lastEventAt: now,
+      eoseReceived: false,
+    };
   }
 
   async queryWithCompletion(): Promise<NdkQueryCompletion> {
@@ -138,6 +155,21 @@ export class LegacyNostrServiceDiscussionNdkGateway
     return (await this.service.getEventsOnEose(
       filters as Parameters<NostrService["getEventsOnEose"]>[0]
     )) as unknown as NostrEventDTO[];
+  }
+
+  async queryDiscussionsByAuthorWithCompletion(
+    authorPubkey: string,
+    options?: ReadEventsOptions
+  ): Promise<NdkQueryCompletion> {
+    return this.queryWithCompletion(
+      [
+        {
+          kinds: [34550],
+          authors: [authorPubkey],
+        },
+      ],
+      options
+    );
   }
 
   async queryWithCompletion(

@@ -3,6 +3,8 @@ import { render, screen, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionDetailPage from "../page";
 
+const mockUseDiscussionMeta = jest.fn();
+
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr-test" }),
   usePathname: () => "/discussions/naddr-test",
@@ -13,33 +15,7 @@ jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
   DiscussionTabLayout: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="discussion-tab-layout">{children}</div>
   ),
-  useDiscussionMeta: () => ({
-    discussion: {
-      id: "34550:author:demo",
-      title: "Streamed Discussion",
-      description: "Streaming description",
-      authorPubkey: "author",
-      dTag: "demo",
-      moderators: [],
-      createdAt: 999,
-      event: {
-        id: "discussion-1",
-        pubkey: "author",
-        kind: 34550,
-        created_at: 999,
-        tags: [
-          ["d", "demo"],
-          ["name", "Streamed Discussion"],
-        ],
-        content: "Streaming description",
-        sig: "sig",
-      },
-    },
-    isLoading: false,
-    completionReason: "eose" as const,
-    error: null,
-    reload: jest.fn(),
-  }),
+  useDiscussionMeta: () => mockUseDiscussionMeta(),
 }));
 
 jest.mock("@/lib/auth/auth-context", () => ({
@@ -213,6 +189,33 @@ describe("DiscussionDetailPage streaming", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: {
+        id: "34550:author:demo",
+        title: "Streamed Discussion",
+        description: "Streaming description",
+        authorPubkey: "author",
+        dTag: "demo",
+        moderators: [],
+        createdAt: 999,
+        event: {
+          id: "discussion-1",
+          pubkey: "author",
+          kind: 34550,
+          created_at: 999,
+          tags: [
+            ["d", "demo"],
+            ["name", "Streamed Discussion"],
+          ],
+          content: "Streaming description",
+          sig: "sig",
+        },
+      },
+      isLoading: false,
+      completionReason: "eose" as const,
+      error: null,
+      reload: jest.fn(),
+    });
   });
 
   it("shows loading state for evaluations until approvals EOSE completes", async () => {
@@ -321,5 +324,37 @@ describe("DiscussionDetailPage streaming", () => {
     );
 
     expect(screen.getByText("意見グループ")).toBeInTheDocument();
+  });
+
+  it("keeps loading UI while metadata read is in progress (cold start/direct access)", () => {
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: true,
+      completionReason: null,
+      error: null,
+      reload: jest.fn(),
+    });
+
+    render(<DiscussionDetailPage />);
+
+    expect(screen.queryByText("会話が見つかりません")).not.toBeInTheDocument();
+    expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
+  });
+
+  it("shows timeout warning instead of not-found when metadata read ends by timeout", async () => {
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: false,
+      completionReason: "idle-timeout" as const,
+      error: null,
+      reload: jest.fn(),
+    });
+
+    render(<DiscussionDetailPage />);
+
+    expect(
+      await screen.findByText(/会話データの取得に時間がかかっています/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText("会話が見つかりません")).not.toBeInTheDocument();
   });
 });

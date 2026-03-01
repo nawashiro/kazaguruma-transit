@@ -3,14 +3,17 @@
 import React, { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import { usePathname, useParams } from "next/navigation";
 import Link from "next/link";
-import { createNostrService } from "@/lib/nostr/nostr-service";
+import { type CompletionReason } from "@/lib/nostr/nostr-service";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
 import { parseDiscussionEvent } from "@/lib/nostr/nostr-utils";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
 import { logger } from "@/utils/logger";
 import type { Discussion } from "@/types/discussion";
-import type { Event } from "@/lib/nostr/nostr-service";
+import {
+  createDiscussionNdkGateway,
+  type NostrEventDTO,
+} from "@/lib/nostr/discussion-ndk-gateway";
 
 interface DiscussionTabLayoutProps {
   /** タブナビゲーションのベースURL（例: "/discussions" または "/discussions/[naddr]"） */
@@ -19,8 +22,23 @@ interface DiscussionTabLayoutProps {
   children: React.ReactNode;
 }
 
-// Nostrサービスのシングルトンインスタンス
-const nostrService = createNostrService(getNostrServiceConfig());
+interface DiscussionMetaContextValue {
+  discussion: Discussion | null;
+  isLoading: boolean;
+  error: string | null;
+  completionReason: CompletionReason | null;
+  reload: () => Promise<void>;
+}
+
+const discussionConfig = getNostrServiceConfig();
+const discussionGateway = createDiscussionNdkGateway(discussionConfig);
+const DiscussionMetaContext = React.createContext<
+  DiscussionMetaContextValue | undefined
+>(undefined);
+
+export function useDiscussionMeta(): DiscussionMetaContextValue | undefined {
+  return React.useContext(DiscussionMetaContext);
+}
 
 /**
  * 会話ページと監査ページを切り替えるタブナビゲーションを提供するレイアウトコンポーネント
@@ -51,7 +69,8 @@ export function DiscussionTabLayout({
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [isDiscussionLoading, setIsDiscussionLoading] = useState(true);
   const [discussionError, setDiscussionError] = useState<string | null>(null);
-  const discussionStreamCleanupRef = useRef<(() => void) | null>(null);
+  const [discussionCompletionReason, setDiscussionCompletionReason] =
+    useState<CompletionReason | null>(null);
   const loadSequenceRef = useRef(0);
 
   // NADDR から discussionInfo を抽出 (T012)
@@ -70,7 +89,7 @@ export function DiscussionTabLayout({
    * @param events - パースするNostr Event配列（kind:34550）
    * @returns 最新のDiscussionオブジェクト、またはパース可能なイベントがない場合はnull
    */
-  const pickLatestDiscussion = useCallback((events: Event[]): Discussion | null => {
+  const pickLatestDiscussion = useCallback((events: NostrEventDTO[]): Discussion | null => {
     const parsed = events
       .map(parseDiscussionEvent)
       .filter((d): d is Discussion => d !== null);
@@ -87,13 +106,12 @@ export function DiscussionTabLayout({
   /**
    * データ取得関数 (T014, T040)
    *
-   * streamDiscussionMeta を使用してリアルタイムでディスカッションデータを取得します。
+   * queryWithCompletion を使用してディスカッションデータを取得します。
    * テストモードの場合は loadTestData を使用して静的データを返します。
    *
-   * なぜストリーミングを使用するのか:
-   * - Nostrプロトコルはリアルタイム性が高く、会話の編集・更新が即座に反映される
-   * - 複数のリレーから最新データを収集し、ユーザーに最新の状態を表示できる
-   * - EOSEイベント後も接続を維持し、リアルタイム更新を継続受信できる
+   * なぜ completion-aware read を使用するのか:
+   * - metadata を本文と同じ read 経路に統一し、二重取得を防ぐ
+   * - 遷移方式差（ナビ/再読込/直アクセス）での完了判定を揃える
    *
    * loadSequence パターンを使用する理由:
    * - 非同期操作の競合を防ぐため、古いリクエストの結果を破棄する
@@ -104,10 +122,6 @@ export function DiscussionTabLayout({
   const loadDiscussionData = useCallback(async () => {
     if (!discussionInfo) return;
 
-    // 前のストリームをクリーンアップ
-    discussionStreamCleanupRef.current?.();
-    discussionStreamCleanupRef.current = null;
-
     // loadSequence パターンで古いデータを破棄
     const loadSequence = ++loadSequenceRef.current;
 
@@ -115,6 +129,7 @@ export function DiscussionTabLayout({
     setDiscussion(null);
     setIsDiscussionLoading(true);
     setDiscussionError(null);
+    setDiscussionCompletionReason(null);
 
     try {
       // テストモード判定
@@ -122,33 +137,33 @@ export function DiscussionTabLayout({
         const testData = await loadTestData();
         if (loadSequenceRef.current !== loadSequence) return;
         setDiscussion(testData.discussion);
+        setDiscussionCompletionReason("eose");
         setIsDiscussionLoading(false);
         return;
       }
 
-      // ストリーム開始
-      discussionStreamCleanupRef.current = nostrService.streamDiscussionMeta(
-        discussionInfo.authorPubkey,
-        discussionInfo.dTag,
+      const discussionResult = await discussionGateway.queryWithCompletion(
+        [
+          {
+            kinds: [34550],
+            authors: [discussionInfo.authorPubkey],
+            "#d": [discussionInfo.dTag],
+            limit: 1,
+          },
+        ],
         {
-          onEvent: (events) => {
-            if (loadSequenceRef.current !== loadSequence) return;
-            const latest = pickLatestDiscussion(events);
-            if (latest) {
-              setDiscussion(latest);
-              setIsDiscussionLoading(false);
-            }
-          },
-          onEose: (events) => {
-            if (loadSequenceRef.current !== loadSequence) return;
-            const latest = pickLatestDiscussion(events);
-            if (latest) {
-              setDiscussion(latest);
-            }
-            setIsDiscussionLoading(false);
-          },
+          idleTimeoutMs: discussionConfig.defaultTimeout,
+          hardTimeoutMs: discussionConfig.defaultTimeout * 3,
         }
       );
+      if (loadSequenceRef.current !== loadSequence) return;
+
+      const latest = pickLatestDiscussion(discussionResult.events);
+      if (latest) {
+        setDiscussion(latest);
+      }
+      setDiscussionCompletionReason(discussionResult.completionReason);
+      setIsDiscussionLoading(false);
     } catch (error) {
       if (loadSequenceRef.current !== loadSequence) return;
       logger.error("Failed to load discussion:", error);
@@ -159,13 +174,25 @@ export function DiscussionTabLayout({
 
   // データロード実行とクリーンアップ (T015)
   useEffect(() => {
-    loadDiscussionData();
-
-    return () => {
-      discussionStreamCleanupRef.current?.();
-      discussionStreamCleanupRef.current = null;
-    };
+    void loadDiscussionData();
   }, [loadDiscussionData]);
+
+  const discussionMeta = useMemo<DiscussionMetaContextValue>(
+    () => ({
+      discussion,
+      isLoading: isDiscussionLoading,
+      error: discussionError,
+      completionReason: discussionCompletionReason,
+      reload: loadDiscussionData,
+    }),
+    [
+      discussion,
+      isDiscussionLoading,
+      discussionError,
+      discussionCompletionReason,
+      loadDiscussionData,
+    ]
+  );
 
   // 末尾のスラッシュを正規化
   const normalizedBase = baseHref.replace(/\/$/, "");
@@ -229,7 +256,8 @@ export function DiscussionTabLayout({
   );
 
   return (
-    <div>
+    <DiscussionMetaContext.Provider value={discussionMeta}>
+      <div>
       {/*
         段階的ローディングの設計判断 (T041):
 
@@ -291,7 +319,7 @@ export function DiscussionTabLayout({
             className="btn btn-sm btn-outline"
             onClick={() => {
               setDiscussionError(null);
-              loadDiscussionData();
+              void loadDiscussionData();
             }}
           >
             再試行
@@ -322,6 +350,7 @@ export function DiscussionTabLayout({
 
       {/* 子コンテンツ */}
       {children}
-    </div>
+      </div>
+    </DiscussionMetaContext.Provider>
   );
 }

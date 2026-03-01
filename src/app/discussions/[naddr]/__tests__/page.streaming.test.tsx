@@ -13,6 +13,33 @@ jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
   DiscussionTabLayout: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="discussion-tab-layout">{children}</div>
   ),
+  useDiscussionMeta: () => ({
+    discussion: {
+      id: "34550:author:demo",
+      title: "Streamed Discussion",
+      description: "Streaming description",
+      authorPubkey: "author",
+      dTag: "demo",
+      moderators: [],
+      createdAt: 999,
+      event: {
+        id: "discussion-1",
+        pubkey: "author",
+        kind: 34550,
+        created_at: 999,
+        tags: [
+          ["d", "demo"],
+          ["name", "Streamed Discussion"],
+        ],
+        content: "Streaming description",
+        sig: "sig",
+      },
+    },
+    isLoading: false,
+    completionReason: "eose" as const,
+    error: null,
+    reload: jest.fn(),
+  }),
 }));
 
 jest.mock("@/lib/auth/auth-context", () => ({
@@ -194,24 +221,8 @@ describe("DiscussionDetailPage streaming", () => {
       resolveApprovals = resolve;
     });
 
-    const discussionEvent = {
-      id: "discussion-1",
-      pubkey: "author",
-      kind: 34550,
-      created_at: 999,
-      tags: [
-        ["d", "demo"],
-        ["name", "Streamed Discussion"],
-      ],
-      content: "Streaming description",
-      sig: "sig",
-    };
-
     gatewayMock.queryWithCompletion.mockImplementation((filters: Array<{ kinds?: number[] }>) => {
       const kinds = filters[0]?.kinds ?? [];
-      if (kinds.includes(34550)) {
-        return Promise.resolve(withCompletion([discussionEvent]));
-      }
       if (kinds.includes(4550)) {
         return approvalsPromise;
       }
@@ -251,24 +262,8 @@ describe("DiscussionDetailPage streaming", () => {
       resolveApprovals = resolve;
     });
 
-    const discussionEvent = {
-      id: "discussion-1",
-      pubkey: "author",
-      kind: 34550,
-      created_at: 999,
-      tags: [
-        ["d", "demo"],
-        ["name", "Streamed Discussion"],
-      ],
-      content: "Streaming description",
-      sig: "sig",
-    };
-
     gatewayMock.queryWithCompletion.mockImplementation((filters: Array<{ kinds?: number[] }>) => {
       const kinds = filters[0]?.kinds ?? [];
-      if (kinds.includes(34550)) {
-        return Promise.resolve(withCompletion([discussionEvent]));
-      }
       if (kinds.includes(4550)) {
         return approvalsPromise;
       }
@@ -291,12 +286,10 @@ describe("DiscussionDetailPage streaming", () => {
       expect(gatewayMock.queryWithCompletion).toHaveBeenCalled()
     );
 
-    // Title is now in the layout, not page content
-    // Verify that evaluations haven't loaded yet (before EOSE)
+    // メタデータ(kind:34550)はページ側で再取得しない
     await waitFor(() =>
-      expect(gatewayMock.queryWithCompletion).toHaveBeenCalled()
+      expect(gatewayMock.queryWithCompletion).toHaveBeenCalledTimes(1)
     );
-    expect(gatewayMock.queryWithCompletion).toHaveBeenCalledTimes(2);
 
     const approvalEvents = [
       {
@@ -324,7 +317,7 @@ describe("DiscussionDetailPage streaming", () => {
     });
 
     await waitFor(() =>
-      expect(gatewayMock.queryWithCompletion).toHaveBeenCalledTimes(3)
+      expect(gatewayMock.queryWithCompletion).toHaveBeenCalledTimes(2)
     );
 
     expect(screen.getByText("意見グループ")).toBeInTheDocument();

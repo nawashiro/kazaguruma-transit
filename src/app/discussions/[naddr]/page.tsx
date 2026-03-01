@@ -15,13 +15,12 @@ import { LoginModal } from "@/components/discussion/LoginModal";
 import { PostPreview } from "@/components/discussion/PostPreview";
 import { EvaluationComponent } from "@/components/discussion/EvaluationComponent";
 import { ModeratorCheck } from "@/components/discussion/PermissionGuards";
+import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   createDiscussionNdkGateway,
-  type NostrEventDTO,
 } from "@/lib/nostr/discussion-ndk-gateway";
 import {
-  parseDiscussionEvent,
   parsePostEvent,
   parseApprovalEvent,
   parseEvaluationEvent,
@@ -37,7 +36,6 @@ import {
 } from "@/lib/evaluation/evaluation-service";
 import Button from "@/components/ui/Button";
 import type {
-  Discussion,
   DiscussionPost,
   PostApproval,
   PostEvaluation,
@@ -56,7 +54,6 @@ export default function DiscussionDetailPage() {
   const naddrParam = params.naddr as string;
 
   const [consensusTab, setConsensusTab] = useState<string>("group-consensus");
-  const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [posts, setPosts] = useState<DiscussionPost[]>([]);
   const [, setApprovals] = useState<PostApproval[]>([]);
   const [evaluations, setEvaluations] = useState<PostEvaluation[]>([]);
@@ -66,11 +63,7 @@ export default function DiscussionDetailPage() {
   const [analysisResult, setAnalysisResult] =
     useState<EvaluationAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isDiscussionLoading, setIsDiscussionLoading] = useState(true);
   const [isPostsLoading, setIsPostsLoading] = useState(true);
-  const [discussionCompletionReason, setDiscussionCompletionReason] = useState<
-    "eose" | "idle-timeout" | "hard-timeout" | "cancelled" | null
-  >(null);
   const [postsLoadError, setPostsLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const renderInlineLoading = (label: string) => (
@@ -104,6 +97,10 @@ export default function DiscussionDetailPage() {
   });
 
   const { user, signEvent } = useAuth();
+  const discussionMeta = useDiscussionMeta();
+  const discussion = discussionMeta?.discussion ?? null;
+  const isDiscussionLoading = discussionMeta?.isLoading ?? false;
+  const discussionCompletionReason = discussionMeta?.completionReason ?? null;
 
   // Parse naddr and extract discussion info
   const discussionInfo = useMemo(() => {
@@ -252,20 +249,16 @@ export default function DiscussionDetailPage() {
     if (!isDiscussionsEnabled() || !discussionInfo) return;
     const loadSequence = ++loadSequenceRef.current;
     analysisRunRef.current = false;
-    setDiscussion(null);
     setPosts([]);
     setApprovals([]);
     setEvaluations([]);
     setAnalysisResult(null);
-    setIsDiscussionLoading(true);
     setIsPostsLoading(true);
-    setDiscussionCompletionReason(null);
 
     if (isTestMode(discussionInfo.dTag)) {
       loadTestData()
         .then((testData) => {
           if (loadSequenceRef.current !== loadSequence) return;
-          setDiscussion(testData.discussion);
           setPosts(testData.posts);
           setEvaluations(testData.evaluations);
         })
@@ -274,57 +267,12 @@ export default function DiscussionDetailPage() {
         })
         .finally(() => {
           if (loadSequenceRef.current === loadSequence) {
-            setIsDiscussionLoading(false);
             setIsPostsLoading(false);
           }
         });
       loadBusStops();
       return;
     }
-
-    const pickLatestDiscussion = (events: NostrEventDTO[]) => {
-      const parsed = events
-        .map(parseDiscussionEvent)
-        .filter((d): d is Discussion => d !== null);
-
-      if (parsed.length === 0) {
-        return null;
-      }
-
-      return parsed.reduce((latest, current) =>
-        current.createdAt > latest.createdAt ? current : latest
-      );
-    };
-
-    void (async () => {
-      const discussionResult = await discussionGateway.queryWithCompletion(
-        [
-          {
-            kinds: [34550],
-            authors: [discussionInfo.authorPubkey],
-            "#d": [discussionInfo.dTag],
-            limit: 1,
-          },
-        ],
-        {
-          idleTimeoutMs: nostrServiceConfig.defaultTimeout,
-          hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
-        }
-      );
-      if (loadSequenceRef.current !== loadSequence) return;
-      logger.info("discussion-detail metadata fetch completed", {
-        discussionId: discussionInfo.discussionId,
-        completionReason: discussionResult.completionReason,
-        eventCount: discussionResult.eventCount,
-        elapsedMs: discussionResult.elapsedMs,
-      });
-      const latest = pickLatestDiscussion(discussionResult.events);
-      if (latest) {
-        setDiscussion(latest);
-      }
-      setDiscussionCompletionReason(discussionResult.completionReason);
-      setIsDiscussionLoading(false);
-    })();
 
     loadApprovalsAndEvaluations(loadSequence);
     loadBusStops();

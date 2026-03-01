@@ -109,7 +109,9 @@ export class NDKEvent {
 
 export class NDKPrivateKeySigner {
   pubkey = "f".repeat(64);
-  constructor(_privateKey: Uint8Array | string) {}
+  constructor(privateKey: Uint8Array | string) {
+    void privateKey;
+  }
 }
 
 export default class NDK {
@@ -119,17 +121,25 @@ export default class NDK {
     ]),
   };
 
-  constructor(_opts?: unknown) {}
+  constructor(opts?: unknown) {
+    void opts;
+  }
 
-  async connect(_timeoutMs?: number) {
+  async connect(timeoutMs?: number) {
+    void timeoutMs;
     return;
   }
 
-  async fetchEvents(_filters: unknown, _opts?: unknown) {
+  async fetchEvents(filters: unknown, opts?: unknown) {
+    void filters;
+    void opts;
     return new Set<NDKEvent>();
   }
 
-  subscribe(_filters: unknown, _opts?: unknown, _autoStart?: unknown) {
+  subscribe(filters: unknown, opts?: unknown, autoStart?: unknown) {
+    void filters;
+    void opts;
+    void autoStart;
     return {
       stop: () => undefined,
     };

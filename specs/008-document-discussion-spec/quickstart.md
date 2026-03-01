@@ -97,3 +97,22 @@ UIはDaisyUI責務を優先し、独自UIの役割重複を禁止する。
 - `Not Found` は `completionReason` と受信件数に基づいて確定し、単純タイムアウトのみで確定しない。
 - 監査ログの 10件再クエリ要件（FR-021/FR-024）は従来どおり維持する。
 - 詳細運用は [`notes/eose-and-timeout-observability.md`](/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/notes/eose-and-timeout-observability.md) を参照。
+
+## Addendum (2026-03-01): 監査10件再クエリ負荷確認ログ（T051）
+
+検証コマンド:
+
+- `npm test -- --runTestsByPath src/components/discussion/__tests__/AuditLogSection.test.tsx`
+
+確認結果（抜粋）:
+
+1. 初回取得: `limit=10` で1クエリ、`eventCount=10`
+2. 追加取得: `until` カーソル付きで再クエリ、`eventCount=3`（残件のみ）
+3. 重複除外: 既取得IDが再取得されても表示集合で重複しない
+4. 残件なし時: 「さらに過去10件を表示」ボタンは disabled になり理由文を表示
+
+観測ログ項目:
+
+- `completionReason`
+- `eventCount`
+- `elapsedMs`

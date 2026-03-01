@@ -33,6 +33,10 @@ import {
   createModeratorPromotionRequestEvent,
 } from "@/lib/discussion/user-creation-flow";
 import { formatBip39JapaneseMnemonicPreviewFromPubkey } from "@/lib/nostr/mnemonic-utils";
+import {
+  createDiscussionNdkGateway,
+  type ModeratorDecision,
+} from "@/lib/nostr/discussion-ndk-gateway";
 import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
@@ -41,6 +45,7 @@ import type { Event } from "@/lib/nostr/nostr-service";
 // const ADMIN_PUBKEY = getAdminPubkeyHex(); // eslint-disable-line @typescript-eslint/no-unused-vars
 const nostrServiceConfig = getNostrServiceConfig();
 const nostrService = createNostrService(nostrServiceConfig);
+const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 
 interface EditFormData {
@@ -74,6 +79,9 @@ export default function DiscussionEditPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRequestingListing, setIsRequestingListing] = useState(false);
   const [isRequestingPromotion, setIsRequestingPromotion] = useState(false);
+  const [decidingPromotionIds, setDecidingPromotionIds] = useState<Set<string>>(
+    new Set()
+  );
   const [promotionRequestMessage, setPromotionRequestMessage] = useState("");
   const [promotionRequests, setPromotionRequests] = useState<
     ModeratorPromotionRequest[]
@@ -454,6 +462,72 @@ export default function DiscussionEditPage() {
     }));
   };
 
+  const handleModerationDecision = async (
+    request: ModeratorPromotionRequest,
+    decision: ModeratorDecision
+  ) => {
+    if (!discussion || !user.isLoggedIn || !user.pubkey || !isAuthor) {
+      return;
+    }
+
+    setDecidingPromotionIds((prev) => new Set(prev).add(request.id));
+    try {
+      const eventTemplate = discussionGateway.createModeratorDecisionDraft({
+        discussionEvent: discussion.event,
+        applicantPubkey: request.applicantPubkey,
+        decision,
+        actorPubkey: user.pubkey,
+      });
+
+      const signedEvent = await signEvent(
+        eventTemplate as unknown as Record<string, unknown>
+      );
+      const published = await nostrService.publishSignedEvent(signedEvent);
+      if (!published) {
+        throw new Error("Failed to publish moderator decision");
+      }
+
+      setDiscussion((prev) => {
+        if (!prev) return prev;
+        const hasApplicant = prev.moderators.some(
+          (moderator) => moderator.pubkey === request.applicantPubkey
+        );
+        const nextModerators =
+          decision === "approved"
+            ? hasApplicant
+              ? prev.moderators
+              : [...prev.moderators, { pubkey: request.applicantPubkey }]
+            : prev.moderators.filter(
+                (moderator) => moderator.pubkey !== request.applicantPubkey
+              );
+
+        return {
+          ...prev,
+          moderators: nextModerators,
+          event: {
+            ...signedEvent,
+          },
+        };
+      });
+
+      setSuccessMessage(
+        decision === "approved"
+          ? "モデレーター昇格を承認しました"
+          : "モデレーター昇格を却下しました"
+      );
+      setSuccessType("promotion");
+    } catch (error) {
+      logger.error("Failed to decide moderator promotion:", error);
+      setErrors(["モデレーター昇格審査に失敗しました"]);
+    } finally {
+      setDecidingPromotionIds((prev) => {
+        const next = new Set(prev);
+        next.delete(request.id);
+        return next;
+      });
+    }
+  };
+
   // 権限チェック
   if (!discussionInfo) {
     return (
@@ -829,7 +903,52 @@ export default function DiscussionEditPage() {
                                 <span className="text-xs text-gray-500">
                                   {formatRelativeTime(request.createdAt)}
                                 </span>
+                                <span
+                                  className={`badge ${
+                                    discussion.moderators.some(
+                                      (moderator) =>
+                                        moderator.pubkey === request.applicantPubkey
+                                    )
+                                      ? "badge-success"
+                                      : "badge-ghost"
+                                  }`}
+                                >
+                                  {discussion.moderators.some(
+                                    (moderator) =>
+                                      moderator.pubkey === request.applicantPubkey
+                                  )
+                                    ? "approved"
+                                    : "unapproved"}
+                                </span>
                               </div>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-primary rounded-full dark:rounded-sm"
+                                  onClick={() =>
+                                    handleModerationDecision(request, "approved")
+                                  }
+                                  disabled={!isAuthor || decidingPromotionIds.has(request.id)}
+                                >
+                                  承認
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline rounded-full dark:rounded-sm"
+                                  onClick={() =>
+                                    handleModerationDecision(request, "unapproved")
+                                  }
+                                  disabled={!isAuthor || decidingPromotionIds.has(request.id)}
+                                >
+                                  却下
+                                </button>
+                              </div>
+                              <DisabledReasonText
+                                state={buildDisabledActionState(
+                                  Boolean(isAuthor),
+                                  "昇格審査は会話作成者のみ操作できます。"
+                                )}
+                              />
                             </div>
                           ))}
                         </div>

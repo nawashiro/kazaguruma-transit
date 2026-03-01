@@ -2,6 +2,10 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { AuditTimeline } from "@/components/discussion/AuditTimeline";
+import {
+  buildDisabledActionState,
+  DisabledReasonText,
+} from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parsePostEvent,
@@ -467,13 +471,22 @@ export const AuditLogSection = React.forwardRef<
                 />
                 <div className="flex justify-center">
                   <button
-                    className="btn btn-outline rounded-full dark:rounded-sm"
+                    className="btn btn-outline rounded-full dark:rounded-sm min-h-[44px] min-w-[44px]"
                     onClick={loadMoreAuditData}
                     disabled={!hasMore || isLoadingMore}
+                    aria-describedby="audit-load-more-reason"
                   >
                     {isLoadingMore ? "読み込み中..." : "さらに過去10件を表示"}
                   </button>
                 </div>
+                <DisabledReasonText
+                  state={buildDisabledActionState(
+                    hasMore,
+                    "これ以上表示できる監査ログはありません。"
+                  )}
+                  id="audit-load-more-reason"
+                  className="text-xs text-center text-base-content/70"
+                />
               </div>
             )}
           </div>

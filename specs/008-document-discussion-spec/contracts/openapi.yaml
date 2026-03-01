@@ -225,6 +225,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DiscussionAuditPageResponse"
+  /settings/me/discussions:
+    get:
+      summary: 設定画面の自作会話一覧取得（completion-aware read）
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SettingsDiscussionsResponse"
 components:
   parameters:
     DiscussionId:
@@ -462,6 +472,16 @@ components:
           type: array
           items: { $ref: "#/components/schemas/DiscussionAuditTimelineItem" }
         nextCursor: { type: string, nullable: true }
+    SettingsDiscussionsResponse:
+      type: object
+      required: [items, completionReason]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Discussion" }
+        completionReason:
+          type: string
+          enum: [eose, idle-timeout, hard-timeout, cancelled]
     PromotionRequestPageResponse:
       type: object
       required: [items, nextCursor]

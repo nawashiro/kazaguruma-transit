@@ -51,6 +51,15 @@ jest.mock("@/lib/nostr/nostr-service", () => {
           content: "pending post",
           sig: "sig",
         },
+        {
+          id: "post-approved",
+          pubkey: "poster",
+          kind: 1111,
+          created_at: 3,
+          tags: [["a", "34550:author:tag"]],
+          content: "approved post",
+          sig: "sig",
+        },
       ]);
       return () => {};
     }),
@@ -84,12 +93,12 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   parsePostEvent: (event: any) =>
     event.kind === 1111
       ? {
-          id: "post-1",
-          content: "pending post",
+          id: event.id,
+          content: event.content,
           authorPubkey: "poster",
           discussionId: "34550:author:tag",
-          createdAt: 2,
-          approved: false,
+          createdAt: event.created_at,
+          approved: event.id === "post-approved",
           event,
         }
       : null,
@@ -132,5 +141,22 @@ describe("PostApprovalPage streaming", () => {
       screen.getByText("この会話の作成者またはモデレーターのみ承認操作できます。")
     ).toBeInTheDocument();
   });
-});
 
+  it("shows disabled revoke action with reason for non-moderator users", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "viewer", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+
+    render(<PostApprovalPage />);
+
+    const approvedTab = await screen.findByRole("tab", { name: "承認済みタブを開く" });
+    approvedTab.click();
+
+    const revokeButton = await screen.findByRole("button", { name: "承認を撤回" });
+    expect(revokeButton).toBeDisabled();
+    expect(
+      screen.getByText("この会話の作成者またはモデレーターのみ承認操作できます。")
+    ).toBeInTheDocument();
+  });
+});

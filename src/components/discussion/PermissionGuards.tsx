@@ -118,18 +118,20 @@ export function PermissionError({ type, message }: PermissionErrorProps) {
 interface DisabledReasonTextProps {
   state: DisabledActionState;
   className?: string;
+  id?: string;
 }
 
 export function DisabledReasonText({
   state,
   className = "text-xs text-base-content/70 mt-1",
+  id,
 }: DisabledReasonTextProps) {
   if (!state.disabled || !state.reason) {
     return null;
   }
 
   return (
-    <p role="note" aria-live="polite" className={className}>
+    <p id={id} role="note" aria-live="polite" className={className}>
       {state.reason}
     </p>
   );

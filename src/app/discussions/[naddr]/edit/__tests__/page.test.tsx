@@ -38,6 +38,18 @@ const createModeratorPromotionRequestMock = jest.fn(() => ({
   ],
   created_at: 1,
 }));
+const createModeratorDecisionDraftMock = jest.fn(() => ({
+  kind: 34550,
+  content: "Test Description",
+  tags: [
+    ["d", "test-discussion"],
+    ["name", "Test Discussion"],
+    ["description", "Test Description"],
+    ["p", "e".repeat(64), "", "moderator"],
+  ],
+  created_at: 11,
+  pubkey: "f".repeat(64),
+}));
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr1discussion" }),
@@ -63,27 +75,57 @@ jest.mock("@/lib/nostr/nostr-service", () => ({
     publishSignedEvent: jest.fn(async () => true),
   },
   createNostrService: () => ({
-    streamEventsOnEvent: (_filters: unknown, handlers: { onEose?: (events: unknown[]) => void }) => {
-      handlers.onEose?.([
-        {
-          id: "discussion-event",
-          pubkey: "f".repeat(64),
-          kind: 34550,
-          created_at: 1,
-          tags: [
-            ["d", "test-discussion"],
-            ["name", "Test Discussion"],
-            ["description", "Test Description"],
-          ],
-          content: "Test Description",
-          sig: "s".repeat(128),
-        },
-      ]);
+    streamEventsOnEvent: (filters: Array<{ kinds?: number[]; "#t"?: string[] }>, handlers: { onEose?: (events: unknown[]) => void }) => {
+      const kinds = filters[0]?.kinds ?? [];
+      if (kinds.includes(34550)) {
+        handlers.onEose?.([
+          {
+            id: "discussion-event",
+            pubkey: "f".repeat(64),
+            kind: 34550,
+            created_at: 1,
+            tags: [
+              ["d", "test-discussion"],
+              ["name", "Test Discussion"],
+              ["description", "Test Description"],
+            ],
+            content: "Test Description",
+            sig: "s".repeat(128),
+          },
+        ]);
+      } else if (kinds.includes(1111) && filters[0]?.["#t"]?.includes("moderator-request")) {
+        handlers.onEose?.([
+          {
+            id: "promotion-request-1",
+            pubkey: "e".repeat(64),
+            kind: 1111,
+            created_at: 2,
+            tags: [
+              ["a", "34550:f:test-discussion"],
+              ["p", "f".repeat(64)],
+              ["t", "moderator-request"],
+            ],
+            content: "",
+            sig: "s".repeat(128),
+          },
+        ]);
+      } else {
+        handlers.onEose?.([]);
+      }
       return () => undefined;
     },
     publishSignedEvent:
       jest.requireMock("@/lib/nostr/nostr-service").__mock
         .publishSignedEvent,
+  }),
+}));
+
+jest.mock("@/lib/nostr/discussion-ndk-gateway", () => ({
+  createDiscussionNdkGateway: () => ({
+    createModeratorDecisionDraft: (...args: unknown[]) =>
+      (createModeratorDecisionDraftMock as (...mockArgs: unknown[]) => unknown)(
+        ...args
+      ),
   }),
 }));
 
@@ -103,7 +145,7 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
     description: "Test Description",
     authorPubkey: "f".repeat(64),
     dTag: "test-discussion",
-    moderators: [],
+    moderators: [{ pubkey: "e".repeat(64) }],
     createdAt: 1,
     event: {
       id: "discussion-event",
@@ -118,6 +160,12 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   isValidNpub: () => true,
   npubToHex: () => "f".repeat(64),
   getAdminPubkeyHex: () => "a".repeat(64),
+  formatRelativeTime: () => "now",
+}));
+
+jest.mock("@/lib/nostr/mnemonic-utils", () => ({
+  formatBip39JapaneseMnemonicPreviewFromPubkey: () =>
+    "あいこくしん あいさつ あいだ",
 }));
 
 jest.mock("@/lib/discussion/user-creation-flow", () => ({
@@ -165,7 +213,7 @@ describe("DiscussionEditPage listing request", () => {
 
   it("allows non-author users to send moderator promotion request", async () => {
     authState.user = {
-      pubkey: "e".repeat(64),
+      pubkey: "d".repeat(64),
       isLoggedIn: true,
     };
 
@@ -183,7 +231,7 @@ describe("DiscussionEditPage listing request", () => {
       expect(createModeratorPromotionRequestMock).toHaveBeenCalledWith(
         "34550:f:test-discussion",
         "f".repeat(64),
-        "e".repeat(64),
+        "d".repeat(64),
         ""
       )
     );
@@ -194,5 +242,38 @@ describe("DiscussionEditPage listing request", () => {
     expect(
       await screen.findByText("モデレーター昇格申請を送信しました")
     ).toBeInTheDocument();
+  });
+
+  it("allows author to decide promotion request by updating kind 34550", async () => {
+    render(<DiscussionEditPage />);
+
+    await waitFor(() =>
+      expect(screen.getByText("昇格申請ユーザー一覧")).toBeInTheDocument()
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "承認" }));
+
+    await waitFor(() =>
+      expect(createModeratorDecisionDraftMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          decision: "approved",
+          applicantPubkey: "e".repeat(64),
+          actorPubkey: "f".repeat(64),
+        })
+      )
+    );
+    expect(signEventMock).toHaveBeenCalled();
+    expect(
+      jest.requireMock("@/lib/nostr/nostr-service").__mock.publishSignedEvent
+    ).toHaveBeenCalled();
+  });
+
+  it("shows current moderators as BIP39 mnemonic preview", async () => {
+    render(<DiscussionEditPage />);
+
+    expect(
+      await screen.findByText("現在のモデレーター（Mnemonic）")
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("あいこくしん あいさつ あいだ").length).toBeGreaterThan(0);
   });
 });

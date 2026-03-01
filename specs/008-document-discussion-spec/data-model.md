@@ -227,4 +227,5 @@ State transitions:
 - `listing-requested` の承認済み/未承認表示は掲載承認状態を参照して修飾する。
 - `promotion-requested` の承認済み/未承認表示は `kind:34550` 最新状態を参照して修飾する。
 - 承認済み表示時は、承認者公開鍵とMnemonic codeを修飾情報として表示する。
+- 設定画面の自作会話一覧は completion-aware read を正とし、`completionReason` が `idle-timeout` / `hard-timeout` / `cancelled` の場合は再試行導線を表示する。
 - FR-008は既存合意形成ロジック（`evaluation-service` / `polis-consensus`）を再利用し、契約変更時も分析アルゴリズムそのものは変更対象外とする。

@@ -272,6 +272,9 @@ describe("AuditLogSection", () => {
     );
     expect(screen.getByTestId("audit-timeline-count")).toHaveTextContent("13");
     expect(screen.getByRole("button", { name: "さらに過去10件を表示" })).toBeDisabled();
+    expect(
+      screen.getByText("これ以上表示できる監査ログはありません。")
+    ).toBeInTheDocument();
   });
 
   it("追加取得で重複イベントIDをマージ時に除外する", async () => {
@@ -385,5 +388,48 @@ describe("AuditLogSection", () => {
     expect(screen.getByTestId("audit-timeline-approvers")).toHaveTextContent(
       expectedMnemonic
     );
+  });
+
+  it("追加読み込みボタンに44px以上ターゲットを適用する", async () => {
+    const firstPage = Array.from({ length: 10 }, (_, i) =>
+      createPostEvent(`event-${i + 1}`, 200 - i)
+    );
+    serviceMock.getEventsWithCompletion.mockResolvedValueOnce(
+      withCompletion(firstPage)
+    );
+
+    const ref = React.createRef<{
+      loadAuditData: () => void;
+      retryLoadAuditData: () => void;
+    }>();
+    render(
+      <AuditLogSection
+        ref={ref}
+        discussion={{
+          id: "34550:test-pubkey:test-dtag",
+          dTag: "test-dtag",
+          title: "Test Discussion",
+          description: "",
+          moderators: [],
+          authorPubkey: "test-pubkey",
+          createdAt: 1234567890,
+          event: {} as any,
+        }}
+        discussionInfo={{
+          discussionId: "34550:test-pubkey:test-dtag",
+          authorPubkey: "test-pubkey",
+          dTag: "test-dtag",
+        }}
+        initialVisibleCount={10}
+      />
+    );
+
+    await act(async () => {
+      await ref.current?.loadAuditData();
+    });
+
+    expect(
+      screen.getByRole("button", { name: "さらに過去10件を表示" })
+    ).toHaveClass("min-h-[44px]");
   });
 });

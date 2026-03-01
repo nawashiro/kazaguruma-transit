@@ -173,3 +173,4 @@ specs/008-document-discussion-spec/
   2. 一覧・詳細・設定・監査初回表示は、リアルタイム購読より read 完了判定（`completionReason`）を優先する。
   3. `DiscussionTabLayout` と詳細本文で同一 metadata を二重取得しない。
   4. Provider階層（`AuthProvider`）を単一化し、遷移方式差による初期化競合を避ける。
+  5. 会話編集画面の昇格審査は `kind:34550` のモデレーター集合更新（`approved` / `unapproved`）で表現し、昇格専用承認イベントを新設しない。

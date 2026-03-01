@@ -372,6 +372,40 @@ describe("Foundation regression checks", () => {
       "promotion-requested",
     ]);
   });
+
+  it("derives approval metadata including approver mnemonic for approved posts", () => {
+    const postEvent: NostrEventDTO = {
+      id: "post-approved-target",
+      kind: 1111,
+      pubkey: "c".repeat(64),
+      created_at: 100,
+      tags: [["a", "34550:creator:discussion"]],
+      content: "hello",
+      sig: "s".repeat(128),
+    };
+    const approvalPubkey = "f".repeat(64);
+    const approvalEvent: NostrEventDTO = {
+      id: "approval-1",
+      kind: 4550,
+      pubkey: approvalPubkey,
+      created_at: 101,
+      tags: [
+        ["a", "34550:creator:discussion"],
+        ["e", "post-approved-target"],
+        ["p", "c".repeat(64)],
+        ["k", "1111"],
+      ],
+      content: "approved",
+      sig: "s".repeat(128),
+    };
+
+    const [item] = mapDiscussionAuditTimeline([postEvent, approvalEvent]);
+    expect(item.approvalState).toBe("approved");
+    expect(item.approvedByPubkey).toBe(approvalPubkey);
+    expect(item.approvedByMnemonic).toBe(
+      formatBip39JapaneseMnemonicPreviewFromPubkey(approvalPubkey)
+    );
+  });
 });
 
 describe("US1 service flow checks", () => {

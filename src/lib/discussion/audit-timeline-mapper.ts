@@ -35,11 +35,32 @@ const approvalsByTarget = (events: NostrEventDTO[]): Map<string, NostrEventDTO> 
   const map = new Map<string, NostrEventDTO>();
   for (const event of events) {
     if (event.kind !== 4550) continue;
-    const target = getTagValue(event, "e") ?? getTagValue(event, "a");
-    if (!target) continue;
-    map.set(target, event);
+    const targets = [getTagValue(event, "e"), getTagValue(event, "a")].filter(
+      (target): target is string => Boolean(target)
+    );
+    if (targets.length === 0) continue;
+    for (const target of targets) {
+      const existing = map.get(target);
+      if (!existing || event.created_at >= existing.created_at) {
+        map.set(target, event);
+      }
+    }
   }
   return map;
+};
+
+const resolveApproval = (
+  event: NostrEventDTO,
+  approvals: Map<string, NostrEventDTO>
+): NostrEventDTO | undefined => {
+  // 投稿・申請イベントの承認は対象イベントID(e)で表現されることがあるため優先する
+  const byEventId = approvals.get(event.id);
+  if (byEventId) return byEventId;
+
+  const byRef =
+    approvals.get(getTagValue(event, "e") ?? "") ??
+    approvals.get(getTagValue(event, "a") ?? "");
+  return byRef;
 };
 
 const toDto = (
@@ -65,8 +86,7 @@ export function mapListAuditTimeline(events: NostrEventDTO[]): AuditTimelineDTO[
   return events
     .filter((event) => isListingRequest(event) || isModeratorRequest(event))
     .map((event) => {
-      const target = getTagValue(event, "e") ?? getTagValue(event, "a");
-      const approval = target ? approvals.get(target) : undefined;
+      const approval = resolveApproval(event, approvals);
       return toDto(
         event,
         isModeratorRequest(event) ? "promotion-requested" : "listing-requested",
@@ -83,8 +103,7 @@ export function mapDiscussionAuditTimeline(
   return events
     .filter((event) => isPostSubmitted(event) || isModeratorRequest(event))
     .map((event) => {
-      const target = getTagValue(event, "e") ?? getTagValue(event, "a");
-      const approval = target ? approvals.get(target) : undefined;
+      const approval = resolveApproval(event, approvals);
       return toDto(
         event,
         isModeratorRequest(event) ? "promotion-requested" : "post-submitted",
@@ -93,4 +112,3 @@ export function mapDiscussionAuditTimeline(
     })
     .sort((a, b) => b.timestamp - a.timestamp);
 }
-

@@ -7,10 +7,13 @@ import {
   parsePostEvent,
   parseApprovalEvent,
   parseDiscussionEvent,
-  createAuditTimeline,
 } from "@/lib/nostr/nostr-utils";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
+import {
+  mapDiscussionAuditTimeline,
+  mapListAuditTimeline,
+} from "@/lib/discussion/audit-timeline-mapper";
 import type {
   Discussion,
   DiscussionPost,
@@ -364,23 +367,10 @@ export const AuditLogSection = React.forwardRef<
 
     const auditItems = useMemo(
       () =>
-        createAuditTimeline(
-          isDiscussionList
-            ? localReferencedDiscussions
-            : discussion
-              ? [discussion]
-              : [],
-          [],
-          auditPosts,
-          auditApprovals
-        ),
-      [
-        auditApprovals,
-        auditPosts,
-        discussion,
-        isDiscussionList,
-        localReferencedDiscussions,
-      ]
+        isDiscussionList
+          ? mapListAuditTimeline(auditEvents)
+          : mapDiscussionAuditTimeline(auditEvents),
+      [auditEvents, isDiscussionList]
     );
 
     const visibleAuditItems = useMemo(

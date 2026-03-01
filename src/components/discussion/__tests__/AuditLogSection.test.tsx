@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen, act, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { AuditLogSection } from "../AuditLogSection";
+import { formatBip39JapaneseMnemonicPreviewFromPubkey } from "@/lib/nostr/mnemonic-utils";
 
 jest.mock("@/lib/config/discussion-config", () => ({
   getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 500 }),
@@ -74,10 +75,20 @@ jest.mock("@/lib/nostr/nostr-service", () => {
 
 jest.mock("@/components/discussion/AuditTimeline", () => ({
   __esModule: true,
-  AuditTimeline: ({ items }: { items: Array<{ id: string }> }) => (
+  AuditTimeline: ({
+    items,
+  }: {
+    items: Array<{ id: string; approvedByMnemonic?: string }>;
+  }) => (
     <div>
       <div data-testid="audit-timeline-count">{items.length}</div>
       <div data-testid="audit-timeline-ids">{items.map((item) => item.id).join(",")}</div>
+      <div data-testid="audit-timeline-approvers">
+        {items
+          .map((item) => item.approvedByMnemonic)
+          .filter((value): value is string => Boolean(value))
+          .join(",")}
+      </div>
     </div>
   ),
 }));
@@ -101,6 +112,26 @@ const createPostEvent = (id: string, createdAt: number): TestEvent => ({
   kind: 1111,
   tags: [["a", "34550:test-pubkey:test-dtag"]],
   content: "post",
+  sig: `sig-${id}`,
+});
+
+const createApprovalEvent = (
+  id: string,
+  createdAt: number,
+  postId: string,
+  approverPubkey: string
+): TestEvent => ({
+  id,
+  pubkey: approverPubkey,
+  created_at: createdAt,
+  kind: 4550,
+  tags: [
+    ["a", "34550:test-pubkey:test-dtag"],
+    ["e", postId],
+    ["p", "user"],
+    ["k", "1111"],
+  ],
+  content: "approved",
   sig: `sig-${id}`,
 });
 
@@ -282,5 +313,50 @@ describe("AuditLogSection", () => {
     const ids = screen.getByTestId("audit-timeline-ids").textContent?.split(",") ?? [];
     const duplicateCount = ids.filter((id) => id === "duplicate").length;
     expect(duplicateCount).toBe(1);
+  });
+
+  it("承認済み投稿の承認者Mnemonicをタイムラインへ渡す", async () => {
+    const approverPubkey = "f".repeat(64);
+    const expectedMnemonic =
+      formatBip39JapaneseMnemonicPreviewFromPubkey(approverPubkey);
+    const events = [
+      createPostEvent("event-approved", 200),
+      createApprovalEvent("approval-1", 201, "event-approved", approverPubkey),
+    ];
+    serviceMock.getEventsOnEose.mockResolvedValueOnce(events);
+
+    const ref = React.createRef<{
+      loadAuditData: () => void;
+      retryLoadAuditData: () => void;
+    }>();
+    render(
+      <AuditLogSection
+        ref={ref}
+        discussion={{
+          id: "34550:test-pubkey:test-dtag",
+          dTag: "test-dtag",
+          title: "Test Discussion",
+          description: "",
+          moderators: [],
+          authorPubkey: "test-pubkey",
+          createdAt: 1234567890,
+          event: {} as any,
+        }}
+        discussionInfo={{
+          discussionId: "34550:test-pubkey:test-dtag",
+          authorPubkey: "test-pubkey",
+          dTag: "test-dtag",
+        }}
+        initialVisibleCount={10}
+      />
+    );
+
+    await act(async () => {
+      await ref.current?.loadAuditData();
+    });
+
+    expect(screen.getByTestId("audit-timeline-approvers")).toHaveTextContent(
+      expectedMnemonic
+    );
   });
 });

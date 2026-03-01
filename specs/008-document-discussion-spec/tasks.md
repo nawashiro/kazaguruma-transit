@@ -235,3 +235,13 @@ T044 / T045
 - [X] T057 会話一覧監査/会話詳細監査の初回取得をEOSE単独依存にしない読込フローへ更新する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/audit/page.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/audit/page.tsx`
 - [X] T058 [P] 読込状態ログ（`completionReason`, `eventCount`, `elapsedMs`）を一覧/詳細/監査で出力する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/page.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/page.tsx` `/root/nawashiro/kazaguruma-transit/src/components/discussion/AuditLogSection.tsx`
 - [X] T059 Addendum追記内容と実装手順の整合を文書へ反映する in `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/quickstart.md` `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/plan.md` `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/spec.md`
+
+## Addendum Tasks (2026-03-01): NDK Singleton + 非ストリーミング前提の安定化
+
+**Purpose**: 遷移方式差（ナビゲーション/再読込/直アクセス）での取得不安定を抑制する
+
+- [X] T060 [P] NDK公式推奨に沿って `NostrService` / Discussion Gateway のクライアント共有インスタンス化方針を文書へ追記する in `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/research.md` `/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/plan.md`
+- [ ] T061 [US1] 会話詳細レイアウトの二重 `AuthProvider` を解消し Provider 階層を単一化する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/layout.tsx` `/root/nawashiro/kazaguruma-transit/src/app/layout.tsx`
+- [ ] T062 [US1] 会話詳細の metadata 取得を単一路線へ統合し、`DiscussionTabLayout` と本文の二重取得を解消する in `/root/nawashiro/kazaguruma-transit/src/components/discussion/DiscussionTabLayout.tsx` `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/page.tsx`
+- [ ] T063 [US1] 設定画面の会話取得を非ストリーミング前提（completion-aware read）へ移行する in `/root/nawashiro/kazaguruma-transit/src/app/settings/page.tsx` `/root/nawashiro/kazaguruma-transit/src/lib/nostr/discussion-ndk-gateway.ts`
+- [ ] T064 [P] 直アクセス/再読込/ナビゲーション差分を再現する回帰テストを追加する in `/root/nawashiro/kazaguruma-transit/src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx` `/root/nawashiro/kazaguruma-transit/src/app/settings/__tests__/page.streaming.test.tsx`

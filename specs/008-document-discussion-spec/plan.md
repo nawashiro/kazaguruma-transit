@@ -162,3 +162,14 @@ specs/008-document-discussion-spec/
 - 取得完了は `completionReason`（`eose` / `idle-timeout` / `hard-timeout` / `cancelled`）を区別して扱う。
 - `Not Found` は単純タイムアウト直後に確定せず、沈黙タイムアウトと逐次受信継続を区別して判定する。
 - 詳細は [`notes/eose-and-timeout-observability.md`](/root/nawashiro/kazaguruma-transit/specs/008-document-discussion-spec/notes/eose-and-timeout-observability.md) を参照。
+
+## Addendum (2026-03-01): NDKインスタンス戦略
+
+- 既存本文は維持し、追記として NDK 利用方針を補足する。
+- NDK公式README（npm公開）に従い、クライアント側の NDK はシングルトン運用を第一選択とする。
+  - 参照: https://www.npmjs.com/package/@nostr-dev-kit/ndk
+- 設計ルール:
+  1. `createNostrService()` / Gateway生成は画面ごとに乱立させず、共有インスタンス経由で利用する。
+  2. 一覧・詳細・設定・監査初回表示は、リアルタイム購読より read 完了判定（`completionReason`）を優先する。
+  3. `DiscussionTabLayout` と詳細本文で同一 metadata を二重取得しない。
+  4. Provider階層（`AuthProvider`）を単一化し、遷移方式差による初期化競合を避ける。

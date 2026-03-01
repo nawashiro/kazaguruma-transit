@@ -102,3 +102,14 @@
 - NIPs参照元: nostrbook.dev の `llms.txt` を指針として採用。
 - 通信フロー明記: plan.mdとquickstart.mdに記載。
 - `nostr-tools`廃止範囲: discussion機能全体と漏れ込み箇所を対象に全面撤去。
+
+## Addendum (2026-03-01): NDKシングルトン推奨の確認
+
+- NDK公式README（npm公開ドキュメント）では、利用時に「単一インスタンスを生成して使い回す」方針が明示されている。
+- 根拠:
+  - https://www.npmjs.com/package/@nostr-dev-kit/ndk
+  - 上記ページのREADMEセクション（"Users of NDK should instantiate a single NDK instance ..."）
+- 設計反映方針:
+  1. 画面/コンポーネントごとの `createNostrService()` 多重生成を避ける。
+  2. relay接続と購読管理を単一NDKインスタンスへ集約し、遷移方式（ナビゲーション/再読込/直アクセス）による挙動差を縮小する。
+  3. 非ストリーミング前提の画面（会話一覧・会話詳細・設定・監査初回表示）は read API を優先し、リアルタイム購読は必須要件として扱わない。

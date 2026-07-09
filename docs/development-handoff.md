@@ -27,12 +27,19 @@ The script fetches remotes, switches to `dev`, fast-forwards it from `origin/dev
 
 | Branch | Status | Use |
 | --- | --- | --- |
-| `dev` / `origin/dev` | Current integration branch. Contains `008-document-discussion-spec` and post-merge test/lockfile alignment. | Start here. |
+| `dev` / `origin/dev` | Current integration branch. Contains the former `008-document-discussion-spec` work and post-merge test/lockfile alignment. | Start here. |
 | `master` / `origin/master` | Latest release branch, tagged `v1.1.1`. Behind `dev`. | Release baseline only. |
-| `origin/008-document-discussion-spec` | Merged into `dev` at `105b5f6`. | Historical reference. Do not start new work here. |
-| `origin/007-migrate-ndk-nostr` | Detached work branch with several reverted NDK/discussion experiments. Not merged into `dev`. | Historical reference only unless a specific commit is intentionally cherry-picked after review. |
-| `origin/006-migrate-nostr-ndk` | Older NDK migration experiment. Not merged into `dev`. | Historical reference only. |
-| `origin/dev-emergency` | Old security hotfix branch. Its useful changes are superseded by later release/dev history unless proven otherwise. | Historical reference only. |
+
+## Deleted Branches
+
+Removed on 2026-07-09 after creating a local bundle checkpoint under `.git/branch-cleanup-backup-*.bundle`:
+
+| Branch | Reason |
+| --- | --- |
+| `origin/008-document-discussion-spec` | Merged into `dev` at `105b5f6`; no separate branch needed. |
+| `origin/007-migrate-ndk-nostr` | Detached experiment branch with several reverted NDK/discussion commits; not a development base. |
+| `origin/006-migrate-nostr-ndk` | Older NDK migration experiment; not a development base. |
+| `origin/dev-emergency` | Old hotfix branch superseded by later `dev` / `master` history. |
 
 ## Before Starting a Task
 

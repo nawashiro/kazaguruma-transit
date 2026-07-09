@@ -1,31 +1,43 @@
 <!--
 Sync Impact Report:
-- Version Change: 1.0.0 -> 1.1.0
-- Reason: Move operational Core Principles to AGENTS.md to avoid duplicating agent instructions.
+- Version Change: 1.1.0 -> 1.2.0
+- Reason: 日本語をこのリポジトリの作業言語として明文化し、憲章本文を日本語化。
 - Modified Principles:
-  * Core Principles now delegate to AGENTS.md.
+  * Core Principles は引き続き AGENTS.md を参照。
+  * 作業言語として日本語を追加。
 - Added Sections:
-  * Authority Model
+  * 作業言語
 - Removed Sections:
-  * Inline detailed Core Principles duplicated in AGENTS.md
+  * なし
 - Templates Status:
-  ✅ plan-template.md: Constitution Check can use this file as the Spec Kit bridge
-  ✅ spec-template.md: User stories and requirements unchanged
-  ✅ tasks-template.md: Task organization unchanged
+  ✅ plan-template.md: Constitution Check はこのファイルを Spec Kit 用の橋渡しとして使用可能
+  ✅ spec-template.md: ユーザーストーリーと要求仕様は日本語で記述する方針に整合
+  ✅ tasks-template.md: タスク記述は日本語で記述する方針に整合
 - Follow-up TODOs: None
 -->
 
-# Kazaguruma Transit Constitution
+# Kazaguruma Transit 憲章
 
-This file exists for GitHub Spec Kit compatibility. The operational source of truth for coding agents is `AGENTS.md`.
+このファイルは GitHub Spec Kit 互換のために存在する。Coding agent 向けの実務上の正本は `AGENTS.md` である。
 
-## Authority Model
+## 権限モデル
 
-Agents MUST read and follow `AGENTS.md` before planning or implementing changes. If this file and `AGENTS.md` conflict, `AGENTS.md` wins.
+Agent は計画または実装を始める前に `AGENTS.md` を読み、その内容に従うこと。
+
+このファイルと `AGENTS.md` が衝突する場合は、`AGENTS.md` を優先する。
+
+## 作業言語
+
+このリポジトリの作業言語は日本語である。
+
+- Spec Kit の `spec.md`、`plan.md`、`tasks.md`、チェックリスト、実装メモ、レビューコメント、作業報告は原則として日本語で書く。
+- コード識別子、API 名、ファイル名、外部仕様名、ライブラリ名、エラーメッセージの技術的引用は英語のままでよい。
+- ユーザー向け UI 文言は、既存のアプリケーション方針に合わせて日本語を優先する。
+- 外部コントリビューターや upstream への提出など、英語が必要な文脈では英語を使ってよい。その場合でも、このリポジトリ内の作業記録は日本語で要点を残す。
 
 ## Core Principles
 
-Core Principles live in `AGENTS.md` under `## Core Principles`:
+Core Principles は `AGENTS.md` の `## Core Principles` に置く。
 
 1. Clear Naming
 2. Simple Logic
@@ -35,29 +47,29 @@ Core Principles live in `AGENTS.md` under `## Core Principles`:
 6. Accessibility & UX
 7. Documentation & Comments
 
-Spec Kit workflows should use these principles as constitution gates when creating `spec.md`, `plan.md`, and `tasks.md`.
+Spec Kit の workflow は、`spec.md`、`plan.md`、`tasks.md` を作成するとき、この原則群を constitution gate として扱うこと。
 
-## Technology Stack & Constraints
+## 技術スタックと制約
 
-- **Framework**: Next.js 15 (App Router), React 19
-- **Language**: TypeScript 5 strict mode
+- **フレームワーク**: Next.js 15 (App Router), React 19
+- **言語**: TypeScript 5 strict mode
 - **UI**: Tailwind CSS 4 + DaisyUI 5
-- **Database**: SQLite + Prisma ORM
-- **Testing**: Jest + React Testing Library
-- **Distributed protocol**: Nostr (NIP-72, NIP-25)
-- **Performance**: API response p95 should stay within 200ms where the existing architecture makes that measurable.
-- **GTFS data**: GTFS import runs during the build/start chain.
-- **External images**: External URL images may use `<img>` when Next.js `<Image>` is unsuitable.
-- **Button styling**: If DaisyUI cupcake rounding fails, use `rounded-full dark:rounded-sm`.
-- **Japanese text**: Ruby display uses the existing ruby text utilities/classes.
-- **Security**: Preserve API rate limiting.
+- **データベース**: SQLite + Prisma ORM
+- **テスト**: Jest + React Testing Library
+- **分散プロトコル**: Nostr (NIP-72, NIP-25)
+- **パフォーマンス**: 既存アーキテクチャで測定可能な範囲では、API 応答 p95 を 200ms 以内に保つ。
+- **GTFS データ**: GTFS import は build/start chain の中で実行される。
+- **外部画像**: 外部 URL 画像は、Next.js `<Image>` が適さない場合に `<img>` を使ってよい。
+- **ボタンスタイル**: DaisyUI cupcake の角丸が効かない場合は `rounded-full dark:rounded-sm` を使う。
+- **日本語テキスト**: ルビ表示は既存の ruby text utilities/classes を使う。
+- **セキュリティ**: API rate limiting を維持する。
 
-## Development Workflow
+## 開発ワークフロー
 
-- Normal development branch: `dev`
-- Release branch: `master`
-- Feature work starts from `dev`
-- Run the repository checks listed in `AGENTS.md` before treating a change as ready
-- When using Spec Kit, create/update artifacts in this order: `spec.md`, `plan.md`, `tasks.md`, implementation, verification
+- 通常開発ブランチ: `dev`
+- リリースブランチ: `master`
+- 機能開発は `dev` から始める。
+- 変更を完了扱いにする前に、`AGENTS.md` に記載された検証コマンドを実行する。
+- Spec Kit を使う場合は、`spec.md`、`plan.md`、`tasks.md`、実装、検証の順で進める。
 
-**Version**: 1.1.0 | **Ratified**: 2026-01-13 | **Last Amended**: 2026-07-09
+**Version**: 1.2.0 | **Ratified**: 2026-01-13 | **Last Amended**: 2026-07-09

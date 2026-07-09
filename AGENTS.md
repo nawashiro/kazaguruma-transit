@@ -8,6 +8,57 @@
 
 Follow TDD principles. First, write the tests. Avoid writing tests for things that don't exist in the specification (e.g., don't create a test for "the administrator role does not exist"). Ensure all tests pass. If something is known to work, you may remove overly complex tests that fail. Run syntax check, lint, test, and build; fix errors until none remain.
 
+## Core Principles
+
+These principles are the operational source of truth for agents working in this repository. `.specify/memory/constitution.md` exists for GitHub Spec Kit compatibility and should point back here instead of duplicating these rules.
+
+### Clear Naming
+- Names must express intent and behavior. Prefer names like `findNearestStop()`, `canApprovePost()`, and `isDbInitialized`.
+- Boolean values should start with `is`, `can`, or `has`.
+- Function names should use action verbs, such as `calculateDistance()`, `formatTime()`, and `validateInput()`.
+- Use domain language for business logic (`Discussion`, `Evaluation`, `Transit`) and avoid mixing it with incidental technical wording.
+- Avoid nonstandard abbreviations. Use `user` instead of `usr`, and `message` instead of `msg`.
+
+### Simple Logic
+- Keep functions single-purpose and small.
+- Use guard clauses and early returns to reduce nesting.
+- Avoid more than three nested control-flow levels; extract functions when logic gets deeper.
+- Replace magic numbers with named constants such as `RATE_LIMIT_WINDOW_MS` or `WALKING_SPEED_KM_H`.
+- Extract complex conditions into named predicates such as `isTimeInRange()` or `isActiveService()`.
+
+### Structured Organization
+- Keep UI, service, and data layers separate. UI components must not access the database directly.
+- Put shared types in `src/types/` and avoid duplicate local type definitions.
+- Component files use PascalCase. Services and utilities use kebab-case. Tests use `*.test.ts(x)` or `__tests__/`.
+- Place related code close together, but keep reusable domain behavior in `src/lib`.
+
+### Type Safety
+- Preserve TypeScript strictness.
+- Avoid `any`; use `unknown` plus type guards when the shape is not known.
+- Prefer explicit interfaces for object shapes and public API payloads.
+- Use discriminated unions where a `type` field drives behavior.
+- Distinguish `null` from `undefined` deliberately.
+
+### Test-First Development
+- Write tests before implementation when changing behavior.
+- Test only behavior that exists in the specification or user request.
+- Keep tests readable and scenario-oriented.
+- Run typecheck, lint, tests, and build before marking work complete.
+
+### Accessibility & UX
+- Interactive UI needs appropriate accessible names and states, such as `aria-label`, `aria-pressed`, and `aria-expanded`.
+- Mobile touch targets should be at least 44px by 44px where practical.
+- Pages and user-facing workflows need loading and error states.
+- Error messages should be understandable Japanese where users see them.
+- Preserve responsive behavior across desktop, tablet, and mobile.
+
+### Documentation & Comments
+- Code should be self-documenting; comments explain why, not what.
+- Add JSDoc for public APIs, complex functions, and non-obvious types.
+- Note concrete WCAG references when implementing accessibility-specific behavior.
+- Explain workarounds and `@ts-expect-error` usage.
+- Delete unused code instead of commenting it out. Git keeps the history.
+
 ## Project Structure & Modules
 - Next.js App Router code lives in `src/app`; feature components sit in `src/components/features`, shared UI in `src/components/ui`, and helpers in `src/utils` and `src/types`.
 - Domain logic is under `src/lib` (transit routing, discussions, evaluation, Nostr integration). Prisma schema and migrations reside in `prisma/`.

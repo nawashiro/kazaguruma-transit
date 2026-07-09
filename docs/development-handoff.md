@@ -23,6 +23,30 @@ From the repository root:
 
 The script fetches remotes, switches to `dev`, fast-forwards it from `origin/dev`, installs dependencies with `npm ci` when needed, and generates the Prisma client.
 
+## Spec Kit
+
+This repository is initialized with the official GitHub Spec Kit CLI (`specify 0.12.8`) using the Codex integration.
+
+Official project-local skills live in `.agents/skills/`:
+
+```text
+$speckit-specify
+$speckit-plan
+$speckit-tasks
+$speckit-implement
+$speckit-converge
+```
+
+Useful CLI checks:
+
+```bash
+specify --version
+specify check
+.specify/scripts/bash/create-new-feature.sh --dry-run --json --short-name example "Example feature"
+```
+
+Use `.specify/memory/constitution.md` as the project constitution. The repository keeps its customized constitution; Spec Kit generated scripts, templates, integration metadata, and workflow files are maintained under `.specify/`.
+
 ## Branch Inventory
 
 | Branch | Status | Use |

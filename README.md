@@ -4,6 +4,14 @@
 
 ## 主要コマンド
 
+### 作業開始
+
+```bash
+./scripts/start-work.sh
+```
+
+通常の開発は `dev` から開始します。ブランチ整理の判断根拠と開始手順は [docs/development-handoff.md](docs/development-handoff.md) を参照してください。
+
 ### 開発
 
 ```bash

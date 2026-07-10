@@ -158,7 +158,7 @@ export function DiscussionTabLayout({
       });
       const relayUrls = selectRelayCandidates({
         hints: plan.relayHints,
-        successful: knownData?.successfulRelays,
+        successful: knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays,
         configured: discussionConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
         defaults: [],
         limit: discussionReadStrategy.relayLimit,
@@ -176,7 +176,9 @@ export function DiscussionTabLayout({
         saveKnownDiscussionData(discussionInfo.discussionId, {
           metadata: latest,
           eventIds: discussionResult.events.map((event) => event.id),
-          successfulRelays: discussionResult.relayUrls,
+          attemptedRelayUrls: discussionResult.relayUrls,
+          successfulEventRelayUrls: [],
+          successfulRelays: [],
         });
       }
       setDiscussionCompletionReason(discussionResult.completionReason);

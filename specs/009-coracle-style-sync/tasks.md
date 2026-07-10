@@ -127,7 +127,7 @@
 - [X] T069 `src/components/discussion/BusStopDiscussion.tsx` と`src/components/discussion/BusStopMemo.tsx`を共通moderation readへ移行し、承認read完了前に投稿を除外せず、`unknown`状態を保留する
 - [ ] T070 `src/components/discussion/EvaluationComponent.tsx` と統計入力を、`approved`確定投稿と`unknown`保留投稿に分離し、承認snapshot更新後に再計算する
 - [X] T071 `src/lib/discussion/audit-timeline-mapper.ts` の承認解決を`approval.e === event.id`へ限定し、会話`a`タグを投稿承認のfallbackに使わない
-- [ ] T072 [P] `src/components/discussion/DiscussionTabLayout.tsx` と`src/components/discussion/AuditLogSection.tsx`のcache保存を`sourceRelayUrlsByEventId`由来の`successfulEventRelayUrls`へ統一し、問い合わせ対象relayを成功実績として保存しない。旧`successfulRelays`は読み取り互換のみとする
+- [X] T072 [P] `src/components/discussion/DiscussionTabLayout.tsx` と`src/components/discussion/AuditLogSection.tsx`のcache保存を`sourceRelayUrlsByEventId`由来の`successfulEventRelayUrls`へ統一し、問い合わせ対象relayを成功実績として保存しない。旧`successfulRelays`は読み取り互換のみとする
 - [ ] T076 [P] `src/app/discussions/page.tsx` と`src/app/discussions/manage/page.tsx`のcache保存を`sourceRelayUrlsByEventId`由来の`successfulEventRelayUrls`へ統一し、問い合わせ対象relayを成功実績として保存しない
 - [ ] T077 [P] `src/components/discussion/BusStopDiscussion.tsx` と`src/components/discussion/BusStopMemo.tsx`のcache保存契約を共通化し、`successfulEventRelayUrls`だけを次回relay候補へ渡す
 - [ ] T073 `src/app/discussions/[naddr]/edit/page.tsx` の承認/未承認表示を共通snapshotの状態契約と照合し、未観測状態を`unapproved`として確定しない。readGenerationで古い結果を破棄する

@@ -144,7 +144,7 @@ export const AuditLogSection = React.forwardRef<
         });
         const relayUrls = selectRelayCandidates({
           hints: plan.relayHints,
-          successful: knownData?.successfulRelays,
+          successful: knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays,
           configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
           defaults: [],
           limit: auditReadStrategy.relayLimit,
@@ -336,7 +336,9 @@ export const AuditLogSection = React.forwardRef<
           saveKnownDiscussionData(discussionInfo.discussionId, {
             metadata: baseDiscussion,
             eventIds: normalizedPage.map((event) => event.id),
-            successfulRelays: pageResult.relayUrls ?? [],
+            attemptedRelayUrls: pageResult.relayUrls ?? [],
+            successfulEventRelayUrls: Array.from(new Set(Object.values(pageResult.sourceRelayUrlsByEventId ?? {}).flat())),
+            successfulRelays: [],
             events: normalizedPage,
           });
         }

@@ -54,3 +54,28 @@ describe("getDiscussionConfig", () => {
     );
   });
 });
+
+describe("getDiscussionReadStrategyConfig", () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    jest.resetModules();
+    process.env = { ...originalEnv };
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
+  });
+
+  it("bounds relay limits and falls back from invalid timeout values", async () => {
+    process.env.NEXT_PUBLIC_DISCUSSION_READ_RELAY_LIMIT = "99";
+    process.env.NEXT_PUBLIC_DISCUSSION_READ_IDLE_TIMEOUT_MS = "invalid";
+    process.env.NEXT_PUBLIC_DISCUSSION_READ_HARD_TIMEOUT_MS = "1";
+    const { getDiscussionReadStrategyConfig } = await import("../discussion-config");
+    const config = getDiscussionReadStrategyConfig();
+
+    expect(config.relayLimit).toBe(3);
+    expect(config.idleTimeoutMs).toBe(5000);
+    expect(config.hardTimeoutMs).toBeGreaterThan(config.idleTimeoutMs);
+  });
+});

@@ -19,7 +19,7 @@
 
 **CRITICAL**: このフェーズを完了するまで画面固有の実装を開始しない。
 
-- [ ] T005 [P] `src/lib/config/__tests__/discussion-config.test.ts` に`DiscussionReadStrategyConfig`の既定値、範囲丸め、無効timeoutのfallbackテストを追加する
+- [X] T005 [P] `src/lib/config/__tests__/discussion-config.test.ts` に`DiscussionReadStrategyConfig`の既定値、範囲丸め、無効timeoutのfallbackテストを追加する
 - [X] T006 [P] `src/lib/discussion/__tests__/relay-candidate-selector.test.ts` にhint・成功実績・設定・既定relayの優先順、重複排除、3件上限、購読前1回だけのフォールバックを含む失敗テストを追加する
 - [X] T007 [P] `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` にメタデータ暫定表示、relay結果での更新、version不一致破棄の失敗テストを追加する
 - [X] T008 [P] `src/lib/discussion/__tests__/discussion-read-plan.test.ts` に各targetのkind/tag/limit、安定ソート規則、auditの`until` cursor契約テストを追加する
@@ -30,7 +30,7 @@
 - [X] T013 `src/lib/nostr/nostr-service.ts` と `src/lib/nostr/discussion-ndk-gateway.ts` に`NDKRelaySet.fromRelayUrls()`を用いる選別read、source relay収集、重複数、観測ログを実装する
 - [X] T014 [P] `src/components/discussion/DiscussionReadStatus.tsx` にloading/partial/unavailable/not-foundの日本語状態通知と再読み込みUIを実装する
 - [X] T015 `src/components/discussion/__tests__/DiscussionReadStatus.test.tsx` にARIA live region、部分取得・取得不能・再読み込みのテストを追加する
-- [ ] T016 `src/lib/discussion/discussion-read-plan.ts` と `src/lib/nostr/discussion-ndk-gateway.ts` に近似filter・同一relayへの短時間の重複read抑制を実装する
+- [X] T016 `src/lib/discussion/discussion-read-plan.ts` と `src/lib/nostr/discussion-ndk-gateway.ts` に近似filter・同一relayへの短時間の重複read抑制を実装する
 - [X] T017 `src/lib/config/__tests__/discussion-config.test.ts` `src/lib/discussion/__tests__/discussion-read-plan.test.ts` `src/lib/discussion/__tests__/relay-candidate-selector.test.ts` `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` を実行してFoundationを検証する
 
 ## Phase 3: User Story 1 - 会話画面を待たされずに開く (P1)
@@ -83,7 +83,7 @@
 **Independent Test**: 初回readの結果をキャッシュ後、同一会話を再訪問すると先に暫定タイトルが表示され、後続の新しい会話定義で置換されることを確認する。
 
 - [ ] T040 [P] [US4] `src/components/discussion/__tests__/DiscussionTabLayout.test.tsx` にsessionStorageからの暫定タイトルとrelay結果での更新テストを追加する
-- [ ] T041 [P] [US4] `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` に既知イベントIDの重複排除とrelay成功実績のテストを追加する
+- [X] T041 [P] [US4] `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` に既知イベントIDの重複排除とrelay成功実績のテストを追加する
 - [X] T042 [US4] `src/components/discussion/DiscussionTabLayout.tsx` で既知メタデータを即時表示し、`usedKnownData`を部分取得状態へ渡す
 - [ ] T043 [US4] `src/app/discussions/[naddr]/page.tsx` と `src/components/discussion/AuditLogSection.tsx` で既知イベントを暫定入力としてマージし、relay取得を常に継続する
 - [X] T044 [US4] `src/lib/discussion/discussion-known-data-cache.ts` からrelay成功実績をrelay選別へ渡す接続を実装する

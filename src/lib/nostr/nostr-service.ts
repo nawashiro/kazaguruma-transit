@@ -91,6 +91,7 @@ export class NostrService {
   private writeRelays: string[];
   private config: NostrServiceConfig;
   private connectPromise?: Promise<void>;
+  private readonly pendingReads = new Map<string, Promise<EventFetchCompletion>>();
 
   constructor(config: NostrServiceConfig) {
     this.config = config;
@@ -248,6 +249,23 @@ export class NostrService {
   }
 
   async getEventsWithCompletion(
+    filters: Filter[],
+    options: ReadEventsOptions = {}
+  ): Promise<EventFetchCompletion> {
+    const readKey = JSON.stringify({ filters, options });
+    const existingRead = this.pendingReads.get(readKey);
+    if (existingRead) return existingRead;
+
+    const readPromise = this.readEventsWithCompletion(filters, options);
+    this.pendingReads.set(readKey, readPromise);
+    try {
+      return await readPromise;
+    } finally {
+      this.pendingReads.delete(readKey);
+    }
+  }
+
+  private async readEventsWithCompletion(
     filters: Filter[],
     options: ReadEventsOptions = {}
   ): Promise<EventFetchCompletion> {

@@ -53,10 +53,10 @@
 
 **Independent Test**: 各画面で実行されたread planを観測し、kind/tag/limit/relay数が契約どおりであることを確認する。
 
-- [ ] T025 [P] [US2] `src/app/discussions/__tests__/page.streaming.test.tsx` に一覧が個別投稿を取得しないread planテストを追加する
+- [X] T025 [P] [US2] `src/app/discussions/__tests__/page.streaming.test.tsx` に一覧が個別投稿を取得しないread planテストを追加する
 - [ ] T026 [P] [US2] `src/app/discussions/[naddr]/approve/__tests__/page.streaming.test.tsx` と `src/app/discussions/[naddr]/edit/__tests__/page.streaming.test.tsx` に目的別filter・relay上限のテストを追加する
 - [ ] T027 [P] [US2] `src/components/discussion/__tests__/AuditLogSection.test.tsx` に初回・追加取得とも`limit: 10`、追加時に古い`until`を使う失敗テストを追加する
-- [ ] T028 [US2] `src/app/discussions/page.tsx` を`discussion-list` read plan経由に変更する
+- [X] T028 [US2] `src/app/discussions/page.tsx` を`discussion-list` read plan経由に変更する
 - [ ] T029 [US2] `src/app/discussions/[naddr]/approve/page.tsx` と `src/app/discussions/[naddr]/edit/page.tsx` を承認・編集用read plan経由に変更する
 - [ ] T030 [US2] `src/components/discussion/AuditLogSection.tsx` を`discussion-audit` read plan経由に変更し、初回・追加のrelay実取得を最大10件にする
 - [ ] T031 [US2] `src/app/discussions/page.tsx` `src/app/discussions/[naddr]/approve/page.tsx` `src/app/discussions/[naddr]/edit/page.tsx` `src/components/discussion/AuditLogSection.tsx` の対象テストを実行する

@@ -160,20 +160,13 @@ export const AuditLogSection = React.forwardRef<
         if (postIds.length === 0) return primaryResult;
         const approvalResult = await nostrService.getEventsWithCompletion([{
           kinds: [4550],
+          "#a": [targetDiscussion.discussionId],
           "#e": postIds,
           limit: AUDIT_PAGE_SIZE,
         }], options);
-        const primaryEventIds = new Set(postIds);
         return {
           ...primaryResult,
-          // Some historical NIP-72 approvals omit the discussion `a` tag.
-          // The `e` tag is the authoritative link to the already-fetched post.
-          events: mergeEvents(
-            primaryResult.events,
-            approvalResult.events.filter((event) =>
-              primaryEventIds.has(event.tags.find((tag) => tag[0] === "e")?.[1] ?? "")
-            )
-          ),
+          events: mergeEvents(primaryResult.events, approvalResult.events),
           eventCount: primaryResult.eventCount,
           completionReason: primaryResult.completionReason === "eose" && approvalResult.completionReason === "eose" ? "eose" : primaryResult.completionReason,
         };

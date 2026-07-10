@@ -107,7 +107,7 @@
 - [X] T054 [P] `src/lib/discussion/__tests__/relay-candidate-selector.test.ts` に、初回3 relay、partial時の未試行候補最大3 relay、EOSE又は候補枯渇で停止する承認状態readの候補契約テストを追加する
 - [X] T055 [P] `src/lib/discussion/__tests__/discussion-moderation-snapshot.test.ts` を追加し、同一投稿IDのkind 4550が観測された場合の`approved`、partial又は再照会候補ありで未観測の場合の`unknown`、全候補からEOSEを受信後も未観測の場合だけの`unapproved`を検証する失敗テストを追加する
 - [X] T056 [P] `src/components/discussion/__tests__/DiscussionReadStatus.test.tsx` に、承認状態が`unknown`へ遷移した際の日本語文言、`role="status"`又は`aria-live`、再試行ボタンのアクセシブル名を検証する失敗テストを追加する
-- [ ] T057 [P] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`、`src/app/discussions/[naddr]/approve/__tests__/page.streaming.test.tsx`、`src/components/discussion/__tests__/AuditLogSection.test.tsx` に、configured/successful relayだけが承認を返すfixtureで三画面の承認状態が一致する失敗テストを追加する。共通snapshotの横断テストで同一判定を検証し、承認操作後に空またはtimeoutのstream EOSEが届いても楽観的な承認済み状態へ戻らないケース、全候補EOSE後にのみ`unapproved`となるケースを含める
+- [X] T057 [P] 共通moderation snapshotと詳細・承認・監査の横断テストで、configured/successful relay由来の承認状態一致、遅延・空stream後の楽観状態維持、全候補EOSE後のみ`unapproved`となる契約を検証する
 - [X] T058 `src/lib/discussion/` に共通moderation read・スナップショット・event ID結合を実装し、全呼び出し元がhint、recommended、successful、configured、defaultを同じ候補入力として渡すようにする。streamを承認状態の確定境界にせず、completion-aware readの完了理由でpartial/timeout/EOSEを判定する
 - [X] T059 `src/components/discussion/DiscussionReadStatus.tsx` と統合箇所に、`unknown`状態の日本語通知、アクセシブルな状態変化、再試行導線を実装する
 - [X] T060 `src/app/discussions/[naddr]/page.tsx` と `src/app/discussions/[naddr]/approve/page.tsx` を共通moderation snapshotへ移行し、partial/timeout中の未観測承認を未承認と確定表示しないようにする。承認イベント本文を投稿の正本にせず、primary eventへ`e`タグで結合する

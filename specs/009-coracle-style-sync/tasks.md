@@ -127,7 +127,9 @@
 - [ ] T069 `src/components/discussion/BusStopDiscussion.tsx` と`src/components/discussion/BusStopMemo.tsx`を共通moderation readへ移行し、承認read完了前に投稿を除外せず、`unknown`状態を保留する
 - [ ] T070 `src/components/discussion/EvaluationComponent.tsx` と統計入力を、`approved`確定投稿と`unknown`保留投稿に分離し、承認snapshot更新後に再計算する
 - [ ] T071 `src/lib/discussion/audit-timeline-mapper.ts` の承認解決を`approval.e === event.id`へ限定し、会話`a`タグを投稿承認のfallbackに使わない
-- [ ] T072 `src/app/discussions/page.tsx`、`src/app/discussions/manage/page.tsx`、`src/components/discussion/DiscussionTabLayout.tsx`、`src/components/discussion/AuditLogSection.tsx`、BusStop系readのcache保存を`sourceRelayUrlsByEventId`由来の`successfulEventRelayUrls`へ統一し、問い合わせ対象relayを成功実績として保存しない。旧`successfulRelays`は読み取り互換のみとする
+- [ ] T072 [P] `src/components/discussion/DiscussionTabLayout.tsx` と`src/components/discussion/AuditLogSection.tsx`のcache保存を`sourceRelayUrlsByEventId`由来の`successfulEventRelayUrls`へ統一し、問い合わせ対象relayを成功実績として保存しない。旧`successfulRelays`は読み取り互換のみとする
+- [ ] T076 [P] `src/app/discussions/page.tsx` と`src/app/discussions/manage/page.tsx`のcache保存を`sourceRelayUrlsByEventId`由来の`successfulEventRelayUrls`へ統一し、問い合わせ対象relayを成功実績として保存しない
+- [ ] T077 [P] `src/components/discussion/BusStopDiscussion.tsx` と`src/components/discussion/BusStopMemo.tsx`のcache保存契約を共通化し、`successfulEventRelayUrls`だけを次回relay候補へ渡す
 - [ ] T073 `src/app/discussions/[naddr]/edit/page.tsx` の承認/未承認表示を共通snapshotの状態契約と照合し、未観測状態を`unapproved`として確定しない。readGenerationで古い結果を破棄する
 - [ ] T074 全Discussion画面の同一fixture横断テスト、権限回帰、撤回、重複排除、フォーム/フォーカス維持を実行する
 - [ ] T075 `npx tsc --noEmit`、`npm run lint`、`npm test`、`npm run build`を実行し、結果を`quickstart.md`へ追記する
@@ -137,7 +139,7 @@
 - Phase 1 -> Phase 2 -> US1/US2/US3/US4 -> Polish。
 - US1はFoundation完了後のMVP。US2とUS3はUS1と独立して開始できるが、同じread plan基盤を使う。US4はFoundation完了後に開始できるが、US1のメタデータ統合と合わせて確認する。
 - Phase 8はT054-T057の失敗テスト後にT058を実装し、T059、T060、T061、T063、T062の順に進める。T054-T057は並行可能だが、T063はT058のread結果契約に依存する。
-- Phase 9はT064-T066の失敗テスト後にT067-T073を実装し、T074、T075で全体検証する。T064-T066は並行可能だが、T067-T073は共通snapshot契約の確定後に開始する。T071はT064完了後、T072は各read境界の移行後に完了とする。
+- Phase 9はT064-T066の失敗テスト後にT067-T073、T076、T077を実装し、T074、T075で全体検証する。T064-T066は並行可能だが、T067-T073、T076、T077は共通snapshot契約の確定後に開始する。T071はT064完了後、T072、T076、T077は各read境界の移行後に完了とする。
 
 ## Parallel Opportunities
 

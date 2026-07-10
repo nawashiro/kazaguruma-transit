@@ -124,7 +124,7 @@
 - [ ] T066 [P] `src/components/discussion/__tests__/EvaluationComponent.test.tsx` に、`unknown`投稿を確定的に未承認除外せずsnapshot更新後に再評価できるテストを追加する
 - [X] T067 `src/app/discussions/page.tsx` をprimary投稿/会話イベントと承認snapshotの結合へ移行し、承認イベント本文からの投稿復元を廃止する
 - [ ] T068 `src/app/discussions/manage/page.tsx` の独立post/approval stream再構築を共通moderation readへ移行し、空・timeout・古いEOSEで承認状態を巻き戻さないようにする
-- [ ] T069 `src/components/discussion/BusStopDiscussion.tsx` と`src/components/discussion/BusStopMemo.tsx`を共通moderation readへ移行し、承認read完了前に投稿を除外せず、`unknown`状態を保留する
+- [X] T069 `src/components/discussion/BusStopDiscussion.tsx` と`src/components/discussion/BusStopMemo.tsx`を共通moderation readへ移行し、承認read完了前に投稿を除外せず、`unknown`状態を保留する
 - [ ] T070 `src/components/discussion/EvaluationComponent.tsx` と統計入力を、`approved`確定投稿と`unknown`保留投稿に分離し、承認snapshot更新後に再計算する
 - [ ] T071 `src/lib/discussion/audit-timeline-mapper.ts` の承認解決を`approval.e === event.id`へ限定し、会話`a`タグを投稿承認のfallbackに使わない
 - [ ] T072 [P] `src/components/discussion/DiscussionTabLayout.tsx` と`src/components/discussion/AuditLogSection.tsx`のcache保存を`sourceRelayUrlsByEventId`由来の`successfulEventRelayUrls`へ統一し、問い合わせ対象relayを成功実績として保存しない。旧`successfulRelays`は読み取り互換のみとする

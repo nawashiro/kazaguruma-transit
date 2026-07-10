@@ -6,6 +6,7 @@ import {
   getDiscussionConfig,
   isDiscussionsEnabled,
 } from "@/lib/config/discussion-config";
+import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
 import {
   parsePostEvent,
   parseApprovalEvent,
@@ -155,6 +156,15 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
     });
 
     postsStreamCleanupRef.current = postStreamCleanup;
+    if (typeof nostrService.getEventsWithCompletion === "function") void loadDiscussionModerationSnapshot(nostrService, { relayLimit: 3, idleTimeoutMs: config.defaultTimeout ?? 5000, hardTimeoutMs: (config.defaultTimeout ?? 5000) * 3, dedupWindowMs: 250 }, {
+      discussionId: config.busStopDiscussionId,
+      configured: config.relays.filter((relay) => relay.read).map((relay) => relay.url),
+      defaults: [],
+    }).then((snapshot) => {
+      postsEventsRef.current = snapshot.primaryEvents;
+      approvalEventsRef.current = snapshot.approvalEvents;
+      void updateFromEvents(snapshot.primaryEvents, snapshot.approvalEvents, snapshot.completionReason === "eose");
+    });
     updateFromEvents([], [], false);
   }, [
     busStops,

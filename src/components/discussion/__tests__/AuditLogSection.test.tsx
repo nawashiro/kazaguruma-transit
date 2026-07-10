@@ -406,6 +406,47 @@ describe("AuditLogSection", () => {
     );
   });
 
+  it("aタグを持たない履歴承認も投稿のeタグで監査へ結合する", async () => {
+    const approverPubkey = "e".repeat(64);
+    const postEvent = createPostEvent("event-historical", 200);
+    const historicalApproval = createApprovalEvent(
+      "approval-historical",
+      201,
+      postEvent.id,
+      approverPubkey
+    );
+    historicalApproval.tags = historicalApproval.tags.filter((tag) => tag[0] !== "a");
+    serviceMock.getEventsWithCompletion
+      .mockResolvedValueOnce(withCompletion([postEvent]))
+      .mockResolvedValueOnce(withCompletion([historicalApproval]));
+
+    const ref = React.createRef<{ loadAuditData: () => void; retryLoadAuditData: () => void }>();
+    render(
+      <AuditLogSection
+        ref={ref}
+        discussion={null}
+        discussionInfo={{
+          discussionId: "34550:test-pubkey:test-dtag",
+          authorPubkey: "test-pubkey",
+          dTag: "test-dtag",
+        }}
+      />
+    );
+
+    await act(async () => {
+      await ref.current?.loadAuditData();
+    });
+
+    expect(serviceMock.getEventsWithCompletion).toHaveBeenNthCalledWith(
+      2,
+      [{ kinds: [4550], "#e": [postEvent.id], limit: 10 }],
+      { idleTimeoutMs: 500, hardTimeoutMs: 1500 }
+    );
+    expect(screen.getByTestId("audit-timeline-approvers")).toHaveTextContent(
+      formatBip39JapaneseMnemonicPreviewFromPubkey(approverPubkey)
+    );
+  });
+
   it("追加読み込みボタンに44px以上ターゲットを適用する", async () => {
     const firstPage = Array.from({ length: 10 }, (_, i) =>
       createPostEvent(`event-${i + 1}`, 200 - i)

@@ -25,7 +25,7 @@ export function EvaluationComponent({
 
   const limitedPosts = useMemo(() => {
     const availablePosts = filterUnevaluatedPosts(
-      posts.filter((p) => p.approved),
+      posts.filter((p) => p.approved && p.approvalState !== "unknown"),
       userEvaluations
     );
 
@@ -78,7 +78,7 @@ export function EvaluationComponent({
   const remainingCount = limitedPosts.length;
 
   // 全承認済み投稿数と評価済み投稿数からプログレスを計算
-  const allApprovedPosts = posts.filter((p) => p.approved);
+  const allApprovedPosts = posts.filter((p) => p.approved && p.approvalState !== "unknown");
   const totalCount = allApprovedPosts.length;
   const evaluatedCount = userEvaluations.size;
   const progressPercentage =

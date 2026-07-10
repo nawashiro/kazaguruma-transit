@@ -35,6 +35,7 @@ export interface DiscussionPost {
   busStopTag?: string
   createdAt: number
   approved: boolean
+  approvalState?: "approved" | "unapproved" | "unknown"
   approvedBy?: string[]
   approvedAt?: number
   event: NostrEventDTO

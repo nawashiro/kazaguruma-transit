@@ -67,4 +67,20 @@ describe("EvaluationComponent", () => {
     });
     expect(onEvaluate).toHaveBeenCalledWith("approved", "+");
   });
+
+  it("keeps approval-unknown posts out of evaluation until state is resolved", () => {
+    const unknown = buildPost({ id: "unknown", content: "checking", approvalState: "unknown" });
+    const view = render(<EvaluationComponent posts={[unknown]} onEvaluate={async () => undefined} userEvaluations={new Set()} />);
+    expect(screen.getByText("評価可能な投稿がありません")).toBeInTheDocument();
+    expect(screen.queryByText("checking")).not.toBeInTheDocument();
+
+    view.rerender(
+      <EvaluationComponent
+        posts={[{ ...unknown, approved: true, approvalState: "approved" }]}
+        onEvaluate={async () => undefined}
+        userEvaluations={new Set()}
+      />
+    );
+    expect(screen.getByText("checking")).toBeInTheDocument();
+  });
 });

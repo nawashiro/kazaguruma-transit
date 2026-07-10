@@ -130,7 +130,7 @@ export default function DiscussionDetailPage() {
           setApprovals(knownApprovals);
         }
         const approvalsPlan = createDiscussionReadPlan("discussion-approvals", readStrategy, { discussionId: discussionInfo.discussionId, relayHints: discussionInfo.relays });
-        const relayUrls = selectRelayCandidates({ hints: approvalsPlan.relayHints, configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url), defaults: [], limit: readStrategy.relayLimit }).map((relay) => relay.url);
+        const relayUrls = selectRelayCandidates({ hints: approvalsPlan.relayHints, successful: knownData?.successfulRelays, configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url), defaults: [], limit: readStrategy.relayLimit }).map((relay) => relay.url);
         const approvalsResult = await discussionGateway.queryWithCompletion(approvalsPlan.filters, {
           idleTimeoutMs: approvalsPlan.idleTimeoutMs,
           hardTimeoutMs: approvalsPlan.hardTimeoutMs,

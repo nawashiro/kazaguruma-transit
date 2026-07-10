@@ -148,6 +148,7 @@ const createApprovalEvent = (
 describe("AuditLogSection", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    serviceMock.getEventsWithCompletion.mockResolvedValue(withCompletion([]));
     process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR = "naddr1discussionlist";
   });
 
@@ -189,11 +190,11 @@ describe("AuditLogSection", () => {
       await ref.current?.loadAuditData();
     });
 
-    expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(1);
+    expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(2);
     expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledWith(
       [
         {
-          kinds: [1111, 1, 4550],
+          kinds: [1111, 1],
           "#a": ["34550:test-pubkey:test-dtag"],
           limit: 10,
         },
@@ -218,7 +219,9 @@ describe("AuditLogSection", () => {
     ];
     serviceMock.getEventsWithCompletion
       .mockResolvedValueOnce(withCompletion(firstPage))
-      .mockResolvedValueOnce(withCompletion(secondPage));
+      .mockResolvedValueOnce(withCompletion([]))
+      .mockResolvedValueOnce(withCompletion(secondPage))
+      .mockResolvedValueOnce(withCompletion([]));
 
     const ref = React.createRef<{
       loadAuditData: () => void;
@@ -254,12 +257,12 @@ describe("AuditLogSection", () => {
       fireEvent.click(screen.getByRole("button", { name: "さらに過去10件を表示" }));
     });
 
-    expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(2);
+    expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(4);
     expect(serviceMock.getEventsWithCompletion).toHaveBeenNthCalledWith(
-      2,
+      3,
       [
         {
-          kinds: [1111, 1, 4550],
+          kinds: [1111, 1],
           "#a": ["34550:test-pubkey:test-dtag"],
           limit: 10,
           until: 190,

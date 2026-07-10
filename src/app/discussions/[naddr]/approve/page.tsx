@@ -14,6 +14,9 @@ import {
   getDiscussionReadStrategyConfig,
 } from "@/lib/config/discussion-config";
 import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
+import { loadKnownDiscussionData, saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
+import { createDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
+import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
 import {
   buildDisabledActionState,
   DisabledReasonText,
@@ -51,6 +54,7 @@ export default function PostApprovalPage() {
   const [posts, setPosts] = useState<DiscussionPost[]>([]);
   const [approvals, setApprovals] = useState<PostApproval[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [approvalState, setApprovalState] = useState<"approved" | "unapproved" | "unknown">("unknown");
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
@@ -66,18 +70,34 @@ export default function PostApprovalPage() {
     return extractDiscussionFromNaddr(naddrParam);
   }, [naddrParam]);
   const rebuildFromEvents = useCallback(() => {
+    const relayCandidates = selectRelayCandidates({
+      hints: discussionInfo?.relays,
+      successful: discussionInfo ? loadKnownDiscussionData<unknown, Event>(discussionInfo.discussionId)?.successfulRelays : [],
+      configured: (nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
+      defaults: [],
+      limit: readStrategy.relayLimit,
+    });
+    const snapshot = createDiscussionModerationSnapshot({
+      discussionId: discussionInfo?.discussionId ?? "",
+      primaryEvents: postsEventsRef.current,
+      approvalEvents: approvalEventsRef.current,
+      relayCandidates,
+      attemptedRelayUrls: relayCandidates.map((candidate) => candidate.url),
+      completionReason: "eose",
+    });
+    setApprovalState(snapshot.approvalState);
     const parsedApprovals = approvalEventsRef.current
       .map(parseApprovalEvent)
       .filter((a): a is PostApproval => a !== null);
 
-    const parsedPosts = postsEventsRef.current
+    const parsedPosts = snapshot.primaryEvents
       .map((event) => parsePostEvent(event, parsedApprovals))
       .filter((p): p is DiscussionPost => p !== null)
       .sort((a, b) => b.createdAt - a.createdAt);
 
     setApprovals(parsedApprovals);
     setPosts(parsedPosts);
-  }, []);
+  }, [discussionInfo]);
 
   const startStreaming = useCallback(() => {
     if (!isDiscussionsEnabled() || !discussionInfo) return;
@@ -85,8 +105,10 @@ export default function PostApprovalPage() {
     approvalStreamCleanupRef.current?.();
     approvalEventsRef.current = [];
     postsEventsRef.current = [];
+    const knownData = loadKnownDiscussionData<unknown, Event>(discussionInfo.discussionId);
     const relayUrls = selectRelayCandidates({
       hints: discussionInfo.relays,
+      successful: knownData?.successfulRelays,
       configured: (nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
       defaults: [],
       limit: readStrategy.relayLimit,
@@ -107,6 +129,7 @@ export default function PostApprovalPage() {
         onEose: (events) => {
           postsEventsRef.current = events;
           rebuildFromEvents();
+          saveKnownDiscussionData(discussionInfo.discussionId, { metadata: null, eventIds: events.map((event) => event.id), successfulRelays: relayUrls, events });
           setIsLoading(false);
         },
         timeoutMs: nostrServiceConfig.defaultTimeout,
@@ -124,6 +147,7 @@ export default function PostApprovalPage() {
         onEose: (events) => {
           approvalEventsRef.current = events;
           rebuildFromEvents();
+          saveKnownDiscussionData(discussionInfo.discussionId, { metadata: null, eventIds: events.map((event) => event.id), successfulRelays: relayUrls, events });
           setIsLoading(false);
         },
         timeoutMs: nostrServiceConfig.defaultTimeout,
@@ -385,6 +409,13 @@ export default function PostApprovalPage() {
           )
         ) : (
           <main aria-labelledby={`${activeTab}-tab`} role="tabpanel">
+            <DiscussionReadStatus
+              isLoading={false}
+              completionReason={null}
+              hasData={posts.length > 0}
+              approvalState={approvalState === "unknown" ? "unknown" : undefined}
+              onReload={startStreaming}
+            />
             {activeTab === "pending" && (
               <section aria-labelledby="pending-posts-heading">
                 <h2

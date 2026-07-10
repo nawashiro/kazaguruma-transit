@@ -35,7 +35,7 @@ export const createDiscussionReadPlan = (
       filter = { kinds: [7], "#e": args.postIds ?? [], limit };
       break;
     case "discussion-audit":
-      filter = { kinds: [1111, 1, 4550], "#a": args.discussionId ? [args.discussionId] : [], limit, until: args.until };
+      filter = { kinds: [1111, 1], "#a": args.discussionId ? [args.discussionId] : [], limit, until: args.until };
       break;
     case "discussion-list":
     case "discussion-edit":

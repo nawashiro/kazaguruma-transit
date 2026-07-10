@@ -7,10 +7,12 @@ interface DiscussionReadStatusProps {
   completionReason: CompletionReason | null;
   hasData: boolean;
   onReload?: () => void;
+  approvalState?: "unknown";
 }
 
-export function DiscussionReadStatus({ isLoading, completionReason, hasData, onReload }: DiscussionReadStatusProps) {
+export function DiscussionReadStatus({ isLoading, completionReason, hasData, onReload, approvalState }: DiscussionReadStatusProps) {
   if (isLoading) return <div role="status" aria-live="polite" className="flex items-center gap-2 text-sm"><span className="loading loading-spinner loading-sm" aria-hidden="true" />会話データを読み込み中...</div>;
+  if (approvalState === "unknown") return <div role="status" aria-live="polite" className="alert alert-warning my-4"><span>承認情報を確認中です。表示内容は暫定です。</span>{onReload && <button type="button" aria-label="承認情報を再確認" className="btn btn-outline min-h-[44px]" onClick={onReload}>再読み込み</button>}</div>;
   if (completionReason === "eose" || !completionReason) return null;
   const message = hasData
     ? "一部のrelayからの取得が完了していません。表示内容は暫定です。"

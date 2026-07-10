@@ -50,6 +50,7 @@ interface AuditLogSectionProps {
     discussionId: string;
     authorPubkey: string;
     dTag: string;
+    relays?: string[];
   } | null;
   conversationAuditMode?: boolean;
   referencedDiscussions?: Discussion[];
@@ -135,23 +136,40 @@ export const AuditLogSection = React.forwardRef<
     const fetchAuditEventsPage = useCallback(
       async (until?: number): Promise<EventFetchCompletion> => {
         const targetDiscussion = getAuditDiscussionRef();
+        const knownData = loadKnownDiscussionData<Discussion, Event>(targetDiscussion.discussionId);
         const plan = createDiscussionReadPlan("discussion-audit", auditReadStrategy, {
           discussionId: targetDiscussion.discussionId,
           until,
-          relayHints: [],
+          relayHints: targetDiscussion.relays,
         });
         const relayUrls = selectRelayCandidates({
           hints: plan.relayHints,
+          successful: knownData?.successfulRelays,
           configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
           defaults: [],
           limit: auditReadStrategy.relayLimit,
         }).map((relay) => relay.url);
 
-        return await nostrService.getEventsWithCompletion(plan.filters as Parameters<typeof nostrService.getEventsWithCompletion>[0], {
+        const options = {
           idleTimeoutMs: plan.idleTimeoutMs,
           hardTimeoutMs: plan.hardTimeoutMs,
           ...(relayUrls.length > 0 ? { relayUrls } : {}),
-        });
+        };
+        const primaryResult = await nostrService.getEventsWithCompletion(plan.filters as Parameters<typeof nostrService.getEventsWithCompletion>[0], options);
+        const postIds = primaryResult.events.map((event) => event.id);
+        if (postIds.length === 0) return primaryResult;
+        const approvalResult = await nostrService.getEventsWithCompletion([{
+          kinds: [4550],
+          "#a": [targetDiscussion.discussionId],
+          "#e": postIds,
+          limit: AUDIT_PAGE_SIZE,
+        }], options);
+        return {
+          ...primaryResult,
+          events: mergeEvents(primaryResult.events, approvalResult.events),
+          eventCount: primaryResult.eventCount,
+          completionReason: primaryResult.completionReason === "eose" && approvalResult.completionReason === "eose" ? "eose" : primaryResult.completionReason,
+        };
       },
       [getAuditDiscussionRef]
     );

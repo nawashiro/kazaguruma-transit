@@ -45,9 +45,19 @@ export const selectRelayCandidates = ({
   defaults,
   limit,
 }: RelayCandidateSelectorInput): RelayCandidate[] => {
+  return rankRelayCandidates({ hints, recommended, successful, configured, defaults }).slice(0, Math.max(1, Math.min(3, limit)));
+};
+
+export const rankRelayCandidates = ({
+  hints,
+  recommended,
+  successful,
+  configured,
+  defaults,
+}: Omit<RelayCandidateSelectorInput, "limit">): RelayCandidate[] => {
   const selected: RelayCandidate[] = [];
   const seen = new Set<string>();
-  const relayLimit = Math.max(1, Math.min(3, limit));
+  const relayLimit = Number.POSITIVE_INFINITY;
 
   appendCandidates(selected, seen, hints, "hint", relayLimit);
   appendCandidates(selected, seen, recommended, "recommended", relayLimit);

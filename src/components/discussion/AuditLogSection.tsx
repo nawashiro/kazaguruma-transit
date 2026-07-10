@@ -2,10 +2,6 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { AuditTimeline } from "@/components/discussion/AuditTimeline";
-import {
-  buildDisabledActionState,
-  DisabledReasonText,
-} from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parsePostEvent,
@@ -42,8 +38,6 @@ const auditReadStrategy =
     ? getDiscussionReadStrategyConfig()
     : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
 const nostrService = createNostrService(nostrServiceConfig);
-const AUDIT_PAGE_SIZE = 10;
-
 interface AuditLogSectionProps {
   discussion?: Discussion | null;
   discussionInfo: {
@@ -56,7 +50,6 @@ interface AuditLogSectionProps {
   referencedDiscussions?: Discussion[];
   isDiscussionList?: boolean;
   loadDiscussionIndependently?: boolean;
-  initialVisibleCount?: number;
 }
 
 export const AuditLogSection = React.forwardRef<
@@ -71,16 +64,13 @@ export const AuditLogSection = React.forwardRef<
       referencedDiscussions = [],
       isDiscussionList = false,
       loadDiscussionIndependently = false,
-      initialVisibleCount = AUDIT_PAGE_SIZE,
     },
     ref
   ) => {
     const [, setAuditEvaluations] = useState<PostEvaluation[]>([]);
     const [isAuditLoading, setIsAuditLoading] = useState(false);
     const [isAuditLoaded, setIsAuditLoaded] = useState(false);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [auditError, setAuditError] = useState<string | null>(null);
-    const [visibleCount, setVisibleCount] = useState(initialVisibleCount);
     const [profiles, setProfiles] = useState<Record<string, { name?: string }>>(
       {}
     );
@@ -90,8 +80,6 @@ export const AuditLogSection = React.forwardRef<
     const [independentDiscussion, setIndependentDiscussion] =
       useState<Discussion | null>(null);
     const [auditEvents, setAuditEvents] = useState<Event[]>([]);
-    const [nextUntil, setNextUntil] = useState<number | null>(null);
-    const [hasMore, setHasMore] = useState(false);
 
     const discussion = loadDiscussionIndependently
       ? independentDiscussion
@@ -134,12 +122,11 @@ export const AuditLogSection = React.forwardRef<
     }, [discussionInfo]);
 
     const fetchAuditEventsPage = useCallback(
-      async (until?: number): Promise<EventFetchCompletion> => {
+      async (): Promise<EventFetchCompletion> => {
         const targetDiscussion = getAuditDiscussionRef();
         const knownData = loadKnownDiscussionData<Discussion, Event>(targetDiscussion.discussionId);
         const plan = createDiscussionReadPlan("discussion-audit", auditReadStrategy, {
           discussionId: targetDiscussion.discussionId,
-          until,
           relayHints: targetDiscussion.relays,
         });
         const relayUrls = selectRelayCandidates({
@@ -162,7 +149,6 @@ export const AuditLogSection = React.forwardRef<
           kinds: [4550],
           "#a": [targetDiscussion.discussionId],
           "#e": postIds,
-          limit: AUDIT_PAGE_SIZE,
         }], options);
         return {
           ...primaryResult,
@@ -285,15 +271,11 @@ export const AuditLogSection = React.forwardRef<
       );
     };
 
-    const normalizePageSize = (events: Event[]): Event[] =>
-      events.slice(0, AUDIT_PAGE_SIZE);
-
     const loadAuditData = useCallback(async () => {
       if (isAuditLoaded || isAuditLoading) return;
 
       setIsAuditLoading(true);
       setAuditError(null);
-      setVisibleCount(initialVisibleCount);
 
       try {
         const cachedData = discussionInfo
@@ -330,27 +312,18 @@ export const AuditLogSection = React.forwardRef<
           eventCount: pageResult.eventCount,
           elapsedMs: pageResult.elapsedMs,
         });
-        const normalizedPage = normalizePageSize(pageResult.events);
-        setAuditEvents(normalizedPage);
+        setAuditEvents(pageResult.events);
         if (discussionInfo) {
           saveKnownDiscussionData(discussionInfo.discussionId, {
             metadata: baseDiscussion,
-            eventIds: normalizedPage.map((event) => event.id),
+            eventIds: pageResult.events.map((event) => event.id),
             attemptedRelayUrls: pageResult.relayUrls ?? [],
             successfulEventRelayUrls: Array.from(new Set(Object.values(pageResult.sourceRelayUrlsByEventId ?? {}).flat())),
             successfulRelays: [],
-            events: normalizedPage,
+            events: pageResult.events,
           });
         }
-        await applyAuditEvents(normalizedPage, baseDiscussion);
-
-        if (normalizedPage.length > 0) {
-          const oldest = Math.min(...normalizedPage.map((event) => event.created_at));
-          setNextUntil(oldest - 1);
-        } else {
-          setNextUntil(null);
-        }
-        setHasMore(pageResult.events.length >= AUDIT_PAGE_SIZE);
+        await applyAuditEvents(pageResult.events, baseDiscussion);
         setIsAuditLoaded(true);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "不明なエラー";
@@ -364,7 +337,6 @@ export const AuditLogSection = React.forwardRef<
       discussion,
       discussionInfo,
       fetchAuditEventsPage,
-      initialVisibleCount,
       isAuditLoaded,
       isAuditLoading,
       isDiscussionList,
@@ -372,59 +344,11 @@ export const AuditLogSection = React.forwardRef<
       loadDiscussionIndependently,
     ]);
 
-    const loadMoreAuditData = useCallback(async () => {
-      if (isAuditLoading || isLoadingMore || !hasMore || nextUntil === null) return;
-
-      setIsLoadingMore(true);
-      try {
-        const baseDiscussion = discussion;
-        const pageResult = await fetchAuditEventsPage(nextUntil);
-        logger.info("audit-log load more completed", {
-          discussionId: discussionInfo?.discussionId,
-          completionReason: pageResult.completionReason,
-          eventCount: pageResult.eventCount,
-          elapsedMs: pageResult.elapsedMs,
-        });
-        const normalizedPage = normalizePageSize(pageResult.events);
-        const merged = mergeEvents(auditEvents, normalizedPage);
-        setAuditEvents(merged);
-        await applyAuditEvents(merged, baseDiscussion);
-
-        if (normalizedPage.length > 0) {
-          const oldest = Math.min(...normalizedPage.map((event) => event.created_at));
-          setNextUntil(oldest - 1);
-        }
-        if (pageResult.events.length < AUDIT_PAGE_SIZE) {
-          setHasMore(false);
-        } else {
-          setHasMore(true);
-        }
-        setVisibleCount((prev) => prev + AUDIT_PAGE_SIZE);
-      } catch (error) {
-        logger.error("Failed to load more audit data:", error);
-        setAuditError("データの取得に失敗しました。再試行してください。");
-      } finally {
-        setIsLoadingMore(false);
-      }
-    }, [
-      applyAuditEvents,
-      auditEvents,
-      discussion,
-      fetchAuditEventsPage,
-      hasMore,
-      isAuditLoading,
-      isLoadingMore,
-      nextUntil,
-    ]);
-
     const retryLoadAuditData = useCallback(() => {
       setIsAuditLoaded(false);
       setAuditError(null);
       setAuditEvents([]);
-      setNextUntil(null);
-      setHasMore(false);
-      setVisibleCount(initialVisibleCount);
-    }, [initialVisibleCount]);
+    }, []);
 
     const auditItems = useMemo(
       () =>
@@ -432,11 +356,6 @@ export const AuditLogSection = React.forwardRef<
           ? mapListAuditTimeline(auditEvents)
           : mapDiscussionAuditTimeline(auditEvents),
       [auditEvents, isDiscussionList]
-    );
-
-    const visibleAuditItems = useMemo(
-      () => auditItems.slice(0, visibleCount),
-      [auditItems, visibleCount]
     );
 
     useEffect(() => {
@@ -506,7 +425,7 @@ export const AuditLogSection = React.forwardRef<
             ) : (
               <div className="space-y-4">
                 <AuditTimeline
-                  items={visibleAuditItems}
+                  items={auditItems}
                   profiles={profiles}
                   referencedDiscussions={
                     isDiscussionList
@@ -518,24 +437,6 @@ export const AuditLogSection = React.forwardRef<
                           : []
                   }
                   conversationAuditMode={conversationAuditMode}
-                />
-                <div className="flex justify-center">
-                  <button
-                    className="btn btn-outline rounded-full dark:rounded-sm min-h-[44px] min-w-[44px]"
-                    onClick={loadMoreAuditData}
-                    disabled={!hasMore || isLoadingMore}
-                    aria-describedby="audit-load-more-reason"
-                  >
-                    {isLoadingMore ? "読み込み中..." : "さらに過去10件を表示"}
-                  </button>
-                </div>
-                <DisabledReasonText
-                  state={buildDisabledActionState(
-                    hasMore,
-                    "これ以上表示できる監査ログはありません。"
-                  )}
-                  id="audit-load-more-reason"
-                  className="text-xs text-center text-base-content/70"
                 />
               </div>
             )}

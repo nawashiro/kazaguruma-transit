@@ -30,7 +30,6 @@ jest.mock("@/components/discussion/AuditLogSection", () => ({
     props: {
       isDiscussionList?: boolean;
       discussionInfo?: { discussionId: string };
-      initialVisibleCount?: number;
     },
     ref: React.Ref<{
       loadAuditData: () => void;
@@ -48,9 +47,6 @@ jest.mock("@/components/discussion/AuditLogSection", () => ({
         </div>
         <div data-testid="discussion-info">
           {props.discussionInfo?.discussionId}
-        </div>
-        <div data-testid="initial-visible-count">
-          {props.initialVisibleCount}
         </div>
       </div>
     );
@@ -84,10 +80,4 @@ describe("Discussion List Audit Page", () => {
     );
   });
 
-  it("sets initial visible count to 10 for pagination", () => {
-    render(<AuditPage />);
-    expect(screen.getByTestId("initial-visible-count")).toHaveTextContent(
-      "10"
-    );
-  });
 });

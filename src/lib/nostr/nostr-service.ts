@@ -82,6 +82,7 @@ export interface StreamEventsOptions {
   onEvent: (events: Event[], event: Event) => void;
   onEose?: (events: Event[]) => void;
   timeoutMs?: number;
+  relayUrls?: string[];
 }
 
 export class NostrService {
@@ -286,7 +287,7 @@ export class NostrService {
 
   streamEventsOnEvent(
     filters: Filter[],
-    { onEvent, onEose, timeoutMs }: StreamEventsOptions
+    { onEvent, onEose, timeoutMs, relayUrls }: StreamEventsOptions
   ): () => void {
     if (filters.length === 0) {
       onEose?.([]);
@@ -298,6 +299,9 @@ export class NostrService {
     let eoseCount = 0;
     const timeoutRef: { id?: ReturnType<typeof setTimeout> } = {};
     const subscriptions: Array<{ stop: () => void }> = [];
+    const relaySet = relayUrls && relayUrls.length > 0
+      ? NDKRelaySet.fromRelayUrls(relayUrls, this.ndk)
+      : undefined;
 
     const closeSubscriptions = () => {
       subscriptions.forEach((subscription) => subscription.stop());
@@ -337,7 +341,7 @@ export class NostrService {
             }
           },
         },
-        true
+        relaySet ?? true
       );
       subscriptions.push(subscription);
     }

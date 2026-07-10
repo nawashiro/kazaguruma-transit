@@ -16,6 +16,7 @@ import {
 import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
 import { loadKnownDiscussionData, saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
 import { createDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
+import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
 import {
   buildDisabledActionState,
@@ -61,6 +62,13 @@ export default function PostApprovalPage() {
   const postsEventsRef = useRef<Event[]>([]);
   const approvalEventsRef = useRef<Event[]>([]);
   const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
+  const completionReasonRef = useRef<"eose" | "idle-timeout" | "hard-timeout" | "cancelled">("eose");
+
+  const mergeStreamEvents = useCallback((current: Event[], incoming: Event[]): Event[] => {
+    const byId = new Map(current.map((event) => [event.id, event]));
+    incoming.forEach((event) => byId.set(event.id, event));
+    return Array.from(byId.values()).sort((left, right) => right.created_at - left.created_at || left.id.localeCompare(right.id));
+  }, []);
 
   const { user, signEvent } = useAuth();
 
@@ -83,7 +91,7 @@ export default function PostApprovalPage() {
       approvalEvents: approvalEventsRef.current,
       relayCandidates,
       attemptedRelayUrls: relayCandidates.map((candidate) => candidate.url),
-      completionReason: "eose",
+      completionReason: completionReasonRef.current,
     });
     setApprovalState(snapshot.approvalState);
     const parsedApprovals = approvalEventsRef.current
@@ -123,13 +131,13 @@ export default function PostApprovalPage() {
       ],
       {
         onEvent: (events) => {
-          postsEventsRef.current = events;
+          postsEventsRef.current = mergeStreamEvents(postsEventsRef.current, events);
           rebuildFromEvents();
         },
         onEose: (events) => {
-          postsEventsRef.current = events;
+          postsEventsRef.current = mergeStreamEvents(postsEventsRef.current, events);
           rebuildFromEvents();
-          saveKnownDiscussionData(discussionInfo.discussionId, { metadata: null, eventIds: events.map((event) => event.id), successfulRelays: relayUrls, events });
+          saveKnownDiscussionData(discussionInfo.discussionId, { metadata: null, eventIds: events.map((event) => event.id), attemptedRelayUrls: relayUrls, successfulRelays: [], events });
           setIsLoading(false);
         },
         timeoutMs: nostrServiceConfig.defaultTimeout,
@@ -141,13 +149,13 @@ export default function PostApprovalPage() {
       discussionInfo.discussionId,
       {
         onEvent: (events) => {
-          approvalEventsRef.current = events;
+          approvalEventsRef.current = mergeStreamEvents(approvalEventsRef.current, events);
           rebuildFromEvents();
         },
         onEose: (events) => {
-          approvalEventsRef.current = events;
+          approvalEventsRef.current = mergeStreamEvents(approvalEventsRef.current, events);
           rebuildFromEvents();
-          saveKnownDiscussionData(discussionInfo.discussionId, { metadata: null, eventIds: events.map((event) => event.id), successfulRelays: relayUrls, events });
+          saveKnownDiscussionData(discussionInfo.discussionId, { metadata: null, eventIds: events.map((event) => event.id), attemptedRelayUrls: relayUrls, successfulRelays: [], events });
           setIsLoading(false);
         },
         timeoutMs: nostrServiceConfig.defaultTimeout,
@@ -155,11 +163,33 @@ export default function PostApprovalPage() {
       }
     );
 
+    if (typeof nostrService.getEventsWithCompletion === "function") {
+      void loadDiscussionModerationSnapshot(nostrService, readStrategy, {
+        discussionId: discussionInfo.discussionId,
+        hints: discussionInfo.relays,
+        successful: knownData?.successfulRelays,
+        configured: (nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
+        defaults: [],
+      }).then((snapshot) => {
+        completionReasonRef.current = snapshot.completionReason;
+        saveKnownDiscussionData(discussionInfo.discussionId, {
+          metadata: null,
+          eventIds: snapshot.approvalEvents.map((event) => event.id),
+          attemptedRelayUrls: snapshot.attemptedRelayUrls,
+          successfulRelays: snapshot.successfulRelayUrls,
+          events: snapshot.approvalEvents,
+        });
+        postsEventsRef.current = mergeStreamEvents(postsEventsRef.current, snapshot.primaryEvents);
+        approvalEventsRef.current = mergeStreamEvents(approvalEventsRef.current, snapshot.approvalEvents);
+        rebuildFromEvents();
+      });
+    }
+
     approvalStreamCleanupRef.current = () => {
       postsStream();
       approvalsStream();
     };
-  }, [discussionInfo, nostrServiceConfig.defaultTimeout, rebuildFromEvents]);
+  }, [discussionInfo, mergeStreamEvents, nostrServiceConfig.defaultTimeout, rebuildFromEvents]);
 
   useEffect(() => {
     if (isDiscussionsEnabled() && discussionInfo) {
@@ -204,6 +234,8 @@ export default function PostApprovalPage() {
         createdAt: signedEvent.created_at,
         event: signedEvent,
       };
+
+      approvalEventsRef.current = mergeStreamEvents(approvalEventsRef.current, [signedEvent as Event]);
 
       setApprovals((prev) => [...prev, newApproval]);
       setPosts((prev) =>

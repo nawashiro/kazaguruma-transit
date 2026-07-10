@@ -63,3 +63,39 @@ relay数、idle/hard timeout、重複read抑制windowは`DiscussionReadStrategyC
 ## Decision: 同時刻イベントはIDで安定化する
 
 イベント一覧は`created_at`降順、同時刻はevent ID昇順で並べる。監査の異なる種類を同時刻に表示する場合は、仕様で定義した監査種別優先順位を先に使い、最後にevent IDで解消する。
+
+## Decision: 承認状態は共通moderation readで一度だけ解決する
+
+詳細、承認、監査は、投稿イベントをprimaryとして取得し、そのID群を`#e`に指定したkind 4550 readを別に実行する。承認済み判定は承認イベントの`e`タグとprimary event IDの一致だけで導出する。承認イベント本文を投稿の正本として復元せず、到着順や画面固有のイベント集合に依存しない。
+
+**Rationale**: 現行`/approve`の独立streamは、承認イベントを含まないEOSE/timeout結果で楽観更新を上書きし得る。現行`/naddr`は承認本文から投稿を復元するため、画面間でevent IDの正本が分裂する。共通snapshotによりFR-026/030を満たす。
+
+## Decision: 未観測承認は候補枯渇までunknownとする
+
+初回は最大3 relayに限定する。承認が見つからずpartial、timeout、または未試行候補が残る場合は`unknown`とし、未試行relayを最大3件ずつ限定再読取する。全候補でEOSEを受信して初めて`unapproved`を確定する。stream APIが完了理由を返さない場合は、completion-aware readへ移行する。
+
+**Rationale**: `/approve`は現在streamの`onEose`を常に`completionReason: "eose"`としてsnapshotへ渡しており、timeoutでも未承認を確定してしまう。これはFR-031に反する。
+
+## Decision: relay試行とイベント発見実績を分離する
+
+cacheには問い合わせたrelay (`attemptedRelayUrls`) と、対象イベントを実際に返したrelay (`successfulRelayUrls`、またはイベントID別source relay) を別々に保存する。問い合わせただけのrelayを次回優先しない。cacheは承認状態の確定には使わず、表示・候補順位の暫定材料に限定する。
+
+**Rationale**: 現行各画面は候補全件を`successfulRelays`として保存しており、発見できなかったrelayも成功扱いになる。
+
+## Decision: 共通moderation readを全Discussion表示面へ拡張する
+
+共通snapshotの利用範囲を詳細・承認・監査に限定せず、一覧、管理、BusStopDiscussion、BusStopMemo、評価対象抽出、編集画面の承認表示にも拡張する。各画面はprimary投稿イベントをcanonical sourceとして扱い、承認イベントの`e`タグでID結合する。承認本文のJSON復元や、独立streamの空結果による状態確定は行わない。
+
+**Rationale**: 一覧の承認本文復元、manage/BusStop系の独立stream、評価コンポーネントの`approved`単独filterは、詳細・承認・監査で修正した問題を別画面で再発させる。
+
+## Decision: unknownを表示・集計の中間状態として保持する
+
+承認readがpartial/timeout/候補再照会待ちの投稿は`unknown`として保留する。承認済み投稿だけを評価・統計へ入力する一方、unknown投稿を未承認として破棄せず、snapshot完了後に同じprimary event IDで再評価する。
+
+**Rationale**: `BusStopMemo`や`BusStopDiscussion`は承認到着前に`approved`だけを抽出し、評価画面も`posts.filter(p => p.approved)`でunknownを不可逆に除外している。
+
+## Decision: audit mapperの承認照合をevent IDに限定する
+
+監査timelineの承認解決は承認イベントの`e`タグと対象イベントIDの一致だけを採用する。会話座標`a`タグはrelay filterの範囲指定にのみ使い、投稿承認のfallbackキーには登録しない。
+
+**Rationale**: 同じ会話内の別投稿に対する承認を、会話`a`タグ一致だけで承認済みとする偽陽性が残っている。

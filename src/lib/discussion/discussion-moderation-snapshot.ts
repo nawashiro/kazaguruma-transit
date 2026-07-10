@@ -11,6 +11,7 @@ export interface DiscussionModerationSnapshot {
   initialRelayUrls: string[];
   attemptedRelayUrls: string[];
   nextRelayUrls: string[];
+  successfulRelayUrls: string[];
   completionReason: CompletionReason;
   approvalState: ApprovalState;
 }
@@ -22,6 +23,7 @@ export interface DiscussionModerationReadInput {
   relayCandidates: RelayCandidate[];
   attemptedRelayUrls: string[];
   completionReason: CompletionReason;
+  successfulRelayUrls?: string[];
 }
 
 const isApprovalForPrimaryEvent = (approval: Event, primaryEventIds: Set<string>): boolean =>
@@ -38,6 +40,7 @@ export const createDiscussionModerationSnapshot = ({
   relayCandidates,
   attemptedRelayUrls,
   completionReason,
+  successfulRelayUrls = [],
 }: DiscussionModerationReadInput): DiscussionModerationSnapshot => {
   const primary = dedupeAndSortEvents(primaryEvents);
   const primaryEventIds = new Set(primary.map((event) => event.id));
@@ -52,7 +55,7 @@ export const createDiscussionModerationSnapshot = ({
     : completionReason !== "eose" || nextRelayUrls.length > 0
       ? "unknown"
       : "unapproved";
-  return { primaryEvents: primary, approvalEvents: approvals, relayCandidates, initialRelayUrls, attemptedRelayUrls, nextRelayUrls, completionReason, approvalState };
+  return { primaryEvents: primary, approvalEvents: approvals, relayCandidates, initialRelayUrls, attemptedRelayUrls, nextRelayUrls, successfulRelayUrls, completionReason, approvalState };
 };
 
 export const loadDiscussionModerationSnapshot = async (
@@ -75,5 +78,6 @@ export const loadDiscussionModerationSnapshot = async (
     relayCandidates,
     attemptedRelayUrls: relayUrls,
     completionReason: primary.completionReason === "eose" && approvals.completionReason === "eose" ? "eose" : primary.completionReason,
+    successfulRelayUrls: Array.from(new Set(approvals.events.flatMap((event) => approvals.sourceRelayUrlsByEventId[event.id] ?? []))),
   });
 };

@@ -189,6 +189,8 @@ This app includes Nostr-based decentralized discussion functionality:
 ## Active Technologies
 - TypeScript 5 (strict mode) + Next.js 15 (App Router), React 19, DaisyUI 5, Tailwind CSS 4, nostr-tools (001-audit-page-refactor)
 - N/A（Nostrリレーサーバーから直接取得） (001-audit-page-refactor)
+- TypeScript 5 strict, React 19, Next.js 15 App Router + `@nostr-dev-kit/ndk`, DaisyUI 5, Tailwind CSS 4 (009-coracle-style-sync)
+- Nostr relay（正本）、ブラウザ `sessionStorage`（暫定既知データとrelay実績）、SQLite/Prisma（対象外） (009-coracle-style-sync)
 
 ## Recent Changes
 - 001-audit-page-refactor: Added TypeScript 5 (strict mode) + Next.js 15 (App Router), React 19, DaisyUI 5, Tailwind CSS 4, nostr-tools

@@ -41,7 +41,7 @@
 
 ## KnownDiscussionData
 
-会話IDごとに、最新会話メタデータ、既知イベントIDとrelay URL、relay成功実績、保存時刻を持つ。`sessionStorage`にversion付きJSONで保存し、relay結果を受けるたびにマージする。
+会話IDごとに、最新会話メタデータ、既知イベントID、問い合わせ済みrelay、対象イベントを実際に返したrelay（イベントID別source relay）、保存時刻を持つ。正規の成功実績フィールドは`successfulEventRelayUrls`とし、旧`successfulRelays`は移行期間の読み取り互換に限る。`sessionStorage`にversion付きJSONで保存し、relay結果を受けるたびにIDでマージする。問い合わせただけのrelayは成功実績に含めない。既知イベントと承認状態は暫定材料であり、relay readなしに確定しない。
 
 ## DiscussionModerationSnapshot
 
@@ -58,7 +58,9 @@
 | `completionReason` | `CompletionReason` | 未観測の承認を未承認と確定できるか判断する根拠 |
 | `approvalState` | `"approved" | "unapproved" | "unknown"` | 承認未観測かつpartial又は`nextRelayUrls`が残る場合は`unknown` |
 
-初回readは最大3 relayとする。承認未観測でpartialの場合は未試行候補を最大3 relayずつ限定再読取し、EOSEを受信するか候補が尽きた時点で停止する。監査ページでは`primaryEvents`だけに10件のページサイズを適用する。各`primaryEvent.id`に対する承認は、`#e`で当該ページの主イベントIDだけを指定し、`limit: 10`を持つ別filterで取得する。
+初回readは最大3 relayとする。各readには単調増加する`readGeneration`を付与し、古い世代の結果は新しい世代の状態を上書きできない。承認未観測でpartial、timeout、または未試行候補が残る場合は`unknown`とし、未試行候補を最大3 relayずつ限定再読取する。全候補でEOSEを受信するか候補が尽きた時点で停止し、その時点で承認がなければ`unapproved`を確定する。承認操作で生成したイベントは同一snapshotへIDマージし、後続の空readで削除しない。監査ページでは`primaryEvents`だけに10件のページサイズを適用する。各`primaryEvent.id`に対する承認は、`#e`で当該ページの主イベントIDだけを指定し、`limit: 10`を持つ別filterで取得する。
+
+一覧・管理・BusStopMemo・BusStopDiscussionも、表示対象のprimary投稿集合を先に確定し、その投稿ID集合に対する承認readを別filterで行う。評価・集計への入力は`approved`状態のみとし、`unknown`は未承認として確定せず、snapshot更新時に再評価可能な状態として保持する。
 
 ## UI State Transitions
 

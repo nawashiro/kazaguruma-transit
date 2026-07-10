@@ -4,6 +4,10 @@
 
 すべてのDiscussion readは`DiscussionReadPlan`から実行する。UIはfilterやrelay URLを直接組み立てない。結果はID重複を除き、`completionReason`、実relay数、重複数、経過時間を観測ログに残す。
 
+承認状態を扱う詳細・承認・監査は共通moderation readを利用する。投稿イベントがcanonical sourceであり、kind 4550の`e`タグが投稿IDに一致する場合だけ承認済みとする。承認イベント本文だけから投稿を復元してはならない。各readは`readGeneration`を持ち、古い世代の結果を破棄する。
+
+この契約は一覧、管理、BusStopMemo、BusStopDiscussionにも適用する。承認read前の投稿は`unknown`として扱い、空結果・timeout・到着順だけで`unapproved`へ遷移させない。評価・集計は`approved`のみを確定入力とするが、`unknown`投稿を再読取後に再評価できるようにする。
+
 | Target | Allowed filters | Limit | Relay cap |
 |---|---|---:|---:|
 | `discussion-list` | kind 34550、掲載/承認関連のみ | 50 | 3 |
@@ -31,6 +35,10 @@
 - 既知イベントは重複排除とrelay候補補強に利用できる。
 - 新規relay結果は古い会話定義・承認状態を上書きできる。
 - cacheのみで最新投稿、承認済み、権限可否、Not Foundを確定しない。
+- `attemptedRelayUrls`と、対象イベントを実際に返した`successfulRelayUrls`を混同しない。
+- 正規の成功実績は`successfulEventRelayUrls`とし、`successfulRelays`は旧キャッシュの読み取り互換に限定する。
+- 空のstream/partial結果は、既存の承認イベントを削除する根拠にしない。
+- `unknown`は承認情報確認中として表示し、承認済み件数・評価可能件数には含めず、snapshot更新後に同じ投稿IDで再計算する。
 
 ## Strategy Configuration Contract
 

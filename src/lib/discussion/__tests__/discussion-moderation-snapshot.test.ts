@@ -17,4 +17,31 @@ describe("createDiscussionModerationSnapshot", () => {
   it("marks unapproved only after every candidate reaches EOSE without approval", () => {
     expect(createDiscussionModerationSnapshot({ discussionId: "d", primaryEvents: [post("post-1")], approvalEvents: [], relayCandidates: candidates, attemptedRelayUrls: candidates.map((candidate) => candidate.url), completionReason: "eose" }).approvalState).toBe("unapproved");
   });
+
+  it("does not treat an approval for another post as approval", () => {
+    expect(createDiscussionModerationSnapshot({
+      discussionId: "d",
+      primaryEvents: [post("post-1")],
+      approvalEvents: [approval("post-2")],
+      relayCandidates: candidates,
+      attemptedRelayUrls: candidates.map((candidate) => candidate.url),
+      completionReason: "eose",
+    }).approvalState).toBe("unapproved");
+  });
+
+  it("keeps three consumers on the same approval decision", () => {
+    const input = {
+      discussionId: "d",
+      primaryEvents: [post("post-1")],
+      approvalEvents: [approval("post-1")],
+      relayCandidates: candidates,
+      attemptedRelayUrls: candidates.map((candidate) => candidate.url),
+      completionReason: "eose" as const,
+    };
+    expect([
+      createDiscussionModerationSnapshot(input).approvalState,
+      createDiscussionModerationSnapshot(input).approvalState,
+      createDiscussionModerationSnapshot(input).approvalState,
+    ]).toEqual(["approved", "approved", "approved"]);
+  });
 });

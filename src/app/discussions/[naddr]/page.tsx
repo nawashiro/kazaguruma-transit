@@ -22,7 +22,7 @@ import {
   createDiscussionNdkGateway,
 } from "@/lib/nostr/discussion-ndk-gateway";
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
-import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
+import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
 import { loadKnownDiscussionData, saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
 import {
   parsePostEvent,
@@ -129,48 +129,58 @@ export default function DiscussionDetailPage() {
           setPosts(knownPosts);
           setApprovals(knownApprovals);
         }
-        const approvalsPlan = createDiscussionReadPlan("discussion-approvals", readStrategy, { discussionId: discussionInfo.discussionId, relayHints: discussionInfo.relays });
-        const relayUrls = selectRelayCandidates({ hints: approvalsPlan.relayHints, successful: knownData?.successfulRelays, configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url), defaults: [], limit: readStrategy.relayLimit }).map((relay) => relay.url);
-        const approvalsResult = await discussionGateway.queryWithCompletion(approvalsPlan.filters, {
-          idleTimeoutMs: approvalsPlan.idleTimeoutMs,
-          hardTimeoutMs: approvalsPlan.hardTimeoutMs,
-          ...(relayUrls.length > 0 ? { relayUrls } : {}),
-        });
-        logger.info("discussion-detail approvals fetch completed", {
+        const moderation = typeof nostrService.getEventsWithCompletion === "function"
+          ? await loadDiscussionModerationSnapshot(nostrService, readStrategy, {
+              discussionId: discussionInfo.discussionId,
+              hints: discussionInfo.relays,
+              successful: knownData?.successfulRelays,
+              configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
+              defaults: [],
+            })
+          : null;
+        let parsedApprovals: PostApproval[];
+        let parsedPosts: DiscussionPost[];
+        let approvalsEvents: import("@/lib/nostr/nostr-service").Event[];
+        let attemptedRelayUrls: string[] = [];
+        if (!moderation) {
+          const legacyPlan = createDiscussionReadPlan("discussion-approvals", readStrategy, { discussionId: discussionInfo.discussionId, relayHints: discussionInfo.relays });
+          const legacyResult = await discussionGateway.queryWithCompletion(legacyPlan.filters, { idleTimeoutMs: legacyPlan.idleTimeoutMs, hardTimeoutMs: legacyPlan.hardTimeoutMs });
+          const legacyApprovals = legacyResult.events.map(parseApprovalEvent).filter((a): a is PostApproval => a !== null);
+          const legacyPosts = legacyApprovals.map((approval) => {
+            try { return parsePostEvent(JSON.parse(approval.event.content), [approval]); } catch { return null; }
+          }).filter((p): p is DiscussionPost => p !== null);
+          approvalsEvents = legacyResult.events;
+          parsedApprovals = legacyApprovals;
+          parsedPosts = legacyPosts;
+        } else {
+          logger.info("discussion-detail approvals fetch completed", {
           discussionId: discussionInfo.discussionId,
-          completionReason: approvalsResult.completionReason,
-          eventCount: approvalsResult.eventCount,
-          elapsedMs: approvalsResult.elapsedMs,
-        });
-        const approvalsEvents = approvalsResult.events;
-        if (loadSequenceRef.current !== loadSequence) return;
-
-        const parsedApprovals = approvalsEvents
+          completionReason: moderation.completionReason,
+          eventCount: moderation.approvalEvents.length,
+          });
+          approvalsEvents = moderation.approvalEvents;
+          attemptedRelayUrls = moderation.attemptedRelayUrls;
+          parsedApprovals = approvalsEvents
           .map(parseApprovalEvent)
           .filter((a): a is PostApproval => a !== null);
-
-        // 承認イベントから投稿データを復元
-        const parsedPosts = parsedApprovals
-          .map((approval) => {
-            try {
-              const approvedPost = JSON.parse(approval.event.content);
-              return parsePostEvent(approvedPost, [approval]);
-            } catch {
-              return null;
-            }
-          })
+          parsedPosts = moderation.primaryEvents
+          .map((postEvent) => parsePostEvent(postEvent, parsedApprovals))
           .filter((p): p is DiscussionPost => p !== null)
           .sort(
             (left, right) =>
               right.createdAt - left.createdAt || left.id.localeCompare(right.id)
           );
+        }
+        if (loadSequenceRef.current !== loadSequence) return;
 
         setPosts(parsedPosts);
         setApprovals(parsedApprovals);
+        const successfulRelayUrls = moderation?.successfulRelayUrls ?? knownData?.successfulRelays ?? [];
         saveKnownDiscussionData(discussionInfo.discussionId, {
           metadata: null,
           eventIds: approvalsEvents.map((event) => event.id),
-          successfulRelays: approvalsResult.relayUrls ?? [],
+          attemptedRelayUrls,
+          successfulRelays: successfulRelayUrls,
           events: approvalsEvents,
         });
 
@@ -179,7 +189,7 @@ export default function DiscussionDetailPage() {
           postIds.length > 0
             ? await discussionGateway.queryWithCompletion(
                 createDiscussionReadPlan("discussion-evaluations", readStrategy, { postIds, relayHints: discussionInfo.relays }).filters,
-                { idleTimeoutMs: readStrategy.idleTimeoutMs, hardTimeoutMs: readStrategy.hardTimeoutMs, ...(relayUrls.length > 0 ? { relayUrls } : {}) }
+                { idleTimeoutMs: readStrategy.idleTimeoutMs, hardTimeoutMs: readStrategy.hardTimeoutMs, ...(attemptedRelayUrls.length > 0 ? { relayUrls: attemptedRelayUrls } : {}) }
               )
             : {
                 events: [],

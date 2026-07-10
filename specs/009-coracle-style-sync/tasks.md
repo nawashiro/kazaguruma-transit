@@ -83,10 +83,10 @@
 **Independent Test**: 初回readの結果をキャッシュ後、同一会話を再訪問すると先に暫定タイトルが表示され、後続の新しい会話定義で置換されることを確認する。
 
 - [X] T040 [P] [US4] `src/components/discussion/__tests__/DiscussionTabLayout.test.tsx` にsessionStorageからの暫定タイトルとrelay結果での更新テストを追加する
-- [X] T041 [P] [US4] `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` に既知イベントIDの重複排除とrelay成功実績のテストを追加する
+- [X] T041 [P] [US4] `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` に既知イベントIDの重複排除とrelay成功実績のテストを追加する（成功実績は対象イベントを返したrelayに限定する）
 - [X] T042 [US4] `src/components/discussion/DiscussionTabLayout.tsx` で既知メタデータを即時表示し、`usedKnownData`を部分取得状態へ渡す
 - [X] T043 [US4] `src/app/discussions/[naddr]/page.tsx` と `src/components/discussion/AuditLogSection.tsx` で既知イベントを暫定入力としてマージし、relay取得を常に継続する
-- [X] T044 [US4] `src/lib/discussion/discussion-known-data-cache.ts` からrelay成功実績をrelay選別へ渡す接続を実装する
+- [X] T044 [US4] `src/lib/discussion/discussion-known-data-cache.ts` からrelay成功実績をrelay選別へ渡す接続を実装する（問い合わせ済みrelayとは別フィールドとして扱う）
 - [X] T045 [US4] 既知データ関連テストを実行して、cache単独でNot Found/承認状態を確定しないことを検証する
 
 ## Phase 7: Polish and Cross-Cutting Concerns
@@ -107,18 +107,37 @@
 - [X] T054 [P] `src/lib/discussion/__tests__/relay-candidate-selector.test.ts` に、初回3 relay、partial時の未試行候補最大3 relay、EOSE又は候補枯渇で停止する承認状態readの候補契約テストを追加する
 - [X] T055 [P] `src/lib/discussion/__tests__/discussion-moderation-snapshot.test.ts` を追加し、同一投稿IDのkind 4550が観測された場合の`approved`、partial又は再照会候補ありで未観測の場合の`unknown`、全候補からEOSEを受信後も未観測の場合だけの`unapproved`を検証する失敗テストを追加する
 - [X] T056 [P] `src/components/discussion/__tests__/DiscussionReadStatus.test.tsx` に、承認状態が`unknown`へ遷移した際の日本語文言、`role="status"`又は`aria-live`、再試行ボタンのアクセシブル名を検証する失敗テストを追加する
-- [ ] T057 [P] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`、`src/app/discussions/[naddr]/approve/__tests__/page.streaming.test.tsx`、`src/components/discussion/__tests__/AuditLogSection.test.tsx` に、configured/successful relayだけが承認を返すfixtureで三画面の承認状態が一致する失敗テストを追加する
-- [ ] T058 `src/lib/discussion/` に共通moderation read・スナップショット・event ID結合を実装し、全呼び出し元がhint、recommended、successful、configured、defaultを同じ候補入力として渡すようにする
-- [ ] T059 `src/components/discussion/DiscussionReadStatus.tsx` と統合箇所に、`unknown`状態の日本語通知、アクセシブルな状態変化、再試行導線を実装する
-- [ ] T060 `src/app/discussions/[naddr]/page.tsx` と `src/app/discussions/[naddr]/approve/page.tsx` を共通moderation snapshotへ移行し、partial/timeout中の未観測承認を未承認と確定表示しないようにする
-- [ ] T061 `src/components/discussion/AuditLogSection.tsx` を主イベント10件のreadと、当該主イベントIDだけを`#e`で対象にする最大10件の承認readへ分離し、共通snapshotで承認状態を表示するようにする
-- [ ] T062 T054-T061のテスト、`npx tsc --noEmit`、`npm run lint`、`npm test`、`npm run build` を実行し、結果を`quickstart.md`へ追記する
+- [ ] T057 [P] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`、`src/app/discussions/[naddr]/approve/__tests__/page.streaming.test.tsx`、`src/components/discussion/__tests__/AuditLogSection.test.tsx` に、configured/successful relayだけが承認を返すfixtureで三画面の承認状態が一致する失敗テストを追加する。共通snapshotの横断テストで同一判定を検証し、承認操作後に空またはtimeoutのstream EOSEが届いても楽観的な承認済み状態へ戻らないケース、全候補EOSE後にのみ`unapproved`となるケースを含める
+- [X] T058 `src/lib/discussion/` に共通moderation read・スナップショット・event ID結合を実装し、全呼び出し元がhint、recommended、successful、configured、defaultを同じ候補入力として渡すようにする。streamを承認状態の確定境界にせず、completion-aware readの完了理由でpartial/timeout/EOSEを判定する
+- [X] T059 `src/components/discussion/DiscussionReadStatus.tsx` と統合箇所に、`unknown`状態の日本語通知、アクセシブルな状態変化、再試行導線を実装する
+- [X] T060 `src/app/discussions/[naddr]/page.tsx` と `src/app/discussions/[naddr]/approve/page.tsx` を共通moderation snapshotへ移行し、partial/timeout中の未観測承認を未承認と確定表示しないようにする。承認イベント本文を投稿の正本にせず、primary eventへ`e`タグで結合する
+- [X] T061 `src/components/discussion/AuditLogSection.tsx` を主イベント10件のreadと、当該主イベントIDだけを`#e`で対象にする最大10件の承認readへ分離し、共通snapshotで承認状態を表示するようにする
+- [X] T062 T054-T061のテスト、`npx tsc --noEmit`、`npm run lint`、`npm test`、`npm run build` を実行し、結果を`quickstart.md`へ追記する
+- [X] T063 `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` と関連画面テストに、問い合わせ済みrelayとイベント発見relayを分離し、`sourceRelayUrlsByEventId`由来の成功実績だけを保存し、キャッシュ削除後も承認状態をrelay readだけで再現できることを追加する
+
+## Phase 9: 全Discussion画面の承認状態整合性
+
+**Purpose**: 一覧、管理、BusStop系、評価・集計を含む全Discussion表示面で、投稿canonical source・承認`e`タグ結合・relay状態を共通化する。
+
+- [ ] T064 [P] `src/lib/discussion/__tests__/audit-timeline-mapper.test.ts` に、同じ`a`タグだが異なる`e`タグの承認を偽陽性にしないテストを追加する
+- [ ] T065 [P] `src/app/discussions/__tests__/page.streaming.test.tsx`、`src/app/discussions/manage/__tests__/page.test.tsx`、`src/components/discussion/__tests__/BusStopDiscussion.streaming.test.tsx`、`src/components/discussion/__tests__/BusStopMemo.streaming.test.tsx` に、承認遅延・別relay・空streamで`unknown`を維持し、承認到着後に`approved`へ更新するfixtureを追加する
+- [ ] T066 [P] `src/components/discussion/__tests__/EvaluationComponent.test.tsx` に、`unknown`投稿を確定的に未承認除外せずsnapshot更新後に再評価できるテストを追加する
+- [ ] T067 `src/app/discussions/page.tsx` をprimary投稿/会話イベントと承認snapshotの結合へ移行し、承認イベント本文からの投稿復元を廃止する
+- [ ] T068 `src/app/discussions/manage/page.tsx` の独立post/approval stream再構築を共通moderation readへ移行し、空・timeout・古いEOSEで承認状態を巻き戻さないようにする
+- [ ] T069 `src/components/discussion/BusStopDiscussion.tsx` と`src/components/discussion/BusStopMemo.tsx`を共通moderation readへ移行し、承認read完了前に投稿を除外せず、`unknown`状態を保留する
+- [ ] T070 `src/components/discussion/EvaluationComponent.tsx` と統計入力を、`approved`確定投稿と`unknown`保留投稿に分離し、承認snapshot更新後に再計算する
+- [ ] T071 `src/lib/discussion/audit-timeline-mapper.ts` の承認解決を`approval.e === event.id`へ限定し、会話`a`タグを投稿承認のfallbackに使わない
+- [ ] T072 `src/app/discussions/page.tsx`、`src/app/discussions/manage/page.tsx`、`src/components/discussion/DiscussionTabLayout.tsx`、`src/components/discussion/AuditLogSection.tsx`、BusStop系readのcache保存を`sourceRelayUrlsByEventId`由来の`successfulEventRelayUrls`へ統一し、問い合わせ対象relayを成功実績として保存しない。旧`successfulRelays`は読み取り互換のみとする
+- [ ] T073 `src/app/discussions/[naddr]/edit/page.tsx` の承認/未承認表示を共通snapshotの状態契約と照合し、未観測状態を`unapproved`として確定しない。readGenerationで古い結果を破棄する
+- [ ] T074 全Discussion画面の同一fixture横断テスト、権限回帰、撤回、重複排除、フォーム/フォーカス維持を実行する
+- [ ] T075 `npx tsc --noEmit`、`npm run lint`、`npm test`、`npm run build`を実行し、結果を`quickstart.md`へ追記する
 
 ## Dependencies and Execution Order
 
 - Phase 1 -> Phase 2 -> US1/US2/US3/US4 -> Polish。
 - US1はFoundation完了後のMVP。US2とUS3はUS1と独立して開始できるが、同じread plan基盤を使う。US4はFoundation完了後に開始できるが、US1のメタデータ統合と合わせて確認する。
-- Phase 8はT054-T057の失敗テスト後にT058を実装し、T059、T060、T061、T062の順に進める。T054-T057は並行可能である。
+- Phase 8はT054-T057の失敗テスト後にT058を実装し、T059、T060、T061、T063、T062の順に進める。T054-T057は並行可能だが、T063はT058のread結果契約に依存する。
+- Phase 9はT064-T066の失敗テスト後にT067-T073を実装し、T074、T075で全体検証する。T064-T066は並行可能だが、T067-T073は共通snapshot契約の確定後に開始する。T071はT064完了後、T072は各read境界の移行後に完了とする。
 
 ## Parallel Opportunities
 
@@ -128,6 +147,7 @@
 - US3: T030-T032。
 - US4: T037-T038。
 - Phase 8: T054-T057。
+- Phase 9: T064-T066。
 
 ## Implementation Strategy
 

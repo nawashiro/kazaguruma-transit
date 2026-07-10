@@ -23,7 +23,6 @@ import {
   extractDiscussionFromNaddr,
 } from "@/lib/nostr/naddr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
-import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import { saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";

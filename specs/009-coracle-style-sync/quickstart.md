@@ -66,4 +66,11 @@ npm run dev
 - `npm run lint`: 成功（既存警告のみ）
 - `npm run build`: 成功
 
+2026-07-11の全Discussion画面・評価・relay成功実績フォローアップで以下を実行した。
+
+- `npx tsc --noEmit`: 成功
+- `npm run lint`: 成功（既存警告のみ）
+- `npm test -- --runInBand`: 成功（369テスト成功、17スキップ、既存警告のみ）
+- `npm run build`: 成功
+
 監査ログのテストでは初回・追加readとも`limit: 10`、追加readは前ページ最古イベントより古い`until`を使用することを確認済み。read planのrelay上限は1-3に範囲検証され、relay hintと設定relayから選別される。

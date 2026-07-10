@@ -95,7 +95,7 @@
 - [ ] T047 [P] `src/lib/discussion/__tests__/discussion-read-performance.test.ts` に20試行で19回以上が2秒以内にmetadataを表示する遅延relayテストを追加する
 - [ ] T048 [P] `src/lib/discussion/__tests__/discussion-read-performance.test.ts` に20試行で18回以上が1秒以内に既知metadataを表示する再訪問テストを追加する
 - [ ] T049 [P] `src/lib/discussion/__tests__/permission-system.test.ts` と既存Discussion画面テストで、NIP-01/09/25/72イベント解釈と投稿・承認・評価・モデレーター権限の回帰を検証する
-- [ ] T050 [P] `specs/009-coracle-style-sync/quickstart.md` に実測したrelay数、timeout、監査ページングの検証結果を追記する
+- [X] T050 [P] `specs/009-coracle-style-sync/quickstart.md` に実測したrelay数、timeout、監査ページングの検証結果を追記する
 - [ ] T051 [P] `src/lib/discussion/discussion-read-plan.ts` と `src/lib/nostr/nostr-service.ts` の観測ログを確認し、イベント数・重複数・完了理由・経過時間を保守者が読めるよう整える
 - [ ] T052 `src/components/discussion/DiscussionReadStatus.tsx` と全統合箇所をキーボード・スクリーンリーダー観点で確認する
 - [X] T053 `npx tsc --noEmit && npm run lint && npm test && npm run build` を `/home/navi/kazaguruma-transit` で実行する

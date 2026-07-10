@@ -38,3 +38,14 @@ npm run dev
 2. 部分取得の日本語メッセージと`再読み込み`をキーボード・スクリーンリーダーで確認する。
 3. 監査画面で`さらに過去10件を表示`を実行し、ブラウザログで新しい`until`と`limit: 10`を確認する。
 4. 同じ会話を再訪問し、暫定メタデータが先に表示され、その後relay取得で更新されることを確認する。
+
+## Verification Record
+
+2026-07-10に以下を実行した。
+
+- `npx tsc --noEmit`: 成功
+- `npm test -- --runInBand`: 成功（既存のReact `act`警告とlint警告はあるが、テスト失敗なし）
+- `npm run lint`: 成功（既存の警告のみ）
+- `npm run build`: 成功
+
+監査ログのテストでは初回・追加readとも`limit: 10`、追加readは前ページ最古イベントより古い`until`を使用することを確認済み。read planのrelay上限は1-3に範囲検証され、relay hintと設定relayから選別される。

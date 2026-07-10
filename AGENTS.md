@@ -85,6 +85,7 @@ These principles are the operational source of truth for agents working in this 
 
 ## Commit & PR Practices
 - Follow the existing short-prefix style (`add: ...`, `fix: ...`, `chore: ...`); keep messages imperative and scoped.
+- Commit at appropriate, coherent milestones so completed work is recoverable and reviewable; do not leave a finished task uncommitted without a concrete reason.
 - For PRs, include: what changed, why, and how to verify (commands/steps). Attach screenshots for UI tweaks and call out DB schema or GTFS data impacts.
 - Run `npm run lint` and `npm test` before requesting review; note any skipped checks or follow-up tasks in the PR description.
 ## Active Technologies
@@ -92,6 +93,8 @@ These principles are the operational source of truth for agents working in this 
 - 既存SQLite（本機能では新規永続化なし）、`package.json`、オープンデータ用JSONファイル (005-license-page-autogen)
 - TypeScript 5.x (strict), React 19, Next.js 15 App Router + `@nostr-dev-kit/ndk`, `nosskey-sdk`, DaisyUI 5 + Tailwind CSS 4, Prisma/SQLite（既存） (008-document-discussion-spec)
 - Nostr relay群（イベント本体）、ブラウザローカル（Passkey/PWKキャッシュ）、SQLite（GTFS等既存アプリデータ） (008-document-discussion-spec)
+- TypeScript 5 strict, React 19, Next.js 15 App Router + `@nostr-dev-kit/ndk`, DaisyUI 5, Tailwind CSS 4 (009-coracle-style-sync)
+- Nostr relay（正本）、ブラウザ `sessionStorage`（暫定既知データとrelay実績）、SQLite/Prisma（対象外） (009-coracle-style-sync)
 
 ## Recent Changes
 - 005-license-page-autogen: Added TypeScript 5, React 19, Next.js 15 (App Router), DaisyUI 5, Tailwind CSS 4, and webpack-license-plugin based license aggregation

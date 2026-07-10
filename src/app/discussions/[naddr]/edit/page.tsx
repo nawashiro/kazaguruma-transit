@@ -103,6 +103,7 @@ export default function DiscussionEditPage() {
     null
   );
   const promotionRequestStreamCleanupRef = useRef<(() => void) | null>(null);
+  const readGenerationRef = useRef(0);
 
   const discussionInfo = useMemo(() => {
     if (!naddrParam) return null;
@@ -136,6 +137,7 @@ export default function DiscussionEditPage() {
 
   const startStreamingDiscussion = useCallback(() => {
     promotionRequestStreamCleanupRef.current?.();
+    const readGeneration = ++readGenerationRef.current;
 
     if (!isDiscussionsEnabled() || !discussionInfo) {
       setIsLoading(false);
@@ -161,6 +163,7 @@ export default function DiscussionEditPage() {
       ],
       {
         onEvent: (events) => {
+          if (readGenerationRef.current !== readGeneration) return;
           const requests = events
             .filter((event) =>
               event.tags.some(
@@ -178,6 +181,7 @@ export default function DiscussionEditPage() {
           setIsLoading(false);
         },
         onEose: (events) => {
+          if (readGenerationRef.current !== readGeneration) return;
           const requests = events
             .filter((event) =>
               event.tags.some(

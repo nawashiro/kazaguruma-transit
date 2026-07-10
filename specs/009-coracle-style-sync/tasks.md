@@ -130,7 +130,7 @@
 - [X] T072 [P] `src/components/discussion/DiscussionTabLayout.tsx` と`src/components/discussion/AuditLogSection.tsx`のcache保存を`sourceRelayUrlsByEventId`由来の`successfulEventRelayUrls`へ統一し、問い合わせ対象relayを成功実績として保存しない。旧`successfulRelays`は読み取り互換のみとする
 - [X] T076 [P] `src/app/discussions/page.tsx` と`src/app/discussions/manage/page.tsx`のcache保存を`sourceRelayUrlsByEventId`由来の`successfulEventRelayUrls`へ統一し、問い合わせ対象relayを成功実績として保存しない
 - [X] T077 [P] `src/components/discussion/BusStopDiscussion.tsx` と`src/components/discussion/BusStopMemo.tsx`のcache保存契約を共通化し、`successfulEventRelayUrls`だけを次回relay候補へ渡す
-- [ ] T073 `src/app/discussions/[naddr]/edit/page.tsx` の承認/未承認表示を共通snapshotの状態契約と照合し、未観測状態を`unapproved`として確定しない。readGenerationで古い結果を破棄する
+- [X] T073 `src/app/discussions/[naddr]/edit/page.tsx` の承認/未承認表示を共通snapshotの状態契約と照合し、未観測状態を`unapproved`として確定しない。readGenerationで古い結果を破棄する
 - [ ] T074 全Discussion画面の同一fixture横断テスト、権限回帰、撤回、重複排除、フォーム/フォーカス維持を実行する
 - [ ] T075 `npx tsc --noEmit`、`npm run lint`、`npm test`、`npm run build`を実行し、結果を`quickstart.md`へ追記する
 

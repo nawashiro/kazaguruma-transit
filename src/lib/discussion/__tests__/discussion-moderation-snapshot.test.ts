@@ -44,4 +44,25 @@ describe("createDiscussionModerationSnapshot", () => {
       createDiscussionModerationSnapshot(input).approvalState,
     ]).toEqual(["approved", "approved", "approved"]);
   });
+
+  it("moves from unknown to approved when a delayed approval arrives from another relay", () => {
+    const initial = createDiscussionModerationSnapshot({
+      discussionId: "d",
+      primaryEvents: [post("post-1")],
+      approvalEvents: [],
+      relayCandidates: candidates,
+      attemptedRelayUrls: ["wss://one"],
+      completionReason: "idle-timeout",
+    });
+    const refreshed = createDiscussionModerationSnapshot({
+      discussionId: "d",
+      primaryEvents: [post("post-1")],
+      approvalEvents: [approval("post-1")],
+      relayCandidates: candidates,
+      attemptedRelayUrls: ["wss://two", "wss://three", "wss://four"],
+      completionReason: "eose",
+    });
+    expect(initial.approvalState).toBe("unknown");
+    expect(refreshed.approvalState).toBe("approved");
+  });
 });

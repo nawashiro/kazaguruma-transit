@@ -18,6 +18,7 @@ import {
   getNostrServiceConfig,
 } from "@/lib/config/discussion-config";
 import { PermissionError } from "@/components/discussion/PermissionGuards";
+import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parseDiscussionEvent,
@@ -250,6 +251,15 @@ export default function DiscussionManagePage() {
       postStream,
       approvalStream,
     ];
+    if (typeof nostrService.getEventsWithCompletion === "function") {
+      void loadDiscussionModerationSnapshot(nostrService, { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 }, {
+        discussionId: discussionInfo.discussionId,
+        configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
+        defaults: [],
+      }).then((snapshot) => {
+        rebuildFromEvents(snapshot.primaryEvents, snapshot.approvalEvents);
+      });
+    }
   }, [discussionInfo, rebuildFromEvents]);
 
   useEffect(() => {

@@ -343,6 +343,19 @@ describe("AuditLogSection", () => {
     expect(duplicateCount).toBe(1);
   });
 
+  it("同時刻の監査イベントをイベントIDで安定して並べる", async () => {
+    serviceMock.getEventsWithCompletion.mockResolvedValueOnce(withCompletion([
+      createPostEvent("z-event", 200),
+      createPostEvent("a-event", 200),
+    ]));
+    const ref = React.createRef<{ loadAuditData: () => void; retryLoadAuditData: () => void }>();
+    render(<AuditLogSection ref={ref} discussion={null} discussionInfo={{ discussionId: "34550:test-pubkey:test-dtag", authorPubkey: "test-pubkey", dTag: "test-dtag" }} />);
+
+    await act(async () => { await ref.current?.loadAuditData(); });
+
+    expect(screen.getByTestId("audit-timeline-ids")).toHaveTextContent("a-event,z-event");
+  });
+
   it("承認済み投稿の承認者Mnemonicをタイムラインへ渡す", async () => {
     const approverPubkey = "f".repeat(64);
     const expectedMnemonic =

@@ -23,7 +23,7 @@
 - [X] T006 [P] `src/lib/discussion/__tests__/relay-candidate-selector.test.ts` にhint・成功実績・設定・既定relayの優先順、重複排除、3件上限、購読前1回だけのフォールバックを含む失敗テストを追加する
 - [X] T007 [P] `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` にメタデータ暫定表示、relay結果での更新、version不一致破棄の失敗テストを追加する
 - [X] T008 [P] `src/lib/discussion/__tests__/discussion-read-plan.test.ts` に各targetのkind/tag/limit、安定ソート規則、auditの`until` cursor契約テストを追加する
-- [ ] T009 [P] `src/lib/nostr/__tests__/nostr-service.test.ts` に`NDKRelaySet`を第3引数で渡す選別read、同一イベントIDの受信元relay情報保持、観測値の失敗テストを追加する
+- [X] T009 [P] `src/lib/nostr/__tests__/nostr-service.test.ts` に`NDKRelaySet`を第3引数で渡す選別read、同一イベントIDの受信元relay情報保持、観測値の失敗テストを追加する
 - [X] T010 `src/lib/discussion/relay-candidate-selector.ts` に優先順位付きrelay選別と購読前フォールバックを実装する
 - [X] T011 `src/lib/discussion/discussion-known-data-cache.ts` にsessionStorageの安全なread/write・TTL検査・新しいrelay結果のマージを実装する
 - [X] T012 `src/lib/discussion/discussion-read-plan.ts` に画面目的別filter、limit、timeout、監査cursor、安定ソート規則の生成を実装する
@@ -39,9 +39,9 @@
 
 **Independent Test**: 一部relayがtimeoutしても会話メタデータまたは既知メタデータを表示し、部分取得の状態と再読み込みを表示する。
 
-- [ ] T018 [P] [US1] `src/components/discussion/__tests__/DiscussionTabLayout.test.tsx` にtimeout時の暫定メタデータ、Not Foundとの区別、状態通知の失敗テストを追加する
-- [ ] T019 [P] [US1] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx` にメタデータ表示中の投稿領域loading、フォーム値・フォーカス維持の失敗テストを追加する
-- [ ] T020 [P] [US1] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx` に3秒以上遅延するrelayで2秒以内に利用可能になる観測テストを追加する
+- [X] T018 [P] [US1] `src/components/discussion/__tests__/DiscussionTabLayout.test.tsx` にtimeout時の暫定メタデータ、Not Foundとの区別、状態通知の失敗テストを追加する
+- [X] T019 [P] [US1] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx` にメタデータ表示中の投稿領域loading、フォーム値・フォーカス維持の失敗テストを追加する
+- [X] T020 [P] [US1] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx` に3秒以上遅延するrelayで2秒以内に利用可能になる観測テストを追加する
 - [X] T021 [US1] `src/components/discussion/DiscussionTabLayout.tsx` を`discussion-meta` read planと既知メタデータで更新し、relay結果で置換する
 - [X] T022 [US1] `src/app/discussions/[naddr]/page.tsx` をapproval/evaluationの独立read planへ更新し、メタデータを待つ全画面skeletonを排除する
 - [X] T023 [US1] `src/components/discussion/DiscussionReadStatus.tsx` を詳細レイアウトと本文へ統合し、部分取得・取得不能の再読み込みを接続する
@@ -67,14 +67,14 @@
 
 **Independent Test**: 同一IDを3回受けても投稿・承認・監査の表示と集計が1件であること、入力中の投稿フォームが維持されることを確認する。
 
-- [ ] T032 [P] [US3] `src/lib/nostr/__tests__/nostr-service.test.ts` に複数relay由来のイベント重複・source relay蓄積テストを追加する
-- [ ] T033 [P] [US3] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx` に連続イベント到着中の投稿フォーム値・フォーカス維持テストを追加する
-- [ ] T034 [P] [US3] `src/components/discussion/__tests__/AuditLogSection.test.tsx` に監査イベントの重複排除テストを追加する
-- [ ] T035 [US3] `src/app/discussions/[naddr]/page.tsx` に同一内容のstate更新を抑制するイベントマージを実装する
-- [ ] T036 [US3] `src/components/discussion/AuditLogSection.tsx` を共通イベントマージに統合し、ID重複を表示・集計しないようにする
-- [ ] T037 [US3] `src/lib/nostr/nostr-service.ts` に重複受信でもrelay hint/source実績を保管する実装を完了する
-- [ ] T038 [US3] 該当のNostr・詳細・監査テストを実行して重複排除とフォーカス維持を検証する
-- [ ] T039 [US3] `src/lib/nostr/__tests__/nostr-service.test.ts` と `src/components/discussion/__tests__/AuditLogSection.test.tsx` に到着順が逆転・同時刻の投稿、承認、評価、監査イベントの安定ソートテストを追加する
+- [X] T032 [P] [US3] `src/lib/nostr/__tests__/nostr-service.test.ts` に複数relay由来のイベント重複・source relay蓄積テストを追加する
+- [X] T033 [P] [US3] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx` に連続イベント到着中の投稿フォーム値・フォーカス維持テストを追加する
+- [X] T034 [P] [US3] `src/components/discussion/__tests__/AuditLogSection.test.tsx` に監査イベントの重複排除テストを追加する
+- [X] T035 [US3] `src/app/discussions/[naddr]/page.tsx` に同一内容のstate更新を抑制するイベントマージを実装する
+- [X] T036 [US3] `src/components/discussion/AuditLogSection.tsx` を共通イベントマージに統合し、ID重複を表示・集計しないようにする
+- [X] T037 [US3] `src/lib/nostr/nostr-service.ts` に重複受信でもrelay hint/source実績を保管する実装を完了する
+- [X] T038 [US3] 該当のNostr・詳細・監査テストを実行して重複排除とフォーカス維持を検証する
+- [X] T039 [US3] `src/lib/nostr/__tests__/nostr-service.test.ts` と `src/components/discussion/__tests__/AuditLogSection.test.tsx` に到着順が逆転・同時刻の投稿、承認、評価、監査イベントの安定ソートテストを追加する
 
 ## Phase 6: User Story 4 - 再訪問時に既知データを活かす (P4)
 
@@ -82,22 +82,22 @@
 
 **Independent Test**: 初回readの結果をキャッシュ後、同一会話を再訪問すると先に暫定タイトルが表示され、後続の新しい会話定義で置換されることを確認する。
 
-- [ ] T040 [P] [US4] `src/components/discussion/__tests__/DiscussionTabLayout.test.tsx` にsessionStorageからの暫定タイトルとrelay結果での更新テストを追加する
+- [X] T040 [P] [US4] `src/components/discussion/__tests__/DiscussionTabLayout.test.tsx` にsessionStorageからの暫定タイトルとrelay結果での更新テストを追加する
 - [X] T041 [P] [US4] `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` に既知イベントIDの重複排除とrelay成功実績のテストを追加する
 - [X] T042 [US4] `src/components/discussion/DiscussionTabLayout.tsx` で既知メタデータを即時表示し、`usedKnownData`を部分取得状態へ渡す
-- [ ] T043 [US4] `src/app/discussions/[naddr]/page.tsx` と `src/components/discussion/AuditLogSection.tsx` で既知イベントを暫定入力としてマージし、relay取得を常に継続する
+- [X] T043 [US4] `src/app/discussions/[naddr]/page.tsx` と `src/components/discussion/AuditLogSection.tsx` で既知イベントを暫定入力としてマージし、relay取得を常に継続する
 - [X] T044 [US4] `src/lib/discussion/discussion-known-data-cache.ts` からrelay成功実績をrelay選別へ渡す接続を実装する
-- [ ] T045 [US4] 既知データ関連テストを実行して、cache単独でNot Found/承認状態を確定しないことを検証する
+- [X] T045 [US4] 既知データ関連テストを実行して、cache単独でNot Found/承認状態を確定しないことを検証する
 
 ## Phase 7: Polish and Cross-Cutting Concerns
 
-- [ ] T046 [P] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx` に詳細画面が目的外イベントを読まないread plan契約テストを追加する
-- [ ] T047 [P] `src/lib/discussion/__tests__/discussion-read-performance.test.ts` に20試行で19回以上が2秒以内にmetadataを表示する遅延relayテストを追加する
-- [ ] T048 [P] `src/lib/discussion/__tests__/discussion-read-performance.test.ts` に20試行で18回以上が1秒以内に既知metadataを表示する再訪問テストを追加する
-- [ ] T049 [P] `src/lib/discussion/__tests__/permission-system.test.ts` と既存Discussion画面テストで、NIP-01/09/25/72イベント解釈と投稿・承認・評価・モデレーター権限の回帰を検証する
+- [X] T046 [P] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx` に詳細画面が目的外イベントを読まないread plan契約テストを追加する
+- [X] T047 [P] `src/lib/discussion/__tests__/discussion-read-performance.test.ts` に20試行で19回以上が2秒以内にmetadataを表示する遅延relayテストを追加する
+- [X] T048 [P] `src/lib/discussion/__tests__/discussion-read-performance.test.ts` に20試行で18回以上が1秒以内に既知metadataを表示する再訪問テストを追加する
+- [X] T049 [P] `src/lib/discussion/__tests__/permission-system.test.ts` と既存Discussion画面テストで、NIP-01/09/25/72イベント解釈と投稿・承認・評価・モデレーター権限の回帰を検証する
 - [X] T050 [P] `specs/009-coracle-style-sync/quickstart.md` に実測したrelay数、timeout、監査ページングの検証結果を追記する
-- [ ] T051 [P] `src/lib/discussion/discussion-read-plan.ts` と `src/lib/nostr/nostr-service.ts` の観測ログを確認し、イベント数・重複数・完了理由・経過時間を保守者が読めるよう整える
-- [ ] T052 `src/components/discussion/DiscussionReadStatus.tsx` と全統合箇所をキーボード・スクリーンリーダー観点で確認する
+- [X] T051 [P] `src/lib/discussion/discussion-read-plan.ts` と `src/lib/nostr/nostr-service.ts` の観測ログを確認し、イベント数・重複数・完了理由・経過時間を保守者が読めるよう整える
+- [X] T052 `src/components/discussion/DiscussionReadStatus.tsx` と全統合箇所をキーボード・スクリーンリーダー観点で確認する
 - [X] T053 `npx tsc --noEmit && npm run lint && npm test && npm run build` を `/home/navi/kazaguruma-transit` で実行する
 
 ## Dependencies and Execution Order

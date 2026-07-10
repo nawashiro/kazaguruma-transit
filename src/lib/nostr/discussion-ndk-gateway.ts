@@ -54,6 +54,7 @@ export interface NdkQueryCompletion {
   eoseReceived: boolean;
   relayUrls: string[];
   duplicateCount: number;
+  sourceRelayUrlsByEventId: Record<string, string[]>;
 }
 
 export type ModeratorDecision = "approved" | "unapproved";
@@ -114,6 +115,7 @@ export class UnconfiguredDiscussionNdkGateway implements DiscussionNdkGateway {
       eoseReceived: false,
       relayUrls: [],
       duplicateCount: 0,
+      sourceRelayUrlsByEventId: {},
     };
   }
 
@@ -129,6 +131,7 @@ export class UnconfiguredDiscussionNdkGateway implements DiscussionNdkGateway {
       eoseReceived: false,
       relayUrls: [],
       duplicateCount: 0,
+      sourceRelayUrlsByEventId: {},
     };
   }
 

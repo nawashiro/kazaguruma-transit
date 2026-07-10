@@ -261,7 +261,10 @@ export const AuditLogSection = React.forwardRef<
           byId.set(event.id, event);
         }
       });
-      return Array.from(byId.values()).sort((a, b) => b.created_at - a.created_at);
+      return Array.from(byId.values()).sort(
+        (left, right) =>
+          right.created_at - left.created_at || left.id.localeCompare(right.id)
+      );
     };
 
     const normalizePageSize = (events: Event[]): Event[] =>
@@ -275,13 +278,15 @@ export const AuditLogSection = React.forwardRef<
       setVisibleCount(initialVisibleCount);
 
       try {
-        const cachedEvents = discussionInfo
-          ? loadKnownDiscussionData<Discussion>(discussionInfo.discussionId)?.eventIds
-          : [];
-        if (cachedEvents && cachedEvents.length > 0) {
+        const cachedData = discussionInfo
+          ? loadKnownDiscussionData<Discussion, Event>(discussionInfo.discussionId)
+          : null;
+        if (cachedData?.events?.length) {
+          setAuditEvents(cachedData.events);
+          void applyAuditEvents(cachedData.events, discussion);
           logger.info("audit-log known events available", {
             discussionId: discussionInfo?.discussionId,
-            eventCount: cachedEvents.length,
+            eventCount: cachedData.events.length,
           });
         }
         let baseDiscussion = discussion;
@@ -314,6 +319,7 @@ export const AuditLogSection = React.forwardRef<
             metadata: baseDiscussion,
             eventIds: normalizedPage.map((event) => event.id),
             successfulRelays: pageResult.relayUrls ?? [],
+            events: normalizedPage,
           });
         }
         await applyAuditEvents(normalizedPage, baseDiscussion);

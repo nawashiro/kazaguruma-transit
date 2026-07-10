@@ -16,6 +16,17 @@ export interface AuditTimelineDTO {
   approvedByMnemonic?: string;
 }
 
+const auditTypePriority: Record<AuditTimelineDTO["type"], number> = {
+  "promotion-requested": 0,
+  "listing-requested": 1,
+  "post-submitted": 2,
+};
+
+const sortAuditTimeline = (left: AuditTimelineDTO, right: AuditTimelineDTO): number =>
+  right.timestamp - left.timestamp ||
+  auditTypePriority[left.type] - auditTypePriority[right.type] ||
+  left.id.localeCompare(right.id);
+
 const getTagValue = (event: NostrEventDTO, key: string): string | undefined =>
   event.tags.find((tag) => tag[0] === key)?.[1];
 
@@ -93,7 +104,7 @@ export function mapListAuditTimeline(events: NostrEventDTO[]): AuditTimelineDTO[
         approval
       );
     })
-    .sort((a, b) => b.timestamp - a.timestamp);
+    .sort(sortAuditTimeline);
 }
 
 export function mapDiscussionAuditTimeline(
@@ -110,5 +121,5 @@ export function mapDiscussionAuditTimeline(
         approval
       );
     })
-    .sort((a, b) => b.timestamp - a.timestamp);
+    .sort(sortAuditTimeline);
 }

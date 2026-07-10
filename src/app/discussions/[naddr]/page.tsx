@@ -23,6 +23,7 @@ import {
 } from "@/lib/nostr/discussion-ndk-gateway";
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
+import { loadKnownDiscussionData, saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
 import {
   parsePostEvent,
   parseApprovalEvent,
@@ -119,6 +120,15 @@ export default function DiscussionDetailPage() {
       setIsPostsLoading(true);
       try {
         setPostsLoadError(null);
+        const knownData = loadKnownDiscussionData<unknown, import("@/lib/nostr/nostr-service").Event>(discussionInfo.discussionId);
+        if (knownData?.events?.length) {
+          const knownApprovals = knownData.events.map(parseApprovalEvent).filter((approval): approval is PostApproval => approval !== null);
+          const knownPosts = knownApprovals.map((approval) => {
+            try { return parsePostEvent(JSON.parse(approval.event.content), [approval]); } catch { return null; }
+          }).filter((post): post is DiscussionPost => post !== null);
+          setPosts(knownPosts);
+          setApprovals(knownApprovals);
+        }
         const approvalsPlan = createDiscussionReadPlan("discussion-approvals", readStrategy, { discussionId: discussionInfo.discussionId, relayHints: discussionInfo.relays });
         const relayUrls = selectRelayCandidates({ hints: approvalsPlan.relayHints, configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url), defaults: [], limit: readStrategy.relayLimit }).map((relay) => relay.url);
         const approvalsResult = await discussionGateway.queryWithCompletion(approvalsPlan.filters, {
@@ -150,10 +160,19 @@ export default function DiscussionDetailPage() {
             }
           })
           .filter((p): p is DiscussionPost => p !== null)
-          .sort((a, b) => b.createdAt - a.createdAt);
+          .sort(
+            (left, right) =>
+              right.createdAt - left.createdAt || left.id.localeCompare(right.id)
+          );
 
         setPosts(parsedPosts);
         setApprovals(parsedApprovals);
+        saveKnownDiscussionData(discussionInfo.discussionId, {
+          metadata: null,
+          eventIds: approvalsEvents.map((event) => event.id),
+          successfulRelays: approvalsResult.relayUrls ?? [],
+          events: approvalsEvents,
+        });
 
         const postIds = parsedPosts.map((post) => post.id);
         const evaluationsResult =

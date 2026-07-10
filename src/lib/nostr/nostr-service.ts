@@ -27,7 +27,14 @@ export interface EventFetchCompletion {
   eoseReceived: boolean;
   relayUrls: string[];
   duplicateCount: number;
+  /** Relay URLs that delivered each event, including duplicate deliveries. */
+  sourceRelayUrlsByEventId: Record<string, string[]>;
 }
+
+const getSourceRelayUrl = (event: NDKEvent): string | null => {
+  const relay = (event as NDKEvent & { relay?: { url?: unknown } }).relay;
+  return typeof relay?.url === "string" ? relay.url : null;
+};
 
 export interface ReadEventsOptions {
   idleTimeoutMs?: number;
@@ -145,6 +152,7 @@ export class NostrService {
         eoseReceived: true,
         relayUrls: [],
         duplicateCount: 0,
+        sourceRelayUrlsByEventId: {},
       });
     }
 
@@ -167,6 +175,7 @@ export class NostrService {
       let eoseReceived = false;
       let duplicateCount = 0;
       const collected: Event[] = [];
+      const sourceRelayUrlsByEventId = new Map<string, Set<string>>();
       const subscriptions: Array<{ stop: () => void }> = [];
       const timerRefs: {
         idle?: ReturnType<typeof setTimeout>;
@@ -185,6 +194,19 @@ export class NostrService {
         closeSubscriptions();
 
         const events = dedupeAndSortEvents(collected);
+        const sourceRelays = Object.fromEntries(
+          Array.from(sourceRelayUrlsByEventId, ([eventId, urls]) => [
+            eventId,
+            Array.from(urls).sort(),
+          ])
+        );
+        logger.info("nostr read completed", {
+          eventCount: events.length,
+          duplicateCount,
+          completionReason,
+          elapsedMs: Date.now() - startedAt,
+          relayCount: relayUrls.length,
+        });
         resolve({
           events,
           completionReason,
@@ -195,6 +217,7 @@ export class NostrService {
           eoseReceived,
           relayUrls,
           duplicateCount,
+          sourceRelayUrlsByEventId: sourceRelays,
         });
       };
 
@@ -218,6 +241,12 @@ export class NostrService {
               resetIdleTimer();
 
               const rawEvent = this.toRawEvent(event);
+              const sourceRelayUrl = getSourceRelayUrl(event);
+              if (sourceRelayUrl) {
+                const sources = sourceRelayUrlsByEventId.get(rawEvent.id) ?? new Set<string>();
+                sources.add(sourceRelayUrl);
+                sourceRelayUrlsByEventId.set(rawEvent.id, sources);
+              }
               const updated = mergeEvent(collected, rawEvent);
               if (updated === collected) {
                 duplicateCount += 1;
@@ -285,6 +314,7 @@ export class NostrService {
         eoseReceived: false,
         relayUrls: options.relayUrls ?? this.relays,
         duplicateCount: 0,
+        sourceRelayUrlsByEventId: {},
       };
     }
   }

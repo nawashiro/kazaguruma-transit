@@ -13,8 +13,9 @@ const mockSubscribe = jest.fn();
 const mockConnect = jest.fn().mockResolvedValue(undefined);
 const mockStop = jest.fn();
 
-const createNdkEvent = (raw: Record<string, unknown>) => ({
+const createNdkEvent = (raw: Record<string, unknown>, relayUrl?: string) => ({
   rawEvent: () => raw,
+  ...(relayUrl ? { relay: { url: relayUrl } } : {}),
 });
 
 jest.mock("@nostr-dev-kit/ndk", () => {
@@ -84,12 +85,17 @@ jest.mock("@nostr-dev-kit/ndk", () => {
     default: MockNDK,
     NDKEvent: MockNDKEvent,
     NDKPrivateKeySigner: MockNDKPrivateKeySigner,
+    NDKRelaySet: { fromRelayUrls: jest.fn((urls: string[]) => ({ urls })) },
     nip19: {
       naddrEncode: encodeNaddr,
       decode: decodeNaddr,
     },
   };
 });
+
+const { NDKRelaySet: mockNDKRelaySet } = jest.requireMock("@nostr-dev-kit/ndk") as {
+  NDKRelaySet: { fromRelayUrls: jest.Mock };
+};
 
 describe("NostrService event retrieval", () => {
   const flushMicrotasks = async () => {
@@ -114,6 +120,7 @@ describe("NostrService event retrieval", () => {
     mockSubscribe.mockReset();
     mockConnect.mockReset().mockResolvedValue(undefined);
     mockStop.mockReset();
+    mockNDKRelaySet.fromRelayUrls.mockClear();
   });
 
   afterEach(() => {
@@ -181,6 +188,40 @@ describe("NostrService event retrieval", () => {
 
     expect(result.completionReason).toBe("idle-timeout");
     expect(result.eventCount).toBe(0);
+  });
+
+  it("limits a selected read with NDKRelaySet and preserves duplicate source relays", async () => {
+    let handlers: { onEvent?: (event: unknown) => void; onEose?: () => void } = {};
+    mockSubscribe.mockImplementation((_filter, options) => {
+      handlers = options;
+      return { stop: mockStop };
+    });
+    const service = new NostrService(config);
+    const resultPromise = service.getEventsWithCompletion([{ kinds: [1] }], {
+      relayUrls: ["wss://first", "wss://second"],
+    });
+    await flushMicrotasks();
+
+    const event = { id: "shared", created_at: 100, kind: 1, pubkey: "pk", content: "", tags: [], sig: "sig" };
+    handlers.onEvent?.(createNdkEvent(event, "wss://second"));
+    handlers.onEvent?.(createNdkEvent(event, "wss://first"));
+    handlers.onEose?.();
+    const result = await resultPromise;
+
+    expect(mockNDKRelaySet.fromRelayUrls).toHaveBeenCalledWith(
+      ["wss://first", "wss://second"],
+      expect.anything()
+    );
+    expect(mockSubscribe).toHaveBeenCalledWith(
+      { kinds: [1] },
+      expect.any(Object),
+      { urls: ["wss://first", "wss://second"] }
+    );
+    expect(result.events).toHaveLength(1);
+    expect(result.duplicateCount).toBe(1);
+    expect(result.sourceRelayUrlsByEventId).toEqual({
+      shared: ["wss://first", "wss://second"],
+    });
   });
 
   it("getEventsWithCompletion returns hard-timeout when events keep arriving without EOSE", async () => {

@@ -20,18 +20,18 @@
 **CRITICAL**: このフェーズを完了するまで画面固有の実装を開始しない。
 
 - [ ] T005 [P] `src/lib/config/__tests__/discussion-config.test.ts` に`DiscussionReadStrategyConfig`の既定値、範囲丸め、無効timeoutのfallbackテストを追加する
-- [ ] T006 [P] `src/lib/discussion/__tests__/relay-candidate-selector.test.ts` にhint・成功実績・設定・既定relayの優先順、重複排除、3件上限、購読前1回だけのフォールバックを含む失敗テストを追加する
-- [ ] T007 [P] `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` にメタデータ暫定表示、relay結果での更新、version不一致破棄の失敗テストを追加する
-- [ ] T008 [P] `src/lib/discussion/__tests__/discussion-read-plan.test.ts` に各targetのkind/tag/limit、安定ソート規則、auditの`until` cursor契約テストを追加する
+- [X] T006 [P] `src/lib/discussion/__tests__/relay-candidate-selector.test.ts` にhint・成功実績・設定・既定relayの優先順、重複排除、3件上限、購読前1回だけのフォールバックを含む失敗テストを追加する
+- [X] T007 [P] `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` にメタデータ暫定表示、relay結果での更新、version不一致破棄の失敗テストを追加する
+- [X] T008 [P] `src/lib/discussion/__tests__/discussion-read-plan.test.ts` に各targetのkind/tag/limit、安定ソート規則、auditの`until` cursor契約テストを追加する
 - [ ] T009 [P] `src/lib/nostr/__tests__/nostr-service.test.ts` に`NDKRelaySet`を第3引数で渡す選別read、同一イベントIDの受信元relay情報保持、観測値の失敗テストを追加する
 - [X] T010 `src/lib/discussion/relay-candidate-selector.ts` に優先順位付きrelay選別と購読前フォールバックを実装する
 - [X] T011 `src/lib/discussion/discussion-known-data-cache.ts` にsessionStorageの安全なread/write・TTL検査・新しいrelay結果のマージを実装する
 - [X] T012 `src/lib/discussion/discussion-read-plan.ts` に画面目的別filter、limit、timeout、監査cursor、安定ソート規則の生成を実装する
 - [X] T013 `src/lib/nostr/nostr-service.ts` と `src/lib/nostr/discussion-ndk-gateway.ts` に`NDKRelaySet.fromRelayUrls()`を用いる選別read、source relay収集、重複数、観測ログを実装する
 - [X] T014 [P] `src/components/discussion/DiscussionReadStatus.tsx` にloading/partial/unavailable/not-foundの日本語状態通知と再読み込みUIを実装する
-- [ ] T015 `src/components/discussion/__tests__/DiscussionReadStatus.test.tsx` にARIA live region、部分取得・取得不能・再読み込みのテストを追加する
+- [X] T015 `src/components/discussion/__tests__/DiscussionReadStatus.test.tsx` にARIA live region、部分取得・取得不能・再読み込みのテストを追加する
 - [ ] T016 `src/lib/discussion/discussion-read-plan.ts` と `src/lib/nostr/discussion-ndk-gateway.ts` に近似filter・同一relayへの短時間の重複read抑制を実装する
-- [ ] T017 `src/lib/config/__tests__/discussion-config.test.ts` `src/lib/discussion/__tests__/discussion-read-plan.test.ts` `src/lib/discussion/__tests__/relay-candidate-selector.test.ts` `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` を実行してFoundationを検証する
+- [X] T017 `src/lib/config/__tests__/discussion-config.test.ts` `src/lib/discussion/__tests__/discussion-read-plan.test.ts` `src/lib/discussion/__tests__/relay-candidate-selector.test.ts` `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` を実行してFoundationを検証する
 
 ## Phase 3: User Story 1 - 会話画面を待たされずに開く (P1)
 
@@ -42,10 +42,10 @@
 - [ ] T018 [P] [US1] `src/components/discussion/__tests__/DiscussionTabLayout.test.tsx` にtimeout時の暫定メタデータ、Not Foundとの区別、状態通知の失敗テストを追加する
 - [ ] T019 [P] [US1] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx` にメタデータ表示中の投稿領域loading、フォーム値・フォーカス維持の失敗テストを追加する
 - [ ] T020 [P] [US1] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx` に3秒以上遅延するrelayで2秒以内に利用可能になる観測テストを追加する
-- [ ] T021 [US1] `src/components/discussion/DiscussionTabLayout.tsx` を`discussion-meta` read planと既知メタデータで更新し、relay結果で置換する
-- [ ] T022 [US1] `src/app/discussions/[naddr]/page.tsx` をapproval/evaluationの独立read planへ更新し、メタデータを待つ全画面skeletonを排除する
-- [ ] T023 [US1] `src/components/discussion/DiscussionReadStatus.tsx` を詳細レイアウトと本文へ統合し、部分取得・取得不能の再読み込みを接続する
-- [ ] T024 [US1] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx` と `src/components/discussion/__tests__/DiscussionTabLayout.test.tsx` を実行してストーリーを検証する
+- [X] T021 [US1] `src/components/discussion/DiscussionTabLayout.tsx` を`discussion-meta` read planと既知メタデータで更新し、relay結果で置換する
+- [X] T022 [US1] `src/app/discussions/[naddr]/page.tsx` をapproval/evaluationの独立read planへ更新し、メタデータを待つ全画面skeletonを排除する
+- [X] T023 [US1] `src/components/discussion/DiscussionReadStatus.tsx` を詳細レイアウトと本文へ統合し、部分取得・取得不能の再読み込みを接続する
+- [X] T024 [US1] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx` と `src/components/discussion/__tests__/DiscussionTabLayout.test.tsx` を実行してストーリーを検証する
 
 ## Phase 4: User Story 2 - 必要なrelayだけから取得する (P2)
 
@@ -59,7 +59,7 @@
 - [X] T028 [US2] `src/app/discussions/page.tsx` を`discussion-list` read plan経由に変更する
 - [X] T029 [US2] `src/app/discussions/[naddr]/approve/page.tsx` と `src/app/discussions/[naddr]/edit/page.tsx` を承認・編集用read plan経由に変更する
 - [X] T030 [US2] `src/components/discussion/AuditLogSection.tsx` を`discussion-audit` read plan経由に変更し、初回・追加のrelay実取得を最大10件にする
-- [ ] T031 [US2] `src/app/discussions/page.tsx` `src/app/discussions/[naddr]/approve/page.tsx` `src/app/discussions/[naddr]/edit/page.tsx` `src/components/discussion/AuditLogSection.tsx` の対象テストを実行する
+- [X] T031 [US2] `src/app/discussions/page.tsx` `src/app/discussions/[naddr]/approve/page.tsx` `src/app/discussions/[naddr]/edit/page.tsx` `src/components/discussion/AuditLogSection.tsx` の対象テストを実行する
 
 ## Phase 5: User Story 3 - 重複や再描画で画面が重くならない (P3)
 
@@ -84,9 +84,9 @@
 
 - [ ] T040 [P] [US4] `src/components/discussion/__tests__/DiscussionTabLayout.test.tsx` にsessionStorageからの暫定タイトルとrelay結果での更新テストを追加する
 - [ ] T041 [P] [US4] `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` に既知イベントIDの重複排除とrelay成功実績のテストを追加する
-- [ ] T042 [US4] `src/components/discussion/DiscussionTabLayout.tsx` で既知メタデータを即時表示し、`usedKnownData`を部分取得状態へ渡す
+- [X] T042 [US4] `src/components/discussion/DiscussionTabLayout.tsx` で既知メタデータを即時表示し、`usedKnownData`を部分取得状態へ渡す
 - [ ] T043 [US4] `src/app/discussions/[naddr]/page.tsx` と `src/components/discussion/AuditLogSection.tsx` で既知イベントを暫定入力としてマージし、relay取得を常に継続する
-- [ ] T044 [US4] `src/lib/discussion/discussion-known-data-cache.ts` からrelay成功実績をrelay選別へ渡す接続を実装する
+- [X] T044 [US4] `src/lib/discussion/discussion-known-data-cache.ts` からrelay成功実績をrelay選別へ渡す接続を実装する
 - [ ] T045 [US4] 既知データ関連テストを実行して、cache単独でNot Found/承認状態を確定しないことを検証する
 
 ## Phase 7: Polish and Cross-Cutting Concerns
@@ -98,7 +98,7 @@
 - [ ] T050 [P] `specs/009-coracle-style-sync/quickstart.md` に実測したrelay数、timeout、監査ページングの検証結果を追記する
 - [ ] T051 [P] `src/lib/discussion/discussion-read-plan.ts` と `src/lib/nostr/nostr-service.ts` の観測ログを確認し、イベント数・重複数・完了理由・経過時間を保守者が読めるよう整える
 - [ ] T052 `src/components/discussion/DiscussionReadStatus.tsx` と全統合箇所をキーボード・スクリーンリーダー観点で確認する
-- [ ] T053 `npx tsc --noEmit && npm run lint && npm test && npm run build` を `/home/navi/kazaguruma-transit` で実行する
+- [X] T053 `npx tsc --noEmit && npm run lint && npm test && npm run build` を `/home/navi/kazaguruma-transit` で実行する
 
 ## Dependencies and Execution Order
 

@@ -1,6 +1,7 @@
 import NDK, {
   NDKEvent,
   NDKPrivateKeySigner,
+  NDKRelaySet,
   type NDKFilter,
   type NostrEvent,
 } from "@nostr-dev-kit/ndk";
@@ -24,11 +25,14 @@ export interface EventFetchCompletion {
   startedAt: number;
   lastEventAt: number;
   eoseReceived: boolean;
+  relayUrls: string[];
+  duplicateCount: number;
 }
 
 export interface ReadEventsOptions {
   idleTimeoutMs?: number;
   hardTimeoutMs?: number;
+  relayUrls?: string[];
 }
 
 export const dedupeAndSortEvents = (events: Event[]): Event[] => {
@@ -42,7 +46,7 @@ export const dedupeAndSortEvents = (events: Event[]): Event[] => {
   });
 
   return Array.from(uniqueById.values()).sort(
-    (a, b) => b.created_at - a.created_at
+    (a, b) => b.created_at - a.created_at || a.id.localeCompare(b.id)
   );
 };
 
@@ -137,6 +141,8 @@ export class NostrService {
         startedAt: now,
         lastEventAt: now,
         eoseReceived: true,
+        relayUrls: [],
+        duplicateCount: 0,
       });
     }
 
@@ -145,6 +151,11 @@ export class NostrService {
       options.hardTimeoutMs ?? this.config.defaultTimeout * 3,
       idleTimeoutMs + 1
     );
+    const relayUrls = Array.from(new Set(options.relayUrls ?? this.relays));
+    const relaySet = relayUrls.length > 0
+      && options.relayUrls
+      ? NDKRelaySet.fromRelayUrls(relayUrls, this.ndk)
+      : undefined;
 
     return new Promise((resolve) => {
       const startedAt = Date.now();
@@ -152,6 +163,7 @@ export class NostrService {
       let closed = false;
       let eoseCount = 0;
       let eoseReceived = false;
+      let duplicateCount = 0;
       const collected: Event[] = [];
       const subscriptions: Array<{ stop: () => void }> = [];
       const timerRefs: {
@@ -179,6 +191,8 @@ export class NostrService {
           startedAt,
           lastEventAt,
           eoseReceived,
+          relayUrls,
+          duplicateCount,
         });
       };
 
@@ -203,7 +217,10 @@ export class NostrService {
 
               const rawEvent = this.toRawEvent(event);
               const updated = mergeEvent(collected, rawEvent);
-              if (updated === collected) return;
+              if (updated === collected) {
+                duplicateCount += 1;
+                return;
+              }
 
               collected.length = 0;
               collected.push(...updated);
@@ -217,7 +234,7 @@ export class NostrService {
               }
             },
           },
-          true
+          relaySet ?? true
         );
         subscriptions.push(subscription);
       }
@@ -247,6 +264,8 @@ export class NostrService {
         startedAt: now,
         lastEventAt: now,
         eoseReceived: false,
+        relayUrls: options.relayUrls ?? this.relays,
+        duplicateCount: 0,
       };
     }
   }

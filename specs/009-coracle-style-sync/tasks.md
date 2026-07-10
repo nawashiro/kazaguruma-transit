@@ -8,10 +8,10 @@
 
 **Purpose**: 既存の通信境界と観測点を確認し、009用の型を追加する。
 
-- [ ] T001 `src/lib/config/discussion-config.ts` に範囲検証付き`DiscussionReadStrategyConfig`とrelay上限・timeout・重複read抑制windowの環境設定を追加する
-- [ ] T002 [P] `src/lib/discussion/discussion-read-plan.ts` に画面目的別`DiscussionReadTarget`とread plan型を定義する
-- [ ] T003 [P] `src/lib/discussion/discussion-known-data-cache.ts` にversion付きsessionStorageキャッシュ型を定義する
-- [ ] T004 [P] `src/lib/discussion/relay-candidate-selector.ts` にrelay候補の優先根拠型を定義する
+- [X] T001 `src/lib/config/discussion-config.ts` に範囲検証付き`DiscussionReadStrategyConfig`とrelay上限・timeout・重複read抑制windowの環境設定を追加する
+- [X] T002 [P] `src/lib/discussion/discussion-read-plan.ts` に画面目的別`DiscussionReadTarget`とread plan型を定義する
+- [X] T003 [P] `src/lib/discussion/discussion-known-data-cache.ts` にversion付きsessionStorageキャッシュ型を定義する
+- [X] T004 [P] `src/lib/discussion/relay-candidate-selector.ts` にrelay候補の優先根拠型を定義する
 
 ## Phase 2: Foundational
 
@@ -24,11 +24,11 @@
 - [ ] T007 [P] `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` にメタデータ暫定表示、relay結果での更新、version不一致破棄の失敗テストを追加する
 - [ ] T008 [P] `src/lib/discussion/__tests__/discussion-read-plan.test.ts` に各targetのkind/tag/limit、安定ソート規則、auditの`until` cursor契約テストを追加する
 - [ ] T009 [P] `src/lib/nostr/__tests__/nostr-service.test.ts` に`NDKRelaySet`を第3引数で渡す選別read、同一イベントIDの受信元relay情報保持、観測値の失敗テストを追加する
-- [ ] T010 `src/lib/discussion/relay-candidate-selector.ts` に優先順位付きrelay選別と購読前フォールバックを実装する
-- [ ] T011 `src/lib/discussion/discussion-known-data-cache.ts` にsessionStorageの安全なread/write・TTL検査・新しいrelay結果のマージを実装する
-- [ ] T012 `src/lib/discussion/discussion-read-plan.ts` に画面目的別filter、limit、timeout、監査cursor、安定ソート規則の生成を実装する
-- [ ] T013 `src/lib/nostr/nostr-service.ts` と `src/lib/nostr/discussion-ndk-gateway.ts` に`NDKRelaySet.fromRelayUrls()`を用いる選別read、source relay収集、重複数、観測ログを実装する
-- [ ] T014 [P] `src/components/discussion/DiscussionReadStatus.tsx` にloading/partial/unavailable/not-foundの日本語状態通知と再読み込みUIを実装する
+- [X] T010 `src/lib/discussion/relay-candidate-selector.ts` に優先順位付きrelay選別と購読前フォールバックを実装する
+- [X] T011 `src/lib/discussion/discussion-known-data-cache.ts` にsessionStorageの安全なread/write・TTL検査・新しいrelay結果のマージを実装する
+- [X] T012 `src/lib/discussion/discussion-read-plan.ts` に画面目的別filter、limit、timeout、監査cursor、安定ソート規則の生成を実装する
+- [X] T013 `src/lib/nostr/nostr-service.ts` と `src/lib/nostr/discussion-ndk-gateway.ts` に`NDKRelaySet.fromRelayUrls()`を用いる選別read、source relay収集、重複数、観測ログを実装する
+- [X] T014 [P] `src/components/discussion/DiscussionReadStatus.tsx` にloading/partial/unavailable/not-foundの日本語状態通知と再読み込みUIを実装する
 - [ ] T015 `src/components/discussion/__tests__/DiscussionReadStatus.test.tsx` にARIA live region、部分取得・取得不能・再読み込みのテストを追加する
 - [ ] T016 `src/lib/discussion/discussion-read-plan.ts` と `src/lib/nostr/discussion-ndk-gateway.ts` に近似filter・同一relayへの短時間の重複read抑制を実装する
 - [ ] T017 `src/lib/config/__tests__/discussion-config.test.ts` `src/lib/discussion/__tests__/discussion-read-plan.test.ts` `src/lib/discussion/__tests__/relay-candidate-selector.test.ts` `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts` を実行してFoundationを検証する

@@ -4,7 +4,7 @@ import React, { useCallback, useRef, useState, useEffect, useMemo } from "react"
 import { usePathname, useParams } from "next/navigation";
 import Link from "next/link";
 import { type CompletionReason } from "@/lib/nostr/nostr-service";
-import { getNostrServiceConfig } from "@/lib/config/discussion-config";
+import { getDiscussionReadStrategyConfig, getNostrServiceConfig } from "@/lib/config/discussion-config";
 import { parseDiscussionEvent } from "@/lib/nostr/nostr-utils";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
@@ -14,6 +14,10 @@ import {
   createDiscussionNdkGateway,
   type NostrEventDTO,
 } from "@/lib/nostr/discussion-ndk-gateway";
+import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
+import { loadKnownDiscussionData, saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
+import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
+import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
 
 interface DiscussionTabLayoutProps {
   /** タブナビゲーションのベースURL（例: "/discussions" または "/discussions/[naddr]"） */
@@ -31,6 +35,10 @@ interface DiscussionMetaContextValue {
 }
 
 const discussionConfig = getNostrServiceConfig();
+const discussionReadStrategy =
+  typeof getDiscussionReadStrategyConfig === "function"
+    ? getDiscussionReadStrategyConfig()
+    : { relayLimit: 3, idleTimeoutMs: discussionConfig.defaultTimeout, hardTimeoutMs: discussionConfig.defaultTimeout * 3, dedupWindowMs: 250 };
 const discussionGateway = createDiscussionNdkGateway(discussionConfig);
 const DiscussionMetaContext = React.createContext<
   DiscussionMetaContextValue | undefined
@@ -126,8 +134,9 @@ export function DiscussionTabLayout({
     const loadSequence = ++loadSequenceRef.current;
 
     // 状態初期化
-    setDiscussion(null);
-    setIsDiscussionLoading(true);
+    const knownData = loadKnownDiscussionData<Discussion>(discussionInfo.discussionId);
+    setDiscussion(knownData?.metadata ?? null);
+    setIsDiscussionLoading(!knownData?.metadata);
     setDiscussionError(null);
     setDiscussionCompletionReason(null);
 
@@ -142,25 +151,33 @@ export function DiscussionTabLayout({
         return;
       }
 
-      const discussionResult = await discussionGateway.queryWithCompletion(
-        [
-          {
-            kinds: [34550],
-            authors: [discussionInfo.authorPubkey],
-            "#d": [discussionInfo.dTag],
-            limit: 1,
-          },
-        ],
-        {
-          idleTimeoutMs: discussionConfig.defaultTimeout,
-          hardTimeoutMs: discussionConfig.defaultTimeout * 3,
-        }
-      );
+      const plan = createDiscussionReadPlan("discussion-meta", discussionReadStrategy, {
+        authorPubkey: discussionInfo.authorPubkey,
+        dTag: discussionInfo.dTag,
+        relayHints: discussionInfo.relays,
+      });
+      const relayUrls = selectRelayCandidates({
+        hints: plan.relayHints,
+        successful: knownData?.successfulRelays,
+        configured: discussionConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
+        defaults: [],
+        limit: discussionReadStrategy.relayLimit,
+      }).map((relay) => relay.url);
+      const discussionResult = await discussionGateway.queryWithCompletion(plan.filters, {
+        idleTimeoutMs: plan.idleTimeoutMs,
+        hardTimeoutMs: plan.hardTimeoutMs,
+        relayUrls,
+      });
       if (loadSequenceRef.current !== loadSequence) return;
 
       const latest = pickLatestDiscussion(discussionResult.events);
       if (latest) {
         setDiscussion(latest);
+        saveKnownDiscussionData(discussionInfo.discussionId, {
+          metadata: latest,
+          eventIds: discussionResult.events.map((event) => event.id),
+          successfulRelays: discussionResult.relayUrls,
+        });
       }
       setDiscussionCompletionReason(discussionResult.completionReason);
       setIsDiscussionLoading(false);
@@ -326,6 +343,13 @@ export function DiscussionTabLayout({
           </button>
         </div>
       )}
+
+      <DiscussionReadStatus
+        isLoading={isDiscussionLoading}
+        completionReason={discussionCompletionReason}
+        hasData={Boolean(discussion)}
+        onReload={() => void loadDiscussionData()}
+      />
 
       {/* タブナビゲーション（既存） */}
       <nav role="tablist" className="join mb-6" aria-label="ページナビゲーション">

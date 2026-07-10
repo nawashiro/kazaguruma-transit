@@ -19,6 +19,7 @@ import {
 } from "@/lib/config/discussion-config";
 import { PermissionError } from "@/components/discussion/PermissionGuards";
 import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
+import { saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parseDiscussionEvent,
@@ -257,6 +258,15 @@ export default function DiscussionManagePage() {
         configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
         defaults: [],
       }).then((snapshot) => {
+        const events = [...snapshot.primaryEvents, ...snapshot.approvalEvents];
+        saveKnownDiscussionData(discussionInfo.discussionId, {
+          metadata: null,
+          eventIds: events.map((event) => event.id),
+          attemptedRelayUrls: snapshot.attemptedRelayUrls,
+          successfulEventRelayUrls: snapshot.successfulRelayUrls,
+          successfulRelays: [],
+          events,
+        });
         rebuildFromEvents(snapshot.primaryEvents, snapshot.approvalEvents);
       });
     }

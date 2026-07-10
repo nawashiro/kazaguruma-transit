@@ -26,6 +26,7 @@ import { getNostrServiceConfig } from "@/lib/config/discussion-config";
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
 import { createNostrService } from "@/lib/nostr/nostr-service";
+import { saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
 import type {
   Discussion,
   DiscussionPost,
@@ -102,6 +103,17 @@ export default function DiscussionsPage() {
         completionReason: moderation?.completionReason ?? "eose",
         eventCount: moderation?.approvalEvents.length ?? 0,
       });
+      if (moderation) {
+        const events = [...moderation.primaryEvents, ...moderation.approvalEvents];
+        saveKnownDiscussionData(discussionInfo.discussionId, {
+          metadata: null,
+          eventIds: events.map((event) => event.id),
+          attemptedRelayUrls: moderation.attemptedRelayUrls,
+          successfulEventRelayUrls: moderation.successfulRelayUrls,
+          successfulRelays: [],
+          events,
+        });
+      }
 
       const listApprovals = (moderation?.approvalEvents ?? (await discussionGateway.queryWithCompletion([{ kinds: [4550], "#a": [discussionInfo.discussionId], limit: 50 }], { idleTimeoutMs: readStrategy.idleTimeoutMs, hardTimeoutMs: readStrategy.hardTimeoutMs, relayUrls: [] })).events)
         .map(parseApprovalEvent)

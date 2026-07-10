@@ -177,7 +177,9 @@ export function DiscussionTabLayout({
           metadata: latest,
           eventIds: discussionResult.events.map((event) => event.id),
           attemptedRelayUrls: discussionResult.relayUrls,
-          successfulEventRelayUrls: [],
+          successfulEventRelayUrls: Array.from(
+            new Set(Object.values(discussionResult.sourceRelayUrlsByEventId ?? {}).flat())
+          ),
           successfulRelays: [],
         });
       }

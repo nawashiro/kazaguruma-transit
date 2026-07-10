@@ -11,6 +11,7 @@ import {
   isDiscussionsEnabled,
 } from "@/lib/config/discussion-config";
 import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
+import { saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
 import {
   parsePostEvent,
   parseApprovalEvent,
@@ -171,6 +172,15 @@ export function BusStopDiscussion({
       configured: config.relays.filter((relay) => relay.read).map((relay) => relay.url),
       defaults: [],
     }).then((snapshot) => {
+      const events = [...snapshot.primaryEvents, ...snapshot.approvalEvents];
+      saveKnownDiscussionData(config.busStopDiscussionId, {
+        metadata: null,
+        eventIds: events.map((event) => event.id),
+        attemptedRelayUrls: snapshot.attemptedRelayUrls,
+        successfulEventRelayUrls: snapshot.successfulRelayUrls,
+        successfulRelays: [],
+        events,
+      });
       postsEventsRef.current = snapshot.primaryEvents;
       approvalEventsRef.current = snapshot.approvalEvents;
       updateFromEvents(snapshot.primaryEvents, snapshot.approvalEvents, snapshot.completionReason === "eose");

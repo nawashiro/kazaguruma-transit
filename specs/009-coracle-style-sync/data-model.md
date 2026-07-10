@@ -52,10 +52,13 @@
 | `primaryEvents` | `NostrEventDTO[]` | 投稿・申請のevent IDで重複排除した集合 |
 | `approvalEvents` | `NostrEventDTO[]` | 対象投稿IDに結び付くkind 4550のID重複なし集合 |
 | `relayCandidates` | `RelayCandidate[]` | hint・推奨・成功・設定・既定を同じ入力から選別 |
+| `initialRelayUrls` | `string[]` | 初回readで使う最大3 relay |
+| `attemptedRelayUrls` | `string[]` | 初回・再読取を通じて実際に問い合わせたrelay |
+| `nextRelayUrls` | `string[]` | 未応答・partial時に次回候補となる未試行relay（最大3件） |
 | `completionReason` | `CompletionReason` | 未観測の承認を未承認と確定できるか判断する根拠 |
-| `approvalState` | `"approved" | "unapproved" | "unknown"` | partial又は再照会待ちで承認未観測なら`unknown` |
+| `approvalState` | `"approved" | "unapproved" | "unknown"` | 承認未観測かつpartial又は`nextRelayUrls`が残る場合は`unknown` |
 
-監査ページでは`primaryEvents`だけに10件のページサイズを適用する。各`primaryEvent.id`に対する承認は別filterの`#e`で取得する。
+初回readは最大3 relayとする。承認未観測でpartialの場合は未試行候補を最大3 relayずつ限定再読取し、EOSEを受信するか候補が尽きた時点で停止する。監査ページでは`primaryEvents`だけに10件のページサイズを適用する。各`primaryEvent.id`に対する承認は、`#e`で当該ページの主イベントIDだけを指定し、`limit: 10`を持つ別filterで取得する。
 
 ## UI State Transitions
 

@@ -104,18 +104,21 @@
 
 **Purpose**: relay候補と投稿・承認の結合経路の違いで、監査だけが承認済みを観測し、詳細又は承認画面が未承認と表示する不整合を解消する。
 
-- [ ] T054 [P] `src/lib/discussion/__tests__/relay-candidate-selector.test.ts` に、hint上位3件の外にあるconfigured又はsuccessful relayを承認状態readのフォールバック候補として扱う失敗テストを追加する
-- [ ] T055 [P] `src/lib/discussion/__tests__/discussion-moderation-snapshot.test.ts` を追加し、同一投稿IDのkind 4550が観測された場合の`approved`、partial時の未観測を`unknown`とする失敗テストを追加する
-- [ ] T056 [P] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`、`src/app/discussions/[naddr]/approve/__tests__/page.streaming.test.tsx`、`src/components/discussion/__tests__/AuditLogSection.test.tsx` に、configured/successful relayだけが承認を返すfixtureで三画面の承認状態が一致する失敗テストを追加する
-- [ ] T057 `src/lib/discussion/` に共通moderation read・スナップショット・event ID結合を実装し、全呼び出し元がhint、recommended、successful、configured、defaultを同じ候補入力として渡すようにする
-- [ ] T058 `src/app/discussions/[naddr]/page.tsx` と `src/app/discussions/[naddr]/approve/page.tsx` を共通moderation snapshotへ移行し、partial/timeout中の未観測承認を未承認と確定表示しないようにする
-- [ ] T059 `src/components/discussion/AuditLogSection.tsx` を主イベント10件のreadと対象event IDへの承認readへ分離し、共通snapshotで承認状態を表示するようにする
-- [ ] T060 T054-T059のテスト、`npx tsc --noEmit`、`npm run lint`、`npm test`、`npm run build` を実行し、結果を`quickstart.md`へ追記する
+- [ ] T054 [P] `src/lib/discussion/__tests__/relay-candidate-selector.test.ts` に、初回3 relay、partial時の未試行候補最大3 relay、EOSE又は候補枯渇で停止する承認状態readの候補契約テストを追加する
+- [ ] T055 [P] `src/lib/discussion/__tests__/discussion-moderation-snapshot.test.ts` を追加し、同一投稿IDのkind 4550が観測された場合の`approved`、partial又は再照会候補ありで未観測の場合の`unknown`、全候補からEOSEを受信後も未観測の場合だけの`unapproved`を検証する失敗テストを追加する
+- [ ] T056 [P] `src/components/discussion/__tests__/DiscussionReadStatus.test.tsx` に、承認状態が`unknown`へ遷移した際の日本語文言、`role="status"`又は`aria-live`、再試行ボタンのアクセシブル名を検証する失敗テストを追加する
+- [ ] T057 [P] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`、`src/app/discussions/[naddr]/approve/__tests__/page.streaming.test.tsx`、`src/components/discussion/__tests__/AuditLogSection.test.tsx` に、configured/successful relayだけが承認を返すfixtureで三画面の承認状態が一致する失敗テストを追加する
+- [ ] T058 `src/lib/discussion/` に共通moderation read・スナップショット・event ID結合を実装し、全呼び出し元がhint、recommended、successful、configured、defaultを同じ候補入力として渡すようにする
+- [ ] T059 `src/components/discussion/DiscussionReadStatus.tsx` と統合箇所に、`unknown`状態の日本語通知、アクセシブルな状態変化、再試行導線を実装する
+- [ ] T060 `src/app/discussions/[naddr]/page.tsx` と `src/app/discussions/[naddr]/approve/page.tsx` を共通moderation snapshotへ移行し、partial/timeout中の未観測承認を未承認と確定表示しないようにする
+- [ ] T061 `src/components/discussion/AuditLogSection.tsx` を主イベント10件のreadと、当該主イベントIDだけを`#e`で対象にする最大10件の承認readへ分離し、共通snapshotで承認状態を表示するようにする
+- [ ] T062 T054-T061のテスト、`npx tsc --noEmit`、`npm run lint`、`npm test`、`npm run build` を実行し、結果を`quickstart.md`へ追記する
 
 ## Dependencies and Execution Order
 
 - Phase 1 -> Phase 2 -> US1/US2/US3/US4 -> Polish。
 - US1はFoundation完了後のMVP。US2とUS3はUS1と独立して開始できるが、同じread plan基盤を使う。US4はFoundation完了後に開始できるが、US1のメタデータ統合と合わせて確認する。
+- Phase 8はT054-T057の失敗テスト後にT058を実装し、T059、T060、T061、T062の順に進める。T054-T057は並行可能である。
 
 ## Parallel Opportunities
 
@@ -124,6 +127,7 @@
 - US2: T023-T025。
 - US3: T030-T032。
 - US4: T037-T038。
+- Phase 8: T054-T057。
 
 ## Implementation Strategy
 

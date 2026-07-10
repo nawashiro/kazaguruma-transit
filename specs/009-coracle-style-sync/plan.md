@@ -7,6 +7,12 @@
 
 Discussion/Nostr画面の取得を、画面目的別の小さな read plan に統一する。既存の NDK gateway、completion-aware read、ID重複排除を再利用し、relay候補の選別、取得結果の観測、ブラウザ内の既知データ、部分取得状態の表示を追加する。NIP-01/09/25/72のイベント解釈、投稿・承認・評価・モデレーターの権限判定は変更しない。
 
+### 2026-07-10 承認状態整合性フォローアップ
+
+009完了後の調査で、詳細・承認・監査が異なるrelay候補と異なる投稿復元経路を使用し、同一のkind 4550承認を相反して表示できることを確認した。フォローアップでは、共通の moderation snapshot をread境界に追加し、三画面でrelay候補入力とevent IDによる投稿・承認結合を共有する。初回3 relayの性能制約は保持するが、partial又はtimeout時の未観測承認は`unknown`として扱い、未承認と確定しない。監査は主イベント10件のページングと関連承認照会を分離する。
+
+調査の根拠、対象範囲、受入条件は [承認状態不整合の調査と修正計画](../../docs/discussion/2026-07-10-009-approval-state-consistency-investigation.md) に記録する。
+
 ## Technical Context
 
 **Language/Version**: TypeScript 5 strict, React 19, Next.js 15 App Router

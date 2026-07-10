@@ -43,6 +43,20 @@
 
 会話IDごとに、最新会話メタデータ、既知イベントIDとrelay URL、relay成功実績、保存時刻を持つ。`sessionStorage`にversion付きJSONで保存し、relay結果を受けるたびにマージする。
 
+## DiscussionModerationSnapshot
+
+同一会話の投稿・申請イベント、承認イベント、relay選別結果、完了状態をまとめた画面横断の読み取り結果。詳細、承認、監査は投稿IDと承認イベントの`e` tagをこのスナップショット内で結合する。
+
+| Field | Type | Rule |
+|---|---|---|
+| `primaryEvents` | `NostrEventDTO[]` | 投稿・申請のevent IDで重複排除した集合 |
+| `approvalEvents` | `NostrEventDTO[]` | 対象投稿IDに結び付くkind 4550のID重複なし集合 |
+| `relayCandidates` | `RelayCandidate[]` | hint・推奨・成功・設定・既定を同じ入力から選別 |
+| `completionReason` | `CompletionReason` | 未観測の承認を未承認と確定できるか判断する根拠 |
+| `approvalState` | `"approved" | "unapproved" | "unknown"` | partial又は再照会待ちで承認未観測なら`unknown` |
+
+監査ページでは`primaryEvents`だけに10件のページサイズを適用する。各`primaryEvent.id`に対する承認は別filterの`#e`で取得する。
+
 ## UI State Transitions
 
 `loading` -> `available`（EOSE）

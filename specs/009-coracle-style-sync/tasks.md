@@ -100,6 +100,18 @@
 - [X] T052 `src/components/discussion/DiscussionReadStatus.tsx` と全統合箇所をキーボード・スクリーンリーダー観点で確認する
 - [X] T053 `npx tsc --noEmit && npm run lint && npm test && npm run build` を `/home/navi/kazaguruma-transit` で実行する
 
+## Phase 8: 承認状態の画面間整合性（009フォローアップ）
+
+**Purpose**: relay候補と投稿・承認の結合経路の違いで、監査だけが承認済みを観測し、詳細又は承認画面が未承認と表示する不整合を解消する。
+
+- [ ] T054 [P] `src/lib/discussion/__tests__/relay-candidate-selector.test.ts` に、hint上位3件の外にあるconfigured又はsuccessful relayを承認状態readのフォールバック候補として扱う失敗テストを追加する
+- [ ] T055 [P] `src/lib/discussion/__tests__/discussion-moderation-snapshot.test.ts` を追加し、同一投稿IDのkind 4550が観測された場合の`approved`、partial時の未観測を`unknown`とする失敗テストを追加する
+- [ ] T056 [P] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`、`src/app/discussions/[naddr]/approve/__tests__/page.streaming.test.tsx`、`src/components/discussion/__tests__/AuditLogSection.test.tsx` に、configured/successful relayだけが承認を返すfixtureで三画面の承認状態が一致する失敗テストを追加する
+- [ ] T057 `src/lib/discussion/` に共通moderation read・スナップショット・event ID結合を実装し、全呼び出し元がhint、recommended、successful、configured、defaultを同じ候補入力として渡すようにする
+- [ ] T058 `src/app/discussions/[naddr]/page.tsx` と `src/app/discussions/[naddr]/approve/page.tsx` を共通moderation snapshotへ移行し、partial/timeout中の未観測承認を未承認と確定表示しないようにする
+- [ ] T059 `src/components/discussion/AuditLogSection.tsx` を主イベント10件のreadと対象event IDへの承認readへ分離し、共通snapshotで承認状態を表示するようにする
+- [ ] T060 T054-T059のテスト、`npx tsc --noEmit`、`npm run lint`、`npm test`、`npm run build` を実行し、結果を`quickstart.md`へ追記する
+
 ## Dependencies and Execution Order
 
 - Phase 1 -> Phase 2 -> US1/US2/US3/US4 -> Polish。

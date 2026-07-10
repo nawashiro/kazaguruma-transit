@@ -16,6 +16,20 @@
 
 **Alternatives considered**: 毎回全relayへ送る方式は遅いrelayによる待ち時間と不要なブロードキャストを増やすため不採用。
 
+## Decision: 承認状態のrelay候補と結合規則を画面横断で共有する
+
+詳細、承認、監査は、naddr hint、推奨relay、既知の成功relay、設定relay、既定relayを同じ入力として共通の moderation read に渡す。初回は最大3 relayを維持するが、承認が未観測でpartialになった結果は「未承認」と確定せず、次候補への限定再読取または再試行を可能にする。投稿はevent ID、承認はその`e` tagで結合し、各画面が独自の集合から状態を導出しない。
+
+**Rationale**: hint優先の3件だけを見る詳細・承認と、configured relayだけを見る監査が存在すると、同じkind 4550に対して相反する表示が発生する。未観測は不承認の証拠ではない。
+
+**Alternatives considered**: すべての画面を全relayへ常時ブロードキャストする方式は009の選別同期と性能要件に反するため不採用。画面ごとに表示を独自に補正する方式は再び差異を生むため不採用。
+
+## Decision: auditの主イベント取得と承認解決を分離する
+
+auditは主イベント（投稿又は申請）を最大10件取得し、そのevent IDを`#e`条件にして関連承認を別readする。表示対象のページ数制約は主イベントに適用し、承認の有無をkind混在filterの時刻順・limitに委ねない。
+
+**Rationale**: 投稿と承認は発生時刻が異なるため、単一の`kinds: [1111, 1, 4550], limit: 10`では関連イベントが同じページに載る保証がない。
+
 ## Decision: 選別relay集合はNDKRelaySetとして購読へ渡す
 
 `NostrService`は`NDKRelaySet.fromRelayUrls(selectedRelayUrls, ndk)`を作り、`ndk.subscribe(filter, options, relaySet)`の第3引数に渡す。これにより、NDKインスタンスを画面ごとに増やさず、readごとに問い合わせ先を限定する。候補不足のfallbackは購読開始前に候補リストへ補充し、実行済みreadを全relayへ再送しない。

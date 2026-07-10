@@ -46,16 +46,10 @@ const approvalsByTarget = (events: NostrEventDTO[]): Map<string, NostrEventDTO> 
   const map = new Map<string, NostrEventDTO>();
   for (const event of events) {
     if (event.kind !== 4550) continue;
-    const targets = [getTagValue(event, "e"), getTagValue(event, "a")].filter(
-      (target): target is string => Boolean(target)
-    );
-    if (targets.length === 0) continue;
-    for (const target of targets) {
-      const existing = map.get(target);
-      if (!existing || event.created_at >= existing.created_at) {
-        map.set(target, event);
-      }
-    }
+    const target = getTagValue(event, "e");
+    if (!target) continue;
+    const existing = map.get(target);
+    if (!existing || event.created_at >= existing.created_at) map.set(target, event);
   }
   return map;
 };
@@ -68,10 +62,7 @@ const resolveApproval = (
   const byEventId = approvals.get(event.id);
   if (byEventId) return byEventId;
 
-  const byRef =
-    approvals.get(getTagValue(event, "e") ?? "") ??
-    approvals.get(getTagValue(event, "a") ?? "");
-  return byRef;
+  return approvals.get(getTagValue(event, "e") ?? "");
 };
 
 const toDto = (

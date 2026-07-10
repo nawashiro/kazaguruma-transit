@@ -119,7 +119,7 @@
 
 **Purpose**: 一覧、管理、BusStop系、評価・集計を含む全Discussion表示面で、投稿canonical source・承認`e`タグ結合・relay状態を共通化する。
 
-- [ ] T064 [P] `src/lib/discussion/__tests__/audit-timeline-mapper.test.ts` に、同じ`a`タグだが異なる`e`タグの承認を偽陽性にしないテストを追加する
+- [X] T064 [P] `src/lib/discussion/__tests__/audit-timeline-mapper.test.ts` に、同じ`a`タグだが異なる`e`タグの承認を偽陽性にしないテストを追加する
 - [ ] T065 [P] `src/app/discussions/__tests__/page.streaming.test.tsx`、`src/app/discussions/manage/__tests__/page.test.tsx`、`src/components/discussion/__tests__/BusStopDiscussion.streaming.test.tsx`、`src/components/discussion/__tests__/BusStopMemo.streaming.test.tsx` に、承認遅延・別relay・空streamで`unknown`を維持し、承認到着後に`approved`へ更新するfixtureを追加する
 - [ ] T066 [P] `src/components/discussion/__tests__/EvaluationComponent.test.tsx` に、`unknown`投稿を確定的に未承認除外せずsnapshot更新後に再評価できるテストを追加する
 - [ ] T067 `src/app/discussions/page.tsx` をprimary投稿/会話イベントと承認snapshotの結合へ移行し、承認イベント本文からの投稿復元を廃止する

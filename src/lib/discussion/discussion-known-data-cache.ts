@@ -7,6 +7,7 @@ export interface KnownDiscussionData<TMetadata = unknown, TEvent = unknown> {
   metadata: TMetadata | null;
   eventIds: string[];
   attemptedRelayUrls?: string[];
+  successfulEventRelayUrls?: string[];
   successfulRelays: string[];
   /** Cached event bodies are provisional only; every visit still reads relays. */
   events?: TEvent[];
@@ -29,7 +30,8 @@ export const loadKnownDiscussionData = <TMetadata, TEvent = unknown>(
       metadata: parsed.metadata ?? null,
       eventIds: parsed.eventIds ?? [],
       attemptedRelayUrls: parsed.attemptedRelayUrls ?? [],
-      successfulRelays: parsed.successfulRelays ?? [],
+      successfulEventRelayUrls: parsed.successfulEventRelayUrls ?? parsed.successfulRelays ?? [],
+      successfulRelays: parsed.successfulRelays ?? parsed.successfulEventRelayUrls ?? [],
       events: parsed.events ?? [],
     };
   } catch {
@@ -53,8 +55,9 @@ export const saveKnownDiscussionData = <TMetadata, TEvent extends { id: string }
     metadata: incoming.metadata ?? current?.metadata ?? null,
     eventIds: Array.from(new Set([...(current?.eventIds ?? []), ...incoming.eventIds])),
     attemptedRelayUrls: Array.from(new Set([...(current?.attemptedRelayUrls ?? []), ...(incoming.attemptedRelayUrls ?? [])])),
+    successfulEventRelayUrls: Array.from(new Set([...(current?.successfulEventRelayUrls ?? current?.successfulRelays ?? []), ...(incoming.successfulEventRelayUrls ?? incoming.successfulRelays ?? [])])),
     successfulRelays: Array.from(
-      new Set([...(current?.successfulRelays ?? []), ...incoming.successfulRelays])
+      new Set([...(current?.successfulRelays ?? current?.successfulEventRelayUrls ?? []), ...(incoming.successfulRelays ?? incoming.successfulEventRelayUrls ?? [])])
     ),
     events: Array.from(eventsById.values()),
   };

@@ -17,6 +17,10 @@ import { getDiscussionReadStrategyConfig, getNostrServiceConfig } from "@/lib/co
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
 import {
+  loadKnownDiscussionData,
+  saveKnownDiscussionData,
+} from "@/lib/discussion/discussion-known-data-cache";
+import {
   mapDiscussionAuditTimeline,
   mapListAuditTimeline,
 } from "@/lib/discussion/audit-timeline-mapper";
@@ -271,6 +275,15 @@ export const AuditLogSection = React.forwardRef<
       setVisibleCount(initialVisibleCount);
 
       try {
+        const cachedEvents = discussionInfo
+          ? loadKnownDiscussionData<Discussion>(discussionInfo.discussionId)?.eventIds
+          : [];
+        if (cachedEvents && cachedEvents.length > 0) {
+          logger.info("audit-log known events available", {
+            discussionId: discussionInfo?.discussionId,
+            eventCount: cachedEvents.length,
+          });
+        }
         let baseDiscussion = discussion;
         if (!isDiscussionList && loadDiscussionIndependently && !baseDiscussion) {
           baseDiscussion = await loadDiscussionForAudit();
@@ -296,6 +309,13 @@ export const AuditLogSection = React.forwardRef<
         });
         const normalizedPage = normalizePageSize(pageResult.events);
         setAuditEvents(normalizedPage);
+        if (discussionInfo) {
+          saveKnownDiscussionData(discussionInfo.discussionId, {
+            metadata: baseDiscussion,
+            eventIds: normalizedPage.map((event) => event.id),
+            successfulRelays: pageResult.relayUrls ?? [],
+          });
+        }
         await applyAuditEvents(normalizedPage, baseDiscussion);
 
         if (normalizedPage.length > 0) {

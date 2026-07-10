@@ -143,8 +143,8 @@ describe("DiscussionsPage streaming", () => {
     );
     expect(gatewayMock.queryWithCompletion).toHaveBeenNthCalledWith(
       1,
-      [{ kinds: [4550], "#a": ["34550:admin:list"] }],
-      { idleTimeoutMs: 500, hardTimeoutMs: 1500 }
+      [{ kinds: [4550], "#a": ["34550:admin:list"], limit: 50 }],
+      { idleTimeoutMs: 500, hardTimeoutMs: 1500, relayUrls: [] }
     );
     expect(gatewayMock.queryWithCompletion).toHaveBeenNthCalledWith(
       2,

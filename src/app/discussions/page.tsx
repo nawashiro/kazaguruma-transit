@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 import React, { useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
-import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
+import { getDiscussionReadStrategyConfig, isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import { DiscussionListTabLayout } from "@/components/discussion/DiscussionListTabLayout";
 import {
   createDiscussionNdkGateway,
@@ -23,6 +23,8 @@ import {
   extractDiscussionFromNaddr,
 } from "@/lib/nostr/naddr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
+import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
+import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
 import type {
   Discussion,
   DiscussionPost,
@@ -31,6 +33,10 @@ import type {
 import { logger } from "@/utils/logger";
 
 const nostrServiceConfig = getNostrServiceConfig();
+const readStrategy =
+  typeof getDiscussionReadStrategyConfig === "function"
+    ? getDiscussionReadStrategyConfig()
+    : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
 const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function DiscussionsPage() {
@@ -81,18 +87,21 @@ export default function DiscussionsPage() {
         );
       };
 
-      const approvalsResult = await discussionGateway.queryWithCompletion(
-        [
-          {
-            kinds: [4550],
-            "#a": [discussionInfo.discussionId],
-          },
-        ],
-        {
-          idleTimeoutMs: nostrServiceConfig.defaultTimeout,
-          hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
-        }
-      );
+      const approvalsPlan = createDiscussionReadPlan("discussion-approvals", readStrategy, {
+        discussionId: discussionInfo.discussionId,
+        relayHints: discussionInfo.relays,
+      });
+      const relayUrls = selectRelayCandidates({
+        hints: approvalsPlan.relayHints,
+        configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
+        defaults: [],
+        limit: readStrategy.relayLimit,
+      }).map((relay) => relay.url);
+      const approvalsResult = await discussionGateway.queryWithCompletion(approvalsPlan.filters, {
+        idleTimeoutMs: approvalsPlan.idleTimeoutMs,
+        hardTimeoutMs: approvalsPlan.hardTimeoutMs,
+        relayUrls,
+      });
       logger.info("discussions-list approvals fetch completed", {
         discussionId: discussionInfo.discussionId,
         completionReason: approvalsResult.completionReason,

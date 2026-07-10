@@ -13,7 +13,9 @@ import {
   parseDiscussionEvent,
 } from "@/lib/nostr/nostr-utils";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
-import { getNostrServiceConfig } from "@/lib/config/discussion-config";
+import { getDiscussionReadStrategyConfig, getNostrServiceConfig } from "@/lib/config/discussion-config";
+import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
+import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
 import {
   mapDiscussionAuditTimeline,
   mapListAuditTimeline,
@@ -31,6 +33,10 @@ import type { Event, EventFetchCompletion } from "@/lib/nostr/nostr-service";
 import { NostrEvent } from "nosskey-sdk";
 
 const nostrServiceConfig = getNostrServiceConfig();
+const auditReadStrategy =
+  typeof getDiscussionReadStrategyConfig === "function"
+    ? getDiscussionReadStrategyConfig()
+    : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
 const nostrService = createNostrService(nostrServiceConfig);
 const AUDIT_PAGE_SIZE = 10;
 
@@ -125,24 +131,22 @@ export const AuditLogSection = React.forwardRef<
     const fetchAuditEventsPage = useCallback(
       async (until?: number): Promise<EventFetchCompletion> => {
         const targetDiscussion = getAuditDiscussionRef();
-        const filter: {
-          kinds: number[];
-          "#a": string[];
-          limit: number;
-          until?: number;
-        } = {
-          kinds: [1111, 1, 4550],
-          "#a": [targetDiscussion.discussionId],
-          limit: AUDIT_PAGE_SIZE,
-        };
+        const plan = createDiscussionReadPlan("discussion-audit", auditReadStrategy, {
+          discussionId: targetDiscussion.discussionId,
+          until,
+          relayHints: [],
+        });
+        const relayUrls = selectRelayCandidates({
+          hints: plan.relayHints,
+          configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
+          defaults: [],
+          limit: auditReadStrategy.relayLimit,
+        }).map((relay) => relay.url);
 
-        if (typeof until === "number") {
-          filter.until = until;
-        }
-
-        return await nostrService.getEventsWithCompletion([filter], {
-          idleTimeoutMs: nostrServiceConfig.defaultTimeout,
-          hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
+        return await nostrService.getEventsWithCompletion(plan.filters as Parameters<typeof nostrService.getEventsWithCompletion>[0], {
+          idleTimeoutMs: plan.idleTimeoutMs,
+          hardTimeoutMs: plan.hardTimeoutMs,
+          ...(relayUrls.length > 0 ? { relayUrls } : {}),
         });
       },
       [getAuditDiscussionRef]

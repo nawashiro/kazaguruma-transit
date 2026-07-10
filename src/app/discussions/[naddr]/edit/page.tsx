@@ -145,7 +145,7 @@ export default function DiscussionEditPage() {
     setIsLoading(true);
     const relayUrls = selectRelayCandidates({
       hints: discussionInfo.relays,
-      configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
+      configured: (nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
       defaults: [],
       limit: readStrategy.relayLimit,
     }).map((relay) => relay.url);

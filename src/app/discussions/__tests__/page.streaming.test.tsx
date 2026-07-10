@@ -38,6 +38,10 @@ jest.mock("@/lib/nostr/discussion-ndk-gateway", () => {
   };
 });
 
+jest.mock("@/lib/nostr/nostr-service", () => ({
+  createNostrService: () => ({}),
+}));
+
 const { __mock: gatewayMock } = jest.requireMock(
   "@/lib/nostr/discussion-ndk-gateway"
 );

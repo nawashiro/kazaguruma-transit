@@ -24,7 +24,8 @@ import {
 } from "@/lib/nostr/naddr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
-import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
+import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
+import { createNostrService } from "@/lib/nostr/nostr-service";
 import type {
   Discussion,
   DiscussionPost,
@@ -38,6 +39,7 @@ const readStrategy =
     ? getDiscussionReadStrategyConfig()
     : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
 const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
+const nostrService = createNostrService(nostrServiceConfig);
 
 export default function DiscussionsPage() {
   const [discussions, setDiscussions] = React.useState<Discussion[]>([]);
@@ -87,46 +89,36 @@ export default function DiscussionsPage() {
         );
       };
 
-      const approvalsPlan = createDiscussionReadPlan("discussion-approvals", readStrategy, {
-        discussionId: discussionInfo.discussionId,
-        relayHints: discussionInfo.relays,
-      });
-      const relayUrls = selectRelayCandidates({
-        hints: approvalsPlan.relayHints,
-        configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
-        defaults: [],
-        limit: readStrategy.relayLimit,
-      }).map((relay) => relay.url);
-      const approvalsResult = await discussionGateway.queryWithCompletion(approvalsPlan.filters, {
-        idleTimeoutMs: approvalsPlan.idleTimeoutMs,
-        hardTimeoutMs: approvalsPlan.hardTimeoutMs,
-        relayUrls,
-      });
+      const moderation = typeof nostrService.getEventsWithCompletion === "function"
+        ? await loadDiscussionModerationSnapshot(nostrService, readStrategy, {
+            discussionId: discussionInfo.discussionId,
+            hints: discussionInfo.relays,
+            configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
+            defaults: [],
+          })
+        : null;
       logger.info("discussions-list approvals fetch completed", {
         discussionId: discussionInfo.discussionId,
-        completionReason: approvalsResult.completionReason,
-        eventCount: approvalsResult.eventCount,
-        elapsedMs: approvalsResult.elapsedMs,
+        completionReason: moderation?.completionReason ?? "eose",
+        eventCount: moderation?.approvalEvents.length ?? 0,
       });
 
-      const listApprovals = approvalsResult.events
+      const listApprovals = (moderation?.approvalEvents ?? (await discussionGateway.queryWithCompletion([{ kinds: [4550], "#a": [discussionInfo.discussionId], limit: 50 }], { idleTimeoutMs: readStrategy.idleTimeoutMs, hardTimeoutMs: readStrategy.hardTimeoutMs, relayUrls: [] })).events)
         .map(parseApprovalEvent)
         .filter((a): a is PostApproval => a !== null);
 
-      const listPosts = listApprovals
-        .map((approval) => {
-          try {
-            const approvedPost = JSON.parse(approval.event.content);
-            return parsePostEvent(approvedPost, [approval]);
-          } catch {
-            return null;
-          }
-        })
-        .filter((p): p is DiscussionPost => p !== null)
+      const listPosts = moderation
+        ? moderation.primaryEvents.map((event) => parsePostEvent(event, listApprovals)).filter((p): p is DiscussionPost => p !== null)
+        : listApprovals.map((approval) => {
+            try { return parsePostEvent(JSON.parse(approval.event.content), [approval]); } catch { return null; }
+          }).filter((p): p is DiscussionPost => p !== null)
         .sort((a, b) => b.createdAt - a.createdAt);
+      const visibleListPosts = moderation
+        ? listPosts.filter((post) => post.approved || moderation.approvalState === "unknown")
+        : listPosts;
 
       const individualDiscussionRefs = new Set<string>();
-      listPosts.forEach((post) => {
+      visibleListPosts.forEach((post) => {
         const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
         qTags.forEach((qTag) => {
           if (qTag[1] && qTag[1].startsWith("34550:")) {

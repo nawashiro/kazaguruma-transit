@@ -11,7 +11,9 @@ import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
+  getDiscussionReadStrategyConfig,
 } from "@/lib/config/discussion-config";
+import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
 import {
   buildDisabledActionState,
   DisabledReasonText,
@@ -35,6 +37,7 @@ import type { Event } from "@/lib/nostr/nostr-service";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrServiceConfig = getNostrServiceConfig();
+const readStrategy = typeof getDiscussionReadStrategyConfig === "function" ? getDiscussionReadStrategyConfig() : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
 const nostrService = createNostrService(nostrServiceConfig);
 
 export default function PostApprovalPage() {
@@ -82,6 +85,12 @@ export default function PostApprovalPage() {
     approvalStreamCleanupRef.current?.();
     approvalEventsRef.current = [];
     postsEventsRef.current = [];
+    const relayUrls = selectRelayCandidates({
+      hints: discussionInfo.relays,
+      configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
+      defaults: [],
+      limit: readStrategy.relayLimit,
+    }).map((relay) => relay.url);
 
     const postsStream = nostrService.streamEventsOnEvent(
       [
@@ -101,6 +110,7 @@ export default function PostApprovalPage() {
           setIsLoading(false);
         },
         timeoutMs: nostrServiceConfig.defaultTimeout,
+        ...(relayUrls.length > 0 ? { relayUrls } : {}),
       }
     );
 
@@ -117,6 +127,7 @@ export default function PostApprovalPage() {
           setIsLoading(false);
         },
         timeoutMs: nostrServiceConfig.defaultTimeout,
+        ...(relayUrls.length > 0 ? { relayUrls } : {}),
       }
     );
 

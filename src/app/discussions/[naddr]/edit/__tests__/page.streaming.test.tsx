@@ -147,4 +147,39 @@ describe("DiscussionEditPage streaming", () => {
       expect(screen.getByLabelText("タイトル *")).toHaveValue("Edit Me")
     );
   });
+
+  it("does not show not-found while the layout is still loading", () => {
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: true,
+      error: null,
+      completionReason: null,
+      reload: jest.fn(),
+    });
+
+    render(<DiscussionEditPage />);
+
+    expect(screen.queryByText("会話が見つかりません")).not.toBeInTheDocument();
+    expect(screen.getByText("会話情報を読み込み中...")).toBeInTheDocument();
+  });
+
+  it("shows not-found only after retrieval has completed without data", async () => {
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: false,
+      error: null,
+      completionReason: "eose",
+      reload: jest.fn(),
+    });
+    serviceMock.streamEventsOnEvent.mockImplementation(
+      (_filters: unknown, handlers: StreamEventsOptions) => {
+        handlers.onEose?.([]);
+        return () => {};
+      }
+    );
+
+    render(<DiscussionEditPage />);
+
+    expect(await screen.findByText("会話が見つかりません")).toBeInTheDocument();
+  });
 });

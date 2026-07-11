@@ -187,7 +187,8 @@ jest.mock("@/lib/discussion/user-creation-flow", () => ({
 }));
 
 jest.mock("@/components/discussion/LoginModal", () => ({
-  LoginModal: () => <div>Login Modal</div>,
+  LoginModal: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="login-modal">Login Modal</div> : null,
 }));
 
 describe("DiscussionEditPage listing request", () => {
@@ -307,5 +308,27 @@ describe("DiscussionEditPage listing request", () => {
       await screen.findByText("現在のモデレーター（Mnemonic）")
     ).toBeInTheDocument();
     expect(screen.getAllByText("あいこくしん あいさつ あいだ").length).toBeGreaterThan(0);
+  });
+
+  it("groups destructive actions separately and removes the duplicate return link", async () => {
+    render(<DiscussionEditPage />);
+
+    expect(await screen.findByRole("heading", { name: "危険な操作" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "会話を削除" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "会話に戻る" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "会話を編集" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "会話情報を編集" })).not.toBeInTheDocument();
+  });
+
+  it("shows one login action in the permission notice for unauthenticated users", async () => {
+    authState.user = { pubkey: "", isLoggedIn: false };
+
+    render(<DiscussionEditPage />);
+
+    const loginButtons = await screen.findAllByRole("button", { name: "ログイン" });
+    expect(loginButtons).toHaveLength(1);
+
+    fireEvent.click(loginButtons[0]);
+    expect(screen.getByTestId("login-modal")).toBeInTheDocument();
   });
 });

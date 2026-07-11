@@ -97,6 +97,8 @@ These principles are the operational source of truth for agents working in this 
 - Nostr relay（正本）、ブラウザ `sessionStorage`（暫定既知データとrelay実績）、SQLite/Prisma（対象外） (009-coracle-style-sync)
 - TypeScript 5.x（strict） + Next.js 15、React 19、Tailwind CSS 4、DaisyUI 5 (010-ui-font-compliance)
 - N/A（UI表示のみで永続データの変更なし） (010-ui-font-compliance)
+- TypeScript 5 strict、React 19、Next.js 15 App Router + Tailwind CSS 4、DaisyUI 5、既存の認証コンテキスト、Nostrサービス、React Testing Library、Jest (011-discussion-edit-ux)
+- N/A（本機能では新規永続化なし。既存の会話データ取得とブラウザ上の一時状態を利用） (011-discussion-edit-ux)
 
 ## Recent Changes
 - 005-license-page-autogen: Added TypeScript 5, React 19, Next.js 15 (App Router), DaisyUI 5, Tailwind CSS 4, and webpack-license-plugin based license aggregation

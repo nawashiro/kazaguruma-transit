@@ -402,13 +402,7 @@ export const AuditLogSection = React.forwardRef<
     );
 
     return (
-      <section aria-labelledby="audit-screen-heading">
-        <h2
-          id="audit-screen-heading"
-          className="text-xl font-semibold mb-4 ruby-text"
-        >
-          監査画面
-        </h2>
+      <section>
         <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="card-body">
             {auditError ? (

@@ -18,6 +18,7 @@ import { LoginModal } from "@/components/discussion/LoginModal";
 import {
   buildDisabledActionState,
   DisabledReasonText,
+  PermissionNotice,
 } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
@@ -551,11 +552,16 @@ export default function DiscussionEditPage() {
 
   if (isDiscussionLoading || isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div
+        className="container mx-auto px-4 py-8"
+        role="status"
+        aria-live="polite"
+      >
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
           <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
         </div>
+        <span className="sr-only">会話情報を読み込み中...</span>
       </div>
     );
   }
@@ -620,18 +626,7 @@ export default function DiscussionEditPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <Link
-            href={`/discussions/${naddrParam}`}
-            className="btn btn-ghost rounded-full dark:rounded-sm mb-4"
-          >
-            <span>← 会話に戻る</span>
-          </Link>
-
-          <h1 className="text-3xl font-bold mb-6 ruby-text">会話を編集</h1>
-        </div>
-
-        <main role="main">
+        <main id="discussion-edit-main" role="main">
           {successMessage ? (
             <div className="card bg-base-100 shadow-lg border border-green-200 dark:border-green-700">
               <div className="card-body text-center">
@@ -654,12 +649,8 @@ export default function DiscussionEditPage() {
               </div>
             </div>
           ) : (
-            <div className="card bg-base-100 shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="card bg-base-100 shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="card-body">
-                <h2 className="text-xl font-semibold mb-6 ruby-text">
-                  会話情報を編集
-                </h2>
-
                 <div className="space-y-6">
                   <div>
                     <label htmlFor="title" className="label ruby-text">
@@ -749,7 +740,7 @@ export default function DiscussionEditPage() {
                       </div>
                     )}
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <input
                         id="moderators"
                         type="text"
@@ -772,11 +763,13 @@ export default function DiscussionEditPage() {
                         追加
                       </Button>
                     </div>
-                    <DisabledReasonText
+                    <PermissionNotice
                       state={buildDisabledActionState(
                         hasEditPermission,
                         editPermissionReason
                       )}
+                      requiresLogin={!user.isLoggedIn}
+                      onLogin={() => setShowLoginModal(true)}
                     />
                   </div>
 
@@ -790,7 +783,11 @@ export default function DiscussionEditPage() {
                     </div>
                   )}
 
-                  <div className="flex gap-4">
+                  <section aria-labelledby="conversation-actions-title" className="space-y-3">
+                    <h3 id="conversation-actions-title" className="text-lg font-semibold ruby-text">
+                      会話の操作
+                    </h3>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                     <button
                       className="btn btn-primary rounded-full dark:rounded-sm ruby-text"
                       onClick={handleSave}
@@ -825,25 +822,24 @@ export default function DiscussionEditPage() {
                         <span>会話一覧へ掲載申請</span>
                       )}
                     </button>
+                  </div>
+                  </section>
 
+                  <section
+                    aria-labelledby="dangerous-actions-title"
+                    className="space-y-3 border-t border-base-300 pt-5"
+                  >
+                    <h3 id="dangerous-actions-title" className="text-lg font-semibold text-error ruby-text">
+                      危険な操作
+                    </h3>
                     <button
-                      className="btn btn-outline btn-error rounded-full dark:rounded-sm ruby-text"
+                      className="btn btn-outline btn-error rounded-full dark:rounded-sm ruby-text min-h-[44px]"
                       onClick={() => setShowDeleteConfirm(true)}
                       disabled={isSaving || isDeleting || !hasEditPermission}
                     >
-                      {isDeleting ? (
-                        <span>削除中...</span>
-                      ) : (
-                        <span>会話を削除</span>
-                      )}
+                      {isDeleting ? "削除中..." : "会話を削除"}
                     </button>
-                  </div>
-                  <DisabledReasonText
-                    state={buildDisabledActionState(
-                      hasEditPermission,
-                      editPermissionReason
-                    )}
-                  />
+                  </section>
 
                   <div className="divider"></div>
 
@@ -890,11 +886,13 @@ export default function DiscussionEditPage() {
                       >
                         {isRequestingPromotion ? "申請中..." : "モデレーター昇格を申請"}
                       </button>
-                      <DisabledReasonText
+                      <PermissionNotice
                         state={buildDisabledActionState(
                           canRequestPromotion,
                           requestPromotionReason
                         )}
+                        requiresLogin={false}
+                        onLogin={() => setShowLoginModal(true)}
                       />
                     </div>
 

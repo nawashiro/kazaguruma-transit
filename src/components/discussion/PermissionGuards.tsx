@@ -121,6 +121,39 @@ interface DisabledReasonTextProps {
   id?: string;
 }
 
+interface PermissionNoticeProps {
+  state: DisabledActionState;
+  requiresLogin: boolean;
+  onLogin: () => void;
+  className?: string;
+}
+
+export function PermissionNotice({
+  state,
+  requiresLogin,
+  onLogin,
+  className = "mt-2 flex flex-wrap items-center gap-3",
+}: PermissionNoticeProps) {
+  if (!state.disabled || !state.reason) {
+    return null;
+  }
+
+  return (
+    <div className={className} role="status" aria-live="polite">
+      <p className="text-sm text-base-content/70">{state.reason}</p>
+      {requiresLogin && (
+        <button
+          type="button"
+          className="btn btn-primary btn-sm min-h-[44px] rounded-full dark:rounded-sm"
+          onClick={onLogin}
+        >
+          ログイン
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function DisabledReasonText({
   state,
   className = "text-sm text-base-content/70 mt-1",

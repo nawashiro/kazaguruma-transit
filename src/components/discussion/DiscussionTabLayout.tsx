@@ -224,6 +224,7 @@ export function DiscussionTabLayout({
     normalizedPath === normalizedBase ||
     normalizedPath === `${normalizedBase}/`;
   const isAuditActive = normalizedPath === `${normalizedBase}/audit`;
+  const isEditActive = normalizedPath === `${normalizedBase}/edit`;
 
   const tabs = [
     {
@@ -235,6 +236,11 @@ export function DiscussionTabLayout({
       href: `${normalizedBase}/audit`,
       label: "監査ログ",
       isActive: isAuditActive,
+    },
+    {
+      href: `${normalizedBase}/edit`,
+      label: "編集",
+      isActive: isEditActive,
     },
   ];
 

@@ -73,11 +73,12 @@ describe("DiscussionTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      expect(tabs).toHaveLength(2);
+      expect(tabs).toHaveLength(3);
 
       // Main tab should be selected when on main path
       expect(tabs[0]).toHaveAttribute("aria-selected", "true");
       expect(tabs[1]).toHaveAttribute("aria-selected", "false");
+      expect(tabs[2]).toHaveAttribute("aria-selected", "false");
     });
 
     it("marks audit tab as selected when on audit path", () => {
@@ -92,6 +93,22 @@ describe("DiscussionTabLayout", () => {
       const tabs = screen.getAllByRole("tab");
       expect(tabs[0]).toHaveAttribute("aria-selected", "false");
       expect(tabs[1]).toHaveAttribute("aria-selected", "true");
+      expect(tabs[2]).toHaveAttribute("aria-selected", "false");
+    });
+
+    it("marks edit tab as selected when on edit path", () => {
+      mockPathname.mockReturnValue("/discussions/naddr123/edit");
+
+      render(
+        <DiscussionTabLayout baseHref="/discussions/naddr123">
+          <div>Content</div>
+        </DiscussionTabLayout>
+      );
+
+      const tabs = screen.getAllByRole("tab");
+      expect(tabs[0]).toHaveAttribute("aria-selected", "false");
+      expect(tabs[1]).toHaveAttribute("aria-selected", "false");
+      expect(tabs[2]).toHaveAttribute("aria-selected", "true");
     });
   });
 
@@ -119,11 +136,11 @@ describe("DiscussionTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      tabs[1].focus();
+      tabs[2].focus();
 
-      fireEvent.keyDown(tabs[1], { key: "ArrowLeft" });
+      fireEvent.keyDown(tabs[2], { key: "ArrowLeft" });
 
-      expect(document.activeElement).toBe(tabs[0]);
+      expect(document.activeElement).toBe(tabs[1]);
     });
 
     it("handles Home key to focus first tab", () => {
@@ -134,9 +151,9 @@ describe("DiscussionTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      tabs[1].focus();
+      tabs[2].focus();
 
-      fireEvent.keyDown(tabs[1], { key: "Home" });
+      fireEvent.keyDown(tabs[2], { key: "Home" });
 
       expect(document.activeElement).toBe(tabs[0]);
     });
@@ -153,7 +170,7 @@ describe("DiscussionTabLayout", () => {
 
       fireEvent.keyDown(tabs[0], { key: "End" });
 
-      expect(document.activeElement).toBe(tabs[1]);
+      expect(document.activeElement).toBe(tabs[2]);
     });
 
     it("wraps around on ArrowRight from last tab", () => {
@@ -164,9 +181,9 @@ describe("DiscussionTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      tabs[1].focus();
+      tabs[2].focus();
 
-      fireEvent.keyDown(tabs[1], { key: "ArrowRight" });
+      fireEvent.keyDown(tabs[2], { key: "ArrowRight" });
 
       expect(document.activeElement).toBe(tabs[0]);
     });
@@ -183,7 +200,7 @@ describe("DiscussionTabLayout", () => {
 
       fireEvent.keyDown(tabs[0], { key: "ArrowLeft" });
 
-      expect(document.activeElement).toBe(tabs[1]);
+      expect(document.activeElement).toBe(tabs[2]);
     });
   });
 
@@ -200,6 +217,7 @@ describe("DiscussionTabLayout", () => {
       const tabs = screen.getAllByRole("tab");
       expect(tabs[0]).toHaveClass("btn-active");
       expect(tabs[1]).not.toHaveClass("btn-active");
+      expect(tabs[2]).not.toHaveClass("btn-active");
     });
 
     it("applies active class to audit tab when on audit path", () => {
@@ -214,6 +232,7 @@ describe("DiscussionTabLayout", () => {
       const tabs = screen.getAllByRole("tab");
       expect(tabs[0]).not.toHaveClass("btn-active");
       expect(tabs[1]).toHaveClass("btn-active");
+      expect(tabs[2]).not.toHaveClass("btn-active");
     });
   });
 

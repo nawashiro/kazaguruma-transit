@@ -112,12 +112,18 @@ textarea:focus-visible {
   position: fixed;
   bottom: 20px;
   right: 20px;
+  z-index: 30;
   background-color: var(--color-primary);
   color: var(--color-primary-content);
   box-shadow: none;
   border: 2px solid
     color-mix(in oklab, var(--color-primary), rgb(0, 0, 0) calc(5%));
   border-radius: var(--radius-md);
+}
+
+/* 固定ルビボタンが本文・フォーム・フッターを覆わないための予約領域 */
+#main-content {
+  padding-bottom: max(5rem, calc(4rem + env(safe-area-inset-bottom)));
 }
 rt {
   margin-bottom: 0.3rem;

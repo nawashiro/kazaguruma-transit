@@ -95,6 +95,8 @@ These principles are the operational source of truth for agents working in this 
 - Nostr relay群（イベント本体）、ブラウザローカル（Passkey/PWKキャッシュ）、SQLite（GTFS等既存アプリデータ） (008-document-discussion-spec)
 - TypeScript 5 strict, React 19, Next.js 15 App Router + `@nostr-dev-kit/ndk`, DaisyUI 5, Tailwind CSS 4 (009-coracle-style-sync)
 - Nostr relay（正本）、ブラウザ `sessionStorage`（暫定既知データとrelay実績）、SQLite/Prisma（対象外） (009-coracle-style-sync)
+- TypeScript 5.x（strict） + Next.js 15、React 19、Tailwind CSS 4、DaisyUI 5 (010-ui-font-compliance)
+- N/A（UI表示のみで永続データの変更なし） (010-ui-font-compliance)
 
 ## Recent Changes
 - 005-license-page-autogen: Added TypeScript 5, React 19, Next.js 15 (App Router), DaisyUI 5, Tailwind CSS 4, and webpack-license-plugin based license aggregation

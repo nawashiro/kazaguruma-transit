@@ -57,15 +57,14 @@ export interface NdkQueryCompletion {
   sourceRelayUrlsByEventId: Record<string, string[]>;
 }
 
-export type ModeratorDecision = "approved" | "unapproved";
-
-export interface ModeratorDecisionDraftParams {
+export interface ModeratorUpdateDraftParams {
   discussionEvent: NostrEventDTO;
-  applicantPubkey: string;
-  decision: ModeratorDecision;
+  moderatorPubkeys: string[];
   actorPubkey: string;
   createdAt?: number;
 }
+export type ModeratorDecision = "approved" | "unapproved";
+export interface ModeratorDecisionDraftParams { discussionEvent: NostrEventDTO; applicantPubkey: string; decision: ModeratorDecision; actorPubkey: string; createdAt?: number }
 
 export interface DiscussionNdkGateway {
   connect: () => Promise<void>;
@@ -79,9 +78,10 @@ export interface DiscussionNdkGateway {
     filters: NdkEventFilter[],
     options?: ReadEventsOptions
   ) => Promise<NdkQueryCompletion>;
-  createModeratorDecisionDraft: (
-    params: ModeratorDecisionDraftParams
+  createModeratorUpdateDraft: (
+    params: ModeratorUpdateDraftParams
   ) => NostrEventDraft;
+  createModeratorDecisionDraft: (params: ModeratorDecisionDraftParams) => NostrEventDraft;
   subscribe: (
     filters: NdkEventFilter[],
     handlers: NdkSubscribeHandlers
@@ -135,25 +135,11 @@ export class UnconfiguredDiscussionNdkGateway implements DiscussionNdkGateway {
     };
   }
 
-  createModeratorDecisionDraft(
-    params: ModeratorDecisionDraftParams
+  createModeratorUpdateDraft(
+    params: ModeratorUpdateDraftParams
   ): NostrEventDraft {
-    const moderatorPubkeys = params.discussionEvent.tags
-      .filter((tag) => tag[0] === "p")
-      .map((tag) => tag[1])
-      .filter((pubkey): pubkey is string => Boolean(pubkey));
-    const nextModerators = new Set(moderatorPubkeys);
-
-    if (params.decision === "approved") {
-      nextModerators.add(params.applicantPubkey);
-    } else {
-      nextModerators.delete(params.applicantPubkey);
-    }
-
-    const nonModeratorTags = params.discussionEvent.tags.filter(
-      (tag) => tag[0] !== "p"
-    );
-    const moderatorTags = Array.from(nextModerators).map((pubkey) => [
+    const nonModeratorTags = params.discussionEvent.tags.filter((tag) => !(tag[0] === "p" && tag[3] === "moderator"));
+    const moderatorTags = [...new Set(params.moderatorPubkeys)].map((pubkey) => [
       "p",
       pubkey,
       "",
@@ -167,6 +153,11 @@ export class UnconfiguredDiscussionNdkGateway implements DiscussionNdkGateway {
       created_at: params.createdAt ?? Math.floor(Date.now() / 1000),
       pubkey: params.actorPubkey,
     };
+  }
+  createModeratorDecisionDraft(params: ModeratorDecisionDraftParams): NostrEventDraft {
+    const current = params.discussionEvent.tags.filter((tag) => tag[0] === "p" && tag[3] === "moderator").map((tag) => tag[1]);
+    const moderatorPubkeys = params.decision === "approved" ? [...current, params.applicantPubkey] : current.filter((key) => key !== params.applicantPubkey);
+    return this.createModeratorUpdateDraft({ discussionEvent: params.discussionEvent, moderatorPubkeys, actorPubkey: params.actorPubkey, createdAt: params.createdAt });
   }
 
   subscribe(): NdkSubscription {
@@ -243,25 +234,11 @@ export class LegacyNostrServiceDiscussionNdkGateway
     };
   }
 
-  createModeratorDecisionDraft(
-    params: ModeratorDecisionDraftParams
+  createModeratorUpdateDraft(
+    params: ModeratorUpdateDraftParams
   ): NostrEventDraft {
-    const moderatorPubkeys = params.discussionEvent.tags
-      .filter((tag) => tag[0] === "p")
-      .map((tag) => tag[1])
-      .filter((pubkey): pubkey is string => Boolean(pubkey));
-    const nextModerators = new Set(moderatorPubkeys);
-
-    if (params.decision === "approved") {
-      nextModerators.add(params.applicantPubkey);
-    } else {
-      nextModerators.delete(params.applicantPubkey);
-    }
-
-    const nonModeratorTags = params.discussionEvent.tags.filter(
-      (tag) => tag[0] !== "p"
-    );
-    const moderatorTags = Array.from(nextModerators).map((pubkey) => [
+    const nonModeratorTags = params.discussionEvent.tags.filter((tag) => !(tag[0] === "p" && tag[3] === "moderator"));
+    const moderatorTags = [...new Set(params.moderatorPubkeys)].map((pubkey) => [
       "p",
       pubkey,
       "",
@@ -275,6 +252,11 @@ export class LegacyNostrServiceDiscussionNdkGateway
       created_at: params.createdAt ?? Math.floor(Date.now() / 1000),
       pubkey: params.actorPubkey,
     };
+  }
+  createModeratorDecisionDraft(params: ModeratorDecisionDraftParams): NostrEventDraft {
+    const current = params.discussionEvent.tags.filter((tag) => tag[0] === "p" && tag[3] === "moderator").map((tag) => tag[1]);
+    const moderatorPubkeys = params.decision === "approved" ? [...current, params.applicantPubkey] : current.filter((key) => key !== params.applicantPubkey);
+    return this.createModeratorUpdateDraft({ discussionEvent: params.discussionEvent, moderatorPubkeys, actorPubkey: params.actorPubkey, createdAt: params.createdAt });
   }
 
   subscribe(

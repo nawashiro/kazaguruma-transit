@@ -29,6 +29,9 @@ jest.mock("@/lib/test/test-data-loader", () => ({
 jest.mock("@/lib/nostr/naddr-utils", () => ({
   extractDiscussionFromNaddr: () => null, // Return null for basic tests
 }));
+jest.mock("@/lib/auth/auth-context", () => ({
+  useAuth: () => ({ user: { pubkey: null, isLoggedIn: false } }),
+}));
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseDiscussionEvent: jest.fn(() => null),
 }));
@@ -96,7 +99,7 @@ describe("DiscussionTabLayout", () => {
       expect(tabs[2]).toHaveAttribute("aria-selected", "false");
     });
 
-    it("marks edit tab as selected when on edit path", () => {
+  it("does not expose the basic information tab to a non-creator", () => {
       mockPathname.mockReturnValue("/discussions/naddr123/edit");
 
       render(
@@ -108,7 +111,8 @@ describe("DiscussionTabLayout", () => {
       const tabs = screen.getAllByRole("tab");
       expect(tabs[0]).toHaveAttribute("aria-selected", "false");
       expect(tabs[1]).toHaveAttribute("aria-selected", "false");
-      expect(tabs[2]).toHaveAttribute("aria-selected", "true");
+      expect(tabs).toHaveLength(3);
+      expect(tabs[2]).toHaveAttribute("aria-selected", "false");
     });
   });
 

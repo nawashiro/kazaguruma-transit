@@ -82,7 +82,10 @@ jest.mock("@/lib/nostr/nostr-service", () => ({
   },
   getNostrServiceConfigKey: () => "test-config",
   createNostrService: () => ({
-    streamEventsOnEvent: (filters: Array<{ kinds?: number[]; "#t"?: string[] }>, handlers: { onEose?: (events: unknown[]) => void }) => {
+    streamEventsOnEvent: (
+      filters: Array<{ kinds?: number[]; "#t"?: string[] }>,
+      handlers: { onEose?: (events: unknown[]) => void },
+    ) => {
       const kinds = filters[0]?.kinds ?? [];
       if (kinds.includes(34550)) {
         handlers.onEose?.([
@@ -100,7 +103,10 @@ jest.mock("@/lib/nostr/nostr-service", () => ({
             sig: "s".repeat(128),
           },
         ]);
-      } else if (kinds.includes(1111) && filters[0]?.["#t"]?.includes("moderator-request")) {
+      } else if (
+        kinds.includes(1111) &&
+        filters[0]?.["#t"]?.includes("moderator-request")
+      ) {
         handlers.onEose?.([
           {
             id: "promotion-request-1",
@@ -121,9 +127,8 @@ jest.mock("@/lib/nostr/nostr-service", () => ({
       }
       return () => undefined;
     },
-    publishSignedEvent:
-      jest.requireMock("@/lib/nostr/nostr-service").__mock
-        .publishSignedEvent,
+    publishSignedEvent: jest.requireMock("@/lib/nostr/nostr-service").__mock
+      .publishSignedEvent,
   }),
 }));
 
@@ -131,7 +136,7 @@ jest.mock("@/lib/nostr/discussion-ndk-gateway", () => ({
   createDiscussionNdkGateway: () => ({
     createModeratorDecisionDraft: (...args: unknown[]) =>
       (createModeratorDecisionDraftMock as (...mockArgs: unknown[]) => unknown)(
-        ...args
+        ...args,
       ),
   }),
 }));
@@ -178,12 +183,12 @@ jest.mock("@/lib/nostr/mnemonic-utils", () => ({
 jest.mock("@/lib/discussion/user-creation-flow", () => ({
   createDiscussionListingRequest: (...args: unknown[]) =>
     (createDiscussionListingRequestMock as (...mockArgs: unknown[]) => unknown)(
-      ...args
+      ...args,
     ),
   createModeratorPromotionRequestEvent: (...args: unknown[]) =>
-    (createModeratorPromotionRequestMock as (
-      ...mockArgs: unknown[]
-    ) => unknown)(...args),
+    (
+      createModeratorPromotionRequestMock as (...mockArgs: unknown[]) => unknown
+    )(...args),
 }));
 
 jest.mock("@/components/discussion/LoginModal", () => ({
@@ -229,22 +234,26 @@ describe("DiscussionEditPage listing request", () => {
     render(<DiscussionEditPage />);
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "会話一覧へ掲載申請" })).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: "会話一覧へ掲載申請" }),
+      ).toBeInTheDocument(),
     );
 
     fireEvent.click(screen.getByRole("button", { name: "会話一覧へ掲載申請" }));
 
     await waitFor(() =>
-      expect(createDiscussionListingRequestMock).toHaveBeenCalled()
+      expect(createDiscussionListingRequestMock).toHaveBeenCalled(),
     );
     expect(signEventMock).toHaveBeenCalled();
     expect(
-      jest.requireMock("@/lib/nostr/nostr-service").__mock.publishSignedEvent
+      jest.requireMock("@/lib/nostr/nostr-service").__mock.publishSignedEvent,
     ).toHaveBeenCalled();
-    expect(await screen.findByText("会話一覧への掲載を申請しました")).toBeInTheDocument();
+    expect(
+      await screen.findByText("会話一覧への掲載を申請しました"),
+    ).toBeInTheDocument();
   });
 
-  it("allows non-author users to send moderator promotion request", async () => {
+  it("does not expose basic information controls to non-authors", () => {
     authState.user = {
       pubkey: "d".repeat(64),
       isLoggedIn: true,
@@ -252,83 +261,61 @@ describe("DiscussionEditPage listing request", () => {
 
     render(<DiscussionEditPage />);
 
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "モデレーター昇格を申請" })
-      ).toBeInTheDocument()
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "モデレーター昇格を申請" }));
-
-    await waitFor(() =>
-      expect(createModeratorPromotionRequestMock).toHaveBeenCalledWith(
-        "34550:f:test-discussion",
-        "f".repeat(64),
-        "d".repeat(64),
-        ""
-      )
-    );
-    expect(signEventMock).toHaveBeenCalled();
     expect(
-      jest.requireMock("@/lib/nostr/nostr-service").__mock.publishSignedEvent
-    ).toHaveBeenCalled();
-    expect(
-      await screen.findByText("モデレーター昇格申請を送信しました")
+      screen.getByRole("heading", { name: "基本情報を編集できません" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText("会話の基本情報を編集できるのは会話作成者だけです。"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "会話に戻る" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("allows author to decide promotion request by updating kind 34550", async () => {
+  it("does not include moderator management in basic information", async () => {
     render(<DiscussionEditPage />);
 
-    await waitFor(() =>
-      expect(screen.getByText("昇格申請ユーザー一覧")).toBeInTheDocument()
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "承認" }));
-
-    await waitFor(() =>
-      expect(createModeratorDecisionDraftMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          decision: "approved",
-          applicantPubkey: "e".repeat(64),
-          actorPubkey: "f".repeat(64),
-        })
-      )
-    );
-    expect(signEventMock).toHaveBeenCalled();
+    expect(screen.queryByText("モデレーター管理")).not.toBeInTheDocument();
     expect(
-      jest.requireMock("@/lib/nostr/nostr-service").__mock.publishSignedEvent
-    ).toHaveBeenCalled();
+      screen.queryByRole("button", { name: "承認" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("shows current moderators as BIP39 mnemonic preview", async () => {
+  it("does not show current moderators in basic information", async () => {
     render(<DiscussionEditPage />);
 
     expect(
-      await screen.findByText("現在のモデレーター（Mnemonic）")
-    ).toBeInTheDocument();
-    expect(screen.getAllByText("あいこくしん あいさつ あいだ").length).toBeGreaterThan(0);
+      screen.queryByText("現在のモデレーター（Mnemonic）"),
+    ).not.toBeInTheDocument();
   });
 
   it("groups destructive actions separately and removes the duplicate return link", async () => {
     render(<DiscussionEditPage />);
 
-    expect(await screen.findByRole("heading", { name: "危険な操作" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "会話を削除" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "会話に戻る" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "会話を編集" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "会話情報を編集" })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "危険な操作" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "会話を削除" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "会話に戻る" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "会話を編集" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "会話情報を編集" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("shows one login action in the permission notice for unauthenticated users", async () => {
+  it("shows only the permission explanation for unauthenticated users", async () => {
     authState.user = { pubkey: "", isLoggedIn: false };
 
     render(<DiscussionEditPage />);
 
-    const loginButtons = await screen.findAllByRole("button", { name: "ログイン" });
-    expect(loginButtons).toHaveLength(1);
-
-    fireEvent.click(loginButtons[0]);
-    expect(screen.getByTestId("login-modal")).toBeInTheDocument();
+    expect(
+      screen.getByText("会話の基本情報を編集できるのは会話作成者だけです。"),
+    ).toBeInTheDocument();
   });
 });

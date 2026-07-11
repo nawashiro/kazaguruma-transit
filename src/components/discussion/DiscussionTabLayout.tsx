@@ -18,6 +18,7 @@ import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan"
 import { loadKnownDiscussionData, saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
 import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
+import { useAuth } from "@/lib/auth/auth-context";
 
 interface DiscussionTabLayoutProps {
   /** タブナビゲーションのベースURL（例: "/discussions" または "/discussions/[naddr]"） */
@@ -69,6 +70,7 @@ export function DiscussionTabLayout({
   children,
 }: DiscussionTabLayoutProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
   const params = useParams();
   const naddr = params.naddr as string;
   const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -225,6 +227,8 @@ export function DiscussionTabLayout({
     normalizedPath === `${normalizedBase}/`;
   const isAuditActive = normalizedPath === `${normalizedBase}/audit`;
   const isEditActive = normalizedPath === `${normalizedBase}/edit`;
+  const isModeratorsActive = normalizedPath === `${normalizedBase}/moderators`;
+  const isCreator = Boolean(discussion && user.pubkey === discussion.authorPubkey);
 
   const tabs = [
     {
@@ -238,10 +242,15 @@ export function DiscussionTabLayout({
       isActive: isAuditActive,
     },
     {
-      href: `${normalizedBase}/edit`,
-      label: "編集",
-      isActive: isEditActive,
+      href: `${normalizedBase}/moderators`,
+      label: "モデレーター",
+      isActive: isModeratorsActive,
     },
+    ...(isCreator ? [{
+      href: `${normalizedBase}/edit`,
+      label: "基本情報",
+      isActive: isEditActive,
+    }] : []),
   ];
 
   /**

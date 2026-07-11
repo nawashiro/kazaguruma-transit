@@ -67,7 +67,7 @@ export default function Button({
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
-      className={`${baseClasses} ${widthClass} ${disabledClass} ${accessibilityClass} ${textClass} ${className} ruby-text`}
+      className={`${baseClasses} ${widthClass} ${disabledClass} ${accessibilityClass} ${textClass} ${className}`}
       data-testid={testId}
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
@@ -81,7 +81,7 @@ export default function Button({
         boxShadow: "none",
       }}
     >
-      {children}
+      <span className="ruby-text">{children}</span>
     </button>
   );
 }

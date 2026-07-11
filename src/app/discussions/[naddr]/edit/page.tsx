@@ -2,10 +2,17 @@
 
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
+import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import {
@@ -47,7 +54,15 @@ import type { Event } from "@/lib/nostr/nostr-service";
 
 // const ADMIN_PUBKEY = getAdminPubkeyHex(); // eslint-disable-line @typescript-eslint/no-unused-vars
 const nostrServiceConfig = getNostrServiceConfig();
-const readStrategy = typeof getDiscussionReadStrategyConfig === "function" ? getDiscussionReadStrategyConfig() : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
+const readStrategy =
+  typeof getDiscussionReadStrategyConfig === "function"
+    ? getDiscussionReadStrategyConfig()
+    : {
+        relayLimit: 3,
+        idleTimeoutMs: nostrServiceConfig.defaultTimeout,
+        hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
+        dedupWindowMs: 250,
+      };
 const nostrService = createNostrService(nostrServiceConfig);
 const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 const ADMIN_PUBKEY = getAdminPubkeyHex();
@@ -88,7 +103,7 @@ export default function DiscussionEditPage() {
   const [isRequestingListing, setIsRequestingListing] = useState(false);
   const [isRequestingPromotion, setIsRequestingPromotion] = useState(false);
   const [decidingPromotionIds, setDecidingPromotionIds] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [promotionRequestMessage, setPromotionRequestMessage] = useState("");
   const [promotionRequests, setPromotionRequests] = useState<
@@ -100,9 +115,7 @@ export default function DiscussionEditPage() {
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [successType, setSuccessType] = useState<
     "save" | "listing" | "promotion" | null
-  >(
-    null
-  );
+  >(null);
   const promotionRequestStreamCleanupRef = useRef<(() => void) | null>(null);
   const readGenerationRef = useRef(0);
 
@@ -148,7 +161,9 @@ export default function DiscussionEditPage() {
     setIsLoading(true);
     const relayUrls = selectRelayCandidates({
       hints: discussionInfo.relays,
-      configured: (nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
+      configured: (nostrServiceConfig.relays ?? [])
+        .filter((relay) => relay.read)
+        .map((relay) => relay.url),
       defaults: [],
       limit: readStrategy.relayLimit,
     }).map((relay) => relay.url);
@@ -168,8 +183,8 @@ export default function DiscussionEditPage() {
           const requests = events
             .filter((event) =>
               event.tags.some(
-                (tag) => tag[0] === "t" && tag[1] === "moderator-request"
-              )
+                (tag) => tag[0] === "t" && tag[1] === "moderator-request",
+              ),
             )
             .map((event) => ({
               id: event.id,
@@ -186,8 +201,8 @@ export default function DiscussionEditPage() {
           const requests = events
             .filter((event) =>
               event.tags.some(
-                (tag) => tag[0] === "t" && tag[1] === "moderator-request"
-              )
+                (tag) => tag[0] === "t" && tag[1] === "moderator-request",
+              ),
             )
             .map((event) => ({
               id: event.id,
@@ -201,12 +216,9 @@ export default function DiscussionEditPage() {
         },
         timeoutMs: nostrServiceConfig.defaultTimeout,
         ...(relayUrls.length > 0 ? { relayUrls } : {}),
-      }
+      },
     );
-  }, [
-    discussionInfo,
-    nostrServiceConfig.defaultTimeout,
-  ]);
+  }, [discussionInfo]);
 
   useEffect(() => {
     startStreamingDiscussion();
@@ -288,7 +300,7 @@ export default function DiscussionEditPage() {
       };
 
       const signedEvent = await signEvent(
-        eventTemplate as unknown as Record<string, unknown>
+        eventTemplate as unknown as Record<string, unknown>,
       );
       const published = await nostrService.publishSignedEvent(signedEvent);
 
@@ -371,11 +383,11 @@ export default function DiscussionEditPage() {
         },
         discussionNaddr,
         ADMIN_PUBKEY,
-        user.pubkey
+        user.pubkey,
       );
 
       const signedEvent = await signEvent(
-        eventTemplate as unknown as Record<string, unknown>
+        eventTemplate as unknown as Record<string, unknown>,
       );
       const published = await nostrService.publishSignedEvent(signedEvent);
       if (!published) {
@@ -406,11 +418,11 @@ export default function DiscussionEditPage() {
         discussion.id,
         discussion.authorPubkey,
         user.pubkey,
-        promotionRequestMessage
+        promotionRequestMessage,
       );
 
       const signedEvent = await signEvent(
-        eventTemplate as unknown as Record<string, unknown>
+        eventTemplate as unknown as Record<string, unknown>,
       );
       const published = await nostrService.publishSignedEvent(signedEvent);
       if (!published) {
@@ -457,7 +469,7 @@ export default function DiscussionEditPage() {
 
   const handleModerationDecision = async (
     request: ModeratorPromotionRequest,
-    decision: ModeratorDecision
+    decision: ModeratorDecision,
   ) => {
     if (!discussion || !user.isLoggedIn || !user.pubkey || !isAuthor) {
       return;
@@ -473,7 +485,7 @@ export default function DiscussionEditPage() {
       });
 
       const signedEvent = await signEvent(
-        eventTemplate as unknown as Record<string, unknown>
+        eventTemplate as unknown as Record<string, unknown>,
       );
       const published = await nostrService.publishSignedEvent(signedEvent);
       if (!published) {
@@ -483,7 +495,7 @@ export default function DiscussionEditPage() {
       setDiscussion((prev) => {
         if (!prev) return prev;
         const hasApplicant = prev.moderators.some(
-          (moderator) => moderator.pubkey === request.applicantPubkey
+          (moderator) => moderator.pubkey === request.applicantPubkey,
         );
         const nextModerators =
           decision === "approved"
@@ -491,7 +503,7 @@ export default function DiscussionEditPage() {
               ? prev.moderators
               : [...prev.moderators, { pubkey: request.applicantPubkey }]
             : prev.moderators.filter(
-                (moderator) => moderator.pubkey !== request.applicantPubkey
+                (moderator) => moderator.pubkey !== request.applicantPubkey,
               );
 
         return {
@@ -506,7 +518,7 @@ export default function DiscussionEditPage() {
       setSuccessMessage(
         decision === "approved"
           ? "モデレーター昇格を承認しました"
-          : "モデレーター昇格を却下しました"
+          : "モデレーター昇格を却下しました",
       );
       setSuccessType("promotion");
     } catch (error) {
@@ -576,8 +588,9 @@ export default function DiscussionEditPage() {
         <div className="container mx-auto px-4 py-8">
           <div className="alert alert-warning mb-4" role="alert">
             <span>
-              会話データの取得に時間がかかっています（{discussionCompletionReason}）。
-              受信待機中または relay 応答遅延の可能性があります。
+              会話データの取得に時間がかかっています（
+              {discussionCompletionReason}）。 受信待機中または relay
+              応答遅延の可能性があります。
             </span>
           </div>
           <button
@@ -612,16 +625,37 @@ export default function DiscussionEditPage() {
     : "会話作成者のみ編集できます。";
   const isCurrentModerator = Boolean(
     user.pubkey &&
-      discussion.moderators.some((moderator) => moderator.pubkey === user.pubkey)
+    discussion.moderators.some((moderator) => moderator.pubkey === user.pubkey),
   );
   const canRequestPromotion = Boolean(
-    user.isLoggedIn && !isAuthor && !isCurrentModerator
+    user.isLoggedIn && !isAuthor && !isCurrentModerator,
   );
   const requestPromotionReason = !user.isLoggedIn
     ? "昇格申請にはログインが必要です。"
     : isAuthor
       ? "会話作成者は昇格申請の対象ではありません。"
       : "すでにモデレーターです。";
+
+  if (!hasEditPermission) {
+    return (
+      <main className="container mx-auto px-4 py-8" role="main">
+        <div className="card max-w-2xl mx-auto bg-base-100 shadow-sm border border-base-300">
+          <div className="card-body items-center text-center py-8">
+            <InformationCircleIcon
+              className="h-12 w-12 text-info"
+              aria-hidden="true"
+            />
+            <h1 className="mt-4 text-lg font-medium text-base-content ruby-text">
+              基本情報を編集できません
+            </h1>
+            <p className="mt-2 text-sm text-base-content/70 ruby-text">
+              会話の基本情報を編集できるのは会話作成者だけです。
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -713,7 +747,7 @@ export default function DiscussionEditPage() {
                     </div>
                   </div>
 
-                  <div>
+                  <div className="hidden" aria-hidden="true">
                     <label htmlFor="moderators" className="label ruby-text">
                       <span className="label-text">モデレーター（任意）</span>
                     </label>
@@ -766,7 +800,7 @@ export default function DiscussionEditPage() {
                     <PermissionNotice
                       state={buildDisabledActionState(
                         hasEditPermission,
-                        editPermissionReason
+                        editPermissionReason,
                       )}
                       requiresLogin={!user.isLoggedIn}
                       onLogin={() => setShowLoginModal(true)}
@@ -783,192 +817,236 @@ export default function DiscussionEditPage() {
                     </div>
                   )}
 
-                  <section aria-labelledby="conversation-actions-title" className="space-y-3">
-                    <h3 id="conversation-actions-title" className="text-lg font-semibold ruby-text">
+                  <section
+                    aria-labelledby="conversation-actions-title"
+                    className="space-y-3"
+                  >
+                    <h3
+                      id="conversation-actions-title"
+                      className="text-lg font-semibold ruby-text"
+                    >
                       会話の操作
                     </h3>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                    <button
-                      className="btn btn-primary rounded-full dark:rounded-sm ruby-text"
-                      onClick={handleSave}
-                      disabled={
-                        isSaving ||
-                        isDeleting ||
-                        !hasEditPermission ||
-                        !formData.title.trim() ||
-                        !formData.description.trim()
-                      }
-                    >
-                      {isSaving ? (
-                        <span>保存中...</span>
-                      ) : (
-                        <span>変更を保存</span>
-                      )}
-                    </button>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                      <button
+                        className="btn btn-primary rounded-full dark:rounded-sm"
+                        onClick={handleSave}
+                        disabled={
+                          isSaving ||
+                          isDeleting ||
+                          !hasEditPermission ||
+                          !formData.title.trim() ||
+                          !formData.description.trim()
+                        }
+                      >
+                        {isSaving ? (
+                          <span className="ruby-text">保存中...</span>
+                        ) : (
+                          <span className="ruby-text">変更を保存</span>
+                        )}
+                      </button>
 
-                    <button
-                      className="btn btn-secondary rounded-full dark:rounded-sm ruby-text"
-                      onClick={handleRequestListing}
-                      disabled={
-                        isSaving ||
-                        isDeleting ||
-                        isRequestingListing ||
-                        !hasEditPermission
-                      }
-                    >
-                      {isRequestingListing ? (
-                        <span>申請中...</span>
-                      ) : (
-                        <span>会話一覧へ掲載申請</span>
-                      )}
-                    </button>
-                  </div>
+                      <button
+                        className="btn btn-secondary rounded-full dark:rounded-sm"
+                        onClick={handleRequestListing}
+                        disabled={
+                          isSaving ||
+                          isDeleting ||
+                          isRequestingListing ||
+                          !hasEditPermission
+                        }
+                      >
+                        {isRequestingListing ? (
+                          <span className="ruby-text">申請中...</span>
+                        ) : (
+                          <span className="ruby-text">会話一覧へ掲載申請</span>
+                        )}
+                      </button>
+                    </div>
                   </section>
 
                   <section
                     aria-labelledby="dangerous-actions-title"
                     className="space-y-3 border-t border-base-300 pt-5"
                   >
-                    <h3 id="dangerous-actions-title" className="text-lg font-semibold text-error ruby-text">
+                    <h3
+                      id="dangerous-actions-title"
+                      className="text-lg font-semibold text-error ruby-text"
+                    >
                       危険な操作
                     </h3>
                     <button
-                      className="btn btn-outline btn-error rounded-full dark:rounded-sm ruby-text min-h-[44px]"
+                      className="btn btn-outline btn-error rounded-full dark:rounded-sm min-h-[44px]"
                       onClick={() => setShowDeleteConfirm(true)}
                       disabled={isSaving || isDeleting || !hasEditPermission}
                     >
-                      {isDeleting ? "削除中..." : "会話を削除"}
+                      <span className="ruby-text">
+                        {isDeleting ? "削除中..." : "会話を削除"}
+                      </span>
                     </button>
                   </section>
 
                   <div className="divider"></div>
 
-                  <section className="space-y-4" aria-labelledby="moderator-section-title">
-                    <h3 id="moderator-section-title" className="text-lg font-semibold ruby-text">
-                      モデレーター管理
-                    </h3>
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
-                        現在のモデレーター（Mnemonic）
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {discussion.moderators.length > 0 ? (
-                          discussion.moderators.map((moderator) => (
-                            <span key={moderator.pubkey} className="badge badge-outline">
-                              {formatBip39JapaneseMnemonicPreviewFromPubkey(
-                                moderator.pubkey
-                              )}
+                  {false && discussion && (
+                    <section aria-labelledby="moderator-section-title">
+                      <h3
+                        id="moderator-section-title"
+                        className="text-lg font-semibold ruby-text"
+                      >
+                        モデレーター管理
+                      </h3>
+                      <div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
+                          現在のモデレーター（Mnemonic）
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {discussion!.moderators.length > 0 ? (
+                            discussion!.moderators.map((moderator) => (
+                              <span
+                                key={moderator.pubkey}
+                                className="badge badge-outline"
+                              >
+                                {formatBip39JapaneseMnemonicPreviewFromPubkey(
+                                  moderator.pubkey,
+                                )}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-gray-500 ruby-text">
+                              モデレーターは未設定です。
                             </span>
-                          ))
-                        ) : (
-                          <span className="text-sm text-gray-500 ruby-text">
-                            モデレーターは未設定です。
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
+                          モデレーター昇格申請
+                        </p>
+                        <textarea
+                          value={promotionRequestMessage}
+                          onChange={(e) =>
+                            setPromotionRequestMessage(e.target.value)
+                          }
+                          className="textarea textarea-bordered w-full h-24 mb-2"
+                          placeholder="申請理由（任意）"
+                          disabled={isRequestingPromotion}
+                        />
+                        <button
+                          className="btn btn-outline rounded-full dark:rounded-sm"
+                          onClick={handleRequestPromotion}
+                          disabled={
+                            isRequestingPromotion || !canRequestPromotion
+                          }
+                        >
+                          <span className="ruby-text">
+                            {isRequestingPromotion
+                              ? "申請中..."
+                              : "モデレーター昇格を申請"}
                           </span>
+                        </button>
+                        <PermissionNotice
+                          state={buildDisabledActionState(
+                            canRequestPromotion,
+                            requestPromotionReason,
+                          )}
+                          requiresLogin={false}
+                          onLogin={() => setShowLoginModal(true)}
+                        />
+                      </div>
+
+                      <div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
+                          昇格申請ユーザー一覧
+                        </p>
+                        {promotionRequests.length === 0 ? (
+                          <p className="text-sm text-gray-500 ruby-text">
+                            申請はまだありません。
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {promotionRequests.map((request) => (
+                              <div
+                                key={request.id}
+                                className="p-3 border border-base-300 rounded-lg"
+                              >
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="badge badge-outline">
+                                    {formatBip39JapaneseMnemonicPreviewFromPubkey(
+                                      request.applicantPubkey,
+                                    )}
+                                  </span>
+                                  <span className="text-sm text-gray-500">
+                                    {formatRelativeTime(request.createdAt)}
+                                  </span>
+                                  <span
+                                    className={`badge ${
+                                      discussion!.moderators.some(
+                                        (moderator) =>
+                                          moderator.pubkey ===
+                                          request.applicantPubkey,
+                                      )
+                                        ? "badge-success"
+                                        : "badge-ghost"
+                                    }`}
+                                  >
+                                    {discussion!.moderators.some(
+                                      (moderator) =>
+                                        moderator.pubkey ===
+                                        request.applicantPubkey,
+                                    )
+                                      ? "approved"
+                                      : "unapproved"}
+                                  </span>
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    className="btn btn-primary rounded-full dark:rounded-sm"
+                                    onClick={() =>
+                                      handleModerationDecision(
+                                        request,
+                                        "approved",
+                                      )
+                                    }
+                                    disabled={
+                                      !isAuthor ||
+                                      decidingPromotionIds.has(request.id)
+                                    }
+                                  >
+                                    <span className="ruby-text">承認</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline rounded-full dark:rounded-sm"
+                                    onClick={() =>
+                                      handleModerationDecision(
+                                        request,
+                                        "unapproved",
+                                      )
+                                    }
+                                    disabled={
+                                      !isAuthor ||
+                                      decidingPromotionIds.has(request.id)
+                                    }
+                                  >
+                                    <span className="ruby-text">却下</span>
+                                  </button>
+                                </div>
+                                <DisabledReasonText
+                                  state={buildDisabledActionState(
+                                    Boolean(isAuthor),
+                                    "昇格審査は会話作成者のみ操作できます。",
+                                  )}
+                                />
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
-                        モデレーター昇格申請
-                      </p>
-                      <textarea
-                        value={promotionRequestMessage}
-                        onChange={(e) => setPromotionRequestMessage(e.target.value)}
-                        className="textarea textarea-bordered w-full h-24 mb-2"
-                        placeholder="申請理由（任意）"
-                        disabled={isRequestingPromotion}
-                      />
-                      <button
-                        className="btn btn-outline rounded-full dark:rounded-sm ruby-text"
-                        onClick={handleRequestPromotion}
-                        disabled={isRequestingPromotion || !canRequestPromotion}
-                      >
-                        {isRequestingPromotion ? "申請中..." : "モデレーター昇格を申請"}
-                      </button>
-                      <PermissionNotice
-                        state={buildDisabledActionState(
-                          canRequestPromotion,
-                          requestPromotionReason
-                        )}
-                        requiresLogin={false}
-                        onLogin={() => setShowLoginModal(true)}
-                      />
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
-                        昇格申請ユーザー一覧
-                      </p>
-                      {promotionRequests.length === 0 ? (
-                        <p className="text-sm text-gray-500 ruby-text">
-                          申請はまだありません。
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          {promotionRequests.map((request) => (
-                            <div key={request.id} className="p-3 border border-base-300 rounded-lg">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="badge badge-outline">
-                                  {formatBip39JapaneseMnemonicPreviewFromPubkey(
-                                    request.applicantPubkey
-                                  )}
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                  {formatRelativeTime(request.createdAt)}
-                                </span>
-                                <span
-                                  className={`badge ${
-                                    discussion.moderators.some(
-                                      (moderator) =>
-                                        moderator.pubkey === request.applicantPubkey
-                                    )
-                                      ? "badge-success"
-                                      : "badge-ghost"
-                                  }`}
-                                >
-                                  {discussion.moderators.some(
-                                    (moderator) =>
-                                      moderator.pubkey === request.applicantPubkey
-                                  )
-                                    ? "approved"
-                                    : "unapproved"}
-                                </span>
-                              </div>
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                <button
-                                  type="button"
-                                  className="btn btn-primary rounded-full dark:rounded-sm"
-                                  onClick={() =>
-                                    handleModerationDecision(request, "approved")
-                                  }
-                                  disabled={!isAuthor || decidingPromotionIds.has(request.id)}
-                                >
-                                  承認
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn btn-outline rounded-full dark:rounded-sm"
-                                  onClick={() =>
-                                    handleModerationDecision(request, "unapproved")
-                                  }
-                                  disabled={!isAuthor || decidingPromotionIds.has(request.id)}
-                                >
-                                  却下
-                                </button>
-                              </div>
-                              <DisabledReasonText
-                                state={buildDisabledActionState(
-                                  Boolean(isAuthor),
-                                  "昇格審査は会話作成者のみ操作できます。"
-                                )}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </section>
+                    </section>
+                  )}
                 </div>
               </div>
             </div>
@@ -990,14 +1068,14 @@ export default function DiscussionEditPage() {
                 className="btn btn-outline rounded-full dark:rounded-sm"
                 disabled={isDeleting}
               >
-                <span>キャンセル</span>
+                <span className="ruby-text">キャンセル</span>
               </button>
               <button
                 onClick={handleDelete}
                 className="btn btn-error rounded-full dark:rounded-sm"
                 disabled={isDeleting}
               >
-                <span>削除する</span>
+                <span className="ruby-text">削除する</span>
               </button>
             </div>
           </div>

@@ -123,7 +123,7 @@ interface DisabledReasonTextProps {
 
 export function DisabledReasonText({
   state,
-  className = "text-xs text-base-content/70 mt-1",
+  className = "text-sm text-base-content/70 mt-1",
   id,
 }: DisabledReasonTextProps) {
   if (!state.disabled || !state.reason) {

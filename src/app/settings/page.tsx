@@ -449,7 +449,7 @@ export default function SettingsPage() {
                             <div className="flex gap-2 ml-4">
                               <Link
                                 href={`/discussions/${naddr}/edit`}
-                                className="btn btn-outline btn-sm rounded-full dark:rounded-sm"
+                                className="btn btn-outline rounded-full dark:rounded-sm"
                               >
                                 編集
                               </Link>
@@ -457,7 +457,7 @@ export default function SettingsPage() {
                                 onClick={() =>
                                   setShowDeleteConfirm(discussion.id)
                                 }
-                                className="btn btn-error btn-outline btn-sm rounded-full dark:rounded-sm"
+                                className="btn btn-error btn-outline rounded-full dark:rounded-sm"
                                 disabled={isDeletingDiscussion}
                               >
                                 削除
@@ -477,7 +477,7 @@ export default function SettingsPage() {
                     </span>
                     <button
                       type="button"
-                      className="btn btn-sm btn-outline"
+                            className="btn btn-outline"
                       onClick={() => {
                         void loadDiscussions();
                       }}

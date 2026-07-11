@@ -101,12 +101,12 @@ export function AuditTimeline({ items }: AuditTimelineProps) {
               ) : null}
 
               {item.targetRef ? (
-                <div className="text-xs opacity-70 break-all">
+                <div className="text-sm opacity-70 break-all">
                   target: <code>{item.targetRef}</code>
                 </div>
               ) : null}
 
-              <time className="text-xs opacity-70">
+              <time className="text-sm opacity-70">
                 {formatRelativeTime(item.timestamp)}
               </time>
             </div>

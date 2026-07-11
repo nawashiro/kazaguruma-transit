@@ -104,7 +104,7 @@ const FirstVisitGuideModal = () => {
         </p>
         <div className="flex gap-2 justify-end mt-3">
           <button
-            className="btn btn-sm btn-outline rounded-full dark:rounded-sm min-h-10 h-fit"
+            className="btn btn-outline rounded-full dark:rounded-sm min-h-10 h-fit"
             onClick={handleClose}
             data-testid="close-guide-modal"
           >
@@ -120,7 +120,7 @@ const FirstVisitGuideModal = () => {
             </span>
           </button>
           <button
-            className="btn btn-sm btn-primary rounded-full dark:rounded-sm min-h-10 h-fit"
+            className="btn btn-primary rounded-full dark:rounded-sm min-h-10 h-fit"
             onClick={handleGoToGuide}
             data-testid="go-to-guide"
           >

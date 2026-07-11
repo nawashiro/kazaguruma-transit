@@ -390,7 +390,7 @@ export const AuditLogSection = React.forwardRef<
         </svg>
         <span>{auditError}</span>
         <button
-          className="btn btn-sm btn-outline"
+          className="btn btn-outline"
           onClick={() => {
             retryLoadAuditData();
             setTimeout(() => loadAuditData(), 0);

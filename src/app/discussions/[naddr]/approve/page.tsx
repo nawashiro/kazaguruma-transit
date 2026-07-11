@@ -366,7 +366,7 @@ export default function PostApprovalPage() {
         <div className="mb-8 ruby-text">
           <Link
             href={`/discussions/${naddrParam}`}
-            className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
+            className="btn btn-ghost mb-4 rounded-full dark:rounded-sm"
           >
             <span>← 会話に戻る</span>
           </Link>

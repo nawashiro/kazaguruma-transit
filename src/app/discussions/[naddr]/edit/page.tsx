@@ -623,7 +623,7 @@ export default function DiscussionEditPage() {
         <div className="mb-8">
           <Link
             href={`/discussions/${naddrParam}`}
-            className="btn btn-ghost btn-sm rounded-full dark:rounded-sm mb-4"
+            className="btn btn-ghost rounded-full dark:rounded-sm mb-4"
           >
             <span>← 会話に戻る</span>
           </Link>
@@ -916,7 +916,7 @@ export default function DiscussionEditPage() {
                                     request.applicantPubkey
                                   )}
                                 </span>
-                                <span className="text-xs text-gray-500">
+                                <span className="text-sm text-gray-500">
                                   {formatRelativeTime(request.createdAt)}
                                 </span>
                                 <span
@@ -940,7 +940,7 @@ export default function DiscussionEditPage() {
                               <div className="mt-3 flex flex-wrap gap-2">
                                 <button
                                   type="button"
-                                  className="btn btn-sm btn-primary rounded-full dark:rounded-sm"
+                                  className="btn btn-primary rounded-full dark:rounded-sm"
                                   onClick={() =>
                                     handleModerationDecision(request, "approved")
                                   }
@@ -950,7 +950,7 @@ export default function DiscussionEditPage() {
                                 </button>
                                 <button
                                   type="button"
-                                  className="btn btn-sm btn-outline rounded-full dark:rounded-sm"
+                                  className="btn btn-outline rounded-full dark:rounded-sm"
                                   onClick={() =>
                                     handleModerationDecision(request, "unapproved")
                                   }

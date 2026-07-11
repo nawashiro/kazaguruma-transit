@@ -297,7 +297,7 @@ export function DiscussionTabLayout({
       <div className="mb-4">
         <Link
           href="/discussions"
-          className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
+          className="btn btn-ghost rounded-full dark:rounded-sm"
         >
           <span className="ruby-text">← 会話一覧に戻る</span>
         </Link>
@@ -337,7 +337,7 @@ export function DiscussionTabLayout({
         <div className="alert alert-error mb-8" role="alert">
           <span>{discussionError}</span>
           <button
-            className="btn btn-sm btn-outline"
+          className="btn btn-outline"
             onClick={() => {
               setDiscussionError(null);
               void loadDiscussionData();

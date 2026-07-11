@@ -193,7 +193,7 @@ export default function DiscussionCreatePage() {
         <div className="mb-8">
           <Link
             href="/discussions"
-            className="btn btn-ghost btn-sm rounded-full dark:rounded-sm mb-4"
+            className="btn btn-ghost rounded-full dark:rounded-sm mb-4"
           >
             <span>← 会話一覧に戻る</span>
           </Link>

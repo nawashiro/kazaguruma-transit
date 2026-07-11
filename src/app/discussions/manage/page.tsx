@@ -461,7 +461,7 @@ export default function DiscussionManagePage() {
         <div className="mb-8">
           <Link
             href="/discussions"
-            className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
+            className="btn btn-ghost mb-4 rounded-full dark:rounded-sm"
           >
             <span className="ruby-text">← 会話一覧に戻る</span>
           </Link>
@@ -500,7 +500,7 @@ export default function DiscussionManagePage() {
       <div className="mb-8">
         <Link
           href="/discussions"
-          className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
+          className="btn btn-ghost mb-4 rounded-full dark:rounded-sm"
         >
           <span className="ruby-text">← 会話一覧に戻る</span>
         </Link>

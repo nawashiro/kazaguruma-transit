@@ -226,6 +226,7 @@ export function DiscussionTabLayout({
     normalizedPath === normalizedBase ||
     normalizedPath === `${normalizedBase}/`;
   const isAuditActive = normalizedPath === `${normalizedBase}/audit`;
+  const isAllPostsActive = normalizedPath === `${normalizedBase}/approve`;
   const isEditActive = normalizedPath === `${normalizedBase}/edit`;
   const isModeratorsActive = normalizedPath === `${normalizedBase}/moderators`;
   const isCreator = Boolean(discussion && user.pubkey === discussion.authorPubkey);
@@ -240,6 +241,11 @@ export function DiscussionTabLayout({
       href: `${normalizedBase}/audit`,
       label: "監査ログ",
       isActive: isAuditActive,
+    },
+    {
+      href: `${normalizedBase}/approve`,
+      label: "すべての投稿",
+      isActive: isAllPostsActive,
     },
     {
       href: `${normalizedBase}/moderators`,
@@ -383,7 +389,7 @@ export function DiscussionTabLayout({
             ref={(el) => {
               tabRefs.current[index] = el;
             }}
-            className={`tab px-4 min-h-[44px] min-w-[44px] shrink-0 whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${tab.isActive ? "tab-active" : ""
+            className={`tab font-bold px-4 min-h-[44px] min-w-[44px] shrink-0 whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${tab.isActive ? "tab-active" : ""
               }`}
             role="tab"
             aria-selected={tab.isActive}

@@ -77,12 +77,13 @@ describe("DiscussionTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      expect(tabs).toHaveLength(3);
+      expect(tabs).toHaveLength(4);
 
       // Main tab should be selected when on main path
       expect(tabs[0]).toHaveAttribute("aria-selected", "true");
       expect(tabs[1]).toHaveAttribute("aria-selected", "false");
       expect(tabs[2]).toHaveAttribute("aria-selected", "false");
+      expect(tabs[3]).toHaveAttribute("aria-selected", "false");
     });
 
     it("marks audit tab as selected when on audit path", () => {
@@ -98,6 +99,24 @@ describe("DiscussionTabLayout", () => {
       expect(tabs[0]).toHaveAttribute("aria-selected", "false");
       expect(tabs[1]).toHaveAttribute("aria-selected", "true");
       expect(tabs[2]).toHaveAttribute("aria-selected", "false");
+      expect(tabs[3]).toHaveAttribute("aria-selected", "false");
+    });
+
+    it("renders and selects the all posts tab on the approval path", () => {
+      mockPathname.mockReturnValue("/discussions/naddr123/approve");
+
+      render(
+        <DiscussionTabLayout baseHref="/discussions/naddr123">
+          <div>Content</div>
+        </DiscussionTabLayout>
+      );
+
+      const allPostsTab = screen.getByRole("tab", { name: "すべての投稿" });
+      expect(allPostsTab).toHaveAttribute(
+        "href",
+        "/discussions/naddr123/approve"
+      );
+      expect(allPostsTab).toHaveAttribute("aria-selected", "true");
     });
 
   it("does not expose the basic information tab to a non-creator", () => {
@@ -112,8 +131,9 @@ describe("DiscussionTabLayout", () => {
       const tabs = screen.getAllByRole("tab");
       expect(tabs[0]).toHaveAttribute("aria-selected", "false");
       expect(tabs[1]).toHaveAttribute("aria-selected", "false");
-      expect(tabs).toHaveLength(3);
+      expect(tabs).toHaveLength(4);
       expect(tabs[2]).toHaveAttribute("aria-selected", "false");
+      expect(tabs[3]).toHaveAttribute("aria-selected", "false");
     });
   });
 
@@ -141,11 +161,11 @@ describe("DiscussionTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      tabs[2].focus();
+      tabs[3].focus();
 
-      fireEvent.keyDown(tabs[2], { key: "ArrowLeft" });
+      fireEvent.keyDown(tabs[3], { key: "ArrowLeft" });
 
-      expect(document.activeElement).toBe(tabs[1]);
+      expect(document.activeElement).toBe(tabs[2]);
     });
 
     it("handles Home key to focus first tab", () => {
@@ -156,9 +176,9 @@ describe("DiscussionTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      tabs[2].focus();
+      tabs[3].focus();
 
-      fireEvent.keyDown(tabs[2], { key: "Home" });
+      fireEvent.keyDown(tabs[3], { key: "Home" });
 
       expect(document.activeElement).toBe(tabs[0]);
     });
@@ -175,7 +195,7 @@ describe("DiscussionTabLayout", () => {
 
       fireEvent.keyDown(tabs[0], { key: "End" });
 
-      expect(document.activeElement).toBe(tabs[2]);
+      expect(document.activeElement).toBe(tabs[3]);
     });
 
     it("wraps around on ArrowRight from last tab", () => {
@@ -186,9 +206,9 @@ describe("DiscussionTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      tabs[2].focus();
+      tabs[3].focus();
 
-      fireEvent.keyDown(tabs[2], { key: "ArrowRight" });
+      fireEvent.keyDown(tabs[3], { key: "ArrowRight" });
 
       expect(document.activeElement).toBe(tabs[0]);
     });
@@ -205,7 +225,7 @@ describe("DiscussionTabLayout", () => {
 
       fireEvent.keyDown(tabs[0], { key: "ArrowLeft" });
 
-      expect(document.activeElement).toBe(tabs[2]);
+      expect(document.activeElement).toBe(tabs[3]);
     });
   });
 

@@ -193,4 +193,37 @@ describe("PostApprovalPage streaming", () => {
       screen.getByText("この会話の作成者またはモデレーターのみ承認操作できます。")
     ).toBeInTheDocument();
   });
+
+  it("does not duplicate the parent discussion navigation or headings", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "author", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+
+    render(<PostApprovalPage />);
+
+    await screen.findByRole("button", { name: "承認" });
+
+    expect(screen.queryByRole("link", { name: /会話に戻る/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "投稿承認管理" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "承認待ち投稿" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "承認済み投稿" })).not.toBeInTheDocument();
+  });
+
+  it("renders approval filters with daisyUI tabs-box classes", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "author", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+
+    render(<PostApprovalPage />);
+
+    const tablist = await screen.findByRole("tablist");
+    expect(tablist).toHaveClass("tabs", "tabs-box");
+    expect(screen.getByRole("tab", { name: "承認待ちタブを開く" })).toHaveClass(
+      "tab",
+      "tab-active"
+    );
+    expect(screen.getByRole("tab", { name: "承認済みタブを開く" })).toHaveClass("tab");
+  });
 });

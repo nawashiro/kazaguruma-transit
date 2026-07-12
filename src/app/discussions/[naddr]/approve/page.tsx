@@ -363,52 +363,39 @@ export default function PostApprovalPage() {
 
   return (
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 ruby-text">
-          <Link
-            href={`/discussions/${naddrParam}`}
-            className="btn btn-ghost mb-4 rounded-full dark:rounded-sm"
-          >
-            <span>← 会話に戻る</span>
-          </Link>
-          <h1 className="text-3xl font-bold">投稿承認管理</h1>
-          {discussion && (
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
-              {discussion.title}
-            </p>
-          )}
-        </div>
-
-        <nav className="join mb-6" role="tablist">
+        <nav className="tabs tabs-box mb-6 w-full overflow-x-auto" role="tablist">
           <button
             aria-selected={activeTab === "pending"}
+            aria-controls="pending-panel"
+            id="pending-tab"
             aria-label="承認待ちタブを開く"
-            className={`join-item btn ruby-text ${
-              activeTab === "pending" ? "btn-active btn-primary" : "false"
+            className={`tab ${
+              activeTab === "pending" ? "tab-active" : ""
             }`}
-            name="tab-options"
             role="tab"
             onClick={() => setActiveTab("pending")}
           >
-            <span>承認待ち</span>
+            <span className="ruby-text">承認待ち</span>
             {pendingPosts.length > 0 && (
-              <span className="badge badge-warning badge-sm ml-1">
+              <span className="badge badge-warning badge-md ml-1">
                 {pendingPosts.length}
               </span>
             )}
           </button>
           <button
             aria-selected={activeTab === "approved"}
+            aria-controls="approved-panel"
+            id="approved-tab"
             aria-label="承認済みタブを開く"
-            className={`join-item btn ruby-text ${
-              activeTab === "approved" ? "btn-active btn-primary" : "false"
+            className={`tab ${
+              activeTab === "approved" ? "tab-active" : ""
             }`}
-            name="tab-options"
             role="tab"
             onClick={() => setActiveTab("approved")}
           >
-            <span>承認済み</span>
+            <span className="ruby-text">承認済み</span>
             {approvedPosts.length > 0 && (
-              <span className="badge badge-success badge-sm ml-1">
+              <span className="badge badge-success badge-md ml-1">
                 {approvedPosts.length}
               </span>
             )}
@@ -440,7 +427,11 @@ export default function PostApprovalPage() {
             </div>
           )
         ) : (
-          <main aria-labelledby={`${activeTab}-tab`} role="tabpanel">
+          <main
+            aria-labelledby={`${activeTab}-tab`}
+            id={`${activeTab}-panel`}
+            role="tabpanel"
+          >
             <DiscussionReadStatus
               isLoading={false}
               completionReason={null}
@@ -449,14 +440,7 @@ export default function PostApprovalPage() {
               onReload={startStreaming}
             />
             {activeTab === "pending" && (
-              <section aria-labelledby="pending-posts-heading">
-                <h2
-                  id="pending-posts-heading"
-                  className="text-xl font-semibold mb-4 ruby-text"
-                >
-                  承認待ち投稿
-                </h2>
-
+              <section>
                 {pendingPosts.length > 0 ? (
                   <div className="space-y-4">
                     {pendingPosts.map((post) => (
@@ -469,7 +453,7 @@ export default function PostApprovalPage() {
                             <div className="flex-1">
                               {post.busStopTag && (
                                 <div className="mb-2">
-                                  <span className="badge badge-outline badge-sm">
+                                  <span className="badge badge-outline badge-md">
                                     {post.busStopTag}
                                   </span>
                                 </div>
@@ -530,14 +514,7 @@ export default function PostApprovalPage() {
             )}
 
             {activeTab === "approved" && (
-              <section aria-labelledby="approved-posts-heading">
-                <h2
-                  id="approved-posts-heading"
-                  className="text-xl font-semibold mb-4 ruby-text"
-                >
-                  承認済み投稿
-                </h2>
-
+              <section>
                 {approvedPosts.length > 0 ? (
                   <div className="space-y-4">
                     {approvedPosts.slice(0, 10).map((post) => (
@@ -550,7 +527,7 @@ export default function PostApprovalPage() {
                             <div className="flex-1">
                               {post.busStopTag && (
                                 <div className="mb-2">
-                                  <span className="badge badge-outline badge-sm">
+                                  <span className="badge badge-outline badge-md">
                                     {post.busStopTag}
                                   </span>
                                 </div>

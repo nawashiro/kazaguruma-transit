@@ -18,16 +18,10 @@ import {
 import { 
   canEditDiscussion,
   canApprovePost,
-  canViewAuditWithNames,
   getVisibleProfileInfo 
 } from '../permission-system';
 import type { Discussion } from '../../../types/discussion';
 import { formatBip39JapaneseMnemonicPreviewFromPubkey } from '../../nostr/mnemonic-utils';
-import {
-  mapDiscussionAuditTimeline,
-  mapListAuditTimeline,
-} from '../audit-timeline-mapper';
-import type { NostrEventDTO } from '../../nostr/discussion-ndk-gateway';
 
 // Mock dependencies
 jest.mock('../../nostr/nostr-service');
@@ -133,12 +127,9 @@ describe('Discussion System Integration', () => {
       const moderatorApprovePermission = canApprovePost(mockModeratorPubkey, mockDiscussion, mockAdminPubkey);
       expect(moderatorApprovePermission).toBe(true);
 
-      // Test audit log access for admin
-      const adminAuditAccess = canViewAuditWithNames(mockAdminPubkey, mockDiscussion, mockAdminPubkey);
-      expect(adminAuditAccess).toBe(true);
     });
 
-    it('should properly handle profile privacy in audit logs', () => {
+    it('should properly handle profile privacy', () => {
       const mockProfiles = {
         [mockUserPubkey]: { name: 'Test User' },
         [mockModeratorPubkey]: { name: 'Test Moderator' },
@@ -310,102 +301,6 @@ describe("Foundation regression checks", () => {
     expect(words.every((word) => word.length > 0)).toBe(true);
   });
 
-  it("maps list audit events to requested-only timeline types", () => {
-    const listingEvent: NostrEventDTO = {
-      id: "listing-1",
-      kind: 1111,
-      pubkey: "a".repeat(64),
-      created_at: 100,
-      tags: [
-        ["a", "34550:creator:list"],
-        ["q", "34550:creator:discussion"],
-      ],
-      content: "nostr:naddr1example",
-      sig: "s".repeat(128),
-    };
-    const promotionEvent: NostrEventDTO = {
-      id: "promotion-1",
-      kind: 1111,
-      pubkey: "b".repeat(64),
-      created_at: 90,
-      tags: [
-        ["a", "34550:creator:discussion"],
-        ["t", "moderator-request"],
-      ],
-      content: "",
-      sig: "s".repeat(128),
-    };
-
-    const result = mapListAuditTimeline([listingEvent, promotionEvent]);
-    expect(result.map((item) => item.type)).toEqual([
-      "listing-requested",
-      "promotion-requested",
-    ]);
-  });
-
-  it("maps discussion audit events to submitted/requested only", () => {
-    const postEvent: NostrEventDTO = {
-      id: "post-1",
-      kind: 1111,
-      pubkey: "c".repeat(64),
-      created_at: 100,
-      tags: [["a", "34550:creator:discussion"]],
-      content: "hello",
-      sig: "s".repeat(128),
-    };
-    const promotionEvent: NostrEventDTO = {
-      id: "promotion-2",
-      kind: 1111,
-      pubkey: "d".repeat(64),
-      created_at: 99,
-      tags: [
-        ["a", "34550:creator:discussion"],
-        ["t", "moderator-request"],
-      ],
-      content: "",
-      sig: "s".repeat(128),
-    };
-
-    const result = mapDiscussionAuditTimeline([postEvent, promotionEvent]);
-    expect(result.map((item) => item.type)).toEqual([
-      "post-submitted",
-      "promotion-requested",
-    ]);
-  });
-
-  it("derives approval metadata including approver mnemonic for approved posts", () => {
-    const postEvent: NostrEventDTO = {
-      id: "post-approved-target",
-      kind: 1111,
-      pubkey: "c".repeat(64),
-      created_at: 100,
-      tags: [["a", "34550:creator:discussion"]],
-      content: "hello",
-      sig: "s".repeat(128),
-    };
-    const approvalPubkey = "f".repeat(64);
-    const approvalEvent: NostrEventDTO = {
-      id: "approval-1",
-      kind: 4550,
-      pubkey: approvalPubkey,
-      created_at: 101,
-      tags: [
-        ["a", "34550:creator:discussion"],
-        ["e", "post-approved-target"],
-        ["p", "c".repeat(64)],
-        ["k", "1111"],
-      ],
-      content: "approved",
-      sig: "s".repeat(128),
-    };
-
-    const [item] = mapDiscussionAuditTimeline([postEvent, approvalEvent]);
-    expect(item.approvalState).toBe("approved");
-    expect(item.approvedByPubkey).toBe(approvalPubkey);
-    expect(item.approvedByMnemonic).toBe(
-      formatBip39JapaneseMnemonicPreviewFromPubkey(approvalPubkey)
-    );
-  });
 });
 
 describe("US1 service flow checks", () => {

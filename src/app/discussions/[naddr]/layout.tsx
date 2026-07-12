@@ -6,7 +6,7 @@ import { DiscussionTabLayout } from "@/components/discussion/DiscussionTabLayout
 
 /**
  * 会話詳細ページのレイアウト
- * タブナビゲーションを含み、会話ページと監査ページで共通して表示される
+ * タブナビゲーションを含み、会話ページで共通して表示される
  */
 export default function DiscussionLayout({
   children,

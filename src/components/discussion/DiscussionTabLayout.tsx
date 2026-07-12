@@ -225,7 +225,6 @@ export function DiscussionTabLayout({
   const isMainActive =
     normalizedPath === normalizedBase ||
     normalizedPath === `${normalizedBase}/`;
-  const isAuditActive = normalizedPath === `${normalizedBase}/audit`;
   const isAllPostsActive = normalizedPath === `${normalizedBase}/approve`;
   const isEditActive = normalizedPath === `${normalizedBase}/edit`;
   const isModeratorsActive = normalizedPath === `${normalizedBase}/moderators`;
@@ -236,11 +235,6 @@ export function DiscussionTabLayout({
       href: normalizedBase,
       label: "会話",
       isActive: isMainActive,
-    },
-    {
-      href: `${normalizedBase}/audit`,
-      label: "監査ログ",
-      isActive: isAuditActive,
     },
     {
       href: `${normalizedBase}/approve`,

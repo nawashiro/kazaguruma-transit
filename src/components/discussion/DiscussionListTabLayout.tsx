@@ -12,7 +12,7 @@ interface DiscussionListTabLayoutProps {
 }
 
 /**
- * 会話一覧ページと監査一覧ページを切り替えるタブナビゲーションを提供するレイアウトコンポーネント
+ * 会話一覧ページのタブナビゲーションを提供するレイアウトコンポーネント
  *
  * このコンポーネントはタブナビゲーションと共通ヘッダー要素（タイトル、説明）を提供します。
  * 会話一覧ページ専用のレイアウトです。
@@ -38,18 +38,11 @@ export function DiscussionListTabLayout({
   const isMainActive =
     normalizedPath === normalizedBase ||
     normalizedPath === `${normalizedBase}/`;
-  const isAuditActive = normalizedPath === `${normalizedBase}/audit`;
-
   const tabs = [
     {
       href: normalizedBase,
       label: "会話一覧",
       isActive: isMainActive,
-    },
-    {
-      href: `${normalizedBase}/audit`,
-      label: "監査ログ",
-      isActive: isAuditActive,
     },
   ];
 

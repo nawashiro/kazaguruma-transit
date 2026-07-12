@@ -6,7 +6,7 @@ import type { Discussion } from "@/types/discussion";
 
 const useAuthMock = jest.fn();
 const mockUseDiscussionMeta = jest.fn();
-var isModeratorMock = jest.fn(() => false);
+let isModeratorResult = false;
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr-test" }),
@@ -112,13 +112,13 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseApprovalEvent: () => null,
   formatRelativeTime: () => "now",
   getAdminPubkeyHex: () => "admin",
-  isModerator: () => isModeratorMock(),
+  isModerator: () => isModeratorResult,
 }));
 
 describe("PostApprovalPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    isModeratorMock.mockReturnValue(false);
+    isModeratorResult = false;
     const layoutDiscussion: Discussion = {
       id: "34550:author:tag",
       title: "Title",
@@ -215,7 +215,7 @@ describe("PostApprovalPage streaming", () => {
   });
 
   it("hides moderator guidance from moderators", async () => {
-    isModeratorMock.mockReturnValue(true);
+    isModeratorResult = true;
     useAuthMock.mockReturnValue({
       user: { pubkey: "moderator-1", isLoggedIn: true },
       signEvent: jest.fn(),

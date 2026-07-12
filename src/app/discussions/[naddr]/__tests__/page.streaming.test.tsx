@@ -165,11 +165,6 @@ jest.mock("@/components/discussion/PostPreview", () => ({
   PostPreview: () => <div>Post Preview</div>,
 }));
 
-jest.mock("@/components/discussion/AuditTimeline", () => ({
-  __esModule: true,
-  AuditTimeline: () => <div>Audit Timeline</div>,
-}));
-
 jest.mock("@/components/ui/Button", () => {
   return function MockButton({ children, ...props }: any) {
     return <button {...props}>{children}</button>;
@@ -255,9 +250,6 @@ describe("DiscussionDetailPage streaming", () => {
     );
     expect(screen.getByText("Evaluation Component")).toBeInTheDocument();
   });
-
-  // NOTE: "loads audit data after switching to the audit tab" test removed
-  // because tab toggle has been replaced by URL-based navigation to /discussions/[naddr]/audit
 
   it("renders metadata on event before approvals EOSE, then runs analysis once after EOSE flow", async () => {
     let resolveApprovals: (result: ReturnType<typeof withCompletion>) => void;

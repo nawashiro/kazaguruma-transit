@@ -6,7 +6,6 @@ export type DiscussionReadTarget =
   | "discussion-meta"
   | "discussion-approvals"
   | "discussion-evaluations"
-  | "discussion-audit"
   | "discussion-edit";
 
 export interface DiscussionReadPlan {
@@ -25,7 +24,7 @@ export const createDiscussionReadPlan = (
   strategy: DiscussionReadStrategyConfig,
   args: { discussionId?: string; authorPubkey?: string; dTag?: string; postIds?: string[]; until?: number; relayHints?: string[] }
 ): DiscussionReadPlan => {
-  const limit = target === "discussion-audit" ? 10 : target === "discussion-meta" ? 1 : target === "discussion-evaluations" ? 100 : 50;
+  const limit = target === "discussion-meta" ? 1 : target === "discussion-evaluations" ? 100 : 50;
   let filter: NdkEventFilter;
   switch (target) {
     case "discussion-meta":
@@ -33,12 +32,6 @@ export const createDiscussionReadPlan = (
       break;
     case "discussion-evaluations":
       filter = { kinds: [7], "#e": args.postIds ?? [], limit };
-      break;
-    case "discussion-audit":
-      filter = {
-        kinds: [1111, 1],
-        "#a": args.discussionId ? [args.discussionId] : [],
-      };
       break;
     case "discussion-list":
     case "discussion-edit":

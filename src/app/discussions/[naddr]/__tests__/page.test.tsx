@@ -52,7 +52,6 @@ jest.mock('@/lib/nostr/nostr-utils', () => ({
   parseApprovalEvent: () => null,
   parseEvaluationEvent: () => null,
   combinePostsWithStats: () => [],
-  createAuditTimeline: () => [],
   validatePostForm: () => [],
   formatRelativeTime: () => '1 hour ago',
   getAdminPubkeyHex: () => 'admin-pubkey',
@@ -101,12 +100,6 @@ jest.mock('@/components/discussion/LoginModal', () => {
 jest.mock('@/components/discussion/PostPreview', () => {
   return function MockPostPreview() {
     return <div>Post Preview</div>;
-  };
-});
-
-jest.mock('@/components/discussion/AuditTimeline', () => {
-  return function MockAuditTimeline() {
-    return <div>Audit Timeline</div>;
   };
 });
 

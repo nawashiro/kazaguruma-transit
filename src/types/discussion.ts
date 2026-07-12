@@ -124,17 +124,6 @@ export interface AdminCheckProps {
   fallback?: React.ReactNode
 }
 
-export interface AuditTimelineItem {
-  id: string
-  type: 'discussion-request' | 'discussion-created' | 'discussion-deleted' | 'post-submitted' | 'post-approved' | 'post-rejected'
-  timestamp: number
-  actorPubkey: string
-  actorName?: string
-  targetId?: string
-  description: string
-  event: NostrEventDTO
-}
-
 export interface BusStop {
   id: string
   name: string
@@ -185,7 +174,7 @@ export interface DiscussionStats {
   totalEvaluations: number
 }
 
-export type TabType = 'main' | 'audit' | 'manage' | 'approve'
+export type TabType = 'main' | 'manage' | 'approve'
 
 export interface TabConfig {
   id: TabType
@@ -202,42 +191,6 @@ export interface PaginationProps {
 export interface LoadingState {
   isLoading: boolean
   error: string | null
-}
-
-/**
- * 監査ページ固有の状態を表す
- * LoadingStateを拡張し、データ取得完了フラグと再試行可能フラグを追加
- */
-export interface AuditPageState extends LoadingState {
-  /** データ取得が完了したかどうか */
-  isLoaded: boolean
-  /** 再試行可能なエラーかどうか */
-  isRetryable: boolean
-}
-
-export interface ListAuditTimelineDTO {
-  id: string
-  type: 'listing-requested' | 'promotion-requested'
-  actorPubkey: string
-  actorMnemonic: string
-  timestamp: number
-  targetRef?: string
-  approvalState: 'unapproved' | 'approved'
-  approvedByPubkey?: string
-  approvedByMnemonic?: string
-}
-
-export interface DiscussionAuditTimelineDTO {
-  id: string
-  type: 'post-submitted' | 'promotion-requested'
-  actorPubkey: string
-  actorMnemonic: string
-  discussionRef?: string
-  timestamp: number
-  targetRef?: string
-  approvalState: 'unapproved' | 'approved'
-  approvedByPubkey?: string
-  approvedByMnemonic?: string
 }
 
 export interface DiscussionError extends Error {

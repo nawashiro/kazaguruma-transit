@@ -86,10 +86,6 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   formatRelativeTime: () => "now",
 }));
 
-jest.mock("@/components/discussion/AuditLogSection", () => ({
-  AuditLogSection: () => <div>Audit Log</div>,
-}));
-
 describe("DiscussionsPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();

@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 import type { ModeratorApplication } from "@/lib/discussion/moderator-application-state";
 import { formatBip39JapaneseMnemonicPreviewFromPubkey } from "@/lib/nostr/mnemonic-utils";
 import { formatRelativeTime, hexToNpub } from "@/lib/nostr/nostr-utils";
@@ -19,39 +17,12 @@ interface Props {
 }
 
 function Identity({ pubkey }: { pubkey: string }) {
-  const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
-  const npub = hexToNpub(pubkey);
-
-  const copyUserId = async () => {
-    try {
-      await navigator.clipboard.writeText(npub);
-      setCopyStatus("copied");
-    } catch {
-      setCopyStatus("idle");
-    }
-  };
-
   return (
     <div className="min-w-0">
       <p className="text-base font-bold ruby-text">
         {formatBip39JapaneseMnemonicPreviewFromPubkey(pubkey)}
       </p>
-      <div className="flex items-center gap-2">
-        <p className="font-mono break-all flex-1">{npub}</p>
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm rounded-full dark:rounded-sm"
-          aria-label={`ユーザーID ${npub} をコピー`}
-          onClick={copyUserId}
-        >
-          <span className="ruby-text">コピー</span>
-        </button>
-      </div>
-      {copyStatus === "copied" && (
-        <p className="text-sm text-success ruby-text" role="status">
-          ユーザーIDをコピーしました
-        </p>
-      )}
+      <p className="font-mono break-all flex-1">{hexToNpub(pubkey)}</p>
     </div>
   );
 }

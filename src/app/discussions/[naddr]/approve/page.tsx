@@ -366,25 +366,27 @@ export default function PostApprovalPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="card bg-base-100 shadow-sm mb-6" role="status">
-        <div className="card-body">
-          <div className="flex flex-nowrap gap-2 items-center">
-            <InformationCircleIcon
-              className="h-6 w-6 shrink-0 text-info"
-              aria-hidden="true"
-            />
-            <span className="ruby-text">
-              投稿を承認するにはモデレーターになる必要があります。
-            </span>
-            <Link
-              href={`/discussions/${naddrParam}/moderators#become-moderator`}
-              className="link ruby-text"
-            >
-              モデレーターになる
-            </Link>
+      {!hasApprovalPermission && (
+        <div className="card bg-base-100 shadow-sm mb-6" role="status">
+          <div className="card-body">
+            <div className="flex flex-nowrap gap-2 items-center">
+              <InformationCircleIcon
+                className="h-6 w-6 shrink-0 text-info"
+                aria-hidden="true"
+              />
+              <span className="ruby-text">
+                投稿を承認するにはモデレーターになる必要があります。
+              </span>
+              <Link
+                href={`/discussions/${naddrParam}/moderators#become-moderator`}
+                className="link ruby-text"
+              >
+                モデレーターになる
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      )}
       <nav className="tabs tabs-box mb-6 w-full overflow-x-auto" role="tablist">
         <button
           aria-selected={activeTab === "pending"}

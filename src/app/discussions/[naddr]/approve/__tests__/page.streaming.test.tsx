@@ -6,6 +6,7 @@ import type { Discussion } from "@/types/discussion";
 
 const useAuthMock = jest.fn();
 const mockUseDiscussionMeta = jest.fn();
+var isModeratorMock = jest.fn(() => false);
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr-test" }),
@@ -111,12 +112,13 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseApprovalEvent: () => null,
   formatRelativeTime: () => "now",
   getAdminPubkeyHex: () => "admin",
-  isModerator: () => false,
+  isModerator: () => isModeratorMock(),
 }));
 
 describe("PostApprovalPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    isModeratorMock.mockReturnValue(false);
     const layoutDiscussion: Discussion = {
       id: "34550:author:tag",
       title: "Title",
@@ -194,6 +196,37 @@ describe("PostApprovalPage streaming", () => {
     ).toHaveAttribute("href", "/discussions/naddr-test/moderators#become-moderator");
     expect(
       screen.queryByText("承認操作にはログインが必要です。")
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides moderator guidance from the discussion creator", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "author", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+
+    render(<PostApprovalPage />);
+
+    await screen.findByRole("button", { name: "承認" });
+
+    expect(
+      screen.queryByText("投稿を承認するにはモデレーターになる必要があります。")
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides moderator guidance from moderators", async () => {
+    isModeratorMock.mockReturnValue(true);
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "moderator-1", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+
+    render(<PostApprovalPage />);
+
+    await screen.findByRole("button", { name: "承認" });
+
+    expect(
+      screen.queryByText("投稿を承認するにはモデレーターになる必要があります。")
     ).not.toBeInTheDocument();
   });
 

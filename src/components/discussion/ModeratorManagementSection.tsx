@@ -65,7 +65,7 @@ function Reason({ application }: { application?: ModeratorApplication }) {
         申請理由: {application.reason || "未記入"}
       </p>
       <p className="text-sm text-base-content/70 ruby-text">
-        申請日時 {formatRelativeTime(application.createdAt)}
+        申請日時: {formatRelativeTime(application.createdAt)}
       </p>
     </div>
   );

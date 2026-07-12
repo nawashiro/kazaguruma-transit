@@ -302,7 +302,10 @@ export default function ModeratorsPage() {
           </section>
         </>
       ) : !user.isLoggedIn ? (
-        <section className="card border border-base-300 bg-base-100">
+        <section
+          id="become-moderator"
+          className="card border border-base-300 bg-base-100"
+        >
           <div className="card-body space-y-3">
             <p className="ruby-text">
               モデレーターに申請するにはログインが必要です。
@@ -320,7 +323,10 @@ export default function ModeratorsPage() {
       ) : isModerator ? (
         <p className="ruby-text">あなたはこの会話のモデレーターです。</p>
       ) : (
-        <section className="card border border-base-300 bg-base-100">
+        <section
+          id="become-moderator"
+          className="card border border-base-300 bg-base-100"
+        >
           <div className="card-body space-y-3">
             <h2 className="card-title ruby-text">
               <span className="label-text">モデレーターになる</span>

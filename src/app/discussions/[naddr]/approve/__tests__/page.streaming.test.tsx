@@ -176,6 +176,27 @@ describe("PostApprovalPage streaming", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows one moderator guidance message above the tabs for logged-out users", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "", isLoggedIn: false },
+      signEvent: jest.fn(),
+    });
+
+    render(<PostApprovalPage />);
+
+    await screen.findByRole("button", { name: "承認" });
+
+    expect(
+      screen.getByText("投稿を承認するにはモデレーターになる必要があります。")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "モデレーターになる" })
+    ).toHaveAttribute("href", "/discussions/naddr-test/moderators#become-moderator");
+    expect(
+      screen.queryByText("承認操作にはログインが必要です。")
+    ).not.toBeInTheDocument();
+  });
+
   it("shows disabled revoke action with reason for non-moderator users", async () => {
     useAuthMock.mockReturnValue({
       user: { pubkey: "viewer", isLoggedIn: true },

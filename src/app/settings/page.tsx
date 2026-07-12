@@ -5,7 +5,6 @@ export const dynamic = "force-dynamic";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   isDiscussionsEnabled,

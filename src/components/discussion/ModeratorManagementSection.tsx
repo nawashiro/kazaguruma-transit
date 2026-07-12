@@ -39,8 +39,8 @@ function Selection({
   pubkey: string;
 }) {
   return (
-    <label className="flex shrink-0 flex-col items-center gap-2 text-sm font-medium ruby-text">
-      <span>{label}</span>
+    <label className="flex shrink-0 flex-col items-center gap-2 text-sm font-medium">
+      <span className="ruby-text">{label}</span>
       <input
         aria-label={`${formatBip39JapaneseMnemonicPreviewFromPubkey(pubkey)} を${label}対象にする`}
         className="checkbox checkbox-primary h-6 w-6 shrink-0"

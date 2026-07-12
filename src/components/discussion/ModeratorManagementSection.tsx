@@ -19,10 +19,12 @@ interface Props {
 function Identity({ pubkey }: { pubkey: string }) {
   return (
     <div className="min-w-0">
-      <p className="font-medium ruby-text">
+      <p className="text-base font-bold ruby-text">
         {formatBip39JapaneseMnemonicPreviewFromPubkey(pubkey)}
       </p>
-      <code className="block break-all text-sm">{hexToNpub(pubkey)}</code>
+      <p className="font-mono break-all flex-1">
+        {hexToNpub(pubkey)}
+      </p>
     </div>
   );
 }
@@ -61,11 +63,11 @@ function Reason({ application }: { application?: ModeratorApplication }) {
     );
   return (
     <div className="mt-3 space-y-1">
-      <p className="text-sm text-base-content/70 ruby-text">
-        申請日時: {formatRelativeTime(application.createdAt)}
+      <p className="text-base whitespace-pre-wrap ruby-text">
+        申請理由 {application.reason || "未記入"}
       </p>
-      <p className="whitespace-pre-wrap ruby-text">
-        申請理由: {application.reason || "未記入"}
+      <p className="text-sm text-base-content/70 ruby-text">
+        申請日時 {formatRelativeTime(application.createdAt)}
       </p>
     </div>
   );
@@ -136,7 +138,7 @@ export function ModeratorManagementSection({
             id="pending-moderators-title"
             className="card-title mb-4 ruby-text"
           >
-            申請中のユーザー
+            <span>申請中のユーザー</span>
           </h2>
           {applications.length === 0 ? (
             <p className="text-base-content/70 ruby-text">

@@ -89,4 +89,20 @@ describe("ModeratorsPage direct moderator management", () => {
     expect(screen.getByText("npub-npub1second")).toBeVisible();
     expect(screen.getByRole("button", { name: "変更を確定" })).not.toBeDisabled();
   });
+
+  it("associates duplicate-user errors with the direct moderator input", () => {
+    render(<ModeratorsPage />);
+
+    const input = screen.getByLabelText("ユーザーID");
+    const addButton = screen.getByRole("button", { name: "追加" });
+    fireEvent.change(input, { target: { value: "npub1duplicate" } });
+    fireEvent.click(addButton);
+    fireEvent.change(input, { target: { value: "npub1duplicate" } });
+    fireEvent.click(addButton);
+
+    const error = screen.getByText("そのユーザーはすでに追加予定です。");
+    expect(error).toBeVisible();
+    expect(input).toHaveAttribute("aria-describedby", "direct-moderator-error");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+  });
 });

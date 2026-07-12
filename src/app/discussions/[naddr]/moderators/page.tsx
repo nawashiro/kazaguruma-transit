@@ -33,6 +33,7 @@ export default function ModeratorsPage() {
     [removed, setRemoved] = useState(new Set<string>()),
     [direct, setDirect] = useState(""),
     [directModerators, setDirectModerators] = useState<string[]>([]),
+    [directError, setDirectError] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   useEffect(() => {
@@ -109,7 +110,7 @@ export default function ModeratorsPage() {
   const addDirectModerator = () => {
     const input = direct.trim();
     if (!isValidNpub(input)) {
-      setError("有効なユーザーIDを入力してください。");
+      setDirectError("有効なユーザーIDを入力してください。");
       return;
     }
 
@@ -118,13 +119,13 @@ export default function ModeratorsPage() {
       (moderator) => moderator.pubkey === pubkey,
     );
     if (isAlreadyModerator || directModerators.includes(pubkey)) {
-      setError("そのユーザーはすでに追加予定です。");
+      setDirectError("そのユーザーはすでに追加予定です。");
       return;
     }
 
     setDirectModerators((current) => [...current, pubkey]);
     setDirect("");
-    setError("");
+    setDirectError("");
   };
   const removeDirectModerator = (pubkey: string) => {
     setDirectModerators((current) =>
@@ -162,6 +163,7 @@ export default function ModeratorsPage() {
       setRemoved(new Set());
       setDirectModerators([]);
       setDirect("");
+      setDirectError("");
       await meta?.reload();
     } catch (error) {
       logger.error(error);
@@ -211,9 +213,14 @@ export default function ModeratorsPage() {
                     id="direct-moderator"
                     className="input input-bordered w-full"
                     value={direct}
-                    onChange={(event) => setDirect(event.target.value)}
+                    onChange={(event) => {
+                      setDirect(event.target.value);
+                      setDirectError("");
+                    }}
                     placeholder="npub1..."
                     disabled={busy}
+                    aria-invalid={Boolean(directError)}
+                    aria-describedby="direct-moderator-error"
                   />
                 </div>
                 <button
@@ -224,6 +231,15 @@ export default function ModeratorsPage() {
                   <span className="ruby-text">追加</span>
                 </button>
               </div>
+              {directError && (
+                <p
+                  id="direct-moderator-error"
+                  role="alert"
+                  className="text-sm text-error ruby-text"
+                >
+                  {directError}
+                </p>
+              )}
               {directModerators.length > 0 && (
                 <div>
                   <h3 className="label-text font-medium ruby-text">
@@ -302,9 +318,10 @@ export default function ModeratorsPage() {
       ) : (
         <section className="card border border-base-300 bg-base-100">
           <div className="card-body space-y-3">
-            <label htmlFor="reason" className="label ruby-text">
-              <span className="label-text">モデレーターに申請</span>
-            </label>
+            <h2 className="card-title ruby-text">
+              <span className="label-text">モデレーターになる</span>
+            </h2>
+            <p className="text-base ruby-text">投稿の承認を行う場合、会話作成者にモデレーターになりたい旨を申請してください。</p>
             <textarea
               id="reason"
               className="textarea textarea-bordered w-full"

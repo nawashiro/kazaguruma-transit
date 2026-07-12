@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import { ArrowRightOnRectangleIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   isDiscussionsEnabled,
@@ -382,20 +383,8 @@ export default function SettingsPage() {
                   <Button
                     onClick={() => setShowLoginModal(true)}
                     disabled={isLoading}
+                    className="whitespace-nowrap text-base"
                   >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-                      />
-                    </svg>
                     <span className="ruby-text">ログイン / アカウント作成</span>
                   </Button>
                 </div>
@@ -477,7 +466,7 @@ export default function SettingsPage() {
                     </span>
                     <button
                       type="button"
-                            className="btn btn-outline"
+                      className="btn btn-outline"
                       onClick={() => {
                         void loadDiscussions();
                       }}
@@ -522,14 +511,8 @@ export default function SettingsPage() {
         <div className="mt-8">
           <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="card-body">
-              <h2 className="card-title mb-4 ruby-text">プライバシー</h2>
-
-              <div className="space-y-4">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  <h3 className="font-medium mb-2 ruby-text">
-                    データの保存について
-                  </h3>
-                  <ul className="space-y-1 list-disc list-inside ruby-text">
+              <h2 className="card-title mb-2 ruby-text">プライバシー</h2>
+                <ul className="space-y-1 list-disc list-inside ruby-text">
                     <li>
                       あなたの投稿と評価はNostrプロトコルを通じて分散保存されます
                     </li>
@@ -540,22 +523,11 @@ export default function SettingsPage() {
                     <li>投稿は削除できない場合があります</li>
                   </ul>
                 </div>
-
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  <h3 className="font-medium mb-2 ruby-text">匿名性について</h3>
-                  <ul className="space-y-1 list-disc list-inside ruby-text">
-                    <li>
-                      メールアドレスやデバイス情報などの個人情報は送信されません
-                    </li>
-                    <li>ユーザーIDは技術的な目的でのみ使用されます</li>
-                  </ul>
-                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
+        
+     
       {/* 削除確認ダイアログ */}
       {showDeleteConfirm && (
         <dialog open className="modal modal-open">

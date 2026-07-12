@@ -83,83 +83,93 @@ export function ModeratorManagementSection({
 }: Props) {
   return (
     <section className="space-y-8">
-      <section className="space-y-3" aria-labelledby="active-moderators-title">
-        <h2
-          id="active-moderators-title"
-          className="text-lg font-semibold ruby-text"
-        >
-          モデレーターをしているユーザー
-        </h2>
-        {moderators.length === 0 ? (
-          <p className="text-base-content/70 ruby-text">
-            モデレーターはいません。
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {moderators.map((moderator) => (
-              <article
-                key={moderator.pubkey}
-                className="card border border-base-300 bg-base-100"
-              >
-                <div className="card-body flex-row items-start justify-between gap-4 p-4">
-                  <div className="min-w-0">
-                    <Identity pubkey={moderator.pubkey} />
-                    <Reason
-                      application={applicationsByPubkey.get(moderator.pubkey)}
-                    />
+      <section
+        className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+        aria-labelledby="active-moderators-title"
+      >
+        <div className="card-body">
+          <h2
+            id="active-moderators-title"
+            className="card-title mb-4 ruby-text"
+          >
+            モデレーターをしているユーザー
+          </h2>
+          {moderators.length === 0 ? (
+            <p className="text-base-content/70 ruby-text">
+              モデレーターはいません。
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {moderators.map((moderator) => (
+                <article
+                  key={moderator.pubkey}
+                  className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <Identity pubkey={moderator.pubkey} />
+                      <Reason
+                        application={applicationsByPubkey.get(moderator.pubkey)}
+                      />
+                    </div>
+                    {isCreator && (
+                      <Selection
+                        label="削除"
+                        checked={removedPubkeys.has(moderator.pubkey)}
+                        onChange={() => onToggleRemoval(moderator.pubkey)}
+                        pubkey={moderator.pubkey}
+                      />
+                    )}
                   </div>
-                  {isCreator && (
-                    <Selection
-                      label="削除"
-                      checked={removedPubkeys.has(moderator.pubkey)}
-                      onChange={() => onToggleRemoval(moderator.pubkey)}
-                      pubkey={moderator.pubkey}
-                    />
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
-      <section className="space-y-3" aria-labelledby="pending-moderators-title">
-        <h2
-          id="pending-moderators-title"
-          className="text-lg font-semibold ruby-text"
-        >
-          申請中のユーザー
-        </h2>
-        {applications.length === 0 ? (
-          <p className="text-base-content/70 ruby-text">
-            申請中のユーザーはいません。
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {applications.map((application) => (
-              <article
-                key={application.id}
-                className="card border border-base-300 bg-base-100"
-              >
-                <div className="card-body flex-row items-start justify-between gap-4 p-4">
-                  <div className="min-w-0">
-                    <Identity pubkey={application.applicantPubkey} />
-                    <Reason application={application} />
+      <section
+        className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+        aria-labelledby="pending-moderators-title"
+      >
+        <div className="card-body">
+          <h2
+            id="pending-moderators-title"
+            className="card-title mb-4 ruby-text"
+          >
+            申請中のユーザー
+          </h2>
+          {applications.length === 0 ? (
+            <p className="text-base-content/70 ruby-text">
+              申請中のユーザーはいません。
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {applications.map((application) => (
+                <article
+                  key={application.id}
+                  className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <Identity pubkey={application.applicantPubkey} />
+                      <Reason application={application} />
+                    </div>
+                    {isCreator && (
+                      <Selection
+                        label="許可"
+                        checked={approvedPubkeys.has(application.applicantPubkey)}
+                        onChange={() =>
+                          onToggleApproval(application.applicantPubkey)
+                        }
+                        pubkey={application.applicantPubkey}
+                      />
+                    )}
                   </div>
-                  {isCreator && (
-                    <Selection
-                      label="許可"
-                      checked={approvedPubkeys.has(application.applicantPubkey)}
-                      onChange={() =>
-                        onToggleApproval(application.applicantPubkey)
-                      }
-                      pubkey={application.applicantPubkey}
-                    />
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
     </section>
   );

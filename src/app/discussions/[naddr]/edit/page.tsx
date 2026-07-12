@@ -58,11 +58,11 @@ const readStrategy =
   typeof getDiscussionReadStrategyConfig === "function"
     ? getDiscussionReadStrategyConfig()
     : {
-        relayLimit: 3,
-        idleTimeoutMs: nostrServiceConfig.defaultTimeout,
-        hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
-        dedupWindowMs: 250,
-      };
+      relayLimit: 3,
+      idleTimeoutMs: nostrServiceConfig.defaultTimeout,
+      hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
+      dedupWindowMs: 250,
+    };
 const nostrService = createNostrService(nostrServiceConfig);
 const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 const ADMIN_PUBKEY = getAdminPubkeyHex();
@@ -503,8 +503,8 @@ export default function DiscussionEditPage() {
               ? prev.moderators
               : [...prev.moderators, { pubkey: request.applicantPubkey }]
             : prev.moderators.filter(
-                (moderator) => moderator.pubkey !== request.applicantPubkey,
-              );
+              (moderator) => moderator.pubkey !== request.applicantPubkey,
+            );
 
         return {
           ...prev,
@@ -886,8 +886,6 @@ export default function DiscussionEditPage() {
                     </button>
                   </section>
 
-                  <div className="divider"></div>
-
                   {false && discussion && (
                     <section aria-labelledby="moderator-section-title">
                       <h3
@@ -981,15 +979,14 @@ export default function DiscussionEditPage() {
                                     {formatRelativeTime(request.createdAt)}
                                   </span>
                                   <span
-                                    className={`badge ${
-                                      discussion!.moderators.some(
-                                        (moderator) =>
-                                          moderator.pubkey ===
-                                          request.applicantPubkey,
-                                      )
+                                    className={`badge ${discussion!.moderators.some(
+                                      (moderator) =>
+                                        moderator.pubkey ===
+                                        request.applicantPubkey,
+                                    )
                                         ? "badge-success"
                                         : "badge-ghost"
-                                    }`}
+                                      }`}
                                   >
                                     {discussion!.moderators.some(
                                       (moderator) =>

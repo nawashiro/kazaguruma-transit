@@ -14,7 +14,10 @@ import {
   deriveLatestModeratorApplications,
   derivePendingModeratorApplications,
 } from "@/lib/discussion/moderator-application-state";
-import { isValidNpub, npubToHex } from "@/lib/nostr/nostr-utils";
+import { hexToNpub, isValidNpub, npubToHex } from "@/lib/nostr/nostr-utils";
+import {
+  formatBip39JapaneseMnemonicPreviewFromPubkey,
+} from "@/lib/nostr/mnemonic-utils";
 import { logger } from "@/utils/logger";
 const config = getNostrServiceConfig();
 const service = createNostrService(config);
@@ -29,6 +32,7 @@ export default function ModeratorsPage() {
     [approved, setApproved] = useState(new Set<string>()),
     [removed, setRemoved] = useState(new Set<string>()),
     [direct, setDirect] = useState(""),
+    [directModerators, setDirectModerators] = useState<string[]>([]),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   useEffect(() => {
@@ -102,13 +106,33 @@ export default function ModeratorsPage() {
       setBusy(false);
     }
   };
-  const confirm = async () => {
-    if (!discussion || !user.pubkey) return;
-    const directKey = direct.trim() ? npubToHex(direct.trim()) : "";
-    if (directKey && !isValidNpub(direct.trim())) {
+  const addDirectModerator = () => {
+    const input = direct.trim();
+    if (!isValidNpub(input)) {
       setError("有効なユーザーIDを入力してください。");
       return;
     }
+
+    const pubkey = npubToHex(input);
+    const isAlreadyModerator = discussion?.moderators.some(
+      (moderator) => moderator.pubkey === pubkey,
+    );
+    if (isAlreadyModerator || directModerators.includes(pubkey)) {
+      setError("そのユーザーはすでに追加予定です。");
+      return;
+    }
+
+    setDirectModerators((current) => [...current, pubkey]);
+    setDirect("");
+    setError("");
+  };
+  const removeDirectModerator = (pubkey: string) => {
+    setDirectModerators((current) =>
+      current.filter((candidate) => candidate !== pubkey),
+    );
+  };
+  const confirm = async () => {
+    if (!discussion || !user.pubkey) return;
     setBusy(true);
     setError("");
     try {
@@ -118,7 +142,7 @@ export default function ModeratorsPage() {
       const keys = calculateNextModeratorPubkeys(
         discussion.moderators.map((m) => m.pubkey),
         [...approved],
-        directKey ? [directKey] : [],
+        directModerators,
         [...removed],
       );
       const draft = gateway.createModeratorUpdateDraft({
@@ -136,6 +160,7 @@ export default function ModeratorsPage() {
       if (!(await service.publishSignedEvent(signed))) throw new Error();
       setApproved(new Set());
       setRemoved(new Set());
+      setDirectModerators([]);
       setDirect("");
       await meta?.reload();
     } catch (error) {
@@ -169,33 +194,93 @@ export default function ModeratorsPage() {
         </p>
       )}
       {isCreator ? (
-        <section className="card border border-base-300 bg-base-100">
-          <div className="card-body space-y-3">
-            <label className="label ruby-text" htmlFor="direct-moderator">
-              <span className="label-text">モデレーターを直接追加</span>
-            </label>
-            <input
-              id="direct-moderator"
-              className="input input-bordered w-full"
-              value={direct}
-              onChange={(event) => setDirect(event.target.value)}
-              placeholder="npub1..."
-              disabled={busy}
-            />
-            <p role="status" className="ruby-text">
-              許可予定 {approved.size}名・削除予定 {removed.size}名
-            </p>
-            <button
-              className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start"
-              onClick={confirm}
-              disabled={
-                busy || (!approved.size && !removed.size && !direct.trim())
-              }
-            >
-              <span className="ruby-text">変更を確定</span>
-            </button>
-          </div>
-        </section>
+        <>
+          <section className="card bg-base-100 shadow-sm border border-base-300">
+            <div className="card-body space-y-4">
+              <h2 className="card-title ruby-text">
+                <span>モデレーターを追加</span>
+              </h2>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="flex-1">
+                  <label className="label" htmlFor="direct-moderator">
+                    <span className="label-text font-medium ruby-text">
+                      ユーザーID
+                    </span>
+                  </label>
+                  <input
+                    id="direct-moderator"
+                    className="input input-bordered w-full"
+                    value={direct}
+                    onChange={(event) => setDirect(event.target.value)}
+                    placeholder="npub1..."
+                    disabled={busy}
+                  />
+                </div>
+                <button
+                  className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+                  onClick={addDirectModerator}
+                  disabled={busy || !direct.trim()}
+                >
+                  <span className="ruby-text">追加</span>
+                </button>
+              </div>
+              {directModerators.length > 0 && (
+                <div>
+                  <h3 className="label-text font-medium ruby-text">
+                    追加予定のユーザー
+                  </h3>
+                  <ul className="mt-2 space-y-2">
+                    {directModerators.map((pubkey) => (
+                      <li
+                        key={pubkey}
+                        className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-base-200 p-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium break-words ruby-text">
+                            {formatBip39JapaneseMnemonicPreviewFromPubkey(
+                              pubkey,
+                            )}
+                          </p>
+                          <code className="block break-all text-sm">
+                            {hexToNpub(pubkey)}
+                          </code>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-ghost min-h-[44px] shrink-0 rounded-full dark:rounded-sm"
+                          onClick={() => removeDirectModerator(pubkey)}
+                          disabled={busy}
+                        >
+                          <span className="ruby-text">取り消す</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </section>
+          <section className="card bg-base-100 shadow-sm border border-base-300">
+            <div className="card-body space-y-4">
+              <h2 className="card-title ruby-text">
+                <span>モデレーターの変更を確定</span>
+              </h2>
+              <p role="status" className="ruby-text">
+                許可予定 {approved.size}名・削除予定 {removed.size}名
+              </p>
+              <button
+                className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start"
+                onClick={confirm}
+                disabled={
+                  busy ||
+                  (!approved.size && !removed.size && !directModerators.length)
+                }
+              >
+                <span className="ruby-text">変更を確定</span>
+              </button>
+            </div>
+          </section>
+        </>
       ) : !user.isLoggedIn ? (
         <section className="card border border-base-300 bg-base-100">
           <div className="card-body space-y-3">

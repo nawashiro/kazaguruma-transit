@@ -64,6 +64,7 @@ describe("DiscussionTabLayout", () => {
 
       const tablist = screen.getByRole("tablist");
       expect(tablist).toBeInTheDocument();
+      expect(tablist).toHaveClass("tabs", "tabs-box");
     });
 
     it("renders tabs with proper role and aria-selected", () => {
@@ -219,9 +220,9 @@ describe("DiscussionTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      expect(tabs[0]).toHaveClass("btn-active");
-      expect(tabs[1]).not.toHaveClass("btn-active");
-      expect(tabs[2]).not.toHaveClass("btn-active");
+      expect(tabs[0]).toHaveClass("tab-active");
+      expect(tabs[1]).not.toHaveClass("tab-active");
+      expect(tabs[2]).not.toHaveClass("tab-active");
     });
 
     it("applies active class to audit tab when on audit path", () => {
@@ -234,9 +235,9 @@ describe("DiscussionTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      expect(tabs[0]).not.toHaveClass("btn-active");
-      expect(tabs[1]).toHaveClass("btn-active");
-      expect(tabs[2]).not.toHaveClass("btn-active");
+      expect(tabs[0]).not.toHaveClass("tab-active");
+      expect(tabs[1]).toHaveClass("tab-active");
+      expect(tabs[2]).not.toHaveClass("tab-active");
     });
   });
 

@@ -34,7 +34,18 @@ jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
   }),
 }));
 jest.mock("@/components/discussion/ModeratorManagementSection", () => ({
-  ModeratorManagementSection: () => null,
+  ModeratorManagementSection: ({
+    onToggleApproval,
+    onToggleRemoval,
+  }: {
+    onToggleApproval: (pubkey: string) => void;
+    onToggleRemoval: (pubkey: string) => void;
+  }) => (
+    <>
+      <button onClick={() => onToggleApproval("applicant")}>許可を選択</button>
+      <button onClick={() => onToggleRemoval("moderator")}>削除を選択</button>
+    </>
+  ),
 }));
 jest.mock("@/components/discussion/LoginModal", () => ({
   LoginModal: () => null,
@@ -64,6 +75,16 @@ jest.mock("@/lib/nostr/mnemonic-utils", () => ({
 }));
 
 describe("ModeratorsPage direct moderator management", () => {
+  it("enables confirmation when approval and removal selections change", () => {
+    render(<ModeratorsPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "許可を選択" }));
+    fireEvent.click(screen.getByRole("button", { name: "削除を選択" }));
+
+    expect(screen.getByRole("button", { name: "変更を確定" })).not.toBeDisabled();
+    expect(screen.queryByText(/許可予定|削除予定/)).not.toBeInTheDocument();
+  });
+
   it("adds multiple direct moderators and allows each one to be cancelled", () => {
     render(<ModeratorsPage />);
 

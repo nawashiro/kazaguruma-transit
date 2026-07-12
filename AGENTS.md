@@ -85,6 +85,7 @@ These principles are the operational source of truth for agents working in this 
 ## Coding Style & Naming
 
 - TypeScript-first; prefer React function components and hooks. Keep files/module names in PascalCase for components (`IntegratedRouteDisplay.tsx`) and camelCase for utilities.
+- DaisyUIの実装・置換では、導入済みの公式DaisyUI Skill/Plugin（`saadeghi/daisyui`、`daisyui@daisyui`）を必ず参照し、その指示に従う。Skill/Pluginが利用できない場合に限り、使用するコンポーネントの公式ドキュメント（https://daisyui.com/components/）を確認し、現行バージョンのクラス名・構造・アクセシビリティ要件に従う。
 - Use 2-space indentation to match existing files; avoid implicit `any` (ESLint warns). Follow Next.js `core-web-vitals` rules; run `npm run lint`.
 - Favor explicit types for API shapes and Prisma results; keep transit/discussion services encapsulated under `src/lib`.
 - Do not repeat a page's active tab as a main heading. In selectable user cards, put a checkbox after the identity/content and give its visible purpose (for example, `許可` or `削除`) next to it; its accessible name must include the target user.

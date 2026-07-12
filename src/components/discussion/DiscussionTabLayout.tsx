@@ -371,7 +371,11 @@ export function DiscussionTabLayout({
       />
 
       {/* タブナビゲーション（既存） */}
-      <nav role="tablist" className="join mb-6" aria-label="ページナビゲーション">
+      <nav
+        role="tablist"
+        className="tabs tabs-box mb-6 w-full overflow-x-auto"
+        aria-label="ページナビゲーション"
+      >
         {tabs.map((tab, index) => (
           <Link
             key={tab.href}
@@ -379,10 +383,11 @@ export function DiscussionTabLayout({
             ref={(el) => {
               tabRefs.current[index] = el;
             }}
-            className={`join-item btn min-h-[44px] min-w-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${tab.isActive ? "btn-active btn-primary" : ""
+            className={`tab px-4 min-h-[44px] min-w-[44px] shrink-0 whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${tab.isActive ? "tab-active" : ""
               }`}
             role="tab"
             aria-selected={tab.isActive}
+            aria-current={tab.isActive ? "page" : undefined}
             tabIndex={tab.isActive ? 0 : -1}
             onKeyDown={(e) => handleKeyDown(e, index)}
           >

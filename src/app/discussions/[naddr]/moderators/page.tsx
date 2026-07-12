@@ -1,5 +1,11 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import { ModeratorManagementSection } from "@/components/discussion/ModeratorManagementSection";
@@ -70,17 +76,18 @@ export default function ModeratorsPage() {
   );
   const isPending = applications.some((a) => a.applicantPubkey === user.pubkey);
   const toggle = (
-    set: Set<string>,
-    change: (value: Set<string>) => void,
+    change: Dispatch<SetStateAction<Set<string>>>,
     key: string,
   ) => {
-    const next = new Set(set);
-    if (next.has(key)) {
-      next.delete(key);
-    } else {
-      next.add(key);
-    }
-    change(next);
+    change((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
   };
   const request = async () => {
     if (!discussion || !user.pubkey) {
@@ -187,8 +194,8 @@ export default function ModeratorsPage() {
         isCreator={isCreator}
         approvedPubkeys={approved}
         removedPubkeys={removed}
-        onToggleApproval={(key) => toggle(approved, setApproved, key)}
-        onToggleRemoval={(key) => toggle(removed, setRemoved, key)}
+        onToggleApproval={(key) => toggle(setApproved, key)}
+        onToggleRemoval={(key) => toggle(setRemoved, key)}
       />
       {error && (
         <p role="alert" className="text-error ruby-text">
@@ -281,9 +288,6 @@ export default function ModeratorsPage() {
               <h2 className="card-title ruby-text">
                 <span>モデレーターの変更を確定</span>
               </h2>
-              <p role="status" className="ruby-text">
-                許可予定 {approved.size}名・削除予定 {removed.size}名
-              </p>
               <button
                 className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start"
                 onClick={confirm}

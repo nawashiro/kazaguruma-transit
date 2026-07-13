@@ -7,6 +7,8 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { logger } from "@/utils/logger";
 import RateLimitModal from "./RateLimitModal";
+import { FiSearch } from "react-icons/fi";
+import { MdMyLocation } from "react-icons/md";
 
 interface OriginSelectorProps {
   onOriginSelected: (location: Location) => void;
@@ -143,7 +145,6 @@ export default function OriginSelector({
       <Card testId="origin-selector-card" title="次に出発地を選択してください">
         <form onSubmit={handleAddressSubmit} className="space-y-4">
           <InputField
-            label="住所や場所"
             placeholder="千代田区役所"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
@@ -152,6 +153,19 @@ export default function OriginSelector({
             required={true}
             error={error || undefined}
             description="千代田区内の住所や場所名を入力してください。自動的に「千代田区」が先頭に追加されます。"
+            endAdornment={
+              <Button
+                type="submit"
+                disabled={loading}
+                loading={loading}
+                iconOnly
+                className="join-item h-11 w-11 p-0 focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-base-content"
+                testId="search-button"
+                aria-label="住所や場所を検索"
+              >
+                <FiSearch className="h-5 w-5" aria-hidden="true" />
+              </Button>
+            }
           />
 
           <fieldset aria-describedby={buttonGroupId}>
@@ -159,31 +173,6 @@ export default function OriginSelector({
               検索オプション
             </legend>
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-              <Button
-                type="submit"
-                disabled={loading}
-                loading={loading}
-                className="flex-1"
-                testId="search-button"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-                <span>この住所で検索</span>
-              </Button>
-
               <Button
                 type="button"
                 onClick={handleUseCurrentLocation}
@@ -193,28 +182,13 @@ export default function OriginSelector({
                 testId="gps-button"
                 aria-label="現在地を使用して経路を検索"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                <span className="flex items-center justify-center gap-2 whitespace-nowrap">
+                  <MdMyLocation
+                    className="h-5 w-5 shrink-0"
+                    aria-hidden="true"
                   />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-                <span>現在地を使用</span>
+                  <span>現在地を使用</span>
+                </span>
               </Button>
             </div>
           </fieldset>

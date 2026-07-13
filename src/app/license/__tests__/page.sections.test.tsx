@@ -20,7 +20,7 @@ describe("LicensePage sections", () => {
       screen.getByRole("heading", { name: "本ソフトウェア", level: 2 })
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "オープンデータ", level: 2 })
+      screen.getByRole("heading", { name: "使用オープンデータ", level: 2 })
     ).toBeTruthy();
     expect(
       screen.getByRole("heading", { name: "導入パッケージ", level: 2 })

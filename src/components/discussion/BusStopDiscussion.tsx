@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { LoginModal } from "./LoginModal";
 import { PostPreview } from "./PostPreview";
@@ -10,6 +10,8 @@ import {
   getDiscussionConfig,
   isDiscussionsEnabled,
 } from "@/lib/config/discussion-config";
+import { useBusStopModeration } from "./useBusStopModeration";
+import { DiscussionReadStatus } from "./DiscussionReadStatus";
 import {
   parsePostEvent,
   parseApprovalEvent,
@@ -24,7 +26,6 @@ import type {
   PostFormData,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import type { Event } from "nostr-tools";
 
 interface BusStopDiscussionProps {
   busStops: string[];
@@ -42,16 +43,13 @@ export function BusStopDiscussion({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginReason, setLoginReason] = useState<string>("");
   const [showPreview, setShowPreview] = useState(false);
   const [postForm, setPostForm] = useState<PostFormData>({
     content: "",
     busStopTag: busStops[0] || "",
   });
   const [errors, setErrors] = useState<string[]>([]);
-  const postsEventsRef = useRef<Event[]>([]);
-  const approvalEventsRef = useRef<Event[]>([]);
-  const approvalsStreamCleanupRef = useRef<(() => void) | null>(null);
-  const approvalsForDiscussionCleanupRef = useRef<(() => void) | null>(null);
 
   const { user, signEvent } = useAuth();
   const config = useMemo(() => getDiscussionConfig(), []);
@@ -64,103 +62,30 @@ export function BusStopDiscussion({
       }),
     [config.relays]
   );
+  const { snapshot, isLoading: isStreamLoading, error: streamError, reload } =
+    useBusStopModeration(busStops);
 
-  const updateFromEvents = useCallback(
-    async (
-      postEvents: Event[],
-      approvalsEvents: Event[],
-      fetchEvaluations: boolean
-    ) => {
-      const parsedApprovals = approvalsEvents
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
-      const parsedPosts = postEvents
-        .map((event) => parsePostEvent(event, parsedApprovals))
-        .filter((p): p is DiscussionPost => p !== null)
-        .filter(
-          (p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag)
-        );
-
-      setPosts(parsedPosts);
-      if (!fetchEvaluations || parsedPosts.length === 0) {
-        return;
-      }
-
-      const approvedPostIds = parsedPosts.map((p) => p.id);
-      const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-        approvedPostIds
-      );
-
-      const parsedEvaluations = evaluationsEvents
-        .map(parseEvaluationEvent)
-        .filter((e): e is PostEvaluation => e !== null);
-      setEvaluations(parsedEvaluations);
-    },
-    [busStops, nostrService]
-  );
-
-  const startStreaming = useCallback(() => {
-    if (busStops.length === 0) {
+  const updateFromSnapshot = useCallback(async () => {
+    if (!snapshot) {
+      setPosts([]);
       return;
     }
-
-    approvalsStreamCleanupRef.current?.();
-    approvalsForDiscussionCleanupRef.current?.();
-    postsEventsRef.current = [];
-    approvalEventsRef.current = [];
-
-    const postFilters =
-      busStops.length > 0
-        ? busStops.map((stop) => ({
-            kinds: [1111, 1],
-            "#a": [config.busStopDiscussionId],
-            "#t": [stop],
-          }))
-        : [
-            {
-              kinds: [1111, 1],
-              "#a": [config.busStopDiscussionId],
-            },
-          ];
-
-    const postStream = nostrService.streamEventsOnEvent(postFilters, {
-      onEvent: (events) => {
-        postsEventsRef.current = events;
-        updateFromEvents(events, approvalEventsRef.current, false);
-      },
-      onEose: (events) => {
-        postsEventsRef.current = events;
-        updateFromEvents(events, approvalEventsRef.current, true);
-      },
-      timeoutMs: config.defaultTimeout ?? 5000,
-    });
-
-    const approvalsStream = nostrService.streamApprovals(
-      config.busStopDiscussionId,
-      {
-        onEvent: (events) => {
-          approvalEventsRef.current = events;
-          updateFromEvents(postsEventsRef.current, events, false);
-        },
-        onEose: (events) => {
-          approvalEventsRef.current = events;
-          updateFromEvents(postsEventsRef.current, events, true);
-        },
-        timeoutMs: config.defaultTimeout ?? 5000,
-      }
-    );
-
-    approvalsStreamCleanupRef.current = postStream;
-    approvalsForDiscussionCleanupRef.current = approvalsStream;
-    updateFromEvents([], [], false);
-  }, [
-    busStops,
-    config.busStopDiscussionId,
-    config.defaultTimeout,
-    nostrService,
-    updateFromEvents,
-  ]);
+    const parsedApprovals = snapshot.approvalEvents
+      .map(parseApprovalEvent)
+      .filter((a): a is PostApproval => a !== null);
+    const parsedPosts = snapshot.primaryEvents
+      .map((event) => parsePostEvent(event, parsedApprovals))
+      .filter((p): p is DiscussionPost => p !== null)
+      .filter((p) => p.busStopTag && busStops.includes(p.busStopTag));
+    setPosts(parsedPosts);
+    const approvedPostIds = parsedPosts.filter((post) => post.approved).map((post) => post.id);
+    if (approvedPostIds.length === 0) {
+      setEvaluations([]);
+      return;
+    }
+    const evaluationEvents = await nostrService.getEvaluationsForPosts(approvedPostIds);
+    setEvaluations(evaluationEvents.map(parseEvaluationEvent).filter((e): e is PostEvaluation => e !== null));
+  }, [busStops, nostrService, snapshot]);
 
   const loadUserEvaluations = useCallback(async () => {
     if (!user.pubkey) return;
@@ -179,15 +104,8 @@ export function BusStopDiscussion({
   }, [user.pubkey, nostrService]);
 
   useEffect(() => {
-    if (discussionsEnabled) {
-      startStreaming();
-    }
-
-    return () => {
-      approvalsStreamCleanupRef.current?.();
-      approvalsForDiscussionCleanupRef.current?.();
-    };
-  }, [discussionsEnabled, startStreaming]);
+    if (discussionsEnabled) void updateFromSnapshot();
+  }, [discussionsEnabled, updateFromSnapshot]);
 
   useEffect(() => {
     if (user.pubkey) {
@@ -197,6 +115,7 @@ export function BusStopDiscussion({
 
   const handlePostSubmit = async () => {
     if (!user.isLoggedIn) {
+      setLoginReason("投稿するにはログインが必要です。");
       setShowLoginModal(true);
       return;
     }
@@ -226,7 +145,7 @@ export function BusStopDiscussion({
 
       setPostForm({ content: "", busStopTag: busStops[0] || "" });
       setShowPreview(false);
-      startStreaming();
+      reload();
     } catch (error) {
       logger.error("Failed to submit post:", error);
       setErrors(["投稿の送信に失敗しました"]);
@@ -237,6 +156,7 @@ export function BusStopDiscussion({
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (!user.isLoggedIn) {
+      setLoginReason("投稿を評価するにはログインが必要です。");
       setShowLoginModal(true);
       return;
     }
@@ -256,7 +176,7 @@ export function BusStopDiscussion({
       }
 
       setUserEvaluations((prev) => new Set([...prev, postId]));
-      startStreaming();
+      reload();
     } catch (error) {
       logger.error("Failed to evaluate post:", error);
     }
@@ -268,10 +188,19 @@ export function BusStopDiscussion({
 
   const approvedPosts = posts.filter((p) => p.approved);
   const postsWithStats = combinePostsWithStats(approvedPosts, evaluations);
+  const isApprovalCheckPending =
+    snapshot?.approvalState === "unknown" && snapshot.primaryEvents.length > 0;
 
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Evaluation component */}
+      <DiscussionReadStatus
+        isLoading={isStreamLoading}
+        completionReason={snapshot?.completionReason ?? null}
+        hasData={Boolean(snapshot?.primaryEvents.length)}
+        approvalState={isApprovalCheckPending ? "unknown" : undefined}
+        onReload={reload}
+      />
       {postsWithStats.length > 0 && (
         <div>
           <EvaluationComponent
@@ -279,7 +208,7 @@ export function BusStopDiscussion({
             onEvaluate={handleEvaluate}
             userEvaluations={userEvaluations}
             isRandomOrder={true}
-            title="メモを評価"
+            title="このバス停メモは役に立ちますか？"
           />
         </div>
       )}
@@ -287,6 +216,16 @@ export function BusStopDiscussion({
       {/* Post form */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
         <h3 className="text-lg font-medium mb-4 ruby-text">バス停メモを投稿</h3>
+        {streamError && (
+          <div className="alert alert-error mb-3" role="alert">
+            <span>{streamError}</span>
+          </div>
+        )}
+        {!isStreamLoading && !streamError && postsWithStats.length === 0 && !isApprovalCheckPending && (
+          <p className="text-sm text-gray-600 dark:text-gray-400 ruby-text mb-3">
+            承認済みの投稿はまだありません。
+          </p>
+        )}
 
         {!showPreview ? (
           <div className="space-y-4">
@@ -303,7 +242,7 @@ export function BusStopDiscussion({
                     content: e.target.value,
                   }))
                 }
-                className="textarea textarea-bordered w-full h-24"
+                className="textarea w-full h-24"
                 placeholder="このバス停での体験など、メモを投稿してください"
                 required
                 disabled={isSubmitting}
@@ -327,7 +266,7 @@ export function BusStopDiscussion({
                     busStopTag: e.target.value,
                   }))
                 }
-                className="select select-bordered w-full"
+                className="select w-full"
                 required
                 disabled={isSubmitting}
               >
@@ -372,7 +311,11 @@ export function BusStopDiscussion({
 
       <LoginModal
         isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
+        reason={loginReason}
+        onClose={() => {
+          setShowLoginModal(false);
+          setLoginReason("");
+        }}
       />
     </div>
   );

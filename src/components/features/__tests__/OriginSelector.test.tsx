@@ -40,6 +40,67 @@ describe("OriginSelector", () => {
     expect(screen.getByTestId("gps-button")).toBeInTheDocument();
   });
 
+  it("現在地ボタンのアイコンと文字を横並びで表示する", () => {
+    render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
+
+    const gpsButton = screen.getByTestId("gps-button");
+    const gpsContent = gpsButton.querySelector(".ruby-text > .flex");
+
+    expect(gpsButton.querySelector("svg")).toBeInTheDocument();
+    expect(gpsContent).toHaveClass(
+      "flex",
+      "items-center",
+      "justify-center",
+      "gap-2",
+      "whitespace-nowrap"
+    );
+  });
+
+  it("住所入力欄の右側にラベル付きアイコン検索ボタンを表示する", () => {
+    render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
+
+    const searchButton = screen.getByRole("button", {
+      name: "住所や場所を検索",
+    });
+    const input = screen.getByTestId("address-input");
+
+    expect(searchButton).toHaveAttribute("aria-label", "住所や場所を検索");
+    expect(searchButton).toHaveClass("join-item", "min-h-[44px]", "min-w-[44px]");
+    expect(input).toHaveClass("join-item");
+    expect(input.closest(".join")).toContainElement(searchButton);
+    expect(input.closest(".join")).toContainElement(input);
+    expect(searchButton.querySelector("svg")).toBeInTheDocument();
+    expect(screen.queryByText("この住所で検索")).not.toBeInTheDocument();
+  });
+
+  it("検索ボタンは住所入力欄と同じフォームを送信する", () => {
+    render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
+
+    const searchButton = screen.getByRole("button", {
+      name: "住所や場所を検索",
+    });
+    const form = searchButton.closest("form");
+
+    expect(form).toBeInTheDocument();
+    expect(searchButton).toHaveAttribute("type", "submit");
+  });
+
+  it("現在地ボタンはアイコンと文言を維持する", () => {
+    render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
+
+    const button = screen.getByTestId("gps-button");
+    const content = button.querySelector(".ruby-text > .flex");
+
+    expect(button.querySelector("svg")).toBeInTheDocument();
+    expect(content).toHaveClass(
+      "flex",
+      "items-center",
+      "justify-center",
+      "gap-2",
+      "whitespace-nowrap"
+    );
+  });
+
   it("住所が未入力の場合はコールバックが呼ばれず検索を実行しない", async () => {
     render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
 
@@ -225,7 +286,9 @@ describe("OriginSelector", () => {
     expect(legend).toHaveTextContent("検索オプション");
 
     // ボタンがアクセシブルであることを確認
-    const searchButton = screen.getByText("この住所で検索");
+    const searchButton = screen.getByRole("button", {
+      name: "住所や場所を検索",
+    });
     expect(searchButton).toBeInTheDocument();
 
     const gpsButton = screen.getByText("現在地を使用");

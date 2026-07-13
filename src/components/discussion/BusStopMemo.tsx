@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   getDiscussionConfig,
   isDiscussionsEnabled,
 } from "@/lib/config/discussion-config";
+import { readBusStopModerationSnapshot, useBusStopModeration } from "./useBusStopModeration";
+import { DiscussionReadStatus } from "./DiscussionReadStatus";
 import {
   parsePostEvent,
   parseApprovalEvent,
@@ -20,7 +22,7 @@ import type {
   PostWithStats,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import type { Event } from "nostr-tools";
+import type { Event } from "@/lib/nostr/nostr-service";
 
 interface BusStopMemoProps {
   busStops: string[];
@@ -31,10 +33,6 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
   const [topPostsByStop, setTopPostsByStop] = useState<
     Map<string, PostWithStats>
   >(new Map());
-  const postsEventsRef = useRef<Event[]>([]);
-  const approvalEventsRef = useRef<Event[]>([]);
-  const postsStreamCleanupRef = useRef<(() => void) | null>(null);
-  const approvalsStreamCleanupRef = useRef<(() => void) | null>(null);
 
   const config = useMemo(() => getDiscussionConfig(), []);
   const discussionsEnabled = useMemo(() => isDiscussionsEnabled(), []);
@@ -46,6 +44,7 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
       }),
     [config.relays]
   );
+  const { snapshot, isLoading, error, reload } = useBusStopModeration(busStops);
 
 
   const updateFromEvents = useCallback(
@@ -97,91 +96,38 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
     [busStops, nostrService]
   );
 
-  const loadMemoData = useCallback(() => {
-    if (busStops.length === 0) {
+  useEffect(() => {
+    if (!discussionsEnabled || !snapshot) {
       setTopPostsByStop(new Map());
       return;
     }
+    void updateFromEvents(
+      snapshot.primaryEvents,
+      snapshot.approvalEvents,
+      snapshot.approvalState === "approved",
+    );
+  }, [discussionsEnabled, snapshot, updateFromEvents]);
 
-    postsStreamCleanupRef.current?.();
-    approvalsStreamCleanupRef.current?.();
-    approvalEventsRef.current = [];
-    postsEventsRef.current = [];
-
-    const postFilters =
-      busStops.length > 0
-        ? busStops.map((stop) => ({
-            kinds: [1111, 1],
-            "#a": [config.busStopDiscussionId],
-            "#t": [stop],
-          }))
-        : [
-            {
-              kinds: [1111, 1],
-              "#a": [config.busStopDiscussionId],
-            },
-          ];
-
-    const postStreamCleanup = nostrService.streamEventsOnEvent(postFilters, {
-      onEvent: (events) => {
-        postsEventsRef.current = events;
-        updateFromEvents(events, approvalEventsRef.current, false);
-      },
-      onEose: (events) => {
-        postsEventsRef.current = events;
-        updateFromEvents(events, approvalEventsRef.current, true);
-        const postIds = events.map((event) => event.id);
-        if (postIds.length === 0) {
-          return;
-        }
-        approvalsStreamCleanupRef.current?.();
-        approvalsStreamCleanupRef.current = nostrService.streamApprovalsForPosts(
-          postIds,
-          config.busStopDiscussionId,
-          {
-            onEvent: (approvalEvents) => {
-              approvalEventsRef.current = approvalEvents;
-              updateFromEvents(postsEventsRef.current, approvalEvents, false);
-            },
-            onEose: (approvalEvents) => {
-              approvalEventsRef.current = approvalEvents;
-              updateFromEvents(postsEventsRef.current, approvalEvents, true);
-            },
-            timeoutMs: config.defaultTimeout ?? 5000,
-          }
-        );
-      },
-      timeoutMs: config.defaultTimeout ?? 5000,
-    });
-
-    postsStreamCleanupRef.current = postStreamCleanup;
-    updateFromEvents([], [], false);
-  }, [
-    busStops,
-    config.busStopDiscussionId,
-    config.defaultTimeout,
-    nostrService,
-    updateFromEvents,
-  ]);
-
-  useEffect(() => {
-    if (discussionsEnabled) {
-      loadMemoData();
-    }
-
-    return () => {
-      postsStreamCleanupRef.current?.();
-      approvalsStreamCleanupRef.current?.();
-    };
-  }, [discussionsEnabled, loadMemoData]);
-
-  if (
-    !discussionsEnabled ||
-    busStops.length === 0 ||
-    topPostsByStop.size === 0
-  ) {
+  if (!discussionsEnabled || busStops.length === 0) {
     return null;
   }
+  const isApprovalCheckPending =
+    snapshot?.approvalState === "unknown" && snapshot.primaryEvents.length > 0;
+
+  if (isLoading || error || isApprovalCheckPending) {
+    return error ? (
+      <div role="alert" className="alert alert-error"><span>{error}</span></div>
+    ) : (
+      <DiscussionReadStatus
+        isLoading={isLoading}
+        completionReason={snapshot?.completionReason ?? null}
+        hasData={Boolean(snapshot?.primaryEvents.length)}
+        approvalState={snapshot?.approvalState === "unknown" ? "unknown" : undefined}
+        onReload={reload}
+      />
+    );
+  }
+  if (topPostsByStop.size === 0) return null;
 
   return (
     <div className={`space-y-3 ${className}`}>
@@ -216,21 +162,13 @@ export async function getBusStopMemoData(
   const config = getDiscussionConfig();
   const nostrService = createNostrService({
     relays: config.relays,
-    defaultTimeout: 5000,
+    defaultTimeout: config.defaultTimeout ?? 5000,
   });
 
   try {
-    const postsEvents = await nostrService.getDiscussionPosts(
-      config.busStopDiscussionId,
-      busStops
-    );
-
-    const postIds = postsEvents.map((event) => event.id);
-
-    const approvalsEvents = await nostrService.getApprovalsForPosts(
-      postIds,
-      config.busStopDiscussionId
-    );
+    const snapshot = await readBusStopModerationSnapshot(busStops, config);
+    const postsEvents = snapshot.primaryEvents;
+    const approvalsEvents = snapshot.approvalEvents;
 
     const parsedApprovals = approvalsEvents
       .map(parseApprovalEvent)
@@ -239,9 +177,7 @@ export async function getBusStopMemoData(
     const parsedPosts = postsEvents
       .map((event) => parsePostEvent(event, parsedApprovals))
       .filter((p): p is DiscussionPost => p !== null)
-      .filter(
-        (p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag)
-      );
+      .filter((p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag));
 
     const approvedPostIds = parsedPosts.map((p) => p.id);
     const evaluationsEvents = await nostrService.getEvaluationsForPosts(

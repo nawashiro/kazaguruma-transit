@@ -8,6 +8,10 @@ jest.mock("next/navigation", () => ({
   usePathname: () => mockPathname(),
 }));
 
+jest.mock("@/lib/auth/auth-context", () => ({
+  useAuth: () => ({ user: { pubkey: null, isLoggedIn: false } }),
+}));
+
 // Import after mocking
 import { DiscussionListTabLayout } from "../DiscussionListTabLayout";
 
@@ -39,26 +43,20 @@ describe("DiscussionListTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      expect(tabs).toHaveLength(2);
+      expect(tabs).toHaveLength(3);
 
       // Main tab should be selected when on main path
       expect(tabs[0]).toHaveAttribute("aria-selected", "true");
-      expect(tabs[1]).toHaveAttribute("aria-selected", "false");
-    });
-
-    it("marks audit tab as selected when on audit path", () => {
-      mockPathname.mockReturnValue("/discussions/audit");
-
-      render(
-        <DiscussionListTabLayout baseHref="/discussions">
-          <div>Content</div>
-        </DiscussionListTabLayout>
+      expect(screen.getByRole("tab", { name: "掲載依頼" })).toHaveAttribute(
+        "href",
+        "/discussions/manage",
       );
-
-      const tabs = screen.getAllByRole("tab");
-      expect(tabs[0]).toHaveAttribute("aria-selected", "false");
-      expect(tabs[1]).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByRole("tab", { name: "モデレーター" })).toHaveAttribute(
+        "href",
+        "/discussions/moderator",
+      );
     });
+
   });
 
   describe("keyboard navigation", () => {
@@ -85,11 +83,11 @@ describe("DiscussionListTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      tabs[1].focus();
+      tabs[0].focus();
 
-      fireEvent.keyDown(tabs[1], { key: "ArrowLeft" });
+      fireEvent.keyDown(tabs[0], { key: "ArrowLeft" });
 
-      expect(document.activeElement).toBe(tabs[0]);
+      expect(document.activeElement).toBe(tabs[2]);
     });
 
     it("handles Home key to focus first tab", () => {
@@ -100,9 +98,9 @@ describe("DiscussionListTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      tabs[1].focus();
+      tabs[0].focus();
 
-      fireEvent.keyDown(tabs[1], { key: "Home" });
+      fireEvent.keyDown(tabs[0], { key: "Home" });
 
       expect(document.activeElement).toBe(tabs[0]);
     });
@@ -119,7 +117,7 @@ describe("DiscussionListTabLayout", () => {
 
       fireEvent.keyDown(tabs[0], { key: "End" });
 
-      expect(document.activeElement).toBe(tabs[1]);
+      expect(document.activeElement).toBe(tabs[2]);
     });
 
     it("wraps around on ArrowRight from last tab", () => {
@@ -130,9 +128,9 @@ describe("DiscussionListTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      tabs[1].focus();
+      tabs[2].focus();
 
-      fireEvent.keyDown(tabs[1], { key: "ArrowRight" });
+      fireEvent.keyDown(tabs[2], { key: "ArrowRight" });
 
       expect(document.activeElement).toBe(tabs[0]);
     });
@@ -149,7 +147,7 @@ describe("DiscussionListTabLayout", () => {
 
       fireEvent.keyDown(tabs[0], { key: "ArrowLeft" });
 
-      expect(document.activeElement).toBe(tabs[1]);
+      expect(document.activeElement).toBe(tabs[2]);
     });
   });
 
@@ -164,23 +162,9 @@ describe("DiscussionListTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      expect(tabs[0]).toHaveClass("btn-active");
-      expect(tabs[1]).not.toHaveClass("btn-active");
+      expect(tabs[0]).toHaveClass("tab-active");
     });
 
-    it("applies active class to audit tab when on audit path", () => {
-      mockPathname.mockReturnValue("/discussions/audit");
-
-      render(
-        <DiscussionListTabLayout baseHref="/discussions">
-          <div>Content</div>
-        </DiscussionListTabLayout>
-      );
-
-      const tabs = screen.getAllByRole("tab");
-      expect(tabs[0]).not.toHaveClass("btn-active");
-      expect(tabs[1]).toHaveClass("btn-active");
-    });
   });
 
   describe("renders children", () => {
@@ -219,7 +203,8 @@ describe("DiscussionListTabLayout", () => {
       );
 
       expect(screen.getByText("会話一覧")).toBeInTheDocument();
-      expect(screen.getByText("監査ログ")).toBeInTheDocument();
+      expect(screen.getByText("掲載依頼")).toBeInTheDocument();
+      expect(screen.getByText("モデレーター")).toBeInTheDocument();
     });
   });
 

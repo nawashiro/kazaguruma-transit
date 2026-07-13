@@ -17,6 +17,24 @@ export interface DiscussionConfig {
   }[];
 }
 
+export interface DiscussionReadStrategyConfig {
+  relayLimit: number;
+  idleTimeoutMs: number;
+  hardTimeoutMs: number;
+  dedupWindowMs: number;
+}
+
+const parseBoundedInteger = (
+  value: string | undefined,
+  fallback: number,
+  min: number,
+  max: number
+): number => {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+};
+
 export function buildDiscussionId(adminPubkey: string, idPart: string): string {
   return `${DISCUSSION_KIND}:${adminPubkey}:${idPart}`;
 }
@@ -122,8 +140,43 @@ export function getNostrServiceConfig(): NostrServiceConfig {
   };
 }
 
+export function getDiscussionReadStrategyConfig(): DiscussionReadStrategyConfig {
+  const fallbackIdleTimeoutMs = getDiscussionConfig().defaultTimeout;
+  const idleTimeoutMs = parseBoundedInteger(
+    process.env.NEXT_PUBLIC_DISCUSSION_READ_IDLE_TIMEOUT_MS,
+    fallbackIdleTimeoutMs,
+    250,
+    30_000
+  );
+  const configuredHardTimeoutMs = parseBoundedInteger(
+    process.env.NEXT_PUBLIC_DISCUSSION_READ_HARD_TIMEOUT_MS,
+    idleTimeoutMs * 3,
+    idleTimeoutMs + 1,
+    90_000
+  );
+
+  return {
+    relayLimit: parseBoundedInteger(
+      process.env.NEXT_PUBLIC_DISCUSSION_READ_RELAY_LIMIT,
+      3,
+      1,
+      3
+    ),
+    idleTimeoutMs,
+    hardTimeoutMs: Math.max(configuredHardTimeoutMs, idleTimeoutMs + 1),
+    dedupWindowMs: parseBoundedInteger(
+      process.env.NEXT_PUBLIC_DISCUSSION_READ_DEDUP_WINDOW_MS,
+      250,
+      0,
+      10_000
+    ),
+  };
+}
+
 export function isDiscussionsEnabled(): boolean {
-  return getDiscussionConfig().enabled;
+  const discussionEnabled = getDiscussionConfig().enabled;
+  const listEnabled = getDiscussionListConfig().enabled;
+  return discussionEnabled && listEnabled;
 }
 
 export function validateDiscussionConfig(): string[] {

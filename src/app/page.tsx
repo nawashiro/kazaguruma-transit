@@ -494,7 +494,7 @@ export default function Home() {
   );
 
   const renderOriginSelection = () => (
-    <>
+    <div className="flex flex-col gap-4">
       <Card title="選択された目的地">
         <p data-testid="selected-destination">
           {selectedDestination?.address ||
@@ -504,12 +504,12 @@ export default function Home() {
         </p>
       </Card>
       <OriginSelector onOriginSelected={handleOriginSelected} />
-      <ResetButton onReset={resetSearch} />
-    </>
+      <ResetButton onReset={resetSearch} className="order-first" />
+    </div>
   );
 
   const renderDateTimeSelection = () => (
-    <>
+    <div className="flex flex-col gap-4">
       <Card title="選択された目的地">
         <p data-testid="selected-destination">
           {selectedDestination?.address ||
@@ -559,9 +559,8 @@ export default function Home() {
           </Button>
         </div>
       </Card>
-
-      <ResetButton onReset={resetSearch} />
-    </>
+      <ResetButton onReset={resetSearch} className="order-first" />
+    </div>
   );
 
   const getBusStops = () => {
@@ -677,10 +676,10 @@ export default function Home() {
     }
 
     return (
-      <>
-        <ResetButton onReset={resetSearch} />
+      <div className="flex flex-col gap-4">
         {renderRouteResults()}
-      </>
+        <ResetButton onReset={resetSearch} className="order-first" />
+      </div>
     );
   };
 

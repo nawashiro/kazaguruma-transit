@@ -1,7 +1,7 @@
 /* eslint-disable react/display-name */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Home from "../page";
 
@@ -92,11 +92,17 @@ jest.mock(
       )
 );
 
-jest.mock("@/components/ui/ResetButton", () => ({ onReset }: any) => (
-  <button data-testid="mock-reset-button" onClick={onReset}>
-    リセット
-  </button>
-));
+jest.mock(
+  "@/components/ui/ResetButton",
+  () =>
+    ({ onReset, className }: any) => (
+      <div className={className}>
+        <button data-testid="mock-reset-button" onClick={onReset}>
+          リセット
+        </button>
+      </div>
+    )
+);
 
 jest.mock(
   "@/components/features/RateLimitModal",
@@ -180,5 +186,40 @@ describe("Home", () => {
 
     // 初回訪問ガイドモーダルが含まれていることを確認
     expect(screen.getByTestId("mock-first-visit-modal")).toBeInTheDocument();
+  });
+
+  test("リセットボタンが上部に表示され、キーボード順では各操作の後になる", async () => {
+    render(<Home />);
+
+    fireEvent.click(screen.getByTestId("mock-destination-selector"));
+
+    const resetButton = screen.getByTestId("mock-reset-button");
+    const resetContainer = resetButton.closest("div");
+    expect(resetContainer).toHaveClass("order-first");
+    const originSelector = screen.getByTestId("mock-origin-selector");
+    expect(
+      originSelector.compareDocumentPosition(resetButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+
+    fireEvent.click(originSelector);
+
+    fireEvent.click(screen.getByTestId("mock-date-time-selector"));
+    const searchButton = screen.getByTestId("search-route");
+    expect(
+      searchButton.compareDocumentPosition(resetButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+
+    fireEvent.click(searchButton);
+    await waitFor(() => {
+      expect(screen.getByTestId("mock-route-display")).toBeInTheDocument();
+    });
+
+    const routeDisplay = screen.getByTestId("mock-route-display");
+    expect(
+      routeDisplay.compareDocumentPosition(resetButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 });

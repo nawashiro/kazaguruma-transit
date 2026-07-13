@@ -16,8 +16,14 @@ import { useAuth } from "@/lib/auth/auth-context";
 import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
+  getDiscussionReadStrategyConfig,
 } from "@/lib/config/discussion-config";
-import { PermissionError } from "@/components/discussion/PermissionGuards";
+import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
+import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
+import {
+  loadKnownDiscussionData,
+  saveKnownDiscussionData,
+} from "@/lib/discussion/discussion-known-data-cache";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   parseDiscussionEvent,
@@ -25,11 +31,14 @@ import {
   parseApprovalEvent,
   formatRelativeTime,
 } from "@/lib/nostr/nostr-utils";
+import { arePubkeysEqual } from "@/lib/discussion/permission-system";
+import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
 import {
   extractDiscussionFromNaddr,
   buildNaddrFromRef,
 } from "@/lib/nostr/naddr-utils";
-import type { Event } from "nostr-tools";
+import type { Event } from "@/lib/nostr/nostr-service";
+import type { CompletionReason } from "@/lib/nostr/nostr-service";
 import type {
   Discussion,
   DiscussionPost,
@@ -38,6 +47,7 @@ import type {
 import { logger } from "@/utils/logger";
 
 const nostrServiceConfig = getNostrServiceConfig();
+const readStrategy = getDiscussionReadStrategyConfig();
 const nostrService = createNostrService(nostrServiceConfig);
 
 export default function DiscussionManagePage() {
@@ -48,15 +58,26 @@ export default function DiscussionManagePage() {
     Discussion[]
   >([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [completionReason, setCompletionReason] =
+    useState<CompletionReason | null>(null);
+  const [approvalState, setApprovalState] = useState<
+    "approved" | "unapproved" | "unknown"
+  >("unknown");
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
 
-  const postEventsRef = useRef<Event[]>([]);
-  const approvalEventsRef = useRef<Event[]>([]);
-  const streamCleanupRef = useRef<(() => void)[]>([]);
+  const readGenerationRef = useRef(0);
 
   const { user, signEvent } = useAuth();
+
+  const canManagePosts = Boolean(
+    discussion &&
+      (arePubkeysEqual(user.pubkey, discussion.authorPubkey) ||
+        discussion.moderators.some(
+          (moderator) => arePubkeysEqual(user.pubkey, moderator.pubkey)
+        ))
+  );
 
   // qタグから参照されている会話を検索
   const findReferencedDiscussion = (qRef: string): Discussion | null => {
@@ -141,31 +162,13 @@ export default function DiscussionManagePage() {
     return extractDiscussionFromNaddr(discussionListNaddr);
   }, []);
 
-  const rebuildFromEvents = useCallback(
-    (postEvents: Event[], approvalEvents: Event[]) => {
-      const parsedApprovals = approvalEvents
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
-      const parsedPosts = postEvents
-        .map((event) => parsePostEvent(event, parsedApprovals))
-        .filter((p): p is DiscussionPost => p !== null)
-        .sort((a, b) => b.createdAt - a.createdAt);
-
-      setApprovals(parsedApprovals);
-      setPosts(parsedPosts);
-    },
-    []
-  );
-
-  const startStreaming = useCallback(() => {
-    streamCleanupRef.current.forEach((stop) => stop());
-    streamCleanupRef.current = [];
-    postEventsRef.current = [];
-    approvalEventsRef.current = [];
+  const loadDiscussionData = useCallback(async () => {
+    const readGeneration = ++readGenerationRef.current;
     setDiscussion(null);
     setPosts([]);
     setApprovals([]);
+    setCompletionReason(null);
+    setApprovalState("unknown");
     setIsLoading(true);
 
     if (!isDiscussionsEnabled() || !discussionInfo) {
@@ -173,93 +176,122 @@ export default function DiscussionManagePage() {
       return;
     }
 
-    const discussionStream = nostrService.streamEventsOnEvent(
-      [
-        {
-          kinds: [34550],
-          authors: [discussionInfo.authorPubkey],
-          "#d": [discussionInfo.dTag],
-          limit: 1,
-        },
-      ],
-      {
-        onEvent: (events) => {
-          const parsedDiscussion = events
-            .map(parseDiscussionEvent)
-            .find((d) => d && d.dTag === discussionInfo.dTag);
-          if (parsedDiscussion) {
-            setDiscussion(parsedDiscussion);
-            setIsLoading(false);
-          }
-        },
-        onEose: (events) => {
-          const parsedDiscussion = events
-            .map(parseDiscussionEvent)
-            .find((d) => d && d.dTag === discussionInfo.dTag);
-          if (parsedDiscussion) {
-            setDiscussion(parsedDiscussion);
-          }
-          setIsLoading(false);
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
-      }
+    const knownData = loadKnownDiscussionData<Discussion, Event>(
+      discussionInfo.discussionId
     );
+    const knownMetadata = knownData?.metadata;
+    if (
+      knownMetadata &&
+      knownMetadata.dTag === discussionInfo.dTag &&
+      arePubkeysEqual(knownMetadata.authorPubkey, discussionInfo.authorPubkey)
+    ) {
+      setDiscussion(knownMetadata);
+    }
 
-    const postStream = nostrService.streamEventsOnEvent(
-      [
+    const relayUrls = selectRelayCandidates({
+      hints: discussionInfo.relays,
+      successful: knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays,
+      configured: nostrServiceConfig.relays
+        .filter((relay) => relay.read)
+        .map((relay) => relay.url),
+      defaults: [],
+      limit: readStrategy.relayLimit,
+    }).map((relay) => relay.url);
+
+    try {
+      const metadataResult = await nostrService.getEventsWithCompletion(
+        [
+          {
+            kinds: [34550],
+            authors: [discussionInfo.authorPubkey],
+            "#d": [discussionInfo.dTag],
+            limit: 1,
+          },
+        ],
         {
-          kinds: [1111, 1],
-          "#a": [discussionInfo.discussionId],
-        },
-      ],
-      {
-        onEvent: (events) => {
-          postEventsRef.current = events;
-          rebuildFromEvents(events, approvalEventsRef.current);
-        },
-        onEose: (events) => {
-          postEventsRef.current = events;
-          rebuildFromEvents(events, approvalEventsRef.current);
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
-      }
-    );
+          idleTimeoutMs: readStrategy.idleTimeoutMs,
+          hardTimeoutMs: readStrategy.hardTimeoutMs,
+          relayUrls,
+        }
+      );
+      if (readGenerationRef.current !== readGeneration) return;
 
-    const approvalStream = nostrService.streamEventsOnEvent(
-      [
+      const parsedDiscussion = metadataResult.events
+        .map(parseDiscussionEvent)
+        .find(
+          (candidate) =>
+            candidate &&
+            candidate.dTag === discussionInfo.dTag &&
+            arePubkeysEqual(candidate.authorPubkey, discussionInfo.authorPubkey)
+        );
+      if (parsedDiscussion) setDiscussion(parsedDiscussion);
+
+      const snapshot = await loadDiscussionModerationSnapshot(
+        nostrService,
+        readStrategy,
         {
-          kinds: [4550],
-          "#a": [discussionInfo.discussionId],
-        },
-      ],
-      {
-        onEvent: (events) => {
-          approvalEventsRef.current = events;
-          rebuildFromEvents(postEventsRef.current, events);
-        },
-        onEose: (events) => {
-          approvalEventsRef.current = events;
-          rebuildFromEvents(postEventsRef.current, events);
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
-      }
-    );
+          discussionId: discussionInfo.discussionId,
+          hints: discussionInfo.relays,
+          successful:
+            knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays,
+          configured: nostrServiceConfig.relays
+            .filter((relay) => relay.read)
+            .map((relay) => relay.url),
+          defaults: [],
+        }
+      );
+      if (readGenerationRef.current !== readGeneration) return;
 
-    streamCleanupRef.current = [
-      discussionStream,
-      postStream,
-      approvalStream,
-    ];
-  }, [discussionInfo, rebuildFromEvents]);
+      const parsedApprovals = snapshot.approvalEvents
+        .map(parseApprovalEvent)
+        .filter((approval): approval is PostApproval => approval !== null);
+      const parsedPosts = snapshot.primaryEvents
+        .map((event) => parsePostEvent(event, parsedApprovals))
+        .filter((post): post is DiscussionPost => post !== null)
+        .map((post) => ({
+          ...post,
+          approvalState: (
+            snapshot.completionReason === "eose"
+              ? post.approved
+                ? "approved"
+                : "unapproved"
+              : "unknown"
+          ) as DiscussionPost["approvalState"],
+        }))
+        .sort((left, right) => right.createdAt - left.createdAt);
+
+      setApprovals(parsedApprovals);
+      setPosts(parsedPosts);
+      setApprovalState(snapshot.approvalState);
+      setCompletionReason(
+        metadataResult.completionReason === "eose"
+          ? snapshot.completionReason
+          : metadataResult.completionReason
+      );
+      const events = [...metadataResult.events, ...snapshot.primaryEvents, ...snapshot.approvalEvents];
+      saveKnownDiscussionData(discussionInfo.discussionId, {
+        metadata: parsedDiscussion ?? knownMetadata ?? null,
+        eventIds: events.map((event) => event.id),
+        attemptedRelayUrls: [
+          ...metadataResult.relayUrls,
+          ...snapshot.attemptedRelayUrls,
+        ],
+        successfulEventRelayUrls: snapshot.successfulRelayUrls,
+        successfulRelays: [],
+        events,
+      });
+    } catch (error) {
+      if (readGenerationRef.current !== readGeneration) return;
+      logger.error("Failed to load discussion management data:", error);
+      setCompletionReason("hard-timeout");
+    } finally {
+      if (readGenerationRef.current === readGeneration) setIsLoading(false);
+    }
+  }, [discussionInfo]);
 
   useEffect(() => {
-    startStreaming();
-
-    return () => {
-      streamCleanupRef.current.forEach((stop) => stop());
-      streamCleanupRef.current = [];
-    };
-  }, [startStreaming]);
+    void loadDiscussionData();
+  }, [loadDiscussionData]);
 
   useEffect(() => {
     const qTagRefs = new Set<string>();
@@ -305,7 +337,7 @@ export default function DiscussionManagePage() {
   }, [posts]);
 
   const handleApprovePost = async (post: DiscussionPost) => {
-    if (!user.isLoggedIn || !discussion) return;
+    if (!user.isLoggedIn || !discussion || !canManagePosts) return;
 
     setApprovingIds((prev) => new Set([...prev, post.id]));
     try {
@@ -358,7 +390,7 @@ export default function DiscussionManagePage() {
   };
 
   const handleRevokeApproval = async (post: DiscussionPost) => {
-    if (!user.isLoggedIn || !discussion) return;
+    if (!user.isLoggedIn || !discussion || !canManagePosts) return;
 
     const approval = approvals.find(
       (a) => a.postId === post.id && a.moderatorPubkey === user.pubkey
@@ -438,15 +470,14 @@ export default function DiscussionManagePage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <Link
-            href="/discussions"
-            className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
-          >
-            <span className="ruby-text">← 会話一覧に戻る</span>
-          </Link>
-          <h1 className="text-3xl font-bold ruby-text">投稿承認管理</h1>
-        </div>
+        <nav className="tabs tabs-box mb-6 w-full overflow-x-auto" role="tablist" aria-label="投稿承認">
+          <button className="tab tab-active px-4" role="tab" aria-selected="true">
+            <span className="ruby-text">承認待ち</span>
+          </button>
+          <button className="tab px-4" role="tab" aria-selected="false">
+            <span className="ruby-text">承認済み</span>
+          </button>
+        </nav>
         <div className="animate-pulse space-y-4">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded" />
@@ -463,58 +494,47 @@ export default function DiscussionManagePage() {
   });
 
   const pendingPosts = postsWithQTags.filter((post) => !post.approved);
+  const pendingPostCount = pendingPosts.filter(
+    (post) => post.approvalState !== "unknown"
+  ).length;
   const approvedPosts = postsWithQTags.filter((post) => post.approved);
-
-  // 会話一覧の作成者またはモデレーターのみアクセス可能
-  const hasPermission =
-    discussion &&
-    (user.pubkey === discussion.authorPubkey ||
-      discussion.moderators.some((m) => m.pubkey === user.pubkey));
-
-  if (!hasPermission) {
-    return <PermissionError type="moderator" />;
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <Link
-          href="/discussions"
-          className="btn btn-ghost btn-sm mb-4 rounded-full dark:rounded-sm"
-        >
-          <span className="ruby-text">← 会話一覧に戻る</span>
-        </Link>
-        <h1 className="text-3xl font-bold ruby-text">投稿承認管理</h1>
-        {discussion && (
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            {discussion.title}
-          </p>
-        )}
-      </div>
-
-      <nav className="join mb-6" role="tablist">
+      <DiscussionReadStatus
+        isLoading={false}
+        completionReason={completionReason}
+        hasData={posts.length > 0}
+        approvalState={approvalState === "unknown" ? "unknown" : undefined}
+        onReload={() => void loadDiscussionData()}
+      />
+      <nav className="tabs tabs-box mb-6 w-full overflow-x-auto" role="tablist">
         <button
           aria-selected={activeTab === "pending"}
+          aria-controls="pending-panel"
+          id="pending-tab"
           aria-label="承認待ちタブを開く"
-          className={`join-item btn  ${
-            activeTab === "pending" ? "btn-active btn-primary" : "false"
+          className={`tab px-4 ${
+            activeTab === "pending" ? "tab-active" : ""
           }`}
           name="tab-options"
           role="tab"
           onClick={() => setActiveTab("pending")}
         >
           <span className="ruby-text">承認待ち</span>
-          {pendingPosts.length > 0 && (
+          {pendingPostCount > 0 && (
             <span className="badge badge-warning badge-sm ml-1">
-              {pendingPosts.length}
+              {pendingPostCount}
             </span>
           )}
         </button>
         <button
           aria-selected={activeTab === "approved"}
+          aria-controls="approved-panel"
+          id="approved-tab"
           aria-label="承認済みタブを開く"
-          className={`join-item btn  ${
-            activeTab === "approved" ? "btn-active btn-primary" : "false"
+          className={`tab px-4 ${
+            activeTab === "approved" ? "tab-active" : ""
           }`}
           name="tab-options"
           role="tab"
@@ -529,7 +549,11 @@ export default function DiscussionManagePage() {
         </button>
       </nav>
 
-      <main aria-labelledby={`${activeTab}-tab`} role="tabpanel">
+      <main
+        aria-labelledby={`${activeTab}-tab`}
+        id={`${activeTab}-panel`}
+        role="tabpanel"
+      >
         {activeTab === "pending" && (
           <section aria-labelledby="pending-posts-heading">
             <h2
@@ -553,7 +577,11 @@ export default function DiscussionManagePage() {
                         </div>
                         <button
                           onClick={() => handleApprovePost(post)}
-                          disabled={approvingIds.has(post.id)}
+                          disabled={
+                            !canManagePosts ||
+                            post.approvalState === "unknown" ||
+                            approvingIds.has(post.id)
+                          }
                           className="ml-4 btn btn-primary rounded-full dark:rounded-sm"
                         >
                           <span className="ruby-text">
@@ -608,20 +636,21 @@ export default function DiscussionManagePage() {
                           {renderQTagReferences(post)}
                         </div>
                         <div className="flex gap-2 ml-4">
-                          {post.approved &&
-                            post.approvedBy?.includes(user.pubkey || "") && (
-                              <button
-                                onClick={() => handleRevokeApproval(post)}
-                                disabled={revokingIds.has(post.id)}
-                                className="btn btn-warning rounded-full dark:rounded-sm"
-                              >
-                                <span className="ruby-text">
-                                  {revokingIds.has(post.id)
-                                    ? ""
-                                    : "承認を撤回"}
-                                </span>
-                              </button>
-                            )}
+                          {post.approved && (
+                            <button
+                              onClick={() => handleRevokeApproval(post)}
+                              disabled={
+                                !canManagePosts ||
+                                !post.approvedBy?.includes(user.pubkey || "") ||
+                                revokingIds.has(post.id)
+                              }
+                              className="btn btn-warning rounded-full dark:rounded-sm"
+                            >
+                              <span className="ruby-text">
+                                {revokingIds.has(post.id) ? "" : "承認を撤回"}
+                              </span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

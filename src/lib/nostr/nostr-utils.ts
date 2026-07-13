@@ -1,5 +1,5 @@
-import type { Event } from "nostr-tools";
-import * as nip19 from "nostr-tools/nip19";
+import { nip19 } from "@nostr-dev-kit/ndk";
+import type { Event } from "@/lib/nostr/nostr-service";
 import type {
   Discussion,
   DiscussionPost,
@@ -9,10 +9,12 @@ import type {
   NostrProfile,
   EvaluationStats,
   PostWithStats,
-  AuditTimelineItem,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { normalizeDiscussionId } from "@/lib/nostr/naddr-utils";
+import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
+
+export { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 
 const normalizeDiscussionIdForParse = (
   discussionId: string
@@ -59,6 +61,7 @@ export function parsePostEvent(
 ): DiscussionPost | null {
   // NIP-72後方互換性: kind:1とkind:1111の両方をサポート
   if (event.kind !== 1111 && event.kind !== 1) return null;
+  if (isModeratorRequestEvent(event)) return null;
 
   const discussionTag = event.tags.find(
     (tag) => tag[0] === "a" || tag[0] === "A"
@@ -244,65 +247,6 @@ export function filterUnevaluatedPosts(
   userEvaluations: Set<string>
 ): PostWithStats[] {
   return posts.filter((post) => !userEvaluations.has(post.id));
-}
-
-export function createAuditTimeline(
-  discussions: Discussion[],
-  requests: DiscussionRequest[],
-  posts: DiscussionPost[],
-  approvals: PostApproval[]
-): AuditTimelineItem[] {
-  const items: AuditTimelineItem[] = [];
-
-  requests.forEach((request) => {
-    items.push({
-      id: request.id,
-      type: "discussion-request",
-      timestamp: request.createdAt,
-      actorPubkey: request.requesterPubkey,
-      targetId: request.adminPubkey,
-      description: `会話「${request.title}」の作成をリクエストしました`,
-      event: request.event,
-    });
-  });
-
-  discussions.forEach((discussion) => {
-    items.push({
-      id: discussion.id,
-      type: "discussion-created",
-      timestamp: discussion.createdAt,
-      actorPubkey: discussion.authorPubkey,
-      targetId: discussion.id,
-      description: `会話「${discussion.title}」を作成しました`,
-      event: discussion.event,
-    });
-  });
-
-  posts.forEach((post) => {
-    items.push({
-      id: post.id,
-      type: "post-submitted",
-      timestamp: post.createdAt,
-      actorPubkey: post.authorPubkey,
-      targetId: post.discussionId,
-      description: "新しい投稿を提出しました",
-      event: post.event,
-    });
-  });
-
-  approvals.forEach((approval) => {
-    items.push({
-      id: approval.id,
-      type: "post-approved",
-      timestamp: approval.createdAt,
-      actorPubkey: approval.moderatorPubkey,
-      targetId: approval.postId,
-      description: "投稿を承認しました",
-      event: approval.event,
-    });
-  });
-
-  return items.sort((a, b) => b.timestamp - a.timestamp);
 }
 
 export function isAdmin(

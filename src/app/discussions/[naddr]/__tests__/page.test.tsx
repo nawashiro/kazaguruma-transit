@@ -18,6 +18,7 @@ jest.mock('@/lib/config/discussion-config', () => ({
 }));
 
 jest.mock('@/lib/nostr/nostr-service', () => ({
+  getNostrServiceConfigKey: () => 'test-config-key',
   createNostrService: () => ({
     streamDiscussionMeta: jest.fn(),
     getDiscussions: jest.fn().mockResolvedValue([{
@@ -51,7 +52,6 @@ jest.mock('@/lib/nostr/nostr-utils', () => ({
   parseApprovalEvent: () => null,
   parseEvaluationEvent: () => null,
   combinePostsWithStats: () => [],
-  createAuditTimeline: () => [],
   validatePostForm: () => [],
   formatRelativeTime: () => '1 hour ago',
   getAdminPubkeyHex: () => 'admin-pubkey',
@@ -60,8 +60,8 @@ jest.mock('@/lib/nostr/nostr-utils', () => ({
 }));
 
 jest.mock('@/lib/test/test-data-loader', () => ({
-  isTestMode: jest.fn(() => false),
-  loadTestData: jest.fn(() => ({})),
+  isTestMode: () => false,
+  loadTestData: () => ({}),
 }));
 
 jest.mock('@/lib/evaluation/evaluation-service', () => ({
@@ -80,40 +80,25 @@ global.fetch = jest.fn().mockResolvedValue({
 
 // Mock components that are causing issues
 jest.mock('@/components/discussion/EvaluationComponent', () => {
-  return {
-    EvaluationComponent: function MockEvaluationComponent() {
-      return <div>Evaluation Component</div>;
-    },
+  return function MockEvaluationComponent() {
+    return <div>Evaluation Component</div>;
   };
 });
 
 jest.mock('@/components/discussion/PermissionGuards', () => ({
   ModeratorCheck: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AdminCheck: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  PermissionError: () => <div>Permission Error</div>,
 }));
 
 jest.mock('@/components/discussion/LoginModal', () => {
-  return {
-    LoginModal: function MockLoginModal() {
-      return <div>Login Modal</div>;
-    },
+  return function MockLoginModal() {
+    return <div>Login Modal</div>;
   };
 });
 
 jest.mock('@/components/discussion/PostPreview', () => {
-  return {
-    PostPreview: function MockPostPreview() {
-      return <div>Post Preview</div>;
-    },
-  };
-});
-
-jest.mock('@/components/discussion/AuditTimeline', () => {
-  return {
-    AuditTimeline: function MockAuditTimeline() {
-      return <div>Audit Timeline</div>;
-    },
+  return function MockPostPreview() {
+    return <div>Post Preview</div>;
   };
 });
 
@@ -161,7 +146,7 @@ describe.skip('DiscussionDetailPage - Role Display', () => {
 
     // Wait for component to load
     await waitFor(() => {
-      expect(screen.getByText('投稿を評価')).toBeInTheDocument();
+      expect(screen.getByText('Test Discussion')).toBeInTheDocument();
     });
     
     // Should show "作成者" (creator) role
@@ -186,7 +171,7 @@ describe.skip('DiscussionDetailPage - Role Display', () => {
 
     // Wait for component to load
     await waitFor(() => {
-      expect(screen.getByText('投稿を評価')).toBeInTheDocument();
+      expect(screen.getByText('Test Discussion')).toBeInTheDocument();
     });
     
     // Should show "モデレーター" (moderator) role
@@ -211,7 +196,7 @@ describe.skip('DiscussionDetailPage - Role Display', () => {
 
     // Wait for component to load
     await waitFor(() => {
-      expect(screen.getByText('投稿を評価')).toBeInTheDocument();
+      expect(screen.getByText('Test Discussion')).toBeInTheDocument();
     });
     
     // Should NOT show the aside section at all
@@ -256,57 +241,5 @@ describe.skip('DiscussionDetailPage - Role Display', () => {
     expect(screen.getByText('モデレーター')).toBeInTheDocument();
     // Should NOT show "作成者" (creator) role when user is both
     expect(screen.queryByText('作成者')).not.toBeInTheDocument();
-  });
-});
-
-describe('DiscussionDetailPage - Legacy Role Block Removal', () => {
-  const mockUseAuth = jest.requireMock('@/lib/auth/auth-context').useAuth as jest.MockedFunction<any>;
-  const mockParseDiscussionEvent = jest.requireMock('@/lib/nostr/nostr-utils').parseDiscussionEvent as jest.MockedFunction<any>;
-  const mockIsTestMode = jest.requireMock('@/lib/test/test-data-loader').isTestMode as jest.MockedFunction<any>;
-  const mockLoadTestData = jest.requireMock('@/lib/test/test-data-loader').loadTestData as jest.MockedFunction<any>;
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockUseAuth.mockReturnValue({
-      user: { pubkey: 'test-author-pubkey', isLoggedIn: true },
-      signEvent: jest.fn(),
-    });
-    mockParseDiscussionEvent.mockReturnValue({
-      id: 'test-id',
-      title: 'Test Discussion',
-      description: 'Test Description',
-      authorPubkey: 'test-author-pubkey',
-      dTag: 'test-discussion',
-      moderators: [],
-      createdAt: Math.floor(Date.now() / 1000),
-    });
-    mockIsTestMode.mockReturnValue(true);
-    mockLoadTestData.mockResolvedValue({
-      discussion: {
-        id: 'test-id',
-        title: 'Test Discussion',
-        description: 'Test Description',
-        authorPubkey: 'test-author-pubkey',
-        dTag: 'test-discussion',
-        moderators: [],
-        createdAt: Math.floor(Date.now() / 1000),
-      },
-      posts: [],
-      evaluations: [],
-    });
-  });
-
-  it('does not render legacy role block content', async () => {
-    await act(async () => {
-      render(<DiscussionDetailPage />);
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('投稿を評価')).toBeInTheDocument();
-    });
-
-    expect(screen.queryByText('あなたは')).not.toBeInTheDocument();
-    expect(screen.queryByText('作成者')).not.toBeInTheDocument();
-    expect(screen.queryByText('モデレーター')).not.toBeInTheDocument();
   });
 });

@@ -1,8 +1,7 @@
 import React from "react";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import SettingsPage from "../page";
-import type { StreamEventsOptions } from "@/lib/nostr/nostr-service";
 
 jest.mock("next/link", () => ({
   __esModule: true,
@@ -16,7 +15,7 @@ jest.mock("@/lib/auth/auth-context", () => ({
     user: {
       isLoggedIn: true,
       pubkey: "user-pubkey",
-      profile: { name: "User" },
+      profile: { about: "自己紹介" },
     },
     logout: jest.fn(),
     isLoading: false,
@@ -32,8 +31,7 @@ jest.mock("@/lib/config/discussion-config", () => ({
 
 jest.mock("@/lib/nostr/nostr-service", () => {
   const serviceMock = {
-    streamEventsOnEvent: jest.fn(),
-    getDiscussions: jest.fn(),
+    publishSignedEvent: jest.fn(),
   };
 
   return {
@@ -42,10 +40,26 @@ jest.mock("@/lib/nostr/nostr-service", () => {
   };
 });
 
-const { __mock: serviceMock } = jest.requireMock("@/lib/nostr/nostr-service");
+const { __mock: nostrServiceMock } = jest.requireMock("@/lib/nostr/nostr-service");
+
+jest.mock("@/lib/nostr/discussion-ndk-gateway", () => {
+  const gatewayMock = {
+    queryDiscussionsByAuthorWithCompletion: jest.fn(),
+  };
+
+  return {
+    createDiscussionNdkGateway: () => gatewayMock,
+    __mock: gatewayMock,
+  };
+});
+
+const { __mock: gatewayMock } = jest.requireMock(
+  "@/lib/nostr/discussion-ndk-gateway"
+);
 
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   hexToNpub: (value: string) => value,
+  formatBip39JapaneseMnemonicPreviewFromPubkey: () => "あいうえお かきくけこ さしすせそ",
   parseDiscussionEvent: jest.fn((event) => ({
     id: `34550:${event.pubkey}:${event.tags?.find((t: string[]) => t[0] === "d")?.[1] || ""}`,
     title: event.tags?.find((t: string[]) => t[0] === "name")?.[1] || "Untitled",
@@ -62,6 +76,11 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
 jest.mock("@/lib/nostr/naddr-utils", () => ({
   __esModule: true,
   buildNaddrFromDiscussion: (discussion: any) => discussion.id,
+}));
+
+jest.mock("@/lib/nostr/mnemonic-utils", () => ({
+  formatBip39JapaneseMnemonicPreviewFromPubkey: () =>
+    "あいうえお かきくけこ さしすせそ",
 }));
 
 jest.mock("@/components/discussion/LoginModal", () => ({
@@ -85,28 +104,36 @@ jest.mock("@/components/ui/Button", () => {
 });
 
 describe("SettingsPage streaming discussions", () => {
+  const withCompletion = (events: any[], completionReason: "eose" | "idle-timeout" | "hard-timeout" = "eose") => ({
+    events,
+    completionReason,
+    eventCount: events.length,
+    elapsedMs: 10,
+    startedAt: 1000,
+    lastEventAt: 1000,
+    eoseReceived: completionReason === "eose",
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("streams user discussions and renders on first event without waiting for EOSE", async () => {
-    let streamHandlers: StreamEventsOptions | undefined;
-
-    serviceMock.streamEventsOnEvent.mockImplementation(
-      (_filters: unknown, handlers: StreamEventsOptions) => {
-        streamHandlers = handlers;
-        return () => {};
-      }
+  it("displays the derived user name with さん and does not display the old profile user name", async () => {
+    gatewayMock.queryDiscussionsByAuthorWithCompletion.mockResolvedValue(
+      withCompletion([])
     );
-
-    expect(typeof SettingsPage).toBe("function");
 
     render(<SettingsPage />);
 
-    await waitFor(() =>
-      expect(serviceMock.streamEventsOnEvent).toHaveBeenCalled()
-    );
-    expect(serviceMock.getDiscussions).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText("あいうえお かきくけこ さしすせそ")
+    ).toBeInTheDocument();
+    expect(screen.getByText("さん")).toBeInTheDocument();
+    expect(screen.queryByText("ユーザー名")).not.toBeInTheDocument();
+  });
+
+  it("loads user discussions via completion-aware read and does not use stream API", async () => {
+    expect(typeof SettingsPage).toBe("function");
 
     const mockEvent = {
       id: "event-1",
@@ -121,17 +148,35 @@ describe("SettingsPage streaming discussions", () => {
       sig: "sig",
     };
 
-    const handlers = streamHandlers;
-    if (!handlers) {
-      throw new Error("streamHandlers not initialized");
-    }
+    gatewayMock.queryDiscussionsByAuthorWithCompletion.mockResolvedValue(
+      withCompletion([mockEvent], "idle-timeout")
+    );
 
-    await act(async () => {
-      handlers.onEvent?.([mockEvent], mockEvent);
-    });
+    render(<SettingsPage />);
+
+    await waitFor(() =>
+      expect(gatewayMock.queryDiscussionsByAuthorWithCompletion).toHaveBeenCalledWith(
+        "user-pubkey",
+        expect.any(Object)
+      )
+    );
 
     await waitFor(() =>
       expect(screen.getByText("Demo Discussion")).toBeInTheDocument()
     );
+
+    expect(nostrServiceMock.publishSignedEvent).not.toHaveBeenCalled();
+  });
+
+  it("shows timeout warning when completion-aware read has no events", async () => {
+    gatewayMock.queryDiscussionsByAuthorWithCompletion.mockResolvedValue(
+      withCompletion([], "hard-timeout")
+    );
+
+    render(<SettingsPage />);
+
+    expect(
+      await screen.findByText(/会話データの取得に時間がかかっています/)
+    ).toBeInTheDocument();
   });
 });

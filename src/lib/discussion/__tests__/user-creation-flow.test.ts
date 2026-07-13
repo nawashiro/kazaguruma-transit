@@ -507,7 +507,7 @@ describe('User Discussion Creation Flow', () => {
         if (res.success) {
           expect(res.successMessage).toContain('URLを共有すれば、仲間を呼び込めます');
           expect(res.successMessage).toContain('10個程度の書き込み');
-          expect(res.successMessage).toContain('会話一覧への掲載は、少々お待ちください');
+          expect(res.successMessage).toContain('会話一覧への掲載は「基本情報」タブから行えます');
         }
       });
     });

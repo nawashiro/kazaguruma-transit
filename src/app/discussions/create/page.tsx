@@ -31,7 +31,6 @@ export default function DiscussionCreatePage() {
     title: "",
     description: "",
     moderators: [],
-    dTag: "",
   });
   const [moderatorInput, setModeratorInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,6 +38,9 @@ export default function DiscussionCreatePage() {
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [createdNaddr, setCreatedNaddr] = useState<string>("");
+
+  const createInternalDiscussionId = (): string =>
+    `discussion-${crypto.randomUUID().toLowerCase()}`;
 
   if (!isDiscussionsEnabled()) {
     return (
@@ -85,18 +87,6 @@ export default function DiscussionCreatePage() {
       }
     }
 
-    // ID is now required
-    if (!formData.dTag || !formData.dTag.trim()) {
-      errors.push("IDは必須です");
-    } else {
-      const dTagTrimmed = formData.dTag.trim();
-      if (dTagTrimmed.length < 3 || dTagTrimmed.length > 100) {
-        errors.push("IDは3文字以上100文字以内で入力してください");
-      } else if (!/^[a-z0-9-]+$/.test(dTagTrimmed)) {
-        errors.push("IDは小文字英数字、ハイフンのみ使用できます");
-      }
-    }
-
     if (errors.length > 0) {
       setErrors(errors);
       return;
@@ -110,6 +100,7 @@ export default function DiscussionCreatePage() {
       const formDataWithModerators = {
         ...formData,
         moderators,
+        dTag: createInternalDiscussionId(),
       };
 
       const result = await processDiscussionCreationFlow({
@@ -118,6 +109,7 @@ export default function DiscussionCreatePage() {
         adminPubkey: ADMIN_PUBKEY,
         signEvent,
         publishEvent: (event) => nostrService.publishSignedEvent(event),
+        publishListingRequest: false,
       });
 
       if (result.success && result.discussionNaddr) {
@@ -125,7 +117,7 @@ export default function DiscussionCreatePage() {
         setSuccessMessage(result.successMessage || "");
 
         // フォームをクリア
-        setFormData({ title: "", description: "", moderators: [], dTag: "" });
+        setFormData({ title: "", description: "", moderators: [] });
         setModeratorInput("");
       } else {
         setErrors(result.errors);
@@ -201,7 +193,7 @@ export default function DiscussionCreatePage() {
         <div className="mb-8">
           <Link
             href="/discussions"
-            className="btn btn-ghost btn-sm rounded-full dark:rounded-sm mb-4"
+            className="btn btn-ghost rounded-full dark:rounded-sm mb-4"
           >
             <span>← 会話一覧に戻る</span>
           </Link>
@@ -248,7 +240,7 @@ export default function DiscussionCreatePage() {
                     </svg>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    会話一覧への掲載は、少々お待ちください。担当者が確認します。
+                    会話一覧への掲載は、基本情報タブから申請できます。管理人が確認します。
                   </p>
                 </div>
                 <div className="flex gap-4 items-center">
@@ -292,7 +284,7 @@ export default function DiscussionCreatePage() {
                         title: e.target.value,
                       }))
                     }
-                    className="input input-bordered w-full"
+                    className="input w-full"
                     placeholder="会話のタイトルを入力してください"
                     required
                     disabled={isSubmitting}
@@ -301,35 +293,6 @@ export default function DiscussionCreatePage() {
                   />
                   <div className="text-gray-500 mt-1">
                     {formData.title.length}/100文字
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="dTag" className="label ruby-text">
-                    <span className="label-text">会話ID *</span>
-                  </label>
-                  <div className="text-gray-600 dark:text-gray-400 mb-2 ruby-text">
-                    小文字英数字、ハイフンのみ。
-                  </div>
-                  <input
-                    id="dTag"
-                    type="text"
-                    value={formData.dTag}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        dTag: e.target.value,
-                      }))
-                    }
-                    className="input input-bordered w-full"
-                    placeholder="chiyoda-kazaguruma-discussion"
-                    required
-                    disabled={isSubmitting}
-                    maxLength={100}
-                    autoComplete="off"
-                  />
-                  <div className="text-gray-500 mt-1">
-                    {formData.dTag?.length || 0}/100文字
                   </div>
                 </div>
 
@@ -346,7 +309,7 @@ export default function DiscussionCreatePage() {
                         description: e.target.value,
                       }))
                     }
-                    className="textarea textarea-bordered w-full h-32"
+                    className="textarea w-full h-32"
                     placeholder="どのような会話にしたいか説明してください"
                     required
                     disabled={isSubmitting}
@@ -387,21 +350,22 @@ export default function DiscussionCreatePage() {
                     投稿の承認を手伝ってくれる人のユーザーIDを入力してください。
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="join w-full">
                     <input
                       id="moderators"
                       type="text"
                       value={moderatorInput}
                       onChange={(e) => setModeratorInput(e.target.value)}
-                      className="input input-bordered flex-1"
+                      className="input join-item h-11 min-h-[44px] flex-1"
                       placeholder="npub1..."
                       disabled={isSubmitting}
                       autoComplete="off"
                     />
-                    <Button
-                      onClick={addModerator}
-                      disabled={!moderatorInput.trim() || isSubmitting}
-                    >
+                      <Button
+                        onClick={addModerator}
+                        disabled={!moderatorInput.trim() || isSubmitting}
+                        className="join-item h-11"
+                      >
                       追加
                     </Button>
                   </div>
@@ -419,12 +383,11 @@ export default function DiscussionCreatePage() {
 
                 <Button
                   onClick={handleSubmit}
-                  fullWidth
+                  className="w-full"
                   disabled={
                     isSubmitting ||
                     !formData.title.trim() ||
-                    !formData.description.trim() ||
-                    !formData.dTag?.trim()
+                    !formData.description.trim()
                   }
                   loading={isSubmitting}
                 >

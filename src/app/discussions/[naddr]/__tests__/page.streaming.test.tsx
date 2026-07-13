@@ -2,7 +2,8 @@ import React from "react";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionDetailPage from "../page";
-import type { StreamEventsOptions } from "@/lib/nostr/nostr-service";
+
+const mockUseDiscussionMeta = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr-test" }),
@@ -14,6 +15,7 @@ jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
   DiscussionTabLayout: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="discussion-tab-layout">{children}</div>
   ),
+  useDiscussionMeta: () => mockUseDiscussionMeta(),
 }));
 
 jest.mock("@/lib/auth/auth-context", () => ({
@@ -38,10 +40,9 @@ jest.mock("@/lib/nostr/naddr-utils", () => ({
 
 jest.mock("@/lib/nostr/nostr-service", () => {
   const serviceMock = {
-    streamDiscussionMeta: jest.fn(),
-    getApprovalsOnEose: jest.fn(),
-    getEvaluationsForPosts: jest.fn(),
     getEvaluations: jest.fn(),
+    createPostEvent: jest.fn(),
+    createEvaluationEvent: jest.fn(),
     publishSignedEvent: jest.fn(),
   };
 
@@ -52,6 +53,20 @@ jest.mock("@/lib/nostr/nostr-service", () => {
 });
 
 const { __mock: serviceMock } = jest.requireMock("@/lib/nostr/nostr-service");
+
+jest.mock("@/lib/nostr/discussion-ndk-gateway", () => {
+  const gatewayMock = {
+    queryWithCompletion: jest.fn(),
+  };
+  return {
+    createDiscussionNdkGateway: () => gatewayMock,
+    __mock: gatewayMock,
+  };
+});
+
+const { __mock: gatewayMock } = jest.requireMock(
+  "@/lib/nostr/discussion-ndk-gateway"
+);
 
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseDiscussionEvent: jest.fn((event) => ({
@@ -137,7 +152,6 @@ jest.mock("@/components/discussion/PermissionGuards", () => ({
   AdminCheck: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
-  PermissionError: () => <div>Permission Error</div>,
 }));
 
 jest.mock("@/components/discussion/LoginModal", () => ({
@@ -150,11 +164,6 @@ jest.mock("@/components/discussion/PostPreview", () => ({
   PostPreview: () => <div>Post Preview</div>,
 }));
 
-jest.mock("@/components/discussion/AuditTimeline", () => ({
-  __esModule: true,
-  AuditTimeline: () => <div>Audit Timeline</div>,
-}));
-
 jest.mock("@/components/ui/Button", () => {
   return function MockButton({ children, ...props }: any) {
     return <button {...props}>{children}</button>;
@@ -162,47 +171,63 @@ jest.mock("@/components/ui/Button", () => {
 });
 
 describe("DiscussionDetailPage streaming", () => {
+  const withCompletion = (events: any[]) => ({
+    events,
+    completionReason: "eose",
+    eventCount: events.length,
+    elapsedMs: 10,
+    startedAt: 1000,
+    lastEventAt: 1000,
+    eoseReceived: true,
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: {
+        id: "34550:author:demo",
+        title: "Streamed Discussion",
+        description: "Streaming description",
+        authorPubkey: "author",
+        dTag: "demo",
+        moderators: [],
+        createdAt: 999,
+        event: {
+          id: "discussion-1",
+          pubkey: "author",
+          kind: 34550,
+          created_at: 999,
+          tags: [
+            ["d", "demo"],
+            ["name", "Streamed Discussion"],
+          ],
+          content: "Streaming description",
+          sig: "sig",
+        },
+      },
+      isLoading: false,
+      completionReason: "eose" as const,
+      error: null,
+      reload: jest.fn(),
+    });
   });
 
   it("shows loading state for evaluations until approvals EOSE completes", async () => {
-    let discussionHandlers: StreamEventsOptions | undefined;
-    let resolveApprovals: (events: any[]) => void;
-
-    const approvalsPromise = new Promise<any[]>((resolve) => {
+    let resolveApprovals: (result: ReturnType<typeof withCompletion>) => void;
+    const approvalsPromise = new Promise<ReturnType<typeof withCompletion>>((resolve) => {
       resolveApprovals = resolve;
     });
 
-    serviceMock.streamDiscussionMeta.mockImplementation(
-      (_pubkey: string, _dTag: string, handlers: StreamEventsOptions) => {
-        discussionHandlers = handlers;
-        return () => {};
+    gatewayMock.queryWithCompletion.mockImplementation((filters: Array<{ kinds?: number[] }>) => {
+      const kinds = filters[0]?.kinds ?? [];
+      if (kinds.includes(4550)) {
+        return approvalsPromise;
       }
-    );
-
-    serviceMock.getApprovalsOnEose.mockReturnValue(approvalsPromise);
-    serviceMock.getEvaluationsForPosts.mockResolvedValue([]);
+      return Promise.resolve(withCompletion([]));
+    });
     serviceMock.getEvaluations.mockResolvedValue([]);
 
     render(<DiscussionDetailPage />);
-
-    const discussionEvent = {
-      id: "discussion-1",
-      pubkey: "author",
-      kind: 34550,
-      created_at: 999,
-      tags: [
-        ["d", "demo"],
-        ["name", "Streamed Discussion"],
-      ],
-      content: "Streaming description",
-      sig: "sig",
-    };
-
-    await act(async () => {
-      discussionHandlers?.onEvent?.([discussionEvent], discussionEvent);
-    });
 
     // Title is now displayed in the layout, not in page content
     // Check for loading state instead to verify streaming works
@@ -214,7 +239,7 @@ describe("DiscussionDetailPage streaming", () => {
     ).not.toBeInTheDocument();
 
     await act(async () => {
-      resolveApprovals([]);
+      resolveApprovals(withCompletion([]));
     });
 
     await waitFor(() =>
@@ -225,63 +250,40 @@ describe("DiscussionDetailPage streaming", () => {
     expect(screen.getByText("Evaluation Component")).toBeInTheDocument();
   });
 
-  // NOTE: "loads audit data after switching to the audit tab" test removed
-  // because tab toggle has been replaced by URL-based navigation to /discussions/[naddr]/audit
-
   it("renders metadata on event before approvals EOSE, then runs analysis once after EOSE flow", async () => {
-    let discussionHandlers: StreamEventsOptions | undefined;
-    let resolveApprovals: (events: any[]) => void;
-
-    const approvalsPromise = new Promise<any[]>((resolve) => {
+    let resolveApprovals: (result: ReturnType<typeof withCompletion>) => void;
+    const approvalsPromise = new Promise<ReturnType<typeof withCompletion>>((resolve) => {
       resolveApprovals = resolve;
     });
 
-    serviceMock.streamDiscussionMeta.mockImplementation(
-      (_pubkey: string, _dTag: string, handlers: StreamEventsOptions) => {
-        discussionHandlers = handlers;
-        return () => {};
+    gatewayMock.queryWithCompletion.mockImplementation((filters: Array<{ kinds?: number[] }>) => {
+      const kinds = filters[0]?.kinds ?? [];
+      if (kinds.includes(4550)) {
+        return approvalsPromise;
       }
-    );
-
-    serviceMock.getApprovalsOnEose.mockReturnValue(approvalsPromise);
-    serviceMock.getEvaluationsForPosts.mockResolvedValue([
-      { id: "eval-1", pubkey: "u1", tags: [["e", "post-1"]], created_at: 1 },
-      { id: "eval-2", pubkey: "u2", tags: [["e", "post-1"]], created_at: 2 },
-      { id: "eval-3", pubkey: "u3", tags: [["e", "post-2"]], created_at: 3 },
-      { id: "eval-4", pubkey: "u4", tags: [["e", "post-2"]], created_at: 4 },
-      { id: "eval-5", pubkey: "u5", tags: [["e", "post-1"]], created_at: 5 },
-    ]);
+      if (kinds.includes(7)) {
+        return Promise.resolve(withCompletion([
+          { id: "eval-1", pubkey: "u1", tags: [["e", "post-1"]], created_at: 1 },
+          { id: "eval-2", pubkey: "u2", tags: [["e", "post-1"]], created_at: 2 },
+          { id: "eval-3", pubkey: "u3", tags: [["e", "post-2"]], created_at: 3 },
+          { id: "eval-4", pubkey: "u4", tags: [["e", "post-2"]], created_at: 4 },
+          { id: "eval-5", pubkey: "u5", tags: [["e", "post-1"]], created_at: 5 },
+        ]));
+      }
+      return Promise.resolve(withCompletion([]));
+    });
     serviceMock.getEvaluations.mockResolvedValue([]);
 
     render(<DiscussionDetailPage />);
 
     await waitFor(() =>
-      expect(serviceMock.streamDiscussionMeta).toHaveBeenCalled()
+      expect(gatewayMock.queryWithCompletion).toHaveBeenCalled()
     );
 
-    const discussionEvent = {
-      id: "discussion-1",
-      pubkey: "author",
-      kind: 34550,
-      created_at: 999,
-      tags: [
-        ["d", "demo"],
-        ["name", "Streamed Discussion"],
-      ],
-      content: "Streaming description",
-      sig: "sig",
-    };
-
-    await act(async () => {
-      discussionHandlers?.onEvent?.([discussionEvent], discussionEvent);
-    });
-
-    // Title is now in the layout, not page content
-    // Verify that evaluations haven't loaded yet (before EOSE)
+    // メタデータ(kind:34550)はページ側で再取得しない
     await waitFor(() =>
-      expect(serviceMock.streamDiscussionMeta).toHaveBeenCalled()
+      expect(gatewayMock.queryWithCompletion).toHaveBeenCalledTimes(1)
     );
-    expect(serviceMock.getEvaluationsForPosts).not.toHaveBeenCalled();
 
     const approvalEvents = [
       {
@@ -305,18 +307,45 @@ describe("DiscussionDetailPage streaming", () => {
     ];
 
     await act(async () => {
-      resolveApprovals(approvalEvents);
+      resolveApprovals(withCompletion(approvalEvents));
     });
 
     await waitFor(() =>
-      expect(serviceMock.getEvaluationsForPosts).toHaveBeenCalled()
+      expect(gatewayMock.queryWithCompletion).toHaveBeenCalledTimes(2)
     );
 
-    const { evaluationService } = jest.requireMock(
-      "@/lib/evaluation/evaluation-service"
-    );
-    await waitFor(() =>
-      expect(evaluationService.analyzeConsensus).toHaveBeenCalledTimes(1)
-    );
+    expect(screen.getByText("意見グループ")).toBeInTheDocument();
+  });
+
+  it("keeps loading UI while metadata read is in progress (cold start/direct access)", () => {
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: true,
+      completionReason: null,
+      error: null,
+      reload: jest.fn(),
+    });
+
+    render(<DiscussionDetailPage />);
+
+    expect(screen.queryByText("会話が見つかりません")).not.toBeInTheDocument();
+    expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
+  });
+
+  it("shows timeout warning instead of not-found when metadata read ends by timeout", async () => {
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: false,
+      completionReason: "idle-timeout" as const,
+      error: null,
+      reload: jest.fn(),
+    });
+
+    render(<DiscussionDetailPage />);
+
+    expect(
+      await screen.findByText(/会話データの取得に時間がかかっています/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText("会話が見つかりません")).not.toBeInTheDocument();
   });
 });

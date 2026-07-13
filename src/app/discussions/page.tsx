@@ -3,53 +3,69 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useEffect, useCallback, useRef } from "react";
+import React, { useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
-import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
+import { getDiscussionReadStrategyConfig, isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import { DiscussionListTabLayout } from "@/components/discussion/DiscussionListTabLayout";
-import { createNostrService } from "@/lib/nostr/nostr-service";
+import {
+  createDiscussionNdkGateway,
+  type NostrEventDTO,
+} from "@/lib/nostr/discussion-ndk-gateway";
 import {
   parseDiscussionEvent,
   parsePostEvent,
   parseApprovalEvent,
   formatRelativeTime,
+  getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
+import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import {
   buildNaddrFromDiscussion,
   extractDiscussionFromNaddr,
 } from "@/lib/nostr/naddr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
+import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
+import { createNostrService } from "@/lib/nostr/nostr-service";
+import { saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
 import type {
   Discussion,
   DiscussionPost,
   PostApproval,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import type { Event } from "nostr-tools";
+import type { DiscussionRole } from "@/components/discussion/DiscussionRoleCard";
 
-const nostrService = createNostrService(getNostrServiceConfig());
+const nostrServiceConfig = getNostrServiceConfig();
+const readStrategy =
+  typeof getDiscussionReadStrategyConfig === "function"
+    ? getDiscussionReadStrategyConfig()
+    : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
+const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
+const nostrService = createNostrService(nostrServiceConfig);
 
 export default function DiscussionsPage() {
   const [discussions, setDiscussions] = React.useState<Discussion[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-
-  const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
-  const discussionStreamCleanupRef = useRef<(() => void) | null>(null);
-  const loadSequenceRef = useRef(0);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const { user } = useAuth();
+  const discussionRole: DiscussionRole = arePubkeysEqual(user.pubkey, getAdminPubkeyHex())
+    ? "admin"
+    : discussions.some((discussion) =>
+        discussion.moderators.some((moderator) =>
+          arePubkeysEqual(user.pubkey, moderator.pubkey),
+        ),
+      )
+      ? "moderator"
+      : "user";
 
   // 会話一覧専用のデータ取得
   const loadData = useCallback(async () => {
     if (!isDiscussionsEnabled()) return;
-    const loadSequence = ++loadSequenceRef.current;
     setIsLoading(true);
+    setLoadError(null);
     setDiscussions([]);
-    approvalStreamCleanupRef.current?.();
-    approvalStreamCleanupRef.current = null;
-    discussionStreamCleanupRef.current?.();
-    discussionStreamCleanupRef.current = null;
 
     try {
       const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
@@ -68,7 +84,7 @@ export default function DiscussionsPage() {
         discussionInfo.discussionId
       );
 
-      const parseDiscussionsFromEvents = (events: Event[]) => {
+      const parseDiscussionsFromEvents = (events: NostrEventDTO[]) => {
         const parsed = events
           .map(parseDiscussionEvent)
           .filter((d): d is Discussion => d !== null);
@@ -85,74 +101,101 @@ export default function DiscussionsPage() {
         );
       };
 
-      const updateFromApprovals = async (events: Event[]) => {
-        if (loadSequenceRef.current !== loadSequence) return;
-        const listApprovals = events
-          .map(parseApprovalEvent)
-          .filter((a): a is PostApproval => a !== null);
-
-        const listPosts = listApprovals
-          .map((approval) => {
-            try {
-              const approvedPost = JSON.parse(approval.event.content);
-              return parsePostEvent(approvedPost, [approval]);
-            } catch {
-              return null;
-            }
+      const moderation = typeof nostrService.getEventsWithCompletion === "function"
+        ? await loadDiscussionModerationSnapshot(nostrService, readStrategy, {
+            discussionId: discussionInfo.discussionId,
+            hints: discussionInfo.relays,
+            configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
+            defaults: [],
           })
-          .filter((p): p is DiscussionPost => p !== null)
-          .sort((a, b) => b.createdAt - a.createdAt);
-
-        const individualDiscussionRefs = new Set<string>();
-        listPosts.forEach((post) => {
-          const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
-          qTags.forEach((qTag) => {
-            if (qTag[1] && qTag[1].startsWith("34550:")) {
-              individualDiscussionRefs.add(qTag[1]);
-            }
-          });
+        : null;
+      logger.info("discussions-list approvals fetch completed", {
+        discussionId: discussionInfo.discussionId,
+        completionReason: moderation?.completionReason ?? "eose",
+        eventCount: moderation?.approvalEvents.length ?? 0,
+      });
+      if (moderation) {
+        const events = [...moderation.primaryEvents, ...moderation.approvalEvents];
+        saveKnownDiscussionData(discussionInfo.discussionId, {
+          metadata: null,
+          eventIds: events.map((event) => event.id),
+          attemptedRelayUrls: moderation.attemptedRelayUrls,
+          successfulEventRelayUrls: moderation.successfulRelayUrls,
+          successfulRelays: [],
+          events,
         });
+      }
 
-        const parsedIndividualDiscussions: Discussion[] = [];
-        if (individualDiscussionRefs.size > 0) {
-          discussionStreamCleanupRef.current?.();
-          discussionStreamCleanupRef.current =
-            nostrService.streamReferencedUserDiscussions(
-              Array.from(individualDiscussionRefs),
-              {
-                onEvent: (discussionEvents) => {
-                  if (loadSequenceRef.current !== loadSequence) return;
-                  const parsed = parseDiscussionsFromEvents(discussionEvents);
-                  if (parsed.length > 0) {
-                    setDiscussions(parsed);
-                    setIsLoading(false);
-                  }
-                },
-                onEose: (discussionEvents) => {
-                  if (loadSequenceRef.current !== loadSequence) return;
-                  const parsed = parseDiscussionsFromEvents(discussionEvents);
-                  setDiscussions(parsed);
-                  setIsLoading(false);
-                },
-              }
-            );
+      const listApprovals = (moderation?.approvalEvents ?? (await discussionGateway.queryWithCompletion([{ kinds: [4550], "#a": [discussionInfo.discussionId], limit: 50 }], { idleTimeoutMs: readStrategy.idleTimeoutMs, hardTimeoutMs: readStrategy.hardTimeoutMs, relayUrls: [] })).events)
+        .map(parseApprovalEvent)
+        .filter((a): a is PostApproval => a !== null);
 
-          return;
-        }
+      const listPosts = moderation
+        ? moderation.primaryEvents.map((event) => parsePostEvent(event, listApprovals)).filter((p): p is DiscussionPost => p !== null)
+        : listApprovals.map((approval) => {
+            try { return parsePostEvent(JSON.parse(approval.event.content), [approval]); } catch { return null; }
+          }).filter((p): p is DiscussionPost => p !== null)
+        .sort((a, b) => b.createdAt - a.createdAt);
+      const visibleListPosts = moderation
+        ? listPosts.filter((post) => post.approved || moderation.approvalState === "unknown")
+        : listPosts;
 
-        setDiscussions(parsedIndividualDiscussions);
+      const individualDiscussionRefs = new Set<string>();
+      visibleListPosts.forEach((post) => {
+        const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
+        qTags.forEach((qTag) => {
+          if (qTag[1] && qTag[1].startsWith("34550:")) {
+            individualDiscussionRefs.add(qTag[1]);
+          }
+        });
+      });
+
+      if (individualDiscussionRefs.size === 0) {
+        setDiscussions([]);
         setIsLoading(false);
-      };
+        return;
+      }
 
-      approvalStreamCleanupRef.current = nostrService.streamApprovals(
-        discussionInfo.discussionId,
+      const discussionFilters = Array.from(individualDiscussionRefs)
+        .map((ref) => {
+          const parts = ref.split(":");
+          if (parts.length !== 3 || parts[0] !== "34550") {
+            return null;
+          }
+          const [, pubkey, dTag] = parts;
+          return {
+            kinds: [34550],
+            authors: [pubkey],
+            "#d": [dTag],
+            limit: 1,
+          };
+        })
+        .filter((filter): filter is NonNullable<typeof filter> => Boolean(filter));
+
+      if (discussionFilters.length === 0) {
+        setDiscussions([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const discussionsResult = await discussionGateway.queryWithCompletion(
+        discussionFilters,
         {
-          onEose: updateFromApprovals,
-          onEvent: () => {},
+          idleTimeoutMs: nostrServiceConfig.defaultTimeout,
+          hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
         }
       );
+      logger.info("discussions-list metadata fetch completed", {
+        discussionId: discussionInfo.discussionId,
+        completionReason: discussionsResult.completionReason,
+        eventCount: discussionsResult.eventCount,
+        elapsedMs: discussionsResult.elapsedMs,
+      });
+      setDiscussions(parseDiscussionsFromEvents(discussionsResult.events));
+      setIsLoading(false);
     } catch (error) {
       logger.error("Failed to load discussion list:", error);
+      setLoadError("会話一覧の取得に失敗しました。時間をおいて再度お試しください。");
       setDiscussions([]);
       setIsLoading(false);
     } finally {
@@ -165,13 +208,6 @@ export default function DiscussionsPage() {
     if (isDiscussionsEnabled()) {
       loadData();
     }
-
-    return () => {
-      approvalStreamCleanupRef.current?.();
-      approvalStreamCleanupRef.current = null;
-      discussionStreamCleanupRef.current?.();
-      discussionStreamCleanupRef.current = null;
-    };
   }, [loadData]);
 
   // ディスカッション機能が有効になっているか確認し、それに応じて表示を切り替える
@@ -187,34 +223,9 @@ export default function DiscussionsPage() {
   }
 
   return (
-    <DiscussionListTabLayout baseHref="/discussions">
+    <DiscussionListTabLayout baseHref="/discussions" role={discussionRole}>
       <div className="container mx-auto px-4 py-8">
         <main className="space-y-6">
-          {/* 作成者またはモデレーターの場合のみ表示 */}
-          {(discussions.some((d) => user.pubkey === d.authorPubkey) ||
-            discussions.some((d) =>
-              d.moderators.some((m) => m.pubkey === user.pubkey)
-            )) && (
-            <aside className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-              <p className="mb-4">
-                あなたは
-                {/* Priority: Creator > Moderator */}
-                {discussions.some((d) => user.pubkey === d.authorPubkey) ? (
-                  <span>作成者</span>
-                ) : (
-                  <span>モデレーター</span>
-                )}
-                です。
-              </p>
-              <Link
-                href="/discussions/manage"
-                className="btn btn-primary rounded-full dark:rounded-sm ruby-text"
-              >
-                <span>会話管理</span>
-              </Link>
-            </aside>
-          )}
-
           <div className="grid lg:grid-cols-2 gap-6">
             <section aria-labelledby="discussions-list-heading">
               <h2
@@ -231,6 +242,10 @@ export default function DiscussionsPage() {
                       <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
                     </div>
                   ))}
+                </div>
+              ) : loadError ? (
+                <div className="alert alert-error" role="alert">
+                  <span>{loadError}</span>
                 </div>
               ) : discussions.length > 0 ? (
                 <div className="space-y-4">

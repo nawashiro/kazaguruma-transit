@@ -46,6 +46,22 @@ describe("DestinationSelector", () => {
     expect(screen.getByTestId("search-button")).toBeInTheDocument();
   });
 
+  it("目的地検索を入力欄と検索アイコンのjoinとして表示する", () => {
+    render(
+      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
+    );
+
+    const input = screen.getByTestId("address-input");
+    const searchButton = screen.getByRole("button", {
+      name: "目的地の住所や場所を検索",
+    });
+
+    expect(input).toHaveClass("join-item", "min-h-[44px]");
+    expect(searchButton).toHaveClass("join-item", "h-11", "min-h-[44px]");
+    expect(input.closest(".join")).toContainElement(searchButton);
+    expect(screen.queryByText("検索")).not.toBeInTheDocument();
+  });
+
   it("入力が空の場合はコールバックが呼ばれない", async () => {
     render(
       <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />

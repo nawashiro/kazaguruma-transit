@@ -7,11 +7,12 @@ import { logger } from "@/utils/logger";
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
+  reason?: string;
 }
 
-export function LoginModal({ isOpen, onClose }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
   const [mode, setMode] = useState<"login" | "create">("create");
-  const [username, setUsername] = useState("");
+  const [passkeyName, setPasskeyName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
@@ -23,22 +24,22 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     if (isLoading) return;
 
     const isCreateMode = mode === "create";
-    const isUsernameEmpty = !username.trim();
+    const isPasskeyNameEmpty = !passkeyName.trim();
     const areTermsNotAccepted =
       isCreateMode && (!termsAccepted || !privacyAccepted);
 
-    if (isCreateMode && isUsernameEmpty) return;
+    if (isCreateMode && isPasskeyNameEmpty) return;
     if (areTermsNotAccepted) return;
 
     setIsLoading(true);
     try {
       if (isCreateMode) {
-        await createAccount(username.trim());
+        await createAccount(passkeyName.trim());
       } else {
         await login();
       }
       onClose();
-      setUsername("");
+      setPasskeyName("");
       setMode("create");
       setTermsAccepted(false);
       setPrivacyAccepted(false);
@@ -68,12 +69,17 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     >
       <div className="modal-backdrop" onClick={handleBackdropClick}></div>
       <div className="modal-box bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+
+        {reason && (
+          <p className="alert text-sm ruby-text mb-6">
+            <span>{reason}</span>
+          </p>
+        )}
         <div className="flex justify-between items-center mb-4">
           <nav role="tablist" className="join" aria-label="モード選択">
             <button
-              className={`join-item btn ruby-text ${
-                mode === "create" ? "btn-active btn-primary" : ""
-              }`}
+              className={`join-item btn ruby-text ${mode === "create" ? "btn-active btn-primary" : ""
+                }`}
               name="tab-options"
               aria-label="新規作成タブを開く"
               role="tab"
@@ -83,9 +89,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
               <span>新規作成</span>
             </button>
             <button
-              className={`join-item btn ruby-text ${
-                mode === "login" ? "btn-active btn-primary" : ""
-              }`}
+              className={`join-item btn ruby-text ${mode === "login" ? "btn-active btn-primary" : ""
+                }`}
               name="tab-options"
               aria-label="ログインを開く"
               role="tab"
@@ -170,22 +175,22 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label
-                  htmlFor="username"
+                  htmlFor="passkey-name"
                   className="block text-sm font-medium mb-2 ruby-text"
                 >
-                  ユーザー名
+                  パスキー名
                 </label>
                 <input
                   type="text"
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="input input-bordered w-full"
-                  placeholder="表示名を入力してください"
+                  id="passkey-name"
+                  value={passkeyName}
+                  onChange={(e) => setPasskeyName(e.target.value)}
+                  className="input w-full"
+                  placeholder="パスキー名を入力してください"
                   disabled={isLoading}
                   maxLength={50}
                   autoComplete="off"
-                  aria-describedby="username-help"
+                  aria-describedby="passkey-name-help"
                   required
                 />
               </div>
@@ -271,12 +276,11 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 </button>
                 <button
                   type="submit"
-                  className={`btn btn-primary flex-1 rounded-full dark:rounded-sm ${
-                    isLoading ? "loading" : ""
-                  }`}
+                  className={`btn btn-primary flex-1 rounded-full dark:rounded-sm ${isLoading ? "loading" : ""
+                    }`}
                   disabled={
                     isLoading ||
-                    !username.trim() ||
+                    !passkeyName.trim() ||
                     !termsAccepted ||
                     !privacyAccepted
                   }
@@ -337,9 +341,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 </button>
                 <button
                   type="submit"
-                  className={`btn btn-primary flex-1 rounded-full dark:rounded-sm ${
-                    isLoading ? "loading" : ""
-                  }`}
+                  className={`btn btn-primary flex-1 rounded-full dark:rounded-sm ${isLoading ? "loading" : ""
+                    }`}
                   disabled={isLoading}
                 >
                   {!isLoading && <span className="ruby-text">ログイン</span>}

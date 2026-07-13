@@ -94,7 +94,7 @@ export default function SidebarLayout({
           {children}
         </div>
         <footer className="flex flex-col md:flex-row px-4 py-2 justify-center md:justify-between">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 md:w-auto">
+          <div className="flex flex-col sm:flex-row items-end justify-center gap-2 md:w-auto">
             <a
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"
               target="_blank"

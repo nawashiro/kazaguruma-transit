@@ -1,5 +1,5 @@
-import type { Event } from 'nostr-tools'
 import type { PWKBlob } from 'nosskey-sdk'
+import type { NostrEventDTO } from '@/lib/nostr/discussion-ndk-gateway'
 
 export interface NostrProfile {
   name?: string
@@ -21,7 +21,7 @@ export interface Discussion {
   moderators: DiscussionModerator[]
   authorPubkey: string
   createdAt: number
-  event: Event
+  event: NostrEventDTO
   // spec_v2.md要件: 承認システム対応
   approvedAt?: number
   approvalReference?: string
@@ -35,9 +35,10 @@ export interface DiscussionPost {
   busStopTag?: string
   createdAt: number
   approved: boolean
+  approvalState?: "approved" | "unapproved" | "unknown"
   approvedBy?: string[]
   approvedAt?: number
-  event: Event
+  event: NostrEventDTO
 }
 
 export interface PostApproval {
@@ -47,7 +48,7 @@ export interface PostApproval {
   moderatorPubkey: string
   discussionId: string
   createdAt: number
-  event: Event
+  event: NostrEventDTO
 }
 
 export interface PostEvaluation {
@@ -57,7 +58,7 @@ export interface PostEvaluation {
   rating: '+' | '-'
   discussionId?: string
   createdAt: number
-  event: Event
+  event: NostrEventDTO
 }
 
 export interface DiscussionRequest {
@@ -67,7 +68,7 @@ export interface DiscussionRequest {
   requesterPubkey: string
   adminPubkey: string
   createdAt: number
-  event: Event
+  event: NostrEventDTO
 }
 
 export interface EvaluationStats {
@@ -123,17 +124,6 @@ export interface AdminCheckProps {
   fallback?: React.ReactNode
 }
 
-export interface AuditTimelineItem {
-  id: string
-  type: 'discussion-request' | 'discussion-created' | 'discussion-deleted' | 'post-submitted' | 'post-approved' | 'post-rejected'
-  timestamp: number
-  actorPubkey: string
-  actorName?: string
-  targetId?: string
-  description: string
-  event: Event
-}
-
 export interface BusStop {
   id: string
   name: string
@@ -162,7 +152,7 @@ export interface DiscussionRequestFormData {
   description: string
 }
 
-export interface NostrEventWithProfile extends Event {
+export interface NostrEventWithProfile extends NostrEventDTO {
   profile?: NostrProfile
 }
 
@@ -184,7 +174,7 @@ export interface DiscussionStats {
   totalEvaluations: number
 }
 
-export type TabType = 'main' | 'audit' | 'manage' | 'approve'
+export type TabType = 'main' | 'manage' | 'approve'
 
 export interface TabConfig {
   id: TabType
@@ -201,17 +191,6 @@ export interface PaginationProps {
 export interface LoadingState {
   isLoading: boolean
   error: string | null
-}
-
-/**
- * 監査ページ固有の状態を表す
- * LoadingStateを拡張し、データ取得完了フラグと再試行可能フラグを追加
- */
-export interface AuditPageState extends LoadingState {
-  /** データ取得が完了したかどうか */
-  isLoaded: boolean
-  /** 再試行可能なエラーかどうか */
-  isRetryable: boolean
 }
 
 export interface DiscussionError extends Error {

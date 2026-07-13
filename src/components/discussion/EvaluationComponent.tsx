@@ -19,13 +19,13 @@ export function EvaluationComponent({
   onEvaluate,
   userEvaluations,
   isRandomOrder = false,
-  title = "投稿を評価",
+  title = "この論点は参考になりますか？",
 }: EvaluationComponentProps) {
   const [evaluatingPost, setEvaluatingPost] = useState<string | null>(null);
 
   const limitedPosts = useMemo(() => {
     const availablePosts = filterUnevaluatedPosts(
-      posts.filter((p) => p.approved),
+      posts.filter((p) => p.approved && p.approvalState !== "unknown"),
       userEvaluations
     );
 
@@ -75,10 +75,9 @@ export function EvaluationComponent({
   }
 
   const currentPost = limitedPosts[0];
-  const remainingCount = limitedPosts.length;
 
   // 全承認済み投稿数と評価済み投稿数からプログレスを計算
-  const allApprovedPosts = posts.filter((p) => p.approved);
+  const allApprovedPosts = posts.filter((p) => p.approved && p.approvalState !== "unknown");
   const totalCount = allApprovedPosts.length;
   const evaluatedCount = userEvaluations.size;
   const progressPercentage =
@@ -118,14 +117,11 @@ export function EvaluationComponent({
       aria-labelledby="evaluation-title"
     >
       <div className="flex justify-between items-center">
-        <h3 id="evaluation-title" className="text-lg font-medium ruby-text">
+        <h2 id="evaluation-title" className="text-xl font-bold ruby-text">
           {title}
-        </h3>
-        <span className="text-sm text-gray-600 dark:text-gray-400 ruby-text">
-          残り {remainingCount} 件
-        </span>
+        </h2>
       </div>
-
+      <p>論点が妥当だと思う、賛成できるなどの投稿は「はい」を押してください。</p>
       <div
         className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
         role="article"
@@ -164,11 +160,9 @@ export function EvaluationComponent({
           <button
             onClick={() => handleEvaluate(currentPost.id, "+")}
             disabled={evaluatingPost !== null}
-            className={`btn btn-primary btn-lg flex-1 max-w-xs rounded-full dark:rounded-sm ${
-              evaluatingPost === currentPost.id ? "loading" : ""
-            }`}
+            className={`btn btn-primary flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
+              }`}
             type="button"
-            aria-label="この投稿に賛成"
           >
             {evaluatingPost === currentPost.id ? (
               ""
@@ -188,18 +182,16 @@ export function EvaluationComponent({
                     d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
                   />
                 </svg>
-                <span className="ruby-text">賛成</span>
+                <span className="ruby-text">はい</span>
               </>
             )}
           </button>
           <button
             onClick={() => handleEvaluate(currentPost.id, "-")}
             disabled={evaluatingPost !== null}
-            className={`btn btn-warning btn-lg flex-1 max-w-xs rounded-full dark:rounded-sm ${
-              evaluatingPost === currentPost.id ? "loading" : ""
-            }`}
+            className={`btn btn-warning flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
+              }`}
             type="button"
-            aria-label="この投稿に反対"
           >
             {evaluatingPost === currentPost.id ? (
               ""
@@ -219,7 +211,7 @@ export function EvaluationComponent({
                     d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"
                   />
                 </svg>
-                <span className="ruby-text">反対</span>
+                <span className="ruby-text">いいえ</span>
               </>
             )}
           </button>

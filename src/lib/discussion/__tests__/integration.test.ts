@@ -7,7 +7,9 @@ import { jest } from '@jest/globals';
 import { 
   processDiscussionCreationFlow,
   type CreationFlowParams,
-  type DiscussionCreationForm
+  type DiscussionCreationForm,
+  createDiscussionPostEvent,
+  isReadableDiscussionPostKind,
 } from '../user-creation-flow';
 import { 
   buildNaddrFromDiscussion,
@@ -16,10 +18,10 @@ import {
 import { 
   canEditDiscussion,
   canApprovePost,
-  canViewAuditWithNames,
   getVisibleProfileInfo 
 } from '../permission-system';
 import type { Discussion } from '../../../types/discussion';
+import { formatBip39JapaneseMnemonicPreviewFromPubkey } from '../../nostr/mnemonic-utils';
 
 // Mock dependencies
 jest.mock('../../nostr/nostr-service');
@@ -125,12 +127,9 @@ describe('Discussion System Integration', () => {
       const moderatorApprovePermission = canApprovePost(mockModeratorPubkey, mockDiscussion, mockAdminPubkey);
       expect(moderatorApprovePermission).toBe(true);
 
-      // Test audit log access for admin
-      const adminAuditAccess = canViewAuditWithNames(mockAdminPubkey, mockDiscussion, mockAdminPubkey);
-      expect(adminAuditAccess).toBe(true);
     });
 
-    it('should properly handle profile privacy in audit logs', () => {
+    it('should properly handle profile privacy', () => {
       const mockProfiles = {
         [mockUserPubkey]: { name: 'Test User' },
         [mockModeratorPubkey]: { name: 'Test Moderator' },
@@ -288,5 +287,42 @@ describe('Discussion System Integration', () => {
       const unauthApprovePermission = canApprovePost(null, mockDiscussion, mockAdminPubkey);
       expect(unauthApprovePermission).toBe(false);
     });
+  });
+});
+
+describe("Foundation regression checks", () => {
+  it("formats pubkey mnemonic as BIP39 Japanese 3-word preview", () => {
+    const pubkey =
+      "f".repeat(64);
+    const mnemonic = formatBip39JapaneseMnemonicPreviewFromPubkey(pubkey);
+    const words = mnemonic.split(" ");
+
+    expect(words).toHaveLength(3);
+    expect(words.every((word) => word.length > 0)).toBe(true);
+  });
+
+});
+
+describe("US1 service flow checks", () => {
+  it("creates discussion post event with kind:1111 and discussion a-tag", () => {
+    const event = createDiscussionPostEvent(
+      "投稿本文",
+      "34550:author:demo",
+      "bus-stop-a"
+    );
+
+    expect(event.kind).toBe(1111);
+    expect(event.tags).toEqual(
+      expect.arrayContaining([
+        ["a", "34550:author:demo"],
+        ["t", "bus-stop-a"],
+      ])
+    );
+  });
+
+  it("allows reading both kind:1111 and kind:1 posts for backward compatibility", () => {
+    expect(isReadableDiscussionPostKind(1111)).toBe(true);
+    expect(isReadableDiscussionPostKind(1)).toBe(true);
+    expect(isReadableDiscussionPostKind(7)).toBe(false);
   });
 });

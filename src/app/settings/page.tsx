@@ -10,38 +10,41 @@ import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
 } from "@/lib/config/discussion-config";
-import {
-  hexToNpub,
-  parseDiscussionEvent,
-  formatRelativeTime,
-} from "@/lib/nostr/nostr-utils";
+import { parseDiscussionEvent, formatRelativeTime } from "@/lib/nostr/nostr-utils";
 import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
 import { createNostrService } from "@/lib/nostr/nostr-service";
+import { type CompletionReason } from "@/lib/nostr/nostr-service";
+import {
+  createDiscussionNdkGateway,
+  type NostrEventDTO,
+} from "@/lib/nostr/discussion-ndk-gateway";
 import { LoginModal } from "@/components/discussion/LoginModal";
+import { UserIdentity } from "@/components/ui/UserIdentity";
 import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import type { Event } from "nostr-tools";
 
 const nostrServiceConfig = getNostrServiceConfig();
 const nostrService = createNostrService(nostrServiceConfig);
+const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function SettingsPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
   const [myDiscussions, setMyDiscussions] = useState<Discussion[]>([]);
   const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(false);
+  const [discussionsCompletionReason, setDiscussionsCompletionReason] =
+    useState<CompletionReason | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
     null
   );
   const [isDeletingDiscussion, setIsDeletingDiscussion] = useState(false);
-  const discussionsStreamCleanupRef = useRef<(() => void) | null>(null);
+  const loadSequenceRef = useRef(0);
 
   const { user, logout, isLoading, error, signEvent } = useAuth();
 
 
-  const updateDiscussions = useCallback((events: Event[]) => {
+  const updateDiscussions = useCallback((events: NostrEventDTO[]) => {
     const parsedDiscussions = events
       .map(parseDiscussionEvent)
       .filter((d): d is Discussion => d !== null)
@@ -50,52 +53,60 @@ export default function SettingsPage() {
     setMyDiscussions(parsedDiscussions);
   }, []);
 
-  const startStreamingDiscussions = useCallback(() => {
+  const loadDiscussions = useCallback(async () => {
+    const loadSequence = ++loadSequenceRef.current;
+
     if (!user.isLoggedIn || !user.pubkey || !isDiscussionsEnabled()) {
-      discussionsStreamCleanupRef.current?.();
-      discussionsStreamCleanupRef.current = null;
       setIsLoadingDiscussions(false);
+      setDiscussionsCompletionReason(null);
       setMyDiscussions([]);
       return;
     }
 
-    discussionsStreamCleanupRef.current?.();
     setIsLoadingDiscussions(true);
+    setDiscussionsCompletionReason(null);
 
-    discussionsStreamCleanupRef.current = nostrService.streamEventsOnEvent(
-      [
+    try {
+      const result = await discussionGateway.queryDiscussionsByAuthorWithCompletion(
+        user.pubkey,
         {
-          kinds: [34550],
-          authors: [user.pubkey],
-        },
-      ],
-      {
-        onEvent: (events) => {
-          updateDiscussions(events);
-          setIsLoadingDiscussions(false);
-        },
-        onEose: (events) => {
-          updateDiscussions(events);
-          setIsLoadingDiscussions(false);
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
+          idleTimeoutMs: nostrServiceConfig.defaultTimeout,
+          hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
+        }
+      );
+      if (loadSequenceRef.current !== loadSequence) return;
+
+      logger.info("settings discussions fetch completed", {
+        authorPubkey: user.pubkey,
+        completionReason: result.completionReason,
+        eventCount: result.eventCount,
+        elapsedMs: result.elapsedMs,
+      });
+
+      updateDiscussions(result.events);
+      setDiscussionsCompletionReason(result.completionReason);
+    } catch (error) {
+      if (loadSequenceRef.current !== loadSequence) return;
+      logger.error("Failed to load discussions in settings:", error);
+      setMyDiscussions([]);
+      setDiscussionsCompletionReason("hard-timeout");
+    } finally {
+      if (loadSequenceRef.current === loadSequence) {
+        setIsLoadingDiscussions(false);
       }
-    );
+    }
   }, [
     updateDiscussions,
     user.isLoggedIn,
     user.pubkey,
-    nostrServiceConfig.defaultTimeout,
   ]);
 
   useEffect(() => {
-    startStreamingDiscussions();
-
+    void loadDiscussions();
     return () => {
-      discussionsStreamCleanupRef.current?.();
-      discussionsStreamCleanupRef.current = null;
+      loadSequenceRef.current += 1;
     };
-  }, [startStreamingDiscussions]);
+  }, [loadDiscussions]);
 
   const handleDeleteDiscussion = async (discussionId: string) => {
     if (!user.isLoggedIn || !signEvent) return;
@@ -150,19 +161,6 @@ export default function SettingsPage() {
     setIsLoggingOut(false);
   };
 
-  const handleCopyPubkey = async () => {
-    if (!user.pubkey) return;
-
-    try {
-      const npubKey = hexToNpub(user.pubkey);
-      await navigator.clipboard.writeText(npubKey);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch (error) {
-      logger.error("Failed to copy to clipboard:", error);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -192,68 +190,7 @@ export default function SettingsPage() {
 
             {user.isLoggedIn ? (
               <div className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">
-                      <span className="label-text font-medium ruby-text">ユーザー名</span>
-                    </label>
-                    <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <span className="text-sm">
-                        {user.profile?.name || "未設定"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="label">
-                      <span className="label-text font-medium ruby-text">
-                        ユーザーID
-                      </span>
-                    </label>
-                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <span className="font-mono break-all flex-1">
-                        {user.pubkey ? hexToNpub(user.pubkey) : "N/A"}
-                      </span>
-                      {user.pubkey && (
-                        <button
-                          onClick={handleCopyPubkey}
-                          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex-shrink-0"
-                          title="クリップボードにコピー"
-                        >
-                          {isCopied ? (
-                            <svg
-                              className="w-4 h-4 text-green-600"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                          ) : (
-                            <svg
-                              className="w-4 h-4 text-gray-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                              />
-                            </svg>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                {user.pubkey && <UserIdentity pubkey={user.pubkey} />}
 
                 {user.profile?.about && (
                   <div>
@@ -269,31 +206,6 @@ export default function SettingsPage() {
                 )}
 
                 <div className="divider"></div>
-
-                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <svg
-                      className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <div className="text-sm text-blue-800 dark:text-blue-200 ruby-text">
-                      <p className="font-medium mb-1">認証について</p>
-                      <p>
-                        あなたのアカウントはパスキーで保護されています。
-                        ログアウトすると、再度生体認証または端末のPINでのログインが必要になります。
-                      </p>
-                    </div>
-                  </div>
-                </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
@@ -367,20 +279,8 @@ export default function SettingsPage() {
                   <Button
                     onClick={() => setShowLoginModal(true)}
                     disabled={isLoading}
+                    className="whitespace-nowrap text-base"
                   >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-                      />
-                    </svg>
                     <span className="ruby-text">ログイン / アカウント作成</span>
                   </Button>
                 </div>
@@ -434,7 +334,7 @@ export default function SettingsPage() {
                             <div className="flex gap-2 ml-4">
                               <Link
                                 href={`/discussions/${naddr}/edit`}
-                                className="btn btn-outline btn-sm rounded-full dark:rounded-sm"
+                                className="btn btn-outline rounded-full dark:rounded-sm"
                               >
                                 編集
                               </Link>
@@ -442,7 +342,7 @@ export default function SettingsPage() {
                                 onClick={() =>
                                   setShowDeleteConfirm(discussion.id)
                                 }
-                                className="btn btn-error btn-outline btn-sm rounded-full dark:rounded-sm"
+                                className="btn btn-error btn-outline rounded-full dark:rounded-sm"
                                 disabled={isDeletingDiscussion}
                               >
                                 削除
@@ -452,6 +352,23 @@ export default function SettingsPage() {
                         </div>
                       );
                     })}
+                  </div>
+                ) : discussionsCompletionReason === "idle-timeout" ||
+                  discussionsCompletionReason === "hard-timeout" ||
+                  discussionsCompletionReason === "cancelled" ? (
+                  <div className="alert alert-warning">
+                    <span className="ruby-text">
+                      会話データの取得に時間がかかっています（{discussionsCompletionReason}）。
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      onClick={() => {
+                        void loadDiscussions();
+                      }}
+                    >
+                      再読み込み
+                    </button>
                   </div>
                 ) : (
                   <div className="text-center py-8">
@@ -490,14 +407,8 @@ export default function SettingsPage() {
         <div className="mt-8">
           <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="card-body">
-              <h2 className="card-title mb-4 ruby-text">プライバシー</h2>
-
-              <div className="space-y-4">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  <h3 className="font-medium mb-2 ruby-text">
-                    データの保存について
-                  </h3>
-                  <ul className="space-y-1 list-disc list-inside ruby-text">
+              <h2 className="card-title mb-2 ruby-text">プライバシー</h2>
+                <ul className="space-y-1 list-disc list-inside ruby-text">
                     <li>
                       あなたの投稿と評価はNostrプロトコルを通じて分散保存されます
                     </li>
@@ -508,22 +419,11 @@ export default function SettingsPage() {
                     <li>投稿は削除できない場合があります</li>
                   </ul>
                 </div>
-
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  <h3 className="font-medium mb-2 ruby-text">匿名性について</h3>
-                  <ul className="space-y-1 list-disc list-inside ruby-text">
-                    <li>
-                      メールアドレスやデバイス情報などの個人情報は送信されません
-                    </li>
-                    <li>ユーザーIDは技術的な目的でのみ使用されます</li>
-                  </ul>
-                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
+        
+     
       {/* 削除確認ダイアログ */}
       {showDeleteConfirm && (
         <dialog open className="modal modal-open">

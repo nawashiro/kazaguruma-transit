@@ -131,7 +131,7 @@ export async function loadTestData(): Promise<{
       dTag: "test",
       title: "統計処理のテスト: AI生成物の著作権について",
       description:
-        "意見グループを特定し、論点を抽出する統計処理のテストです。\n「意見グループ」セクションをご覧ください。\nAI生成物の著作権や依拠性について議論するテスト用データが書き込まれています。\n新たな書き込みや投票はできません。監査ログもなく、見ようとするとエラーが出るはずです。",
+        "意見グループを特定し、論点を抽出する統計処理のテストです。\n「意見グループ」セクションをご覧ください。\nAI生成物の著作権や依拠性について議論するテスト用データが書き込まれています。\n新たな書き込みや投票はできません。",
       authorPubkey: "test-admin-pubkey",
       moderators: [{ pubkey: "test-admin-pubkey" }],
       createdAt: Date.now() / 1000,

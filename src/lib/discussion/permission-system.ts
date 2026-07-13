@@ -1,5 +1,5 @@
 import type { Discussion } from '@/types/discussion';
-import { isAdmin, isModerator } from '@/lib/nostr/nostr-utils';
+import { isAdmin, isModerator, npubToHex } from '@/lib/nostr/nostr-utils';
 
 export interface ProfileDisplayInfo {
   name?: string;
@@ -7,12 +7,20 @@ export interface ProfileDisplayInfo {
   badges: string[];
 }
 
+export function arePubkeysEqual(
+  leftPubkey: string | null | undefined,
+  rightPubkey: string | null | undefined,
+): boolean {
+  if (!leftPubkey || !rightPubkey) return false;
+  return npubToHex(leftPubkey).toLowerCase() === npubToHex(rightPubkey).toLowerCase();
+}
+
 export function isDiscussionCreator(
   userPubkey: string | null | undefined,
   discussion: Discussion
 ): boolean {
   if (!userPubkey) return false;
-  return userPubkey === discussion.authorPubkey;
+  return arePubkeysEqual(userPubkey, discussion.authorPubkey);
 }
 
 export function canEditDiscussion(

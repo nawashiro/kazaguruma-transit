@@ -151,7 +151,7 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
           />
         </svg>
         <span>{error}</span>
-        <button onClick={() => setError(null)} className="btn btn-sm">
+        <button onClick={() => setError(null)} className="btn">
           閉じる
         </button>
       </div>
@@ -179,7 +179,7 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
           <div className="font-bold">PDF生成エラー</div>
           <div>{pdfError}</div>
         </div>
-        <button onClick={() => setPdfError(null)} className="btn btn-sm">
+        <button onClick={() => setPdfError(null)} className="btn">
           閉じる
         </button>
       </div>

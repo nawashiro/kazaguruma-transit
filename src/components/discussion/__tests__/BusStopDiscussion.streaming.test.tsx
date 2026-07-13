@@ -25,6 +25,18 @@ const serviceMock = {
   getDiscussionPosts: jest.fn(),
   getEvaluationsForPosts: jest.fn(),
   getEvaluations: jest.fn(),
+  getEventsWithCompletion: jest.fn().mockResolvedValue({
+    events: [],
+    completionReason: "eose",
+    eventCount: 0,
+    elapsedMs: 1,
+    startedAt: 1,
+    lastEventAt: 1,
+    eoseReceived: true,
+    relayUrls: [],
+    duplicateCount: 0,
+    sourceRelayUrlsByEventId: {},
+  }),
 };
 
 jest.mock("@/lib/nostr/nostr-service", () => ({
@@ -44,12 +56,25 @@ describe("BusStopDiscussion streaming", () => {
     jest.clearAllMocks();
   });
 
-  it("starts streaming posts/approvals without waiting for EOSE fetch", async () => {
+  it("uses a scoped completion-aware read for bus-stop posts and approvals", async () => {
     render(<BusStopDiscussion busStops={["A"]} />);
 
     await waitFor(() =>
-      expect(serviceMock.streamEventsOnEvent).toHaveBeenCalled()
+      expect(serviceMock.getEventsWithCompletion).toHaveBeenCalled()
     );
-    expect(serviceMock.getDiscussionPosts).not.toHaveBeenCalled();
+    expect(serviceMock.getEventsWithCompletion).toHaveBeenNthCalledWith(
+      1,
+      [{ kinds: [1111, 1], "#a": ["discussion-1"], "#t": ["A"], limit: 10, until: undefined }],
+      expect.objectContaining({ relayUrls: expect.any(Array) }),
+    );
+  });
+
+  it("does not show the provisional approval warning when no post is associated with a stop", async () => {
+    const { queryByText } = render(<BusStopDiscussion busStops={["A"]} />);
+
+    await waitFor(() => {
+      expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(1);
+      expect(queryByText("承認情報を確認中です。表示内容は暫定です。")).not.toBeInTheDocument();
+    });
   });
 });

@@ -13,7 +13,7 @@ import type { UserAuth } from "@/types/discussion";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import { parseProfileEvent } from "@/lib/nostr/nostr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
-import type { Event } from "nostr-tools";
+import type { NostrEventDTO } from "@/lib/nostr/discussion-ndk-gateway";
 import { logger } from "@/utils/logger";
 
 interface PWKEvent {
@@ -26,9 +26,9 @@ interface PWKEvent {
 interface AuthContextType {
   user: UserAuth;
   login: () => Promise<void>;
-  createAccount: (username?: string) => Promise<void>;
+  createAccount: (passkeyName?: string) => Promise<void>;
   logout: () => void;
-  signEvent: (event: Record<string, unknown>) => Promise<Event>;
+  signEvent: (event: Record<string, unknown>) => Promise<NostrEventDTO>;
   refreshProfile: () => Promise<void>;
   isLoading: boolean;
   error: string | null;
@@ -147,7 +147,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const createAccount = async (username?: string) => {
+  const createAccount = async (passkeyName?: string) => {
     setIsLoading(true);
     setError(null);
 
@@ -158,8 +158,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       logger.log("📱 Step 1: Creating passkey...");
       const credentialId = await pwkManager.createPasskey({
         user: {
-          name: username || `user_${Date.now()}`,
-          displayName: username || "Nostr User",
+          name: passkeyName || `user_${Date.now()}`,
+          displayName: passkeyName || "Nostr User",
         },
       });
 
@@ -171,7 +171,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Step 2: Use PRF value directly as a Nostr key
       logger.log("🔑 Step 2: Using PRF value as Nostr key...");
       const pwk = await pwkManager.directPrfToNostrKey(credentialId, {
-        username: username || "Anonymous User",
+        username: passkeyName || "Anonymous User",
       });
 
       logger.log("✅ PWK created successfully:", {
@@ -189,16 +189,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const pubkey = pwk.pubkey;
 
-      // Step 5: Publish profile
-      logger.log("📤 Publishing profile...");
-      await publishProfile(username || "Anonymous User", pwk);
-      logger.log("✅ Profile published successfully");
-
       setUser({
         pwk,
         pubkey,
         isLoggedIn: true,
-        profile: { pubkey, name: username },
+        profile: { pubkey },
       });
 
       localStorage.setItem(PWK_STORAGE_KEY, JSON.stringify(pwk));
@@ -251,25 +246,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const publishProfile = async (name: string, pwk: PWKBlob) => {
-    try {
-      const profileEvent = {
-        kind: 0,
-        created_at: Math.floor(Date.now() / 1000),
-        tags: [],
-        content: JSON.stringify({ name }),
-      };
-
-      const signedEvent = (await pwkManager.signEventWithPWK(
-        profileEvent,
-        pwk
-      )) as unknown as Event;
-      await nostrService.publishSignedEvent(signedEvent);
-    } catch (error) {
-      logger.error("Failed to publish profile:", error);
-    }
-  };
-
   const logout = () => {
     setUser({
       pwk: null,
@@ -283,7 +259,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
   };
 
-  const signEvent = async (event: Record<string, unknown>): Promise<Event> => {
+  const signEvent = async (
+    event: Record<string, unknown>
+  ): Promise<NostrEventDTO> => {
     if (!user.pwk) {
       throw new Error("Not logged in");
     }
@@ -292,7 +270,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const signedEvent = (await pwkManager.signEventWithPWK(
         event as unknown as PWKEvent,
         user.pwk
-      )) as unknown as Event;
+      )) as unknown as NostrEventDTO;
       return signedEvent;
     } catch (error) {
       logger.error("Failed to sign event:", error);

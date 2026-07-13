@@ -17,8 +17,10 @@ import {
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import { loadKnownDiscussionData, saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
 import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
+import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
 import { useAuth } from "@/lib/auth/auth-context";
+import { InformationCircleIcon } from "@heroicons/react/24/outline";
 
 interface DiscussionTabLayoutProps {
   /** タブナビゲーションのベースURL（例: "/discussions" または "/discussions/[naddr]"） */
@@ -143,8 +145,14 @@ export function DiscussionTabLayout({
 
     // 状態初期化
     const knownData = loadKnownDiscussionData<Discussion>(discussionInfo.discussionId);
-    setDiscussion(knownData?.metadata ?? null);
-    setIsDiscussionLoading(!knownData?.metadata);
+    const knownMetadata = knownData?.metadata;
+    const hasMatchingKnownMetadata = Boolean(
+      knownMetadata &&
+      knownMetadata.dTag === discussionInfo.dTag &&
+      arePubkeysEqual(knownMetadata.authorPubkey, discussionInfo.authorPubkey),
+    );
+    setDiscussion(hasMatchingKnownMetadata ? knownMetadata ?? null : null);
+    setIsDiscussionLoading(!hasMatchingKnownMetadata);
     setDiscussionError(null);
     setDiscussionCompletionReason(null);
 
@@ -178,7 +186,12 @@ export function DiscussionTabLayout({
       });
       if (loadSequenceRef.current !== loadSequence) return;
 
-      const latest = pickLatestDiscussion(discussionResult.events);
+      const matchingEvents = discussionResult.events.filter(
+        (event) =>
+          arePubkeysEqual(event.pubkey, discussionInfo.authorPubkey) &&
+          event.tags.some((tag) => tag[0] === "d" && tag[1] === discussionInfo.dTag),
+      );
+      const latest = pickLatestDiscussion(matchingEvents);
       if (latest) {
         setDiscussion(latest);
         saveKnownDiscussionData(discussionInfo.discussionId, {
@@ -234,7 +247,18 @@ export function DiscussionTabLayout({
   const isAllPostsActive = normalizedPath === `${normalizedBase}/approve`;
   const isEditActive = normalizedPath === `${normalizedBase}/edit`;
   const isModeratorsActive = normalizedPath === `${normalizedBase}/moderators`;
-  const isCreator = Boolean(discussion && user.pubkey === discussion.authorPubkey);
+  const isCreator = Boolean(
+    discussion && arePubkeysEqual(user.pubkey, discussion.authorPubkey),
+  );
+  const isMod = Boolean(
+    user.pubkey &&
+    discussion?.moderators.some((moderator) =>
+      arePubkeysEqual(moderator.pubkey, user.pubkey),
+    ),
+  );
+  const isDiscussionRoleReady = Boolean(
+    discussion && !isDiscussionLoading && discussionCompletionReason,
+  );
 
   const tabs = [
     {
@@ -375,6 +399,39 @@ export function DiscussionTabLayout({
         hasData={Boolean(discussion)}
         onReload={() => void loadDiscussionData()}
       />
+
+      {isDiscussionRoleReady && (
+        <div className="alert mb-8" role="status">
+          <InformationCircleIcon className="h-6 w-6 text-info" aria-hidden="true" />
+          <div>
+            {isCreator ? (
+              <>
+                <p className="font-semibold ruby-text">あなたは作成者です。</p>
+                <ul className="list-disc pl-5 mt-2 space-y-1 ruby-text">
+                  <li>ユーザーとして、新しい意見を投稿できます。</li>
+                  <li>モデレーターとして、投稿を承認できます。</li>
+                  <li>作成者として、会話を編集できます（説明を書く、モデレーターを指名するなど）。</li>
+                </ul>
+              </>
+            ) : isMod ? (
+              <>
+                <p className="font-semibold ruby-text">あなたはモデレーターです。</p>
+                <ul className="list-disc pl-5 mt-2 space-y-1 ruby-text">
+                  <li>ユーザーとして、新しい意見を投稿できます。</li>
+                  <li>モデレーターとして、投稿を承認できます。</li>
+                </ul>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold ruby-text">あなたはユーザーです。</p>
+                <ul className="list-disc pl-5 mt-2 space-y-1 ruby-text">
+                  <li>ユーザーとして、新しい意見を投稿できます。</li>
+                </ul>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* タブナビゲーション（既存） */}
       <nav

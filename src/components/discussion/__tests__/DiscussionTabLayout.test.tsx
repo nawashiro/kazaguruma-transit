@@ -34,6 +34,8 @@ jest.mock("@/lib/auth/auth-context", () => ({
 }));
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseDiscussionEvent: jest.fn(() => null),
+  getAdminPubkeyHex: jest.fn(() => "admin-pubkey"),
+  isModerator: jest.fn(() => false),
 }));
 jest.mock("@/utils/logger", () => ({
   logger: {
@@ -238,6 +240,17 @@ describe("DiscussionTabLayout", () => {
       );
 
       expect(screen.getByTestId("child-content")).toBeInTheDocument();
+    });
+
+    it("does not render a role card before discussion metadata is ready", () => {
+      render(
+        <DiscussionTabLayout baseHref="/discussions/naddr123">
+          <div>Content</div>
+        </DiscussionTabLayout>
+      );
+
+      expect(screen.queryByText("あなたはユーザーです。")).not.toBeInTheDocument();
+      expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
     });
   });
 

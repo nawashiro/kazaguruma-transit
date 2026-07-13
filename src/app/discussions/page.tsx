@@ -214,31 +214,6 @@ export default function DiscussionsPage() {
     <DiscussionListTabLayout baseHref="/discussions">
       <div className="container mx-auto px-4 py-8">
         <main className="space-y-6">
-          {/* 作成者またはモデレーターの場合のみ表示 */}
-          {(discussions.some((d) => user.pubkey === d.authorPubkey) ||
-            discussions.some((d) =>
-              d.moderators.some((m) => m.pubkey === user.pubkey)
-            )) && (
-            <aside className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-              <p className="mb-4">
-                あなたは
-                {/* Priority: Creator > Moderator */}
-                {discussions.some((d) => user.pubkey === d.authorPubkey) ? (
-                  <span>作成者</span>
-                ) : (
-                  <span>モデレーター</span>
-                )}
-                です。
-              </p>
-              <Link
-                href="/discussions/manage"
-                className="btn btn-primary rounded-full dark:rounded-sm ruby-text"
-              >
-                <span>会話管理</span>
-              </Link>
-            </aside>
-          )}
-
           <div className="grid lg:grid-cols-2 gap-6">
             <section aria-labelledby="discussions-list-heading">
               <h2

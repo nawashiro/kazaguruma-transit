@@ -12,8 +12,10 @@ import {
   shouldShowCreatorBadge,
   shouldShowModeratorBadge,
   getVisibleProfileInfo,
+  arePubkeysEqual,
 } from '../permission-system';
 import type { Discussion } from '@/types/discussion';
+import { hexToNpub } from '@/lib/nostr/nostr-utils';
 
 jest.mock('@/utils/logger', () => ({
   logger: {
@@ -50,6 +52,13 @@ describe('Discussion Permission System', () => {
       expect(result).toBe(true);
     });
 
+    test('should recognize a creator when the user key is npub and the discussion key is hex', () => {
+      const hexPubkey = 'a'.repeat(64);
+      const discussion = { ...mockDiscussion, authorPubkey: hexPubkey };
+
+      expect(isDiscussionCreator(hexToNpub(hexPubkey), discussion)).toBe(true);
+    });
+
     test('should return false for non-creator', () => {
       expect(isDiscussionCreator(regularUserPubkey, mockDiscussion)).toBe(false);
       expect(isDiscussionCreator(adminPubkey, mockDiscussion)).toBe(false);
@@ -59,6 +68,18 @@ describe('Discussion Permission System', () => {
     test('should return false for null/undefined pubkey', () => {
       expect(isDiscussionCreator(null, mockDiscussion)).toBe(false);
       expect(isDiscussionCreator(undefined, mockDiscussion)).toBe(false);
+    });
+  });
+
+  describe('arePubkeysEqual', () => {
+    test('should compare npub and hex representations of the same key', () => {
+      const hexPubkey = 'a'.repeat(64);
+
+      expect(arePubkeysEqual(hexToNpub(hexPubkey), hexPubkey)).toBe(true);
+    });
+
+    test('should reject different public keys', () => {
+      expect(arePubkeysEqual(creatorPubkey, regularUserPubkey)).toBe(false);
     });
   });
 

@@ -1,6 +1,7 @@
 import type { DiscussionReadStrategyConfig } from "@/lib/config/discussion-config";
 import type { CompletionReason, Event, EventFetchCompletion, NostrService } from "@/lib/nostr/nostr-service";
 import { rankRelayCandidates, type RelayCandidate, selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
+import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 
 export type ApprovalState = "approved" | "unapproved" | "unknown";
 
@@ -42,7 +43,7 @@ export const createDiscussionModerationSnapshot = ({
   completionReason,
   successfulRelayUrls = [],
 }: DiscussionModerationReadInput): DiscussionModerationSnapshot => {
-  const primary = dedupeAndSortEvents(primaryEvents);
+  const primary = dedupeAndSortEvents(primaryEvents.filter((event) => !isModeratorRequestEvent(event)));
   const primaryEventIds = new Set(primary.map((event) => event.id));
   const approvals = dedupeAndSortEvents(approvalEvents.filter((event) => isApprovalForPrimaryEvent(event, primaryEventIds)));
   const initialRelayUrls = relayCandidates.slice(0, 3).map((candidate) => candidate.url);
@@ -67,7 +68,8 @@ export const loadDiscussionModerationSnapshot = async (
   const relayUrls = selectRelayCandidates({ ...input, limit: strategy.relayLimit }).map((candidate) => candidate.url);
   const options = { idleTimeoutMs: strategy.idleTimeoutMs, hardTimeoutMs: strategy.hardTimeoutMs, relayUrls };
   const primary = await service.getEventsWithCompletion([{ kinds: [1111, 1], "#a": [input.discussionId], limit: 10, until: input.until }], options);
-  const postIds = primary.events.map((event) => event.id);
+  const primaryEvents = primary.events.filter((event) => !isModeratorRequestEvent(event));
+  const postIds = primaryEvents.map((event) => event.id);
   const approvals: EventFetchCompletion = postIds.length === 0
     ? { ...primary, events: [], eventCount: 0 }
     : await service.getEventsWithCompletion([{ kinds: [4550], "#a": [input.discussionId], "#e": postIds, limit: 10 }], options);
@@ -76,7 +78,7 @@ export const loadDiscussionModerationSnapshot = async (
     : approvals.completionReason;
   return createDiscussionModerationSnapshot({
     discussionId: input.discussionId,
-    primaryEvents: primary.events,
+    primaryEvents,
     approvalEvents: approvals.events,
     relayCandidates,
     attemptedRelayUrls: relayUrls,

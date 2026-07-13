@@ -1,5 +1,6 @@
 import { naddrEncode } from "../naddr-utils";
 import {
+  isModeratorRequestEvent,
   parsePostEvent,
   parseApprovalEvent,
   parseEvaluationEvent,
@@ -22,6 +23,21 @@ describe("nostr-utils discussion id normalization", () => {
   };
   const discussionId = `34550:${discussionPointer.pubkey}:${discussionPointer.identifier}`;
   const discussionNaddr = naddrEncode(discussionPointer);
+
+  it("does not parse moderator requests as discussion posts", () => {
+    const event = {
+      id: "moderator-request-1",
+      kind: 1111,
+      pubkey: "applicant",
+      content: "please add me",
+      created_at: 100,
+      tags: [["a", discussionNaddr], ["t", "moderator-request"]],
+      sig: "sig",
+    };
+
+    expect(isModeratorRequestEvent(event)).toBe(true);
+    expect(parsePostEvent(event as any)).toBeNull();
+  });
 
   it("parsePostEvent normalizes naddr discussion tag", () => {
     const event = {

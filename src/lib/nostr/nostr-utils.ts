@@ -12,6 +12,9 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { normalizeDiscussionId } from "@/lib/nostr/naddr-utils";
+import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
+
+export { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 
 const normalizeDiscussionIdForParse = (
   discussionId: string
@@ -58,6 +61,7 @@ export function parsePostEvent(
 ): DiscussionPost | null {
   // NIP-72後方互換性: kind:1とkind:1111の両方をサポート
   if (event.kind !== 1111 && event.kind !== 1) return null;
+  if (isModeratorRequestEvent(event)) return null;
 
   const discussionTag = event.tags.find(
     (tag) => tag[0] === "a" || tag[0] === "A"

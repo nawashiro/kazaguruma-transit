@@ -5,10 +5,24 @@ import {
 import type { Event } from "@/lib/nostr/nostr-service";
 
 const post = (id: string): Event => ({ id, kind: 1111, pubkey: "author", created_at: 1, content: "post", tags: [["a", "34550:author:topic"]], sig: "sig" });
+const moderatorRequest: Event = { id: "moderator-request", kind: 1111, pubkey: "applicant", created_at: 3, content: "request", tags: [["a", "34550:author:topic"], ["t", "moderator-request"]], sig: "sig" };
 const approval = (postId: string): Event => ({ id: `approval-${postId}`, kind: 4550, pubkey: "moderator", created_at: 2, content: "", tags: [["e", postId]], sig: "sig" });
 const candidates = ["wss://one", "wss://two", "wss://three", "wss://four"].map((url) => ({ url, source: "configured" as const }));
 
 describe("createDiscussionModerationSnapshot", () => {
+  it("excludes moderator requests from primary events", () => {
+    const snapshot = createDiscussionModerationSnapshot({
+      discussionId: "34550:author:topic",
+      primaryEvents: [post("post-1"), moderatorRequest],
+      approvalEvents: [],
+      relayCandidates: candidates,
+      attemptedRelayUrls: candidates.map((candidate) => candidate.url),
+      completionReason: "eose",
+    });
+
+    expect(snapshot.primaryEvents.map((event) => event.id)).toEqual(["post-1"]);
+  });
+
   it("marks a primary event approved when its approval is observed", () => {
     expect(createDiscussionModerationSnapshot({ discussionId: "d", primaryEvents: [post("post-1")], approvalEvents: [approval("post-1")], relayCandidates: candidates, attemptedRelayUrls: ["wss://one"], completionReason: "eose" }).approvalState).toBe("approved");
   });

@@ -41,6 +41,7 @@ import {
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import type { Event } from "@/lib/nostr/nostr-service";
+import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrServiceConfig = getNostrServiceConfig();
@@ -134,13 +135,14 @@ export default function PostApprovalPage() {
       ],
       {
         onEvent: (events) => {
-          postsEventsRef.current = mergeStreamEvents(postsEventsRef.current, events);
+          postsEventsRef.current = mergeStreamEvents(postsEventsRef.current, events.filter((event) => !isModeratorRequestEvent(event)));
           rebuildFromEvents();
         },
         onEose: (events) => {
-          postsEventsRef.current = mergeStreamEvents(postsEventsRef.current, events);
+          const normalPosts = events.filter((event) => !isModeratorRequestEvent(event));
+          postsEventsRef.current = mergeStreamEvents(postsEventsRef.current, normalPosts);
           rebuildFromEvents();
-          saveKnownDiscussionData(discussionInfo.discussionId, { metadata: null, eventIds: events.map((event) => event.id), attemptedRelayUrls: relayUrls, successfulRelays: [], events });
+          saveKnownDiscussionData(discussionInfo.discussionId, { metadata: null, eventIds: normalPosts.map((event) => event.id), attemptedRelayUrls: relayUrls, successfulRelays: [], events: normalPosts });
           setIsLoading(false);
         },
         timeoutMs: nostrServiceConfig.defaultTimeout,

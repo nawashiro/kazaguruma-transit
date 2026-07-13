@@ -8,6 +8,7 @@ import NDK, {
 import type { PWKBlob } from "nosskey-sdk";
 import { logger } from "@/utils/logger";
 import { normalizeDiscussionId } from "@/lib/nostr/naddr-utils";
+import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 
 export type Event = NostrEvent & { id: string; sig: string; kind: number };
 export type Filter = NDKFilter<number>;
@@ -330,7 +331,8 @@ export class NostrService {
   }
 
   async getEvents(filters: Filter[]): Promise<Event[]> {
-    return this.getEventsOnEose(filters);
+    const events = await this.getEventsOnEose(filters);
+    return events.filter((event) => !isModeratorRequestEvent(event));
   }
 
   streamEventsOnEvent(
@@ -594,7 +596,8 @@ export class NostrService {
       });
     }
 
-    return this.getEventsOnEose(filters);
+    const events = await this.getEventsOnEose(filters);
+    return events.filter((event) => !isModeratorRequestEvent(event));
   }
 
   async getApprovalsOnEose(discussionId: string): Promise<Event[]> {

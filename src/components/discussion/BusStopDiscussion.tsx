@@ -188,6 +188,8 @@ export function BusStopDiscussion({
 
   const approvedPosts = posts.filter((p) => p.approved);
   const postsWithStats = combinePostsWithStats(approvedPosts, evaluations);
+  const isApprovalCheckPending =
+    snapshot?.approvalState === "unknown" && snapshot.primaryEvents.length > 0;
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -196,7 +198,7 @@ export function BusStopDiscussion({
         isLoading={isStreamLoading}
         completionReason={snapshot?.completionReason ?? null}
         hasData={Boolean(snapshot?.primaryEvents.length)}
-        approvalState={snapshot?.approvalState === "unknown" ? "unknown" : undefined}
+        approvalState={isApprovalCheckPending ? "unknown" : undefined}
         onReload={reload}
       />
       {postsWithStats.length > 0 && (
@@ -219,7 +221,7 @@ export function BusStopDiscussion({
             <span>{streamError}</span>
           </div>
         )}
-        {!isStreamLoading && !streamError && postsWithStats.length === 0 && snapshot?.approvalState !== "unknown" && (
+        {!isStreamLoading && !streamError && postsWithStats.length === 0 && !isApprovalCheckPending && (
           <p className="text-sm text-gray-600 dark:text-gray-400 ruby-text mb-3">
             承認済みの投稿はまだありません。
           </p>

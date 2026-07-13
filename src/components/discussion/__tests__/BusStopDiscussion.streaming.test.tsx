@@ -68,4 +68,13 @@ describe("BusStopDiscussion streaming", () => {
       expect.objectContaining({ relayUrls: expect.any(Array) }),
     );
   });
+
+  it("does not show the provisional approval warning when no post is associated with a stop", async () => {
+    const { queryByText } = render(<BusStopDiscussion busStops={["A"]} />);
+
+    await waitFor(() => {
+      expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(1);
+      expect(queryByText("承認情報を確認中です。表示内容は暫定です。")).not.toBeInTheDocument();
+    });
+  });
 });

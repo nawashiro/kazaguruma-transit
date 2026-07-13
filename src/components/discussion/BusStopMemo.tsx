@@ -111,7 +111,10 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
   if (!discussionsEnabled || busStops.length === 0) {
     return null;
   }
-  if (isLoading || error || snapshot?.approvalState === "unknown" || topPostsByStop.size === 0) {
+  const isApprovalCheckPending =
+    snapshot?.approvalState === "unknown" && snapshot.primaryEvents.length > 0;
+
+  if (isLoading || error || isApprovalCheckPending) {
     return error ? (
       <div role="alert" className="alert alert-error"><span>{error}</span></div>
     ) : (
@@ -124,6 +127,7 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
       />
     );
   }
+  if (topPostsByStop.size === 0) return null;
 
   return (
     <div className={`space-y-3 ${className}`}>

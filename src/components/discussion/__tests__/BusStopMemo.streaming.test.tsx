@@ -67,4 +67,47 @@ describe("BusStopMemo streaming", () => {
     );
     expect(serviceMock.getDiscussionPosts).not.toHaveBeenCalled();
   });
+
+  it("does not show the provisional approval warning when no post is associated with a stop", async () => {
+    const { queryByText } = render(<BusStopMemo busStops={["A"]} />);
+
+    await waitFor(() => {
+      expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(1);
+      expect(queryByText("承認情報を確認中です。表示内容は暫定です。")).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows the provisional approval warning while associated posts are still being checked", () => {
+    serviceMock.getEventsWithCompletion
+      .mockResolvedValueOnce({
+        events: [{ id: "post-1", kind: 1111, created_at: 1, tags: [], content: "", pubkey: "" }],
+        completionReason: "idle-timeout",
+        eventCount: 1,
+        elapsedMs: 1,
+        startedAt: 1,
+        lastEventAt: 1,
+        eoseReceived: false,
+        relayUrls: [],
+        duplicateCount: 0,
+        sourceRelayUrlsByEventId: {},
+      })
+      .mockResolvedValueOnce({
+        events: [],
+        completionReason: "idle-timeout",
+        eventCount: 0,
+        elapsedMs: 1,
+        startedAt: 1,
+        lastEventAt: 1,
+        eoseReceived: false,
+        relayUrls: [],
+        duplicateCount: 0,
+        sourceRelayUrlsByEventId: {},
+      });
+
+    render(<BusStopMemo busStops={["A"]} />);
+
+    return waitFor(() =>
+      expect(document.body).toHaveTextContent("承認情報を確認中です。表示内容は暫定です。")
+    );
+  });
 });

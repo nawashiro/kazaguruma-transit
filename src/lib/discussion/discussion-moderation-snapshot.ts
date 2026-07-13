@@ -71,13 +71,16 @@ export const loadDiscussionModerationSnapshot = async (
   const approvals: EventFetchCompletion = postIds.length === 0
     ? { ...primary, events: [], eventCount: 0 }
     : await service.getEventsWithCompletion([{ kinds: [4550], "#a": [input.discussionId], "#e": postIds, limit: 10 }], options);
+  const completionReason = primary.completionReason !== "eose"
+    ? primary.completionReason
+    : approvals.completionReason;
   return createDiscussionModerationSnapshot({
     discussionId: input.discussionId,
     primaryEvents: primary.events,
     approvalEvents: approvals.events,
     relayCandidates,
     attemptedRelayUrls: relayUrls,
-    completionReason: primary.completionReason === "eose" && approvals.completionReason === "eose" ? "eose" : primary.completionReason,
+    completionReason,
     successfulRelayUrls: Array.from(new Set(approvals.events.flatMap((event) => approvals.sourceRelayUrlsByEventId[event.id] ?? []))),
   });
 };

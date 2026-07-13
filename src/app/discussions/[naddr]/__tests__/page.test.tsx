@@ -88,7 +88,6 @@ jest.mock('@/components/discussion/EvaluationComponent', () => {
 jest.mock('@/components/discussion/PermissionGuards', () => ({
   ModeratorCheck: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AdminCheck: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  PermissionError: () => <div>Permission Error</div>,
 }));
 
 jest.mock('@/components/discussion/LoginModal', () => {

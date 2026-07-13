@@ -12,7 +12,7 @@ jest.mock("next/link", () => ({
 
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => ({
-    user: { pubkey: "author", isLoggedIn: true },
+    user: { pubkey: "viewer", isLoggedIn: true },
     signEvent: jest.fn(),
   }),
 }));
@@ -20,6 +20,12 @@ jest.mock("@/lib/auth/auth-context", () => ({
 jest.mock("@/lib/config/discussion-config", () => ({
   isDiscussionsEnabled: () => true,
   getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 500 }),
+  getDiscussionReadStrategyConfig: () => ({
+    relayLimit: 3,
+    idleTimeoutMs: 500,
+    hardTimeoutMs: 1500,
+    dedupWindowMs: 250,
+  }),
 }));
 
 jest.mock("@/lib/nostr/nostr-service", () => {
@@ -42,7 +48,18 @@ jest.mock("@/lib/nostr/nostr-service", () => {
     getDiscussionPosts: jest.fn().mockResolvedValue([]),
     getApprovals: jest.fn().mockResolvedValue([]),
     getReferencedUserDiscussions: jest.fn().mockResolvedValue([]),
-    streamEventsOnEvent: jest.fn(() => () => {}),
+    getEventsWithCompletion: jest.fn().mockResolvedValue({
+      events: [],
+      completionReason: "eose",
+      eventCount: 0,
+      elapsedMs: 0,
+      startedAt: 1,
+      lastEventAt: 1,
+      eoseReceived: true,
+      relayUrls: [],
+      duplicateCount: 0,
+      sourceRelayUrlsByEventId: {},
+    }),
     publishSignedEvent: jest.fn().mockResolvedValue(true),
     createApprovalEvent: jest.fn(),
     createRevocationEvent: jest.fn(),
@@ -85,7 +102,7 @@ describe("DiscussionManagePage", () => {
     jest.clearAllMocks();
   });
 
-  it("does not flash a permission error before data streams in", async () => {
+  it("allows viewers to see the moderation tabs without an access error", async () => {
     render(<DiscussionManagePage />);
 
     expect(

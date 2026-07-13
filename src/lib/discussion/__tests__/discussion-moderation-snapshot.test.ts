@@ -1,4 +1,7 @@
-import { createDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
+import {
+  createDiscussionModerationSnapshot,
+  loadDiscussionModerationSnapshot,
+} from "@/lib/discussion/discussion-moderation-snapshot";
 import type { Event } from "@/lib/nostr/nostr-service";
 
 const post = (id: string): Event => ({ id, kind: 1111, pubkey: "author", created_at: 1, content: "post", tags: [["a", "34550:author:topic"]], sig: "sig" });
@@ -64,5 +67,40 @@ describe("createDiscussionModerationSnapshot", () => {
     });
     expect(initial.approvalState).toBe("unknown");
     expect(refreshed.approvalState).toBe("approved");
+  });
+});
+
+describe("loadDiscussionModerationSnapshot", () => {
+  it("preserves an approval read timeout when the post read completed", async () => {
+    const completion = (events: Event[], completionReason: "eose" | "idle-timeout") => ({
+      events,
+      completionReason,
+      eventCount: events.length,
+      elapsedMs: 1,
+      startedAt: 1,
+      lastEventAt: 1,
+      eoseReceived: completionReason === "eose",
+      relayUrls: ["wss://one"],
+      duplicateCount: 0,
+      sourceRelayUrlsByEventId: {},
+    });
+    const service = {
+      getEventsWithCompletion: jest.fn()
+        .mockResolvedValueOnce(completion([post("post-1")], "eose"))
+        .mockResolvedValueOnce(completion([], "idle-timeout")),
+    };
+
+    const snapshot = await loadDiscussionModerationSnapshot(
+      service,
+      { relayLimit: 3, idleTimeoutMs: 100, hardTimeoutMs: 300, dedupWindowMs: 0 },
+      {
+        discussionId: "34550:author:topic",
+        configured: ["wss://one"],
+        defaults: [],
+      },
+    );
+
+    expect(snapshot.completionReason).toBe("idle-timeout");
+    expect(snapshot.approvalState).toBe("unknown");
   });
 });

@@ -658,13 +658,13 @@ export default function DiscussionDetailPage() {
                                 >
                                   <div className="card-body p-4">
                                     <div className="flex items-start justify-between mb-2">
-                                      <span className="badge badge-sm badge-primary">
+                                      <span className="badge badge-primary">
                                         {item.overallAgreePercentage}%の人が賛成
                                       </span>
                                     </div>
                                     {item.post?.busStopTag && (
                                       <div className="mb-2">
-                                        <span className="badge badge-outline badge-sm">
+                                        <span className="badge badge-outline">
                                           {item.post.busStopTag}
                                         </span>
                                       </div>
@@ -717,14 +717,14 @@ export default function DiscussionDetailPage() {
                                     <div className="flex items-start justify-between mb-2">
                                       <div className="flex gap-2">
                                         {item.voteType == "agree" ? (
-                                          <span className="badge badge-sm badge-primary">
+                                          <span className="badge badge-primary">
                                             {String.fromCharCode(65 + groupIndex)}
                                             のうち
                                             {Math.round(item.agreeRatio * 100)}
                                             %が賛成
                                           </span>
                                         ) : (
-                                          <span className="badge badge-sm badge-warning">
+                                          <span className="badge badge-warning">
                                             {String.fromCharCode(65 + groupIndex)}
                                             のうち
                                             {Math.round(item.disagreeRatio * 100)}
@@ -735,7 +735,7 @@ export default function DiscussionDetailPage() {
                                     </div>
                                     {item.post?.busStopTag && (
                                       <div className="mb-2">
-                                        <span className="badge badge-outline badge-sm">
+                                        <span className="badge badge-outline">
                                           {item.post.busStopTag}
                                         </span>
                                       </div>

@@ -84,6 +84,22 @@ describe("Button", () => {
     expect(button).toHaveClass("test-custom-class");
   });
 
+  it("結合ボタンでは丸い角を付けないこと", () => {
+    render(
+      <Button
+        onClick={mockOnClick}
+        className="join-item"
+        testId="test-button"
+      >
+        追加
+      </Button>
+    );
+
+    const button = screen.getByTestId("test-button");
+    expect(button).not.toHaveClass("rounded-full");
+    expect(button).toHaveClass("join-item");
+  });
+
   it("タイプ属性が正しく設定されること", () => {
     render(
       <Button onClick={mockOnClick} type="submit" testId="test-button">

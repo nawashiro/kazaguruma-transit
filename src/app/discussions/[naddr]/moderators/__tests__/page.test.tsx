@@ -111,6 +111,17 @@ describe("ModeratorsPage direct moderator management", () => {
     expect(screen.getByRole("button", { name: "変更を確定" })).not.toBeDisabled();
   });
 
+  it("keeps the direct moderator button joined to the input", () => {
+    render(<ModeratorsPage />);
+
+    const input = screen.getByLabelText("ユーザーID");
+    const addButton = screen.getByRole("button", { name: "追加" });
+
+    expect(addButton).toHaveClass("join-item");
+    expect(addButton).not.toHaveClass("rounded-full");
+    expect(input.closest(".join")).toContainElement(addButton);
+  });
+
   it("associates duplicate-user errors with the direct moderator input", () => {
     render(<ModeratorsPage />);
 

@@ -232,7 +232,7 @@ export default function ModeratorsPage() {
                       aria-describedby="direct-moderator-error"
                     />
                     <button
-                      className="btn btn-primary join-item h-11 min-h-[44px] rounded-full dark:rounded-sm"
+                      className="btn btn-primary join-item h-11 min-h-[44px]"
                       onClick={addDirectModerator}
                       disabled={busy || !direct.trim()}
                     >

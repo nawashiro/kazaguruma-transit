@@ -42,9 +42,10 @@ export default function Button({
   const buttonId = useId();
 
   // 高コントラストのカラーパレットを使用
+  const isJoined = className.split(/\s+/).includes("join-item");
   const baseClasses = secondary
-    ? "btn btn-secondary rounded-full dark:rounded-sm"
-    : "btn btn-primary rounded-full dark:rounded-sm";
+    ? `btn btn-secondary ${isJoined ? "" : "rounded-full dark:rounded-sm"}`
+    : `btn btn-primary ${isJoined ? "" : "rounded-full dark:rounded-sm"}`;
   const widthClass = fullWidth ? "w-full" : "";
   const disabledClass =
     disabled || loading ? "opacity-70 cursor-not-allowed" : "";

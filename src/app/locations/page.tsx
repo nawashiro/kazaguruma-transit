@@ -21,6 +21,7 @@ import Card from "@/components/ui/Card";
 import CarouselCard from "@/components/ui/CarouselCard";
 import Button from "@/components/ui/Button";
 import RubyWrapper from "@/components/ui/RubyWrapper";
+import CategoryTabs from "@/components/ui/CategoryTabs";
 
 // 2点間の距離を計算する関数（ハーバーサイン公式）
 const calculateDistance = (
@@ -566,31 +567,26 @@ export default function LocationsPage() {
         </Card>
 
         <Card title="カテゴリを選択">
-          <div className="flex flex-row flex-wrap gap-2 mb-4" role="tablist">
-            {categories.map((category) => (
-              <button
-                key={category.category}
-                className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium ruby-text
-                ${
-                  activeCategory === category.category
-                    ? "btn-primary border-primary text-primary-content"
-                    : "btn-outline hover:border-primary/50 hover:bg-primary/5"
-                }
-              `}
-                onClick={() => toggleCategory(category.category)}
-                role="tab"
-                aria-label={`${category.category}カテゴリを${
-                  activeCategory === category.category ? "閉じる" : "開く"
-                }`}
-              >
-                <p>{category.category}</p>
-              </button>
-            ))}
-          </div>
+          <CategoryTabs
+            categories={categories.map((category) => category.category)}
+            activeCategory={activeCategory}
+            onCategoryChange={toggleCategory}
+            idPrefix="locations-category"
+            activePanelId="locations-category-panel"
+            ariaLabel="施設カテゴリ"
+          />
         </Card>
         <RubyWrapper observe={[activeCategory]} />
         {activeCategory && (
-          <div className="animate-fadeIn mb-6">
+          <div
+            className="animate-fadeIn mb-6"
+            id="locations-category-panel"
+            role="tabpanel"
+            aria-labelledby={`locations-category-${activeCategory.replace(
+              /\s+/g,
+              "-"
+            )}`}
+          >
             {geoJsonLoading && (
               <div className="flex items-center justify-center py-4">
                 <span className="loading loading-spinner loading-md text-primary"></span>

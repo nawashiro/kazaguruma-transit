@@ -11,6 +11,7 @@ import {
 import { logger } from "@/utils/logger";
 import Card from "@/components/ui/Card";
 import RubyWrapper from "@/components/ui/RubyWrapper";
+import CategoryTabs from "@/components/ui/CategoryTabs";
 
 interface LocationSuggestionsProps {
   onLocationSelected: (location: Location) => void;
@@ -104,50 +105,23 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
       >
         よく利用される施設から選択
       </label>
-      <div
-        className="flex flex-row flex-wrap gap-2 mb-4 mt-2"
-        role="tablist"
-        id={categoryListId}
-        aria-label="施設カテゴリ"
-      >
-        {categories.map((category) => {
-          const isActive = activeCategory === category.category;
-          const categoryId = `category-${category.category.replace(
-            /\s+/g,
-            "-"
-          )}`;
-          const controlsId = isActive ? locationListId : undefined;
-
-          return (
-            <button
-              key={category.category}
-              id={categoryId}
-              className={`btn border px-2 py-1 h-auto min-h-0 rounded-md justify-start font-medium
-                ${
-                  isActive
-                    ? "btn-primary border-primary text-primary-content"
-                    : "btn-outline hover:border-primary/50 hover:bg-primary/5"
-                }
-              `}
-              onClick={() => toggleCategory(category.category)}
-              role="tab"
-              aria-selected={isActive}
-              aria-controls={controlsId}
-              aria-label={`${category.category}カテゴリを${
-                isActive ? "閉じる" : "開く"
-              }`}
-            >
-              <span className="ruby-text">{category.category}</span>
-            </button>
-          );
-        })}
-      </div>
+      <CategoryTabs
+        categories={categories.map((category) => category.category)}
+        activeCategory={activeCategory}
+        onCategoryChange={toggleCategory}
+        idPrefix={categoryListId}
+        activePanelId={locationListId}
+        ariaLabel="施設カテゴリ"
+      />
 
       {activeCategory && (
         <div
           className="bg-base-100 rounded-box p-3 animate-fadeIn max-h-64 overflow-y-auto"
           role="tabpanel"
-          aria-labelledby={`category-${activeCategory.replace(/\s+/g, "-")}`}
+          aria-labelledby={`${categoryListId}-${activeCategory.replace(
+            /\s+/g,
+            "-"
+          )}`}
         >
           <ul
             className="menu w-full"

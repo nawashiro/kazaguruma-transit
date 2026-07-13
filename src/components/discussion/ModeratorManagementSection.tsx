@@ -4,7 +4,7 @@ import type { ModeratorApplication } from "@/lib/discussion/moderator-applicatio
 import { formatBip39JapaneseMnemonicPreviewFromPubkey } from "@/lib/nostr/mnemonic-utils";
 import { formatRelativeTime } from "@/lib/nostr/nostr-utils";
 import type { DiscussionModerator } from "@/types/discussion";
-import { NpubDisplay } from "@/components/ui/NpubDisplay";
+import { UserIdentity } from "@/components/ui/UserIdentity";
 
 interface Props {
   moderators: DiscussionModerator[];
@@ -15,20 +15,6 @@ interface Props {
   removedPubkeys: Set<string>;
   onToggleApproval: (pubkey: string) => void;
   onToggleRemoval: (pubkey: string) => void;
-}
-
-function Identity({ pubkey }: { pubkey: string }) {
-  return (
-    <div className="min-w-0">
-      <p>
-        <span className="text-base font-bold mr-1">
-          {formatBip39JapaneseMnemonicPreviewFromPubkey(pubkey)}
-        </span>
-        <span className="text-base-content/70">さん</span>
-      </p>
-      <NpubDisplay pubkey={pubkey} />
-    </div>
-  );
 }
 
 function Selection({
@@ -111,7 +97,7 @@ export function ModeratorManagementSection({
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <Identity pubkey={moderator.pubkey} />
+                      <UserIdentity pubkey={moderator.pubkey} />
                       <Reason
                         application={applicationsByPubkey.get(moderator.pubkey)}
                       />
@@ -155,7 +141,7 @@ export function ModeratorManagementSection({
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <Identity pubkey={application.applicantPubkey} />
+                      <UserIdentity pubkey={application.applicantPubkey} />
                       <Reason application={application} />
                     </div>
                     {isCreator && (

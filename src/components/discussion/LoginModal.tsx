@@ -12,7 +12,7 @@ interface LoginModalProps {
 
 export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
   const [mode, setMode] = useState<"login" | "create">("create");
-  const [username, setUsername] = useState("");
+  const [passkeyName, setPasskeyName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
@@ -24,22 +24,22 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
     if (isLoading) return;
 
     const isCreateMode = mode === "create";
-    const isUsernameEmpty = !username.trim();
+    const isPasskeyNameEmpty = !passkeyName.trim();
     const areTermsNotAccepted =
       isCreateMode && (!termsAccepted || !privacyAccepted);
 
-    if (isCreateMode && isUsernameEmpty) return;
+    if (isCreateMode && isPasskeyNameEmpty) return;
     if (areTermsNotAccepted) return;
 
     setIsLoading(true);
     try {
       if (isCreateMode) {
-        await createAccount(username.trim());
+        await createAccount(passkeyName.trim());
       } else {
         await login();
       }
       onClose();
-      setUsername("");
+      setPasskeyName("");
       setMode("create");
       setTermsAccepted(false);
       setPrivacyAccepted(false);
@@ -175,22 +175,22 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label
-                  htmlFor="username"
+                  htmlFor="passkey-name"
                   className="block text-sm font-medium mb-2 ruby-text"
                 >
-                  ユーザー名
+                  パスキー名
                 </label>
                 <input
                   type="text"
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="passkey-name"
+                  value={passkeyName}
+                  onChange={(e) => setPasskeyName(e.target.value)}
                   className="input input-bordered w-full"
-                  placeholder="表示名を入力してください"
+                  placeholder="パスキー名を入力してください"
                   disabled={isLoading}
                   maxLength={50}
                   autoComplete="off"
-                  aria-describedby="username-help"
+                  aria-describedby="passkey-name-help"
                   required
                 />
               </div>
@@ -280,7 +280,7 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
                     }`}
                   disabled={
                     isLoading ||
-                    !username.trim() ||
+                    !passkeyName.trim() ||
                     !termsAccepted ||
                     !privacyAccepted
                   }

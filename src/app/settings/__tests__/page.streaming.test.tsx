@@ -15,7 +15,7 @@ jest.mock("@/lib/auth/auth-context", () => ({
     user: {
       isLoggedIn: true,
       pubkey: "user-pubkey",
-      profile: { name: "User" },
+      profile: { about: "自己紹介" },
     },
     logout: jest.fn(),
     isLoading: false,
@@ -59,6 +59,7 @@ const { __mock: gatewayMock } = jest.requireMock(
 
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   hexToNpub: (value: string) => value,
+  formatBip39JapaneseMnemonicPreviewFromPubkey: () => "あいうえお かきくけこ さしすせそ",
   parseDiscussionEvent: jest.fn((event) => ({
     id: `34550:${event.pubkey}:${event.tags?.find((t: string[]) => t[0] === "d")?.[1] || ""}`,
     title: event.tags?.find((t: string[]) => t[0] === "name")?.[1] || "Untitled",
@@ -75,6 +76,11 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
 jest.mock("@/lib/nostr/naddr-utils", () => ({
   __esModule: true,
   buildNaddrFromDiscussion: (discussion: any) => discussion.id,
+}));
+
+jest.mock("@/lib/nostr/mnemonic-utils", () => ({
+  formatBip39JapaneseMnemonicPreviewFromPubkey: () =>
+    "あいうえお かきくけこ さしすせそ",
 }));
 
 jest.mock("@/components/discussion/LoginModal", () => ({
@@ -110,6 +116,20 @@ describe("SettingsPage streaming discussions", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it("displays the derived user name with さん and does not display the old profile user name", async () => {
+    gatewayMock.queryDiscussionsByAuthorWithCompletion.mockResolvedValue(
+      withCompletion([])
+    );
+
+    render(<SettingsPage />);
+
+    expect(
+      await screen.findByText("あいうえお かきくけこ さしすせそ")
+    ).toBeInTheDocument();
+    expect(screen.getByText("さん")).toBeInTheDocument();
+    expect(screen.queryByText("ユーザー名")).not.toBeInTheDocument();
   });
 
   it("loads user discussions via completion-aware read and does not use stream API", async () => {

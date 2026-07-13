@@ -10,11 +10,7 @@ import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
 } from "@/lib/config/discussion-config";
-import {
-  hexToNpub,
-  parseDiscussionEvent,
-  formatRelativeTime,
-} from "@/lib/nostr/nostr-utils";
+import { parseDiscussionEvent, formatRelativeTime } from "@/lib/nostr/nostr-utils";
 import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import { type CompletionReason } from "@/lib/nostr/nostr-service";
@@ -23,6 +19,7 @@ import {
   type NostrEventDTO,
 } from "@/lib/nostr/discussion-ndk-gateway";
 import { LoginModal } from "@/components/discussion/LoginModal";
+import { UserIdentity } from "@/components/ui/UserIdentity";
 import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
@@ -34,7 +31,6 @@ const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 export default function SettingsPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
   const [myDiscussions, setMyDiscussions] = useState<Discussion[]>([]);
   const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(false);
   const [discussionsCompletionReason, setDiscussionsCompletionReason] =
@@ -165,19 +161,6 @@ export default function SettingsPage() {
     setIsLoggingOut(false);
   };
 
-  const handleCopyPubkey = async () => {
-    if (!user.pubkey) return;
-
-    try {
-      const npubKey = hexToNpub(user.pubkey);
-      await navigator.clipboard.writeText(npubKey);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch (error) {
-      logger.error("Failed to copy to clipboard:", error);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -207,68 +190,7 @@ export default function SettingsPage() {
 
             {user.isLoggedIn ? (
               <div className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">
-                      <span className="label-text font-medium ruby-text">ユーザー名</span>
-                    </label>
-                    <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <span className="text-sm">
-                        {user.profile?.name || "未設定"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="label">
-                      <span className="label-text font-medium ruby-text">
-                        ユーザーID
-                      </span>
-                    </label>
-                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <span className="font-mono break-all flex-1">
-                        {user.pubkey ? hexToNpub(user.pubkey) : "N/A"}
-                      </span>
-                      {user.pubkey && (
-                        <button
-                          onClick={handleCopyPubkey}
-                          className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex-shrink-0"
-                          title="クリップボードにコピー"
-                        >
-                          {isCopied ? (
-                            <svg
-                              className="w-4 h-4 text-green-600"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                          ) : (
-                            <svg
-                              className="w-4 h-4 text-gray-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                              />
-                            </svg>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                {user.pubkey && <UserIdentity pubkey={user.pubkey} />}
 
                 {user.profile?.about && (
                   <div>
@@ -284,31 +206,6 @@ export default function SettingsPage() {
                 )}
 
                 <div className="divider"></div>
-
-                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <svg
-                      className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <div className="text-sm text-blue-800 dark:text-blue-200 ruby-text">
-                      <p className="font-medium mb-1">認証について</p>
-                      <p>
-                        あなたのアカウントはパスキーで保護されています。
-                        ログアウトすると、再度生体認証または端末のPINでのログインが必要になります。
-                      </p>
-                    </div>
-                  </div>
-                </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button

@@ -26,7 +26,7 @@ interface PWKEvent {
 interface AuthContextType {
   user: UserAuth;
   login: () => Promise<void>;
-  createAccount: (username?: string) => Promise<void>;
+  createAccount: (passkeyName?: string) => Promise<void>;
   logout: () => void;
   signEvent: (event: Record<string, unknown>) => Promise<NostrEventDTO>;
   refreshProfile: () => Promise<void>;
@@ -147,7 +147,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const createAccount = async (username?: string) => {
+  const createAccount = async (passkeyName?: string) => {
     setIsLoading(true);
     setError(null);
 
@@ -158,8 +158,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       logger.log("📱 Step 1: Creating passkey...");
       const credentialId = await pwkManager.createPasskey({
         user: {
-          name: username || `user_${Date.now()}`,
-          displayName: username || "Nostr User",
+          name: passkeyName || `user_${Date.now()}`,
+          displayName: passkeyName || "Nostr User",
         },
       });
 
@@ -171,7 +171,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Step 2: Use PRF value directly as a Nostr key
       logger.log("🔑 Step 2: Using PRF value as Nostr key...");
       const pwk = await pwkManager.directPrfToNostrKey(credentialId, {
-        username: username || "Anonymous User",
+        username: passkeyName || "Anonymous User",
       });
 
       logger.log("✅ PWK created successfully:", {
@@ -189,16 +189,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const pubkey = pwk.pubkey;
 
-      // Step 5: Publish profile
-      logger.log("📤 Publishing profile...");
-      await publishProfile(username || "Anonymous User", pwk);
-      logger.log("✅ Profile published successfully");
-
       setUser({
         pwk,
         pubkey,
         isLoggedIn: true,
-        profile: { pubkey, name: username },
+        profile: { pubkey },
       });
 
       localStorage.setItem(PWK_STORAGE_KEY, JSON.stringify(pwk));
@@ -248,25 +243,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setError(errorMessage);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const publishProfile = async (name: string, pwk: PWKBlob) => {
-    try {
-      const profileEvent = {
-        kind: 0,
-        created_at: Math.floor(Date.now() / 1000),
-        tags: [],
-        content: JSON.stringify({ name }),
-      };
-
-      const signedEvent = (await pwkManager.signEventWithPWK(
-        profileEvent,
-        pwk
-      )) as unknown as NostrEventDTO;
-      await nostrService.publishSignedEvent(signedEvent);
-    } catch (error) {
-      logger.error("Failed to publish profile:", error);
     }
   };
 

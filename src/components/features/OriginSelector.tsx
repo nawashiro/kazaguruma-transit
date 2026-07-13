@@ -7,6 +7,8 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { logger } from "@/utils/logger";
 import RateLimitModal from "./RateLimitModal";
+import { FiSearch } from "react-icons/fi";
+import { MdMyLocation } from "react-icons/md";
 
 interface OriginSelectorProps {
   onOriginSelected: (location: Location) => void;
@@ -166,22 +168,10 @@ export default function OriginSelector({
                 className="flex-1"
                 testId="search-button"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-                <span>この住所で検索</span>
+                <span className="flex items-center justify-center gap-2 whitespace-nowrap">
+                  <FiSearch className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  <span>この住所で検索</span>
+                </span>
               </Button>
 
               <Button
@@ -193,28 +183,13 @@ export default function OriginSelector({
                 testId="gps-button"
                 aria-label="現在地を使用して経路を検索"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                <span className="flex items-center justify-center gap-2 whitespace-nowrap">
+                  <MdMyLocation
+                    className="h-5 w-5 shrink-0"
+                    aria-hidden="true"
                   />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-                <span>現在地を使用</span>
+                  <span>現在地を使用</span>
+                </span>
               </Button>
             </div>
           </fieldset>

@@ -40,6 +40,24 @@ describe("OriginSelector", () => {
     expect(screen.getByTestId("gps-button")).toBeInTheDocument();
   });
 
+  it("検索ボタンと現在地ボタンのアイコンと文字を横並びで表示する", () => {
+    render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
+
+    for (const testId of ["search-button", "gps-button"]) {
+      const button = screen.getByTestId(testId);
+      const content = button.querySelector(".ruby-text > .flex");
+
+      expect(button.querySelector("svg")).toBeInTheDocument();
+      expect(content).toHaveClass(
+        "flex",
+        "items-center",
+        "justify-center",
+        "gap-2",
+        "whitespace-nowrap"
+      );
+    }
+  });
+
   it("住所が未入力の場合はコールバックが呼ばれず検索を実行しない", async () => {
     render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
 

@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { ModeratorManagementSection } from "../ModeratorManagementSection";
 
@@ -14,7 +14,10 @@ const pubkey = "a".repeat(64);
 const moderator = { pubkey };
 
 describe("ModeratorManagementSection", () => {
-  it("shows the complete user ID without a copy action", () => {
+  it("truncates the displayed user ID and copies the complete ID", async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
     render(
       <ModeratorManagementSection
         moderators={[moderator]}
@@ -29,6 +32,15 @@ describe("ModeratorManagementSection", () => {
     );
 
     expect(document.body).toHaveTextContent("npub1example");
-    expect(document.querySelector("button")).not.toBeInTheDocument();
+    expect(screen.getByText("npub1example")).toHaveClass("truncate");
+
+    fireEvent.click(screen.getByRole("button", { name: "ユーザーIDをコピー" }));
+
+    expect(writeText).toHaveBeenCalledWith("npub1example");
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "ユーザーIDをコピーしました" }),
+      ).toBeVisible();
+    });
   });
 });

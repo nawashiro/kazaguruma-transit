@@ -20,11 +20,12 @@ import {
   deriveLatestModeratorApplications,
   derivePendingModeratorApplications,
 } from "@/lib/discussion/moderator-application-state";
-import { hexToNpub, isValidNpub, npubToHex } from "@/lib/nostr/nostr-utils";
+import { isValidNpub, npubToHex } from "@/lib/nostr/nostr-utils";
 import {
   formatBip39JapaneseMnemonicPreviewFromPubkey,
 } from "@/lib/nostr/mnemonic-utils";
 import { logger } from "@/utils/logger";
+import { NpubDisplay } from "@/components/ui/NpubDisplay";
 const config = getNostrServiceConfig();
 const service = createNostrService(config);
 const gateway = createDiscussionNdkGateway(config);
@@ -264,9 +265,7 @@ export default function ModeratorsPage() {
                               pubkey,
                             )}
                           </p>
-                          <code className="block break-all text-sm">
-                            {hexToNpub(pubkey)}
-                          </code>
+                          <NpubDisplay pubkey={pubkey} />
                         </div>
                         <button
                           type="button"

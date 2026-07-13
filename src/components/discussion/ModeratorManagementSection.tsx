@@ -2,8 +2,9 @@
 
 import type { ModeratorApplication } from "@/lib/discussion/moderator-application-state";
 import { formatBip39JapaneseMnemonicPreviewFromPubkey } from "@/lib/nostr/mnemonic-utils";
-import { formatRelativeTime, hexToNpub } from "@/lib/nostr/nostr-utils";
+import { formatRelativeTime } from "@/lib/nostr/nostr-utils";
 import type { DiscussionModerator } from "@/types/discussion";
+import { NpubDisplay } from "@/components/ui/NpubDisplay";
 
 interface Props {
   moderators: DiscussionModerator[];
@@ -19,10 +20,13 @@ interface Props {
 function Identity({ pubkey }: { pubkey: string }) {
   return (
     <div className="min-w-0">
-      <p className="text-base font-bold ruby-text">
-        {formatBip39JapaneseMnemonicPreviewFromPubkey(pubkey)}
+      <p>
+        <span className="text-base font-bold mr-1">
+          {formatBip39JapaneseMnemonicPreviewFromPubkey(pubkey)}
+        </span>
+        <span className="text-base-content/70">さん</span>
       </p>
-      <p className="font-mono break-all flex-1">{hexToNpub(pubkey)}</p>
+      <NpubDisplay pubkey={pubkey} />
     </div>
   );
 }

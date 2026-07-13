@@ -2,7 +2,6 @@ import React from "react";
 import { render, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { BusStopMemo } from "../BusStopMemo";
-import type { Event } from "@/lib/nostr/nostr-service";
 import type { StreamEventsOptions } from "@/lib/nostr/nostr-service";
 
 jest.mock("@/lib/config/discussion-config", () => ({
@@ -21,6 +20,18 @@ const serviceMock = {
   streamApprovalsForPosts: jest.fn(() => () => {}),
   getDiscussionPosts: jest.fn(),
   getEvaluationsForPosts: jest.fn(),
+  getEventsWithCompletion: jest.fn().mockResolvedValue({
+    events: [],
+    completionReason: "eose",
+    eventCount: 0,
+    elapsedMs: 1,
+    startedAt: 1,
+    lastEventAt: 1,
+    eoseReceived: true,
+    relayUrls: [],
+    duplicateCount: 0,
+    sourceRelayUrlsByEventId: {},
+  }),
 };
 
 jest.mock("@/lib/nostr/nostr-service", () => ({
@@ -40,34 +51,19 @@ describe("BusStopMemo streaming", () => {
     jest.clearAllMocks();
   });
 
-  it("starts approvals streaming after posts EOSE", async () => {
-    serviceMock.streamEventsOnEvent.mockImplementationOnce(
-      (_filters, options) => {
-        const postEvents = [{ id: "post-1" }, { id: "post-2" }] as Event[];
-        options.onEose?.(postEvents);
-        return () => {};
-      }
-    );
-
+  it("uses the same scoped completion-aware read as discussion", async () => {
     render(<BusStopMemo busStops={["A"]} />);
 
     await waitFor(() =>
-      expect(serviceMock.streamApprovalsForPosts).toHaveBeenCalled()
+      expect(serviceMock.getEventsWithCompletion).toHaveBeenCalled()
     );
-
-    expect(serviceMock.streamApprovalsForPosts).toHaveBeenCalledWith(
-      ["post-1", "post-2"],
-      "discussion-1",
-      expect.any(Object)
-    );
-    expect(serviceMock.streamApprovals).not.toHaveBeenCalled();
   });
 
-  it("streams memo data without blocking on EOSE fetch", async () => {
+  it("does not use the legacy unscoped post fetch", async () => {
     render(<BusStopMemo busStops={["A"]} />);
 
     await waitFor(() =>
-      expect(serviceMock.streamEventsOnEvent).toHaveBeenCalled()
+      expect(serviceMock.getEventsWithCompletion).toHaveBeenCalled()
     );
     expect(serviceMock.getDiscussionPosts).not.toHaveBeenCalled();
   });

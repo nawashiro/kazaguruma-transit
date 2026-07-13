@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { LoginModal } from "./LoginModal";
 import { PostPreview } from "./PostPreview";
@@ -10,8 +10,8 @@ import {
   getDiscussionConfig,
   isDiscussionsEnabled,
 } from "@/lib/config/discussion-config";
-import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
-import { saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
+import { useBusStopModeration } from "./useBusStopModeration";
+import { DiscussionReadStatus } from "./DiscussionReadStatus";
 import {
   parsePostEvent,
   parseApprovalEvent,
@@ -26,7 +26,6 @@ import type {
   PostFormData,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import type { Event } from "@/lib/nostr/nostr-service";
 
 interface BusStopDiscussionProps {
   busStops: string[];
@@ -51,12 +50,6 @@ export function BusStopDiscussion({
     busStopTag: busStops[0] || "",
   });
   const [errors, setErrors] = useState<string[]>([]);
-  const [isStreamLoading, setIsStreamLoading] = useState(false);
-  const [streamError, setStreamError] = useState<string | null>(null);
-  const postsEventsRef = useRef<Event[]>([]);
-  const approvalEventsRef = useRef<Event[]>([]);
-  const approvalsStreamCleanupRef = useRef<(() => void) | null>(null);
-  const approvalsForDiscussionCleanupRef = useRef<(() => void) | null>(null);
 
   const { user, signEvent } = useAuth();
   const config = useMemo(() => getDiscussionConfig(), []);
@@ -69,130 +62,30 @@ export function BusStopDiscussion({
       }),
     [config.relays]
   );
+  const { snapshot, isLoading: isStreamLoading, error: streamError, reload } =
+    useBusStopModeration(busStops);
 
-  const updateFromEvents = useCallback(
-    async (
-      postEvents: Event[],
-      approvalsEvents: Event[],
-      fetchEvaluations: boolean
-    ) => {
-      try {
-        const parsedApprovals = approvalsEvents
-          .map(parseApprovalEvent)
-          .filter((a): a is PostApproval => a !== null);
-
-        const parsedPosts = postEvents
-          .map((event) => parsePostEvent(event, parsedApprovals))
-          .filter((p): p is DiscussionPost => p !== null)
-          .filter(
-            (p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag)
-          );
-
-        setPosts(parsedPosts);
-        if (!fetchEvaluations || parsedPosts.length === 0) {
-          return;
-        }
-
-        const approvedPostIds = parsedPosts.map((p) => p.id);
-        const evaluationsEvents = await nostrService.getEvaluationsForPosts(
-          approvedPostIds
-        );
-
-        const parsedEvaluations = evaluationsEvents
-          .map(parseEvaluationEvent)
-          .filter((e): e is PostEvaluation => e !== null);
-        setEvaluations(parsedEvaluations);
-      } catch (error) {
-        logger.error("Failed to update discussion stream data:", error);
-        setStreamError("投稿データの読み込みに失敗しました。");
-      } finally {
-        setIsStreamLoading(false);
-      }
-    },
-    [busStops, nostrService]
-  );
-
-  const startStreaming = useCallback(() => {
-    if (busStops.length === 0) {
+  const updateFromSnapshot = useCallback(async () => {
+    if (!snapshot) {
+      setPosts([]);
       return;
     }
-
-    approvalsStreamCleanupRef.current?.();
-    approvalsForDiscussionCleanupRef.current?.();
-    postsEventsRef.current = [];
-    approvalEventsRef.current = [];
-    setIsStreamLoading(true);
-    setStreamError(null);
-
-    const postFilters =
-      busStops.length > 0
-        ? busStops.map((stop) => ({
-            kinds: [1111, 1],
-            "#a": [config.busStopDiscussionId],
-            "#t": [stop],
-          }))
-        : [
-            {
-              kinds: [1111, 1],
-              "#a": [config.busStopDiscussionId],
-            },
-          ];
-
-    const postStream = nostrService.streamEventsOnEvent(postFilters, {
-      onEvent: (events) => {
-        postsEventsRef.current = events;
-        updateFromEvents(events, approvalEventsRef.current, false);
-      },
-      onEose: (events) => {
-        postsEventsRef.current = events;
-        updateFromEvents(events, approvalEventsRef.current, true);
-      },
-      timeoutMs: config.defaultTimeout ?? 5000,
-    });
-
-    const approvalsStream = nostrService.streamApprovals(
-      config.busStopDiscussionId,
-      {
-        onEvent: (events) => {
-          approvalEventsRef.current = events;
-          updateFromEvents(postsEventsRef.current, events, false);
-        },
-        onEose: (events) => {
-          approvalEventsRef.current = events;
-          updateFromEvents(postsEventsRef.current, events, true);
-        },
-        timeoutMs: config.defaultTimeout ?? 5000,
-      }
-    );
-
-    approvalsStreamCleanupRef.current = postStream;
-    approvalsForDiscussionCleanupRef.current = approvalsStream;
-    if (typeof nostrService.getEventsWithCompletion === "function") void loadDiscussionModerationSnapshot(nostrService, { relayLimit: 3, idleTimeoutMs: config.defaultTimeout ?? 5000, hardTimeoutMs: (config.defaultTimeout ?? 5000) * 3, dedupWindowMs: 250 }, {
-      discussionId: config.busStopDiscussionId,
-      configured: config.relays.filter((relay) => relay.read).map((relay) => relay.url),
-      defaults: [],
-    }).then((snapshot) => {
-      const events = [...snapshot.primaryEvents, ...snapshot.approvalEvents];
-      saveKnownDiscussionData(config.busStopDiscussionId, {
-        metadata: null,
-        eventIds: events.map((event) => event.id),
-        attemptedRelayUrls: snapshot.attemptedRelayUrls,
-        successfulEventRelayUrls: snapshot.successfulRelayUrls,
-        successfulRelays: [],
-        events,
-      });
-      postsEventsRef.current = snapshot.primaryEvents;
-      approvalEventsRef.current = snapshot.approvalEvents;
-      updateFromEvents(snapshot.primaryEvents, snapshot.approvalEvents, snapshot.completionReason === "eose");
-    });
-    updateFromEvents([], [], false);
-  }, [
-    busStops,
-    config.busStopDiscussionId,
-    config.defaultTimeout,
-    nostrService,
-    updateFromEvents,
-  ]);
+    const parsedApprovals = snapshot.approvalEvents
+      .map(parseApprovalEvent)
+      .filter((a): a is PostApproval => a !== null);
+    const parsedPosts = snapshot.primaryEvents
+      .map((event) => parsePostEvent(event, parsedApprovals))
+      .filter((p): p is DiscussionPost => p !== null)
+      .filter((p) => p.busStopTag && busStops.includes(p.busStopTag));
+    setPosts(parsedPosts);
+    const approvedPostIds = parsedPosts.filter((post) => post.approved).map((post) => post.id);
+    if (approvedPostIds.length === 0) {
+      setEvaluations([]);
+      return;
+    }
+    const evaluationEvents = await nostrService.getEvaluationsForPosts(approvedPostIds);
+    setEvaluations(evaluationEvents.map(parseEvaluationEvent).filter((e): e is PostEvaluation => e !== null));
+  }, [busStops, nostrService, snapshot]);
 
   const loadUserEvaluations = useCallback(async () => {
     if (!user.pubkey) return;
@@ -211,15 +104,8 @@ export function BusStopDiscussion({
   }, [user.pubkey, nostrService]);
 
   useEffect(() => {
-    if (discussionsEnabled) {
-      startStreaming();
-    }
-
-    return () => {
-      approvalsStreamCleanupRef.current?.();
-      approvalsForDiscussionCleanupRef.current?.();
-    };
-  }, [discussionsEnabled, startStreaming]);
+    if (discussionsEnabled) void updateFromSnapshot();
+  }, [discussionsEnabled, updateFromSnapshot]);
 
   useEffect(() => {
     if (user.pubkey) {
@@ -259,7 +145,7 @@ export function BusStopDiscussion({
 
       setPostForm({ content: "", busStopTag: busStops[0] || "" });
       setShowPreview(false);
-      startStreaming();
+      reload();
     } catch (error) {
       logger.error("Failed to submit post:", error);
       setErrors(["投稿の送信に失敗しました"]);
@@ -290,7 +176,7 @@ export function BusStopDiscussion({
       }
 
       setUserEvaluations((prev) => new Set([...prev, postId]));
-      startStreaming();
+      reload();
     } catch (error) {
       logger.error("Failed to evaluate post:", error);
     }
@@ -306,6 +192,13 @@ export function BusStopDiscussion({
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Evaluation component */}
+      <DiscussionReadStatus
+        isLoading={isStreamLoading}
+        completionReason={snapshot?.completionReason ?? null}
+        hasData={Boolean(snapshot?.primaryEvents.length)}
+        approvalState={snapshot?.approvalState === "unknown" ? "unknown" : undefined}
+        onReload={reload}
+      />
       {postsWithStats.length > 0 && (
         <div>
           <EvaluationComponent
@@ -321,15 +214,12 @@ export function BusStopDiscussion({
       {/* Post form */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
         <h3 className="text-lg font-medium mb-4 ruby-text">バス停メモを投稿</h3>
-        {isStreamLoading && (
-          <div className="loading loading-spinner loading-sm mb-3" aria-label="読み込み中"></div>
-        )}
         {streamError && (
           <div className="alert alert-error mb-3" role="alert">
             <span>{streamError}</span>
           </div>
         )}
-        {!isStreamLoading && !streamError && postsWithStats.length === 0 && (
+        {!isStreamLoading && !streamError && postsWithStats.length === 0 && snapshot?.approvalState !== "unknown" && (
           <p className="text-sm text-gray-600 dark:text-gray-400 ruby-text mb-3">
             承認済みの投稿はまだありません。
           </p>

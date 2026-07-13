@@ -62,12 +62,19 @@ export const createDiscussionModerationSnapshot = ({
 export const loadDiscussionModerationSnapshot = async (
   service: Pick<NostrService, "getEventsWithCompletion">,
   strategy: DiscussionReadStrategyConfig,
-  input: { discussionId: string; hints?: string[]; recommended?: string[]; successful?: string[]; configured: string[]; defaults: string[]; until?: number }
+  input: { discussionId: string; hints?: string[]; recommended?: string[]; successful?: string[]; configured: string[]; defaults: string[]; until?: number; primaryTags?: string[] }
 ): Promise<DiscussionModerationSnapshot> => {
   const relayCandidates = rankRelayCandidates(input);
   const relayUrls = selectRelayCandidates({ ...input, limit: strategy.relayLimit }).map((candidate) => candidate.url);
   const options = { idleTimeoutMs: strategy.idleTimeoutMs, hardTimeoutMs: strategy.hardTimeoutMs, relayUrls };
-  const primary = await service.getEventsWithCompletion([{ kinds: [1111, 1], "#a": [input.discussionId], limit: 10, until: input.until }], options);
+  const primaryFilter = {
+    kinds: [1111, 1],
+    "#a": [input.discussionId],
+    ...(input.primaryTags && input.primaryTags.length > 0 ? { "#t": input.primaryTags } : {}),
+    limit: 10,
+    until: input.until,
+  };
+  const primary = await service.getEventsWithCompletion([primaryFilter], options);
   const primaryEvents = primary.events.filter((event) => !isModeratorRequestEvent(event));
   const postIds = primaryEvents.map((event) => event.id);
   const approvals: EventFetchCompletion = postIds.length === 0
@@ -83,6 +90,9 @@ export const loadDiscussionModerationSnapshot = async (
     relayCandidates,
     attemptedRelayUrls: relayUrls,
     completionReason,
-    successfulRelayUrls: Array.from(new Set(approvals.events.flatMap((event) => approvals.sourceRelayUrlsByEventId[event.id] ?? []))),
+    successfulRelayUrls: Array.from(new Set([
+      ...primary.events.flatMap((event) => primary.sourceRelayUrlsByEventId[event.id] ?? []),
+      ...approvals.events.flatMap((event) => approvals.sourceRelayUrlsByEventId[event.id] ?? []),
+    ])),
   });
 };

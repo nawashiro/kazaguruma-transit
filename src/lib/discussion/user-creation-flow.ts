@@ -301,7 +301,7 @@ export async function processDiscussionCreationFlow(
 
 まずは話題の呼び水として、10個程度の書き込みをしてみてください。なるべく簡単なものを書き込むと、他の人が参加しやすくなります。
 
-会話一覧への掲載は、少々お待ちください。
+会話一覧への掲載は「基本情報」タブから行えます。
     `.trim();
 
     return {

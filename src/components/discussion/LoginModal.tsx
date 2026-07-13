@@ -304,11 +304,6 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 ruby-text">
                 保存されているパスキーを使用してログインします。端末の生体認証またはPINを使用してください。
               </p>
-              {reason && (
-                <p className="alert alert-info text-sm ruby-text mt-3">
-                  {reason}
-                </p>
-              )}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">

@@ -16,10 +16,14 @@ jest.mock("next/link", () => ({
   ),
 }));
 
+jest.mock("@/lib/auth/auth-context", () => ({
+  useAuth: () => ({ user: { pubkey: null, isLoggedIn: false } }),
+}));
+
 describe("DiscussionManagementTabLayout", () => {
   it("renders the shared management tabs as a tabs-box", () => {
     render(
-      <DiscussionManagementTabLayout>
+      <DiscussionManagementTabLayout role="user">
         <div>content</div>
       </DiscussionManagementTabLayout>,
     );
@@ -41,6 +45,8 @@ describe("DiscussionManagementTabLayout", () => {
     expect(
       screen.getByText("意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。"),
     ).toBeInTheDocument();
+    expect(screen.getByText("あなたはユーザーです。"))
+      .toBeInTheDocument();
   });
 
   it("marks the current management route active", () => {

@@ -47,6 +47,8 @@ const { __mock: gatewayMock } = jest.requireMock(
 );
 
 jest.mock("@/lib/nostr/nostr-utils", () => ({
+  getAdminPubkeyHex: () => "admin",
+  npubToHex: (pubkey: string) => pubkey,
   parseDiscussionEvent: jest.fn((event) => ({
     id: `34550:${event.pubkey}:${event.tags?.find((tag: string[]) => tag[0] === "d")?.[1] || ""}`,
     title: event.tags?.find((tag: string[]) => tag[0] === "name")?.[1] || "Untitled",

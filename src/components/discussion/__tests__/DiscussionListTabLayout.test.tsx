@@ -8,6 +8,10 @@ jest.mock("next/navigation", () => ({
   usePathname: () => mockPathname(),
 }));
 
+jest.mock("@/lib/auth/auth-context", () => ({
+  useAuth: () => ({ user: { pubkey: null, isLoggedIn: false } }),
+}));
+
 // Import after mocking
 import { DiscussionListTabLayout } from "../DiscussionListTabLayout";
 

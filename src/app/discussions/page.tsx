@@ -17,7 +17,9 @@ import {
   parsePostEvent,
   parseApprovalEvent,
   formatRelativeTime,
+  getAdminPubkeyHex,
 } from "@/lib/nostr/nostr-utils";
+import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import {
   buildNaddrFromDiscussion,
   extractDiscussionFromNaddr,
@@ -32,6 +34,7 @@ import type {
   PostApproval,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
+import type { DiscussionRole } from "@/components/discussion/DiscussionRoleCard";
 
 const nostrServiceConfig = getNostrServiceConfig();
 const readStrategy =
@@ -47,6 +50,15 @@ export default function DiscussionsPage() {
   const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const { user } = useAuth();
+  const discussionRole: DiscussionRole = arePubkeysEqual(user.pubkey, getAdminPubkeyHex())
+    ? "admin"
+    : discussions.some((discussion) =>
+        discussion.moderators.some((moderator) =>
+          arePubkeysEqual(user.pubkey, moderator.pubkey),
+        ),
+      )
+      ? "moderator"
+      : "user";
 
   // 会話一覧専用のデータ取得
   const loadData = useCallback(async () => {
@@ -211,7 +223,7 @@ export default function DiscussionsPage() {
   }
 
   return (
-    <DiscussionListTabLayout baseHref="/discussions">
+    <DiscussionListTabLayout baseHref="/discussions" role={discussionRole}>
       <div className="container mx-auto px-4 py-8">
         <main className="space-y-6">
           <div className="grid lg:grid-cols-2 gap-6">

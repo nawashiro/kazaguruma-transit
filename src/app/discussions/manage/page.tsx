@@ -143,7 +143,7 @@ export default function DiscussionManagePage() {
                       {formatRelativeTime(referencedDiscussion.createdAt)}
                     </time>
                   </div>
-                  <span className="badge badge-outline badge-sm">
+                  <span className="badge badge-outline">
                     {referencedDiscussion.moderators.length + 1} モデレーター
                   </span>
                 </div>
@@ -523,7 +523,7 @@ export default function DiscussionManagePage() {
         >
           <span className="ruby-text">承認待ち</span>
           {pendingPostCount > 0 && (
-            <span className="badge badge-warning badge-sm ml-1">
+            <span className="badge badge-warning ml-1">
               {pendingPostCount}
             </span>
           )}
@@ -542,7 +542,7 @@ export default function DiscussionManagePage() {
         >
           <span className="ruby-text">承認済み</span>
           {approvedPosts.length > 0 && (
-            <span className="badge badge-success badge-sm ml-1">
+            <span className="badge badge-success ml-1">
               {approvedPosts.length}
             </span>
           )}

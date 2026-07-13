@@ -36,7 +36,7 @@ export function PostPreview({
         >
           {busStopTag && (
             <div className="mb-2">
-              <span className="badge badge-primary badge-sm">{busStopTag}</span>
+              <span className="badge badge-primary">{busStopTag}</span>
             </div>
           )}
 

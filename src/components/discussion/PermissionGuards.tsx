@@ -100,7 +100,7 @@ export function PermissionNotice({
       {requiresLogin && (
         <button
           type="button"
-          className="btn btn-primary btn-sm min-h-[44px] rounded-full dark:rounded-sm"
+          className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm"
           onClick={onLogin}
         >
           ログイン

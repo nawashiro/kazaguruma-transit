@@ -100,12 +100,29 @@ function findSmallCssDeclarations(sourceFile: SourceFile): string[] {
   return violations;
 }
 
+function findSmallDaisyUiClasses(sourceFile: SourceFile): string[] {
+  const violations: string[] = [];
+
+  for (const [index, line] of sourceFile.content.split("\n").entries()) {
+    if (/\bbadge-sm\b/.test(line)) {
+      violations.push(`${sourceFile.path}:${index + 1}: class badge-sm`);
+    }
+
+    if (/\bbtn-sm\b/.test(line) && !/\bbtn-circle\b/.test(line)) {
+      violations.push(`${sourceFile.path}:${index + 1}: class btn-sm`);
+    }
+  }
+
+  return violations;
+}
+
 describe("UI minimum font-size compliance", () => {
   it("rejects sub-14px utility classes and CSS declarations outside ruby text", async () => {
     const sourceFiles = await loadSourceFiles();
     const violations = sourceFiles.flatMap((sourceFile) => [
       ...findSmallUtilityClasses(sourceFile),
       ...findSmallCssDeclarations(sourceFile),
+      ...findSmallDaisyUiClasses(sourceFile),
     ]);
 
     expect(violations).toEqual([]);

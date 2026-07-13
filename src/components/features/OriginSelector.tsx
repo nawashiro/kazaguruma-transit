@@ -154,6 +154,19 @@ export default function OriginSelector({
             required={true}
             error={error || undefined}
             description="千代田区内の住所や場所名を入力してください。自動的に「千代田区」が先頭に追加されます。"
+            endAdornment={
+              <Button
+                type="submit"
+                disabled={loading}
+                loading={loading}
+                iconOnly
+                className="join-item h-11 w-11 p-0 focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-base-content"
+                testId="search-button"
+                aria-label="住所や場所を検索"
+              >
+                <FiSearch className="h-5 w-5" aria-hidden="true" />
+              </Button>
+            }
           />
 
           <fieldset aria-describedby={buttonGroupId}>
@@ -161,19 +174,6 @@ export default function OriginSelector({
               検索オプション
             </legend>
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-              <Button
-                type="submit"
-                disabled={loading}
-                loading={loading}
-                className="flex-1"
-                testId="search-button"
-              >
-                <span className="flex items-center justify-center gap-2 whitespace-nowrap">
-                  <FiSearch className="h-5 w-5 shrink-0" aria-hidden="true" />
-                  <span>この住所で検索</span>
-                </span>
-              </Button>
-
               <Button
                 type="button"
                 onClick={handleUseCurrentLocation}

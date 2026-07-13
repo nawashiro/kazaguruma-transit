@@ -522,23 +522,23 @@ export default function LocationsPage() {
                 onSubmit={handleAddressSearch}
                 className="flex flex-col sm:flex-row gap-2"
               >
-                <div className="form-control flex-1">
+                <div className="join flex-1">
                   <input
                     type="text"
                     placeholder="住所を入力（例：神田駿河台）"
-                    className="input outline w-full"
+                    className="input join-item h-11 min-h-[44px] flex-1"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     disabled={searchLoading}
                   />
+                  <Button
+                    type="submit"
+                    className="join-item h-11"
+                    disabled={searchLoading}
+                  >
+                    検索
+                  </Button>
                 </div>
-                <Button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={searchLoading}
-                >
-                  検索
-                </Button>
               </form>
             </div>
           </div>

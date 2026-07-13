@@ -13,7 +13,7 @@ const globalStyles = fs.readFileSync(
 describe("DiscussionEditPage responsive layout contract", () => {
   it("uses a responsive action layout instead of a fixed horizontal row", () => {
     expect(editPageSource).toContain("flex flex-col gap-3 sm:flex-row sm:flex-wrap");
-    expect(editPageSource).toContain("flex flex-col gap-2 sm:flex-row");
+    expect(editPageSource).toContain("join w-full");
   });
 
   it("reserves space for the fixed ruby control at the end of the page", () => {

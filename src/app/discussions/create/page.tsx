@@ -284,7 +284,7 @@ export default function DiscussionCreatePage() {
                         title: e.target.value,
                       }))
                     }
-                    className="input input-bordered w-full"
+                    className="input w-full"
                     placeholder="会話のタイトルを入力してください"
                     required
                     disabled={isSubmitting}
@@ -309,7 +309,7 @@ export default function DiscussionCreatePage() {
                         description: e.target.value,
                       }))
                     }
-                    className="textarea textarea-bordered w-full h-32"
+                    className="textarea w-full h-32"
                     placeholder="どのような会話にしたいか説明してください"
                     required
                     disabled={isSubmitting}
@@ -350,21 +350,22 @@ export default function DiscussionCreatePage() {
                     投稿の承認を手伝ってくれる人のユーザーIDを入力してください。
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="join w-full">
                     <input
                       id="moderators"
                       type="text"
                       value={moderatorInput}
                       onChange={(e) => setModeratorInput(e.target.value)}
-                      className="input input-bordered flex-1"
+                      className="input join-item h-11 min-h-[44px] flex-1"
                       placeholder="npub1..."
                       disabled={isSubmitting}
                       autoComplete="off"
                     />
-                    <Button
-                      onClick={addModerator}
-                      disabled={!moderatorInput.trim() || isSubmitting}
-                    >
+                      <Button
+                        onClick={addModerator}
+                        disabled={!moderatorInput.trim() || isSubmitting}
+                        className="join-item h-11"
+                      >
                       追加
                     </Button>
                   </div>

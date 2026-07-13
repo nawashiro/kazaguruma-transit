@@ -217,27 +217,29 @@ export default function ModeratorsPage() {
                       ユーザーID
                     </span>
                   </label>
-                  <input
-                    id="direct-moderator"
-                    className="input input-bordered w-full"
-                    value={direct}
-                    onChange={(event) => {
-                      setDirect(event.target.value);
-                      setDirectError("");
-                    }}
-                    placeholder="npub1..."
-                    disabled={busy}
-                    aria-invalid={Boolean(directError)}
-                    aria-describedby="direct-moderator-error"
-                  />
+                  <div className="join w-full">
+                    <input
+                      id="direct-moderator"
+                      className="input join-item h-11 min-h-[44px] flex-1"
+                      value={direct}
+                      onChange={(event) => {
+                        setDirect(event.target.value);
+                        setDirectError("");
+                      }}
+                      placeholder="npub1..."
+                      disabled={busy}
+                      aria-invalid={Boolean(directError)}
+                      aria-describedby="direct-moderator-error"
+                    />
+                    <button
+                      className="btn btn-primary join-item h-11 min-h-[44px] rounded-full dark:rounded-sm"
+                      onClick={addDirectModerator}
+                      disabled={busy || !direct.trim()}
+                    >
+                      <span className="ruby-text">追加</span>
+                    </button>
+                  </div>
                 </div>
-                <button
-                  className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm"
-                  onClick={addDirectModerator}
-                  disabled={busy || !direct.trim()}
-                >
-                  <span className="ruby-text">追加</span>
-                </button>
               </div>
               {directError && (
                 <p
@@ -333,7 +335,7 @@ export default function ModeratorsPage() {
             <p className="text-base ruby-text">投稿の承認を行う場合、会話作成者にモデレーターになりたい旨を申請してください。</p>
             <textarea
               id="reason"
-              className="textarea textarea-bordered w-full"
+              className="textarea w-full"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               placeholder="申請理由（任意）"

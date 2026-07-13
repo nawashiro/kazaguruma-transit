@@ -27,6 +27,27 @@ describe("InputField", () => {
     expect(input).toHaveValue("テスト値");
   });
 
+  it("入力欄の外観をDaisyUIのinputスタイルに委任すること", () => {
+    render(
+      <InputField
+        label="テストラベル"
+        value=""
+        onChange={mockOnChange}
+        testId="test-input"
+      />
+    );
+
+    const input = screen.getByTestId("test-input");
+
+    expect(input).toHaveClass("input");
+    expect(input).not.toHaveClass(
+      "outline",
+      "border",
+      "border-base-300",
+      "hover:border-base-content/50"
+    );
+  });
+
   it("値が変更されたときにonChangeが呼ばれること", () => {
     render(
       <InputField

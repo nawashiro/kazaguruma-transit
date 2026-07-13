@@ -700,7 +700,7 @@ export default function DiscussionEditPage() {
                           title: e.target.value,
                         }))
                       }
-                      className="input input-bordered w-full"
+                      className="input w-full"
                       required
                       disabled={isSaving || isDeleting || !hasEditPermission}
                       maxLength={100}
@@ -724,7 +724,7 @@ export default function DiscussionEditPage() {
                           description: e.target.value,
                         }))
                       }
-                      className="textarea textarea-bordered w-full h-32"
+                      className="textarea w-full h-32"
                       required
                       disabled={isSaving || isDeleting || !hasEditPermission}
                       maxLength={500}
@@ -774,13 +774,13 @@ export default function DiscussionEditPage() {
                       </div>
                     )}
 
-                    <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className="join w-full">
                       <input
                         id="moderators"
                         type="text"
                         value={moderatorInput}
                         onChange={(e) => setModeratorInput(e.target.value)}
-                        className="input input-bordered flex-1"
+                        className="input join-item h-11 min-h-[44px] flex-1"
                         placeholder="npub1..."
                         disabled={isSaving || isDeleting}
                         autoComplete="off"
@@ -793,6 +793,7 @@ export default function DiscussionEditPage() {
                           isDeleting ||
                           !hasEditPermission
                         }
+                        className="join-item h-11"
                       >
                         追加
                       </Button>
@@ -927,7 +928,7 @@ export default function DiscussionEditPage() {
                           onChange={(e) =>
                             setPromotionRequestMessage(e.target.value)
                           }
-                          className="textarea textarea-bordered w-full h-24 mb-2"
+                          className="textarea w-full h-24 mb-2"
                           placeholder="申請理由（任意）"
                           disabled={isRequestingPromotion}
                         />

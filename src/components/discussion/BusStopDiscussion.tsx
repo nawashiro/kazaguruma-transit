@@ -240,7 +240,7 @@ export function BusStopDiscussion({
                     content: e.target.value,
                   }))
                 }
-                className="textarea textarea-bordered w-full h-24"
+                className="textarea w-full h-24"
                 placeholder="このバス停での体験など、メモを投稿してください"
                 required
                 disabled={isSubmitting}
@@ -264,7 +264,7 @@ export function BusStopDiscussion({
                     busStopTag: e.target.value,
                   }))
                 }
-                className="select select-bordered w-full"
+                className="select w-full"
                 required
                 disabled={isSubmitting}
               >

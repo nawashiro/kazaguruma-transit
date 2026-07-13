@@ -16,6 +16,7 @@ interface InputFieldProps {
   description?: string;
   name?: string;
   maxLength?: number;
+  endAdornment?: React.ReactNode;
 }
 
 export default function InputField({
@@ -31,6 +32,7 @@ export default function InputField({
   description,
   name,
   maxLength,
+  endAdornment,
 }: InputFieldProps) {
   const uniqueId = useId();
   const inputId = `input-${uniqueId}`;
@@ -58,27 +60,30 @@ export default function InputField({
           {description}
         </div>
       )}
-      <input
-        id={inputId}
-        type={type}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        disabled={disabled}
-        required={required}
-        name={name}
-        maxLength={maxLength}
-        className={`input outline w-full min-h-[44px] leading-relaxed ${
-          hasError
-            ? "input-error border-2 border-error"
-            : "border border-base-300 hover:border-base-content/50"
-        } ${disabled ? "opacity-70 cursor-not-allowed" : ""}`}
-        aria-invalid={hasError ? "true" : undefined}
-        aria-required={required ? "true" : undefined}
-        aria-describedby={ariaDescribedby}
-        data-testid={testId}
-        autoComplete="true"
-      />
+      <div className={endAdornment ? "join w-full" : undefined}>
+        <input
+          id={inputId}
+          type={type}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          disabled={disabled}
+          required={required}
+          name={name}
+          maxLength={maxLength}
+          className={`input min-h-[44px] leading-relaxed ${
+            hasError ? "input-error" : ""
+          } ${endAdornment ? "join-item flex-1" : "w-full"} ${
+            disabled ? "opacity-70 cursor-not-allowed" : ""
+          }`}
+          aria-invalid={hasError ? "true" : undefined}
+          aria-required={required ? "true" : undefined}
+          aria-describedby={ariaDescribedby}
+          data-testid={testId}
+          autoComplete="true"
+        />
+        {endAdornment}
+      </div>
       {hasError && (
         <div
           id={errorId}

@@ -811,7 +811,7 @@ export default function DiscussionDetailPage() {
                               content: e.target.value,
                             }))
                           }
-                          className="textarea textarea-bordered w-full h-32"
+                          className="textarea w-full h-32"
                           placeholder="あなたの体験や意見を投稿してください"
                           required
                           disabled={isSubmitting}
@@ -832,7 +832,7 @@ export default function DiscussionDetailPage() {
                           <select
                             value={selectedRoute}
                             onChange={(e) => handleRouteSelect(e.target.value)}
-                            className="select select-bordered w-full"
+                            className="select w-full"
                             disabled={isSubmitting}
                             autoComplete="off"
                           >
@@ -853,7 +853,7 @@ export default function DiscussionDetailPage() {
                                   busStopTag: e.target.value,
                                 }))
                               }
-                              className="select select-bordered w-full"
+                              className="select w-full"
                               disabled={isSubmitting}
                               autoComplete="off"
                             >

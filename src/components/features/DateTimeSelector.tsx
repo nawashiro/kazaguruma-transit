@@ -125,7 +125,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             value={dateTime}
             onChange={(e) => handleChange(e.target.value, isDeparture)}
             required
-            className="input input-bordered min-h-[44px]"
+            className="input min-h-[44px]"
             data-testid={isDeparture ? "departure-input" : "arrival-input"}
             disabled={disabled}
             aria-required="true"

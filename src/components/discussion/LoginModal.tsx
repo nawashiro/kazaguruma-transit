@@ -185,7 +185,7 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
                   id="passkey-name"
                   value={passkeyName}
                   onChange={(e) => setPasskeyName(e.target.value)}
-                  className="input input-bordered w-full"
+                  className="input w-full"
                   placeholder="パスキー名を入力してください"
                   disabled={isLoading}
                   maxLength={50}

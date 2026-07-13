@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { logger } from "@/utils/logger";
 import RateLimitModal from "./RateLimitModal";
+import { FiSearch } from "react-icons/fi";
 
 interface DestinationSelectorProps {
   onDestinationSelected: (location: Location) => void;
@@ -106,18 +107,20 @@ export default function DestinationSelector({
             required={false}
             error={error || undefined}
             description="千代田区内の住所や場所名を入力してください。建物名だけでも大丈夫な場合がほとんどです。"
+            endAdornment={
+              <Button
+                type="submit"
+                disabled={loading}
+                loading={loading}
+                iconOnly
+                className="join-item h-11 w-11 p-0 focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-base-content"
+                testId="search-button"
+                aria-label="目的地の住所や場所を検索"
+              >
+                <FiSearch className="h-5 w-5" aria-hidden="true" />
+              </Button>
+            }
           />
-
-          <div className="card-actions justify-center">
-            <Button
-              type="submit"
-              disabled={loading}
-              loading={loading}
-              testId="search-button"
-            >
-              検索
-            </Button>
-          </div>
         </form>
       </Card>
 

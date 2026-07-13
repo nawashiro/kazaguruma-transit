@@ -4,7 +4,6 @@ import React, { useId } from "react";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 interface InputFieldProps {
-  label: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   type?: string;
@@ -20,7 +19,6 @@ interface InputFieldProps {
 }
 
 export default function InputField({
-  label,
   value,
   onChange,
   type = "text",
@@ -46,12 +44,6 @@ export default function InputField({
 
   return (
     <div className="form-control w-full space-y-2">
-      <label htmlFor={inputId} className="label">
-        <span className="label-text font-medium text-foreground ruby-text">
-          {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
-        </span>
-      </label>
       {description && (
         <div
           id={descriptionId}
@@ -71,11 +63,9 @@ export default function InputField({
           required={required}
           name={name}
           maxLength={maxLength}
-          className={`input min-h-[44px] leading-relaxed ${
-            hasError ? "input-error" : ""
-          } ${endAdornment ? "join-item flex-1" : "w-full"} ${
-            disabled ? "opacity-70 cursor-not-allowed" : ""
-          }`}
+          className={`input min-h-[44px] leading-relaxed ${hasError ? "input-error" : ""
+            } ${endAdornment ? "join-item flex-1" : "w-full"} ${disabled ? "opacity-70 cursor-not-allowed" : ""
+            }`}
           aria-invalid={hasError ? "true" : undefined}
           aria-required={required ? "true" : undefined}
           aria-describedby={ariaDescribedby}

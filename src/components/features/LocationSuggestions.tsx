@@ -99,12 +99,11 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
 
   return (
     <div data-testid={sectionId}>
-      <label
-        htmlFor={categoryListId}
-        className="label label-text font-medium text-foreground ruby-text inline"
+      <h3
+        className="text-base font-bold ruby-text my-4"
       >
         よく利用される施設から選択
-      </label>
+      </h3>
       <CategoryTabs
         categories={categories.map((category) => category.category)}
         activeCategory={activeCategory}

@@ -99,6 +99,7 @@ export default function LocationsPage() {
         setLoading(true);
         const data = await loadKeyLocationsData();
         setCategories(data);
+        setActiveCategory(data[0]?.category ?? null);
         setError(null);
       } catch (err) {
         setError("施設データの読み込みに失敗しました");

@@ -63,7 +63,7 @@ describe("EvaluationComponent", () => {
     );
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "この投稿に賛成" }));
+      fireEvent.click(screen.getByRole("button", { name: "はい" }));
     });
     expect(onEvaluate).toHaveBeenCalledWith("approved", "+");
   });

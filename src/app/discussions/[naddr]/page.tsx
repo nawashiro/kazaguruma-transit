@@ -592,12 +592,6 @@ export default function DiscussionDetailPage() {
       <main className="grid lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             <section aria-labelledby="evaluation-heading">
-              <h2
-                id="evaluation-heading"
-                className="text-xl font-semibold mb-4 ruby-text"
-              >
-                投稿を評価
-              </h2>
               {isPostsLoading
                 ? renderInlineLoading("評価データを読み込み中...")
                 : postsLoadError ? (

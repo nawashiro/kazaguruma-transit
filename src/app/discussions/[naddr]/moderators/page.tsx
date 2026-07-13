@@ -310,7 +310,7 @@ export default function ModeratorsPage() {
               モデレーターに申請するにはログインが必要です。
             </p>
             <button
-              className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start ml-12 sm:ml-0"
+              className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start sm:ml-0"
               onClick={() => setShowLogin(true)}
             >
               <span className="ruby-text">ログイン</span>

@@ -69,12 +69,17 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
     >
       <div className="modal-backdrop" onClick={handleBackdropClick}></div>
       <div className="modal-box bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+
+        {reason && (
+          <p className="alert text-sm ruby-text mb-6">
+            <span>{reason}</span>
+          </p>
+        )}
         <div className="flex justify-between items-center mb-4">
           <nav role="tablist" className="join" aria-label="モード選択">
             <button
-              className={`join-item btn ruby-text ${
-                mode === "create" ? "btn-active btn-primary" : ""
-              }`}
+              className={`join-item btn ruby-text ${mode === "create" ? "btn-active btn-primary" : ""
+                }`}
               name="tab-options"
               aria-label="新規作成タブを開く"
               role="tab"
@@ -84,9 +89,8 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
               <span>新規作成</span>
             </button>
             <button
-              className={`join-item btn ruby-text ${
-                mode === "login" ? "btn-active btn-primary" : ""
-              }`}
+              className={`join-item btn ruby-text ${mode === "login" ? "btn-active btn-primary" : ""
+                }`}
               name="tab-options"
               aria-label="ログインを開く"
               role="tab"
@@ -132,11 +136,6 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
               <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 ruby-text">
                 新しいパスキーが作成され、あなたのデバイスに安全に保存されます。端末の生体認証またはPINを使用してください。
               </p>
-              {reason && (
-                <p className="alert alert-info text-sm ruby-text mt-3">
-                  {reason}
-                </p>
-              )}
             </div>
 
             <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 mb-4 text-blue-800 dark:text-blue-200 ruby-text">
@@ -277,9 +276,8 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
                 </button>
                 <button
                   type="submit"
-                  className={`btn btn-primary flex-1 rounded-full dark:rounded-sm ${
-                    isLoading ? "loading" : ""
-                  }`}
+                  className={`btn btn-primary flex-1 rounded-full dark:rounded-sm ${isLoading ? "loading" : ""
+                    }`}
                   disabled={
                     isLoading ||
                     !username.trim() ||
@@ -348,9 +346,8 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
                 </button>
                 <button
                   type="submit"
-                  className={`btn btn-primary flex-1 rounded-full dark:rounded-sm ${
-                    isLoading ? "loading" : ""
-                  }`}
+                  className={`btn btn-primary flex-1 rounded-full dark:rounded-sm ${isLoading ? "loading" : ""
+                    }`}
                   disabled={isLoading}
                 >
                   {!isLoading && <span className="ruby-text">ログイン</span>}

@@ -374,15 +374,15 @@ export default function PostApprovalPage() {
                 className="h-6 w-6 shrink-0 text-info"
                 aria-hidden="true"
               />
-              <span className="ruby-text">
+              <p className="ruby-text">
                 投稿を承認するにはモデレーターになる必要があります。
-              </span>
-              <Link
-                href={`/discussions/${naddrParam}/moderators#become-moderator`}
-                className="link ruby-text"
-              >
-                モデレーターになる
-              </Link>
+                <Link
+                  href={`/discussions/${naddrParam}/moderators#become-moderator`}
+                  className="link"
+                >
+                  モデレーターになる
+                </Link>
+              </p>
             </div>
           </div>
         </div>

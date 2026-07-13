@@ -313,7 +313,7 @@ export function BusStopDiscussion({
             onEvaluate={handleEvaluate}
             userEvaluations={userEvaluations}
             isRandomOrder={true}
-            title="メモを評価"
+            title="このバス停メモは役に立ちますか？"
           />
         </div>
       )}

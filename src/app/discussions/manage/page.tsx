@@ -636,22 +636,21 @@ export default function DiscussionManagePage() {
                           {renderQTagReferences(post)}
                         </div>
                         <div className="flex gap-2 ml-4">
-                          {post.approved &&
-                            post.approvedBy?.includes(user.pubkey || "") && (
-                              <button
-                                onClick={() => handleRevokeApproval(post)}
-                                disabled={
-                                  !canManagePosts || revokingIds.has(post.id)
-                                }
-                                className="btn btn-warning rounded-full dark:rounded-sm"
-                              >
-                                <span className="ruby-text">
-                                  {revokingIds.has(post.id)
-                                    ? ""
-                                    : "承認を撤回"}
-                                </span>
-                              </button>
-                            )}
+                          {post.approved && (
+                            <button
+                              onClick={() => handleRevokeApproval(post)}
+                              disabled={
+                                !canManagePosts ||
+                                !post.approvedBy?.includes(user.pubkey || "") ||
+                                revokingIds.has(post.id)
+                              }
+                              className="btn btn-warning rounded-full dark:rounded-sm"
+                            >
+                              <span className="ruby-text">
+                                {revokingIds.has(post.id) ? "" : "承認を撤回"}
+                              </span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

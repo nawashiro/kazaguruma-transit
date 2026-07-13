@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { DiscussionManagementTabLayout } from "@/components/discussion/DiscussionManagementTabLayout";
 
 export const metadata: Metadata = {
   title: "会話管理 - 意見交換 - 風ぐるま",
@@ -10,5 +11,5 @@ export default function ManageLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return <DiscussionManagementTabLayout>{children}</DiscussionManagementTabLayout>;
 }

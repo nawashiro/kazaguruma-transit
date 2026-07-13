@@ -39,10 +39,18 @@ describe("DiscussionListTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      expect(tabs).toHaveLength(1);
+      expect(tabs).toHaveLength(3);
 
       // Main tab should be selected when on main path
       expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByRole("tab", { name: "掲載依頼" })).toHaveAttribute(
+        "href",
+        "/discussions/manage",
+      );
+      expect(screen.getByRole("tab", { name: "モデレーター" })).toHaveAttribute(
+        "href",
+        "/discussions/moderator",
+      );
     });
 
   });
@@ -60,7 +68,7 @@ describe("DiscussionListTabLayout", () => {
 
       fireEvent.keyDown(tabs[0], { key: "ArrowRight" });
 
-      expect(document.activeElement).toBe(tabs[0]);
+      expect(document.activeElement).toBe(tabs[1]);
     });
 
     it("handles ArrowLeft key to focus previous tab", () => {
@@ -75,7 +83,7 @@ describe("DiscussionListTabLayout", () => {
 
       fireEvent.keyDown(tabs[0], { key: "ArrowLeft" });
 
-      expect(document.activeElement).toBe(tabs[0]);
+      expect(document.activeElement).toBe(tabs[2]);
     });
 
     it("handles Home key to focus first tab", () => {
@@ -105,7 +113,7 @@ describe("DiscussionListTabLayout", () => {
 
       fireEvent.keyDown(tabs[0], { key: "End" });
 
-      expect(document.activeElement).toBe(tabs[0]);
+      expect(document.activeElement).toBe(tabs[2]);
     });
 
     it("wraps around on ArrowRight from last tab", () => {
@@ -116,9 +124,9 @@ describe("DiscussionListTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      tabs[0].focus();
+      tabs[2].focus();
 
-      fireEvent.keyDown(tabs[0], { key: "ArrowRight" });
+      fireEvent.keyDown(tabs[2], { key: "ArrowRight" });
 
       expect(document.activeElement).toBe(tabs[0]);
     });
@@ -135,7 +143,7 @@ describe("DiscussionListTabLayout", () => {
 
       fireEvent.keyDown(tabs[0], { key: "ArrowLeft" });
 
-      expect(document.activeElement).toBe(tabs[0]);
+      expect(document.activeElement).toBe(tabs[2]);
     });
   });
 
@@ -150,7 +158,7 @@ describe("DiscussionListTabLayout", () => {
       );
 
       const tabs = screen.getAllByRole("tab");
-      expect(tabs[0]).toHaveClass("btn-active");
+      expect(tabs[0]).toHaveClass("tab-active");
     });
 
   });
@@ -191,6 +199,8 @@ describe("DiscussionListTabLayout", () => {
       );
 
       expect(screen.getByText("会話一覧")).toBeInTheDocument();
+      expect(screen.getByText("掲載依頼")).toBeInTheDocument();
+      expect(screen.getByText("モデレーター")).toBeInTheDocument();
     });
   });
 

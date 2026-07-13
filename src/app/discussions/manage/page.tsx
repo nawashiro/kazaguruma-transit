@@ -458,15 +458,14 @@ export default function DiscussionManagePage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <Link
-            href="/discussions"
-            className="btn btn-ghost mb-4 rounded-full dark:rounded-sm"
-          >
-            <span className="ruby-text">← 会話一覧に戻る</span>
-          </Link>
-          <h1 className="text-3xl font-bold ruby-text">投稿承認管理</h1>
-        </div>
+        <nav className="tabs tabs-box mb-6 w-full overflow-x-auto" role="tablist" aria-label="投稿承認">
+          <button className="tab tab-active px-4" role="tab" aria-selected="true">
+            <span className="ruby-text">承認待ち</span>
+          </button>
+          <button className="tab px-4" role="tab" aria-selected="false">
+            <span className="ruby-text">承認済み</span>
+          </button>
+        </nav>
         <div className="animate-pulse space-y-4">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded" />
@@ -497,27 +496,14 @@ export default function DiscussionManagePage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <Link
-          href="/discussions"
-          className="btn btn-ghost mb-4 rounded-full dark:rounded-sm"
-        >
-          <span className="ruby-text">← 会話一覧に戻る</span>
-        </Link>
-        <h1 className="text-3xl font-bold ruby-text">投稿承認管理</h1>
-        {discussion && (
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            {discussion.title}
-          </p>
-        )}
-      </div>
-
-      <nav className="join mb-6" role="tablist">
+      <nav className="tabs tabs-box mb-6 w-full overflow-x-auto" role="tablist">
         <button
           aria-selected={activeTab === "pending"}
+          aria-controls="pending-panel"
+          id="pending-tab"
           aria-label="承認待ちタブを開く"
-          className={`join-item btn  ${
-            activeTab === "pending" ? "btn-active btn-primary" : "false"
+          className={`tab px-4 ${
+            activeTab === "pending" ? "tab-active" : ""
           }`}
           name="tab-options"
           role="tab"
@@ -532,9 +518,11 @@ export default function DiscussionManagePage() {
         </button>
         <button
           aria-selected={activeTab === "approved"}
+          aria-controls="approved-panel"
+          id="approved-tab"
           aria-label="承認済みタブを開く"
-          className={`join-item btn  ${
-            activeTab === "approved" ? "btn-active btn-primary" : "false"
+          className={`tab px-4 ${
+            activeTab === "approved" ? "tab-active" : ""
           }`}
           name="tab-options"
           role="tab"
@@ -549,7 +537,11 @@ export default function DiscussionManagePage() {
         </button>
       </nav>
 
-      <main aria-labelledby={`${activeTab}-tab`} role="tabpanel">
+      <main
+        aria-labelledby={`${activeTab}-tab`}
+        id={`${activeTab}-panel`}
+        role="tabpanel"
+      >
         {activeTab === "pending" && (
           <section aria-labelledby="pending-posts-heading">
             <h2

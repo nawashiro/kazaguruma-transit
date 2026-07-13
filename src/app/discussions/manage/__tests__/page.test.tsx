@@ -93,7 +93,7 @@ describe("DiscussionManagePage", () => {
     ).not.toBeInTheDocument();
 
     await waitFor(() =>
-      expect(screen.getByText("投稿承認管理")).toBeInTheDocument()
+      expect(screen.getByRole("tab", { name: "承認待ち" })).toBeInTheDocument()
     );
   });
 });

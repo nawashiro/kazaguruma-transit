@@ -23,6 +23,10 @@ import { useAuth } from "@/lib/auth/auth-context";
 interface DiscussionTabLayoutProps {
   /** タブナビゲーションのベースURL（例: "/discussions" または "/discussions/[naddr]"） */
   baseHref: string;
+  /** 動的ルートを持たない管理画面が明示的に使用する会話 naddr */
+  naddr?: string;
+  /** 会話固有の戻るリンク・見出し・タブを表示するか */
+  showNavigation?: boolean;
   /** 子コンポーネント（ページコンテンツ） */
   children: React.ReactNode;
 }
@@ -67,12 +71,14 @@ export function useDiscussionMeta(): DiscussionMetaContextValue | undefined {
  */
 export function DiscussionTabLayout({
   baseHref,
+  naddr: explicitNaddr,
+  showNavigation = true,
   children,
 }: DiscussionTabLayoutProps) {
   const pathname = usePathname();
   const { user } = useAuth();
   const params = useParams();
-  const naddr = params.naddr as string;
+  const naddr = explicitNaddr ?? (params.naddr as string);
   const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
   // 会話データの状態 (T011)
@@ -293,7 +299,7 @@ export function DiscussionTabLayout({
 
   return (
     <DiscussionMetaContext.Provider value={discussionMeta}>
-      <div>
+      {showNavigation ? <div>
       {/*
         段階的ローディングの設計判断 (T041):
 
@@ -398,7 +404,7 @@ export function DiscussionTabLayout({
 
       {/* 子コンテンツ */}
       {children}
-      </div>
+      </div> : children}
     </DiscussionMetaContext.Provider>
   );
 }

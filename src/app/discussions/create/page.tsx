@@ -240,7 +240,7 @@ export default function DiscussionCreatePage() {
                     </svg>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    会話一覧への掲載は、少々お待ちください。担当者が確認します。
+                    会話一覧への掲載は、基本情報タブから申請できます。管理人が確認します。
                   </p>
                 </div>
                 <div className="flex gap-4 items-center">

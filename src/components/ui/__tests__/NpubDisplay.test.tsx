@@ -11,7 +11,13 @@ describe("NpubDisplay", () => {
     render(<NpubDisplay pubkey="00" />);
 
     const button = screen.getByRole("button", { name: "ユーザーIDをコピー" });
-    expect(button).toHaveClass("min-h-[44px]", "min-w-[44px]");
+    expect(button).toHaveClass(
+      "inline-flex",
+      "items-center",
+      "justify-center",
+      "min-h-[44px]",
+      "min-w-[44px]"
+    );
     await act(async () => {
       fireEvent.click(button);
       await Promise.resolve();

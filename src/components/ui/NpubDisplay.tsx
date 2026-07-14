@@ -31,7 +31,7 @@ export function NpubDisplay({ pubkey }: Props) {
       <button
         type="button"
         onClick={handleCopy}
-        className="shrink-0 min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-2 transition-colors hover:bg-base-200"
+        className="inline-flex shrink-0 min-h-[44px] min-w-[44px] items-center justify-center rounded-full dark:rounded-sm p-2 transition-colors hover:bg-base-200"
         title={isCopied ? "ユーザーIDをコピーしました" : "クリップボードにコピー"}
         aria-label={isCopied ? "ユーザーIDをコピーしました" : "ユーザーIDをコピー"}
       >

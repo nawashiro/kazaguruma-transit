@@ -18,7 +18,6 @@ import {
 } from "@/lib/config/discussion-config";
 import { parseDiscussionEvent, formatRelativeTime } from "@/lib/nostr/nostr-utils";
 import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
-import { createNostrService } from "@/lib/nostr/nostr-service";
 import { type CompletionReason } from "@/lib/nostr/nostr-service";
 import {
   createDiscussionNdkGateway,
@@ -31,7 +30,6 @@ import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 
 const nostrServiceConfig = getNostrServiceConfig();
-const nostrService = createNostrService(nostrServiceConfig);
 const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function SettingsPage() {
@@ -41,14 +39,9 @@ export default function SettingsPage() {
   const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(false);
   const [discussionsCompletionReason, setDiscussionsCompletionReason] =
     useState<CompletionReason | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
-    null
-  );
-  const [isDeletingDiscussion, setIsDeletingDiscussion] = useState(false);
   const loadSequenceRef = useRef(0);
 
-  const { user, logout, isLoading, error, signEvent } = useAuth();
-
+  const { user, logout, isLoading, error } = useAuth();
 
   const updateDiscussions = useCallback((events: NostrEventDTO[]) => {
     const parsedDiscussions = events
@@ -113,39 +106,6 @@ export default function SettingsPage() {
       loadSequenceRef.current += 1;
     };
   }, [loadDiscussions]);
-
-  const handleDeleteDiscussion = async (discussionId: string) => {
-    if (!user.isLoggedIn || !signEvent) return;
-
-    const discussion = myDiscussions.find((d) => d.id === discussionId);
-    if (!discussion?.event?.id) return;
-
-    setIsDeletingDiscussion(true);
-    try {
-      const deleteEvent = {
-        kind: 5,
-        content: "",
-        tags: [["e", discussion.event.id]],
-        pubkey: user.pubkey,
-        created_at: Math.floor(Date.now() / 1000),
-      };
-
-      const signedEvent = await signEvent(deleteEvent);
-      const published = await nostrService.publishSignedEvent(signedEvent);
-
-      if (!published) {
-        throw new Error("Failed to publish delete event to relays");
-      }
-
-      // 削除した会話をリストから除去
-      setMyDiscussions((prev) => prev.filter((d) => d.id !== discussionId));
-      setShowDeleteConfirm(null);
-    } catch (error) {
-      logger.error("Failed to delete discussion:", error);
-    } finally {
-      setIsDeletingDiscussion(false);
-    }
-  };
 
   // Check if discussions are enabled and render accordingly
   if (!isDiscussionsEnabled()) {
@@ -325,7 +285,7 @@ export default function SettingsPage() {
                           key={discussion.id}
                           className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
                         >
-                          <div className="flex items-start justify-between">
+                          <div className="flex items-start">
                             <div className="flex-1">
                               <Link
                                 href={`/discussions/${naddr}`}
@@ -339,23 +299,6 @@ export default function SettingsPage() {
                               <p className="text-gray-500 mt-2">
                                 {formatRelativeTime(discussion.createdAt)}
                               </p>
-                            </div>
-                            <div className="flex gap-2 ml-4">
-                              <Link
-                                href={`/discussions/${naddr}/edit`}
-                                className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-                              >
-                                <span className="ruby-text">編集</span>
-                              </Link>
-                              <button
-                                onClick={() =>
-                                  setShowDeleteConfirm(discussion.id)
-                                }
-                                className="btn btn-error btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-                                disabled={isDeletingDiscussion}
-                              >
-                                <span className="ruby-text">削除</span>
-                              </button>
                             </div>
                           </div>
                         </div>
@@ -434,33 +377,6 @@ export default function SettingsPage() {
           </div>
         
      
-      {/* 削除確認ダイアログ */}
-      {showDeleteConfirm && (
-        <dialog open className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="font-bold text-lg ruby-text">会話の削除</h3>
-            <p className="py-4 ruby-text">
-              この会話を削除しますか？この操作は取り消せません。
-            </p>
-            <div className="modal-action">
-              <button
-                className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-                onClick={() => setShowDeleteConfirm(null)}
-              >
-                <span className="ruby-text">キャンセル</span>
-              </button>
-              <button
-                onClick={() => handleDeleteDiscussion(showDeleteConfirm)}
-                className="btn btn-error min-h-[44px] rounded-full dark:rounded-sm"
-                disabled={isDeletingDiscussion}
-              >
-                <span className="ruby-text">削除</span>
-              </button>
-            </div>
-          </div>
-        </dialog>
-      )}
-
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}

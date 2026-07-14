@@ -34,4 +34,12 @@ describe("アクセシビリティ実装契約", () => {
 
     expect(invalidFiles).toEqual([]);
   });
+
+  it("設定の自作会話一覧に編集・削除機能を持たせない", () => {
+    const settingsSource = readSource("src/app/settings/page.tsx");
+
+    expect(settingsSource).not.toContain("/edit");
+    expect(settingsSource).not.toContain("handleDeleteDiscussion");
+    expect(settingsSource).not.toContain("showDeleteConfirm");
+  });
 });

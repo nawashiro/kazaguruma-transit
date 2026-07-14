@@ -151,15 +151,15 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
     <>
       <Button
         onClick={handleGeneratePdf}
-        className="mt-4 flex items-center"
+        className="mt-4"
         disabled={isGenerating}
         loading={isGenerating}
       >
-        {!isGenerating && <FiDownload className="h-5 w-5 mr-2" aria-hidden="true" />}
+        {!isGenerating && <FiDownload className="h-5 w-5" aria-hidden="true" />}
         {isGenerating ? (
-          <span className="ruby-text">生成中...</span>
+          "生成中..."
         ) : (
-          <span className="ruby-text">印刷する</span>
+          "印刷する"
         )}
       </Button>
     </>

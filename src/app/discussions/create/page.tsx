@@ -337,7 +337,10 @@ export default function DiscussionCreatePage() {
                   {formData.moderators.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-2">
                       {formData.moderators.map((npub) => (
-                        <div key={npub} className="badge badge-outline gap-1">
+                        <div
+                          key={npub}
+                          className="inline-flex min-h-[44px] items-center gap-1 rounded-full border border-base-content/20 px-2"
+                        >
                           <span className="font-mono">
                             {npub.substring(0, 10)}...
                           </span>
@@ -370,11 +373,12 @@ export default function DiscussionCreatePage() {
                       disabled={isSubmitting}
                       autoComplete="off"
                     />
-                      <Button
-                        onClick={addModerator}
-                        disabled={!moderatorInput.trim() || isSubmitting}
-                        className="join-item h-11"
-                      >
+                    <Button
+                      joined
+                      onClick={addModerator}
+                      disabled={!moderatorInput.trim() || isSubmitting}
+                      className="join-item h-11 rounded-r-full dark:rounded-r-sm"
+                    >
                       追加
                     </Button>
                   </div>

@@ -52,7 +52,7 @@ export default function Button({
   const accessibilityClass = "min-h-[44px] min-w-[44px] ";
 
   // テキストサイズの変更時も対応できるようにrem単位を使用
-  const textClass = " leading-relaxed font-medium";
+  const textClass = " leading-relaxed font-medium inline-flex items-center justify-center";
 
   return (
     <button
@@ -68,7 +68,9 @@ export default function Button({
       aria-describedby={ariaDescribedby}
       aria-busy={loading ? "true" : undefined}
     >
-      <span className="ruby-text">{children}</span>
+      <span className="ruby-text inline-flex w-full items-center justify-center gap-2">
+        {children}
+      </span>
     </button>
   );
 }

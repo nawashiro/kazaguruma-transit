@@ -123,6 +123,21 @@ describe("Button", () => {
     expect(button).toHaveClass("min-w-[44px]");
   });
 
+  it("複合コンテンツをボタン内で中央揃えにすること", () => {
+    render(
+      <Button testId="test-button">
+        <span data-testid="button-content">内容</span>
+      </Button>
+    );
+
+    const button = screen.getByTestId("test-button");
+    expect(button).toHaveClass("inline-flex", "items-center", "justify-center");
+    expect(button.querySelector(".ruby-text")).toHaveClass(
+      "items-center",
+      "justify-center"
+    );
+  });
+
   it("日本語の表示文字列をruby-text内に配置すること", () => {
     render(<Button testId="test-button">確認</Button>);
 

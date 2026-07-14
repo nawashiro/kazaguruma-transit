@@ -42,4 +42,15 @@ describe("LocationsPage", () => {
       "locations-category-病院"
     );
   });
+
+  it("住所検索のjoinが左右の角丸とボタンの結合状態を持つ", async () => {
+    render(<LocationsPage />);
+
+    const input = await screen.findByLabelText("住所");
+    const submit = screen.getByRole("button", { name: "検索" });
+
+    expect(input).toHaveClass("rounded-l-full");
+    expect(submit).toHaveClass("rounded-r-full");
+    expect(submit).not.toHaveClass("rounded-full");
+  });
 });

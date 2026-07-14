@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useReducer, useRef } from "react";
 import DateTimeSelector from "@/components/features/DateTimeSelector";
 import OriginSelector from "@/components/features/OriginSelector";
 import DestinationSelector from "@/components/features/DestinationSelector";
@@ -20,6 +20,10 @@ import {
 } from "@/components/discussion";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import type { PostWithStats } from "@/types/discussion";
+import {
+  createInitialRouteSearchState,
+  reduceRouteSearchState,
+} from "@/lib/transit/route-search-state";
 
 interface JourneySegment {
   from: string;
@@ -132,6 +136,11 @@ export default function Home() {
   const [memoData, setMemoData] = useState<Map<string, PostWithStats>>(
     new Map()
   );
+  const [, dispatchRouteSearch] = useReducer(
+    reduceRouteSearchState<RouteResponse>,
+    createInitialRouteSearchState<RouteResponse>(),
+  );
+  const requestIdRef = useRef(0);
 
   // URLパラメータから目的地情報を読み取る
   useEffect(() => {
@@ -252,6 +261,9 @@ export default function Home() {
       return;
     }
 
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    dispatchRouteSearch({ type: "start", requestId });
     setRouteLoading(true);
     setSearchPerformed(true);
     setError(null);
@@ -296,6 +308,11 @@ export default function Home() {
 
       // レート制限に達した場合
       if (response.status === 429 && apiResponse.limitExceeded) {
+        dispatchRouteSearch({
+          type: "rate-limited",
+          requestId,
+          message: "利用制限に達しました",
+        });
         setIsRateLimitModalOpen(true);
         setRouteLoading(false);
         return;
@@ -421,7 +438,7 @@ export default function Home() {
           }
 
           // 経路情報をセット
-          setRouteInfo({
+          const nextRouteInfo: RouteResponse = {
             hasRoute: true,
             routes: routeDetails,
             type,
@@ -429,6 +446,13 @@ export default function Home() {
             message: data.message,
             originStop,
             destinationStop,
+          };
+          if (requestId !== requestIdRef.current) return;
+          setRouteInfo(nextRouteInfo);
+          dispatchRouteSearch({
+            type: "success",
+            requestId,
+            result: { routeInfo: nextRouteInfo },
           });
 
           logger.log("出発地→バス停の情報:", {
@@ -446,7 +470,7 @@ export default function Home() {
           });
         } else {
           // 経路が見つからない場合
-          setRouteInfo({
+          const nextRouteInfo: RouteResponse = {
             hasRoute: false,
             routes: [],
             type: "none",
@@ -462,22 +486,37 @@ export default function Home() {
               stopName: "目的地最寄りバス停",
               distance: 0,
             },
+          };
+          if (requestId !== requestIdRef.current) return;
+          setRouteInfo(nextRouteInfo);
+          dispatchRouteSearch({
+            type: "empty",
+            requestId,
+            message: nextRouteInfo.message ?? "経路が見つかりませんでした",
           });
         }
       } else {
-        setError(apiResponse.error || "経路検索に失敗しました");
+        const message = apiResponse.error || "経路検索に失敗しました";
+        if (requestId !== requestIdRef.current) return;
+        setError(message);
+        dispatchRouteSearch({ type: "error", requestId, message });
       }
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       logger.error("経路検索リクエストエラー:", err);
-      setError(
-        err instanceof Error ? err.message : "予期せぬエラーが発生しました"
-      );
+      const message = err instanceof Error ? err.message : "予期せぬエラーが発生しました";
+      setError(message);
+      dispatchRouteSearch({ type: "error", requestId, message });
     } finally {
-      setRouteLoading(false);
+      if (requestId === requestIdRef.current) {
+        setRouteLoading(false);
+      }
     }
   };
 
   const resetSearch = () => {
+    requestIdRef.current += 1;
+    dispatchRouteSearch({ type: "reset" });
     setSearchPerformed(false);
     setError(null);
     setRouteInfo(null);

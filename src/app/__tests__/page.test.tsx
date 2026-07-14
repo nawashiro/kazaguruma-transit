@@ -222,4 +222,36 @@ describe("Home", () => {
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
   });
+
+  test("経路APIエラーを日本語で表示する", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ success: false, error: "経路APIエラー" }),
+    });
+
+    render(<Home />);
+    fireEvent.click(screen.getByTestId("mock-destination-selector"));
+    fireEvent.click(screen.getByTestId("mock-origin-selector"));
+    fireEvent.click(screen.getByTestId("mock-date-time-selector"));
+    fireEvent.click(screen.getByTestId("search-route"));
+
+    expect(await screen.findByText("経路APIエラー")).toBeInTheDocument();
+  });
+
+  test("経路APIの429をレート制限モーダルへ接続する", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      json: async () => ({ success: false, limitExceeded: true }),
+    });
+
+    render(<Home />);
+    fireEvent.click(screen.getByTestId("mock-destination-selector"));
+    fireEvent.click(screen.getByTestId("mock-origin-selector"));
+    fireEvent.click(screen.getByTestId("mock-date-time-selector"));
+    fireEvent.click(screen.getByTestId("search-route"));
+
+    expect(await screen.findByTestId("mock-rate-limit-modal")).toBeInTheDocument();
+  });
 });

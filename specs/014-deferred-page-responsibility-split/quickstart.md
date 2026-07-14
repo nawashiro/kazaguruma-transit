@@ -91,3 +91,19 @@ npm run build
 - 状態モデル: [data-model.md](data-model.md)
 - 009 read契約: [../../009-coracle-style-sync/contracts/discussion-read-contract.md](../../009-coracle-style-sync/contracts/discussion-read-contract.md)
 - 013 UI境界: [../013-ui-kiss-maintenance/contracts/ui-component-boundary.md](../013-ui-kiss-maintenance/contracts/ui-component-boundary.md)
+
+## 実装前ベースライン
+
+2026-07-14時点の実装前ベースラインは、経路検索ページ、場所一覧ページ、会話タブの既存テストを実行して記録する。実装後は同一コマンドを再実行し、テスト結果、URL・履歴、表示状態、Nostr read契約の差分を比較する。
+
+## 実装結果（2026-07-14）
+
+- 実装前対象テスト: 3スイート21テストが通過。
+- 実装後対象テスト: 80スイート中80スイートが通過、424テスト通過（17テストは既存のskip）。
+- `npx tsc --noEmit`: 通過。
+- `npm run lint`: 通過。既存コード由来のwarning（`any`、既存Hook依存、既存`img`）のみ。
+- `npm run build`: Prisma generate/db push、GTFS import、Next.js production buildを通過。
+- production smoke: `/`、`/locations`、`/discussions` がHTTP 200。
+- API測定（ローカルproduction server、各12回、レート制限回避のため要求ごとに異なるローカルIPヘッダー）: 実装前 `/api/geocode` p95 0.188秒・`/api/transit` p95 0.048秒、実装後 `/api/geocode` p95 0.185秒・`/api/transit` p95 0.047秒。いずれも200ms以内で、実装後の悪化はありません。
+- 手動確認のうち、DOMベースのURL・ARIA・キーボード・表示状態は対象テストで確認した。実ブラウザのデスクトップ/モバイル視覚確認と実relay上のpartial/timeout確認は、このCLI実行環境では未実施。
+- 実装前後とも同一環境・同一代表リクエスト・各12回で測定し、p95 200ms以内およびベースライン比10%超の悪化なしを確認した。

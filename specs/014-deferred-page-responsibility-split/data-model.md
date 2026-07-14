@@ -45,6 +45,7 @@
 - 位置取得・住所検索の失敗は、既存一覧を表示できる場合に一覧全体を壊さない。
 - 最新の位置要求・詳細要求だけが現在の選択を更新する。
 - 距離計算は既存の単位・丸め・並べ替え順を維持する。
+- `/api/geocode`、GeoJSON取得、施設データ取得は状態境界側で扱い、ページ入口は結果を受け取って表示へ接続する。
 
 ## 3. DiscussionMetaReadState
 
@@ -76,6 +77,10 @@
 | State transition | event/result/error | current state | relayやDBへ直接アクセスしない |
 | User operation | user event, current state | command/state event | 外部取得結果を直接描画しない |
 | Presentation | current state, typed display data | accessible UI | 新しい取得・永続化を開始しない |
+
+### Page entry rule
+
+経路検索ページと場所一覧ページの公開入口は、URL初期化、イベント接続、状態境界と表示コンポーネントの構成だけを担当する。`fetch`、API応答の業務変換、距離・地域計算、Nostr relay/cache操作は入口に置かない。
 
 ## 5. Lifecycle
 

@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  loadKeyLocationsData,
   KeyLocationCategory,
   KeyLocation,
   convertToLocation,
@@ -11,44 +10,19 @@ import {
 import { logger } from "../../utils/logger";
 import RateLimitModal from "@/components/features/RateLimitModal";
 import LocationDetailModal from "@/components/features/LocationDetailModal";
-import {
-  loadGeoJSON,
-  groupLocationsByArea,
-  formatAreaName,
-  getAreaNameFromCoordinates,
-} from "../../utils/clientGeoUtils";
 import Card from "@/components/ui/Card";
 import CarouselCard from "@/components/ui/CarouselCard";
 import Button from "@/components/ui/Button";
 import RubyWrapper from "@/components/ui/RubyWrapper";
 import CategoryTabs from "@/components/ui/CategoryTabs";
-
-// 2点間の距離を計算する関数（ハーバーサイン公式）
-const calculateDistance = (
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number => {
-  // 緯度経度をラジアンに変換
-  const lat1Rad = (lat1 * Math.PI) / 180;
-  const lon1Rad = (lon1 * Math.PI) / 180;
-  const lat2Rad = (lat2 * Math.PI) / 180;
-  const lon2Rad = (lon2 * Math.PI) / 180;
-
-  // ハーバーサイン公式
-  const R = 6371; // 地球の半径（キロメートル）
-  const dLat = lat2Rad - lat1Rad;
-  const dLon = lon2Rad - lon1Rad;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1Rad) *
-      Math.cos(lat2Rad) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; // キロメートル単位の距離
-};
+import {
+  calculateDistance,
+  findLocationAreaName,
+  geocodeAddress,
+  groupCategoryLocationsByArea,
+  loadLocationCategories,
+  sortLocationsByDistance,
+} from "@/lib/location/location-list-state";
 
 type LocationWithDistance = KeyLocation & {
   distance?: number;
@@ -97,7 +71,7 @@ export default function LocationsPage() {
     async function fetchLocationData() {
       try {
         setLoading(true);
-        const data = await loadKeyLocationsData();
+        const data = await loadLocationCategories();
         setCategories(data);
         setActiveCategory(data[0]?.category ?? null);
         setError(null);
@@ -126,11 +100,7 @@ export default function LocationsPage() {
           [];
 
         if (categoryLocations.length > 0 && !sortedByDistance) {
-          const geoJSON = await loadGeoJSON();
-          const groupedLocations = groupLocationsByArea(
-            categoryLocations,
-            geoJSON
-          );
+          const groupedLocations = await groupCategoryLocationsByArea(categoryLocations);
           setLocationsByArea(
             groupedLocations as { [areaName: string]: LocationWithDistance[] }
           );
@@ -172,9 +142,7 @@ export default function LocationsPage() {
           return { ...location, distance };
         });
 
-        const sorted = [...locationsWithDistance].sort(
-          (a, b) => (a.distance || Infinity) - (b.distance || Infinity)
-        );
+        const sorted = sortLocationsByDistance(locationsWithDistance);
 
         setLocationsSorted(sorted);
         setSortedByDistance(true);
@@ -220,9 +188,7 @@ export default function LocationsPage() {
             });
 
             // 距離で昇順ソート（近い順）
-            const sorted = [...locationsWithDistance].sort(
-              (a, b) => (a.distance || Infinity) - (b.distance || Infinity)
-            );
+            const sorted = sortLocationsByDistance(locationsWithDistance);
 
             setLocationsSorted(sorted);
             setSortedByDistance(true);
@@ -263,35 +229,20 @@ export default function LocationsPage() {
     }
 
     try {
-      // 「千代田区」が含まれていない場合は接頭辞として追加
-      let searchAddress = address.trim();
-      if (!searchAddress.includes("千代田区")) {
-        searchAddress = `千代田区 ${searchAddress}`;
-      }
+      const result = await geocodeAddress(address);
 
-      // Geocoding APIを呼び出し
-      const response = await fetch(
-        `/api/geocode?address=${encodeURIComponent(searchAddress)}`
-      );
-      const data = await response.json();
-      logger.log("Geocode API Response:", data);
-
-      if (response.status === 429 && data.limitExceeded) {
+      if (result.status === "rate-limited") {
         setIsRateLimitModalOpen(true);
         setSearchLoading(false);
         return;
       }
 
-      if (!response.ok) {
-        throw new Error(data.error || "ジオコーディングに失敗しました");
+      if (result.status === "error") {
+        throw new Error(result.message);
       }
 
-      if (data.success && data.results?.length > 0) {
-        const firstResult = data.results[0];
-        const userPosition = {
-          lat: firstResult.lat,
-          lng: firstResult.lng,
-        };
+      if (result.status === "success") {
+        const userPosition = result.position;
 
         setCurrentPosition(userPosition);
 
@@ -311,15 +262,11 @@ export default function LocationsPage() {
           });
 
           // 距離で昇順ソート（近い順）
-          const sorted = [...locationsWithDistance].sort(
-            (a, b) => (a.distance || Infinity) - (b.distance || Infinity)
-          );
+          const sorted = sortLocationsByDistance(locationsWithDistance);
 
           setLocationsSorted(sorted);
           setSortedByDistance(true);
         }
-      } else {
-        throw new Error("住所が見つかりませんでした");
       }
     } catch (err) {
       setSearchError(
@@ -354,13 +301,7 @@ export default function LocationsPage() {
 
     // 町名を取得
     try {
-      const geoJSON = await loadGeoJSON();
-      const area = getAreaNameFromCoordinates(
-        location.lat,
-        location.lng,
-        geoJSON
-      );
-      setSelectedLocationAreaName(area ? formatAreaName(area) : "不明");
+      setSelectedLocationAreaName(await findLocationAreaName(location));
     } catch (err) {
       logger.log("町名取得エラー:", err);
       setSelectedLocationAreaName("不明");
@@ -382,13 +323,7 @@ export default function LocationsPage() {
     useEffect(() => {
       const fetchAreaName = async () => {
         try {
-          const geoJSON = await loadGeoJSON();
-          const area = getAreaNameFromCoordinates(
-            location.lat,
-            location.lng,
-            geoJSON
-          );
-          setAreaName(area ? formatAreaName(area) : "不明");
+          setAreaName(await findLocationAreaName(location));
         } catch (err) {
           logger.log("町名取得エラー:", err);
           setAreaName("不明");

@@ -73,7 +73,7 @@ export function PostPreview({
           disabled={isLoading}
           loading={isLoading}
         >
-          <span>{isLoading ? "" : "投稿する"}</span>
+          <span>{isLoading ? "投稿中..." : "投稿する"}</span>
         </Button>
       </div>
     </div>

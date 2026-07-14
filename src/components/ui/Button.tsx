@@ -1,7 +1,6 @@
 "use client";
 
-import { logger } from "@/utils/logger";
-import React, { useId } from "react";
+import React from "react";
 
 interface ButtonProps {
   type?: "button" | "submit" | "reset";
@@ -11,6 +10,7 @@ interface ButtonProps {
   className?: string;
   fullWidth?: boolean;
   secondary?: boolean;
+  joined?: boolean;
   testId?: string;
   "aria-label"?: string;
   "aria-pressed"?: boolean;
@@ -29,6 +29,7 @@ export default function Button({
   className = "",
   fullWidth = false,
   secondary = false,
+  joined = false,
   testId,
   "aria-label": ariaLabel,
   "aria-pressed": ariaPressed,
@@ -38,15 +39,11 @@ export default function Button({
   iconOnly = false,
   children,
 }: ButtonProps) {
-  // アクセシビリティのためのIDを生成
-  const buttonId = useId();
-
-  // 高コントラストのカラーパレットを使用
-  const isJoined = className.split(/\s+/).includes("join-item");
   const baseClasses = secondary
-    ? `btn btn-secondary ${isJoined ? "" : "rounded-full dark:rounded-sm"}`
-    : `btn btn-primary ${isJoined ? "" : "rounded-full dark:rounded-sm"}`;
+    ? `btn btn-secondary ${joined ? "" : "rounded-full dark:rounded-sm"}`
+    : `btn btn-primary ${joined ? "" : "rounded-full dark:rounded-sm"}`;
   const widthClass = fullWidth ? "w-full" : "";
+  const iconOnlyClass = iconOnly ? "aspect-square p-0" : "";
   const disabledClass =
     disabled || loading ? "opacity-70 cursor-not-allowed" : "";
 
@@ -57,18 +54,12 @@ export default function Button({
   // テキストサイズの変更時も対応できるようにrem単位を使用
   const textClass = " leading-relaxed font-medium";
 
-  // アイコンのみボタンの場合、aria-labelが必須
-  if (iconOnly && !ariaLabel) {
-    logger.warn("アイコンのみのボタンにはaria-label属性が必要です");
-  }
-
   return (
     <button
-      id={buttonId}
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
-      className={`${baseClasses} ${widthClass} ${disabledClass} ${accessibilityClass} ${textClass} ${className}`}
+      className={`${baseClasses} ${widthClass} ${iconOnlyClass} ${disabledClass} ${accessibilityClass} ${textClass} ${className}`}
       data-testid={testId}
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
@@ -76,11 +67,6 @@ export default function Button({
       aria-controls={ariaControls}
       aria-describedby={ariaDescribedby}
       aria-busy={loading ? "true" : undefined}
-      // フォーカス表示を明確にするための高コントラストアウトライン
-      style={{
-        outline: "none",
-        boxShadow: "none",
-      }}
     >
       <span className="ruby-text">{children}</span>
     </button>

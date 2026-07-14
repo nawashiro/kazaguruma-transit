@@ -67,3 +67,11 @@ npm run build
 - PDF入力: [contracts/pdf-route-input.md](contracts/pdf-route-input.md)
 - 共有データ: [data-model.md](data-model.md)
 - 009 Nostr read契約: [../../009-coracle-style-sync/contracts/discussion-read-contract.md](../../009-coracle-style-sync/contracts/discussion-read-contract.md)
+
+## 実装検証記録
+
+- 実装前ベースライン: 既存の対象テストを基準シナリオとして記録し、実装後に同じテスト群を再実行する。
+- 実装後: `npx tsc --noEmit`、対象テスト、`npm run lint`、`npm test -- --runInBand`、`npm run build` を実行し、いずれも終了コード0を確認した。
+- 009性能: 実relayのp95測定は環境依存のため、T053で同一環境の実装前後値を記録する。
+- Red-team: 009 read境界、RubyWrapper、PDF Puppeteer境界、大規模ページ非分割、全画面一括移行なしを差分確認し、逸脱なし。
+- 手動受け入れ: 自動テストとbuildで検証可能な状態を確認した。実relay接続、実ブラウザ、実PDFの目視確認は環境依存のため別途実施する。

@@ -3,9 +3,9 @@
 import React, { memo } from "react";
 import { Departure } from "@/types/core";
 import { generateGoogleMapDirectionLink } from "@/utils/maps";
-import { logger } from "@/utils/logger";
 import Card from "@/components/ui/Card";
 import StopTimeDisplay from "./StopTimeDisplay";
+import { calculateArrivalTime } from "@/lib/transit/route-display-model";
 
 interface RouteInfo {
   routeId: string;
@@ -58,11 +58,6 @@ interface IntegratedRouteDisplayProps {
   destLng?: number;
 }
 
-interface RouteError {
-  message: string;
-  code?: string;
-}
-
 const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
   originStop,
   destinationStop,
@@ -79,33 +74,6 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
       routes.find((route) => route.routeId === routeId)?.departureTime ||
       "時刻不明"
     );
-  };
-
-  // 到着時刻を計算する関数 (出発時刻 + 所要時間の概算)
-  const calculateArrivalTime = (
-    departureTime: string | undefined,
-    durationMinutes: number = 30
-  ) => {
-    if (!departureTime || departureTime === "時刻不明") {
-      return "時刻不明";
-    }
-
-    try {
-      const [hours, minutes] = departureTime.split(":").map(Number);
-      const totalMinutes = minutes + durationMinutes;
-      const additionalHours = Math.floor(totalMinutes / 60);
-      const finalMinutes = totalMinutes % 60;
-      const finalHours = (hours + additionalHours) % 24;
-
-      const formattedHours = finalHours.toString().padStart(2, "0");
-      const formattedMinutes = finalMinutes.toString().padStart(2, "0");
-
-      return `${formattedHours}:${formattedMinutes}`;
-    } catch (error: unknown) {
-      const routeError = error as RouteError;
-      logger.error("ルート表示エラー:", routeError.message);
-      return "時刻不明";
-    }
   };
 
   // Googleマップリンクを生成（両方の緯度経度が存在する場合のみ）

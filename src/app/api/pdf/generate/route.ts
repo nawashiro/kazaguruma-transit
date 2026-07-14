@@ -3,6 +3,7 @@ import { appRouterRateLimitMiddleware } from "../../../../lib/api/rate-limit-mid
 import { logger } from "../../../../utils/logger";
 import puppeteer from "puppeteer";
 import type { Browser, PDFOptions } from "puppeteer";
+import { calculateArrivalTime } from "../../../../lib/transit/route-display-model";
 import {
   Client,
   TravelMode,
@@ -63,6 +64,7 @@ interface GeneratePdfRequest {
   }>;
   type: "direct" | "transfer" | "none";
   transfers: number;
+  /** Legacy compatibility field. Not used by HTML generation; remove after all callers migrate. */
   departures?: Array<{
     route_id: string;
     trip_id: string;
@@ -71,6 +73,7 @@ interface GeneratePdfRequest {
     stop_name: string;
     sequence: number;
   }>;
+  /** Legacy compatibility field. Not used by HTML generation; remove with departures. */
   message?: string;
   originLat?: number;
   originLng?: number;
@@ -288,30 +291,6 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
     );
   };
 
-  // 到着時刻を計算する関数
-  const getArrivalTime = (
-    departureTime: string | undefined,
-    durationMinutes: number = 30
-  ) => {
-    if (!departureTime || departureTime === "時刻不明") return "時刻不明";
-
-    try {
-      const [hours, minutes] = departureTime.split(":").map(Number);
-      let arrivalMinutes = minutes + durationMinutes;
-      let arrivalHours = hours + Math.floor(arrivalMinutes / 60);
-      arrivalMinutes = arrivalMinutes % 60;
-
-      // 24時間表記に調整
-      arrivalHours = arrivalHours % 24;
-
-      return `${arrivalHours.toString().padStart(2, "0")}:${arrivalMinutes
-        .toString()
-        .padStart(2, "0")}`;
-    } catch {
-      return "時刻不明";
-    }
-  };
-
   // 時刻表示用のフォーマッター
   const formatTimeDisplay = (time: string) => {
     if (time === "時刻不明") return time;
@@ -485,7 +464,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
       getDepartureTime(data.originStop.stopId, route.routeId || "");
     const firstSegmentDuration = data.type === "direct" ? 45 : 30;
     const arrivalTime =
-      route.arrivalTime || getArrivalTime(departureTime, firstSegmentDuration);
+      route.arrivalTime || calculateArrivalTime(departureTime, firstSegmentDuration);
 
     const hasTransfers = route.transfers && route.transfers.length > 0;
     const destinationName =
@@ -539,11 +518,11 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
       route.transfers.forEach((transfer) => {
         // 乗換後の時刻を計算
         const transferWaitTime = 15;
-        const transferDepartureTime = getArrivalTime(
+        const transferDepartureTime = calculateArrivalTime(
           arrivalTime,
           transferWaitTime
         );
-        const finalArrivalTime = getArrivalTime(transferDepartureTime, 30);
+        const finalArrivalTime = calculateArrivalTime(transferDepartureTime, 30);
 
         routesHtml += `
           <div class="card bg-white p-4 border-left-4 my-4" style="border-left: 4px solid #ccc;">

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { LoginModal } from "./LoginModal";
 import { PostPreview } from "./PostPreview";
+import Button from "@/components/ui/Button";
 import { EvaluationComponent } from "./EvaluationComponent";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
@@ -12,19 +13,13 @@ import {
 } from "@/lib/config/discussion-config";
 import { useBusStopModeration } from "./useBusStopModeration";
 import { DiscussionReadStatus } from "./DiscussionReadStatus";
-import {
-  parsePostEvent,
-  parseApprovalEvent,
-  parseEvaluationEvent,
-  combinePostsWithStats,
-  validatePostForm,
-} from "@/lib/nostr/nostr-utils";
+import { combinePostsWithStats, parseEvaluationEvent, validatePostForm } from "@/lib/nostr/nostr-utils";
 import type {
   DiscussionPost,
-  PostApproval,
   PostEvaluation,
   PostFormData,
 } from "@/types/discussion";
+import { projectBusStopSnapshot } from "@/lib/discussion/bus-stop-projection";
 import { logger } from "@/utils/logger";
 
 interface BusStopDiscussionProps {
@@ -70,21 +65,15 @@ export function BusStopDiscussion({
       setPosts([]);
       return;
     }
-    const parsedApprovals = snapshot.approvalEvents
-      .map(parseApprovalEvent)
-      .filter((a): a is PostApproval => a !== null);
-    const parsedPosts = snapshot.primaryEvents
-      .map((event) => parsePostEvent(event, parsedApprovals))
-      .filter((p): p is DiscussionPost => p !== null)
-      .filter((p) => p.busStopTag && busStops.includes(p.busStopTag));
-    setPosts(parsedPosts);
-    const approvedPostIds = parsedPosts.filter((post) => post.approved).map((post) => post.id);
+    const projection = projectBusStopSnapshot({ primaryEvents: snapshot.primaryEvents, approvalEvents: snapshot.approvalEvents, busStops, approvalState: snapshot.approvalState });
+    setPosts(projection.posts);
+    const approvedPostIds = projection.posts.map((post) => post.id);
     if (approvedPostIds.length === 0) {
       setEvaluations([]);
       return;
     }
     const evaluationEvents = await nostrService.getEvaluationsForPosts(approvedPostIds);
-    setEvaluations(evaluationEvents.map(parseEvaluationEvent).filter((e): e is PostEvaluation => e !== null));
+    setEvaluations(evaluationEvents.map(parseEvaluationEvent).filter((evaluation): evaluation is PostEvaluation => evaluation !== null));
   }, [busStops, nostrService, snapshot]);
 
   const loadUserEvaluations = useCallback(async () => {
@@ -186,8 +175,7 @@ export function BusStopDiscussion({
     return null;
   }
 
-  const approvedPosts = posts.filter((p) => p.approved);
-  const postsWithStats = combinePostsWithStats(approvedPosts, evaluations);
+  const postsWithStats = combinePostsWithStats(posts, evaluations);
   const isApprovalCheckPending =
     snapshot?.approvalState === "unknown" && snapshot.primaryEvents.length > 0;
 
@@ -289,13 +277,13 @@ export function BusStopDiscussion({
             )}
 
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={() => setShowPreview(true)}
                 className="btn btn-primary flex-1 rounded-full dark:rounded-sm"
                 disabled={!postForm.content.trim() || isSubmitting}
               >
                 プレビュー
-              </button>
+              </Button>
             </div>
           </div>
         ) : (

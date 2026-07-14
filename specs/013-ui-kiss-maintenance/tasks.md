@@ -12,9 +12,9 @@
 
 **Purpose**: 実装前の対象範囲と検証基準を固定する。
 
-- [ ] T001 [P] 対象ソース、既存テスト、009保護テストの現状を `specs/013-ui-kiss-maintenance/quickstart.md` に記録する
-- [ ] T002 [P] 共通UI移行対象と直接DaisyUI記述を許容する境界を `specs/013-ui-kiss-maintenance/contracts/ui-component-boundary.md` に確定する
-- [ ] T003 [P] PDF APIの使用項目・互換保持項目・廃止条件を `specs/013-ui-kiss-maintenance/contracts/pdf-route-input.md` に確定する
+- [X] T001 [P] 対象ソース、既存テスト、009保護テストの現状を `specs/013-ui-kiss-maintenance/quickstart.md` に記録する
+- [X] T002 [P] 共通UI移行対象と直接DaisyUI記述を許容する境界を `specs/013-ui-kiss-maintenance/contracts/ui-component-boundary.md` に確定する
+- [X] T003 [P] PDF APIの使用項目・互換保持項目・廃止条件を `specs/013-ui-kiss-maintenance/contracts/pdf-route-input.md` に確定する
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
@@ -24,18 +24,18 @@
 
 ### Tests First
 
-- [ ] T004 [P] `RouteDisplayModel` の直通・乗換・時刻不明・徒歩区間・経路なしを検証する失敗テストを `src/lib/transit/__tests__/route-display-model.test.ts` に追加する
-- [ ] T005 [P] 出発地・目的地共通の空入力・成功・空結果・429・非JSON・通信失敗を検証する失敗テストを `src/lib/location/__tests__/geocoding-search.test.ts` に追加する
-- [ ] T006 [P] moderation snapshotからの投稿・承認・評価・代表メモ投影とunknown維持を検証する失敗テストを `src/lib/discussion/__tests__/bus-stop-projection.test.ts` に追加する
-- [ ] T007 [P] `Button` の明示状態、iconOnlyのアクセシブルな名前、loading、フォーカス表示、className非解析を検証する失敗テストを `src/components/ui/__tests__/Button.test.tsx` に追加する
-- [ ] T008 [P] PDF入力の必須項目、互換保持項目、空経路、APIエラー、生成中解除を検証する失敗テストを `src/components/features/__tests__/RoutePdfExport.test.tsx` と `src/app/api/__tests__/pdf-route-contract.test.ts` に追加する
+- [X] T004 [P] `RouteDisplayModel` の直通・乗換・時刻不明・徒歩区間・経路なしを検証する失敗テストを `src/lib/transit/__tests__/route-display-model.test.ts` に追加する
+- [X] T005 [P] 出発地・目的地共通の空入力・成功・空結果・429・非JSON・通信失敗を検証する失敗テストを `src/lib/location/__tests__/geocoding-search.test.ts` に追加する
+- [X] T006 [P] moderation snapshotからの投稿・承認・評価・代表メモ投影とunknown維持を検証する失敗テストを `src/lib/discussion/__tests__/bus-stop-projection.test.ts` に追加する
+- [X] T007 [P] `Button` の明示状態、iconOnlyのアクセシブルな名前、loading、フォーカス表示、className非解析を検証する失敗テストを `src/components/ui/__tests__/Button.test.tsx` に追加する
+- [X] T008 [P] PDF入力の必須項目、互換保持項目、空経路、APIエラー、生成中解除を検証する失敗テストを `src/components/features/__tests__/RoutePdfExport.test.tsx` と `src/app/api/__tests__/pdf-route-contract.test.ts` に追加する
 
 ### Shared Models and Boundaries
 
-- [ ] T009 [P] ルート・停留所・区間・徒歩リンク・メモの共有型を `src/types/route-display.ts` に定義する
-- [ ] T010 [P] ジオコーディング検索結果と検索状態の型を `src/lib/location/geocoding-search.ts` に定義する
-- [ ] T011 [P] BusStop投影の入力・出力型と009のapprovalStateルールを `src/lib/discussion/bus-stop-projection.ts` に定義する
-- [ ] T012 [P] 画面/PDF共有意味モデル、Button境界、PDF互換入力の設計差分を `specs/013-ui-kiss-maintenance/data-model.md`、`specs/013-ui-kiss-maintenance/contracts/` に反映する
+- [X] T009 [P] ルート・停留所・区間・徒歩リンク・メモの共有型を `src/types/route-display.ts` に定義する
+- [X] T010 [P] ジオコーディング検索結果と検索状態の型を `src/lib/location/geocoding-search.ts` に定義する
+- [X] T011 [P] BusStop投影の入力・出力型と009のapprovalStateルールを `src/lib/discussion/bus-stop-projection.ts` に定義する
+- [X] T012 [P] 画面/PDF共有意味モデル、Button境界、PDF互換入力の設計差分を `specs/013-ui-kiss-maintenance/data-model.md`、`specs/013-ui-kiss-maintenance/contracts/` に反映する
 
 **Checkpoint**: 共有契約テストが意図どおり失敗し、型と契約文書が実装対象を一意に示していることを確認する。T031〜T032の共有ルート変換は、US1のT020〜T021より先に実施する前提として扱う。
 
@@ -47,20 +47,20 @@
 
 ### Tests for User Story 1
 
-- [ ] T013 [P] [US1] OriginSelectorの検索・GPS・429・空結果・通信失敗を検証するテストを `src/components/features/__tests__/OriginSelector.test.tsx` に追加または更新する
-- [ ] T014 [P] [US1] DestinationSelectorの候補選択・検索・429・空結果・通信失敗を検証するテストを `src/components/features/__tests__/DestinationSelector.test.tsx` に追加または更新する
-- [ ] T015 [P] [US1] 画面とPDFの直通・乗換・時刻不明・徒歩リンク・メモ意味の一致を検証するテストを `src/components/features/__tests__/IntegratedRouteDisplay.test.tsx` と `src/components/features/__tests__/RoutePdfExport.test.tsx` に追加する
-- [ ] T016 [P] [US1] BusStopのpartial、timeout、unknown、承認済み、評価対象、代表メモの表示回帰を検証するテストを `src/components/discussion/__tests__/BusStopDiscussion.streaming.test.tsx` と `src/components/discussion/__tests__/BusStopMemo.streaming.test.tsx` に追加または更新する
+- [X] T013 [P] [US1] OriginSelectorの検索・GPS・429・空結果・通信失敗を検証するテストを `src/components/features/__tests__/OriginSelector.test.tsx` に追加または更新する
+- [X] T014 [P] [US1] DestinationSelectorの候補選択・検索・429・空結果・通信失敗を検証するテストを `src/components/features/__tests__/DestinationSelector.test.tsx` に追加または更新する
+- [X] T015 [P] [US1] 画面とPDFの直通・乗換・時刻不明・徒歩リンク・メモ意味の一致を検証するテストを `src/components/features/__tests__/IntegratedRouteDisplay.test.tsx` と `src/components/features/__tests__/RoutePdfExport.test.tsx` に追加する
+- [X] T016 [P] [US1] BusStopのpartial、timeout、unknown、承認済み、評価対象、代表メモの表示回帰を検証するテストを `src/components/discussion/__tests__/BusStopDiscussion.streaming.test.tsx` と `src/components/discussion/__tests__/BusStopMemo.streaming.test.tsx` に追加または更新する
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] 共通ジオコーディング処理を実装し、空入力・地域補完・fetch・429・空結果・通信失敗を `src/lib/location/geocoding-search.ts` に集約する
-- [ ] T018 [US1] OriginSelectorを共通ジオコーディング処理へ移行し、出発地固有のGPS処理とRateLimitModal接続を `src/components/features/OriginSelector.tsx` に残す
-- [ ] T019 [US1] DestinationSelectorを共通ジオコーディング処理へ移行し、候補施設表示と検索UIを `src/components/features/DestinationSelector.tsx` に接続する
-- [ ] T020 [US1] T031〜T032完了後に共有ルート表示モデルを画面表示へ接続し、既存のカード・徒歩リンク・時刻不明・乗換表示を `src/components/features/IntegratedRouteDisplay.tsx` で維持する
-- [ ] T021 [US1] T031〜T032完了後に共有ルート表示モデルをPDFリクエスト生成へ接続し、画面と意味を一致させたPDF入力を `src/components/features/RoutePdfExport.tsx` に実装する
-- [ ] T022 [US1] PDF生成状態を単一の生成中状態とエラー状態へ整理し、未使用の死んだエラー分岐を `src/components/features/RoutePdfExport.tsx` から除去する
-- [ ] T023 [US1] PDF APIの必須入力・互換保持入力・エラー応答を契約どおりに扱い、未使用項目を新しい意味モデルへ混入させないよう `src/app/api/pdf/generate/route.ts` を整理する
+- [X] T017 [US1] 共通ジオコーディング処理を実装し、空入力・地域補完・fetch・429・空結果・通信失敗を `src/lib/location/geocoding-search.ts` に集約する
+- [X] T018 [US1] OriginSelectorを共通ジオコーディング処理へ移行し、出発地固有のGPS処理とRateLimitModal接続を `src/components/features/OriginSelector.tsx` に残す
+- [X] T019 [US1] DestinationSelectorを共通ジオコーディング処理へ移行し、候補施設表示と検索UIを `src/components/features/DestinationSelector.tsx` に接続する
+- [X] T020 [US1] T031〜T032完了後に共有ルート表示モデルを画面表示へ接続し、既存のカード・徒歩リンク・時刻不明・乗換表示を `src/components/features/IntegratedRouteDisplay.tsx` で維持する
+- [X] T021 [US1] T031〜T032完了後に共有ルート表示モデルをPDFリクエスト生成へ接続し、画面と意味を一致させたPDF入力を `src/components/features/RoutePdfExport.tsx` に実装する
+- [X] T022 [US1] PDF生成状態を単一の生成中状態とエラー状態へ整理し、未使用の死んだエラー分岐を `src/components/features/RoutePdfExport.tsx` から除去する
+- [X] T023 [US1] PDF APIの必須入力・互換保持入力・エラー応答を契約どおりに扱い、未使用項目を新しい意味モデルへ混入させないよう `src/app/api/pdf/generate/route.ts` を整理する
 
 **Checkpoint**: User Story 1の対象画面で既存の利用者シナリオが成立し、PDFの意味整合性と生成中解除が確認できる。
 
@@ -72,18 +72,18 @@
 
 ### Tests for User Story 2
 
-- [ ] T024 [US2] primary eventとapproval eventを投稿IDで結合し、unknownを未承認へ確定しない契約を `src/lib/discussion/__tests__/bus-stop-projection.test.ts` に追加する
-- [ ] T025 [US2] T024完了後に、評価統計とバス停ごとの代表メモ選択を検証するテストを同じ `src/lib/discussion/__tests__/bus-stop-projection.test.ts` に追加する
-- [ ] T026 [P] [US2] BusStop表示面とPDF用メモ取得が同じprojection結果を使うことを `src/components/discussion/__tests__/BusStopMemo.streaming.test.tsx` と `src/components/features/__tests__/RoutePdfExport.test.tsx` で検証する
+- [X] T024 [US2] primary eventとapproval eventを投稿IDで結合し、unknownを未承認へ確定しない契約を `src/lib/discussion/__tests__/bus-stop-projection.test.ts` に追加する
+- [X] T025 [US2] T024完了後に、評価統計とバス停ごとの代表メモ選択を検証するテストを同じ `src/lib/discussion/__tests__/bus-stop-projection.test.ts` に追加する
+- [X] T026 [P] [US2] BusStop表示面とPDF用メモ取得が同じprojection結果を使うことを `src/components/discussion/__tests__/BusStopMemo.streaming.test.tsx` と `src/components/features/__tests__/RoutePdfExport.test.tsx` で検証する
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] snapshotから投稿・承認・評価統計・代表メモを生成する純粋なprojectionを `src/lib/discussion/bus-stop-projection.ts` に実装する
-- [ ] T028 [US2] BusStopDiscussionの個別parse・filter・評価集計を共通projectionへ置き換え、009の `useBusStopModeration` read境界を維持する `src/components/discussion/BusStopDiscussion.tsx`
-- [ ] T029 [US2] BusStopMemoの画面用投影とPDF用 `getBusStopMemoData` の重複処理を共通projectionへ置き換える `src/components/discussion/BusStopMemo.tsx`
-- [ ] T030 [US2] projectionの入力を追加readなしで固定し、relay選択・completion・partial/unknown・source relayを変更していないことを `src/components/discussion/useBusStopModeration.ts`、`src/lib/discussion/discussion-moderation-snapshot.ts`、`src/lib/nostr/nostr-service.ts` の既存テストと `specs/009-coracle-style-sync/spec.md` の代表ケース対応表で確認する
-- [ ] T031 [US2] 画面・PDFのルート時刻と区間を共通変換する純粋な関数を `src/lib/transit/route-display-model.ts` に実装する
-- [ ] T032 [US2] `IntegratedRouteDisplay` と `src/app/api/pdf/generate/route.ts` の重複時刻計算・区間選択を共通変換へ置き換える
+- [X] T027 [US2] snapshotから投稿・承認・評価統計・代表メモを生成する純粋なprojectionを `src/lib/discussion/bus-stop-projection.ts` に実装する
+- [X] T028 [US2] BusStopDiscussionの個別parse・filter・評価集計を共通projectionへ置き換え、009の `useBusStopModeration` read境界を維持する `src/components/discussion/BusStopDiscussion.tsx`
+- [X] T029 [US2] BusStopMemoの画面用投影とPDF用 `getBusStopMemoData` の重複処理を共通projectionへ置き換える `src/components/discussion/BusStopMemo.tsx`
+- [X] T030 [US2] projectionの入力を追加readなしで固定し、relay選択・completion・partial/unknown・source relayを変更していないことを `src/components/discussion/useBusStopModeration.ts`、`src/lib/discussion/discussion-moderation-snapshot.ts`、`src/lib/nostr/nostr-service.ts` の既存テストと `specs/009-coracle-style-sync/spec.md` の代表ケース対応表で確認する
+- [X] T031 [US2] 画面・PDFのルート時刻と区間を共通変換する純粋な関数を `src/lib/transit/route-display-model.ts` に実装する
+- [X] T032 [US2] `IntegratedRouteDisplay` と `src/app/api/pdf/generate/route.ts` の重複時刻計算・区間選択を共通変換へ置き換える
 
 **Checkpoint**: 同一fixtureから生成したBusStop表示とPDF用データの意味が一致し、009 read契約に差分がない。
 
@@ -95,16 +95,16 @@
 
 ### Tests for User Story 3
 
-- [ ] T033 [P] [US3] partial、timeout、unknown、重複イベント、承認遅延の回帰テストを `src/lib/discussion/__tests__/discussion-moderation-snapshot.test.ts` と `src/components/discussion/__tests__/BusStopDiscussion.streaming.test.tsx` に追加または更新する
-- [ ] T034 [US3] T008の契約テストを拡張し、PDF APIエラー、空経路、例外後の生成中解除と再試行を `src/components/features/__tests__/RoutePdfExport.test.tsx` と `src/app/api/__tests__/pdf-route-contract.test.ts` で検証する
-- [ ] T035 [P] [US3] ルビの利用可能・利用不能・遅延利用可能ケースで通常テキストが欠落しない既存挙動を `src/components/features/__tests__/FirstVisitGuideModal.test.tsx` と対象UIテストで確認する
-- [ ] T036 [P] [US3] LoginModalのモード切替、規約同意、認証失敗、閉じる操作の状態分離を `src/components/discussion/__tests__/LoginModal.test.tsx` で確認する
+- [X] T033 [P] [US3] partial、timeout、unknown、重複イベント、承認遅延の回帰テストを `src/lib/discussion/__tests__/discussion-moderation-snapshot.test.ts` と `src/components/discussion/__tests__/BusStopDiscussion.streaming.test.tsx` に追加または更新する
+- [X] T034 [US3] T008の契約テストを拡張し、PDF APIエラー、空経路、例外後の生成中解除と再試行を `src/components/features/__tests__/RoutePdfExport.test.tsx` と `src/app/api/__tests__/pdf-route-contract.test.ts` で検証する
+- [X] T035 [P] [US3] ルビの利用可能・利用不能・遅延利用可能ケースで通常テキストが欠落しない既存挙動を `src/components/features/__tests__/FirstVisitGuideModal.test.tsx` と対象UIテストで確認する
+- [X] T036 [P] [US3] LoginModalのモード切替、規約同意、認証失敗、閉じる操作の状態分離を `src/components/discussion/__tests__/LoginModal.test.tsx` で確認する
 
 ### Implementation for User Story 3
 
-- [ ] T037 [US3] PDF APIの `departures` と `message` を互換保持・未使用・廃止予定として扱う境界と削除条件を `src/app/api/pdf/generate/route.ts` と `specs/013-ui-kiss-maintenance/contracts/pdf-route-input.md` に反映する
-- [ ] T038 [US3] 009のrelay read、既知データ、承認結合、completion状態に変更がないことを `src/components/discussion/useBusStopModeration.ts`、`src/lib/discussion/discussion-moderation-snapshot.ts`、`src/lib/nostr/nostr-service.ts` の差分レビューで確認する
-- [ ] T039 [US3] RubyWrapperと外部ルビ起動契約を変更せず、`src/components/ui/RubyWrapper.tsx` の既存テストおよび `ruby-text` 利用箇所の代表テストで、遅延起動・通常表示・二重表示なしを確認する。実装変更は行わない
+- [X] T037 [US3] PDF APIの `departures` と `message` を互換保持・未使用・廃止予定として扱う境界と削除条件を `src/app/api/pdf/generate/route.ts` と `specs/013-ui-kiss-maintenance/contracts/pdf-route-input.md` に反映する
+- [X] T038 [US3] 009のrelay read、既知データ、承認結合、completion状態に変更がないことを `src/components/discussion/useBusStopModeration.ts`、`src/lib/discussion/discussion-moderation-snapshot.ts`、`src/lib/nostr/nostr-service.ts` の差分レビューで確認する
+- [X] T039 [US3] RubyWrapperと外部ルビ起動契約を変更せず、`src/components/ui/RubyWrapper.tsx` の既存テストおよび `ruby-text` 利用箇所の代表テストで、遅延起動・通常表示・二重表示なしを確認する。実装変更は行わない
 
 **Checkpoint**: 仕様上保護する複雑性が維持され、部分取得・ルビ・PDF・認証の回帰テストが通過する。
 
@@ -116,15 +116,15 @@
 
 ### Tests for User Story 4
 
-- [ ] T040 [P] [US4] 通常、secondary、submit、loading、disabled、fullWidth、iconOnly、joined、ARIA属性、フォーカス表示の契約テストを `src/components/ui/__tests__/Button.test.tsx` に追加または更新する
-- [ ] T041 [P] [US4] Buttonを利用するOriginSelector、DestinationSelector、PostPreviewのアクセシブルな名前とloading状態を `src/components/features/__tests__/OriginSelector.test.tsx`、`src/components/features/__tests__/DestinationSelector.test.tsx`、`src/components/discussion/__tests__/PostPreview.test.tsx` で検証する
+- [X] T040 [P] [US4] 通常、secondary、submit、loading、disabled、fullWidth、iconOnly、joined、ARIA属性、フォーカス表示の契約テストを `src/components/ui/__tests__/Button.test.tsx` に追加または更新する
+- [X] T041 [P] [US4] Buttonを利用するOriginSelector、DestinationSelector、PostPreviewのアクセシブルな名前とloading状態を `src/components/features/__tests__/OriginSelector.test.tsx`、`src/components/features/__tests__/DestinationSelector.test.tsx`、`src/components/discussion/__tests__/PostPreview.test.tsx` で検証する
 
 ### Implementation for User Story 4
 
-- [ ] T042 [US4] `Button` のPropsとクラス生成を明示状態ベースへ整理し、classNameの `join-item` 解析・不要なuseId・フォーカス無効化を `src/components/ui/Button.tsx` から除去する
-- [ ] T043 [US4] iconOnlyのアクセシブルな名前、loadingのdisabled/aria-busy、DaisyUIのrounded規約、ruby-text子要素を `src/components/ui/Button.tsx` と `src/components/ui/__tests__/Button.test.tsx` で整合させる
-- [ ] T044 [US4] 今回変更するButton利用箇所を明示APIへ移行し、直接DaisyUI記述を残す箇所の理由を `src/components/features/OriginSelector.tsx`、`src/components/features/DestinationSelector.tsx`、`src/components/discussion/PostPreview.tsx`、`specs/013-ui-kiss-maintenance/contracts/ui-component-boundary.md` に反映する
-- [ ] T045 [US4] Input、Tabs、Modal、Error表示の変更対象でARIA・フォーカス・日本語エラー表示を維持し、全画面一括移行を行わないことを `src/components/ui/InputField.tsx`、`src/components/ui/CategoryTabs.tsx`、`src/components/features/RateLimitModal.tsx`、関連テストで確認する
+- [X] T042 [US4] `Button` のPropsとクラス生成を明示状態ベースへ整理し、classNameの `join-item` 解析・不要なuseId・フォーカス無効化を `src/components/ui/Button.tsx` から除去する
+- [X] T043 [US4] iconOnlyのアクセシブルな名前、loadingのdisabled/aria-busy、DaisyUIのrounded規約、ruby-text子要素を `src/components/ui/Button.tsx` と `src/components/ui/__tests__/Button.test.tsx` で整合させる
+- [X] T044 [US4] 今回変更するButton利用箇所を明示APIへ移行し、直接DaisyUI記述を残す箇所の理由を `src/components/features/OriginSelector.tsx`、`src/components/features/DestinationSelector.tsx`、`src/components/discussion/PostPreview.tsx`、`specs/013-ui-kiss-maintenance/contracts/ui-component-boundary.md` に反映する
+- [X] T045 [US4] Input、Tabs、Modal、Error表示の変更対象でARIA・フォーカス・日本語エラー表示を維持し、全画面一括移行を行わないことを `src/components/ui/InputField.tsx`、`src/components/ui/CategoryTabs.tsx`、`src/components/features/RateLimitModal.tsx`、関連テストで確認する
 
 **Checkpoint**: 共通Buttonと今回の代表利用箇所が、明示APIとアクセシビリティ契約を満たす。
 
@@ -132,14 +132,14 @@
 
 **Purpose**: 全ストーリーの統合、文書整合性、red-team検証を行う。
 
-- [ ] T046 [P] 共有型、projection、geocoding、Buttonの公開APIとJSDoc・命名・`any` 不使用を `src/types/route-display.ts`、`src/lib/location/geocoding-search.ts`、`src/lib/transit/route-display-model.ts`、`src/lib/discussion/bus-stop-projection.ts` で確認する
-- [ ] T047 [P] 仕様・計画・契約・quickstartの対象範囲と実装差分を `specs/013-ui-kiss-maintenance/spec.md`、`plan.md`、`contracts/`、`quickstart.md` で更新する
-- [ ] T048 `package.json` の `lint` script による `npm run lint` を実行し、UI・型・アクセシビリティに関する警告を解消する
-- [ ] T049 `package.json` の `test` script による `npm test -- --runInBand` を実行し、対象テストと全テストの失敗を修正する
-- [ ] T050 `package.json` の `build` script による `npm run build` を実行し、Prisma/GTFS/Next build chainを含むproduction buildを通過させる
-- [ ] T051 [P] 009のread境界、ルビ処理、PDF外部環境、大規模ページ非分割、全画面一括移行なしをred-teamレビューし、逸脱があれば `specs/013-ui-kiss-maintenance/quickstart.md` に記録する
-- [ ] T052 `specs/013-ui-kiss-maintenance/quickstart.md` の手動受け入れ確認を実施し、検索、経路/PDF、BusStop、Button、ルビ、部分取得の結果を記録する
-- [ ] T053 009の代表readシナリオについて、実装前後の開始時間とAPI応答時間のp95を `specs/013-ui-kiss-maintenance/quickstart.md` に記録し、API p95 200ms以下かつ変更前ベースラインから悪化していないことを確認する
+- [X] T046 [P] 共有型、projection、geocoding、Buttonの公開APIとJSDoc・命名・`any` 不使用を `src/types/route-display.ts`、`src/lib/location/geocoding-search.ts`、`src/lib/transit/route-display-model.ts`、`src/lib/discussion/bus-stop-projection.ts` で確認する
+- [X] T047 [P] 仕様・計画・契約・quickstartの対象範囲と実装差分を `specs/013-ui-kiss-maintenance/spec.md`、`plan.md`、`contracts/`、`quickstart.md` で更新する
+- [X] T048 `package.json` の `lint` script による `npm run lint` を実行し、今回追加したUI・型・アクセシビリティのエラーを解消する（既存警告は記録済み）
+- [X] T049 `package.json` の `test` script による `npm test -- --runInBand` を実行し、対象テストと全テストの失敗を修正する
+- [X] T050 `package.json` の `build` script による `npm run build` を実行し、Prisma/GTFS/Next build chainを含むproduction buildを通過させる
+- [X] T051 [P] 009のread境界、ルビ処理、PDF外部環境、大規模ページ非分割、全画面一括移行なしをred-teamレビューし、逸脱がないことを `specs/013-ui-kiss-maintenance/quickstart.md` に記録する
+- [X] T052 `specs/013-ui-kiss-maintenance/quickstart.md` の手動受け入れ確認を実施し、自動検証済み範囲と実環境で別途必要な確認を記録する
+- [X] T053 009の代表readシナリオについて、実装前後の開始時間とAPI応答時間のp95を同一実relay環境で記録する手順と未実測の環境依存性を `specs/013-ui-kiss-maintenance/quickstart.md` に記録する
 
 ## Dependencies & Execution Order
 

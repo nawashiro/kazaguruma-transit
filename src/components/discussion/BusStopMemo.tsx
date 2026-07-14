@@ -8,19 +8,8 @@ import {
 } from "@/lib/config/discussion-config";
 import { readBusStopModerationSnapshot, useBusStopModeration } from "./useBusStopModeration";
 import { DiscussionReadStatus } from "./DiscussionReadStatus";
-import {
-  parsePostEvent,
-  parseApprovalEvent,
-  parseEvaluationEvent,
-  combinePostsWithStats,
-  sortPostsByScore,
-} from "@/lib/nostr/nostr-utils";
-import type {
-  DiscussionPost,
-  PostApproval,
-  PostEvaluation,
-  PostWithStats,
-} from "@/types/discussion";
+import type { PostWithStats } from "@/types/discussion";
+import { projectBusStopSnapshot } from "@/lib/discussion/bus-stop-projection";
 import { logger } from "@/utils/logger";
 import type { Event } from "@/lib/nostr/nostr-service";
 
@@ -53,45 +42,17 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
       approvalsEvents: Event[],
       fetchEvaluations: boolean
     ) => {
-      const parsedApprovals = approvalsEvents
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
-      const parsedPosts = postEvents
-        .map((event) => parsePostEvent(event, parsedApprovals))
-        .filter((p): p is DiscussionPost => p !== null)
-        .filter(
-          (p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag)
-        );
-
-      let parsedEvaluations: PostEvaluation[] = [];
-      if (fetchEvaluations && parsedPosts.length > 0) {
-        const approvedPostIds = parsedPosts.map((p) => p.id);
+      let evaluationEvents: Event[] = [];
+      const approvalState = "approved" as const;
+      const initialProjection = projectBusStopSnapshot({ primaryEvents: postEvents, approvalEvents: approvalsEvents, busStops, approvalState });
+      if (fetchEvaluations && initialProjection.posts.length > 0) {
+        const approvedPostIds = initialProjection.posts.map((p) => p.id);
         const evaluationsEvents = await nostrService.getEvaluationsForPosts(
           approvedPostIds
         );
-
-        parsedEvaluations = evaluationsEvents
-          .map(parseEvaluationEvent)
-          .filter((e): e is PostEvaluation => e !== null);
+        evaluationEvents = evaluationsEvents;
       }
-
-      const postsWithStats = combinePostsWithStats(
-        parsedPosts,
-        parsedEvaluations
-      );
-
-      const topPostsMap = new Map<string, PostWithStats>();
-      busStops.forEach((stopName) => {
-        const stopPosts = postsWithStats.filter(
-          (p) => p.busStopTag === stopName
-        );
-        const sortedStopPosts = sortPostsByScore(stopPosts);
-        if (sortedStopPosts.length > 0) {
-          topPostsMap.set(stopName, sortedStopPosts[0]);
-        }
-      });
-      setTopPostsByStop(topPostsMap);
+      setTopPostsByStop(projectBusStopSnapshot({ primaryEvents: postEvents, approvalEvents: approvalsEvents, evaluationEvents, busStops, approvalState }).topPostsByStop);
     },
     [busStops, nostrService]
   );
@@ -167,42 +128,13 @@ export async function getBusStopMemoData(
 
   try {
     const snapshot = await readBusStopModerationSnapshot(busStops, config);
-    const postsEvents = snapshot.primaryEvents;
-    const approvalsEvents = snapshot.approvalEvents;
-
-    const parsedApprovals = approvalsEvents
-      .map(parseApprovalEvent)
-      .filter((a): a is PostApproval => a !== null);
-
-    const parsedPosts = postsEvents
-      .map((event) => parsePostEvent(event, parsedApprovals))
-      .filter((p): p is DiscussionPost => p !== null)
-      .filter((p) => p.approved && p.busStopTag && busStops.includes(p.busStopTag));
-
-    const approvedPostIds = parsedPosts.map((p) => p.id);
+    const projection = projectBusStopSnapshot({ primaryEvents: snapshot.primaryEvents, approvalEvents: snapshot.approvalEvents, busStops, approvalState: snapshot.approvalState });
+    const approvedPostIds = projection.posts.map((p) => p.id);
+    if (approvedPostIds.length === 0) return new Map();
     const evaluationsEvents = await nostrService.getEvaluationsForPosts(
       approvedPostIds
     );
-
-    const parsedEvaluations = evaluationsEvents
-      .map(parseEvaluationEvent)
-      .filter((e): e is PostEvaluation => e !== null);
-
-    const postsWithStats = combinePostsWithStats(
-      parsedPosts,
-      parsedEvaluations
-    );
-
-    const topPostsMap = new Map<string, PostWithStats>();
-    busStops.forEach((stopName) => {
-      const stopPosts = postsWithStats.filter((p) => p.busStopTag === stopName);
-      const sortedStopPosts = sortPostsByScore(stopPosts);
-      if (sortedStopPosts.length > 0) {
-        topPostsMap.set(stopName, sortedStopPosts[0]);
-      }
-    });
-
-    return topPostsMap;
+    return projectBusStopSnapshot({ primaryEvents: snapshot.primaryEvents, approvalEvents: snapshot.approvalEvents, evaluationEvents: evaluationsEvents, busStops, approvalState: snapshot.approvalState }).topPostsByStop;
   } catch (error) {
     logger.error("Failed to load bus stop memo data:", error);
     return new Map();

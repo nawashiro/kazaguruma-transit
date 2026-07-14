@@ -47,7 +47,7 @@ export default function InputField({
       {description && (
         <div
           id={descriptionId}
-          className="text-sm /70 leading-relaxed ruby-text"
+          className="text-sm opacity-70 leading-relaxed ruby-text"
         >
           {description}
         </div>

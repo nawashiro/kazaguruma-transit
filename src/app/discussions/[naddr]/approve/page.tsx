@@ -395,7 +395,7 @@ export default function PostApprovalPage() {
           aria-controls="pending-panel"
           id="pending-tab"
           aria-label="承認待ちタブを開く"
-          className={`tab px-4 ${activeTab === "pending" ? "tab-active" : ""
+          className={`tab min-h-[44px] px-4 ${activeTab === "pending" ? "tab-active" : ""
             }`}
           role="tab"
           onClick={() => setActiveTab("pending")}
@@ -412,7 +412,7 @@ export default function PostApprovalPage() {
           aria-controls="approved-panel"
           id="approved-tab"
           aria-label="承認済みタブを開く"
-          className={`tab px-4 ${activeTab === "approved" ? "tab-active" : ""
+          className={`tab min-h-[44px] px-4 ${activeTab === "approved" ? "tab-active" : ""
             }`}
           role="tab"
           onClick={() => setActiveTab("approved")}
@@ -496,7 +496,7 @@ export default function PostApprovalPage() {
                               approvingIds.has(post.id) ||
                               !hasApprovalPermission
                             }
-                            className="ml-4 btn btn-primary rounded-full dark:rounded-sm"
+                            className="ml-4 btn btn-primary min-h-[44px] rounded-full dark:rounded-sm"
                           >
                             <span>
                               {approvingIds.has(post.id) ? "" : "承認"}
@@ -581,7 +581,7 @@ export default function PostApprovalPage() {
                                   disabled={
                                     revokingIds.has(post.id) || !revokeAllowed
                                   }
-                                  className="btn btn-warning rounded-full dark:rounded-sm"
+                                  className="btn btn-warning min-h-[44px] rounded-full dark:rounded-sm"
                                 >
                                   <span>
                                     {revokingIds.has(post.id)

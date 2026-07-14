@@ -39,10 +39,10 @@ export default function LocationDetailModal({
         {/* 閉じるボタン */}
         <form method="dialog">
           <button
-            className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+            className="btn btn-circle btn-ghost min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm absolute right-2 top-2"
             aria-label="閉じる"
           >
-            <XMarkIcon className="w-4 h-4" />
+            <XMarkIcon className="w-5 h-5" aria-hidden="true" />
           </button>
         </form>
 
@@ -113,17 +113,17 @@ export default function LocationDetailModal({
         {/* アクションボタン */}
         <div className="modal-action">
           <button
-            className="btn btn-primary inline ruby-text rounded-full dark:rounded-sm min-h-10 h-fit"
+            className="btn btn-primary inline rounded-full dark:rounded-sm min-h-[44px] h-fit"
             onClick={() => {
               modalRef.current?.close();
               onGoToLocation(location);
             }}
           >
-            <span>ここへ行く</span>
+            <span className="ruby-text">ここへ行く</span>
           </button>
           <form method="dialog">
-            <button className="btn inline ruby-text rounded-full dark:rounded-sm min-h-10 h-fit">
-              <span>閉じる</span>
+            <button className="btn inline rounded-full dark:rounded-sm min-h-[44px] h-fit">
+              <span className="ruby-text">閉じる</span>
             </button>
           </form>
         </div>
@@ -131,7 +131,7 @@ export default function LocationDetailModal({
 
       {/* 背景をクリックしても閉じられるようにする */}
       <form method="dialog" className="modal-backdrop">
-        <button>閉じる</button>
+        <button className="min-h-[44px] min-w-[44px]"><span className="ruby-text">閉じる</span></button>
       </form>
       <RubyWrapper />
     </dialog>

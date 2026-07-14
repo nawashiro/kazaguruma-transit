@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useId } from "react";
+import { useState, useId, useCallback } from "react";
 import { Location } from "@/types/core";
 import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { logger } from "@/utils/logger";
+import { useGeocodingSearch } from "./useGeocodingSearch";
 import RateLimitModal from "./RateLimitModal";
 import { FiSearch } from "react-icons/fi";
 import { MdMyLocation } from "react-icons/md";
@@ -18,71 +19,14 @@ export default function OriginSelector({
   onOriginSelected,
 }: OriginSelectorProps) {
   const [address, setAddress] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
   const uniqueId = useId();
   const buttonGroupId = `origin-actions-${uniqueId}`;
+  const handleSelected = useCallback((location: Location) => onOriginSelected(location), [onOriginSelected]);
+  const { error, setError, loading, setLoading, isRateLimitModalOpen, setIsRateLimitModalOpen, search } = useGeocodingSearch(handleSelected);
 
   const handleAddressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    // 入力値のバリデーション
-    if (!address.trim()) {
-      setError("住所を入力してください");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // 「千代田区」が含まれていない場合は接頭辞として追加
-      let searchAddress = address.trim();
-      if (!searchAddress.includes("千代田区")) {
-        searchAddress = `千代田区 ${searchAddress}`;
-      }
-
-      // Google Maps Geocoding APIを呼び出し
-      const response = await fetch(
-        `/api/geocode?address=${encodeURIComponent(searchAddress)}`
-      );
-      const data = await response.json();
-      logger.log("Geocode API Response:", data);
-
-      if (response.status === 429 && data.limitExceeded) {
-        setIsRateLimitModalOpen(true);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(data.error || "ジオコーディングに失敗しました");
-      }
-
-      if (data.success && data.results?.length > 0) {
-        const firstResult = data.results[0];
-        const location: Location = {
-          lat: firstResult.lat,
-          lng: firstResult.lng,
-          address: firstResult.formattedAddress,
-        };
-        onOriginSelected(location);
-        logger.log(`出発地選択: ${location.address}`);
-      } else {
-        // よりわかりやすいエラーメッセージを提供
-        setError(
-          "入力された住所が見つかりませんでした。住所をより具体的に入力するか、一般的な場所名を試してください。"
-        );
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "予期せぬエラーが発生しました。ネットワーク接続を確認して、再度お試しください。"
-      );
-    } finally {
-      setLoading(false);
-    }
+    await search(address);
   };
 
   const handleUseCurrentLocation = () => {
@@ -124,7 +68,7 @@ export default function OriginSelector({
             // 逆ジオコーディングに失敗しても続行する
           }
 
-          onOriginSelected(location);
+            onOriginSelected(location);
         } catch (err) {
           setError(
             err instanceof Error ? err.message : "予期せぬエラーが発生しました"
@@ -159,6 +103,7 @@ export default function OriginSelector({
                 disabled={loading}
                 loading={loading}
                 iconOnly
+                joined
                 className="join-item h-11 w-11 p-0 focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-base-content"
                 testId="search-button"
                 aria-label="住所や場所を検索"

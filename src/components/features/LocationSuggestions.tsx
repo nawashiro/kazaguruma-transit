@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useId, memo } from "react";
+import { ExclamationCircleIcon, MapPinIcon } from "@heroicons/react/24/outline";
 import { Location } from "@/types/core";
 import {
   AddressCategory,
@@ -77,7 +78,8 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
     return (
       <Card className="mb-6 overflow-hidden">
         <div className="alert alert-error" role="alert" aria-live="assertive">
-          <svg
+          <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
+          {/*
             xmlns="http://www.w3.org/2000/svg"
             className="stroke-current shrink-0 h-6 w-6"
             fill="none"
@@ -90,7 +92,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
               strokeWidth="2"
               d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
-          </svg>
+          */}
           <span>{error}</span>
         </div>
       </Card>
@@ -117,6 +119,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
         <div
           className="bg-base-100 rounded-box p-3 animate-fadeIn max-h-64 overflow-y-auto"
           role="tabpanel"
+          id={locationListId}
           aria-labelledby={`${categoryListId}-${activeCategory.replace(
             /\s+/g,
             "-"
@@ -124,16 +127,20 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
         >
           <ul
             className="menu w-full"
-            id={locationListId}
             aria-label={`${activeCategory}の施設一覧`}
           >
             {categories
               .find((c) => c.category === activeCategory)!
               .locations.map((location) => (
                 <li key={location.name}>
-                  <button onClick={() => handleLocationSelect(location)}>
+                  <button
+                    type="button"
+                    className="flex min-h-[44px] w-full items-center text-start"
+                    onClick={() => handleLocationSelect(location)}
+                  >
                     <div className="flex items-center w-full overflow-hidden">
-                      <svg
+                      <MapPinIcon className="h-4 w-4 mr-2 flex-shrink-0" aria-hidden="true" />
+                      {/*
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-4 w-4 mr-2 flex-shrink-0"
                         fill="none"
@@ -153,7 +160,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
                           strokeWidth={2}
                           d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                         />
-                      </svg>
+                      */}
                       <span className="truncate">{location.name}</span>
                     </div>
                   </button>

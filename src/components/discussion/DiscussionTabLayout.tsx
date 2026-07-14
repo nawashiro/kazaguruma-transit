@@ -19,6 +19,7 @@ import { loadKnownDiscussionData, saveKnownDiscussionData } from "@/lib/discussi
 import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
 import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
+import { DiscussionMetaReadState } from "@/components/discussion/DiscussionMetaReadState";
 import { useAuth } from "@/lib/auth/auth-context";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 
@@ -348,57 +349,22 @@ export function DiscussionTabLayout({
         </Link>
       </div>
 
-      {/* タイトル・説明（データ取得後のみ表示） (T017) */}
-      {!isDiscussionLoading && discussion && (
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-4 ruby-text">
-            {discussion.title}
-          </h1>
-          {discussion.description.split("\n").map((line, idx) => (
-            <p key={idx} className="text-gray-600 dark:text-gray-400 ruby-text">
-              {line}
-            </p>
-          ))}
-        </div>
-      )}
-
-      {/* ローディング表示 (T018) */}
-      {isDiscussionLoading && (
-        <div
-          className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 ruby-text mb-8"
-          role="status"
-          aria-live="polite"
-        >
-          <div
-            className="loading loading-spinner loading-sm"
-            aria-hidden="true"
-          ></div>
-          <span>会話情報を読み込み中...</span>
-        </div>
-      )}
-
-      {/* エラー表示 (T019) */}
-      {discussionError && (
-        <div className="alert alert-error mb-8" role="alert">
-          <span>{discussionError}</span>
-          <button
-          className="btn btn-outline"
-            onClick={() => {
-              setDiscussionError(null);
-              void loadDiscussionData();
-            }}
-          >
-            再試行
-          </button>
-        </div>
-      )}
-
-      <DiscussionReadStatus
+      <DiscussionMetaReadState
+        discussion={discussion}
         isLoading={isDiscussionLoading}
+        error={discussionError}
         completionReason={discussionCompletionReason}
-        hasData={Boolean(discussion)}
-        onReload={() => void loadDiscussionData()}
-      />
+        onReload={() => {
+          setDiscussionError(null);
+          void loadDiscussionData();
+        }}
+      >
+        <DiscussionReadStatus
+          isLoading={isDiscussionLoading}
+          completionReason={discussionCompletionReason}
+          hasData={Boolean(discussion)}
+          onReload={() => void loadDiscussionData()}
+        />
 
       {isDiscussionRoleReady && (
         <div className="alert mb-8" role="status">
@@ -432,6 +398,7 @@ export function DiscussionTabLayout({
           </div>
         </div>
       )}
+      </DiscussionMetaReadState>
 
       {/* タブナビゲーション（既存） */}
       <nav

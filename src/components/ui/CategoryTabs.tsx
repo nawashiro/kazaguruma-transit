@@ -67,7 +67,7 @@ export default function CategoryTabs({
             className={`tab px-4 ${isActive ? "tab-active" : ""}`}
             role="tab"
             aria-selected={isActive}
-            aria-controls={isActive ? activePanelId : undefined}
+            aria-controls={activePanelId}
             tabIndex={index === focusIndex ? 0 : -1}
             onClick={() => onCategoryChange(category)}
             onKeyDown={(event) => handleKeyDown(event, index)}

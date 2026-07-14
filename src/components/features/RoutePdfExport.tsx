@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { logger } from "@/utils/logger";
 import { Departure } from "@/types/core";
 import type { PostWithStats } from "@/types/discussion";
+import Button from "@/components/ui/Button";
+import { FiDownload } from "react-icons/fi";
 
 // IntegratedRouteDisplayと同様の型定義を使用
 interface StopInfo {
@@ -55,16 +57,13 @@ interface RoutePdfExportProps {
 
 // PDF出力機能を提供するメインコンポーネント
 const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
-  const [error, setError] = useState<string | null>(null);
-  const [pdfGenerating, setPdfGenerating] = useState<boolean>(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
   // サーバーサイドPDF生成APIを呼び出す関数
   const handleGeneratePdf = async () => {
     try {
-      setPdfLoading(true);
-      setPdfGenerating(true);
+      setIsGenerating(true);
       setPdfError(null);
 
       if (!props.routes || props.routes.length === 0) {
@@ -129,94 +128,40 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
           : "PDF生成中にエラーが発生しました"
       );
     } finally {
-      setPdfLoading(false);
-      setPdfGenerating(false);
+      setIsGenerating(false);
     }
   };
-
-  if (error) {
-    return (
-      <div className="alert alert-error mt-4">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="stroke-current shrink-0 h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <span>{error}</span>
-        <button onClick={() => setError(null)} className="btn">
-          閉じる
-        </button>
-      </div>
-    );
-  }
 
   // PDF生成中のエラー表示
   if (pdfError) {
     return (
       <div className="alert alert-error mt-4">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="stroke-current shrink-0 h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
         <div className="flex-1">
           <div className="font-bold">PDF生成エラー</div>
           <div>{pdfError}</div>
         </div>
-        <button onClick={() => setPdfError(null)} className="btn">
+        <Button type="button" secondary onClick={() => setPdfError(null)}>
           閉じる
-        </button>
+        </Button>
       </div>
     );
   }
 
   return (
     <>
-      <button
+      <Button
         onClick={handleGeneratePdf}
-        className="btn btn-primary mt-4 flex items-center rounded-full dark:rounded-sm"
-        disabled={pdfGenerating || pdfLoading}
+        className="mt-4"
+        disabled={isGenerating}
+        loading={isGenerating}
       >
-        {pdfGenerating || pdfLoading ? (
-          <span className="loading loading-spinner loading-xs mr-2"></span>
+        {!isGenerating && <FiDownload className="h-5 w-5" aria-hidden="true" />}
+        {isGenerating ? (
+          "生成中..."
         ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 mr-2"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
+          "印刷する"
         )}
-        {pdfGenerating || pdfLoading ? (
-          <span className="ruby-text">生成中...</span>
-        ) : (
-          <span className="ruby-text">印刷する</span>
-        )}
-      </button>
+      </Button>
     </>
   );
 };

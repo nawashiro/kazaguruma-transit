@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { Bars3Icon } from "@heroicons/react/24/outline";
 import Sidebar from "./Sidebar";
 import ThemeToggle from "../ui/ThemeToggle";
 import SkipToContent from "../ui/SkipToContent";
@@ -12,6 +14,8 @@ export default function SidebarLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
   return (
     <div className="drawer lg:drawer-open">
       {/* Rubyful v2 */}
@@ -48,7 +52,14 @@ export default function SidebarLayout({
         }}
       />
       <SkipToContent />
-      <input id="drawer" type="checkbox" className="drawer-toggle" />
+      <input
+        id="drawer"
+        type="checkbox"
+        className="drawer-toggle"
+        checked={isDrawerOpen}
+        onChange={(event) => setIsDrawerOpen(event.target.checked)}
+        aria-label="ナビゲーションメニュー"
+      />
       <div className="drawer-side z-40">
         <label
           htmlFor="drawer"
@@ -57,36 +68,23 @@ export default function SidebarLayout({
         ></label>
         <Sidebar
           toggleSidebar={() => {
-            const checkbox = document.getElementById(
-              "drawer"
-            ) as HTMLInputElement;
-            if (checkbox) checkbox.checked = false;
+            setIsDrawerOpen(false);
           }}
         />
       </div>
       <div className="drawer-content flex flex-col min-h-screen">
         <div className="flex items-center justify-between p-2">
           <span>
-            <label
-              htmlFor="drawer"
+            <button
+              type="button"
               className="btn btn-ghost drawer-button lg:hidden rounded-full dark:rounded-sm"
-              role="button"
+              aria-expanded={isDrawerOpen}
+              aria-controls="drawer"
+              onClick={() => setIsDrawerOpen(true)}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                className="inline-block w-6 h-6 stroke-current"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h16M4 18h16"
-                ></path>
-              </svg>
-              メニュー
-            </label>
+              <Bars3Icon className="inline-block w-6 h-6 stroke-current" aria-hidden="true" />
+              <span className="ruby-text">メニュー</span>
+            </button>
           </span>
           <ThemeToggle />
         </div>

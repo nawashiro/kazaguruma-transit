@@ -4,6 +4,12 @@
 export const dynamic = "force-dynamic";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import {
+  ArrowRightOnRectangleIcon,
+  DocumentTextIcon,
+  ExclamationCircleIcon,
+  UserCircleIcon,
+} from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
@@ -12,7 +18,6 @@ import {
 } from "@/lib/config/discussion-config";
 import { parseDiscussionEvent, formatRelativeTime } from "@/lib/nostr/nostr-utils";
 import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
-import { createNostrService } from "@/lib/nostr/nostr-service";
 import { type CompletionReason } from "@/lib/nostr/nostr-service";
 import {
   createDiscussionNdkGateway,
@@ -25,7 +30,6 @@ import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 
 const nostrServiceConfig = getNostrServiceConfig();
-const nostrService = createNostrService(nostrServiceConfig);
 const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function SettingsPage() {
@@ -35,14 +39,9 @@ export default function SettingsPage() {
   const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(false);
   const [discussionsCompletionReason, setDiscussionsCompletionReason] =
     useState<CompletionReason | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
-    null
-  );
-  const [isDeletingDiscussion, setIsDeletingDiscussion] = useState(false);
   const loadSequenceRef = useRef(0);
 
-  const { user, logout, isLoading, error, signEvent } = useAuth();
-
+  const { user, logout, isLoading, error } = useAuth();
 
   const updateDiscussions = useCallback((events: NostrEventDTO[]) => {
     const parsedDiscussions = events
@@ -107,39 +106,6 @@ export default function SettingsPage() {
       loadSequenceRef.current += 1;
     };
   }, [loadDiscussions]);
-
-  const handleDeleteDiscussion = async (discussionId: string) => {
-    if (!user.isLoggedIn || !signEvent) return;
-
-    const discussion = myDiscussions.find((d) => d.id === discussionId);
-    if (!discussion?.event?.id) return;
-
-    setIsDeletingDiscussion(true);
-    try {
-      const deleteEvent = {
-        kind: 5,
-        content: "",
-        tags: [["e", discussion.event.id]],
-        pubkey: user.pubkey,
-        created_at: Math.floor(Date.now() / 1000),
-      };
-
-      const signedEvent = await signEvent(deleteEvent);
-      const published = await nostrService.publishSignedEvent(signedEvent);
-
-      if (!published) {
-        throw new Error("Failed to publish delete event to relays");
-      }
-
-      // 削除した会話をリストから除去
-      setMyDiscussions((prev) => prev.filter((d) => d.id !== discussionId));
-      setShowDeleteConfirm(null);
-    } catch (error) {
-      logger.error("Failed to delete discussion:", error);
-    } finally {
-      setIsDeletingDiscussion(false);
-    }
-  };
 
   // Check if discussions are enabled and render accordingly
   if (!isDiscussionsEnabled()) {
@@ -210,14 +176,15 @@ export default function SettingsPage() {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={handleLogout}
-                    className="btn btn-warning rounded-full dark:rounded-sm"
+                    className="btn btn-warning min-h-[44px] rounded-full dark:rounded-sm"
                     disabled={isLoggingOut}
                   >
                     {isLoggingOut ? (
                       ""
                     ) : (
                       <>
-                        <svg
+                        <ArrowRightOnRectangleIcon className="w-4 h-4" aria-hidden="true" />
+                        {/*
                           className="w-4 h-4"
                           fill="none"
                           stroke="currentColor"
@@ -229,7 +196,7 @@ export default function SettingsPage() {
                             strokeWidth={2}
                             d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                           />
-                        </svg>
+                        */}
                         <span className="ruby-text">ログアウト</span>
                       </>
                     )}
@@ -239,7 +206,8 @@ export default function SettingsPage() {
             ) : (
               <div className="py-8">
                 <div className="text-center mb-6">
-                  <svg
+                  <UserCircleIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
+                  {/*
                     className="mx-auto h-12 w-12 text-gray-400 mb-4"
                     fill="none"
                     stroke="currentColor"
@@ -251,7 +219,7 @@ export default function SettingsPage() {
                       strokeWidth={2}
                       d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                     />
-                  </svg>
+                  */}
                   <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2 ruby-text">
                     ログインしていません
                   </h3>
@@ -259,7 +227,8 @@ export default function SettingsPage() {
 
                 {error && (
                   <div className="alert alert-error mb-4">
-                    <svg
+                    <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
+                    {/*
                       className="stroke-current shrink-0 h-6 w-6"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -270,7 +239,7 @@ export default function SettingsPage() {
                         strokeWidth="2"
                         d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
-                    </svg>
+                    */}
                     <span className="text-sm">{error}</span>
                   </div>
                 )}
@@ -316,7 +285,7 @@ export default function SettingsPage() {
                           key={discussion.id}
                           className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
                         >
-                          <div className="flex items-start justify-between">
+                          <div className="flex items-start">
                             <div className="flex-1">
                               <Link
                                 href={`/discussions/${naddr}`}
@@ -330,23 +299,6 @@ export default function SettingsPage() {
                               <p className="text-gray-500 mt-2">
                                 {formatRelativeTime(discussion.createdAt)}
                               </p>
-                            </div>
-                            <div className="flex gap-2 ml-4">
-                              <Link
-                                href={`/discussions/${naddr}/edit`}
-                                className="btn btn-outline rounded-full dark:rounded-sm"
-                              >
-                                編集
-                              </Link>
-                              <button
-                                onClick={() =>
-                                  setShowDeleteConfirm(discussion.id)
-                                }
-                                className="btn btn-error btn-outline rounded-full dark:rounded-sm"
-                                disabled={isDeletingDiscussion}
-                              >
-                                削除
-                              </button>
                             </div>
                           </div>
                         </div>
@@ -362,7 +314,7 @@ export default function SettingsPage() {
                     </span>
                     <button
                       type="button"
-                      className="btn btn-outline"
+                      className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
                       onClick={() => {
                         void loadDiscussions();
                       }}
@@ -372,7 +324,8 @@ export default function SettingsPage() {
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <svg
+                    <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
+                    {/*
                       className="mx-auto h-12 w-12 text-gray-400 mb-4"
                       fill="none"
                       stroke="currentColor"
@@ -384,7 +337,7 @@ export default function SettingsPage() {
                         strokeWidth={2}
                         d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                       />
-                    </svg>
+                    */}
                     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2 ruby-text">
                       まだ会話を作成していません
                     </h3>
@@ -424,33 +377,6 @@ export default function SettingsPage() {
           </div>
         
      
-      {/* 削除確認ダイアログ */}
-      {showDeleteConfirm && (
-        <dialog open className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="font-bold text-lg ruby-text">会話の削除</h3>
-            <p className="py-4 ruby-text">
-              この会話を削除しますか？この操作は取り消せません。
-            </p>
-            <div className="modal-action">
-              <button
-                className="btn btn-outline rounded-full dark:rounded-sm"
-                onClick={() => setShowDeleteConfirm(null)}
-              >
-                <span className="ruby-text">キャンセル</span>
-              </button>
-              <button
-                onClick={() => handleDeleteDiscussion(showDeleteConfirm)}
-                className="btn btn-error rounded-full dark:rounded-sm"
-                disabled={isDeletingDiscussion}
-              >
-                <span className="ruby-text">削除</span>
-              </button>
-            </div>
-          </div>
-        </dialog>
-      )}
-
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}

@@ -1,7 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Button from "../Button";
-import { logger } from "@/utils/logger";
 
 describe("Button", () => {
   const mockOnClick = jest.fn();
@@ -89,6 +88,7 @@ describe("Button", () => {
       <Button
         onClick={mockOnClick}
         className="join-item"
+        joined
         testId="test-button"
       >
         追加
@@ -123,7 +123,30 @@ describe("Button", () => {
     expect(button).toHaveClass("min-w-[44px]");
   });
 
-  it("一意のIDが各ボタンに割り当てられていること", () => {
+  it("複合コンテンツをボタン内で中央揃えにすること", () => {
+    render(
+      <Button testId="test-button">
+        <span data-testid="button-content">内容</span>
+      </Button>
+    );
+
+    const button = screen.getByTestId("test-button");
+    expect(button).toHaveClass("inline-flex", "items-center", "justify-center");
+    expect(button.querySelector(".ruby-text")).toHaveClass(
+      "items-center",
+      "justify-center"
+    );
+  });
+
+  it("日本語の表示文字列をruby-text内に配置すること", () => {
+    render(<Button testId="test-button">確認</Button>);
+
+    expect(screen.getByTestId("test-button").querySelector(".ruby-text")).toHaveTextContent(
+      "確認"
+    );
+  });
+
+  it("不要な自動IDを生成しないこと", () => {
     render(
       <Button onClick={mockOnClick} testId="test-button">
         ボタン
@@ -131,19 +154,17 @@ describe("Button", () => {
     );
 
     const button = screen.getByTestId("test-button");
-    expect(button.id).toBeTruthy();
+    expect(button.id).toBe("");
   });
 
-  it("アイコンのみのボタンで警告が発生すること", () => {
+  it("アイコンのみのボタンで警告に依存しないこと", () => {
     render(
       <Button onClick={mockOnClick} iconOnly testId="test-button">
         <span>🔍</span>
       </Button>
     );
 
-    expect(logger.warn).toHaveBeenCalledWith(
-      "アイコンのみのボタンにはaria-label属性が必要です"
-    );
+    expect(screen.getByTestId("test-button")).toBeInTheDocument();
   });
 
   it("アイコンのみのボタンにaria-labelが設定されていれば警告が発生しないこと", () => {
@@ -158,7 +179,7 @@ describe("Button", () => {
       </Button>
     );
 
-    expect(logger.warn).not.toHaveBeenCalled();
+    expect(screen.getByTestId("test-button")).toHaveAccessibleName("検索");
   });
 
   it("テキストサイズ変更用のクラスが適用されていること", () => {

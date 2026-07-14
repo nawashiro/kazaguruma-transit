@@ -1,6 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
+import {
+  ExclamationCircleIcon,
+  InformationCircleIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/lib/auth/auth-context";
 import { logger } from "@/utils/logger";
 
@@ -78,36 +83,37 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
         <div className="flex justify-between items-center mb-4">
           <nav role="tablist" className="join" aria-label="モード選択">
             <button
-              className={`join-item btn ruby-text ${mode === "create" ? "btn-active btn-primary" : ""
+              className={`join-item btn min-h-[44px] rounded-full dark:rounded-sm ${mode === "create" ? "btn-active btn-primary" : ""
                 }`}
               name="tab-options"
               aria-label="新規作成タブを開く"
               role="tab"
-              area-selected={mode === "create" ? "true" : "false"}
+              aria-selected={mode === "create"}
               onClick={() => setMode("create")}
             >
-              <span>新規作成</span>
+              <span className="ruby-text">新規作成</span>
             </button>
             <button
-              className={`join-item btn ruby-text ${mode === "login" ? "btn-active btn-primary" : ""
+              className={`join-item btn min-h-[44px] rounded-full dark:rounded-sm ${mode === "login" ? "btn-active btn-primary" : ""
                 }`}
               name="tab-options"
               aria-label="ログインを開く"
               role="tab"
-              area-selected={mode === "login" ? "true" : "false"}
+              aria-selected={mode === "login"}
               onClick={() => setMode("login")}
             >
-              <span>ログイン</span>
+              <span className="ruby-text">ログイン</span>
             </button>
           </nav>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             disabled={isLoading}
             aria-label="モーダルを閉じる"
             type="button"
           >
-            <svg
+            <XMarkIcon className="mx-auto w-6 h-6" aria-hidden="true" />
+            {/*
               className="w-6 h-6"
               fill="none"
               stroke="currentColor"
@@ -120,7 +126,7 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
                 strokeWidth={2}
                 d="M6 18L18 6M6 6l12 12"
               />
-            </svg>
+            */}
           </button>
         </div>
 
@@ -140,7 +146,8 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
 
             <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 mb-4 text-blue-800 dark:text-blue-200 ruby-text">
               <div className="flex items-start gap-2">
-                <svg
+                <InformationCircleIcon className="w-5 h-5 mt-0.5 shrink-0" aria-hidden="true" />
+                {/*
                   className="w-5 h-5 mt-0.5 shrink-0"
                   fill="none"
                   stroke="currentColor"
@@ -153,7 +160,7 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
                     strokeWidth={2}
                     d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
-                </svg>
+                */}
                 <div className="text-sm">
                   <p className="font-medium mb-1">ブラウザの対応状況</p>
                   <p>
@@ -248,7 +255,8 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
                   role="alert"
                   aria-live="polite"
                 >
-                  <svg
+                  <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
+                  {/*
                     className="stroke-current shrink-0 h-6 w-6"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -260,7 +268,7 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
                       strokeWidth="2"
                       d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
-                  </svg>
+                  */}
                   <span className="text-sm">{error}</span>
                 </div>
               )}
@@ -269,14 +277,14 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
                 <button
                   type="button"
                   onClick={onClose}
-                  className="btn btn-outline flex-1 rounded-full dark:rounded-sm"
+                  className="btn btn-outline min-h-[44px] flex-1 rounded-full dark:rounded-sm"
                   disabled={isLoading}
                 >
-                  キャンセル
+                  <span className="ruby-text">キャンセル</span>
                 </button>
                 <button
                   type="submit"
-                  className={`btn btn-primary flex-1 rounded-full dark:rounded-sm ${isLoading ? "loading" : ""
+                  className={`btn btn-primary min-h-[44px] flex-1 rounded-full dark:rounded-sm ${isLoading ? "loading" : ""
                     }`}
                   disabled={
                     isLoading ||
@@ -313,7 +321,8 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
                   role="alert"
                   aria-live="polite"
                 >
-                  <svg
+                  <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
+                  {/*
                     className="stroke-current shrink-0 h-6 w-6"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -325,7 +334,7 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
                       strokeWidth="2"
                       d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
-                  </svg>
+                  */}
                   <span className="text-sm">{error}</span>
                 </div>
               )}
@@ -334,14 +343,14 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
                 <button
                   type="button"
                   onClick={onClose}
-                  className="btn btn-outline flex-1 rounded-full dark:rounded-sm"
+                  className="btn btn-outline min-h-[44px] flex-1 rounded-full dark:rounded-sm"
                   disabled={isLoading}
                 >
-                  キャンセル
+                  <span className="ruby-text">キャンセル</span>
                 </button>
                 <button
                   type="submit"
-                  className={`btn btn-primary flex-1 rounded-full dark:rounded-sm ${isLoading ? "loading" : ""
+                  className={`btn btn-primary min-h-[44px] flex-1 rounded-full dark:rounded-sm ${isLoading ? "loading" : ""
                     }`}
                   disabled={isLoading}
                 >

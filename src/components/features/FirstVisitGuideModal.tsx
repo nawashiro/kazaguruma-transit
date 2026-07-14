@@ -104,11 +104,11 @@ const FirstVisitGuideModal = () => {
         </p>
         <div className="flex gap-2 justify-end mt-3">
           <button
-            className="btn btn-outline rounded-full dark:rounded-sm min-h-10 h-fit"
+            className="btn btn-outline rounded-full dark:rounded-sm min-h-[44px] h-fit"
             onClick={handleClose}
             data-testid="close-guide-modal"
           >
-            <span>
+            <span className="ruby-text">
               <ruby>
                 後<rt>あと</rt>
               </ruby>
@@ -120,11 +120,11 @@ const FirstVisitGuideModal = () => {
             </span>
           </button>
           <button
-            className="btn btn-primary rounded-full dark:rounded-sm min-h-10 h-fit"
+            className="btn btn-primary rounded-full dark:rounded-sm min-h-[44px] h-fit"
             onClick={handleGoToGuide}
             data-testid="go-to-guide"
           >
-            <span>
+            <span className="ruby-text">
               <ruby>
                 使<rt>つか</rt>
               </ruby>

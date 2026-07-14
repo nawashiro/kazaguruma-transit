@@ -60,7 +60,7 @@ export default function RateLimitModal({
           <button
             ref={closeButtonRef}
             onClick={onClose}
-            className="btn btn-sm btn-circle btn-ghost"
+            className="btn btn-circle btn-ghost min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm"
             aria-label="閉じる"
             data-testid="x-close-btn"
           >
@@ -80,10 +80,10 @@ export default function RateLimitModal({
           <div className="flex flex-col gap-2">
             <button
               onClick={onClose}
-              className="btn btn-primary rounded-full dark:rounded-sm"
+              className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm"
               data-testid="primary-close-btn"
             >
-              閉じる
+              <span className="ruby-text">閉じる</span>
             </button>
           </div>
         </div>

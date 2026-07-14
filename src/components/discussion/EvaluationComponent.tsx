@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { CheckCircleIcon, HandThumbDownIcon, HandThumbUpIcon } from "@heroicons/react/24/outline";
 import type { PostWithStats } from "@/types/discussion";
 import { shuffleArray, filterUnevaluatedPosts } from "@/lib/nostr/nostr-utils";
 import { logger } from "@/utils/logger";
@@ -51,19 +52,7 @@ export function EvaluationComponent({
   if (limitedPosts.length === 0) {
     return (
       <div className="text-center py-8 ruby-text">
-        <svg
-          className="mx-auto h-12 w-12 text-gray-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+        <CheckCircleIcon className="mx-auto h-12 w-12 text-gray-400" aria-hidden="true" />
         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
           評価可能な投稿がありません
         </h3>
@@ -86,19 +75,7 @@ export function EvaluationComponent({
   if (!currentPost) {
     return (
       <div className="text-center py-8 ruby-text">
-        <svg
-          className="mx-auto h-12 w-12 text-green-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+        <CheckCircleIcon className="mx-auto h-12 w-12 text-green-400" aria-hidden="true" />
         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
           評価完了
         </h3>
@@ -160,7 +137,7 @@ export function EvaluationComponent({
           <button
             onClick={() => handleEvaluate(currentPost.id, "+")}
             disabled={evaluatingPost !== null}
-            className={`btn btn-primary flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
+            className={`btn btn-primary min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
               }`}
             type="button"
           >
@@ -168,7 +145,8 @@ export function EvaluationComponent({
               ""
             ) : (
               <>
-                <svg
+                <HandThumbUpIcon className="w-6 h-6" aria-hidden="true" />
+                {/*
                   className="w-6 h-6"
                   fill="none"
                   stroke="currentColor"
@@ -181,7 +159,7 @@ export function EvaluationComponent({
                     strokeWidth={2}
                     d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
                   />
-                </svg>
+                */}
                 <span className="ruby-text">はい</span>
               </>
             )}
@@ -189,7 +167,7 @@ export function EvaluationComponent({
           <button
             onClick={() => handleEvaluate(currentPost.id, "-")}
             disabled={evaluatingPost !== null}
-            className={`btn btn-warning flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
+            className={`btn btn-warning min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
               }`}
             type="button"
           >
@@ -197,7 +175,8 @@ export function EvaluationComponent({
               ""
             ) : (
               <>
-                <svg
+                <HandThumbDownIcon className="w-6 h-6" aria-hidden="true" />
+                {/*
                   className="w-6 h-6"
                   fill="none"
                   stroke="currentColor"
@@ -210,7 +189,7 @@ export function EvaluationComponent({
                     strokeWidth={2}
                     d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"
                   />
-                </svg>
+                */}
                 <span className="ruby-text">いいえ</span>
               </>
             )}

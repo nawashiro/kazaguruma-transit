@@ -762,12 +762,13 @@ export default function DiscussionEditPage() {
                             <button
                               type="button"
                               onClick={() => removeModerator(npub)}
-                              className="btn btn-ghost btn-xs p-0 min-h-0 h-4 w-4"
+                              className="btn btn-ghost min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-0"
+                              aria-label={`モデレーター ${npub} を削除`}
                               disabled={
                                 isSaving || isDeleting || !hasEditPermission
                               }
                             >
-                              ×
+                              <span className="ruby-text">×</span>
                             </button>
                           </div>
                         ))}

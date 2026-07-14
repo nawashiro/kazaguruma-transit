@@ -123,6 +123,14 @@ describe("Button", () => {
     expect(button).toHaveClass("min-w-[44px]");
   });
 
+  it("日本語の表示文字列をruby-text内に配置すること", () => {
+    render(<Button testId="test-button">確認</Button>);
+
+    expect(screen.getByTestId("test-button").querySelector(".ruby-text")).toHaveTextContent(
+      "確認"
+    );
+  });
+
   it("不要な自動IDを生成しないこと", () => {
     render(
       <Button onClick={mockOnClick} testId="test-button">

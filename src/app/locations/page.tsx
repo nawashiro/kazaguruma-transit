@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { CheckCircleIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 import {
   KeyLocationCategory,
@@ -385,8 +386,9 @@ export default function LocationsPage() {
         <header className="text-center my-4">
           <h1 className="text-3xl font-bold ">場所をさがす</h1>
         </header>
-        <div className="alert alert-error max-w-lg mx-auto">
-          <svg
+        <div className="alert alert-error max-w-lg mx-auto" role="alert">
+          <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
+          {/*
             xmlns="http://www.w3.org/2000/svg"
             className="stroke-current shrink-0 h-6 w-6"
             fill="none"
@@ -398,7 +400,7 @@ export default function LocationsPage() {
               strokeWidth="2"
               d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
-          </svg>
+          */}
           <span>{error}</span>
         </div>
       </div>
@@ -417,8 +419,9 @@ export default function LocationsPage() {
       <main className="space-y-4">
         <Card title="近いところから表示">
           {searchError && (
-            <div className="alert alert-error ruby-text">
-              <svg
+            <div id="location-search-error" className="alert alert-error ruby-text" role="alert">
+              <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
+              {/*
                 xmlns="http://www.w3.org/2000/svg"
                 className="stroke-current shrink-0 h-6 w-6"
                 fill="none"
@@ -430,7 +433,7 @@ export default function LocationsPage() {
                   strokeWidth="2"
                   d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
-              </svg>
+              */}
               <span>{searchError}</span>
             </div>
           )}
@@ -460,10 +463,15 @@ export default function LocationsPage() {
                 className="flex flex-col sm:flex-row gap-2"
               >
                 <div className="join flex-1">
+                  <label htmlFor="location-address" className="sr-only">
+                    住所
+                  </label>
                   <input
+                    id="location-address"
                     type="text"
                     placeholder="住所を入力（例：神田駿河台）"
                     className="input join-item h-11 min-h-[44px] flex-1"
+                    aria-describedby={searchError ? "location-search-error" : undefined}
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     disabled={searchLoading}
@@ -482,7 +490,8 @@ export default function LocationsPage() {
 
           {currentPosition && (
             <div className="alert alert-success ruby-text">
-              <svg
+              <CheckCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
+              {/*
                 xmlns="http://www.w3.org/2000/svg"
                 className="stroke-current shrink-0 h-6 w-6"
                 fill="none"
@@ -494,7 +503,7 @@ export default function LocationsPage() {
                   strokeWidth="2"
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
-              </svg>
+              */}
               <span>
                 位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます
               </span>

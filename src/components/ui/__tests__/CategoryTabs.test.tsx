@@ -59,4 +59,24 @@ describe("CategoryTabs", () => {
     expect(onCategoryChange).toHaveBeenCalledWith("公共施設");
     expect(secondTab).toHaveFocus();
   });
+
+  it("指定されたパネルとの関係をすべてのタブに設定する", () => {
+    render(
+      <CategoryTabs
+        categories={categories}
+        activeCategory="病院"
+        activePanelId="location-panel"
+        onCategoryChange={jest.fn()}
+      />
+    );
+
+    expect(screen.getAllByRole("tab")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({}),
+      ])
+    );
+    screen.getAllByRole("tab").forEach((tab) => {
+      expect(tab).toHaveAttribute("aria-controls", "location-panel");
+    });
+  });
 });

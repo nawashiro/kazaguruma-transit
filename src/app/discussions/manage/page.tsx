@@ -471,10 +471,10 @@ export default function DiscussionManagePage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <nav className="tabs tabs-box mb-6 w-full overflow-x-auto" role="tablist" aria-label="投稿承認">
-          <button className="tab tab-active px-4" role="tab" aria-selected="true">
+          <button className="tab tab-active min-h-[44px] px-4" role="tab" aria-selected="true">
             <span className="ruby-text">承認待ち</span>
           </button>
-          <button className="tab px-4" role="tab" aria-selected="false">
+          <button className="tab min-h-[44px] px-4" role="tab" aria-selected="false">
             <span className="ruby-text">承認済み</span>
           </button>
         </nav>
@@ -514,7 +514,7 @@ export default function DiscussionManagePage() {
           aria-controls="pending-panel"
           id="pending-tab"
           aria-label="承認待ちタブを開く"
-          className={`tab px-4 ${
+          className={`tab min-h-[44px] px-4 ${
             activeTab === "pending" ? "tab-active" : ""
           }`}
           name="tab-options"
@@ -533,7 +533,7 @@ export default function DiscussionManagePage() {
           aria-controls="approved-panel"
           id="approved-tab"
           aria-label="承認済みタブを開く"
-          className={`tab px-4 ${
+          className={`tab min-h-[44px] px-4 ${
             activeTab === "approved" ? "tab-active" : ""
           }`}
           name="tab-options"
@@ -644,7 +644,7 @@ export default function DiscussionManagePage() {
                                 !post.approvedBy?.includes(user.pubkey || "") ||
                                 revokingIds.has(post.id)
                               }
-                              className="btn btn-warning rounded-full dark:rounded-sm"
+                              className="btn btn-warning min-h-[44px] rounded-full dark:rounded-sm"
                             >
                               <span className="ruby-text">
                                 {revokingIds.has(post.id) ? "" : "承認を撤回"}

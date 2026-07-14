@@ -105,6 +105,8 @@ These principles are the operational source of truth for agents working in this 
 - Run `npm run lint` and `npm test` before requesting review; note any skipped checks or follow-up tasks in the PR description.
 
 ## Active Technologies
+- TypeScript 5 strict、React 19、Next.js 15 App Router + Tailwind CSS 4、DaisyUI 5、Jest、React Testing Library、既存のNostr gateway/service、Puppeteer、Google Maps Services (013-ui-kiss-maintenance)
+- 新規永続化なし。既存のNostr relay、sessionStorage、SQLite/Prismaを変更せず利用する (013-ui-kiss-maintenance)
 
 - TypeScript 5, React 19, Next.js 15 (App Router) + DaisyUI 5, Tailwind CSS 4, webpack-license-plugin（導入パッケージライセンス収集）, Prisma（既存） (005-license-page-autogen)
 - 既存SQLite（本機能では新規永続化なし）、`package.json`、オープンデータ用JSONファイル (005-license-page-autogen)

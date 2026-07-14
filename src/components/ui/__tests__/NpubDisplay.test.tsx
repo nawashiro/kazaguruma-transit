@@ -18,4 +18,10 @@ describe("NpubDisplay", () => {
     });
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith("npub1example");
   });
+
+  it("すでにnpub形式のIDを再エンコードしない", () => {
+    render(<NpubDisplay pubkey="npub1already-encoded" />);
+
+    expect(screen.getByText("npub1already-encoded")).toBeInTheDocument();
+  });
 });

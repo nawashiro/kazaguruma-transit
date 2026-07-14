@@ -43,6 +43,7 @@ import {
   createModeratorPromotionRequestEvent,
 } from "@/lib/discussion/user-creation-flow";
 import { formatBip39JapaneseMnemonicPreviewFromPubkey } from "@/lib/nostr/mnemonic-utils";
+import { UserIdentity } from "@/components/ui/UserIdentity";
 import {
   createDiscussionNdkGateway,
   type ModeratorDecision,
@@ -753,12 +754,13 @@ export default function DiscussionEditPage() {
                     </label>
 
                     {formData.moderators.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-2">
+                      <div className="space-y-2 mb-2">
                         {formData.moderators.map((npub) => (
-                          <div key={npub} className="badge badge-outline gap-1">
-                            <span className="font-mono">
-                              {npub.substring(0, 10)}...
-                            </span>
+                          <div
+                            key={npub}
+                            className="flex min-w-0 items-center justify-between gap-3 rounded-box border border-base-300 bg-base-100 p-3"
+                          >
+                            <UserIdentity pubkey={npub} />
                             <button
                               type="button"
                               onClick={() => removeModerator(npub)}

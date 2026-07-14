@@ -23,6 +23,7 @@ import {
   type DiscussionCreationForm,
 } from "@/lib/discussion/user-creation-flow";
 import Button from "@/components/ui/Button";
+import { UserIdentity } from "@/components/ui/UserIdentity";
 import { logger } from "@/utils/logger";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
@@ -335,15 +336,13 @@ export default function DiscussionCreatePage() {
                   </label>
 
                   {formData.moderators.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-2">
+                    <div className="space-y-2 mb-2">
                       {formData.moderators.map((npub) => (
                         <div
                           key={npub}
-                          className="inline-flex min-h-[44px] items-center gap-1 rounded-full border border-base-content/20 px-2"
+                          className="flex min-w-0 items-center justify-between gap-3 rounded-box border border-base-300 bg-base-100 p-3"
                         >
-                          <span className="font-mono">
-                            {npub.substring(0, 10)}...
-                          </span>
+                          <UserIdentity pubkey={npub} />
                           <button
                             type="button"
                             onClick={() => removeModerator(npub)}

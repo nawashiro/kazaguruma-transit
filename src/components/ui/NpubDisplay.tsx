@@ -11,7 +11,7 @@ interface Props {
 
 export function NpubDisplay({ pubkey }: Props) {
   const [isCopied, setIsCopied] = useState(false);
-  const npub = hexToNpub(pubkey);
+  const npub = pubkey.startsWith("npub1") ? pubkey : hexToNpub(pubkey);
 
   const handleCopy = async () => {
     try {

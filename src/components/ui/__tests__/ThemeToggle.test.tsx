@@ -14,7 +14,8 @@ describe("ThemeToggle", () => {
     render(<ThemeToggle />);
 
     const toggle = screen.getByRole("checkbox", { name: "ダークモードに切り替え" });
-    expect(toggle).toHaveClass("min-h-[44px]", "min-w-[44px]");
+    expect(toggle).toHaveClass("toggle", "theme-controller");
+    expect(toggle.parentElement).toHaveClass("min-h-[44px]", "min-w-[44px]");
     fireEvent.click(toggle);
     expect(toggle).toHaveAccessibleName("ライトモードに切り替え");
   });

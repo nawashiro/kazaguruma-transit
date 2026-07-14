@@ -47,19 +47,24 @@ export default function ThemeToggle() {
   return (
     <div className="flex cursor-pointer gap-2 items-center">
       <SunIcon className="h-5 w-5" aria-hidden="true" />
-      <label htmlFor="theme-toggle" className="sr-only">
-        {isDarkMode ? "ライトモードに切り替え" : "ダークモードに切り替え"}
+      <label
+        htmlFor="theme-toggle"
+        className="inline-flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center"
+      >
+        <span className="sr-only">
+          {isDarkMode ? "ライトモードに切り替え" : "ダークモードに切り替え"}
+        </span>
+        <input
+          id="theme-toggle"
+          type="checkbox"
+          checked={isDarkMode}
+          onChange={toggleTheme}
+          className="toggle theme-controller"
+          aria-label={
+            isDarkMode ? "ライトモードに切り替え" : "ダークモードに切り替え"
+          }
+        />
       </label>
-      <input
-        id="theme-toggle"
-        type="checkbox"
-        checked={isDarkMode}
-        onChange={toggleTheme}
-        className="toggle theme-controller min-h-[44px] min-w-[44px]"
-        aria-label={
-          isDarkMode ? "ライトモードに切り替え" : "ダークモードに切り替え"
-        }
-      />
       <MoonIcon className="h-5 w-5" aria-hidden="true" />
     </div>
   );

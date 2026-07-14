@@ -151,6 +151,7 @@ jest.mock("@/lib/nostr/naddr-utils", () => ({
 }));
 
 jest.mock("@/lib/nostr/nostr-utils", () => ({
+  hexToNpub: (pubkey: string) => `npub-${pubkey}`,
   parseDiscussionEvent: () => ({
     id: "34550:f:test-discussion",
     title: "Test Discussion",

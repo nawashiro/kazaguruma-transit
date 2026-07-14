@@ -97,8 +97,8 @@ describe("ModeratorsPage direct moderator management", () => {
     fireEvent.click(addButton);
 
     expect(screen.getByText("追加予定のユーザー")).toBeVisible();
-    expect(screen.getByText("npub-npub1first")).toBeVisible();
-    expect(screen.getByText("npub-npub1second")).toBeVisible();
+    expect(screen.getByText("npub1first")).toBeVisible();
+    expect(screen.getByText("npub1second")).toBeVisible();
     expect(screen.getAllByRole("button", { name: "取り消す" })).toHaveLength(2);
     expect(
       screen.getByRole("button", { name: "変更を確定" }),
@@ -106,8 +106,8 @@ describe("ModeratorsPage direct moderator management", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: "取り消す" })[0]);
 
-    expect(screen.queryByText("npub-npub1first")).not.toBeInTheDocument();
-    expect(screen.getByText("npub-npub1second")).toBeVisible();
+    expect(screen.queryByText("npub1first")).not.toBeInTheDocument();
+    expect(screen.getByText("npub1second")).toBeVisible();
     expect(screen.getByRole("button", { name: "変更を確定" })).not.toBeDisabled();
   });
 

@@ -49,8 +49,8 @@ describe("LocationsPage", () => {
     const input = await screen.findByLabelText("住所");
     const submit = screen.getByRole("button", { name: "検索" });
 
-    expect(input).toHaveClass("rounded-l-full");
-    expect(submit).toHaveClass("rounded-r-full");
+    expect(input).toHaveClass("!rounded-l-full");
+    expect(submit).toHaveClass("!rounded-r-full");
     expect(submit).not.toHaveClass("rounded-full");
   });
 });

@@ -470,7 +470,7 @@ export default function LocationsPage() {
                     id="location-address"
                     type="text"
                     placeholder="住所を入力（例：神田駿河台）"
-                    className="input join-item h-11 min-h-[44px] flex-1 rounded-l-full dark:rounded-l-sm"
+                    className="input join-item h-11 min-h-[44px] flex-1 !rounded-l-full dark:!rounded-l-sm"
                     aria-describedby={searchError ? "location-search-error" : undefined}
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
@@ -479,7 +479,7 @@ export default function LocationsPage() {
                   <Button
                     type="submit"
                     joined
-                    className="join-item h-11 rounded-r-full dark:rounded-r-sm"
+                    className="join-item h-11 !rounded-r-full dark:!rounded-r-sm"
                     disabled={searchLoading}
                   >
                     検索

@@ -135,7 +135,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
                 <li key={location.name}>
                   <button
                     type="button"
-                    className="min-h-[44px] w-full"
+                    className="flex min-h-[44px] w-full items-center text-start"
                     onClick={() => handleLocationSelect(location)}
                   >
                     <div className="flex items-center w-full overflow-hidden">

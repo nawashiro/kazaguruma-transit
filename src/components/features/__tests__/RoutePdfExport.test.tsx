@@ -238,7 +238,7 @@ describe("RoutePdfExport", () => {
     });
   });
 
-  it("APIエラー時にエラーメッセージが表示されること", async () => {
+  it("APIエラー時に簡潔で再試行可能なエラーメッセージが表示されること", async () => {
     // エラーレスポンスを返すようにモックを設定
     (global.fetch as jest.Mock).mockImplementation((url) => {
       if (url === "/api/pdf/generate") {
@@ -274,9 +274,23 @@ describe("RoutePdfExport", () => {
       fireEvent.click(button);
     });
 
-    // エラーメッセージの表示を待機
+    // エラー表示に余分な操作を追加せず、再試行は本来の操作から行える。
     await waitFor(() => {
-      expect(screen.getByText("PDF生成エラー")).toBeInTheDocument();
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveTextContent(
+        "PDF生成エラー: サーバーエラーが発生しました"
+      );
+      expect(alert).toHaveClass(
+        "alert-error",
+        "alert-soft",
+        "text-base-content!"
+      );
+      expect(
+        screen.queryByRole("button", { name: "閉じる" })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "印刷する" })
+      ).toBeEnabled();
     });
   });
 });

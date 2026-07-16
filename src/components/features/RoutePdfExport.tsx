@@ -134,23 +134,16 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
     }
   };
 
-  // PDF生成中のエラー表示
-  if (pdfError) {
-    return (
-      <div className="alert alert-error mt-4">
-        <div className="flex-1">
-          <div className="font-bold">PDF生成エラー</div>
-          <div>{pdfError}</div>
-        </div>
-        <Button type="button" secondary onClick={() => setPdfError(null)}>
-          閉じる
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <>
+      {pdfError && (
+        <div
+          role="alert"
+          className="alert alert-error alert-soft mt-4 text-base-content!"
+        >
+          <span>PDF生成エラー: {pdfError}</span>
+        </div>
+      )}
       <Button
         onClick={handleGeneratePdf}
         className="mt-4"

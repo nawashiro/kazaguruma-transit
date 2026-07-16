@@ -115,11 +115,13 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
       a.href = url;
       a.download = `乗換案内_${props.originStop.stopName}_${props.destinationStop.stopName}.pdf`;
       document.body.appendChild(a);
-      a.click();
-
-      // クリーンアップ
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      try {
+        a.click();
+      } finally {
+        // ブラウザ拡張などが先にリンクを除去しても例外にしない。
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      }
     } catch (error) {
       logger.error("PDF生成エラー:", error);
       setPdfError(
@@ -155,13 +157,21 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
         disabled={isGenerating}
         loading={isGenerating}
       >
-        {!isGenerating && <FiDownload className="h-5 w-5" aria-hidden="true" />}
-        <span>
-          {isGenerating ? (
-            "生成中..."
-          ) : (
-            "印刷する"
-          )}
+        <FiDownload
+          className={`h-5 w-5 ${isGenerating ? "hidden" : ""}`}
+          aria-hidden="true"
+        />
+        <span
+          className={`ruby-text ${isGenerating ? "hidden" : ""}`}
+          aria-hidden={isGenerating}
+        >
+          印刷する
+        </span>
+        <span
+          className={`ruby-text ${isGenerating ? "" : "hidden"}`}
+          aria-hidden={!isGenerating}
+        >
+          生成中...
         </span>
       </Button>
     </>

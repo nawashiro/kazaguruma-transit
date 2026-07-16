@@ -678,8 +678,6 @@ export default function Home() {
           destLng={selectedDestination!.lng}
         />
 
-        {renderBusStopFeatures()}
-
         {routeInfo.type !== "none" && (
           <div className="mt-4 flex justify-center">
             <RoutePdfExport
@@ -697,6 +695,8 @@ export default function Home() {
             />
           </div>
         )}
+
+        {renderBusStopFeatures()}
       </div>
     );
   };

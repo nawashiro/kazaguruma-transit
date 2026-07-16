@@ -3,6 +3,10 @@ import { importGtfs } from "gtfs";
 import fs from "fs";
 import path from "path";
 import { loadConfig } from "../src/lib/config/config";
+import {
+  redactSensitiveUrlQueryParameters,
+  sanitizeGtfsLogError,
+} from "./gtfs-log-sanitizer";
 
 const prisma = new PrismaClient();
 
@@ -15,7 +19,11 @@ async function importGtfsData() {
 
     // 設定ファイルを読み込む
     const config = loadConfig();
-    console.log(`設定を読み込みました: ${JSON.stringify(config, null, 2)}`);
+    console.log("設定を読み込みました:", {
+      sqlitePath: config.sqlitePath,
+      agencyCount: config.agencies.length,
+      verbose: config.verbose,
+    });
 
     // 必要なディレクトリを作成
     const tempDir = path.join(process.cwd(), "prisma", ".temp");
@@ -77,7 +85,12 @@ async function importGtfsData() {
 
     // importGtfsを使用してデータをインポート
     console.log("GTFSデータをインポートしています...");
-    await importGtfs(config);
+    await importGtfs({
+      ...config,
+      logFunction: (message) => {
+        console.log(redactSensitiveUrlQueryParameters(message));
+      },
+    });
     console.log("GTFSデータのインポートが完了しました");
 
     console.log("データベースとの接続をテストしています...");
@@ -110,7 +123,10 @@ async function importGtfsData() {
       );
     }
   } catch (error) {
-    console.error("GTFSデータのインポート中にエラーが発生しました:", error);
+    console.error(
+      "GTFSデータのインポート中にエラーが発生しました:",
+      sanitizeGtfsLogError(error),
+    );
   } finally {
     await prisma.$disconnect();
   }
@@ -123,6 +139,9 @@ importGtfsData()
     process.exit(0);
   })
   .catch((error) => {
-    console.error("スクリプトの実行中にエラーが発生しました:", error);
+    console.error(
+      "スクリプトの実行中にエラーが発生しました:",
+      sanitizeGtfsLogError(error),
+    );
     process.exit(1);
   });

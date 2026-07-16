@@ -89,7 +89,7 @@ RUN echo "NEXT_PUBLIC_DISCUSSION_LIST_NADDR=$NEXT_PUBLIC_DISCUSSION_LIST_NADDR" 
 RUN cat .env
 
 # ビルド実行
-RUN npm run build
+RUN --mount=type=secret,id=transit_config,target=/app/transit-config.json,required=true npm run build
 
 # 開発用の環境変数
 ENV NODE_ENV=development

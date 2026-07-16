@@ -9,6 +9,17 @@ const directPrfToNostrKeyMock = jest
   .fn()
   .mockResolvedValue({ pubkey: "pubkey", alg: "test", credentialId: "credential-id" });
 const signEventWithPWKMock = jest.fn().mockResolvedValue({ id: "signed-event" });
+const passkeySessionSignEventMock = jest.fn().mockResolvedValue({ id: "session-signed-event" });
+const passkeySessionClearMock = jest.fn();
+const createPasskeySessionMock = jest.fn().mockResolvedValue({
+  pwk: { v: 1, pubkey: "pubkey", alg: "prf-direct", credentialId: "credential-id" },
+  signEvent: passkeySessionSignEventMock,
+  clear: passkeySessionClearMock,
+});
+
+jest.mock("../passkey-session", () => ({
+  createPasskeySession: (...args: unknown[]) => createPasskeySessionMock(...args),
+}));
 
 jest.mock("nosskey-sdk", () => ({
   PWKManager: class {
@@ -35,12 +46,13 @@ jest.mock("@/lib/nostr/nostr-service", () => ({
 }));
 
 function TestConsumer() {
-  const { createAccount, login, signEvent, user } = useAuth();
+  const { createAccount, login, logout, signEvent, user } = useAuth();
   return (
     <>
       <output>{user.isLoggedIn ? "ログイン済み" : "未ログイン"}</output>
       <button onClick={() => void createAccount("端末用パスキー")}>作成</button>
       <button onClick={() => void login()}>ログイン</button>
+      <button onClick={logout}>ログアウト</button>
       <button onClick={() => void signEvent({ kind: 1, content: "test" })}>
         署名
       </button>
@@ -58,6 +70,9 @@ describe("AuthProvider", () => {
     directPrfToNostrKeyMock.mockClear();
     signEventWithPWKMock.mockReset();
     signEventWithPWKMock.mockResolvedValue({ id: "signed-event" });
+    createPasskeySessionMock.mockClear();
+    passkeySessionSignEventMock.mockClear();
+    passkeySessionClearMock.mockClear();
   });
 
   it("does not publish a profile event", async () => {
@@ -86,7 +101,38 @@ describe("AuthProvider", () => {
 
     await screen.findByText("ログイン済み");
     expect(isPrfSupportedMock).not.toHaveBeenCalled();
-    expect(directPrfToNostrKeyMock).toHaveBeenCalledTimes(1);
+    expect(createPasskeySessionMock).toHaveBeenCalledTimes(1);
+    expect(directPrfToNostrKeyMock).not.toHaveBeenCalled();
+  });
+
+  it("reuses the login session for the first signature without another authentication", async () => {
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+    fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+    await screen.findByText("ログイン済み");
+
+    fireEvent.click(screen.getByRole("button", { name: "署名" }));
+
+    await waitFor(() => expect(passkeySessionSignEventMock).toHaveBeenCalledTimes(1));
+    expect(signEventWithPWKMock).not.toHaveBeenCalled();
+  });
+
+  it("destroys the in-memory passkey session on logout", async () => {
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+    fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+    await screen.findByText("ログイン済み");
+
+    fireEvent.click(screen.getByRole("button", { name: "ログアウト" }));
+
+    expect(passkeySessionClearMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("未ログイン")).toBeInTheDocument();
   });
 
   it("keeps the signing key cached for a normal interaction session", () => {

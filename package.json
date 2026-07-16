@@ -37,6 +37,7 @@
     "@nostr-dev-kit/ndk": "latest",
     "@prisma/client": "^6.19.3",
     "@react-pdf/renderer": "^4.3.0",
+    "@rx-nostr/crypto": "^3.1.6",
     "@types/luxon": "^3.4.2",
     "daisyui": "^5.0.50",
     "gtfs": "^4.17.0",

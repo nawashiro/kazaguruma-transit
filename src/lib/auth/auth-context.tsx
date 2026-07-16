@@ -15,6 +15,10 @@ import { createNostrService } from "@/lib/nostr/nostr-service";
 import { parseProfileEvent } from "@/lib/nostr/nostr-utils";
 import { getNostrServiceConfig } from "@/lib/config/discussion-config";
 import type { NostrEventDTO } from "@/lib/nostr/discussion-ndk-gateway";
+import {
+  createPasskeySession,
+  type PasskeySession,
+} from "@/lib/auth/passkey-session";
 import { logger } from "@/utils/logger";
 
 interface PWKEvent {
@@ -88,6 +92,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
     createNostrService(getNostrServiceConfig())
   );
   const signingQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const passkeySessionRef = useRef<PasskeySession | null>(null);
+  const passkeySessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+
+  const clearPasskeySession = () => {
+    passkeySessionRef.current?.clear();
+    passkeySessionRef.current = null;
+    if (passkeySessionTimeoutRef.current) {
+      clearTimeout(passkeySessionTimeoutRef.current);
+      passkeySessionTimeoutRef.current = null;
+    }
+  };
+
+  const storePasskeySession = (session: PasskeySession) => {
+    clearPasskeySession();
+    passkeySessionRef.current = session;
+    passkeySessionTimeoutRef.current = setTimeout(() => {
+      clearPasskeySession();
+    }, SIGNING_KEY_CACHE_TIMEOUT_MS);
+  };
 
   const loadProfile = useCallback(
     async (pubkey: string) => {
@@ -136,8 +161,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
 
     try {
-      // SDKのisPrfSupported()も実認証を行うため、鍵導出だけで対応可否を判定する。
-      const pwk = await pwkManager.directPrfToNostrKey();
+      const passkeySession = await createPasskeySession();
+      const pwk = passkeySession.pwk;
       if (!pwk) {
         throw new Error(
           "保存されたアカウント情報が見つかりません。新しくアカウントを作成してください。"
@@ -145,6 +170,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       const pubkey = pwk.pubkey;
+      storePasskeySession(passkeySession);
 
       setUser({
         pwk,
@@ -156,6 +182,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await loadProfile(pubkey);
       localStorage.setItem(PWK_STORAGE_KEY, JSON.stringify(pwk));
     } catch (error) {
+      clearPasskeySession();
       logger.error("Login failed:", error);
       const errorMessage = formatLoginError(error);
       setError(errorMessage);
@@ -206,6 +233,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       logger.log(`✅ Public key verified: ${publicKey}`);
 
       const pubkey = pwk.pubkey;
+      clearPasskeySession();
 
       setUser({
         pwk,
@@ -266,6 +294,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const logout = () => {
+    clearPasskeySession();
     setUser({
       pwk: null,
       pubkey: null,
@@ -293,10 +322,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     await previousSignature;
     try {
-      const signedEvent = (await pwkManager.signEventWithPWK(
-        event as unknown as PWKEvent,
-        user.pwk
-      )) as unknown as NostrEventDTO;
+      const passkeySession = passkeySessionRef.current;
+      const canReusePasskeySession =
+        passkeySession?.pwk.credentialId === user.pwk.credentialId;
+      const signedEvent = canReusePasskeySession
+        ? await passkeySession.signEvent(event as unknown as PWKEvent)
+        : ((await pwkManager.signEventWithPWK(
+            event as unknown as PWKEvent,
+            user.pwk
+          )) as unknown as NostrEventDTO);
       return signedEvent;
     } catch (error) {
       logger.error("Failed to sign event:", error);
@@ -315,6 +349,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     loadStoredPWK();
   }, [loadStoredPWK]);
+
+  useEffect(
+    () => () => {
+      passkeySessionRef.current?.clear();
+      if (passkeySessionTimeoutRef.current) {
+        clearTimeout(passkeySessionTimeoutRef.current);
+      }
+    },
+    []
+  );
 
   const value: AuthContextType = {
     user,

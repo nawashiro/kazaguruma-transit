@@ -6,6 +6,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import { PWKManager } from "nosskey-sdk";
 import type { PWKBlob } from "nosskey-sdk";
@@ -41,6 +42,29 @@ interface AuthProviderProps {
 }
 
 const PWK_STORAGE_KEY = "nosskey_pwk";
+const SIGNING_KEY_CACHE_TIMEOUT_MS = 30 * 60 * 1000;
+
+function formatLoginError(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return "ログインに失敗しました";
+  }
+
+  const normalizedMessage = `${error.name} ${error.message}`.toLowerCase();
+  if (
+    normalizedMessage.includes("notallowed") ||
+    normalizedMessage.includes("not allowed") ||
+    normalizedMessage.includes("abort") ||
+    normalizedMessage.includes("cancel") ||
+    normalizedMessage.includes("キャンセル")
+  ) {
+    return "パスキー認証がキャンセルされました。もう一度お試しください。";
+  }
+  if (normalizedMessage.includes("prf")) {
+    return "この環境では必要なパスキー機能を利用できません。PRF対応ブラウザをご利用ください。";
+  }
+
+  return error.message || "ログインに失敗しました";
+}
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<UserAuth>({
@@ -53,16 +77,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [error, setError] = useState<string | null>(null);
   const [pwkManager] = useState(() => {
     const manager = new PWKManager();
-    // 秘密鍵を300秒間キャッシュする設定
+    // 通常操作中の認証反復を抑えつつ、長時間の保持を避ける。
     manager.setCacheOptions({
       enabled: true,
-      timeoutMs: 300000, // 300秒 = 5分
+      timeoutMs: SIGNING_KEY_CACHE_TIMEOUT_MS,
     });
     return manager;
   });
   const [nostrService] = useState(() =>
     createNostrService(getNostrServiceConfig())
   );
+  const signingQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const loadProfile = useCallback(
     async (pubkey: string) => {
@@ -111,14 +136,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
 
     try {
-      const isPrfSupported = await pwkManager.isPrfSupported();
-      if (!isPrfSupported) {
-        throw new Error(
-          "PRF拡張がサポートされていません。WebAuthnに対応したブラウザをご利用ください。"
-        );
-      }
-
-      // 保存されたクレデンシャルIDを取得
+      // SDKのisPrfSupported()も実認証を行うため、鍵導出だけで対応可否を判定する。
       const pwk = await pwkManager.directPrfToNostrKey();
       if (!pwk) {
         throw new Error(
@@ -139,9 +157,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem(PWK_STORAGE_KEY, JSON.stringify(pwk));
     } catch (error) {
       logger.error("Login failed:", error);
-      setError(
-        error instanceof Error ? error.message : "ログインに失敗しました"
-      );
+      const errorMessage = formatLoginError(error);
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -241,6 +259,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -266,6 +285,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       throw new Error("Not logged in");
     }
 
+    const previousSignature = signingQueueRef.current;
+    let releaseSignatureQueue: (() => void) | undefined;
+    signingQueueRef.current = new Promise<void>((resolve) => {
+      releaseSignatureQueue = resolve;
+    });
+
+    await previousSignature;
     try {
       const signedEvent = (await pwkManager.signEventWithPWK(
         event as unknown as PWKEvent,
@@ -275,6 +301,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       logger.error("Failed to sign event:", error);
       throw error;
+    } finally {
+      releaseSignatureQueue?.();
     }
   };
 

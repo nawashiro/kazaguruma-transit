@@ -156,11 +156,13 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
         loading={isGenerating}
       >
         {!isGenerating && <FiDownload className="h-5 w-5" aria-hidden="true" />}
-        {isGenerating ? (
-          "生成中..."
-        ) : (
-          "印刷する"
-        )}
+        <span>
+          {isGenerating ? (
+            "生成中..."
+          ) : (
+            "印刷する"
+          )}
+        </span>
       </Button>
     </>
   );

@@ -643,12 +643,20 @@ export default function LocationsPage() {
                 千代田区で開催されるイベント情報はこちら。
               </p>
               <a
+                href="https://chiyolab.jp/comunity_event"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
+              >
+                <p>ちよだコミュニティラボ</p>
+              </a>
+              <a
                 href="https://visit-chiyoda.tokyo/app/event"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
-                <p>千代田区観光協会ウェブサイトへ</p>
+                <p>千代田区観光協会</p>
               </a>
               <a
                 href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
@@ -656,7 +664,7 @@ export default function LocationsPage() {
                 rel="noopener noreferrer"
                 className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
-                <p>千代田区ウェブサイトへ</p>
+                <p>千代田区ウェブサイト</p>
               </a>
             </CarouselCard>
           </div>

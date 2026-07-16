@@ -86,7 +86,7 @@ export default function OriginSelector({
 
   return (
     <>
-      <Card testId="origin-selector-card" title="次に出発地を選択してください">
+      <Card testId="origin-selector-card" title="出発地を選択してください">
         <form onSubmit={handleAddressSubmit} className="space-y-4">
           <InputField
             placeholder="千代田区役所"

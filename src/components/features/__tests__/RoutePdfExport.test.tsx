@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import RoutePdfExport from "../RoutePdfExport";
 
@@ -60,6 +60,7 @@ jest.mock("react-to-print", () => ({
 // window.URL.createObjectURLのモック
 const mockCreateObjectURL = jest.fn();
 const mockRevokeObjectURL = jest.fn();
+let mockAnchorClick: jest.SpyInstance;
 
 beforeAll(() => {
   // window.URLのモックを設定
@@ -77,6 +78,13 @@ beforeEach(() => {
   mockCreateObjectURL.mockReset();
   mockRevokeObjectURL.mockReset();
   mockCreateObjectURL.mockReturnValue("blob:mock-url");
+  mockAnchorClick = jest
+    .spyOn(HTMLAnchorElement.prototype, "click")
+    .mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  mockAnchorClick.mockRestore();
 });
 
 describe("RoutePdfExport", () => {
@@ -159,7 +167,78 @@ describe("RoutePdfExport", () => {
     });
   });
 
-  it("APIエラー時にエラーメッセージが表示されること", async () => {
+  it("PDF生成中もアイコンのDOMノードを維持すること", async () => {
+    let resolvePdfResponse: ((response: object) => void) | undefined;
+    const pdfResponse = new Promise<object>((resolve) => {
+      resolvePdfResponse = resolve;
+    });
+    (global.fetch as jest.Mock).mockReturnValue(pdfResponse);
+
+    render(
+      <RoutePdfExport
+        originStop={mockOriginStop}
+        destinationStop={mockDestinationStop}
+        routes={mockRoutes}
+        type="direct"
+        transfers={0}
+      />
+    );
+
+    const button = screen.getByRole("button", { name: "印刷する" });
+    const downloadIcon = button.querySelector("svg");
+    expect(downloadIcon).not.toBeNull();
+
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "生成中..." })).toBeDisabled();
+    });
+    expect(button.querySelector("svg")).toBe(downloadIcon);
+
+    await act(async () => {
+      resolvePdfResponse?.({
+        ok: true,
+        blob: () =>
+          Promise.resolve(new Blob(["test"], { type: "application/pdf" })),
+      });
+    });
+    expect(screen.getByRole("button", { name: "印刷する" })).toBeEnabled();
+  });
+
+  it("ダウンロードリンクが外部で除去されてもエラー表示に切り替わらないこと", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      blob: () =>
+        Promise.resolve(new Blob(["test"], { type: "application/pdf" })),
+    });
+    mockAnchorClick.mockImplementation(function removeClickedAnchor(
+      this: HTMLAnchorElement
+    ) {
+      this.remove();
+    });
+
+    render(
+      <RoutePdfExport
+        originStop={mockOriginStop}
+        destinationStop={mockDestinationStop}
+        routes={mockRoutes}
+        type="direct"
+        transfers={0}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "印刷する" }));
+
+    await waitFor(() => {
+      expect(mockRevokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
+      expect(screen.queryByText("PDF生成エラー")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "印刷する" })
+      ).toBeEnabled();
+    });
+  });
+
+  it("APIエラー時に簡潔で再試行可能なエラーメッセージが表示されること", async () => {
     // エラーレスポンスを返すようにモックを設定
     (global.fetch as jest.Mock).mockImplementation((url) => {
       if (url === "/api/pdf/generate") {
@@ -195,9 +274,23 @@ describe("RoutePdfExport", () => {
       fireEvent.click(button);
     });
 
-    // エラーメッセージの表示を待機
+    // エラー表示に余分な操作を追加せず、再試行は本来の操作から行える。
     await waitFor(() => {
-      expect(screen.getByText("PDF生成エラー")).toBeInTheDocument();
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveTextContent(
+        "PDF生成エラー: サーバーエラーが発生しました"
+      );
+      expect(alert).toHaveClass(
+        "alert-error",
+        "alert-soft",
+        "text-base-content!"
+      );
+      expect(
+        screen.queryByRole("button", { name: "閉じる" })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "印刷する" })
+      ).toBeEnabled();
     });
   });
 });

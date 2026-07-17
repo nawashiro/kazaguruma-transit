@@ -10,5 +10,6 @@ npm-debug.log
 *.md
 *.log
 coverage/
+transit-config.json
 Dockerfile*
 .dockerignore

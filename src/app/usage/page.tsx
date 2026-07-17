@@ -48,7 +48,7 @@ export default function Usage() {
 
         <Card id="basic-usage" className="shadow-md" title="基本的な使いかた">
           <div className="space-y-4">
-            <img src="/images/route.gif" alt="ルートをさがす操作" />
+            <img src="/images/route.gif" alt="ルートをさがす操作" className="w-full"/>
             <p>
               風ぐるま乗換案内は、千代田区内の移動をサポートするためのサービスです。以下のステップで簡単に最適な経路を検索できます。
             </p>
@@ -93,7 +93,7 @@ export default function Usage() {
           title="風ぐるまで行ける場所の探し方"
         >
           <div className="space-y-4">
-            <img src="/images/locations.gif" alt="場所をさがす操作" />
+            <img src="/images/locations.gif" alt="場所をさがす操作" className="w-full"/>
             <p>
               <Link href="/locations" className="link">
                 場所を探す
@@ -145,7 +145,7 @@ export default function Usage() {
           title="ふりがなをつける / 消す"
         >
           <div className="space-y-4">
-            <img src="/images/rubyful.gif" alt="ルビフルボタンの操作" />
+            <img src="/images/rubyful.gif" alt="ルビフルボタンの操作" className="w-full"/>
             <p>
               このサイトは、一般財団法人ルビ財団が提供するルビフルボタンを備えています。
             </p>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ExclamationCircleIcon,
   InformationCircleIcon,
@@ -21,12 +21,13 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const isSubmittingRef = useRef(false);
   const { login, createAccount, error } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isLoading) return;
+    if (isSubmittingRef.current) return;
 
     const isCreateMode = mode === "create";
     const isPasskeyNameEmpty = !passkeyName.trim();
@@ -36,6 +37,7 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
     if (isCreateMode && isPasskeyNameEmpty) return;
     if (areTermsNotAccepted) return;
 
+    isSubmittingRef.current = true;
     setIsLoading(true);
     try {
       if (isCreateMode) {
@@ -52,6 +54,7 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
       const actionType = isCreateMode ? "Account creation" : "Login";
       logger.error(`${actionType} failed:`, error);
     } finally {
+      isSubmittingRef.current = false;
       setIsLoading(false);
     }
   };

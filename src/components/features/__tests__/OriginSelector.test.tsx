@@ -33,7 +33,7 @@ describe("OriginSelector", () => {
     render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
 
     expect(
-      screen.getByText("次に出発地を選択してください")
+      screen.getByText("出発地を選択してください")
     ).toBeInTheDocument();
     expect(screen.getByTestId("address-input")).toBeInTheDocument();
     expect(screen.getByTestId("search-button")).toBeInTheDocument();
@@ -262,7 +262,7 @@ describe("OriginSelector", () => {
 
     const heading = section.querySelector(".card-title");
     expect(heading).toBeInTheDocument();
-    expect(heading).toHaveTextContent("次に出発地を選択してください");
+    expect(heading).toHaveTextContent("出発地を選択してください");
 
     // 入力フィールドの確認
     const addressInput = screen.getByTestId("address-input");

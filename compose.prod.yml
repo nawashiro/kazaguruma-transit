@@ -14,6 +14,8 @@ services:
         NEXT_PUBLIC_DISCUSSIONS_ENABLED: ${NEXT_PUBLIC_DISCUSSIONS_ENABLED}
         NEXT_PUBLIC_LOCATIONS_DATA_VERSION: ${NEXT_PUBLIC_LOCATIONS_DATA_VERSION}
         NEXT_PUBLIC_DISCUSSION_LIST_NADDR: ${NEXT_PUBLIC_DISCUSSION_LIST_NADDR}
+      secrets:
+        - transit_config
     ports:
       - "3000:3000"
     env_file:
@@ -22,6 +24,9 @@ services:
       - NODE_ENV=production
     restart: unless-stopped
     command: ["npm", "run", "start"]
+    secrets:
+      - source: transit_config
+        target: /app/transit-config.json
     networks:
       - app-network
 
@@ -41,3 +46,7 @@ networks:
 volumes:
   temp-data:
     driver: local
+
+secrets:
+  transit_config:
+    file: ./transit-config.json

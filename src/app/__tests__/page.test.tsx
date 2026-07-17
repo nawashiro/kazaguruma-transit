@@ -81,6 +81,16 @@ jest.mock("@/components/features/RoutePdfExport", () => () => (
   <div data-testid="mock-pdf-export" />
 ));
 
+jest.mock("@/components/discussion", () => ({
+  BusStopDiscussion: () => <div data-testid="mock-bus-stop-discussion" />,
+  BusStopMemo: () => <div data-testid="mock-bus-stop-memo" />,
+  getBusStopMemoData: jest.fn().mockResolvedValue(new Map()),
+}));
+
+jest.mock("@/lib/config/discussion-config", () => ({
+  isDiscussionsEnabled: () => true,
+}));
+
 jest.mock(
   "@/components/ui/Button",
   () =>
@@ -219,6 +229,52 @@ describe("Home", () => {
     const routeDisplay = screen.getByTestId("mock-route-display");
     expect(
       routeDisplay.compareDocumentPosition(resetButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  test("印刷ボタンを経路ナビの直後かつバス停メモの直前に表示する", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: {
+          journeys: [
+            {
+              departure: "09:00",
+              arrival: "09:15",
+              duration: 15,
+              transfers: 0,
+              route: "テスト路線",
+              from: "出発バス停",
+              to: "到着バス停",
+            },
+          ],
+          stops: [
+            { id: "origin", name: "出発バス停", distance: 100 },
+            { id: "destination", name: "到着バス停", distance: 200 },
+          ],
+        },
+      }),
+    });
+
+    render(<Home />);
+    fireEvent.click(screen.getByTestId("mock-destination-selector"));
+    fireEvent.click(screen.getByTestId("mock-origin-selector"));
+    fireEvent.click(screen.getByTestId("mock-date-time-selector"));
+    fireEvent.click(screen.getByTestId("search-route"));
+
+    const routeDisplay = await screen.findByTestId("mock-route-display");
+    const pdfExport = screen.getByTestId("mock-pdf-export");
+    const busStopMemo = screen.getByTestId("mock-bus-stop-memo");
+
+    expect(
+      routeDisplay.compareDocumentPosition(pdfExport) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      pdfExport.compareDocumentPosition(busStopMemo) &
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
   });

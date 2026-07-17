@@ -115,11 +115,13 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
       a.href = url;
       a.download = `乗換案内_${props.originStop.stopName}_${props.destinationStop.stopName}.pdf`;
       document.body.appendChild(a);
-      a.click();
-
-      // クリーンアップ
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      try {
+        a.click();
+      } finally {
+        // ブラウザ拡張などが先にリンクを除去しても例外にしない。
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      }
     } catch (error) {
       logger.error("PDF生成エラー:", error);
       setPdfError(
@@ -132,35 +134,38 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
     }
   };
 
-  // PDF生成中のエラー表示
-  if (pdfError) {
-    return (
-      <div className="alert alert-error mt-4">
-        <div className="flex-1">
-          <div className="font-bold">PDF生成エラー</div>
-          <div>{pdfError}</div>
-        </div>
-        <Button type="button" secondary onClick={() => setPdfError(null)}>
-          閉じる
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <>
+      {pdfError && (
+        <div
+          role="alert"
+          className="alert alert-error alert-soft mt-4 text-base-content!"
+        >
+          <span>PDF生成エラー: {pdfError}</span>
+        </div>
+      )}
       <Button
         onClick={handleGeneratePdf}
         className="mt-4"
         disabled={isGenerating}
         loading={isGenerating}
       >
-        {!isGenerating && <FiDownload className="h-5 w-5" aria-hidden="true" />}
-        {isGenerating ? (
-          "生成中..."
-        ) : (
-          "印刷する"
-        )}
+        <FiDownload
+          className={`h-5 w-5 ${isGenerating ? "hidden" : ""}`}
+          aria-hidden="true"
+        />
+        <span
+          className={`ruby-text ${isGenerating ? "hidden" : ""}`}
+          aria-hidden={isGenerating}
+        >
+          印刷する
+        </span>
+        <span
+          className={`ruby-text ${isGenerating ? "" : "hidden"}`}
+          aria-hidden={!isGenerating}
+        >
+          生成中...
+        </span>
       </Button>
     </>
   );

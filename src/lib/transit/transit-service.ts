@@ -12,28 +12,18 @@ import {
 import { loadConfig, TransitConfig } from "../config/config";
 import { prisma } from "../db/prisma";
 import { logger } from "@/utils/logger";
-import { TimeTableRouter } from "./route-algorithm";
+import {
+  ROUTE_PARAMS,
+  TimeTableRouter,
+  type TimeTableRouteResult,
+} from "./route-algorithm";
 import { TRANSIT_PARAMS } from "./transit-params";
-
-// route-algorithm.ts の TimeTableRouteResult インターフェース
-interface TimeTableRouteResult {
-  nodes: Array<{
-    stopId: string;
-    stopName: string;
-    tripId: string;
-    routeId: string;
-    routeName: string;
-    arrivalTime: string;
-    departureTime: string;
-    stopSequence: number;
-    stopLat: number;
-    stopLon: number;
-  }>;
-  transfers: number;
-  totalDuration: number;
-  departure: string;
-  arrival: string;
-}
+import {
+  calculateGridWalkingDistanceKm,
+  calculateJourneyDurationMinutes,
+  calculateRouteSearchTime,
+  parseGtfsTime,
+} from "./walking";
 
 interface StopLocation {
   lat: number;
@@ -701,67 +691,60 @@ export class TransitService {
   ): Promise<{ journeys: Journey[]; stops: NearbyStop[] }> {
     try {
       // 出発地点から最初のバス停までの徒歩距離を計算
-      const walkToFirstStop = this.calculateDistance(
-        origin.lat,
-        origin.lng,
-        from.lat,
-        from.lng
+      const walkToFirstStop = calculateGridWalkingDistanceKm(
+        this.calculateDistance(origin.lat, origin.lng, from.lat, from.lng)
       );
 
       // 徒歩時間（分）を計算
       const walkTimeToFirstStop =
         walkToFirstStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
 
-      // 時刻表ベースのダイクストラアルゴリズムを使用して経路を検索
+      const walkFromLastStop = calculateGridWalkingDistanceKm(
+        this.calculateDistance(
+          to.lat,
+          to.lng,
+          destination.lat,
+          destination.lng
+        )
+      );
+      const walkTimeFromLastStop =
+        walkFromLastStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
+
       const timeTableRouter = new TimeTableRouter();
       const userRequestedTime = time ? new Date(time) : new Date();
 
       // 出発時刻指定の場合、バス停までの徒歩時間を考慮した時刻を計算
-      let departureTime = userRequestedTime;
+      const routeSearchTime = calculateRouteSearchTime(
+        userRequestedTime,
+        isDeparture,
+        walkTimeToFirstStop,
+        walkTimeFromLastStop
+      );
       if (isDeparture) {
-        // バス停までの所要時間を計算し、実際のバス停出発可能時刻を算出
-        const walkTimeMs = Math.ceil(walkTimeToFirstStop) * 60 * 1000; // 分をミリ秒に変換（切り上げ）
-        departureTime = new Date(userRequestedTime.getTime() + walkTimeMs);
-
         logger.log(
           `[findConventionalRoute] バス停到着時間の調整: 出発時刻=${this.formatTime(
             userRequestedTime
           )}, ` +
             `徒歩時間=${Math.ceil(
               walkTimeToFirstStop
-            )}分, バス停到着時刻=${this.formatTime(departureTime)}`
-        );
+            )}分, バス停到着時刻=${this.formatTime(routeSearchTime)}`
+          );
       }
 
-      // 最大2回の乗換、3時間の時間枠で検索
       const routes = await timeTableRouter.findOptimalRoute(
         from.stopId,
         to.stopId,
-        departureTime,
+        routeSearchTime,
         isDeparture,
-        2,
-        180
+        ROUTE_PARAMS.MAX_TRANSFERS,
+        ROUTE_PARAMS.DEFAULT_TIME_WINDOW
       );
 
       if (routes.length === 0) {
         return { journeys: [], stops: [] };
       }
 
-      // ルートを整理して最適なものを選択
-      // まず直行便と乗換ありのルートを分ける
-      const directRoutes = routes.filter((route) => route.transfers === 0);
-      const transferRoutes = routes.filter((route) => route.transfers > 0);
-
-      // 経路選択ロジック
-      // 直行便が存在する場合は優先
-      // 到着時刻指定と出発時刻指定で異なるソート方法を使用
-      const routesToConsider = directRoutes.length > 0 ? directRoutes : transferRoutes;
-      
-      if (routesToConsider.length === 0) {
-        return { journeys: [], stops: [] };
-      }
-
-      const selectedRoute = this.selectOptimalRoute(routesToConsider, isDeparture);
+      const selectedRoute = routes[0];
 
       // 使用する停留所のリストを作成
       const stops: NearbyStop[] = [
@@ -799,20 +782,8 @@ export class TransitService {
         },
       ];
 
-      // 最後のバス停から目的地までの徒歩距離
-      const walkFromLastStop = this.calculateDistance(
-        to.lat,
-        to.lng,
-        destination.lat,
-        destination.lng
-      );
-
       // 合計徒歩距離
       const totalWalkingDistance = walkToFirstStop + walkFromLastStop;
-
-      // 残りの徒歩時間（分）
-      const walkTimeFromLastStop =
-        walkFromLastStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
 
       // 内部のRouteJourneyをAPIのJourney型に変換
       const journey = this.convertTimeTableRouteToJourney(
@@ -821,9 +792,14 @@ export class TransitService {
         to
       );
 
-      // 総所要時間 = バスの所要時間 + 徒歩時間
-      const totalDuration =
-        journey.durationMinutes + walkTimeToFirstStop + walkTimeFromLastStop;
+      const totalDuration = calculateJourneyDurationMinutes({
+        isDeparture,
+        requestedTime: this.formatTime(userRequestedTime),
+        transitDepartureTime: selectedRoute.departure,
+        transitArrivalTime: selectedRoute.arrival,
+        walkToFirstStopMinutes: walkTimeToFirstStop,
+        walkFromLastStopMinutes: walkTimeFromLastStop,
+      });
 
       // Journey型に変換
       const convertedJourney = this.transformToJourney(journey, from, to);
@@ -926,18 +902,16 @@ export class TransitService {
           continue;
         }
 
-        const walkToFirstStop = this.calculateDistance(
-          origin.lat,
-          origin.lng,
-          originStop.lat,
-          originStop.lng
+        const walkToFirstStop = calculateGridWalkingDistanceKm(
+          this.calculateDistance(
+            origin.lat,
+            origin.lng,
+            originStop.lat,
+            originStop.lng
+          )
         );
 
         const walkTimeToFirstStop = walkToFirstStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
-
-        const departureTime = isDeparture 
-          ? this.calculateDepartureTimeWithWalk(userRequestedTime, walkTimeToFirstStop, originStop.name)
-          : userRequestedTime;
 
         for (const destStop of topDestStops) {
           if (!destStop.lat || !destStop.lng || originStop.id === destStop.id) {
@@ -959,18 +933,35 @@ export class TransitService {
               stopName: destStop.name,
             };
 
+            const walkFromLastStop = calculateGridWalkingDistanceKm(
+              this.calculateDistance(
+                destStop.lat,
+                destStop.lng,
+                destination.lat,
+                destination.lng
+              )
+            );
+            const walkTimeFromLastStop =
+              walkFromLastStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
+            const routeSearchTime = calculateRouteSearchTime(
+              userRequestedTime,
+              isDeparture,
+              walkTimeToFirstStop,
+              walkTimeFromLastStop
+            );
+
             // 経路を検索
             const routes = await timeTableRouter.findOptimalRoute(
               originStop.id,
               destStop.id,
-              departureTime,
+              routeSearchTime,
               isDeparture,
-              2, // 最大2回の乗換
-              180 // 3時間の時間枠
+              ROUTE_PARAMS.MAX_TRANSFERS,
+              ROUTE_PARAMS.DEFAULT_TIME_WINDOW
             );
 
             if (routes.length > 0) {
-              const selectedRoute = this.selectOptimalRoute(routes, isDeparture);
+              const selectedRoute = routes[0];
 
               const routeResult = this.buildRouteResult(
                 selectedRoute,
@@ -978,8 +969,8 @@ export class TransitService {
                 to,
                 walkToFirstStop,
                 walkTimeToFirstStop,
-                destStop,
-                destination,
+                walkFromLastStop,
+                walkTimeFromLastStop,
                 isDeparture,
                 time,
                 userRequestedTime
@@ -1248,42 +1239,7 @@ export class TransitService {
    * 所要時間を分単位で計算する
    */
   private calculateDurationMinutes(startTime: string, endTime: string): number {
-    const start = new Date(`2000-01-01T${startTime}`);
-    const end = new Date(`2000-01-01T${endTime}`);
-    return (end.getTime() - start.getTime()) / (60 * 1000);
-  }
-
-  /**
-   * 最適なルートを選択する
-   */
-  private selectOptimalRoute(routes: TimeTableRouteResult[], isDeparture: boolean): TimeTableRouteResult {
-    const sortComparator = (firstRoute: TimeTableRouteResult, secondRoute: TimeTableRouteResult) => {
-      const timeField = isDeparture ? 'departure' : 'arrival';
-      const firstTime = new Date(`2000-01-01T${firstRoute[timeField]}`).getTime();
-      const secondTime = new Date(`2000-01-01T${secondRoute[timeField]}`).getTime();
-      
-      return isDeparture 
-        ? firstTime - secondTime  // 出発時刻指定の場合：昇順
-        : secondTime - firstTime; // 到着時刻指定の場合：降順
-    };
-
-    return routes.sort(sortComparator)[0];
-  }
-
-  /**
-   * 徒歩時間を考慮した出発時刻を計算する
-   */
-  private calculateDepartureTimeWithWalk(userRequestedTime: Date, walkTimeMinutes: number, stopName: string): Date {
-    const walkTimeMs = Math.ceil(walkTimeMinutes) * 60 * 1000;
-    const departureTime = new Date(userRequestedTime.getTime() + walkTimeMs);
-
-    logger.log(
-      `[findRouteWithNearbyStops] バス停到着時間の調整 (${stopName}): ` +
-        `出発時刻=${this.formatTime(userRequestedTime)}, ` +
-        `徒歩時間=${Math.ceil(walkTimeMinutes)}分, バス停到着時刻=${this.formatTime(departureTime)}`
-    );
-
-    return departureTime;
+    return (parseGtfsTime(endTime) - parseGtfsTime(startTime)) / 60;
   }
 
   /**
@@ -1295,24 +1251,23 @@ export class TransitService {
     to: StopLocation,
     walkToFirstStop: number,
     walkTimeToFirstStop: number,
-    destStop: NearbyStop,
-    destination: { lat: number; lng: number },
+    walkFromLastStop: number,
+    walkTimeFromLastStop: number,
     isDeparture: boolean,
     time?: string,
     userRequestedTime?: Date
   ) {
-    const walkFromLastStop = this.calculateDistance(
-      destStop.lat!,
-      destStop.lng!,
-      destination.lat,
-      destination.lng
-    );
-
     const totalWalkingDistance = walkToFirstStop + walkFromLastStop;
-    const walkTimeFromLastStop = walkFromLastStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
 
     const journey = this.convertTimeTableRouteToJourney(selectedRoute, from, to);
-    const totalDuration = journey.durationMinutes + walkTimeToFirstStop + walkTimeFromLastStop;
+    const totalDuration = calculateJourneyDurationMinutes({
+      isDeparture,
+      requestedTime: this.formatTime(userRequestedTime ?? new Date()),
+      transitDepartureTime: selectedRoute.departure,
+      transitArrivalTime: selectedRoute.arrival,
+      walkToFirstStopMinutes: walkTimeToFirstStop,
+      walkFromLastStopMinutes: walkTimeFromLastStop,
+    });
 
     const convertedJourney = this.transformToJourney(journey, from, to);
     convertedJourney.walkingDistanceKm = totalWalkingDistance;
@@ -1328,16 +1283,6 @@ export class TransitService {
       totalWalkingDistance,
       totalDuration,
     };
-  }
-
-  /**
-   * 時間差を分単位で計算する
-   */
-  private calculateTimeDifference(time1: string, time2: string): number {
-    const t1 = new Date(`2000-01-01T${time1}`);
-    const t2 = new Date(`2000-01-01T${time2}`);
-    const timeDiff = (t2.getTime() - t1.getTime()) / (60 * 1000);
-    return timeDiff;
   }
 
   /**

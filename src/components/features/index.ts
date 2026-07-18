@@ -1,6 +1,5 @@
 export { default as DateTimeSelector } from './DateTimeSelector';
 export { default as DestinationSelector } from './DestinationSelector';
-export { default as FirstVisitGuideModal } from './FirstVisitGuideModal';
 export { default as IntegratedRouteDisplay } from './IntegratedRouteDisplay';
 export { default as LocationDetailModal } from './LocationDetailModal';
 export { default as LocationSuggestions } from './LocationSuggestions';

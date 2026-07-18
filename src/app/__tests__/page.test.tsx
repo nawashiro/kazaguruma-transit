@@ -125,11 +125,6 @@ jest.mock(
       isOpen ? <div data-testid="mock-rate-limit-modal" /> : null
 );
 
-// 初心者ガイド関連のコンポーネントもモック
-jest.mock("@/components/features/FirstVisitGuideModal", () => () => (
-  <div data-testid="mock-first-visit-modal">初回訪問ガイドモーダル</div>
-));
-
 describe("Home", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -195,11 +190,10 @@ describe("Home", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("初回訪問ガイドモーダルがメインページに含まれている", () => {
+  test("初回訪問ガイドモーダルがメインページに含まれていない", () => {
     render(<Home />);
 
-    // 初回訪問ガイドモーダルが含まれていることを確認
-    expect(screen.getByTestId("mock-first-visit-modal")).toBeInTheDocument();
+    expect(screen.queryByText("風ぐるまは初めてですか？")).not.toBeInTheDocument();
   });
 
   test("リセットボタンが上部に表示され、キーボード順では各操作の後になる", async () => {

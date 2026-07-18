@@ -14,7 +14,6 @@ import Card from "@/components/ui/Card";
 import { TransitFormData, Location } from "@/types/core";
 import { logger } from "@/utils/logger";
 import RateLimitModal from "@/components/features/RateLimitModal";
-import FirstVisitGuideModal from "@/components/features/FirstVisitGuideModal";
 import AwardRecognition from "@/components/features/AwardRecognition";
 import {
   BusStopDiscussion,
@@ -752,9 +751,6 @@ export default function Home() {
       <div className="mb-6">
         <AwardRecognition />
       </div>
-
-      {/* 初回訪問ガイドモーダル */}
-      <FirstVisitGuideModal />
 
       <div className="space-y-4">
         <div aria-live="polite" className="space-y-4">

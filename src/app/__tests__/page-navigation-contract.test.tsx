@@ -20,9 +20,6 @@ jest.mock("@/components/features/RoutePdfExport", () => function MockRoutePdfExp
 jest.mock("@/components/features/RateLimitModal", () => function MockRateLimitModal() {
   return null;
 });
-jest.mock("@/components/features/FirstVisitGuideModal", () => function MockFirstVisitGuideModal() {
-  return null;
-});
 jest.mock("@/components/ui/Button", () => function MockButton({ children }: { children: React.ReactNode }) {
   return <button>{children}</button>;
 });

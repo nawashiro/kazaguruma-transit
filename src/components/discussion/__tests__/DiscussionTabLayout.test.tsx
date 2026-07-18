@@ -91,8 +91,16 @@ describe("DiscussionTabLayout", () => {
 
       // Main tab should be selected when on main path
       expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+      expect(tabs[0]).toHaveAttribute(
+        "aria-controls",
+        "discussion-content-panel",
+      );
       expect(tabs[1]).toHaveAttribute("aria-selected", "false");
       expect(tabs[2]).toHaveAttribute("aria-selected", "false");
+      expect(screen.getByRole("tabpanel")).toHaveAttribute(
+        "aria-labelledby",
+        "discussion-content-0-tab",
+      );
     });
 
     it("renders and selects the all posts tab on the approval path", () => {

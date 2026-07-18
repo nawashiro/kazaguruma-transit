@@ -9,6 +9,7 @@ import PageHeader from "@/components/layouts/PageHeader";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
+import { useDiscussionContentData } from "@/components/discussion/DiscussionContentDataProvider";
 import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
@@ -16,18 +17,14 @@ import {
 } from "@/lib/config/discussion-config";
 import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
 import { loadKnownDiscussionData, saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
-import { createDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
-import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
 import { ApprovalStatusTabs } from "@/components/discussion/ApprovalStatusTabs";
 import {
   buildDisabledActionState,
   DisabledReasonText,
 } from "@/components/discussion/PermissionGuards";
-import { createNostrService } from "@/lib/nostr/nostr-service";
+import { createNostrService, type Event } from "@/lib/nostr/nostr-service";
 import {
-  parsePostEvent,
-  parseApprovalEvent,
   formatRelativeTime,
   getAdminPubkeyHex,
   isModerator,
@@ -42,7 +39,6 @@ import {
   CheckBadgeIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import type { Event } from "@/lib/nostr/nostr-service";
 import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
@@ -58,67 +54,32 @@ export default function PostApprovalPage() {
   const isDiscussionLoading = discussionMeta?.isLoading ?? false;
   const discussionCompletionReason = discussionMeta?.completionReason ?? null;
 
-  const [posts, setPosts] = useState<DiscussionPost[]>([]);
-  const [approvals, setApprovals] = useState<PostApproval[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [approvalState, setApprovalState] = useState<"approved" | "unapproved" | "unknown">("unknown");
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
-  const postsEventsRef = useRef<Event[]>([]);
-  const approvalEventsRef = useRef<Event[]>([]);
   const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
-  const completionReasonRef = useRef<"eose" | "idle-timeout" | "hard-timeout" | "cancelled">("eose");
-
-  const mergeStreamEvents = useCallback((current: Event[], incoming: Event[]): Event[] => {
-    const byId = new Map(current.map((event) => [event.id, event]));
-    incoming.forEach((event) => byId.set(event.id, event));
-    return Array.from(byId.values()).sort((left, right) => right.created_at - left.created_at || left.id.localeCompare(right.id));
-  }, []);
 
   const { user, signEvent } = useAuth();
+  const {
+    posts,
+    approvals,
+    isLoading,
+    completionReason,
+    approvalState,
+    reload,
+    mergeModerationEvents,
+    addApproval,
+    removeApproval,
+  } = useDiscussionContentData();
 
   // Parse naddr and extract discussion info
   const discussionInfo = useMemo(() => {
     if (!naddrParam) return null;
     return extractDiscussionFromNaddr(naddrParam);
   }, [naddrParam]);
-  const rebuildFromEvents = useCallback(() => {
-    const relayCandidates = selectRelayCandidates({
-      hints: discussionInfo?.relays,
-      successful: discussionInfo ? loadKnownDiscussionData<unknown, Event>(discussionInfo.discussionId)?.successfulRelays : [],
-      configured: (nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
-      defaults: [],
-      limit: readStrategy.relayLimit,
-    });
-    const snapshot = createDiscussionModerationSnapshot({
-      discussionId: discussionInfo?.discussionId ?? "",
-      primaryEvents: postsEventsRef.current,
-      approvalEvents: approvalEventsRef.current,
-      relayCandidates,
-      attemptedRelayUrls: relayCandidates.map((candidate) => candidate.url),
-      completionReason: completionReasonRef.current,
-    });
-    setApprovalState(snapshot.approvalState);
-    const parsedApprovals = approvalEventsRef.current
-      .map(parseApprovalEvent)
-      .filter((a): a is PostApproval => a !== null);
-
-    const parsedPosts = snapshot.primaryEvents
-      .map((event) => parsePostEvent(event, parsedApprovals))
-      .filter((p): p is DiscussionPost => p !== null)
-      .sort((a, b) => b.createdAt - a.createdAt);
-
-    setApprovals(parsedApprovals);
-    setPosts(parsedPosts);
-  }, [discussionInfo]);
-
   const startStreaming = useCallback(() => {
     if (!isDiscussionsEnabled() || !discussionInfo) return;
-    setIsLoading(true);
     approvalStreamCleanupRef.current?.();
-    approvalEventsRef.current = [];
-    postsEventsRef.current = [];
     const knownData = loadKnownDiscussionData<unknown, Event>(discussionInfo.discussionId);
     const relayUrls = selectRelayCandidates({
       hints: discussionInfo.relays,
@@ -137,15 +98,16 @@ export default function PostApprovalPage() {
       ],
       {
         onEvent: (events) => {
-          postsEventsRef.current = mergeStreamEvents(postsEventsRef.current, events.filter((event) => !isModeratorRequestEvent(event)));
-          rebuildFromEvents();
+          mergeModerationEvents({
+            primaryEvents: events.filter(
+              (event) => !isModeratorRequestEvent(event),
+            ),
+          });
         },
         onEose: (events) => {
           const normalPosts = events.filter((event) => !isModeratorRequestEvent(event));
-          postsEventsRef.current = mergeStreamEvents(postsEventsRef.current, normalPosts);
-          rebuildFromEvents();
+          mergeModerationEvents({ primaryEvents: normalPosts });
           saveKnownDiscussionData(discussionInfo.discussionId, { metadata: null, eventIds: normalPosts.map((event) => event.id), attemptedRelayUrls: relayUrls, successfulRelays: [], events: normalPosts });
-          setIsLoading(false);
         },
         timeoutMs: nostrServiceConfig.defaultTimeout,
         ...(relayUrls.length > 0 ? { relayUrls } : {}),
@@ -156,47 +118,22 @@ export default function PostApprovalPage() {
       discussionInfo.discussionId,
       {
         onEvent: (events) => {
-          approvalEventsRef.current = mergeStreamEvents(approvalEventsRef.current, events);
-          rebuildFromEvents();
+          mergeModerationEvents({ approvalEvents: events });
         },
         onEose: (events) => {
-          approvalEventsRef.current = mergeStreamEvents(approvalEventsRef.current, events);
-          rebuildFromEvents();
+          mergeModerationEvents({ approvalEvents: events });
           saveKnownDiscussionData(discussionInfo.discussionId, { metadata: null, eventIds: events.map((event) => event.id), attemptedRelayUrls: relayUrls, successfulRelays: [], events });
-          setIsLoading(false);
         },
         timeoutMs: nostrServiceConfig.defaultTimeout,
         ...(relayUrls.length > 0 ? { relayUrls } : {}),
       }
     );
 
-    if (typeof nostrService.getEventsWithCompletion === "function") {
-      void loadDiscussionModerationSnapshot(nostrService, readStrategy, {
-        discussionId: discussionInfo.discussionId,
-        hints: discussionInfo.relays,
-        successful: knownData?.successfulRelays,
-        configured: (nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
-        defaults: [],
-      }).then((snapshot) => {
-        completionReasonRef.current = snapshot.completionReason;
-        saveKnownDiscussionData(discussionInfo.discussionId, {
-          metadata: null,
-          eventIds: snapshot.approvalEvents.map((event) => event.id),
-          attemptedRelayUrls: snapshot.attemptedRelayUrls,
-          successfulRelays: snapshot.successfulRelayUrls,
-          events: snapshot.approvalEvents,
-        });
-        postsEventsRef.current = mergeStreamEvents(postsEventsRef.current, snapshot.primaryEvents);
-        approvalEventsRef.current = mergeStreamEvents(approvalEventsRef.current, snapshot.approvalEvents);
-        rebuildFromEvents();
-      });
-    }
-
     approvalStreamCleanupRef.current = () => {
       postsStream();
       approvalsStream();
     };
-  }, [discussionInfo, mergeStreamEvents, nostrServiceConfig.defaultTimeout, rebuildFromEvents]);
+  }, [discussionInfo, mergeModerationEvents]);
 
   useEffect(() => {
     if (isDiscussionsEnabled() && discussionInfo) {
@@ -242,21 +179,7 @@ export default function PostApprovalPage() {
         event: signedEvent,
       };
 
-      approvalEventsRef.current = mergeStreamEvents(approvalEventsRef.current, [signedEvent as Event]);
-
-      setApprovals((prev) => [...prev, newApproval]);
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === post.id
-            ? {
-              ...p,
-              approved: true,
-              approvedBy: [...(p.approvedBy || []), user.pubkey || ""],
-              approvedAt: signedEvent.created_at,
-            }
-            : p
-        )
-      );
+      addApproval(newApproval);
     } catch (error) {
       logger.error("Failed to approve post:", error);
     } finally {
@@ -297,22 +220,7 @@ export default function PostApprovalPage() {
         throw new Error("Failed to publish revocation to relays");
       }
 
-      // 楽観的な更新 - 承認を削除
-      setApprovals((prev) => prev.filter((a) => a.id !== approval.id));
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === post.id
-            ? {
-              ...p,
-              approved: false,
-              approvedBy:
-                p.approvedBy?.filter((pubkey) => pubkey !== user.pubkey) ||
-                [],
-              approvedAt: undefined,
-            }
-            : p
-        )
-      );
+      removeApproval(approval.id);
     } catch (error) {
       logger.error("Failed to revoke approval:", error);
     } finally {
@@ -436,10 +344,10 @@ export default function PostApprovalPage() {
           <>
             <DiscussionReadStatus
               isLoading={false}
-              completionReason={null}
+              completionReason={completionReason}
               hasData={posts.length > 0}
               approvalState={approvalState === "unknown" ? "unknown" : undefined}
-              onReload={startStreaming}
+              onReload={() => void reload()}
             />
             {activeTab === "pending" && (
               <section>

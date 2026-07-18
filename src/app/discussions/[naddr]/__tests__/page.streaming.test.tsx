@@ -1,9 +1,10 @@
 import React from "react";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionDetailPage from "../page";
 
 const mockUseDiscussionMeta = jest.fn();
+const mockUseDiscussionContentData = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr-test" }),
@@ -16,6 +17,10 @@ jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
     <div data-testid="discussion-tab-layout">{children}</div>
   ),
   useDiscussionMeta: () => mockUseDiscussionMeta(),
+}));
+
+jest.mock("@/components/discussion/DiscussionContentDataProvider", () => ({
+  useDiscussionContentData: () => mockUseDiscussionContentData(),
 }));
 
 jest.mock("@/lib/auth/auth-context", () => ({
@@ -210,24 +215,25 @@ describe("DiscussionDetailPage streaming", () => {
       error: null,
       reload: jest.fn(),
     });
+    mockUseDiscussionContentData.mockReturnValue({
+      posts: [],
+      isLoading: false,
+      error: null,
+      addPost: jest.fn(),
+    });
   });
 
-  it("shows loading state for evaluations until approvals EOSE completes", async () => {
-    let resolveApprovals: (result: ReturnType<typeof withCompletion>) => void;
-    const approvalsPromise = new Promise<ReturnType<typeof withCompletion>>((resolve) => {
-      resolveApprovals = resolve;
+  it("shows loading state until the shared content read completes", async () => {
+    mockUseDiscussionContentData.mockReturnValue({
+      posts: [],
+      isLoading: true,
+      error: null,
+      addPost: jest.fn(),
     });
-
-    gatewayMock.queryWithCompletion.mockImplementation((filters: Array<{ kinds?: number[] }>) => {
-      const kinds = filters[0]?.kinds ?? [];
-      if (kinds.includes(4550)) {
-        return approvalsPromise;
-      }
-      return Promise.resolve(withCompletion([]));
-    });
+    gatewayMock.queryWithCompletion.mockResolvedValue(withCompletion([]));
     serviceMock.getEvaluations.mockResolvedValue([]);
 
-    render(<DiscussionDetailPage />);
+    const { rerender } = render(<DiscussionDetailPage />);
 
     // Title is now displayed in the layout, not in page content
     // Check for loading state instead to verify streaming works
@@ -238,9 +244,13 @@ describe("DiscussionDetailPage streaming", () => {
       screen.queryByText("Evaluation Component")
     ).not.toBeInTheDocument();
 
-    await act(async () => {
-      resolveApprovals(withCompletion([]));
+    mockUseDiscussionContentData.mockReturnValue({
+      posts: [],
+      isLoading: false,
+      error: null,
+      addPost: jest.fn(),
     });
+    rerender(<DiscussionDetailPage />);
 
     await waitFor(() =>
       expect(
@@ -250,17 +260,18 @@ describe("DiscussionDetailPage streaming", () => {
     expect(screen.getByText("Evaluation Component")).toBeInTheDocument();
   });
 
-  it("renders metadata on event before approvals EOSE, then runs analysis once after EOSE flow", async () => {
-    let resolveApprovals: (result: ReturnType<typeof withCompletion>) => void;
-    const approvalsPromise = new Promise<ReturnType<typeof withCompletion>>((resolve) => {
-      resolveApprovals = resolve;
+  it("loads only evaluations after shared posts become available", async () => {
+    mockUseDiscussionContentData.mockReturnValue({
+      posts: [
+        { id: "post-1", approved: true },
+        { id: "post-2", approved: true },
+      ],
+      isLoading: false,
+      error: null,
+      addPost: jest.fn(),
     });
-
     gatewayMock.queryWithCompletion.mockImplementation((filters: Array<{ kinds?: number[] }>) => {
       const kinds = filters[0]?.kinds ?? [];
-      if (kinds.includes(4550)) {
-        return approvalsPromise;
-      }
       if (kinds.includes(7)) {
         return Promise.resolve(withCompletion([
           { id: "eval-1", pubkey: "u1", tags: [["e", "post-1"]], created_at: 1 },
@@ -280,39 +291,11 @@ describe("DiscussionDetailPage streaming", () => {
       expect(gatewayMock.queryWithCompletion).toHaveBeenCalled()
     );
 
-    // メタデータ(kind:34550)はページ側で再取得しない
+    // 投稿・承認・メタデータは共有Providerの責務で、ページは評価だけを読む。
     await waitFor(() =>
       expect(gatewayMock.queryWithCompletion).toHaveBeenCalledTimes(1)
     );
-
-    const approvalEvents = [
-      {
-        id: "approval-1",
-        pubkey: "mod",
-        kind: 4550,
-        created_at: 10,
-        tags: [["e", "post-1"]],
-        content: JSON.stringify({}),
-        sig: "sig",
-      },
-      {
-        id: "approval-2",
-        pubkey: "mod",
-        kind: 4550,
-        created_at: 11,
-        tags: [["e", "post-2"]],
-        content: JSON.stringify({}),
-        sig: "sig",
-      },
-    ];
-
-    await act(async () => {
-      resolveApprovals(withCompletion(approvalEvents));
-    });
-
-    await waitFor(() =>
-      expect(gatewayMock.queryWithCompletion).toHaveBeenCalledTimes(2)
-    );
+    expect(gatewayMock.queryWithCompletion.mock.calls[0][0][0].kinds).toEqual([7]);
 
     expect(screen.getByText("意見グループ")).toBeInTheDocument();
   });

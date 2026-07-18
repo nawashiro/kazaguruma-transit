@@ -17,16 +17,15 @@ import { LoginModal } from "@/components/discussion/LoginModal";
 import { PostPreview } from "@/components/discussion/PostPreview";
 import { EvaluationComponent } from "@/components/discussion/EvaluationComponent";
 import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
+import { useDiscussionContentData } from "@/components/discussion/DiscussionContentDataProvider";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   createDiscussionNdkGateway,
 } from "@/lib/nostr/discussion-ndk-gateway";
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
-import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
-import { loadKnownDiscussionData, saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
+import { loadKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
+import type { Event } from "@/lib/nostr/nostr-service";
 import {
-  parsePostEvent,
-  parseApprovalEvent,
   parseEvaluationEvent,
   combinePostsWithStats,
   validatePostForm,
@@ -39,8 +38,6 @@ import {
 } from "@/lib/evaluation/evaluation-service";
 import Button from "@/components/ui/Button";
 import type {
-  DiscussionPost,
-  PostApproval,
   PostEvaluation,
   PostFormData,
 } from "@/types/discussion";
@@ -57,8 +54,6 @@ export default function DiscussionDetailPage() {
   const naddrParam = params.naddr as string;
 
   const [consensusTab, setConsensusTab] = useState<string>("group-consensus");
-  const [posts, setPosts] = useState<DiscussionPost[]>([]);
-  const [, setApprovals] = useState<PostApproval[]>([]);
   const [evaluations, setEvaluations] = useState<PostEvaluation[]>([]);
   const [userEvaluations, setUserEvaluations] = useState<Set<string>>(
     new Set()
@@ -66,8 +61,8 @@ export default function DiscussionDetailPage() {
   const [analysisResult, setAnalysisResult] =
     useState<EvaluationAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isPostsLoading, setIsPostsLoading] = useState(true);
-  const [postsLoadError, setPostsLoadError] = useState<string | null>(null);
+  const [isEvaluationsLoading, setIsEvaluationsLoading] = useState(true);
+  const [evaluationsLoadError, setEvaluationsLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const renderInlineLoading = (label: string) => (
     <div
@@ -104,6 +99,14 @@ export default function DiscussionDetailPage() {
   const discussion = discussionMeta?.discussion ?? null;
   const isDiscussionLoading = discussionMeta?.isLoading ?? false;
   const discussionCompletionReason = discussionMeta?.completionReason ?? null;
+  const {
+    posts,
+    isLoading: isContentLoading,
+    error: contentLoadError,
+    addPost,
+  } = useDiscussionContentData();
+  const isPostsLoading = isContentLoading || isEvaluationsLoading;
+  const postsLoadError = contentLoadError ?? evaluationsLoadError;
 
   // Parse naddr and extract discussion info
   const discussionInfo = useMemo(() => {
@@ -111,83 +114,27 @@ export default function DiscussionDetailPage() {
     return extractDiscussionFromNaddr(naddrParam);
   }, [naddrParam]);
 
-  // メイン画面専用のデータ取得
-  const loadApprovalsAndEvaluations = useCallback(
+  // 評価はメインタブだけで必要なため、共有投稿の確定後に遅延取得します。
+  const loadEvaluations = useCallback(
     async (loadSequence: number) => {
       if (!discussionInfo) return;
-      setIsPostsLoading(true);
+      setIsEvaluationsLoading(true);
       try {
-        setPostsLoadError(null);
-        const knownData = loadKnownDiscussionData<unknown, import("@/lib/nostr/nostr-service").Event>(discussionInfo.discussionId);
-        if (knownData?.events?.length) {
-          const knownApprovals = knownData.events.map(parseApprovalEvent).filter((approval): approval is PostApproval => approval !== null);
-          const knownPosts = knownApprovals.map((approval) => {
-            try { return parsePostEvent(JSON.parse(approval.event.content), [approval]); } catch { return null; }
-          }).filter((post): post is DiscussionPost => post !== null);
-          setPosts(knownPosts);
-          setApprovals(knownApprovals);
-        }
-        const moderation = typeof nostrService.getEventsWithCompletion === "function"
-          ? await loadDiscussionModerationSnapshot(nostrService, readStrategy, {
-              discussionId: discussionInfo.discussionId,
-              hints: discussionInfo.relays,
-              successful: knownData?.successfulRelays,
-              configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
-              defaults: [],
-            })
-          : null;
-        let parsedApprovals: PostApproval[];
-        let parsedPosts: DiscussionPost[];
-        let approvalsEvents: import("@/lib/nostr/nostr-service").Event[];
-        let attemptedRelayUrls: string[] = [];
-        if (!moderation) {
-          const legacyPlan = createDiscussionReadPlan("discussion-approvals", readStrategy, { discussionId: discussionInfo.discussionId, relayHints: discussionInfo.relays });
-          const legacyResult = await discussionGateway.queryWithCompletion(legacyPlan.filters, { idleTimeoutMs: legacyPlan.idleTimeoutMs, hardTimeoutMs: legacyPlan.hardTimeoutMs });
-          const legacyApprovals = legacyResult.events.map(parseApprovalEvent).filter((a): a is PostApproval => a !== null);
-          const legacyPosts = legacyApprovals.map((approval) => {
-            try { return parsePostEvent(JSON.parse(approval.event.content), [approval]); } catch { return null; }
-          }).filter((p): p is DiscussionPost => p !== null);
-          approvalsEvents = legacyResult.events;
-          parsedApprovals = legacyApprovals;
-          parsedPosts = legacyPosts;
-        } else {
-          logger.info("discussion-detail approvals fetch completed", {
-          discussionId: discussionInfo.discussionId,
-          completionReason: moderation.completionReason,
-          eventCount: moderation.approvalEvents.length,
-          });
-          approvalsEvents = moderation.approvalEvents;
-          attemptedRelayUrls = moderation.attemptedRelayUrls;
-          parsedApprovals = approvalsEvents
-          .map(parseApprovalEvent)
-          .filter((a): a is PostApproval => a !== null);
-          parsedPosts = moderation.primaryEvents
-          .map((postEvent) => parsePostEvent(postEvent, parsedApprovals))
-          .filter((p): p is DiscussionPost => p !== null)
-          .sort(
-            (left, right) =>
-              right.createdAt - left.createdAt || left.id.localeCompare(right.id)
-          );
-        }
-        if (loadSequenceRef.current !== loadSequence) return;
-
-        setPosts(parsedPosts);
-        setApprovals(parsedApprovals);
-        const successfulRelayUrls = moderation?.successfulRelayUrls ?? knownData?.successfulRelays ?? [];
-        saveKnownDiscussionData(discussionInfo.discussionId, {
-          metadata: null,
-          eventIds: approvalsEvents.map((event) => event.id),
-          attemptedRelayUrls,
-          successfulRelays: successfulRelayUrls,
-          events: approvalsEvents,
-        });
-
-        const postIds = parsedPosts.map((post) => post.id);
+        setEvaluationsLoadError(null);
+        const postIds = posts.map((post) => post.id);
+        const relayUrls =
+          loadKnownDiscussionData<unknown, Event>(
+            discussionInfo.discussionId,
+          )?.attemptedRelayUrls ?? [];
         const evaluationsResult =
           postIds.length > 0
             ? await discussionGateway.queryWithCompletion(
                 createDiscussionReadPlan("discussion-evaluations", readStrategy, { postIds, relayHints: discussionInfo.relays }).filters,
-                { idleTimeoutMs: readStrategy.idleTimeoutMs, hardTimeoutMs: readStrategy.hardTimeoutMs, ...(attemptedRelayUrls.length > 0 ? { relayUrls: attemptedRelayUrls } : {}) }
+                {
+                  idleTimeoutMs: readStrategy.idleTimeoutMs,
+                  hardTimeoutMs: readStrategy.hardTimeoutMs,
+                  ...(relayUrls.length > 0 ? { relayUrls } : {}),
+                }
               )
             : {
                 events: [],
@@ -214,14 +161,14 @@ export default function DiscussionDetailPage() {
         setEvaluations(parsedEvaluations);
       } catch (error) {
         logger.error("Failed to load discussion:", error);
-        setPostsLoadError("投稿・評価データの取得に失敗しました。");
+        setEvaluationsLoadError("投稿・評価データの取得に失敗しました。");
       } finally {
         if (loadSequenceRef.current === loadSequence) {
-          setIsPostsLoading(false);
+          setIsEvaluationsLoading(false);
         }
       }
     },
-    [discussionInfo]
+    [discussionInfo, posts]
   );
 
 
@@ -265,19 +212,21 @@ export default function DiscussionDetailPage() {
 
   useEffect(() => {
     if (!isDiscussionsEnabled() || !discussionInfo) return;
+    void loadBusStops();
+  }, [discussionInfo, loadBusStops]);
+
+  useEffect(() => {
+    if (!isDiscussionsEnabled() || !discussionInfo || isContentLoading) return;
     const loadSequence = ++loadSequenceRef.current;
     analysisRunRef.current = false;
-    setPosts([]);
-    setApprovals([]);
     setEvaluations([]);
     setAnalysisResult(null);
-    setIsPostsLoading(true);
+    setIsEvaluationsLoading(true);
 
     if (isTestMode(discussionInfo.dTag)) {
       loadTestData()
         .then((testData) => {
           if (loadSequenceRef.current !== loadSequence) return;
-          setPosts(testData.posts);
           setEvaluations(testData.evaluations);
         })
         .catch((error) => {
@@ -285,16 +234,14 @@ export default function DiscussionDetailPage() {
         })
         .finally(() => {
           if (loadSequenceRef.current === loadSequence) {
-            setIsPostsLoading(false);
+            setIsEvaluationsLoading(false);
           }
         });
-      loadBusStops();
       return;
     }
 
-    loadApprovalsAndEvaluations(loadSequence);
-    loadBusStops();
-  }, [discussionInfo, loadApprovalsAndEvaluations, loadBusStops]);
+    void loadEvaluations(loadSequence);
+  }, [discussionInfo, isContentLoading, loadEvaluations]);
 
   useEffect(() => {
     if (user.pubkey && isDiscussionsEnabled()) {
@@ -429,7 +376,7 @@ export default function DiscussionDetailPage() {
         event: signedEvent,
       };
 
-      setPosts((prev) => [newPost, ...prev]);
+      addPost(newPost);
     } catch (error) {
       logger.error("Failed to submit post:", error);
       setErrors(["投稿の送信に失敗しました"]);

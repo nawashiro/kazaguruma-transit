@@ -146,7 +146,6 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
       )}
       <Button
         onClick={handleGeneratePdf}
-        className="mt-4"
         disabled={isGenerating}
         loading={isGenerating}
       >

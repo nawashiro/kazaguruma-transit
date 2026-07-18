@@ -28,6 +28,10 @@ describe("SiteMapPage", () => {
     expect(
       screen.getByRole("link", { name: "はじめての方へ" })
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "受賞について" })).toHaveAttribute(
+      "href",
+      "/award",
+    );
   });
 
   it("外部リンクには適切な属性が設定されていること", () => {

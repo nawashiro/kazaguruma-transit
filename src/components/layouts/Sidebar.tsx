@@ -13,6 +13,7 @@ import {
   MapPinIcon,
   ChatBubbleLeftRightIcon,
   Cog6ToothIcon,
+  TrophyIcon,
 } from "@heroicons/react/24/outline";
 import { HeartIcon } from "@heroicons/react/24/solid";
 interface SidebarProps {
@@ -84,6 +85,12 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
                 <Link role="menuitem" href="/usage" onClick={toggleSidebar}>
                   <BookOpenIcon className="h-6 w-6" />
                   <span className="ruby-text">使い方</span>
+                </Link>
+              </li>
+              <li>
+                <Link role="menuitem" href="/award" onClick={toggleSidebar}>
+                  <TrophyIcon className="h-6 w-6" />
+                  <span className="ruby-text">受賞について</span>
                 </Link>
               </li>
               <li>

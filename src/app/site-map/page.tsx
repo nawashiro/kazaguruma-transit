@@ -9,6 +9,7 @@ import {
   ArrowPathIcon,
   MapPinIcon,
   ChatBubbleLeftRightIcon,
+  TrophyIcon,
 } from "@heroicons/react/24/outline";
 
 export const metadata: Metadata = {
@@ -72,6 +73,12 @@ export default function SiteMapPage() {
           サイト情報
         </h2>
         <ul className="space-y-3 ml-4">
+          <li className="flex items-center">
+            <TrophyIcon className="h-5 w-5 mr-2" />
+            <Link href="/award" className="text-lg hover:underline">
+              <span>受賞について</span>
+            </Link>
+          </li>
           <li className="flex items-center">
             <DocumentTextIcon className="h-5 w-5 mr-2" />
             <Link href="/license" className="text-lg hover:underline">

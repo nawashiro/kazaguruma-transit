@@ -14,6 +14,7 @@ import { TransitFormData, Location } from "@/types/core";
 import { logger } from "@/utils/logger";
 import RateLimitModal from "@/components/features/RateLimitModal";
 import FirstVisitGuideModal from "@/components/features/FirstVisitGuideModal";
+import AwardRecognition from "@/components/features/AwardRecognition";
 import {
   BusStopDiscussion,
   BusStopMemo,
@@ -744,6 +745,10 @@ export default function Home() {
         </h1>
         <p className="mt-2 text-lg">千代田区福祉交通の乗換案内サービス</p>
       </header>
+
+      <div className="max-w-md mx-auto mb-6">
+        <AwardRecognition />
+      </div>
 
       {/* 初回訪問ガイドモーダル */}
       <FirstVisitGuideModal />

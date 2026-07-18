@@ -88,9 +88,13 @@ describe("RoutesPage", () => {
     render(<RoutesPage />);
 
     expect(screen.getByRole("alert")).toHaveTextContent("検索条件");
-    expect(screen.getByRole("link", { name: "検索条件を変更" })).toHaveAttribute(
-      "href",
-      "/",
+    const changeSearchLink = screen.getByRole("link", { name: "検索条件を変更" });
+    expect(changeSearchLink).toHaveAttribute("href", "/");
+    expect(changeSearchLink).toHaveClass(
+      "btn",
+      "btn-secondary",
+      "rounded-full",
+      "dark:rounded-sm",
     );
     expect(global.fetch).not.toHaveBeenCalled();
   });

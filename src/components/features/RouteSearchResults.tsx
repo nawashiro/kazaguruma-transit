@@ -37,6 +37,21 @@ interface RouteSearchResultsProps {
   searchParams: string;
 }
 
+function ChangeSearchConditionsLink() {
+  return (
+    <div className="flex justify-center">
+      <Link
+        href="/"
+        className="btn btn-secondary rounded-full dark:rounded-sm min-h-[44px] min-w-[44px] leading-relaxed font-medium inline-flex items-center justify-center"
+      >
+        <span className="ruby-text inline-flex w-full items-center justify-center gap-2">
+          検索条件を変更
+        </span>
+      </Link>
+    </div>
+  );
+}
+
 function getBusStops(routeInfo: RouteResultViewModel): string[] {
   if (routeInfo.type === "none") return [];
 
@@ -55,9 +70,7 @@ function SearchError({ message }: { message: string }) {
       <div role="alert" className="alert alert-error mb-4">
         {message}
       </div>
-      <Link href="/" className="link ruby-text min-h-[44px] inline-flex items-center">
-        検索条件を変更
-      </Link>
+      <ChangeSearchConditionsLink />
     </Card>
   );
 }
@@ -162,9 +175,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
   const busStops = getBusStops(routeInfo);
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/" className="link ruby-text min-h-[44px] inline-flex items-center w-fit">
-        検索条件を変更
-      </Link>
+      <ChangeSearchConditionsLink />
       <IntegratedRouteDisplay
         originStop={routeInfo.originStop}
         destinationStop={routeInfo.destinationStop}

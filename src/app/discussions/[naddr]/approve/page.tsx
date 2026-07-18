@@ -19,6 +19,7 @@ import { loadKnownDiscussionData, saveKnownDiscussionData } from "@/lib/discussi
 import { createDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
 import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
+import { ApprovalStatusTabs } from "@/components/discussion/ApprovalStatusTabs";
 import {
   buildDisabledActionState,
   DisabledReasonText,
@@ -392,269 +393,244 @@ export default function PostApprovalPage() {
           </div>
         </div>
       )}
-      <nav className="tabs tabs-box mb-6 w-full overflow-x-auto" role="tablist">
-        <button
-          aria-selected={activeTab === "pending"}
-          aria-controls="pending-panel"
-          id="pending-tab"
-          aria-label="承認待ちタブを開く"
-          className={`tab min-h-[44px] px-4 ${activeTab === "pending" ? "tab-active" : ""
-            }`}
-          role="tab"
-          onClick={() => setActiveTab("pending")}
-        >
-          <span className="ruby-text">承認待ち</span>
-          {pendingPosts.length > 0 && (
-            <span className="badge badge-warning badge-md ml-1">
-              {pendingPosts.length}
-            </span>
-          )}
-        </button>
-        <button
-          aria-selected={activeTab === "approved"}
-          aria-controls="approved-panel"
-          id="approved-tab"
-          aria-label="承認済みタブを開く"
-          className={`tab min-h-[44px] px-4 ${activeTab === "approved" ? "tab-active" : ""
-            }`}
-          role="tab"
-          onClick={() => setActiveTab("approved")}
-        >
-          <span className="ruby-text">承認済み</span>
-          {approvedPosts.length > 0 && (
-            <span className="badge badge-success badge-md ml-1">
-              {approvedPosts.length}
-            </span>
-          )}
-        </button>
-      </nav>
+      <ApprovalStatusTabs
+        activeTab={activeTab}
+        approvedCount={approvedPosts.length}
+        badgeClassName="badge-md"
+        idPrefix="post-approval"
+        onTabChange={setActiveTab}
+        pendingCount={pendingPosts.length}
+      />
 
-      {isDiscussionLoading || isLoading ? (
-        <div className="animate-pulse space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="h-24 bg-gray-200 dark:bg-gray-700 rounded"
-            ></div>
-          ))}
-        </div>
-      ) : !discussion ? (
-        discussionCompletionReason === "idle-timeout" ||
-          discussionCompletionReason === "hard-timeout" ||
-          discussionCompletionReason === "cancelled" ? (
-          <div className="alert alert-warning" role="alert">
-            <span>
-              会話データの取得に時間がかかっています（{discussionCompletionReason}）。
-              受信待機中または relay 応答遅延の可能性があります。
-            </span>
+      <div
+        aria-labelledby={`post-approval-${activeTab}-tab`}
+        id={`post-approval-${activeTab}-panel`}
+        role="tabpanel"
+        tabIndex={0}
+      >
+        {isDiscussionLoading || isLoading ? (
+          <div className="animate-pulse space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="h-24 bg-gray-200 dark:bg-gray-700 rounded"
+              ></div>
+            ))}
           </div>
+        ) : !discussion ? (
+          discussionCompletionReason === "idle-timeout" ||
+            discussionCompletionReason === "hard-timeout" ||
+            discussionCompletionReason === "cancelled" ? (
+            <div className="alert alert-warning" role="alert">
+              <span>
+                会話データの取得に時間がかかっています（{discussionCompletionReason}）。
+                受信待機中または relay 応答遅延の可能性があります。
+              </span>
+            </div>
+          ) : (
+            <div className="alert alert-warning" role="alert">
+              <span>会話が見つかりません。</span>
+            </div>
+          )
         ) : (
-          <div className="alert alert-warning" role="alert">
-            <span>会話が見つかりません。</span>
-          </div>
-        )
-      ) : (
-        <div
-          aria-labelledby={`${activeTab}-tab`}
-          id={`${activeTab}-panel`}
-          role="tabpanel"
-        >
-          <DiscussionReadStatus
-            isLoading={false}
-            completionReason={null}
-            hasData={posts.length > 0}
-            approvalState={approvalState === "unknown" ? "unknown" : undefined}
-            onReload={startStreaming}
-          />
-          {activeTab === "pending" && (
-            <section>
-              {pendingPosts.length > 0 ? (
-                <div className="space-y-4">
-                  {pendingPosts.map((post) => (
-                    <div
-                      key={post.id}
-                      className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
-                    >
-                      <div className="card-body p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            {post.busStopTag && (
-                              <div className="mb-2">
-                                <span className="badge badge-outline badge-md">
-                                  {post.busStopTag}
-                                </span>
-                              </div>
-                            )}
-                            <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
-                              {post.content.split("\n").map((line, i) => (
-                                <p key={i} className="mb-1 last:mb-0">
-                                  {line || "\u00A0"}
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleApprovePost(post)}
-                            disabled={
-                              approvingIds.has(post.id) ||
-                              !hasApprovalPermission
-                            }
-                            className="ml-4 btn btn-primary min-h-[44px] rounded-full dark:rounded-sm"
-                          >
-                            <span>
-                              {approvingIds.has(post.id) ? "" : "承認"}
-                            </span>
-                          </button>
-                        </div>
-                        {user.isLoggedIn && (
-                          <DisabledReasonText
-                            state={buildDisabledActionState(
-                              hasApprovalPermission,
-                              permissionReason
-                            )}
-                          />
-                        )}
-                        <div className="text-gray-500">
-                          {formatRelativeTime(post.createdAt)}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
-                  <div className="card-body">
-                    <div className="py-8 ruby-text">
-                      <CheckBadgeIcon
-                        aria-label="承認待ちなし"
-                        className="h-12 w-12 text-gray-400"
-                      />
-                      <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
-                        承認待ちの投稿はありません
-                      </h3>
-                      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                        新しい投稿が投稿されると、ここに表示されます。
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </section>
-          )}
-
-          {activeTab === "approved" && (
-            <section>
-              {approvedPosts.length > 0 ? (
-                <div className="space-y-4">
-                  {approvedPosts.slice(0, 10).map((post) => (
-                    <div
-                      key={post.id}
-                      className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 opacity-75"
-                    >
-                      <div className="card-body p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            {post.busStopTag && (
-                              <div className="mb-2">
-                                <span className="badge badge-outline badge-md">
-                                  {post.busStopTag}
-                                </span>
-                              </div>
-                            )}
-                            <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
-                              {post.content.split("\n").map((line, i) => (
-                                <p key={i} className="mb-1 last:mb-0">
-                                  {line || "\u00A0"}
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex gap-2 ml-4">
-                            {(() => {
-                              const hasOwnApproval = approvals.some(
-                                (a) =>
-                                  a.postId === post.id &&
-                                  a.moderatorPubkey === user.pubkey
-                              );
-                              const revokeAllowed =
-                                hasApprovalPermission && hasOwnApproval;
-                              return (
-                                <button
-                                  onClick={() => handleRevokeApproval(post)}
-                                  disabled={
-                                    revokingIds.has(post.id) || !revokeAllowed
-                                  }
-                                  className="btn btn-warning min-h-[44px] rounded-full dark:rounded-sm"
-                                >
-                                  <span>
-                                    {revokingIds.has(post.id)
-                                      ? ""
-                                      : "承認を撤回"}
+          <>
+            <DiscussionReadStatus
+              isLoading={false}
+              completionReason={null}
+              hasData={posts.length > 0}
+              approvalState={approvalState === "unknown" ? "unknown" : undefined}
+              onReload={startStreaming}
+            />
+            {activeTab === "pending" && (
+              <section>
+                {pendingPosts.length > 0 ? (
+                  <div className="space-y-4">
+                    {pendingPosts.map((post) => (
+                      <div
+                        key={post.id}
+                        className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
+                      >
+                        <div className="card-body p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              {post.busStopTag && (
+                                <div className="mb-2">
+                                  <span className="badge badge-outline badge-md">
+                                    {post.busStopTag}
                                   </span>
-                                </button>
-                              );
-                            })()}
+                                </div>
+                              )}
+                              <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
+                                {post.content.split("\n").map((line, i) => (
+                                  <p key={i} className="mb-1 last:mb-0">
+                                    {line || "\u00A0"}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleApprovePost(post)}
+                              disabled={
+                                approvingIds.has(post.id) ||
+                                !hasApprovalPermission
+                              }
+                              className="ml-4 btn btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+                            >
+                              <span>
+                                {approvingIds.has(post.id) ? "" : "承認"}
+                              </span>
+                            </button>
+                          </div>
+                          {user.isLoggedIn && (
+                            <DisabledReasonText
+                              state={buildDisabledActionState(
+                                hasApprovalPermission,
+                                permissionReason
+                              )}
+                            />
+                          )}
+                          <div className="text-gray-500">
+                            {formatRelativeTime(post.createdAt)}
                           </div>
                         </div>
-                        {(() => {
-                          const hasOwnApproval = approvals.some(
-                            (a) =>
-                              a.postId === post.id &&
-                              a.moderatorPubkey === user.pubkey
-                          );
-                          const revokeAllowed =
-                            hasApprovalPermission && hasOwnApproval;
-                          const revokeReason = !hasApprovalPermission
-                            ? permissionReason
-                            : "自分が行った承認のみ撤回できます。";
-                          return (
-                            user.isLoggedIn ? (
-                              <DisabledReasonText
-                                state={buildDisabledActionState(
-                                  revokeAllowed,
-                                  revokeReason
-                                )}
-                              />
-                            ) : null
-                          );
-                        })()}
-                        <div className="text-gray-500">
-                          承認:{" "}
-                          {formatRelativeTime(
-                            post.approvedAt || post.createdAt
-                          )}
-                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div className="card-body">
+                      <div className="py-8 ruby-text">
+                        <CheckBadgeIcon
+                          aria-label="承認待ちなし"
+                          className="h-12 w-12 text-gray-400"
+                        />
+                        <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                          承認待ちの投稿はありません
+                        </h3>
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                          新しい投稿が投稿されると、ここに表示されます。
+                        </p>
                       </div>
                     </div>
-                  ))}
-                  {approvedPosts.length > 10 && (
-                    <p className="text-gray-500 text-sm">
-                      最新10件を表示中（全{approvedPosts.length}件）
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
-                  <div className="card-body">
-                    <div className="py-8 ruby-text">
-                      <CheckBadgeIcon
-                        aria-label="承認済みなし"
-                        className="h-12 w-12 text-gray-400"
-                      />
-                      <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
-                        承認済みの投稿はありません
-                      </h3>
-                      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                        投稿が承認されると、ここに表示されます。
+                  </div>
+                )}
+              </section>
+            )}
+
+            {activeTab === "approved" && (
+              <section>
+                {approvedPosts.length > 0 ? (
+                  <div className="space-y-4">
+                    {approvedPosts.slice(0, 10).map((post) => (
+                      <div
+                        key={post.id}
+                        className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 opacity-75"
+                      >
+                        <div className="card-body p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              {post.busStopTag && (
+                                <div className="mb-2">
+                                  <span className="badge badge-outline badge-md">
+                                    {post.busStopTag}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="prose prose-sm dark:prose-invert max-w-none ruby-text">
+                                {post.content.split("\n").map((line, i) => (
+                                  <p key={i} className="mb-1 last:mb-0">
+                                    {line || "\u00A0"}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="flex gap-2 ml-4">
+                              {(() => {
+                                const hasOwnApproval = approvals.some(
+                                  (a) =>
+                                    a.postId === post.id &&
+                                    a.moderatorPubkey === user.pubkey
+                                );
+                                const revokeAllowed =
+                                  hasApprovalPermission && hasOwnApproval;
+                                return (
+                                  <button
+                                    onClick={() => handleRevokeApproval(post)}
+                                    disabled={
+                                      revokingIds.has(post.id) || !revokeAllowed
+                                    }
+                                    className="btn btn-warning min-h-[44px] rounded-full dark:rounded-sm"
+                                  >
+                                    <span>
+                                      {revokingIds.has(post.id)
+                                        ? ""
+                                        : "承認を撤回"}
+                                    </span>
+                                  </button>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                          {(() => {
+                            const hasOwnApproval = approvals.some(
+                              (a) =>
+                                a.postId === post.id &&
+                                a.moderatorPubkey === user.pubkey
+                            );
+                            const revokeAllowed =
+                              hasApprovalPermission && hasOwnApproval;
+                            const revokeReason = !hasApprovalPermission
+                              ? permissionReason
+                              : "自分が行った承認のみ撤回できます。";
+                            return (
+                              user.isLoggedIn ? (
+                                <DisabledReasonText
+                                  state={buildDisabledActionState(
+                                    revokeAllowed,
+                                    revokeReason
+                                  )}
+                                />
+                              ) : null
+                            );
+                          })()}
+                          <div className="text-gray-500">
+                            承認:{" "}
+                            {formatRelativeTime(
+                              post.approvedAt || post.createdAt
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {approvedPosts.length > 10 && (
+                      <p className="text-gray-500 text-sm">
+                        最新10件を表示中（全{approvedPosts.length}件）
                       </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div className="card-body">
+                      <div className="py-8 ruby-text">
+                        <CheckBadgeIcon
+                          aria-label="承認済みなし"
+                          className="h-12 w-12 text-gray-400"
+                        />
+                        <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
+                          承認済みの投稿はありません
+                        </h3>
+                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                          投稿が承認されると、ここに表示されます。
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </section>
-          )}
-        </div>
-      )}
+                )}
+              </section>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

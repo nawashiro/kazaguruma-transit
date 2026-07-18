@@ -37,6 +37,7 @@ import {
 } from "@/lib/nostr/nostr-utils";
 import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
+import { ApprovalStatusTabs } from "@/components/discussion/ApprovalStatusTabs";
 import {
   extractDiscussionFromNaddr,
   buildNaddrFromRef,
@@ -476,15 +477,18 @@ export default function DiscussionManagePage() {
   if (isLoading) {
     return (
       <div className="py-8">
-        <nav className="tabs tabs-box mb-6 w-full overflow-x-auto" role="tablist" aria-label="投稿承認">
-          <button className="tab tab-active min-h-[44px] px-4" role="tab" aria-selected="true">
+        <div
+          className="tabs tabs-box mb-6 w-full overflow-x-auto"
+          aria-hidden="true"
+        >
+          <span className="tab tab-active min-h-[44px] px-4">
             <span className="ruby-text">承認待ち</span>
-          </button>
-          <button className="tab min-h-[44px] px-4" role="tab" aria-selected="false">
+          </span>
+          <span className="tab min-h-[44px] px-4">
             <span className="ruby-text">承認済み</span>
-          </button>
-        </nav>
-        <div className="animate-pulse space-y-4">
+          </span>
+        </div>
+        <div className="animate-pulse space-y-4" aria-hidden="true">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded" />
           ))}
@@ -535,51 +539,19 @@ export default function DiscussionManagePage() {
           </div>
         </div>
       )}
-      <nav className="tabs tabs-box mb-6 w-full overflow-x-auto" role="tablist">
-        <button
-          aria-selected={activeTab === "pending"}
-          aria-controls="pending-panel"
-          id="pending-tab"
-          aria-label="承認待ちタブを開く"
-          className={`tab min-h-[44px] px-4 ${
-            activeTab === "pending" ? "tab-active" : ""
-          }`}
-          name="tab-options"
-          role="tab"
-          onClick={() => setActiveTab("pending")}
-        >
-          <span className="ruby-text">承認待ち</span>
-          {pendingPostCount > 0 && (
-            <span className="badge badge-warning ml-1">
-              {pendingPostCount}
-            </span>
-          )}
-        </button>
-        <button
-          aria-selected={activeTab === "approved"}
-          aria-controls="approved-panel"
-          id="approved-tab"
-          aria-label="承認済みタブを開く"
-          className={`tab min-h-[44px] px-4 ${
-            activeTab === "approved" ? "tab-active" : ""
-          }`}
-          name="tab-options"
-          role="tab"
-          onClick={() => setActiveTab("approved")}
-        >
-          <span className="ruby-text">承認済み</span>
-          {approvedPosts.length > 0 && (
-            <span className="badge badge-success ml-1">
-              {approvedPosts.length}
-            </span>
-          )}
-        </button>
-      </nav>
+      <ApprovalStatusTabs
+        activeTab={activeTab}
+        approvedCount={approvedPosts.length}
+        idPrefix="discussion-manage-approval"
+        onTabChange={setActiveTab}
+        pendingCount={pendingPostCount}
+      />
 
       <div
-        aria-labelledby={`${activeTab}-tab`}
-        id={`${activeTab}-panel`}
+        aria-labelledby={`discussion-manage-approval-${activeTab}-tab`}
+        id={`discussion-manage-approval-${activeTab}-panel`}
         role="tabpanel"
+        tabIndex={0}
       >
         {activeTab === "pending" && (
           <section aria-labelledby="pending-posts-heading">

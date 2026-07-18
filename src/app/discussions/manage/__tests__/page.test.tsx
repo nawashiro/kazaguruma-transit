@@ -167,7 +167,9 @@ describe("DiscussionManagePage", () => {
     ).not.toBeInTheDocument();
 
     await waitFor(() =>
-      expect(screen.getByRole("tab", { name: "承認待ち" })).toBeInTheDocument()
+      expect(
+        screen.getByRole("tab", { name: "承認待ちタブを開く" })
+      ).toBeInTheDocument()
     );
   });
 
@@ -187,6 +189,37 @@ describe("DiscussionManagePage", () => {
       "href",
       "/discussions/moderator#become-moderator"
     );
+  });
+
+  it("moves and activates approval tabs with horizontal arrow keys", async () => {
+    render(<DiscussionManagePage />);
+
+    const pendingTab = await screen.findByRole("tab", {
+      name: "承認待ちタブを開く",
+    });
+    const approvedTab = screen.getByRole("tab", {
+      name: "承認済みタブを開く",
+    });
+
+    expect(pendingTab).toHaveAttribute("tabindex", "0");
+    expect(approvedTab).toHaveAttribute("tabindex", "-1");
+
+    pendingTab.focus();
+    fireEvent.keyDown(pendingTab, { key: "ArrowLeft" });
+
+    expect(approvedTab).toHaveFocus();
+    expect(approvedTab).toHaveAttribute("aria-selected", "true");
+    expect(approvedTab).toHaveAttribute("tabindex", "0");
+    expect(pendingTab).toHaveAttribute("tabindex", "-1");
+    expect(approvedTab).toHaveAttribute(
+      "aria-controls",
+      screen.getByRole("tabpanel").id
+    );
+
+    fireEvent.keyDown(approvedTab, { key: "ArrowRight" });
+
+    expect(pendingTab).toHaveFocus();
+    expect(pendingTab).toHaveAttribute("aria-selected", "true");
   });
 
   it.each(["author", "moderator"])(

@@ -8,6 +8,7 @@ const CALENDAR_PRODUCT_ID = "-//Kazaguruma Transit//Route Calendar//JA";
 const MILLISECONDS_PER_MINUTE = 60_000;
 const MILLISECONDS_PER_DAY = 24 * 60 * MILLISECONDS_PER_MINUTE;
 const BOARDING_ALARM_MINUTES = 10;
+const ALIGHTING_ALARM_MINUTES = 5;
 
 interface CalendarLocation {
   name: string;
@@ -208,6 +209,11 @@ export function buildRouteCalendar(input: RouteCalendarInput): string {
     lines.push(
       "BEGIN:VALARM",
       `TRIGGER:-PT${BOARDING_ALARM_MINUTES}M`,
+      "ACTION:DISPLAY",
+      `DESCRIPTION:${escapeIcsText(event.summary)}`,
+      "END:VALARM",
+      "BEGIN:VALARM",
+      `TRIGGER;RELATED=END:-PT${ALIGHTING_ALARM_MINUTES}M`,
       "ACTION:DISPLAY",
       `DESCRIPTION:${escapeIcsText(event.summary)}`,
       "END:VALARM",

@@ -7,6 +7,7 @@ const MILLISECONDS_PER_MINUTE = 60_000;
 const MILLISECONDS_PER_DAY = 24 * 60 * MILLISECONDS_PER_MINUTE;
 const INITIAL_WALK_ALARM_MINUTES = 10;
 const STANDARD_ALARM_MINUTES = 5;
+const EVENT_BOUNDARY_BUFFER_MINUTES = 1;
 
 interface CalendarLocation {
   name: string;
@@ -123,6 +124,10 @@ function calculateRoundedWalkingMinutes(distanceKm: number): number {
   );
 }
 
+function addMinutes(date: Date, minutes: number): Date {
+  return new Date(date.getTime() + minutes * MILLISECONDS_PER_MINUTE);
+}
+
 function collectTransitLegs(input: RouteCalendarInput): TransitLeg[] {
   const firstRoute = input.routes[0];
   if (!firstRoute) throw new Error("有効な経路情報がありません");
@@ -170,10 +175,11 @@ function buildEvents(input: RouteCalendarInput): CalendarEvent[] {
   const events: CalendarEvent[] = [
     {
       summary: `歩き ${input.originStop.stopName}バス停へ`,
-      start: new Date(
-        firstLeg.departure.getTime() - originWalkingMinutes * MILLISECONDS_PER_MINUTE
+      start: addMinutes(
+        firstLeg.departure,
+        -originWalkingMinutes - EVENT_BOUNDARY_BUFFER_MINUTES
       ),
-      end: firstLeg.departure,
+      end: addMinutes(firstLeg.departure, -EVENT_BOUNDARY_BUFFER_MINUTES),
       alarmMinutes: INITIAL_WALK_ALARM_MINUTES,
       location: getStopLocation(input.originStop),
     },
@@ -190,21 +196,32 @@ function buildEvents(input: RouteCalendarInput): CalendarEvent[] {
 
     const nextLeg = legs[index + 1];
     if (nextLeg) {
-      events.push({
-        summary: `乗り換え ${nextLeg.boardingStop.name}`,
-        start: leg.arrival,
-        end: nextLeg.departure,
-        alarmMinutes: STANDARD_ALARM_MINUTES,
-        location: nextLeg.boardingStop,
-      });
+      const transferDurationMilliseconds =
+        nextLeg.departure.getTime() - leg.arrival.getTime();
+      if (transferDurationMilliseconds > 0) {
+        const boundaryBufferMilliseconds = Math.min(
+          EVENT_BOUNDARY_BUFFER_MINUTES * MILLISECONDS_PER_MINUTE,
+          transferDurationMilliseconds / 3
+        );
+        events.push({
+          summary: `乗り換え ${nextLeg.boardingStop.name}`,
+          start: new Date(leg.arrival.getTime() + boundaryBufferMilliseconds),
+          end: new Date(
+            nextLeg.departure.getTime() - boundaryBufferMilliseconds
+          ),
+          alarmMinutes: STANDARD_ALARM_MINUTES,
+          location: nextLeg.boardingStop,
+        });
+      }
     }
   });
 
   events.push({
     summary: `歩き ${input.destinationStop.stopName}バス停から`,
-    start: lastLeg.arrival,
-    end: new Date(
-      lastLeg.arrival.getTime() + destinationWalkingMinutes * MILLISECONDS_PER_MINUTE
+    start: addMinutes(lastLeg.arrival, EVENT_BOUNDARY_BUFFER_MINUTES),
+    end: addMinutes(
+      lastLeg.arrival,
+      destinationWalkingMinutes + EVENT_BOUNDARY_BUFFER_MINUTES
     ),
     alarmMinutes: STANDARD_ALARM_MINUTES,
     location: getStopLocation(input.destinationStop),

@@ -81,6 +81,10 @@ jest.mock("@/components/features/RoutePdfExport", () => () => (
   <div data-testid="mock-pdf-export" />
 ));
 
+jest.mock("@/components/features/RouteCalendarExport", () => () => (
+  <div data-testid="mock-calendar-export" />
+));
+
 jest.mock("@/components/discussion", () => ({
   BusStopDiscussion: () => <div data-testid="mock-bus-stop-discussion" />,
   BusStopMemo: () => <div data-testid="mock-bus-stop-memo" />,
@@ -233,7 +237,7 @@ describe("Home", () => {
     ).toBeTruthy();
   });
 
-  test("印刷ボタンを経路ナビの直後かつバス停メモの直前に表示する", async () => {
+  test("カレンダー追加を印刷の上に置き、両方を経路ナビとバス停メモの間に表示する", async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -266,11 +270,16 @@ describe("Home", () => {
     fireEvent.click(screen.getByTestId("search-route"));
 
     const routeDisplay = await screen.findByTestId("mock-route-display");
+    const calendarExport = screen.getByTestId("mock-calendar-export");
     const pdfExport = screen.getByTestId("mock-pdf-export");
     const busStopMemo = screen.getByTestId("mock-bus-stop-memo");
 
     expect(
-      routeDisplay.compareDocumentPosition(pdfExport) &
+      routeDisplay.compareDocumentPosition(calendarExport) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      calendarExport.compareDocumentPosition(pdfExport) &
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
     expect(

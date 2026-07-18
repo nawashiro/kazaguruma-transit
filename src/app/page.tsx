@@ -6,6 +6,7 @@ import OriginSelector from "@/components/features/OriginSelector";
 import DestinationSelector from "@/components/features/DestinationSelector";
 import IntegratedRouteDisplay from "@/components/features/IntegratedRouteDisplay";
 import RoutePdfExport from "@/components/features/RoutePdfExport";
+import RouteCalendarExport from "@/components/features/RouteCalendarExport";
 import Button from "@/components/ui/Button";
 import ResetButton from "@/components/ui/ResetButton";
 import Card from "@/components/ui/Card";
@@ -679,7 +680,17 @@ export default function Home() {
         />
 
         {routeInfo.type !== "none" && (
-          <div className="mt-4 flex justify-center">
+          <div className="mt-4 flex flex-col items-center gap-4">
+            <RouteCalendarExport
+              originStop={routeInfo.originStop}
+              destinationStop={routeInfo.destinationStop}
+              routes={routeInfo.routes}
+              selectedDateTime={selectedDateTime}
+              originLat={selectedOrigin!.lat}
+              originLng={selectedOrigin!.lng}
+              destLat={selectedDestination!.lat}
+              destLng={selectedDestination!.lng}
+            />
             <RoutePdfExport
               originStop={routeInfo.originStop}
               destinationStop={routeInfo.destinationStop}

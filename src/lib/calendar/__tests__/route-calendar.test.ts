@@ -17,7 +17,7 @@ const destinationStop = {
 };
 
 describe("buildRouteCalendar", () => {
-  test("直通経路は乗車10分前と降車5分前の通知付きで登録する", () => {
+  test("直通経路は乗車時間だけを10分前通知付きで登録する", () => {
     const calendar = buildRouteCalendar({
       originStop,
       destinationStop,
@@ -46,9 +46,7 @@ describe("buildRouteCalendar", () => {
     expect(calendar).toContain("DTEND:20260718T101500");
     expect(calendar).toContain("LOCATION:和泉橋出張所");
     expect(calendar).toContain("GEO:35.697;139.78");
-    expect(calendar.match(/BEGIN:VALARM/g)).toHaveLength(2);
     expect(calendar.match(/TRIGGER:-PT10M/g)).toHaveLength(1);
-    expect(calendar.match(/TRIGGER;RELATED=END:-PT5M/g)).toHaveLength(1);
     expect(calendar).not.toContain("SUMMARY:歩き");
   });
 
@@ -103,9 +101,7 @@ describe("buildRouteCalendar", () => {
       "風ぐるま 千代田区役所 内神田ルート 毎日新聞",
     ]);
     expect(calendar.match(/BEGIN:VEVENT/g)).toHaveLength(2);
-    expect(calendar.match(/BEGIN:VALARM/g)).toHaveLength(4);
     expect(calendar.match(/TRIGGER:-PT10M/g)).toHaveLength(2);
-    expect(calendar.match(/TRIGGER;RELATED=END:-PT5M/g)).toHaveLength(2);
     expect(calendar).not.toContain("SUMMARY:乗り換え");
     expect(calendar).not.toContain("SUMMARY:歩き");
   });

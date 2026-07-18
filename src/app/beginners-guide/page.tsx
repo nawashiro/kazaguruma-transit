@@ -177,24 +177,6 @@ export default function BeginnersGuide() {
         <Card id="payment" title="お金をとるの？">
           <div className="space-y-4">
             <p>原則として無料で使うことができます。</p>
-            <p>
-              Nawashiroは、労働災害で障害を負い、ふつうの仕事をすることができません。貯金を取り崩して生活しています。
-            </p>
-            <p>
-              継続的な支援があれば、活動を続けることができるかもしれません。
-            </p>
-            <p>
-              支援してくれる人は、
-              <a
-                href="https://ko-fi.com/nawashiro/tiers"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="link"
-              >
-                Ko-fi
-              </a>
-              からお願いします。
-            </p>
           </div>
         </Card>
       </main>

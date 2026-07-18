@@ -15,15 +15,16 @@ import {
   TrophyIcon,
 } from "@heroicons/react/24/outline";
 import { HeartIcon } from "@heroicons/react/24/solid";
+import { buildKoFiTierPageUrl } from "@/lib/config/ko-fi-config";
 interface SidebarProps {
   toggleSidebar: () => void;
+  koFiUsername: string | null;
 }
 
-export default function Sidebar({ toggleSidebar }: SidebarProps) {
-  const koFiTierPageUrl =
-    process.env.NEXT_PUBLIC_KOFI_TIER_PAGE_URL ||
-    "https://ko-fi.com/nawashiro/tiers";
-
+export default function Sidebar({
+  toggleSidebar,
+  koFiUsername,
+}: SidebarProps) {
   return (
     <aside className="h-full w-80 border-r bg-base-200">
       <ul className="menu p-4 space-y-4 w-full bg-base-200">
@@ -125,18 +126,20 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
               <span className="ruby-text">設定</span>
             </Link>
           </li>
-          <li>
-            <a
-              href={koFiTierPageUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={toggleSidebar}
-              role="menuitem"
-            >
-              <HeartIcon className="h-6 w-6 text-error" />
-              <span className="ruby-text">開発者を支援する</span>
-            </a>
-          </li>
+          {koFiUsername && (
+            <li>
+              <a
+                href={buildKoFiTierPageUrl(koFiUsername)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={toggleSidebar}
+                role="menuitem"
+              >
+                <HeartIcon className="h-6 w-6 text-error" />
+                <span className="ruby-text">開発者を支援する</span>
+              </a>
+            </li>
+          )}
         </ul>
       </ul>
     </aside>

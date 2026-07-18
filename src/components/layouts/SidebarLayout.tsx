@@ -8,11 +8,17 @@ import SkipToContent from "../ui/SkipToContent";
 import Script from "next/script";
 import { logger } from "@/utils/logger";
 import { loadRubyPreference, saveRubyPreference, observeRubyToggle } from "@/lib/preferences/ruby-preference";
+import KoFiSupport from "@/components/features/KoFiSupport";
+import type { KoFiContent } from "@/types/ko-fi";
 
 export default function SidebarLayout({
   children,
+  koFiUsername,
+  koFiContent,
 }: {
   children: React.ReactNode;
+  koFiUsername: string | null;
+  koFiContent: KoFiContent;
 }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -67,6 +73,7 @@ export default function SidebarLayout({
           className="drawer-overlay"
         ></label>
         <Sidebar
+          koFiUsername={koFiUsername}
           toggleSidebar={() => {
             setIsDrawerOpen(false);
           }}
@@ -91,8 +98,8 @@ export default function SidebarLayout({
         <div id="main-content" className="flex-grow p-4" tabIndex={-1}>
           {children}
         </div>
-        <footer className="flex flex-col md:flex-row px-4 py-2 justify-center md:justify-between">
-          <div className="flex flex-col sm:flex-row items-end justify-center gap-2 md:w-auto">
+        <footer className="flex flex-col gap-4 px-4 py-4">
+          <div className="flex flex-col items-end justify-center gap-2 sm:flex-row">
             <a
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"
               target="_blank"
@@ -118,6 +125,9 @@ export default function SidebarLayout({
               クッキーポリシー
             </a>
           </div>
+          {koFiUsername && (
+            <KoFiSupport username={koFiUsername} content={koFiContent} />
+          )}
         </footer>
       </div>
     </div>

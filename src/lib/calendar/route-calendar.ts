@@ -1,13 +1,13 @@
-import { TRANSIT_PARAMS } from "@/lib/transit/transit-params";
-import { calculateWalkingTimeMinutes } from "@/lib/transit/walking";
-import type { CalendarRoute, CalendarStop, RouteCalendarInput } from "@/types/calendar";
+import type {
+  CalendarRoute,
+  CalendarStop,
+  RouteCalendarInput,
+} from "@/types/calendar";
 
 const CALENDAR_PRODUCT_ID = "-//Kazaguruma Transit//Route Calendar//JA";
 const MILLISECONDS_PER_MINUTE = 60_000;
 const MILLISECONDS_PER_DAY = 24 * 60 * MILLISECONDS_PER_MINUTE;
-const INITIAL_WALK_ALARM_MINUTES = 10;
-const STANDARD_ALARM_MINUTES = 5;
-const EVENT_BOUNDARY_BUFFER_MINUTES = 1;
+const BOARDING_ALARM_MINUTES = 10;
 
 interface CalendarLocation {
   name: string;
@@ -19,13 +19,13 @@ interface CalendarEvent {
   summary: string;
   start: Date;
   end: Date;
-  alarmMinutes: number;
   location: CalendarLocation;
 }
 
 interface TransitLeg {
   route: CalendarRoute;
   boardingStop: CalendarLocation;
+  alightingStop: CalendarLocation;
   departure: Date;
   arrival: Date;
 }
@@ -83,51 +83,6 @@ function getStopLocation(stop: CalendarStop): CalendarLocation {
   };
 }
 
-function getStraightLineDistanceKm(
-  stop: CalendarStop,
-  pointLatitude?: number,
-  pointLongitude?: number
-): number {
-  if (stop.distance > 0) return stop.distance;
-
-  const stopLatitude = stop.stop_lat;
-  const stopLongitude = stop.stop_lon;
-  if (
-    pointLatitude === undefined ||
-    pointLongitude === undefined ||
-    stopLatitude === undefined ||
-    stopLongitude === undefined
-  ) {
-    return 0;
-  }
-
-  const earthRadiusKm = 6371;
-  const toRadians = (degrees: number) => degrees * (Math.PI / 180);
-  const latitudeDifference = toRadians(stopLatitude - pointLatitude);
-  const longitudeDifference = toRadians(stopLongitude - pointLongitude);
-  const firstLatitude = toRadians(pointLatitude);
-  const secondLatitude = toRadians(stopLatitude);
-  const haversineValue =
-    Math.sin(latitudeDifference / 2) ** 2 +
-    Math.cos(firstLatitude) *
-      Math.cos(secondLatitude) *
-      Math.sin(longitudeDifference / 2) ** 2;
-  return earthRadiusKm * 2 * Math.atan2(
-    Math.sqrt(haversineValue),
-    Math.sqrt(1 - haversineValue)
-  );
-}
-
-function calculateRoundedWalkingMinutes(distanceKm: number): number {
-  return Math.ceil(
-    calculateWalkingTimeMinutes(distanceKm, TRANSIT_PARAMS.WALKING_SPEED_KM_H)
-  );
-}
-
-function addMinutes(date: Date, minutes: number): Date {
-  return new Date(date.getTime() + minutes * MILLISECONDS_PER_MINUTE);
-}
-
 function collectTransitLegs(input: RouteCalendarInput): TransitLeg[] {
   const firstRoute = input.routes[0];
   if (!firstRoute) throw new Error("有効な経路情報がありません");
@@ -142,7 +97,15 @@ function collectTransitLegs(input: RouteCalendarInput): TransitLeg[] {
   ) => {
     const departure = parseRouteTime(route.departureTime, serviceDate, earliest);
     const arrival = parseRouteTime(route.arrivalTime, serviceDate, departure);
-    legs.push({ route, boardingStop, departure, arrival });
+    const nextTransfer = route.transfers?.[0];
+    const alightingStop = nextTransfer
+      ? {
+          name: nextTransfer.transferStop.stopName,
+          latitude: nextTransfer.transferStop.stopLat,
+          longitude: nextTransfer.transferStop.stopLon,
+        }
+      : getStopLocation(input.destinationStop);
+    legs.push({ route, boardingStop, alightingStop, departure, arrival });
 
     route.transfers?.forEach((transfer) => {
       appendRoute(
@@ -162,71 +125,15 @@ function collectTransitLegs(input: RouteCalendarInput): TransitLeg[] {
 }
 
 function buildEvents(input: RouteCalendarInput): CalendarEvent[] {
-  const legs = collectTransitLegs(input);
-  const firstLeg = legs[0];
-  const lastLeg = legs[legs.length - 1];
-  const originWalkingMinutes = calculateRoundedWalkingMinutes(
-    getStraightLineDistanceKm(input.originStop, input.originLat, input.originLng)
-  );
-  const destinationWalkingMinutes = calculateRoundedWalkingMinutes(
-    getStraightLineDistanceKm(input.destinationStop, input.destLat, input.destLng)
-  );
-
-  const events: CalendarEvent[] = [
-    {
-      summary: `歩き ${input.originStop.stopName}バス停へ`,
-      start: addMinutes(
-        firstLeg.departure,
-        -originWalkingMinutes - EVENT_BOUNDARY_BUFFER_MINUTES
-      ),
-      end: addMinutes(firstLeg.departure, -EVENT_BOUNDARY_BUFFER_MINUTES),
-      alarmMinutes: INITIAL_WALK_ALARM_MINUTES,
-      location: getStopLocation(input.originStop),
-    },
-  ];
-
-  legs.forEach((leg, index) => {
-    events.push({
-      summary: `風ぐるま ${leg.boardingStop.name} ${leg.route.routeName}`,
+  return collectTransitLegs(input).map((leg) => {
+    const { boardingStop, alightingStop, route } = leg;
+    return {
+      summary: `風ぐるま ${boardingStop.name} ${route.routeName} ${alightingStop.name}`,
       start: leg.departure,
       end: leg.arrival,
-      alarmMinutes: STANDARD_ALARM_MINUTES,
-      location: leg.boardingStop,
-    });
-
-    const nextLeg = legs[index + 1];
-    if (nextLeg) {
-      const transferDurationMilliseconds =
-        nextLeg.departure.getTime() - leg.arrival.getTime();
-      if (transferDurationMilliseconds > 0) {
-        const boundaryBufferMilliseconds = Math.min(
-          EVENT_BOUNDARY_BUFFER_MINUTES * MILLISECONDS_PER_MINUTE,
-          transferDurationMilliseconds / 3
-        );
-        events.push({
-          summary: `乗り換え ${nextLeg.boardingStop.name}`,
-          start: new Date(leg.arrival.getTime() + boundaryBufferMilliseconds),
-          end: new Date(
-            nextLeg.departure.getTime() - boundaryBufferMilliseconds
-          ),
-          alarmMinutes: STANDARD_ALARM_MINUTES,
-          location: nextLeg.boardingStop,
-        });
-      }
-    }
+      location: boardingStop,
+    };
   });
-
-  events.push({
-    summary: `歩き ${input.destinationStop.stopName}バス停から`,
-    start: addMinutes(lastLeg.arrival, EVENT_BOUNDARY_BUFFER_MINUTES),
-    end: addMinutes(
-      lastLeg.arrival,
-      destinationWalkingMinutes + EVENT_BOUNDARY_BUFFER_MINUTES
-    ),
-    alarmMinutes: STANDARD_ALARM_MINUTES,
-    location: getStopLocation(input.destinationStop),
-  });
-  return events;
 }
 
 function escapeIcsText(value: string): string {
@@ -300,7 +207,7 @@ export function buildRouteCalendar(input: RouteCalendarInput): string {
     }
     lines.push(
       "BEGIN:VALARM",
-      `TRIGGER:-PT${event.alarmMinutes}M`,
+      `TRIGGER:-PT${BOARDING_ALARM_MINUTES}M`,
       "ACTION:DISPLAY",
       `DESCRIPTION:${escapeIcsText(event.summary)}`,
       "END:VALARM",

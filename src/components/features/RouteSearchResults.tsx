@@ -37,7 +37,7 @@ interface RouteSearchResultsProps {
   searchParams: string;
 }
 
-function ChangeSearchConditionsLink() {
+function ResetSearchConditionsLink() {
   return (
     <div className="flex justify-center">
       <Link
@@ -45,7 +45,7 @@ function ChangeSearchConditionsLink() {
         className="btn btn-secondary rounded-full dark:rounded-sm min-h-[44px] min-w-[44px] leading-relaxed font-medium inline-flex items-center justify-center"
       >
         <span className="ruby-text inline-flex w-full items-center justify-center gap-2">
-          検索条件を変更
+          検索条件をリセット
         </span>
       </Link>
     </div>
@@ -70,7 +70,7 @@ function SearchError({ message }: { message: string }) {
       <div role="alert" className="alert alert-error mb-4">
         {message}
       </div>
-      <ChangeSearchConditionsLink />
+      <ResetSearchConditionsLink />
     </Card>
   );
 }
@@ -175,7 +175,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
   const busStops = getBusStops(routeInfo);
   return (
     <div className="flex flex-col gap-4">
-      <ChangeSearchConditionsLink />
+      <ResetSearchConditionsLink />
       <IntegratedRouteDisplay
         originStop={routeInfo.originStop}
         destinationStop={routeInfo.destinationStop}

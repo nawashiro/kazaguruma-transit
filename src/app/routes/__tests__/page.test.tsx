@@ -88,7 +88,7 @@ describe("RoutesPage", () => {
     render(<RoutesPage />);
 
     expect(screen.getByRole("alert")).toHaveTextContent("検索条件");
-    const changeSearchLink = screen.getByRole("link", { name: "検索条件を変更" });
+    const changeSearchLink = screen.getByRole("link", { name: "検索条件をリセット" });
     expect(changeSearchLink).toHaveAttribute("href", "/");
     expect(changeSearchLink).toHaveClass(
       "btn",
@@ -123,7 +123,7 @@ describe("RoutesPage", () => {
     render(<RoutesPage />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("経路APIエラー");
-    expect(screen.getByRole("link", { name: "検索条件を変更" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "検索条件をリセット" })).toBeInTheDocument();
   });
 
   it("429を既存のレート制限モーダルへ接続する", async () => {

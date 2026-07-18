@@ -16,6 +16,65 @@ jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => mockUseAuth(),
 }));
 
+jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
+  useDiscussionMeta: () => ({
+    discussion: {
+      id: "34550:author:discussion-d-tag",
+      authorPubkey: "author",
+      dTag: "discussion-d-tag",
+      moderators: [{ pubkey: "moderator" }],
+      createdAt: 1,
+      title: "Title",
+      description: "desc",
+    },
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+jest.mock("@/components/discussion/DiscussionManagementDataProvider", () => ({
+  useDiscussionManagementData: () => ({
+    posts: [
+      {
+        id: "post-approved",
+        content: "approved post",
+        authorPubkey: "poster",
+        discussionId: "34550:author:discussion-d-tag",
+        createdAt: 2,
+        approved: true,
+        approvedBy: ["other-moderator"],
+        approvalState: "approved",
+        event: {
+          id: "post-approved",
+          pubkey: "poster",
+          created_at: 2,
+          kind: 1111,
+          tags: [
+            ["a", "34550:author:discussion-d-tag"],
+            ["q", "34550:ref:tag"],
+          ],
+          content: "approved post",
+          sig: "sig",
+        },
+      },
+    ],
+    approvals: [
+      {
+        id: "approval-event",
+        postId: "post-approved",
+        moderatorPubkey: "other-moderator",
+      },
+    ],
+    referencedDiscussions: [],
+    isModerationLoading: false,
+    completionReason: "eose",
+    approvalState: "approved",
+    reloadModeration: jest.fn(),
+    addApproval: jest.fn(),
+    removeApproval: jest.fn(),
+  }),
+}));
+
 jest.mock("@/lib/config/discussion-config", () => ({
   isDiscussionsEnabled: () => true,
   getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 500 }),

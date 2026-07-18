@@ -7,28 +7,13 @@ jest.mock("@/components/discussion/DiscussionManagementTabLayout", () => ({
   ),
 }));
 
-jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
-  DiscussionTabLayout: ({
-    children,
-    naddr,
-  }: {
-    children: React.ReactNode;
-    naddr?: string;
-  }) => (
-    <div data-testid="discussion-layout" data-naddr={naddr}>
-      {children}
-    </div>
-  ),
-}));
-
 import ModeratorLayout from "../layout";
 
 describe("ModeratorLayout", () => {
-  it("places management UI inside the single discussion metadata provider", () => {
+  it("uses the management tabs without creating a second metadata provider", () => {
     render(<ModeratorLayout>content</ModeratorLayout>);
 
-    expect(screen.getByTestId("discussion-layout")).toContainElement(
-      screen.getByTestId("management-layout"),
-    );
+    expect(screen.getByTestId("management-layout")).toHaveTextContent("content");
+    expect(screen.queryByTestId("discussion-layout")).not.toBeInTheDocument();
   });
 });

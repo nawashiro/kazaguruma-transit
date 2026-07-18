@@ -59,6 +59,10 @@ describe("DiscussionManagementTabLayout", () => {
       "href",
       "/discussions",
     );
+    expect(screen.getByRole("tab", { name: "会話一覧" })).toHaveAttribute(
+      "aria-controls",
+      "discussion-management-panel",
+    );
     expect(screen.getByRole("tab", { name: "掲載依頼" })).toHaveAttribute(
       "href",
       "/discussions/manage",
@@ -73,6 +77,10 @@ describe("DiscussionManagementTabLayout", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("あなたはユーザーです。"))
       .toBeInTheDocument();
+    expect(screen.getByRole("tabpanel")).toHaveAttribute(
+      "aria-labelledby",
+      "discussion-management-1-tab",
+    );
   });
 
   it("marks the current management route active", () => {

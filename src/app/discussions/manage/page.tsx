@@ -3,13 +3,7 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-} from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   CheckBadgeIcon,
@@ -20,61 +14,40 @@ import { useAuth } from "@/lib/auth/auth-context";
 import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
-  getDiscussionReadStrategyConfig,
 } from "@/lib/config/discussion-config";
-import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
-import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
-import {
-  loadKnownDiscussionData,
-  saveKnownDiscussionData,
-} from "@/lib/discussion/discussion-known-data-cache";
 import { createNostrService } from "@/lib/nostr/nostr-service";
-import {
-  parseDiscussionEvent,
-  parsePostEvent,
-  parseApprovalEvent,
-  formatRelativeTime,
-} from "@/lib/nostr/nostr-utils";
+import { formatRelativeTime } from "@/lib/nostr/nostr-utils";
 import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
 import { ApprovalStatusTabs } from "@/components/discussion/ApprovalStatusTabs";
-import {
-  extractDiscussionFromNaddr,
-  buildNaddrFromRef,
-} from "@/lib/nostr/naddr-utils";
-import type { Event } from "@/lib/nostr/nostr-service";
-import type { CompletionReason } from "@/lib/nostr/nostr-service";
-import type {
-  Discussion,
-  DiscussionPost,
-  PostApproval,
-} from "@/types/discussion";
+import { buildNaddrFromRef } from "@/lib/nostr/naddr-utils";
+import type { Discussion, DiscussionPost, PostApproval } from "@/types/discussion";
 import { logger } from "@/utils/logger";
+import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
+import { useDiscussionManagementData } from "@/components/discussion/DiscussionManagementDataProvider";
 
 const nostrServiceConfig = getNostrServiceConfig();
-const readStrategy = getDiscussionReadStrategyConfig();
 const nostrService = createNostrService(nostrServiceConfig);
 
 export default function DiscussionManagePage() {
-  const [discussion, setDiscussion] = useState<Discussion | null>(null);
-  const [posts, setPosts] = useState<DiscussionPost[]>([]);
-  const [approvals, setApprovals] = useState<PostApproval[]>([]);
-  const [referencedDiscussions, setReferencedDiscussions] = useState<
-    Discussion[]
-  >([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [completionReason, setCompletionReason] =
-    useState<CompletionReason | null>(null);
-  const [approvalState, setApprovalState] = useState<
-    "approved" | "unapproved" | "unknown"
-  >("unknown");
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
 
-  const readGenerationRef = useRef(0);
-
   const { user, signEvent } = useAuth();
+  const discussionMeta = useDiscussionMeta();
+  const discussion = discussionMeta?.discussion;
+  const {
+    posts,
+    approvals,
+    referencedDiscussions,
+    isModerationLoading: isLoading,
+    completionReason,
+    approvalState,
+    reloadModeration,
+    addApproval,
+    removeApproval,
+  } = useDiscussionManagementData();
 
   const canManagePosts = Boolean(
     discussion &&
@@ -160,187 +133,6 @@ export default function DiscussionManagePage() {
     );
   };
 
-  // naddrを解析し、ディスカッション情報を抽出します
-  const discussionInfo = useMemo(() => {
-    const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
-    if (!discussionListNaddr) return null;
-    return extractDiscussionFromNaddr(discussionListNaddr);
-  }, []);
-
-  const loadDiscussionData = useCallback(async () => {
-    const readGeneration = ++readGenerationRef.current;
-    setDiscussion(null);
-    setPosts([]);
-    setApprovals([]);
-    setCompletionReason(null);
-    setApprovalState("unknown");
-    setIsLoading(true);
-
-    if (!isDiscussionsEnabled() || !discussionInfo) {
-      setIsLoading(false);
-      return;
-    }
-
-    const knownData = loadKnownDiscussionData<Discussion, Event>(
-      discussionInfo.discussionId
-    );
-    const knownMetadata = knownData?.metadata;
-    if (
-      knownMetadata &&
-      knownMetadata.dTag === discussionInfo.dTag &&
-      arePubkeysEqual(knownMetadata.authorPubkey, discussionInfo.authorPubkey)
-    ) {
-      setDiscussion(knownMetadata);
-    }
-
-    const relayUrls = selectRelayCandidates({
-      hints: discussionInfo.relays,
-      successful: knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays,
-      configured: nostrServiceConfig.relays
-        .filter((relay) => relay.read)
-        .map((relay) => relay.url),
-      defaults: [],
-      limit: readStrategy.relayLimit,
-    }).map((relay) => relay.url);
-
-    try {
-      const metadataResult = await nostrService.getEventsWithCompletion(
-        [
-          {
-            kinds: [34550],
-            authors: [discussionInfo.authorPubkey],
-            "#d": [discussionInfo.dTag],
-            limit: 1,
-          },
-        ],
-        {
-          idleTimeoutMs: readStrategy.idleTimeoutMs,
-          hardTimeoutMs: readStrategy.hardTimeoutMs,
-          relayUrls,
-        }
-      );
-      if (readGenerationRef.current !== readGeneration) return;
-
-      const parsedDiscussion = metadataResult.events
-        .map(parseDiscussionEvent)
-        .find(
-          (candidate) =>
-            candidate &&
-            candidate.dTag === discussionInfo.dTag &&
-            arePubkeysEqual(candidate.authorPubkey, discussionInfo.authorPubkey)
-        );
-      if (parsedDiscussion) setDiscussion(parsedDiscussion);
-
-      const snapshot = await loadDiscussionModerationSnapshot(
-        nostrService,
-        readStrategy,
-        {
-          discussionId: discussionInfo.discussionId,
-          hints: discussionInfo.relays,
-          successful:
-            knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays,
-          configured: nostrServiceConfig.relays
-            .filter((relay) => relay.read)
-            .map((relay) => relay.url),
-          defaults: [],
-        }
-      );
-      if (readGenerationRef.current !== readGeneration) return;
-
-      const parsedApprovals = snapshot.approvalEvents
-        .map(parseApprovalEvent)
-        .filter((approval): approval is PostApproval => approval !== null);
-      const parsedPosts = snapshot.primaryEvents
-        .map((event) => parsePostEvent(event, parsedApprovals))
-        .filter((post): post is DiscussionPost => post !== null)
-        .map((post) => ({
-          ...post,
-          approvalState: (
-            snapshot.completionReason === "eose"
-              ? post.approved
-                ? "approved"
-                : "unapproved"
-              : "unknown"
-          ) as DiscussionPost["approvalState"],
-        }))
-        .sort((left, right) => right.createdAt - left.createdAt);
-
-      setApprovals(parsedApprovals);
-      setPosts(parsedPosts);
-      setApprovalState(snapshot.approvalState);
-      setCompletionReason(
-        metadataResult.completionReason === "eose"
-          ? snapshot.completionReason
-          : metadataResult.completionReason
-      );
-      const events = [...metadataResult.events, ...snapshot.primaryEvents, ...snapshot.approvalEvents];
-      saveKnownDiscussionData(discussionInfo.discussionId, {
-        metadata: parsedDiscussion ?? knownMetadata ?? null,
-        eventIds: events.map((event) => event.id),
-        attemptedRelayUrls: [
-          ...metadataResult.relayUrls,
-          ...snapshot.attemptedRelayUrls,
-        ],
-        successfulEventRelayUrls: snapshot.successfulRelayUrls,
-        successfulRelays: [],
-        events,
-      });
-    } catch (error) {
-      if (readGenerationRef.current !== readGeneration) return;
-      logger.error("Failed to load discussion management data:", error);
-      setCompletionReason("hard-timeout");
-    } finally {
-      if (readGenerationRef.current === readGeneration) setIsLoading(false);
-    }
-  }, [discussionInfo]);
-
-  useEffect(() => {
-    void loadDiscussionData();
-  }, [loadDiscussionData]);
-
-  useEffect(() => {
-    const qTagRefs = new Set<string>();
-    posts.forEach((post) => {
-      const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
-      qTags.forEach((qTag) => {
-        if (qTag[1] && qTag[1].startsWith("34550:")) {
-          qTagRefs.add(qTag[1]);
-        }
-      });
-    });
-
-    if (qTagRefs.size === 0) {
-      setReferencedDiscussions([]);
-      return;
-    }
-
-    let cancelled = false;
-    const loadReferencedDiscussions = async () => {
-      try {
-        const individualDiscussions =
-          await nostrService.getReferencedUserDiscussions(
-            Array.from(qTagRefs)
-          );
-        if (cancelled) return;
-
-        const parsed = individualDiscussions
-          .map(parseDiscussionEvent)
-          .filter((d): d is Discussion => d !== null);
-        setReferencedDiscussions(parsed);
-      } catch (error) {
-        if (!cancelled) {
-          logger.error("Failed to load referenced discussions:", error);
-        }
-      }
-    };
-
-    loadReferencedDiscussions();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [posts]);
-
   const handleApprovePost = async (post: DiscussionPost) => {
     if (!user.isLoggedIn || !discussion || !canManagePosts) return;
 
@@ -369,20 +161,7 @@ export default function DiscussionManagePage() {
         event: signedEvent,
       };
 
-      // 楽観的な更新
-      setApprovals((prev) => [...prev, newApproval]);
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === post.id
-            ? {
-                ...p,
-                approved: true,
-                approvedBy: [...(p.approvedBy || []), user.pubkey || ""],
-                approvedAt: signedEvent.created_at,
-              }
-            : p
-        )
-      );
+      addApproval(newApproval);
     } catch (error) {
       logger.error("Failed to approve post:", error);
     } finally {
@@ -416,22 +195,7 @@ export default function DiscussionManagePage() {
         throw new Error("Failed to publish revocation to relays");
       }
 
-      // 楽観的な更新
-      setApprovals((prev) => prev.filter((a) => a.id !== approval.id));
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === post.id
-            ? {
-                ...p,
-                approved: false,
-                approvedBy:
-                  p.approvedBy?.filter((pubkey) => pubkey !== user.pubkey) ||
-                  [],
-                approvedAt: undefined,
-              }
-            : p
-        )
-      );
+      removeApproval(approval.id, post.id, user.pubkey || "");
     } catch (error) {
       logger.error("Failed to revoke approval:", error);
     } finally {
@@ -443,21 +207,20 @@ export default function DiscussionManagePage() {
     }
   };
 
-  // 無効な naddr をチェックしています
-  if (!discussionInfo) {
+  if (!discussion && discussionMeta?.isLoading === false) {
     return (
       <div className="py-8">
-        <div>
-          <PageHeader
-            title="無効な会話URL"
-            description="指定された会話URLが無効です。"
-          />
-          <Link
-            href="/discussions"
-            className="btn btn-primary rounded-full dark:rounded-sm"
+        <div className="alert alert-error" role="alert">
+          <span className="ruby-text">
+            {discussionMeta.error ?? "掲載一覧の会話情報が見つかりませんでした。"}
+          </span>
+          <button
+            type="button"
+            className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            onClick={() => void discussionMeta.reload()}
           >
-            会話一覧に戻る
-          </Link>
+            <span className="ruby-text">再読み込み</span>
+          </button>
         </div>
       </div>
     );
@@ -474,7 +237,7 @@ export default function DiscussionManagePage() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading || discussionMeta?.isLoading) {
     return (
       <div className="py-8">
         <div
@@ -516,7 +279,7 @@ export default function DiscussionManagePage() {
         completionReason={completionReason}
         hasData={posts.length > 0}
         approvalState={approvalState === "unknown" ? "unknown" : undefined}
-        onReload={() => void loadDiscussionData()}
+        onReload={() => void reloadModeration()}
       />
       {!canManagePosts && (
         <div className="card bg-base-100 shadow-sm mb-6" role="status">

@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import PageHeader from "@/components/layouts/PageHeader";
+import { DiscussionManagementShell } from "@/components/discussion/DiscussionManagementShell";
 
 export const metadata: Metadata = {
   title: "意見交換 - 風ぐるま",
@@ -23,5 +24,11 @@ export default function DiscussionsLayout({
     );
   }
 
-  return <>{children}</>;
+  return (
+    <DiscussionManagementShell
+      discussionListNaddr={process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR}
+    >
+      {children}
+    </DiscussionManagementShell>
+  );
 }

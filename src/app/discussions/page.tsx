@@ -3,213 +3,55 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useEffect, useCallback } from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
-import { getDiscussionReadStrategyConfig, isDiscussionsEnabled } from "@/lib/config/discussion-config";
+import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import { DiscussionListTabLayout } from "@/components/discussion/DiscussionListTabLayout";
 import PageHeader from "@/components/layouts/PageHeader";
-import {
-  createDiscussionNdkGateway,
-  type NostrEventDTO,
-} from "@/lib/nostr/discussion-ndk-gateway";
-import {
-  parseDiscussionEvent,
-  parsePostEvent,
-  parseApprovalEvent,
-  formatRelativeTime,
-  getAdminPubkeyHex,
-} from "@/lib/nostr/nostr-utils";
-import { arePubkeysEqual } from "@/lib/discussion/permission-system";
-import {
-  buildNaddrFromDiscussion,
-  extractDiscussionFromNaddr,
-} from "@/lib/nostr/naddr-utils";
-import { getNostrServiceConfig } from "@/lib/config/discussion-config";
-import { loadDiscussionModerationSnapshot } from "@/lib/discussion/discussion-moderation-snapshot";
-import { createNostrService } from "@/lib/nostr/nostr-service";
-import { saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
-import type {
-  Discussion,
-  DiscussionPost,
-  PostApproval,
-} from "@/types/discussion";
-import { logger } from "@/utils/logger";
-import type { DiscussionRole } from "@/components/discussion/DiscussionRoleCard";
-
-const nostrServiceConfig = getNostrServiceConfig();
-const readStrategy =
-  typeof getDiscussionReadStrategyConfig === "function"
-    ? getDiscussionReadStrategyConfig()
-    : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
-const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
-const nostrService = createNostrService(nostrServiceConfig);
+import { formatRelativeTime } from "@/lib/nostr/nostr-utils";
+import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
+import { useDiscussionManagementData } from "@/components/discussion/DiscussionManagementDataProvider";
 
 export default function DiscussionsPage() {
-  const [discussions, setDiscussions] = React.useState<Discussion[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [loadError, setLoadError] = React.useState<string | null>(null);
-
   const { user } = useAuth();
-  const discussionRole: DiscussionRole = arePubkeysEqual(user.pubkey, getAdminPubkeyHex())
-    ? "admin"
-    : discussions.some((discussion) =>
-        discussion.moderators.some((moderator) =>
-          arePubkeysEqual(user.pubkey, moderator.pubkey),
-        ),
-      )
-      ? "moderator"
-      : "user";
-
-  // 会話一覧専用のデータ取得
-  const loadData = useCallback(async () => {
-    if (!isDiscussionsEnabled()) return;
-    setIsLoading(true);
-    setLoadError(null);
-    setDiscussions([]);
-
-    try {
-      const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
-      if (!discussionListNaddr) {
-        logger.error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is not configured");
-        throw new Error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is not configured");
-      }
-
-      const discussionInfo = extractDiscussionFromNaddr(discussionListNaddr);
-      if (!discussionInfo) {
-        throw new Error("Invalid DISCUSSION_LIST_NADDR format");
-      }
-
-      logger.info(
-        "Loading discussion list with discussionId:",
-        discussionInfo.discussionId
-      );
-
-      const parseDiscussionsFromEvents = (events: NostrEventDTO[]) => {
-        const parsed = events
-          .map(parseDiscussionEvent)
-          .filter((d): d is Discussion => d !== null);
-        const latestById = new Map<string, Discussion>();
-        parsed.forEach((discussion) => {
-          const existing = latestById.get(discussion.id);
-          if (!existing || discussion.createdAt > existing.createdAt) {
-            latestById.set(discussion.id, discussion);
-          }
-        });
-
-        return Array.from(latestById.values()).sort(
-          (a, b) => b.createdAt - a.createdAt
-        );
-      };
-
-      const moderation = typeof nostrService.getEventsWithCompletion === "function"
-        ? await loadDiscussionModerationSnapshot(nostrService, readStrategy, {
-            discussionId: discussionInfo.discussionId,
-            hints: discussionInfo.relays,
-            configured: nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
-            defaults: [],
-          })
-        : null;
-      logger.info("discussions-list approvals fetch completed", {
-        discussionId: discussionInfo.discussionId,
-        completionReason: moderation?.completionReason ?? "eose",
-        eventCount: moderation?.approvalEvents.length ?? 0,
-      });
-      if (moderation) {
-        const events = [...moderation.primaryEvents, ...moderation.approvalEvents];
-        saveKnownDiscussionData(discussionInfo.discussionId, {
-          metadata: null,
-          eventIds: events.map((event) => event.id),
-          attemptedRelayUrls: moderation.attemptedRelayUrls,
-          successfulEventRelayUrls: moderation.successfulRelayUrls,
-          successfulRelays: [],
-          events,
-        });
-      }
-
-      const listApprovals = (moderation?.approvalEvents ?? (await discussionGateway.queryWithCompletion([{ kinds: [4550], "#a": [discussionInfo.discussionId], limit: 50 }], { idleTimeoutMs: readStrategy.idleTimeoutMs, hardTimeoutMs: readStrategy.hardTimeoutMs, relayUrls: [] })).events)
-        .map(parseApprovalEvent)
-        .filter((a): a is PostApproval => a !== null);
-
-      const listPosts = moderation
-        ? moderation.primaryEvents.map((event) => parsePostEvent(event, listApprovals)).filter((p): p is DiscussionPost => p !== null)
-        : listApprovals.map((approval) => {
-            try { return parsePostEvent(JSON.parse(approval.event.content), [approval]); } catch { return null; }
-          }).filter((p): p is DiscussionPost => p !== null)
-        .sort((a, b) => b.createdAt - a.createdAt);
-      const visibleListPosts = moderation
-        ? listPosts.filter((post) => post.approved || moderation.approvalState === "unknown")
-        : listPosts;
-
-      const individualDiscussionRefs = new Set<string>();
-      visibleListPosts.forEach((post) => {
-        const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
-        qTags.forEach((qTag) => {
-          if (qTag[1] && qTag[1].startsWith("34550:")) {
-            individualDiscussionRefs.add(qTag[1]);
-          }
-        });
-      });
-
-      if (individualDiscussionRefs.size === 0) {
-        setDiscussions([]);
-        setIsLoading(false);
-        return;
-      }
-
-      const discussionFilters = Array.from(individualDiscussionRefs)
-        .map((ref) => {
-          const parts = ref.split(":");
-          if (parts.length !== 3 || parts[0] !== "34550") {
-            return null;
-          }
-          const [, pubkey, dTag] = parts;
-          return {
-            kinds: [34550],
-            authors: [pubkey],
-            "#d": [dTag],
-            limit: 1,
-          };
-        })
-        .filter((filter): filter is NonNullable<typeof filter> => Boolean(filter));
-
-      if (discussionFilters.length === 0) {
-        setDiscussions([]);
-        setIsLoading(false);
-        return;
-      }
-
-      const discussionsResult = await discussionGateway.queryWithCompletion(
-        discussionFilters,
-        {
-          idleTimeoutMs: nostrServiceConfig.defaultTimeout,
-          hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
-        }
-      );
-      logger.info("discussions-list metadata fetch completed", {
-        discussionId: discussionInfo.discussionId,
-        completionReason: discussionsResult.completionReason,
-        eventCount: discussionsResult.eventCount,
-        elapsedMs: discussionsResult.elapsedMs,
-      });
-      setDiscussions(parseDiscussionsFromEvents(discussionsResult.events));
-      setIsLoading(false);
-    } catch (error) {
-      logger.error("Failed to load discussion list:", error);
-      setLoadError("会話一覧の取得に失敗しました。時間をおいて再度お試しください。");
-      setDiscussions([]);
-      setIsLoading(false);
-    } finally {
-      logger.info("Finished loading discussion list");
-    }
-  }, []);
-
-
-  useEffect(() => {
-    if (isDiscussionsEnabled()) {
-      loadData();
-    }
-  }, [loadData]);
+  const {
+    posts,
+    referencedDiscussions,
+    isModerationLoading,
+    isReferencedDiscussionsLoading,
+    moderationError: loadError,
+  } = useDiscussionManagementData();
+  const visibleDiscussionReferences = useMemo(
+    () =>
+      new Set(
+        posts
+          .filter(
+            (post) => post.approved || post.approvalState === "unknown",
+          )
+          .flatMap((post) =>
+            (post.event?.tags ?? [])
+              .filter(
+                (tag) => tag[0] === "q" && tag[1]?.startsWith("34550:"),
+              )
+              .map((tag) => tag[1]),
+          ),
+      ),
+    [posts],
+  );
+  const discussions = useMemo(
+    () =>
+      referencedDiscussions
+        .filter((discussion) =>
+          visibleDiscussionReferences.has(
+            `34550:${discussion.authorPubkey}:${discussion.dTag}`,
+          ),
+        )
+        .sort((left, right) => right.createdAt - left.createdAt),
+    [referencedDiscussions, visibleDiscussionReferences],
+  );
+  const isLoading =
+    isModerationLoading || isReferencedDiscussionsLoading;
 
   // ディスカッション機能が有効になっているか確認し、それに応じて表示を切り替える
   if (!isDiscussionsEnabled()) {
@@ -224,7 +66,7 @@ export default function DiscussionsPage() {
   }
 
   return (
-    <DiscussionListTabLayout baseHref="/discussions" role={discussionRole}>
+    <DiscussionListTabLayout baseHref="/discussions">
       <div className="space-y-6 py-8">
             <section aria-labelledby="discussions-list-heading">
               <h2

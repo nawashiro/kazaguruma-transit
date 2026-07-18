@@ -9,14 +9,14 @@ export default function ModeratorLayout({
   children: React.ReactNode;
 }) {
   return (
-    <DiscussionManagementTabLayout>
-      <DiscussionTabLayout
-        baseHref="/discussions/moderator"
-        naddr={discussionListNaddr}
-        showNavigation={false}
-      >
+    <DiscussionTabLayout
+      baseHref="/discussions/moderator"
+      naddr={discussionListNaddr}
+      showNavigation={false}
+    >
+      <DiscussionManagementTabLayout>
         {children}
-      </DiscussionTabLayout>
-    </DiscussionManagementTabLayout>
+      </DiscussionManagementTabLayout>
+    </DiscussionTabLayout>
   );
 }

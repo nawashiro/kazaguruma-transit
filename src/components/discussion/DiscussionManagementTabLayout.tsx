@@ -10,6 +10,7 @@ import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import { getAdminPubkeyHex, parseDiscussionEvent } from "@/lib/nostr/nostr-utils";
 import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import { DiscussionRoleCard, type DiscussionRole } from "@/components/discussion/DiscussionRoleCard";
+import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import PageHeader from "@/components/layouts/PageHeader";
 
 const MANAGEMENT_TABS = [
@@ -29,6 +30,7 @@ export function DiscussionManagementTabLayout({
   const pathname = usePathname().replace(/\/$/, "") || "/";
   const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const { user } = useAuth();
+  const discussionMeta = useDiscussionMeta();
   const [role, setRole] = useState<DiscussionRole | null>(null);
   const isAdminUser = arePubkeysEqual(user.pubkey, getAdminPubkeyHex());
 
@@ -40,8 +42,24 @@ export function DiscussionManagementTabLayout({
     const listNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
     if (isAdminUser) {
       setRole("admin");
+      return;
     }
-    if (!listNaddr || isAdminUser) return;
+
+    if (discussionMeta) {
+      const discussion = discussionMeta.discussion;
+      if (!discussion) {
+        setRole(null);
+        return;
+      }
+
+      const isModerator = discussion.moderators.some((moderator) =>
+        arePubkeysEqual(user.pubkey, moderator.pubkey),
+      );
+      setRole(isModerator ? "moderator" : "user");
+      return;
+    }
+
+    if (!listNaddr) return;
 
     const discussionInfo = extractDiscussionFromNaddr(listNaddr);
     if (!discussionInfo) return;
@@ -86,7 +104,7 @@ export function DiscussionManagementTabLayout({
     return () => {
       isActive = false;
     };
-  }, [isAdminUser, roleOverride, user.pubkey]);
+  }, [discussionMeta, isAdminUser, roleOverride, user.pubkey]);
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent, currentIndex: number) => {

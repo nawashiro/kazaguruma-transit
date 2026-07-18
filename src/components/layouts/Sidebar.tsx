@@ -20,6 +20,10 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ toggleSidebar }: SidebarProps) {
+  const koFiTierPageUrl =
+    process.env.NEXT_PUBLIC_KOFI_TIER_PAGE_URL ||
+    "https://ko-fi.com/nawashiro/tiers";
+
   return (
     <aside className="h-full w-80 border-r bg-base-200">
       <ul className="menu p-4 space-y-4 w-full bg-base-200">
@@ -123,7 +127,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
           </li>
           <li>
             <a
-              href="https://ko-fi.com/nawashiro/tiers"
+              href={koFiTierPageUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={toggleSidebar}

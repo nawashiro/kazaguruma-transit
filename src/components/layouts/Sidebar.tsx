@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   HomeIcon,
-  MapIcon,
   QuestionMarkCircleIcon,
   BookOpenIcon,
   DocumentTextIcon,
@@ -13,13 +12,19 @@ import {
   MapPinIcon,
   ChatBubbleLeftRightIcon,
   Cog6ToothIcon,
+  TrophyIcon,
 } from "@heroicons/react/24/outline";
 import { HeartIcon } from "@heroicons/react/24/solid";
+import { buildKoFiPageUrl } from "@/lib/config/ko-fi-config";
 interface SidebarProps {
   toggleSidebar: () => void;
+  koFiUsername: string | null;
 }
 
-export default function Sidebar({ toggleSidebar }: SidebarProps) {
+export default function Sidebar({
+  toggleSidebar,
+  koFiUsername,
+}: SidebarProps) {
   return (
     <aside className="h-full w-80 border-r bg-base-200">
       <ul className="menu p-4 space-y-4 w-full bg-base-200">
@@ -87,6 +92,12 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
                 </Link>
               </li>
               <li>
+                <Link role="menuitem" href="/award" onClick={toggleSidebar}>
+                  <TrophyIcon className="h-6 w-6" />
+                  <span className="ruby-text">受賞について</span>
+                </Link>
+              </li>
+              <li>
                 <Link role="menuitem" href="/license" onClick={toggleSidebar}>
                   <DocumentTextIcon className="h-6 w-6" />
                   <span className="ruby-text">ライセンス</span>
@@ -94,7 +105,7 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
               </li>
               <li>
                 <a
-                  href="https://halved-hamster-4a1.notion.site/1df78db44c3d80979856c735893403d4"
+                  href="https://github.com/nawashiro/kazaguruma-transit/releases"
                   target="_blank"
                   rel="noopener noreferrer"
                   role="menuitem"
@@ -115,24 +126,20 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
               <span className="ruby-text">設定</span>
             </Link>
           </li>
-          <li>
-            <Link role="menuitem" href="/site-map" onClick={toggleSidebar}>
-              <MapIcon className="h-6 w-6" />
-              <span className="ruby-text">サイトマップ</span>
-            </Link>
-          </li>
-          <li>
-            <a
-              href="https://ko-fi.com/nawashiro/tiers"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={toggleSidebar}
-              role="menuitem"
-            >
-              <HeartIcon className="h-6 w-6 text-error" />
-              <span className="ruby-text">開発者を支援する</span>
-            </a>
-          </li>
+          {koFiUsername && (
+            <li>
+              <a
+                href={buildKoFiPageUrl(koFiUsername)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={toggleSidebar}
+                role="menuitem"
+              >
+                <HeartIcon className="h-6 w-6 text-error" />
+                <span className="ruby-text">開発者を支援する</span>
+              </a>
+            </li>
+          )}
         </ul>
       </ul>
     </aside>

@@ -6,6 +6,7 @@ import type { Discussion } from "@/types/discussion";
 
 const useAuthMock = jest.fn();
 const mockUseDiscussionMeta = jest.fn();
+const mockUseDiscussionContentData = jest.fn();
 let isModeratorResult = false;
 
 jest.mock("next/navigation", () => ({
@@ -18,6 +19,10 @@ jest.mock("@/lib/auth/auth-context", () => ({
 
 jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
   useDiscussionMeta: () => mockUseDiscussionMeta(),
+}));
+
+jest.mock("@/components/discussion/DiscussionContentDataProvider", () => ({
+  useDiscussionContentData: () => mockUseDiscussionContentData(),
 }));
 
 jest.mock("@/lib/config/discussion-config", () => ({
@@ -146,6 +151,54 @@ describe("PostApprovalPage streaming", () => {
       error: null,
       completionReason: "eose",
       reload: jest.fn(),
+    });
+    mockUseDiscussionContentData.mockReturnValue({
+      posts: [
+        {
+          id: "post-1",
+          content: "pending post",
+          authorPubkey: "poster",
+          discussionId: "34550:author:tag",
+          createdAt: 2,
+          approved: false,
+          approvalState: "unapproved",
+          event: {
+            id: "post-1",
+            pubkey: "poster",
+            kind: 1111,
+            created_at: 2,
+            tags: [["a", "34550:author:tag"]],
+            content: "pending post",
+            sig: "sig",
+          },
+        },
+        {
+          id: "post-approved",
+          content: "approved post",
+          authorPubkey: "poster",
+          discussionId: "34550:author:tag",
+          createdAt: 3,
+          approved: true,
+          approvalState: "approved",
+          event: {
+            id: "post-approved",
+            pubkey: "poster",
+            kind: 1111,
+            created_at: 3,
+            tags: [["a", "34550:author:tag"]],
+            content: "approved post",
+            sig: "sig",
+          },
+        },
+      ],
+      approvals: [],
+      isLoading: false,
+      completionReason: "eose",
+      approvalState: "unapproved",
+      reload: jest.fn(),
+      mergeModerationEvents: jest.fn(),
+      addApproval: jest.fn(),
+      removeApproval: jest.fn(),
     });
   });
 
@@ -279,5 +332,41 @@ describe("PostApprovalPage streaming", () => {
       "tab-active"
     );
     expect(screen.getByRole("tab", { name: "承認済みタブを開く" })).toHaveClass("tab");
+  });
+
+  it("moves and activates approval tabs with horizontal arrow keys", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "author", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+
+    render(<PostApprovalPage />);
+
+    const pendingTab = await screen.findByRole("tab", {
+      name: "承認待ちタブを開く",
+    });
+    const approvedTab = screen.getByRole("tab", {
+      name: "承認済みタブを開く",
+    });
+
+    expect(pendingTab).toHaveAttribute("tabindex", "0");
+    expect(approvedTab).toHaveAttribute("tabindex", "-1");
+
+    pendingTab.focus();
+    fireEvent.keyDown(pendingTab, { key: "ArrowRight" });
+
+    expect(approvedTab).toHaveFocus();
+    expect(approvedTab).toHaveAttribute("aria-selected", "true");
+    expect(approvedTab).toHaveAttribute("tabindex", "0");
+    expect(pendingTab).toHaveAttribute("tabindex", "-1");
+    expect(approvedTab).toHaveAttribute(
+      "aria-controls",
+      screen.getByRole("tabpanel").id
+    );
+
+    fireEvent.keyDown(approvedTab, { key: "ArrowRight" });
+
+    expect(pendingTab).toHaveFocus();
+    expect(pendingTab).toHaveAttribute("aria-selected", "true");
   });
 });

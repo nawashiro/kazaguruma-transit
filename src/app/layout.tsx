@@ -6,6 +6,10 @@ import GoogleAnalytics from "@/components/layouts/GoogleAnalytics";
 import StructuredData from "@/components/layouts/StructuredData";
 import CustomHead from "@/components/layouts/CustomHead";
 import { AuthProvider } from "@/lib/auth/auth-context";
+import {
+  loadKoFiContent,
+  loadKoFiUsername,
+} from "@/lib/config/ko-fi-funding";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -55,6 +59,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const koFiUsername = loadKoFiUsername();
+  const koFiContent = loadKoFiContent();
+
   return (
     <html lang="ja">
       <head>
@@ -64,7 +71,12 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <GoogleAnalytics />
         <AuthProvider>
-          <SidebarLayout>{children}</SidebarLayout>
+          <SidebarLayout
+            koFiUsername={koFiUsername}
+            koFiContent={koFiContent}
+          >
+            {children}
+          </SidebarLayout>
         </AuthProvider>
       </body>
     </html>

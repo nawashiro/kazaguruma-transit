@@ -48,6 +48,7 @@ prisma/.temp/
 
 # transit
 transit-config.json
+ko-fi-content.json
 
 .gtfs/
 .codex/

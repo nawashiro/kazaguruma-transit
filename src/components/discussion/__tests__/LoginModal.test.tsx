@@ -19,6 +19,84 @@ describe("LoginModal", () => {
     loginMock.mockResolvedValue(undefined);
   });
 
+  it("renders the mode selector as DaisyUI tabs-box tabs", () => {
+    render(<LoginModal isOpen onClose={jest.fn()} />);
+
+    const tablist = screen.getByRole("tablist", { name: "モード選択" });
+    const createTab = screen.getByRole("tab", { name: "新規作成タブを開く" });
+    const loginTab = screen.getByRole("tab", { name: "ログインを開く" });
+
+    expect(tablist).toHaveClass("tabs", "tabs-box");
+    expect(tablist).not.toHaveClass("join");
+    expect(createTab).toHaveClass("tab", "tab-active", "min-h-[44px]");
+    expect(createTab).not.toHaveClass("btn", "join-item");
+    expect(loginTab).toHaveClass("tab", "min-h-[44px]");
+    expect(loginTab).not.toHaveClass("tab-active", "btn", "join-item");
+
+    fireEvent.click(loginTab);
+
+    expect(createTab).not.toHaveClass("tab-active");
+    expect(createTab).toHaveAttribute("aria-selected", "false");
+    expect(loginTab).toHaveClass("tab-active");
+    expect(loginTab).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("moves and activates tabs with horizontal arrow keys", () => {
+    render(<LoginModal isOpen onClose={jest.fn()} />);
+
+    const createTab = screen.getByRole("tab", { name: "新規作成タブを開く" });
+    const loginTab = screen.getByRole("tab", { name: "ログインを開く" });
+
+    expect(createTab).toHaveAttribute("tabindex", "0");
+    expect(loginTab).toHaveAttribute("tabindex", "-1");
+    expect(createTab).toHaveAttribute(
+      "aria-controls",
+      "login-modal-create-panel"
+    );
+    expect(screen.getByRole("tabpanel")).toHaveAttribute(
+      "aria-labelledby",
+      "login-modal-create-tab"
+    );
+    expect(screen.getByRole("dialog")).toHaveAttribute(
+      "aria-labelledby",
+      "login-modal-create-title"
+    );
+    expect(screen.getByRole("dialog")).toHaveAttribute(
+      "aria-describedby",
+      "login-modal-create-description"
+    );
+
+    createTab.focus();
+    fireEvent.keyDown(createTab, { key: "ArrowRight" });
+
+    expect(loginTab).toHaveFocus();
+    expect(loginTab).toHaveAttribute("aria-selected", "true");
+    expect(loginTab).toHaveAttribute("tabindex", "0");
+    expect(createTab).toHaveAttribute("tabindex", "-1");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute(
+      "aria-labelledby",
+      "login-modal-login-tab"
+    );
+    expect(screen.getByRole("dialog")).toHaveAttribute(
+      "aria-labelledby",
+      "login-modal-login-title"
+    );
+    expect(screen.getByRole("dialog")).toHaveAttribute(
+      "aria-describedby",
+      "login-modal-login-description"
+    );
+
+    fireEvent.keyDown(loginTab, { key: "ArrowRight" });
+
+    expect(createTab).toHaveFocus();
+    expect(createTab).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.keyDown(createTab, { key: "ArrowLeft" });
+
+    expect(loginTab).toHaveFocus();
+    expect(loginTab).toHaveAttribute("aria-selected", "true");
+  });
+
   it("asks for a passkey name instead of a user name", () => {
     render(<LoginModal isOpen onClose={jest.fn()} />);
 

@@ -20,6 +20,8 @@ const createDiscussion = () => ({
     sig: "signature",
   },
 });
+const mockReload = jest.fn();
+const mockUseDiscussionMeta = jest.fn();
 
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => ({
@@ -28,10 +30,7 @@ jest.mock("@/lib/auth/auth-context", () => ({
   }),
 }));
 jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
-  useDiscussionMeta: () => ({
-    discussion: createDiscussion(),
-    reload: jest.fn(),
-  }),
+  useDiscussionMeta: () => mockUseDiscussionMeta(),
 }));
 jest.mock("@/components/discussion/ModeratorManagementSection", () => ({
   ModeratorManagementSection: ({
@@ -75,6 +74,51 @@ jest.mock("@/lib/nostr/mnemonic-utils", () => ({
 }));
 
 describe("ModeratorsPage direct moderator management", () => {
+  beforeEach(() => {
+    mockReload.mockReset();
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: createDiscussion(),
+      isLoading: false,
+      error: null,
+      reload: mockReload,
+    });
+  });
+
+  it("keeps Rubyful mutations inside the removable loading text", () => {
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: true,
+      error: null,
+      reload: mockReload,
+    });
+
+    render(<ModeratorsPage />);
+
+    const loadingStatus = screen.getByRole("status");
+    expect(loadingStatus).not.toHaveClass("ruby-text");
+    expect(screen.getByText("会話情報を読み込み中...")).toHaveClass(
+      "ruby-text",
+    );
+  });
+
+  it("取得完了後に会話がなければ読み込み表示を続けない", () => {
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: false,
+      error: "会話情報が見つかりませんでした。",
+      reload: mockReload,
+    });
+
+    render(<ModeratorsPage />);
+
+    expect(screen.queryByText("会話情報を読み込み中...")).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "会話情報が見つかりませんでした。",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+    expect(mockReload).toHaveBeenCalledTimes(1);
+  });
+
   it("enables confirmation when approval and removal selections change", () => {
     render(<ModeratorsPage />);
 

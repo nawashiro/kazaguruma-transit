@@ -190,6 +190,27 @@ describe("NostrService event retrieval", () => {
     expect(result.eventCount).toBe(0);
   });
 
+  it("getEventsWithCompletion enforces a completion timeout while connection is pending", async () => {
+    mockConnect.mockImplementation(() => new Promise<void>(() => undefined));
+    mockSubscribe.mockReturnValue({ stop: mockStop });
+    const service = new NostrService(config);
+    let completionReason: string | undefined;
+
+    void service
+      .getEventsWithCompletion([{ kinds: [34550] }], {
+        idleTimeoutMs: 100,
+        hardTimeoutMs: 300,
+      })
+      .then((result) => {
+        completionReason = result.completionReason;
+      });
+
+    await jest.advanceTimersByTimeAsync(101);
+
+    expect(completionReason).toBe("idle-timeout");
+    expect(mockStop).toHaveBeenCalledTimes(1);
+  });
+
   it("limits a selected read with NDKRelaySet and preserves duplicate source relays", async () => {
     let handlers: { onEvent?: (event: unknown) => void; onEose?: () => void } = {};
     mockSubscribe.mockImplementation((_filter, options) => {

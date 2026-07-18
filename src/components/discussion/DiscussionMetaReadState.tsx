@@ -2,6 +2,7 @@
 
 import type { CompletionReason } from "@/lib/nostr/nostr-service";
 import type { Discussion } from "@/types/discussion";
+import PageHeader from "@/components/layouts/PageHeader";
 
 interface DiscussionMetaReadStateProps {
   discussion: Discussion | null;
@@ -22,19 +23,13 @@ export function DiscussionMetaReadState({
 }: DiscussionMetaReadStateProps) {
   return (
     <>
+      <PageHeader
+        title={discussion?.title ?? "会話情報"}
+        description={discussion?.description}
+      />
       {isLoading && (
         <div role="status" aria-live="polite" className="mb-8">
           会話情報を読み込み中...
-        </div>
-      )}
-      {discussion && (
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-4 ruby-text">{discussion.title}</h1>
-          {discussion.description.split("\n").map((line) => (
-            <p key={line} className="text-gray-600 dark:text-gray-400 ruby-text">
-              {line}
-            </p>
-          ))}
         </div>
       )}
       {error && (

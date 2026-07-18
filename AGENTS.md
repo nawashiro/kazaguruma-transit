@@ -110,6 +110,7 @@ These principles are the operational source of truth for agents working in this 
 - TypeScript 5 strict、React 19、Next.js 15 App Router + Tailwind CSS 4、DaisyUI 5、既存のNostr gateway/service、Prisma/SQLite、Jest、React Testing Library (014-deferred-page-responsibility-split)
 - TypeScript 5 strict、React 19、Next.js 15 App Router + Tailwind CSS 4、DaisyUI 5、`@heroicons/react`、`react-icons`、Jest、React Testing Library、Puppeteer (015-accessibility-violation-fix)
 - N/A（新規永続化なし。既存の状態・データ取得を維持） (015-accessibility-violation-fix)
+- TypeScript 5 strict、React 19、Next.js 15 App Router + Tailwind CSS 4、DaisyUI 5、既存TransitService、Jest、React Testing Library (016-bookmarkable-route-results)
 
 - TypeScript 5, React 19, Next.js 15 (App Router) + DaisyUI 5, Tailwind CSS 4, webpack-license-plugin（導入パッケージライセンス収集）, Prisma（既存） (005-license-page-autogen)
 - 既存SQLite（本機能では新規永続化なし）、`package.json`、オープンデータ用JSONファイル (005-license-page-autogen)

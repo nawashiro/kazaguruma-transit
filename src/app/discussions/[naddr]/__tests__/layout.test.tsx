@@ -31,6 +31,12 @@ jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
   ),
 }));
 
+jest.mock("@/components/discussion/DiscussionContentDataProvider", () => ({
+  DiscussionContentDataProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="discussion-content-provider">{children}</div>
+  ),
+}));
+
 describe("DiscussionLayout", () => {
   beforeEach(() => {
     authProviderMock.mockClear();
@@ -44,6 +50,9 @@ describe("DiscussionLayout", () => {
     );
 
     expect(screen.getByTestId("discussion-tab-layout")).toBeInTheDocument();
+    expect(screen.getByTestId("discussion-content-provider")).toHaveTextContent(
+      "child content",
+    );
     expect(screen.queryByTestId("auth-provider")).not.toBeInTheDocument();
     expect(authProviderMock).not.toHaveBeenCalled();
   });

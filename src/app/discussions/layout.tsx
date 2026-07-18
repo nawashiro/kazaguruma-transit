@@ -1,5 +1,7 @@
 import { Metadata } from "next";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
+import PageHeader from "@/components/layouts/PageHeader";
+import { DiscussionManagementShell } from "@/components/discussion/DiscussionManagementShell";
 
 export const metadata: Metadata = {
   title: "意見交換 - 風ぐるま",
@@ -13,14 +15,20 @@ export default function DiscussionsLayout({
 }) {
   if (!isDiscussionsEnabled()) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">意見交換機能</h1>
-          <p className="text-gray-600">この機能は現在利用できません。</p>
-        </div>
+      <div className="py-8">
+        <PageHeader
+          title="意見交換機能"
+          description="この機能は現在利用できません。"
+        />
       </div>
     );
   }
 
-  return <>{children}</>;
+  return (
+    <DiscussionManagementShell
+      discussionListNaddr={process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR}
+    >
+      {children}
+    </DiscussionManagementShell>
+  );
 }

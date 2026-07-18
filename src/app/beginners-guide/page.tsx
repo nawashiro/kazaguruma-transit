@@ -1,20 +1,23 @@
 "use client";
 
 import Card from "@/components/ui/Card";
+import PageHeader from "@/components/layouts/PageHeader";
 
 export default function BeginnersGuide() {
   return (
-    <div className="container ruby-text">
-      <header className="text-center my-4">
-        <h1 className="text-3xl font-bold">
-          <ruby>
-            風<rt>かざ</rt>
-          </ruby>
-          ぐるまは初めて？
-        </h1>
-        <p className="mt-2 text-xl">ビギナーズガイド</p>
-      </header>
-      <main className="max-w-md mx-auto space-y-4">
+    <div className="ruby-text">
+      <PageHeader
+        title={
+          <>
+            <ruby>
+              風<rt>かざ</rt>
+            </ruby>
+            ぐるまは初めて？
+          </>
+        }
+        description="ビギナーズガイド"
+      />
+      <div className="space-y-4">
         <Card title="目次">
           <ul className="menu bg-base-100 p-0">
             <li>
@@ -177,27 +180,9 @@ export default function BeginnersGuide() {
         <Card id="payment" title="お金をとるの？">
           <div className="space-y-4">
             <p>原則として無料で使うことができます。</p>
-            <p>
-              Nawashiroは、労働災害で障害を負い、ふつうの仕事をすることができません。貯金を取り崩して生活しています。
-            </p>
-            <p>
-              継続的な支援があれば、活動を続けることができるかもしれません。
-            </p>
-            <p>
-              支援してくれる人は、
-              <a
-                href="https://ko-fi.com/nawashiro/tiers"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="link"
-              >
-                Ko-fi
-              </a>
-              からお願いします。
-            </p>
           </div>
         </Card>
-      </main>
+      </div>
     </div>
   );
 }

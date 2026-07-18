@@ -8,11 +8,19 @@ import SkipToContent from "../ui/SkipToContent";
 import Script from "next/script";
 import { logger } from "@/utils/logger";
 import { loadRubyPreference, saveRubyPreference, observeRubyToggle } from "@/lib/preferences/ruby-preference";
+import KoFiSupport from "@/components/features/KoFiSupport";
+import type { KoFiContent } from "@/types/ko-fi";
+
+const PAGE_CONTAINER_CLASS_NAME = "mx-auto w-full max-w-4xl px-4";
 
 export default function SidebarLayout({
   children,
+  koFiUsername,
+  koFiContent,
 }: {
   children: React.ReactNode;
+  koFiUsername: string | null;
+  koFiContent: KoFiContent;
 }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -67,6 +75,7 @@ export default function SidebarLayout({
           className="drawer-overlay"
         ></label>
         <Sidebar
+          koFiUsername={koFiUsername}
           toggleSidebar={() => {
             setIsDrawerOpen(false);
           }}
@@ -88,16 +97,25 @@ export default function SidebarLayout({
           </span>
           <ThemeToggle />
         </div>
-        <div id="main-content" className="flex-grow p-4" tabIndex={-1}>
-          {children}
-        </div>
-        <footer className="flex flex-col md:flex-row px-4 py-2 justify-center md:justify-between">
-          <div className="flex flex-col sm:flex-row items-end justify-center gap-2 md:w-auto">
+        <main id="main-content" className="flex-grow" tabIndex={-1}>
+          <div
+            className={`${PAGE_CONTAINER_CLASS_NAME} flex flex-col gap-8`}
+          >
+            {children}
+            {koFiUsername && (
+              <KoFiSupport username={koFiUsername} content={koFiContent} />
+            )}
+          </div>
+        </main>
+        <footer className="py-4">
+          <div
+            className={`${PAGE_CONTAINER_CLASS_NAME} flex flex-col items-start gap-2`}
+          >
             <a
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"
               target="_blank"
               rel="noopener noreferrer"
-              className="link text-sm /60 hover:underline inline-block mx-2 ruby-text"
+              className="link inline-block text-sm text-base-content/60 hover:underline ruby-text"
             >
               利用規約
             </a>
@@ -105,7 +123,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80b2a6d4d045e850407c"
               target="_blank"
               rel="noopener noreferrer"
-              className="link text-sm /60 hover:underline inline-block mx-2 ruby-text"
+              className="link inline-block text-sm text-base-content/60 hover:underline ruby-text"
             >
               プライバシーポリシー
             </a>
@@ -113,7 +131,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80d0ba82d66f451b9ff1"
               target="_blank"
               rel="noopener noreferrer"
-              className="link text-sm /60 hover:underline inline-block mx-2 ruby-text"
+              className="link inline-block text-sm text-base-content/60 hover:underline ruby-text"
             >
               クッキーポリシー
             </a>

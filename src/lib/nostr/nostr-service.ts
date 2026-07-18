@@ -300,7 +300,6 @@ export class NostrService {
     options: ReadEventsOptions = {}
   ): Promise<EventFetchCompletion> {
     try {
-      await this.ensureConnected();
       return await this.collectEventsWithCompletion(filters, options);
     } catch (error) {
       logger.error("Failed to get events with completion:", error);

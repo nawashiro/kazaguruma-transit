@@ -3,6 +3,22 @@ import "@testing-library/jest-dom";
 import { DiscussionMetaReadState } from "../DiscussionMetaReadState";
 
 describe("DiscussionMetaReadState", () => {
+  it("会話情報の読み込み中もページ見出しを保つ", () => {
+    render(
+      <DiscussionMetaReadState
+        discussion={null}
+        isLoading
+        error={null}
+        completionReason={null}
+        onReload={jest.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "会話情報" }),
+    ).toBeInTheDocument();
+  });
+
   it("known dataを表示しながら取得状態を示す", () => {
     render(
       <DiscussionMetaReadState
@@ -30,6 +46,9 @@ describe("DiscussionMetaReadState", () => {
       />,
     );
 
+    expect(
+      screen.getByRole("heading", { level: 1, name: "会話情報" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("取得に失敗");
     expect(screen.getByRole("button", { name: "再試行" })).toBeInTheDocument();
   });

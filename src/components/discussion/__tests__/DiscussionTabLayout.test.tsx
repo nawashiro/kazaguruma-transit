@@ -47,7 +47,15 @@ jest.mock("@/utils/logger", () => ({
 }));
 
 // Import after mocking
-import { DiscussionTabLayout } from "../DiscussionTabLayout";
+import {
+  DiscussionTabLayout,
+  useDiscussionMeta,
+} from "../DiscussionTabLayout";
+
+function DiscussionMetaProbe() {
+  const meta = useDiscussionMeta();
+  return <div>{meta?.isLoading ? "loading" : meta?.error ?? "ready"}</div>;
+}
 
 describe("DiscussionTabLayout", () => {
   beforeEach(() => {
@@ -83,8 +91,16 @@ describe("DiscussionTabLayout", () => {
 
       // Main tab should be selected when on main path
       expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+      expect(tabs[0]).toHaveAttribute(
+        "aria-controls",
+        "discussion-content-panel",
+      );
       expect(tabs[1]).toHaveAttribute("aria-selected", "false");
       expect(tabs[2]).toHaveAttribute("aria-selected", "false");
+      expect(screen.getByRole("tabpanel")).toHaveAttribute(
+        "aria-labelledby",
+        "discussion-content-0-tab",
+      );
     });
 
     it("renders and selects the all posts tab on the approval path", () => {
@@ -232,6 +248,22 @@ describe("DiscussionTabLayout", () => {
   });
 
   describe("renders children", () => {
+    it("不正なNADDRでは読み込みを終了してエラー状態にする", async () => {
+      render(
+        <DiscussionTabLayout
+          baseHref="/discussions/moderator"
+          naddr="invalid"
+          showNavigation={false}
+        >
+          <DiscussionMetaProbe />
+        </DiscussionTabLayout>,
+      );
+
+      expect(
+        await screen.findByText("会話情報の指定が正しくありません。"),
+      ).toBeInTheDocument();
+    });
+
     it("renders children content", () => {
       render(
         <DiscussionTabLayout baseHref="/discussions/naddr123">

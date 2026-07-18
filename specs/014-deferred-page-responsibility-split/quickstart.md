@@ -38,9 +38,7 @@ npm test -- --runInBand \
 ## 3. 場所一覧ページ
 
 ```bash
-npm test -- --runInBand \
-  src/app/locations/__tests__/page.test.tsx \
-  src/app/__tests__/site-map.test.tsx
+npm test -- --runInBand src/app/locations/__tests__/page.test.tsx
 ```
 
 確認内容:

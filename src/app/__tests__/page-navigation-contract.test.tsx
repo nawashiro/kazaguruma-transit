@@ -2,6 +2,10 @@ import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Home from "../page";
 
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn() }),
+}));
+
 jest.mock("@/components/features/DateTimeSelector", () => function MockDateTimeSelector() {
   return <div />;
 });
@@ -18,9 +22,6 @@ jest.mock("@/components/features/RoutePdfExport", () => function MockRoutePdfExp
   return <div />;
 });
 jest.mock("@/components/features/RateLimitModal", () => function MockRateLimitModal() {
-  return null;
-});
-jest.mock("@/components/features/FirstVisitGuideModal", () => function MockFirstVisitGuideModal() {
   return null;
 });
 jest.mock("@/components/ui/Button", () => function MockButton({ children }: { children: React.ReactNode }) {

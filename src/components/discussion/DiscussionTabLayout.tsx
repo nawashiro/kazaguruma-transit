@@ -139,7 +139,13 @@ export function DiscussionTabLayout({
    * @throws {Error} ストリーム接続エラー時（catchブロックで処理）
    */
   const loadDiscussionData = useCallback(async () => {
-    if (!discussionInfo) return;
+    if (!discussionInfo) {
+      setDiscussion(null);
+      setIsDiscussionLoading(false);
+      setDiscussionError("会話情報の指定が正しくありません。");
+      setDiscussionCompletionReason("cancelled");
+      return;
+    }
 
     // loadSequence パターンで古いデータを破棄
     const loadSequence = ++loadSequenceRef.current;
@@ -204,6 +210,8 @@ export function DiscussionTabLayout({
           ),
           successfulRelays: [],
         });
+      } else {
+        setDiscussionError("会話情報が見つかりませんでした。");
       }
       setDiscussionCompletionReason(discussionResult.completionReason);
       setIsDiscussionLoading(false);
@@ -283,6 +291,10 @@ export function DiscussionTabLayout({
       isActive: isEditActive,
     }] : []),
   ];
+  const activeTabIndex = Math.max(
+    0,
+    tabs.findIndex((tab) => tab.isActive),
+  );
 
   /**
    * キーボードナビゲーション処理
@@ -416,18 +428,26 @@ export function DiscussionTabLayout({
             className={`tab font-bold px-4 min-h-[44px] min-w-[44px] shrink-0 whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${tab.isActive ? "tab-active" : ""
               }`}
             role="tab"
+            id={`discussion-content-${index}-tab`}
+            aria-controls="discussion-content-panel"
             aria-selected={tab.isActive}
             aria-current={tab.isActive ? "page" : undefined}
             tabIndex={tab.isActive ? 0 : -1}
             onKeyDown={(e) => handleKeyDown(e, index)}
           >
-            {tab.label}
+            <span className="ruby-text">{tab.label}</span>
           </Link>
         ))}
       </nav>
 
-      {/* 子コンテンツ */}
-      {children}
+      <div
+        id="discussion-content-panel"
+        role="tabpanel"
+        aria-labelledby={`discussion-content-${activeTabIndex}-tab`}
+        tabIndex={0}
+      >
+        {children}
+      </div>
       </div> : children}
     </DiscussionMetaContext.Provider>
   );

@@ -10,6 +10,7 @@ import React, {
   useRef,
 } from "react";
 import Link from "next/link";
+import PageHeader from "@/components/layouts/PageHeader";
 import { useParams, useRouter } from "next/navigation";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
@@ -538,9 +539,11 @@ export default function DiscussionEditPage() {
   if (!discussionInfo) {
     return (
       <div className="py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">無効な会話URL</h1>
-          <p className="text-gray-600 mb-4">指定された会話URLが無効です。</p>
+        <div>
+          <PageHeader
+            title="無効な会話URL"
+            description="指定された会話URLが無効です。"
+          />
           <Link
             href="/discussions"
             className="btn btn-primary rounded-full dark:rounded-sm"
@@ -555,10 +558,10 @@ export default function DiscussionEditPage() {
   if (!isDiscussionsEnabled()) {
     return (
       <div className="py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">会話編集</h1>
-          <p className="text-gray-600">この機能は現在利用できません。</p>
-        </div>
+        <PageHeader
+          title="会話編集"
+          description="この機能は現在利用できません。"
+        />
       </div>
     );
   }
@@ -607,8 +610,8 @@ export default function DiscussionEditPage() {
 
     return (
       <div className="py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">会話が見つかりません</h1>
+        <div>
+          <PageHeader title="会話が見つかりません" />
           <Link
             href="/discussions"
             className="btn btn-primary rounded-full dark:rounded-sm"
@@ -639,34 +642,32 @@ export default function DiscussionEditPage() {
 
   if (!hasEditPermission) {
     return (
-      <main className="py-8" role="main">
-        <div className="card max-w-2xl mx-auto bg-base-100 shadow-sm border border-base-300">
-          <div className="card-body items-center text-center py-8">
+      <div className="py-8">
+        <div className="card bg-base-100 shadow-sm border border-base-300">
+          <div className="card-body py-8">
             <InformationCircleIcon
               className="h-12 w-12 text-info"
               aria-hidden="true"
             />
-            <h1 className="mt-4 text-lg font-medium text-base-content ruby-text">
-              基本情報を編集できません
-            </h1>
-            <p className="mt-2 text-sm text-base-content/70 ruby-text">
-              会話の基本情報を編集できるのは会話作成者だけです。
-            </p>
+            <PageHeader
+              title="基本情報を編集できません"
+              description="会話の基本情報を編集できるのは会話作成者だけです。"
+            />
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
     <div className="py-8">
-      <div className="max-w-2xl mx-auto">
-        <main id="discussion-edit-main" role="main">
+      <div>
+        <div id="discussion-edit-main">
           {successMessage ? (
             <div className="card bg-base-100 shadow-lg border border-green-200 dark:border-green-700">
-              <div className="card-body text-center">
+              <div className="card-body ">
                 <div className="mb-4">
-                  <CheckCircleIcon className="w-16 h-16 text-green-600 dark:text-green-400 mx-auto" />
+                  <CheckCircleIcon className="w-16 h-16 text-green-600 dark:text-green-400 " />
                 </div>
                 <h2 className="text-xl font-semibold mb-4 text-green-600 dark:text-green-400">
                   {successMessage}
@@ -1052,7 +1053,7 @@ export default function DiscussionEditPage() {
               </div>
             </div>
           )}
-        </main>
+        </div>
       </div>
 
       {/* 削除確認ダイアログ */}

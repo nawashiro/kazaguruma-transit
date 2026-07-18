@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
+import PageHeader from "@/components/layouts/PageHeader";
 
 export const metadata: Metadata = {
   title: "意見交換 - 風ぐるま",
@@ -14,10 +15,10 @@ export default function DiscussionsLayout({
   if (!isDiscussionsEnabled()) {
     return (
       <div className="py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">意見交換機能</h1>
-          <p className="text-gray-600">この機能は現在利用できません。</p>
-        </div>
+        <PageHeader
+          title="意見交換機能"
+          description="この機能は現在利用できません。"
+        />
       </div>
     );
   }

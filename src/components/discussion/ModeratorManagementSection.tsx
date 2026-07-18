@@ -91,7 +91,7 @@ export function ModeratorManagementSection({
           ) : (
             <div className="space-y-4">
               {moderators.map((moderator) => (
-                <article
+                <div
                   key={moderator.pubkey}
                   className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
                 >
@@ -111,7 +111,7 @@ export function ModeratorManagementSection({
                       />
                     )}
                   </div>
-                </article>
+                </div>
               ))}
             </div>
           )}
@@ -135,7 +135,7 @@ export function ModeratorManagementSection({
           ) : (
             <div className="space-y-4">
               {applications.map((application) => (
-                <article
+                <div
                   key={application.id}
                   className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
                 >
@@ -155,7 +155,7 @@ export function ModeratorManagementSection({
                       />
                     )}
                   </div>
-                </article>
+                </div>
               ))}
             </div>
           )}

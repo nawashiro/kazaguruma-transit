@@ -10,6 +10,7 @@ import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import { getAdminPubkeyHex, parseDiscussionEvent } from "@/lib/nostr/nostr-utils";
 import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import { DiscussionRoleCard, type DiscussionRole } from "@/components/discussion/DiscussionRoleCard";
+import PageHeader from "@/components/layouts/PageHeader";
 
 const MANAGEMENT_TABS = [
   { href: "/discussions", label: "会話一覧" },
@@ -112,12 +113,10 @@ export function DiscussionManagementTabLayout({
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4 ruby-text">意見交換</h1>
-        <p className="text-gray-600 dark:text-gray-400 ruby-text">
-          意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。
-        </p>
-      </div>
+      <PageHeader
+        title="意見交換"
+        description="意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。"
+      />
       {role && <DiscussionRoleCard role={role} />}
       <nav
         className="tabs tabs-box mb-6 w-full overflow-x-auto"

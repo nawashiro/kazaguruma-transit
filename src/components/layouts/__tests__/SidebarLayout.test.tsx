@@ -28,7 +28,7 @@ describe("SidebarLayout", () => {
           message: "支援をお願いします。",
         }}
       >
-        <article>ページ本文</article>
+        <div>ページ本文</div>
       </SidebarLayout>,
     );
 
@@ -41,6 +41,7 @@ describe("SidebarLayout", () => {
     const footer = cookiePolicyLink.closest("footer");
 
     expect(mainContent).toContainElement(supportFrame);
+    expect(mainContent?.tagName).toBe("MAIN");
     expect(footer).not.toContainElement(supportFrame);
     expect(pageContent.compareDocumentPosition(supportFrame)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
@@ -59,7 +60,7 @@ describe("SidebarLayout", () => {
           message: "支援をお願いします。",
         }}
       >
-        <article>ページ本文</article>
+        <div>ページ本文</div>
       </SidebarLayout>,
     );
 
@@ -81,7 +82,7 @@ describe("SidebarLayout", () => {
           message: "支援をお願いします。",
         }}
       >
-        <article>ページ本文</article>
+        <div>ページ本文</div>
       </SidebarLayout>,
     );
 

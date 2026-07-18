@@ -187,7 +187,7 @@ export default function ModeratorsPage() {
       </div>
     );
   return (
-    <main className="max-w-2xl space-y-6">
+    <div className="space-y-6">
       <ModeratorManagementSection
         moderators={discussion.moderators}
         applications={applications}
@@ -352,6 +352,6 @@ export default function ModeratorsPage() {
         </section>
       )}
       <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
-    </main>
+    </div>
   );
 }

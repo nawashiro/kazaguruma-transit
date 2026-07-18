@@ -1,15 +1,14 @@
 import { getLicensePagePayload } from "@/lib/license/licensePayload";
+import PageHeader from "@/components/layouts/PageHeader";
 
 export default async function LicensePage() {
   const payload = await getLicensePagePayload();
 
   return (
     <div className="pb-8 ruby-text">
-      <header className="text-center my-4">
-        <h1 className="text-3xl font-bold">ライセンス</h1>
-      </header>
+      <PageHeader title="ライセンス" />
 
-      <main className="max-w-4xl mx-auto space-y-4">
+      <div className="space-y-4">
         <section className="card bg-base-100 shadow-md">
           <div className="card-body p-4 sm:p-6">
             <h2 className="card-title"><span>本ソフトウェア</span></h2>
@@ -124,7 +123,7 @@ export default async function LicensePage() {
             </div>
           </div>
         </section>
-      </main>
+      </div>
     </div>
   );
 }

@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
+import PageHeader from "@/components/layouts/PageHeader";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
@@ -349,9 +350,11 @@ export default function DiscussionDetailPage() {
   if (!discussionInfo) {
     return (
       <div className="py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">無効な会話URL</h1>
-          <p className="text-gray-600 mb-4">指定された会話URLが無効です。</p>
+        <div>
+          <PageHeader
+            title="無効な会話URL"
+            description="指定された会話URLが無効です。"
+          />
           <Link
             href="/discussions"
             className="btn btn-primary rounded-full dark:rounded-sm"
@@ -366,10 +369,10 @@ export default function DiscussionDetailPage() {
   if (!isDiscussionsEnabled()) {
     return (
       <div className="py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">会話</h1>
-          <p className="text-gray-600">この機能は現在利用できません。</p>
-        </div>
+        <PageHeader
+          title="会話"
+          description="この機能は現在利用できません。"
+        />
       </div>
     );
   }
@@ -529,8 +532,8 @@ export default function DiscussionDetailPage() {
 
     return (
       <div className="py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">会話が見つかりません</h1>
+        <div>
+          <PageHeader title="会話が見つかりません" />
           <Link
             href="/discussions"
             className="btn btn-primary rounded-full dark:rounded-sm"
@@ -546,7 +549,7 @@ export default function DiscussionDetailPage() {
       <div className="py-8">
       {/* タブナビゲーションはlayout.tsxに移動 */}
 
-      <main className="grid lg:grid-cols-2 gap-8">
+      <div className="grid lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             <section aria-labelledby="evaluation-heading">
               {isPostsLoading
@@ -901,7 +904,7 @@ export default function DiscussionDetailPage() {
               </div>
             </section>
           </aside>
-        </main>
+        </div>
 
       <LoginModal
         isOpen={showLoginModal}

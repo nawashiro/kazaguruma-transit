@@ -117,7 +117,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
     <Card className="rounded-lg" bodyClassName="p-4">
       {type === "none" ? (
         // ルートが見つからない場合の表示
-        <div className="text-center">
+        <div>
           <h3 className="text-xl font-bold mb-2 ">ルートが見つかりません</h3>
           <p>この2つの地点を結ぶルートが見つかりませんでした</p>
           <p className="mt-2 ">別の交通手段をご検討ください</p>
@@ -127,7 +127,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
         <div>
           {/* 出発地から出発地バス停へのリンク */}
           {originToStopMapLink && (
-            <div className="mb-4 text-center">
+            <div className="mb-4">
               <a
                 href={originToStopMapLink}
                 target="_blank"
@@ -207,7 +207,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
 
                   return (
                     <>
-                      <div className="text-center my-4">
+                      <div className="my-4">
                         <div className="inline-block bg-blue-100 px-4 py-2 rounded-full font-bold text-blue-800 border border-blue-300 shadow-sm">
                           ここで乗り換え
                         </div>
@@ -269,7 +269,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
 
           {/* 目的地バス停から目的地へのリンク */}
           {stopToDestinationMapLink && (
-            <div className="mt-4 text-center">
+            <div className="mt-4">
               <a
                 href={stopToDestinationMapLink}
                 target="_blank"

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
+import PageHeader from "@/components/layouts/PageHeader";
 import {
   AWARD_BADGE_IMAGE_URL,
   AWARD_BADGE_URL,
@@ -13,14 +14,16 @@ import {
 
 export default function AwardPage() {
   return (
-    <main className="mx-auto max-w-3xl space-y-6 ruby-text">
-      <header className="space-y-3 text-center">
-        <p className="text-sm font-semibold">{AWARD_NAME}</p>
-        <h1 className="text-3xl font-bold">受賞について</h1>
-        <p className="text-lg">
+    <div className="space-y-6 ruby-text">
+      <PageHeader
+        eyebrow={AWARD_NAME}
+        title="受賞について"
+        description={
+          <>
           「風ぐるま乗換案内」の取組が、{AWARD_PRIZE}を受賞しました。
-        </p>
-      </header>
+          </>
+        }
+      />
 
       <section className="card card-border bg-base-100 shadow-sm md:card-side">
         <figure className="shrink-0 bg-base-200 p-6 md:w-72">
@@ -102,6 +105,6 @@ export default function AwardPage() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

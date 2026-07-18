@@ -9,6 +9,7 @@ import RoutePdfExport from "@/components/features/RoutePdfExport";
 import RouteCalendarExport from "@/components/features/RouteCalendarExport";
 import Button from "@/components/ui/Button";
 import ResetButton from "@/components/ui/ResetButton";
+import PageHeader from "@/components/layouts/PageHeader";
 import Card from "@/components/ui/Card";
 import { TransitFormData, Location } from "@/types/core";
 import { logger } from "@/utils/logger";
@@ -654,7 +655,7 @@ export default function Home() {
 
     if (routeLoading) {
       return (
-        <Card bodyClassName="items-center text-center">
+        <Card bodyClassName="items-center ">
           <span className="loading loading-spinner loading-lg"></span>
           <p>経路を検索中...</p>
         </Card>
@@ -736,28 +737,30 @@ export default function Home() {
 
   return (
     <div>
-      <header className="relative text-center mb-8 ruby-text">
-        <h1 className="text-3xl font-bold">
+      <PageHeader
+        title={
+          <>
           <ruby>
             風<rt>かざ</rt>
           </ruby>
           ぐるま乗換案内
-        </h1>
-        <p className="mt-2 text-lg">千代田区福祉交通の乗換案内サービス</p>
-      </header>
+          </>
+        }
+        description="千代田区福祉交通の乗換案内サービス"
+      />
 
-      <div className="max-w-md mx-auto mb-6">
+      <div className="mb-6">
         <AwardRecognition />
       </div>
 
       {/* 初回訪問ガイドモーダル */}
       <FirstVisitGuideModal />
 
-      <main className="space-y-4 max-w-md mx-auto">
+      <div className="space-y-4">
         <div aria-live="polite" className="space-y-4">
           {renderMainContent()}
         </div>
-        <Card bodyClassName="text-center ruby-text">
+        <Card bodyClassName="ruby-text">
           <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
           <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>
           <p>
@@ -772,7 +775,7 @@ export default function Home() {
             で最新の運行情報を確認できます
           </p>
         </Card>
-      </main>
+      </div>
 
       {/* レート制限モーダル */}
       <RateLimitModal

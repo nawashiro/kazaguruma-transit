@@ -1,20 +1,23 @@
 "use client";
 
 import Card from "@/components/ui/Card";
+import PageHeader from "@/components/layouts/PageHeader";
 
 export default function BeginnersGuide() {
   return (
     <div className="ruby-text">
-      <header className="text-center my-4">
-        <h1 className="text-3xl font-bold">
-          <ruby>
-            風<rt>かざ</rt>
-          </ruby>
-          ぐるまは初めて？
-        </h1>
-        <p className="mt-2 text-xl">ビギナーズガイド</p>
-      </header>
-      <main className="max-w-md mx-auto space-y-4">
+      <PageHeader
+        title={
+          <>
+            <ruby>
+              風<rt>かざ</rt>
+            </ruby>
+            ぐるまは初めて？
+          </>
+        }
+        description="ビギナーズガイド"
+      />
+      <div className="space-y-4">
         <Card title="目次">
           <ul className="menu bg-base-100 p-0">
             <li>
@@ -179,7 +182,7 @@ export default function BeginnersGuide() {
             <p>原則として無料で使うことができます。</p>
           </div>
         </Card>
-      </main>
+      </div>
     </div>
   );
 }

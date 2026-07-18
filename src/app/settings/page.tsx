@@ -11,6 +11,7 @@ import {
   UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
+import PageHeader from "@/components/layouts/PageHeader";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   isDiscussionsEnabled,
@@ -111,12 +112,10 @@ export default function SettingsPage() {
   if (!isDiscussionsEnabled()) {
     return (
       <div className="py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4 ruby-text">設定</h1>
-          <p className="text-gray-600 ruby-text">
-            この機能は現在利用できません。
-          </p>
-        </div>
+        <PageHeader
+          title="設定"
+          description="この機能は現在利用できません。"
+        />
       </div>
     );
   }
@@ -140,14 +139,12 @@ export default function SettingsPage() {
 
   return (
     <div className="py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4 ruby-text">設定</h1>
-        <p className="text-gray-600 dark:text-gray-400 ruby-text">
-          アカウント設定と認証情報を管理します。
-        </p>
-      </div>
+      <PageHeader
+        title="設定"
+        description="アカウント設定と認証情報を管理します。"
+      />
 
-      <div className="max-w-2xl">
+      <div>
         <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="card-body">
             <h2 className="card-title mb-4 ruby-text">
@@ -205,10 +202,10 @@ export default function SettingsPage() {
               </div>
             ) : (
               <div className="py-8">
-                <div className="text-center mb-6">
-                  <UserCircleIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
+                <div className="mb-6">
+                  <UserCircleIcon className="h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
                   {/*
-                    className="mx-auto h-12 w-12 text-gray-400 mb-4"
+                    className="h-12 w-12 text-gray-400 mb-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -323,10 +320,10 @@ export default function SettingsPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
+                  <div className="py-8">
+                    <DocumentTextIcon className="h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
                     {/*
-                      className="mx-auto h-12 w-12 text-gray-400 mb-4"
+                      className="h-12 w-12 text-gray-400 mb-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"

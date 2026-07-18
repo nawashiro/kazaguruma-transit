@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { getDiscussionReadStrategyConfig, isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import { DiscussionListTabLayout } from "@/components/discussion/DiscussionListTabLayout";
+import PageHeader from "@/components/layouts/PageHeader";
 import {
   createDiscussionNdkGateway,
   type NostrEventDTO,
@@ -214,10 +215,10 @@ export default function DiscussionsPage() {
   if (!isDiscussionsEnabled()) {
     return (
       <div className="py-8 ruby-text">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">意見交換機能</h1>
-          <p className="text-gray-600">この機能は現在利用できません。</p>
-        </div>
+        <PageHeader
+          title="意見交換機能"
+          description="この機能は現在利用できません。"
+        />
       </div>
     );
   }
@@ -225,7 +226,7 @@ export default function DiscussionsPage() {
   return (
     <DiscussionListTabLayout baseHref="/discussions" role={discussionRole}>
       <div className="py-8">
-        <main className="space-y-6">
+        <div className="space-y-6">
           <div className="grid lg:grid-cols-2 gap-6">
             <section aria-labelledby="discussions-list-heading">
               <h2
@@ -299,7 +300,7 @@ export default function DiscussionsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
+                <div className="py-8">
                   <p className="text-gray-600 dark:text-gray-400 ruby-text">
                     会話がまだありません。
                   </p>
@@ -331,7 +332,7 @@ export default function DiscussionsPage() {
               </div>
             </section>
           </div>
-        </main>
+        </div>
       </div>
     </DiscussionListTabLayout>
   );

@@ -11,7 +11,7 @@ import { loadRubyPreference, saveRubyPreference, observeRubyToggle } from "@/lib
 import KoFiSupport from "@/components/features/KoFiSupport";
 import type { KoFiContent } from "@/types/ko-fi";
 
-const PAGE_CONTAINER_CLASS_NAME = "container mx-auto w-full px-4";
+const PAGE_CONTAINER_CLASS_NAME = "mx-auto w-full max-w-4xl px-4";
 
 export default function SidebarLayout({
   children,
@@ -97,7 +97,7 @@ export default function SidebarLayout({
           </span>
           <ThemeToggle />
         </div>
-        <div id="main-content" className="flex-grow" tabIndex={-1}>
+        <main id="main-content" className="flex-grow" tabIndex={-1}>
           <div
             className={`${PAGE_CONTAINER_CLASS_NAME} flex flex-col gap-8`}
           >
@@ -106,7 +106,7 @@ export default function SidebarLayout({
               <KoFiSupport username={koFiUsername} content={koFiContent} />
             )}
           </div>
-        </div>
+        </main>
         <footer className="py-4">
           <div
             className={`${PAGE_CONTAINER_CLASS_NAME} flex flex-col items-start justify-start gap-2 sm:flex-row sm:flex-wrap`}

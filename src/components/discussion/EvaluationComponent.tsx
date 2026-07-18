@@ -51,8 +51,8 @@ export function EvaluationComponent({
 
   if (limitedPosts.length === 0) {
     return (
-      <div className="text-center py-8 ruby-text">
-        <CheckCircleIcon className="mx-auto h-12 w-12 text-gray-400" aria-hidden="true" />
+      <div className="py-8 ruby-text">
+        <CheckCircleIcon className="h-12 w-12 text-gray-400" aria-hidden="true" />
         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
           評価可能な投稿がありません
         </h3>
@@ -74,8 +74,8 @@ export function EvaluationComponent({
 
   if (!currentPost) {
     return (
-      <div className="text-center py-8 ruby-text">
-        <CheckCircleIcon className="mx-auto h-12 w-12 text-green-400" aria-hidden="true" />
+      <div className="py-8 ruby-text">
+        <CheckCircleIcon className="h-12 w-12 text-green-400" aria-hidden="true" />
         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
           評価完了
         </h3>

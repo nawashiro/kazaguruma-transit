@@ -16,6 +16,7 @@ import CarouselCard from "@/components/ui/CarouselCard";
 import Button from "@/components/ui/Button";
 import RubyWrapper from "@/components/ui/RubyWrapper";
 import CategoryTabs from "@/components/ui/CategoryTabs";
+import PageHeader from "@/components/layouts/PageHeader";
 import {
   calculateDistance,
   findLocationAreaName,
@@ -369,9 +370,7 @@ export default function LocationsPage() {
   if (loading) {
     return (
       <div className="py-8">
-        <div className="text-center my-4">
-          <h1 className="text-3xl font-bold ">場所をさがす</h1>
-        </div>
+        <PageHeader title="場所をさがす" />
         <div className="flex items-center justify-center py-12">
           <span className="loading loading-spinner loading-lg text-primary"></span>
           <p className="ml-3 text-lg font-medium">施設データを読み込み中...</p>
@@ -383,10 +382,8 @@ export default function LocationsPage() {
   if (error) {
     return (
       <div className="py-8">
-        <header className="text-center my-4">
-          <h1 className="text-3xl font-bold ">場所をさがす</h1>
-        </header>
-        <div className="alert alert-error max-w-lg mx-auto" role="alert">
+        <PageHeader title="場所をさがす" />
+        <div className="alert alert-error" role="alert">
           <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
           {/*
             xmlns="http://www.w3.org/2000/svg"
@@ -409,14 +406,12 @@ export default function LocationsPage() {
 
   return (
     <>
-      <header className="text-center my-4 ruby-text">
-        <h1 className="text-3xl font-bold">場所をさがす</h1>
-        <p className="mt-2 text-xl ">
-          位置とカテゴリから千代田区のスポットをさがす
-        </p>
-      </header>
+      <PageHeader
+        title="場所をさがす"
+        description="位置とカテゴリから千代田区のスポットをさがす"
+      />
 
-      <main className="space-y-4">
+      <div className="space-y-4">
         <Card title="近いところから表示">
           {searchError && (
             <div id="location-search-error" className="alert alert-error ruby-text" role="alert">
@@ -584,8 +579,8 @@ export default function LocationsPage() {
           </div>
         )}
 
-        <div className="md:flex md:justify-center">
-          <div className="carousel w-full md:max-w-3xl">
+        <div>
+          <div className="carousel w-full">
             {/* お悩みハンドブックへのリンクカード */}
             <CarouselCard
               id="slide1"
@@ -697,7 +692,7 @@ export default function LocationsPage() {
           </p>
           <p>写真のご提供も歓迎しています。</p>
         </Card>
-      </main>
+      </div>
 
       <style jsx>{`
         @keyframes fadeIn {

@@ -23,6 +23,7 @@ import {
   type DiscussionCreationForm,
 } from "@/lib/discussion/user-creation-flow";
 import Button from "@/components/ui/Button";
+import PageHeader from "@/components/layouts/PageHeader";
 import { UserIdentity } from "@/components/ui/UserIdentity";
 import { logger } from "@/utils/logger";
 
@@ -51,10 +52,10 @@ export default function DiscussionCreatePage() {
   if (!isDiscussionsEnabled()) {
     return (
       <div className="py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">会話作成</h1>
-          <p className="text-gray-600">この機能は現在利用できません。</p>
-        </div>
+        <PageHeader
+          title="会話作成"
+          description="この機能は現在利用できません。"
+        />
       </div>
     );
   }
@@ -164,11 +165,8 @@ export default function DiscussionCreatePage() {
   if (successMessage && createdNaddr) {
     return (
       <div className="py-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="text-6xl mb-4">🎉</div>
-            <h1 className="text-3xl font-bold mb-4 ruby-text">会話作成完了</h1>
-          </div>
+        <div>
+          <PageHeader title="会話作成完了" />
 
           <div className="card bg-base-100 shadow-lg border border-gray-200 dark:border-gray-700">
             <div className="card-body">
@@ -195,7 +193,7 @@ export default function DiscussionCreatePage() {
 
   return (
     <div className="py-8">
-      <div className="max-w-2xl mx-auto">
+      <div>
         <div className="mb-8">
           <Link
             href="/discussions"
@@ -204,7 +202,7 @@ export default function DiscussionCreatePage() {
             <span>← 会話一覧に戻る</span>
           </Link>
 
-          <h1 className="text-3xl font-bold mb-6 ruby-text">会話を作成</h1>
+          <PageHeader title="会話を作成" />
 
           {/* 3ステップ説明 */}
           <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 mb-8">
@@ -271,7 +269,7 @@ export default function DiscussionCreatePage() {
           </div>
         </div>
 
-        <main role="main">
+        <div>
           <div className="card bg-base-100 shadow-lg border border-gray-200 dark:border-gray-700">
             <div className="card-body">
               <h2 className="text-xl font-semibold mb-6 ruby-text">
@@ -412,7 +410,7 @@ export default function DiscussionCreatePage() {
               </div>
             </div>
           </div>
-        </main>
+        </div>
       </div>
 
       <LoginModal

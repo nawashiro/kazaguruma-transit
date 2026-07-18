@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
+import PageHeader from "@/components/layouts/PageHeader";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
@@ -326,9 +327,11 @@ export default function PostApprovalPage() {
   if (!discussionInfo) {
     return (
       <div className="py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">無効な会話URL</h1>
-          <p className="text-gray-600 mb-4">指定された会話URLが無効です。</p>
+        <div>
+          <PageHeader
+            title="無効な会話URL"
+            description="指定された会話URLが無効です。"
+          />
           <Link
             href="/discussions"
             className="btn btn-primary rounded-full dark:rounded-sm"
@@ -343,10 +346,10 @@ export default function PostApprovalPage() {
   if (!isDiscussionsEnabled()) {
     return (
       <div className="py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">投稿承認</h1>
-          <p className="text-gray-600">この機能は現在利用できません。</p>
-        </div>
+        <PageHeader
+          title="投稿承認"
+          description="この機能は現在利用できません。"
+        />
       </div>
     );
   }
@@ -451,7 +454,7 @@ export default function PostApprovalPage() {
           </div>
         )
       ) : (
-        <main
+        <div
           aria-labelledby={`${activeTab}-tab`}
           id={`${activeTab}-panel`}
           role="tabpanel"
@@ -521,10 +524,10 @@ export default function PostApprovalPage() {
               ) : (
                 <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="card-body">
-                    <div className="text-center py-8 ruby-text">
+                    <div className="py-8 ruby-text">
                       <CheckBadgeIcon
                         aria-label="承認待ちなし"
-                        className="mx-auto h-12 w-12 text-gray-400"
+                        className="h-12 w-12 text-gray-400"
                       />
                       <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
                         承認待ちの投稿はありません
@@ -625,7 +628,7 @@ export default function PostApprovalPage() {
                     </div>
                   ))}
                   {approvedPosts.length > 10 && (
-                    <p className="text-center text-gray-500 text-sm">
+                    <p className="text-gray-500 text-sm">
                       最新10件を表示中（全{approvedPosts.length}件）
                     </p>
                   )}
@@ -633,10 +636,10 @@ export default function PostApprovalPage() {
               ) : (
                 <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="card-body">
-                    <div className="text-center py-8 ruby-text">
+                    <div className="py-8 ruby-text">
                       <CheckBadgeIcon
                         aria-label="承認済みなし"
-                        className="mx-auto h-12 w-12 text-gray-400"
+                        className="h-12 w-12 text-gray-400"
                       />
                       <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
                         承認済みの投稿はありません
@@ -650,7 +653,7 @@ export default function PostApprovalPage() {
               )}
             </section>
           )}
-        </main>
+        </div>
       )}
     </div>
   );

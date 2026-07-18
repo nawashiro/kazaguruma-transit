@@ -40,4 +40,23 @@ describe("AwardPage", () => {
     expect(container.querySelector(".badge-soft")).not.toBeInTheDocument();
     expect(container.querySelector(".btn-primary")).not.toBeInTheDocument();
   });
+
+  it("重複する受賞バッジを表示せず、通常テキストをtext-baseで表示する", () => {
+    const { container } = render(<AwardPage />);
+
+    expect(screen.queryByText("受賞")).not.toBeInTheDocument();
+    expect(container.querySelector(".badge")).not.toBeInTheDocument();
+    expect(container.querySelector(".text-sm")).not.toBeInTheDocument();
+
+    for (const cardBody of container.querySelectorAll(".card-body")) {
+      expect(cardBody).toHaveClass("text-base");
+    }
+
+    expect(
+      screen.getByRole("link", { name: /東京都の作品紹介を見る/ }),
+    ).toHaveClass("text-base");
+    expect(
+      screen.getByRole("link", { name: "オープンバッジを確認する" }),
+    ).toHaveClass("text-base");
+  });
 });

@@ -15,7 +15,7 @@ export default function AwardPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-6 ruby-text">
       <header className="space-y-3 text-center">
-        <p className="text-sm font-semibold">{AWARD_NAME}</p>
+        <p className="text-base font-semibold">{AWARD_NAME}</p>
         <h1 className="text-3xl font-bold">受賞について</h1>
         <p className="text-lg">
           「風ぐるま乗換案内」の取組が、{AWARD_PRIZE}を受賞しました。
@@ -41,9 +41,8 @@ export default function AwardPage() {
           </a>
         </figure>
 
-        <div className="card-body gap-4">
+        <div className="card-body gap-4 text-base">
           <div>
-            <span className="badge badge-outline mb-2">受賞</span>
             <h2 className="card-title text-xl">
               <span className="ruby-text">{AWARD_PRIZE}</span>
             </h2>
@@ -67,7 +66,7 @@ export default function AwardPage() {
       </section>
 
       <section className="card card-border bg-base-100 shadow-sm">
-        <div className="card-body gap-4">
+        <div className="card-body gap-4 text-base">
           <h2 className="card-title">
             <span className="ruby-text">評価された取組</span>
           </h2>
@@ -86,7 +85,7 @@ export default function AwardPage() {
               href={AWARD_PROJECT_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-neutral rounded-full dark:rounded-sm"
+              className="btn btn-neutral rounded-full text-base dark:rounded-sm"
             >
               <span className="ruby-text">東京都の作品紹介を見る</span>
               <ArrowTopRightOnSquareIcon className="h-5 w-5" aria-hidden="true" />
@@ -95,7 +94,7 @@ export default function AwardPage() {
               href={AWARD_BADGE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-outline rounded-full dark:rounded-sm"
+              className="btn btn-outline rounded-full text-base dark:rounded-sm"
             >
               <span className="ruby-text">オープンバッジを確認する</span>
               <ArrowTopRightOnSquareIcon className="h-5 w-5" aria-hidden="true" />

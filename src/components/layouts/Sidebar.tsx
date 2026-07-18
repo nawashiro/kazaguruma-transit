@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   HomeIcon,
-  MapIcon,
   QuestionMarkCircleIcon,
   BookOpenIcon,
   DocumentTextIcon,
@@ -120,12 +119,6 @@ export default function Sidebar({ toggleSidebar }: SidebarProps) {
             <Link role="menuitem" href="/settings" onClick={toggleSidebar}>
               <Cog6ToothIcon className="h-6 w-6" />
               <span className="ruby-text">設定</span>
-            </Link>
-          </li>
-          <li>
-            <Link role="menuitem" href="/site-map" onClick={toggleSidebar}>
-              <MapIcon className="h-6 w-6" />
-              <span className="ruby-text">サイトマップ</span>
             </Link>
           </li>
           <li>

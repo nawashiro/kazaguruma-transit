@@ -139,7 +139,13 @@ export function DiscussionTabLayout({
    * @throws {Error} ストリーム接続エラー時（catchブロックで処理）
    */
   const loadDiscussionData = useCallback(async () => {
-    if (!discussionInfo) return;
+    if (!discussionInfo) {
+      setDiscussion(null);
+      setIsDiscussionLoading(false);
+      setDiscussionError("会話情報の指定が正しくありません。");
+      setDiscussionCompletionReason("cancelled");
+      return;
+    }
 
     // loadSequence パターンで古いデータを破棄
     const loadSequence = ++loadSequenceRef.current;
@@ -204,6 +210,8 @@ export function DiscussionTabLayout({
           ),
           successfulRelays: [],
         });
+      } else {
+        setDiscussionError("会話情報が見つかりませんでした。");
       }
       setDiscussionCompletionReason(discussionResult.completionReason);
       setIsDiscussionLoading(false);

@@ -68,8 +68,8 @@ describe("SidebarLayout", () => {
     const footerLinkContainer = termsLink.parentElement;
     const footer = termsLink.closest("footer");
 
-    expect(footerLinkContainer).toHaveClass("justify-start");
-    expect(footerLinkContainer).not.toHaveClass("items-end");
+    expect(footerLinkContainer).toHaveClass("flex-col", "items-start");
+    expect(footerLinkContainer).not.toHaveClass("sm:flex-row");
     expect(footer?.parentElement?.lastElementChild).toBe(footer);
   });
 

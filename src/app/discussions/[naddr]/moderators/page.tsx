@@ -180,10 +180,25 @@ export default function ModeratorsPage() {
       setBusy(false);
     }
   };
-  if (!discussion)
+  if (!discussion && meta?.isLoading !== false)
     return (
       <div role="status" className="ruby-text">
         会話情報を読み込み中...
+      </div>
+    );
+  if (!discussion)
+    return (
+      <div className="alert alert-error" role="alert">
+        <span className="ruby-text">
+          {meta?.error ?? "会話情報が見つかりませんでした。"}
+        </span>
+        <button
+          type="button"
+          className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+          onClick={() => void meta?.reload()}
+        >
+          <span className="ruby-text">再読み込み</span>
+        </button>
       </div>
     );
   return (

@@ -225,9 +225,7 @@ export default function DiscussionsPage() {
 
   return (
     <DiscussionListTabLayout baseHref="/discussions" role={discussionRole}>
-      <div className="py-8">
-        <div className="space-y-6">
-          <div className="grid lg:grid-cols-2 gap-6">
+      <div className="space-y-6 py-8">
             <section aria-labelledby="discussions-list-heading">
               <h2
                 id="discussions-list-heading"
@@ -324,15 +322,13 @@ export default function DiscussionsPage() {
                   </p>
                   <Link
                     href="/discussions/create"
-                    className="btn btn-primary rounded-full dark:rounded-sm ruby-text w-full"
+                    className="btn btn-primary w-full rounded-full dark:rounded-sm"
                   >
-                    <span>新しい会話を作成</span>
+                    <span className="ruby-text">新しい会話を作成</span>
                   </Link>
                 </div>
               </div>
             </section>
-          </div>
-        </div>
       </div>
     </DiscussionListTabLayout>
   );

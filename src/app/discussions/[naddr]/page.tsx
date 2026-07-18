@@ -549,7 +549,7 @@ export default function DiscussionDetailPage() {
       <div className="py-8">
       {/* タブナビゲーションはlayout.tsxに移動 */}
 
-      <div className="grid lg:grid-cols-2 gap-8">
+      <div className="space-y-8">
           <div className="space-y-6">
             <section aria-labelledby="evaluation-heading">
               {isPostsLoading
@@ -785,8 +785,7 @@ export default function DiscussionDetailPage() {
             </section>
           </div>
 
-          <aside>
-            <section aria-labelledby="new-post-heading">
+          <section aria-labelledby="new-post-heading">
               <h2
                 id="new-post-heading"
                 className="text-xl font-semibold mb-4 ruby-text"
@@ -902,8 +901,7 @@ export default function DiscussionDetailPage() {
                   )}
                 </div>
               </div>
-            </section>
-          </aside>
+          </section>
         </div>
 
       <LoginModal

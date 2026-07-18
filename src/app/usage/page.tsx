@@ -1,8 +1,30 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import PageHeader from "@/components/layouts/PageHeader";
+
+interface UsageImageProps {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+}
+
+function UsageImage({ src, alt, width, height }: UsageImageProps) {
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      sizes="(max-width: 640px) calc(100vw - 4rem), 300px"
+      className="h-auto w-full max-w-[300px]"
+      unoptimized
+    />
+  );
+}
 
 export default function Usage() {
   return (
@@ -51,7 +73,12 @@ export default function Usage() {
 
         <Card id="basic-usage" className="shadow-md" title="基本的な使いかた">
           <div className="space-y-4">
-            <img src="/images/route.gif" alt="ルートをさがす操作" className="w-full"/>
+            <UsageImage
+              src="/images/route.gif"
+              alt="ルートをさがす操作"
+              width={300}
+              height={533}
+            />
             <p>
               風ぐるま乗換案内は、千代田区内の移動をサポートするためのサービスです。以下のステップで簡単に最適な経路を検索できます。
             </p>
@@ -96,7 +123,12 @@ export default function Usage() {
           title="風ぐるまで行ける場所の探し方"
         >
           <div className="space-y-4">
-            <img src="/images/locations.gif" alt="場所をさがす操作" className="w-full"/>
+            <UsageImage
+              src="/images/locations.gif"
+              alt="場所をさがす操作"
+              width={300}
+              height={533}
+            />
             <p>
               <Link href="/locations" className="link">
                 場所を探す
@@ -148,7 +180,12 @@ export default function Usage() {
           title="ふりがなをつける / 消す"
         >
           <div className="space-y-4">
-            <img src="/images/rubyful.gif" alt="ルビフルボタンの操作" className="w-full"/>
+            <UsageImage
+              src="/images/rubyful.gif"
+              alt="ルビフルボタンの操作"
+              width={608}
+              height={1080}
+            />
             <p>
               このサイトは、一般財団法人ルビ財団が提供するルビフルボタンを備えています。
             </p>

@@ -41,8 +41,8 @@ export function buildKoFiWidgetUrl(username: string): string {
 }
 
 /**
- * Ko-fiユーザー名から支援プランページのURLを作る。
+ * Ko-fiユーザー名から支援ページのURLを作る。
  */
-export function buildKoFiTierPageUrl(username: string): string {
-  return `https://ko-fi.com/${encodeURIComponent(username)}/tiers`;
+export function buildKoFiPageUrl(username: string): string {
+  return `https://ko-fi.com/${encodeURIComponent(username)}/`;
 }

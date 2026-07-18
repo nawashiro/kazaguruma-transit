@@ -109,7 +109,7 @@ export default function SidebarLayout({
         </main>
         <footer className="py-4">
           <div
-            className={`${PAGE_CONTAINER_CLASS_NAME} flex flex-col items-start justify-start gap-2 sm:flex-row sm:flex-wrap`}
+            className={`${PAGE_CONTAINER_CLASS_NAME} flex flex-col items-start gap-2`}
           >
             <a
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"

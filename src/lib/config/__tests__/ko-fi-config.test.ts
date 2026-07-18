@@ -1,5 +1,5 @@
 import {
-  buildKoFiTierPageUrl,
+  buildKoFiPageUrl,
   buildKoFiWidgetUrl,
   parseKoFiUsername,
 } from "../ko-fi-config";
@@ -30,9 +30,9 @@ describe("Ko-fi設定", () => {
     );
   });
 
-  it("ユーザー名から支援プランページのURLを組み立てる", () => {
-    expect(buildKoFiTierPageUrl("nawashiro")).toBe(
-      "https://ko-fi.com/nawashiro/tiers",
+  it("ユーザー名からKo-fiページのURLを組み立てる", () => {
+    expect(buildKoFiPageUrl("nawashiro")).toBe(
+      "https://ko-fi.com/nawashiro/",
     );
   });
 });

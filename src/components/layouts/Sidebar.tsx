@@ -15,7 +15,7 @@ import {
   TrophyIcon,
 } from "@heroicons/react/24/outline";
 import { HeartIcon } from "@heroicons/react/24/solid";
-import { buildKoFiTierPageUrl } from "@/lib/config/ko-fi-config";
+import { buildKoFiPageUrl } from "@/lib/config/ko-fi-config";
 interface SidebarProps {
   toggleSidebar: () => void;
   koFiUsername: string | null;
@@ -105,7 +105,7 @@ export default function Sidebar({
               </li>
               <li>
                 <a
-                  href="https://halved-hamster-4a1.notion.site/1df78db44c3d80979856c735893403d4"
+                  href="https://github.com/nawashiro/kazaguruma-transit/releases"
                   target="_blank"
                   rel="noopener noreferrer"
                   role="menuitem"
@@ -129,7 +129,7 @@ export default function Sidebar({
           {koFiUsername && (
             <li>
               <a
-                href={buildKoFiTierPageUrl(koFiUsername)}
+                href={buildKoFiPageUrl(koFiUsername)}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={toggleSidebar}

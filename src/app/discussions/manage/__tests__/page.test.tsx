@@ -3,6 +3,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionManagePage from "../page";
 
+const mockUseAuth = jest.fn();
+
 jest.mock("next/link", () => ({
   __esModule: true,
   default: ({ children, href }: { children: React.ReactNode; href: string }) => (
@@ -11,10 +13,7 @@ jest.mock("next/link", () => ({
 }));
 
 jest.mock("@/lib/auth/auth-context", () => ({
-  useAuth: () => ({
-    user: { pubkey: "viewer", isLoggedIn: true },
-    signEvent: jest.fn(),
-  }),
+  useAuth: () => mockUseAuth(),
 }));
 
 jest.mock("@/lib/config/discussion-config", () => ({
@@ -154,6 +153,10 @@ describe("DiscussionManagePage", () => {
     process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR =
       "naddr1discussionlistplaceholder";
     jest.clearAllMocks();
+    mockUseAuth.mockReturnValue({
+      user: { pubkey: "viewer", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
   });
 
   it("allows viewers to see the moderation tabs without an access error", async () => {
@@ -167,6 +170,43 @@ describe("DiscussionManagePage", () => {
       expect(screen.getByRole("tab", { name: "承認待ち" })).toBeInTheDocument()
     );
   });
+
+  it("shows moderator guidance above the tabs for viewers", async () => {
+    render(<DiscussionManagePage />);
+
+    await screen.findByRole("tab", { name: "承認待ちタブを開く" });
+
+    expect(
+      screen.getByText(
+        "掲載依頼を承認するにはモデレーターになる必要があります。"
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "モデレーターになる" })
+    ).toHaveAttribute(
+      "href",
+      "/discussions/moderator#become-moderator"
+    );
+  });
+
+  it.each(["author", "moderator"])(
+    "hides moderator guidance from authorized user %s",
+    async (pubkey) => {
+      mockUseAuth.mockReturnValue({
+        user: { pubkey, isLoggedIn: true },
+        signEvent: jest.fn(),
+      });
+
+      render(<DiscussionManagePage />);
+
+      await screen.findByRole("tab", { name: "承認待ちタブを開く" });
+      expect(
+        screen.queryByText(
+          "掲載依頼を承認するにはモデレーターになる必要があります。"
+        )
+      ).not.toBeInTheDocument();
+    }
+  );
 
   it("keeps the revoke action visible when another moderator approved the post", async () => {
     render(<DiscussionManagePage />);

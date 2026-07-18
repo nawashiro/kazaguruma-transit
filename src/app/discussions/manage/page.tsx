@@ -11,7 +11,10 @@ import React, {
   useRef,
 } from "react";
 import Link from "next/link";
-import { CheckBadgeIcon } from "@heroicons/react/24/outline";
+import {
+  CheckBadgeIcon,
+  InformationCircleIcon,
+} from "@heroicons/react/24/outline";
 import PageHeader from "@/components/layouts/PageHeader";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
@@ -511,6 +514,27 @@ export default function DiscussionManagePage() {
         approvalState={approvalState === "unknown" ? "unknown" : undefined}
         onReload={() => void loadDiscussionData()}
       />
+      {!canManagePosts && (
+        <div className="card bg-base-100 shadow-sm mb-6" role="status">
+          <div className="card-body">
+            <div className="flex flex-nowrap gap-2 items-center">
+              <InformationCircleIcon
+                className="h-6 w-6 shrink-0 text-info"
+                aria-hidden="true"
+              />
+              <p className="ruby-text">
+                掲載依頼を承認するにはモデレーターになる必要があります。
+                <Link
+                  href="/discussions/moderator#become-moderator"
+                  className="link"
+                >
+                  モデレーターになる
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       <nav className="tabs tabs-box mb-6 w-full overflow-x-auto" role="tablist">
         <button
           aria-selected={activeTab === "pending"}

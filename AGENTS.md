@@ -53,6 +53,7 @@ These principles are the operational source of truth for agents working in this 
 ### Accessibility & UX
 
 - Interactive UI needs appropriate accessible names and states, such as `aria-label`, `aria-pressed`, and `aria-expanded`.
+- Regular user-facing text, including body copy, descriptions, and labels, should use Tailwind CSS `text-base` by default. Use a smaller size only when information hierarchy or the component role requires it, and never render non-ruby user-facing text below 14px.
 - Mobile touch targets should be at least 44px by 44px where practical.
 - Pages and user-facing workflows need loading and error states.
 - Error messages should be understandable Japanese where users see them.

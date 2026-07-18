@@ -24,8 +24,8 @@ export default function AwardRecognition() {
             className="h-auto w-full"
           />
         </figure>
-        <div className="card-body gap-1 p-4 text-base ruby-text">
-          <p className="font-semibold">{AWARD_NAME}</p>
+        <div className="card-body gap-1 p-4 ruby-text">
+          <p className="text-sm font-semibold">{AWARD_NAME}</p>
           <p className="font-bold">{AWARD_PRIZE}を受賞しました</p>
           <Link href="/award" className="link w-fit font-medium">
             受賞について詳しく見る

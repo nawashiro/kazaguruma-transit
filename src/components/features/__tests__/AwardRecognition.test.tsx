@@ -20,11 +20,4 @@ describe("AwardRecognition", () => {
     expect(container.querySelector(".text-primary")).not.toBeInTheDocument();
     expect(container.querySelector(".link-primary")).not.toBeInTheDocument();
   });
-
-  it("通常テキストをtext-baseで表示する", () => {
-    const { container } = render(<AwardRecognition />);
-
-    expect(container.querySelector(".card-body")).toHaveClass("text-base");
-    expect(container.querySelector(".text-sm")).not.toBeInTheDocument();
-  });
 });

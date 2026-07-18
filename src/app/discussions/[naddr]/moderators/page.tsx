@@ -182,8 +182,8 @@ export default function ModeratorsPage() {
   };
   if (!discussion && meta?.isLoading !== false)
     return (
-      <div role="status" className="ruby-text">
-        会話情報を読み込み中...
+      <div role="status">
+        <span className="ruby-text">会話情報を読み込み中...</span>
       </div>
     );
   if (!discussion)

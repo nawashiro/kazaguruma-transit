@@ -40,4 +40,11 @@ describe("AwardPage", () => {
     expect(container.querySelector(".badge-soft")).not.toBeInTheDocument();
     expect(container.querySelector(".btn-primary")).not.toBeInTheDocument();
   });
+
+  it("見出しと重複する受賞バッジを表示しない", () => {
+    const { container } = render(<AwardPage />);
+
+    expect(screen.queryByText("受賞")).not.toBeInTheDocument();
+    expect(container.querySelector(".badge")).not.toBeInTheDocument();
+  });
 });

@@ -43,7 +43,6 @@ export default function AwardPage() {
 
         <div className="card-body gap-4">
           <div>
-            <span className="badge badge-outline mb-2">受賞</span>
             <h2 className="card-title text-xl">
               <span className="ruby-text">{AWARD_PRIZE}</span>
             </h2>

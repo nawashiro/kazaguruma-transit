@@ -441,7 +441,7 @@ export default function DiscussionManagePage() {
   // 無効な naddr をチェックしています
   if (!discussionInfo) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">無効な会話URL</h1>
           <p className="text-gray-600 mb-4">指定された会話URLが無効です。</p>
@@ -458,7 +458,7 @@ export default function DiscussionManagePage() {
 
   if (!isDiscussionsEnabled()) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">投稿管理</h1>
           <p className="text-gray-600">この機能は現在利用できません。</p>
@@ -469,7 +469,7 @@ export default function DiscussionManagePage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <nav className="tabs tabs-box mb-6 w-full overflow-x-auto" role="tablist" aria-label="投稿承認">
           <button className="tab tab-active min-h-[44px] px-4" role="tab" aria-selected="true">
             <span className="ruby-text">承認待ち</span>
@@ -500,7 +500,7 @@ export default function DiscussionManagePage() {
   const approvedPosts = postsWithQTags.filter((post) => post.approved);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="py-8">
       <DiscussionReadStatus
         isLoading={false}
         completionReason={completionReason}

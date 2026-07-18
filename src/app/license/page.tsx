@@ -4,7 +4,7 @@ export default async function LicensePage() {
   const payload = await getLicensePagePayload();
 
   return (
-    <div className="container mx-auto px-2 pb-8 ruby-text sm:px-4">
+    <div className="pb-8 ruby-text">
       <header className="text-center my-4">
         <h1 className="text-3xl font-bold">ライセンス</h1>
       </header>

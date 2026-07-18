@@ -735,7 +735,7 @@ export default function Home() {
   };
 
   return (
-    <div className="container">
+    <div>
       <header className="relative text-center mb-8 ruby-text">
         <h1 className="text-3xl font-bold">
           <ruby>

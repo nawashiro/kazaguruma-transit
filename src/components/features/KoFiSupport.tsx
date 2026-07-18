@@ -14,7 +14,7 @@ export default function KoFiSupport({
 
   return (
     <section
-      className="card card-border mx-auto w-full max-w-3xl bg-base-100 shadow-sm"
+      className="card card-border w-full bg-base-100 shadow-sm"
       aria-labelledby={headingId}
     >
       <div className="card-body gap-4 p-4 sm:p-6">

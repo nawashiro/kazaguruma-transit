@@ -348,7 +348,7 @@ export default function DiscussionDetailPage() {
   // Check for invalid naddr
   if (!discussionInfo) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">無効な会話URL</h1>
           <p className="text-gray-600 mb-4">指定された会話URLが無効です。</p>
@@ -365,7 +365,7 @@ export default function DiscussionDetailPage() {
 
   if (!isDiscussionsEnabled()) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">会話</h1>
           <p className="text-gray-600">この機能は現在利用できません。</p>
@@ -485,7 +485,7 @@ export default function DiscussionDetailPage() {
 
   if (isDiscussionLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
           <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -509,7 +509,7 @@ export default function DiscussionDetailPage() {
       discussionCompletionReason === "cancelled"
     ) {
       return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="py-8">
           <div className="alert alert-warning mb-4" role="alert">
             <span>
               会話データの取得に時間がかかっています（{discussionCompletionReason}）。
@@ -528,7 +528,7 @@ export default function DiscussionDetailPage() {
     }
 
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">会話が見つかりません</h1>
           <Link
@@ -543,7 +543,7 @@ export default function DiscussionDetailPage() {
   }
 
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
       {/* タブナビゲーションはlayout.tsxに移動 */}
 
       <main className="grid lg:grid-cols-2 gap-8">

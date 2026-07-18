@@ -213,7 +213,7 @@ export default function DiscussionsPage() {
   // ディスカッション機能が有効になっているか確認し、それに応じて表示を切り替える
   if (!isDiscussionsEnabled()) {
     return (
-      <div className="container mx-auto px-4 py-8 ruby-text">
+      <div className="py-8 ruby-text">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">意見交換機能</h1>
           <p className="text-gray-600">この機能は現在利用できません。</p>
@@ -224,7 +224,7 @@ export default function DiscussionsPage() {
 
   return (
     <DiscussionListTabLayout baseHref="/discussions" role={discussionRole}>
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <main className="space-y-6">
           <div className="grid lg:grid-cols-2 gap-6">
             <section aria-labelledby="discussions-list-heading">

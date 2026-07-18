@@ -50,7 +50,7 @@ export default function DiscussionCreatePage() {
 
   if (!isDiscussionsEnabled()) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">会話作成</h1>
           <p className="text-gray-600">この機能は現在利用できません。</p>
@@ -163,7 +163,7 @@ export default function DiscussionCreatePage() {
   // 成功画面
   if (successMessage && createdNaddr) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
             <div className="text-6xl mb-4">🎉</div>
@@ -194,7 +194,7 @@ export default function DiscussionCreatePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="py-8">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <Link

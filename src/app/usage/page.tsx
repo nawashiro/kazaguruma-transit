@@ -5,7 +5,7 @@ import Card from "@/components/ui/Card";
 
 export default function Usage() {
   return (
-    <div className="container ruby-text">
+    <div className="ruby-text">
       <header className="text-center my-4">
         <h1 className="text-3xl font-bold">
           <ruby>

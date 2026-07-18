@@ -25,5 +25,7 @@ describe("KoFiSupport", () => {
       "https://ko-fi.com/nawashiro/?hidefeed=true&widget=true&embed=true&preview=true",
     );
     expect(iframe).toHaveAttribute("loading", "lazy");
+    expect(iframe.closest("section")).toHaveClass("w-full");
+    expect(iframe.closest("section")).not.toHaveClass("max-w-3xl", "mx-auto");
   });
 });

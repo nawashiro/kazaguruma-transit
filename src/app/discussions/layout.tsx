@@ -13,7 +13,7 @@ export default function DiscussionsLayout({
 }) {
   if (!isDiscussionsEnabled()) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">意見交換機能</h1>
           <p className="text-gray-600">この機能は現在利用できません。</p>

@@ -11,6 +11,8 @@ import { loadRubyPreference, saveRubyPreference, observeRubyToggle } from "@/lib
 import KoFiSupport from "@/components/features/KoFiSupport";
 import type { KoFiContent } from "@/types/ko-fi";
 
+const PAGE_CONTAINER_CLASS_NAME = "container mx-auto w-full px-4";
+
 export default function SidebarLayout({
   children,
   koFiUsername,
@@ -95,16 +97,25 @@ export default function SidebarLayout({
           </span>
           <ThemeToggle />
         </div>
-        <div id="main-content" className="flex-grow p-4" tabIndex={-1}>
-          {children}
+        <div id="main-content" className="flex-grow" tabIndex={-1}>
+          <div
+            className={`${PAGE_CONTAINER_CLASS_NAME} flex flex-col gap-8`}
+          >
+            {children}
+            {koFiUsername && (
+              <KoFiSupport username={koFiUsername} content={koFiContent} />
+            )}
+          </div>
         </div>
-        <footer className="flex flex-col gap-4 px-4 py-4">
-          <div className="flex flex-col items-end justify-center gap-2 sm:flex-row">
+        <footer className="py-4">
+          <div
+            className={`${PAGE_CONTAINER_CLASS_NAME} flex flex-col items-start justify-start gap-2 sm:flex-row sm:flex-wrap`}
+          >
             <a
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"
               target="_blank"
               rel="noopener noreferrer"
-              className="link text-sm /60 hover:underline inline-block mx-2 ruby-text"
+              className="link inline-block text-sm text-base-content/60 hover:underline ruby-text"
             >
               利用規約
             </a>
@@ -112,7 +123,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80b2a6d4d045e850407c"
               target="_blank"
               rel="noopener noreferrer"
-              className="link text-sm /60 hover:underline inline-block mx-2 ruby-text"
+              className="link inline-block text-sm text-base-content/60 hover:underline ruby-text"
             >
               プライバシーポリシー
             </a>
@@ -120,14 +131,11 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80d0ba82d66f451b9ff1"
               target="_blank"
               rel="noopener noreferrer"
-              className="link text-sm /60 hover:underline inline-block mx-2 ruby-text"
+              className="link inline-block text-sm text-base-content/60 hover:underline ruby-text"
             >
               クッキーポリシー
             </a>
           </div>
-          {koFiUsername && (
-            <KoFiSupport username={koFiUsername} content={koFiContent} />
-          )}
         </footer>
       </div>
     </div>

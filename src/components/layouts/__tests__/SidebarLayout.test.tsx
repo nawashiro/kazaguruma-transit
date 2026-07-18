@@ -19,7 +19,7 @@ jest.mock("../../ui/SkipToContent", () => ({
 }));
 
 describe("SidebarLayout", () => {
-  it("全ページ共通の本文後にKo-fi支援欄を表示する", () => {
+  it("共通のメインコンテンツ枠内でページ本文後にKo-fi支援欄を表示する", () => {
     render(
       <SidebarLayout
         koFiUsername="nawashiro"
@@ -28,7 +28,7 @@ describe("SidebarLayout", () => {
           message: "支援をお願いします。",
         }}
       >
-        <main>ページ本文</main>
+        <article>ページ本文</article>
       </SidebarLayout>,
     );
 
@@ -37,13 +37,39 @@ describe("SidebarLayout", () => {
       name: "クッキーポリシー",
     });
     const supportFrame = screen.getByTitle("開発者を支援する（Ko-fi）");
+    const mainContent = pageContent.closest("#main-content");
+    const footer = cookiePolicyLink.closest("footer");
 
+    expect(mainContent).toContainElement(supportFrame);
+    expect(footer).not.toContainElement(supportFrame);
     expect(pageContent.compareDocumentPosition(supportFrame)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
-    expect(cookiePolicyLink.compareDocumentPosition(supportFrame)).toBe(
+    expect(supportFrame.compareDocumentPosition(cookiePolicyLink)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+  });
+
+  it("規約リンクを共通幅の左端に揃えて最下部に表示する", () => {
+    render(
+      <SidebarLayout
+        koFiUsername="nawashiro"
+        koFiContent={{
+          heading: "開発者を支援する",
+          message: "支援をお願いします。",
+        }}
+      >
+        <article>ページ本文</article>
+      </SidebarLayout>,
+    );
+
+    const termsLink = screen.getByRole("link", { name: "利用規約" });
+    const footerLinkContainer = termsLink.parentElement;
+    const footer = termsLink.closest("footer");
+
+    expect(footerLinkContainer).toHaveClass("justify-start");
+    expect(footerLinkContainer).not.toHaveClass("items-end");
+    expect(footer?.parentElement?.lastElementChild).toBe(footer);
   });
 
   it("FUNDING.ymlにko_fiがなければ支援欄を表示しない", () => {
@@ -55,7 +81,7 @@ describe("SidebarLayout", () => {
           message: "支援をお願いします。",
         }}
       >
-        <main>ページ本文</main>
+        <article>ページ本文</article>
       </SidebarLayout>,
     );
 

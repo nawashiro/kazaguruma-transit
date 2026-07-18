@@ -110,7 +110,7 @@ export default function SettingsPage() {
   // Check if discussions are enabled and render accordingly
   if (!isDiscussionsEnabled()) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4 ruby-text">設定</h1>
           <p className="text-gray-600 ruby-text">
@@ -129,7 +129,7 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
           <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -139,7 +139,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-4 ruby-text">設定</h1>
         <p className="text-gray-600 dark:text-gray-400 ruby-text">

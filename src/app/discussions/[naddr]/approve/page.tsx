@@ -325,7 +325,7 @@ export default function PostApprovalPage() {
   // Check for invalid naddr
   if (!discussionInfo) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">無効な会話URL</h1>
           <p className="text-gray-600 mb-4">指定された会話URLが無効です。</p>
@@ -342,7 +342,7 @@ export default function PostApprovalPage() {
 
   if (!isDiscussionsEnabled()) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">投稿承認</h1>
           <p className="text-gray-600">この機能は現在利用できません。</p>
@@ -367,7 +367,7 @@ export default function PostApprovalPage() {
     : "この会話の作成者またはモデレーターのみ承認操作できます。";
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="py-8">
       {!hasApprovalPermission && (
         <div className="card bg-base-100 shadow-sm mb-6" role="status">
           <div className="card-body">

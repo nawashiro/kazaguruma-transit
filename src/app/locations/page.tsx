@@ -368,7 +368,7 @@ export default function LocationsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="text-center my-4">
           <h1 className="text-3xl font-bold ">場所をさがす</h1>
         </div>
@@ -382,7 +382,7 @@ export default function LocationsPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-8">
         <header className="text-center my-4">
           <h1 className="text-3xl font-bold ">場所をさがす</h1>
         </header>

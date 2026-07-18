@@ -126,6 +126,7 @@ export default function Home() {
           </div>
           <div className="card-actions justify-center">
             <Button
+              className="w-full"
               onClick={handleSearch}
               disabled={!selectedDateTime}
               testId="search-route"

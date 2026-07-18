@@ -24,6 +24,7 @@ import {
   calculateRouteSearchTime,
   parseGtfsTime,
 } from "./walking";
+import { selectBestRouteCandidate } from "./route-result-ranking";
 
 interface StopLocation {
   lat: number;
@@ -642,7 +643,8 @@ export class TransitService {
           origin,
           destination,
           time,
-          isDeparture
+          isDeparture,
+          prioritizeSpeed
         );
       }
 
@@ -670,7 +672,8 @@ export class TransitService {
         origin,
         destination,
         time,
-        isDeparture
+        isDeparture,
+        prioritizeSpeed
       );
     } catch (error) {
       logger.error("[TransitService] 経路検索エラー:", error);
@@ -846,7 +849,8 @@ export class TransitService {
     origin: { lat: number; lng: number },
     destination: { lat: number; lng: number },
     time?: string,
-    isDeparture: boolean = true
+    isDeparture: boolean = true,
+    prioritizeSpeed: boolean = false
   ): Promise<{ journeys: Journey[]; stops: NearbyStop[] }> {
     try {
       // 検索半径をメートルからキロメートルに変換
@@ -1000,11 +1004,14 @@ export class TransitService {
         return { journeys: [], stops: [] };
       }
 
-      // 所要時間の少ない順にソート
-      allResults.sort((firstResult, secondResult) => firstResult.totalDuration - secondResult.totalDuration);
+      const bestResult = selectBestRouteCandidate(
+        allResults,
+        prioritizeSpeed
+      );
 
-      // 最適な結果を選択
-      const bestResult = allResults[0];
+      if (!bestResult) {
+        return { journeys: [], stops: [] };
+      }
 
       // ユーザーの実際の出発地と目的地の座標と、使用するバス停情報を追加
       const stops: NearbyStop[] = [

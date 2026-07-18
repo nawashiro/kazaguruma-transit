@@ -4,7 +4,7 @@ import AwardRecognition from "../AwardRecognition";
 
 describe("AwardRecognition", () => {
   it("受賞名、オープンバッジ、詳細ページへの導線を表示する", () => {
-    render(<AwardRecognition />);
+    const { container } = render(<AwardRecognition />);
 
     expect(
       screen.getByText("都知事杯オープンデータ・ハッカソン2025"),
@@ -17,5 +17,7 @@ describe("AwardRecognition", () => {
       "href",
       "/award",
     );
+    expect(container.querySelector(".text-primary")).not.toBeInTheDocument();
+    expect(container.querySelector(".link-primary")).not.toBeInTheDocument();
   });
 });

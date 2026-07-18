@@ -25,9 +25,9 @@ export default function AwardRecognition() {
           />
         </figure>
         <div className="card-body gap-1 p-4 ruby-text">
-          <p className="text-sm font-semibold text-primary">{AWARD_NAME}</p>
+          <p className="text-sm font-semibold">{AWARD_NAME}</p>
           <p className="font-bold">{AWARD_PRIZE}を受賞しました</p>
-          <Link href="/award" className="link link-primary w-fit font-medium">
+          <Link href="/award" className="link w-fit font-medium">
             受賞について詳しく見る
           </Link>
         </div>

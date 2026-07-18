@@ -19,6 +19,28 @@ describe("LoginModal", () => {
     loginMock.mockResolvedValue(undefined);
   });
 
+  it("renders the mode selector as DaisyUI tabs-box tabs", () => {
+    render(<LoginModal isOpen onClose={jest.fn()} />);
+
+    const tablist = screen.getByRole("tablist", { name: "モード選択" });
+    const createTab = screen.getByRole("tab", { name: "新規作成タブを開く" });
+    const loginTab = screen.getByRole("tab", { name: "ログインを開く" });
+
+    expect(tablist).toHaveClass("tabs", "tabs-box");
+    expect(tablist).not.toHaveClass("join");
+    expect(createTab).toHaveClass("tab", "tab-active", "min-h-[44px]");
+    expect(createTab).not.toHaveClass("btn", "join-item");
+    expect(loginTab).toHaveClass("tab", "min-h-[44px]");
+    expect(loginTab).not.toHaveClass("tab-active", "btn", "join-item");
+
+    fireEvent.click(loginTab);
+
+    expect(createTab).not.toHaveClass("tab-active");
+    expect(createTab).toHaveAttribute("aria-selected", "false");
+    expect(loginTab).toHaveClass("tab-active");
+    expect(loginTab).toHaveAttribute("aria-selected", "true");
+  });
+
   it("asks for a passkey name instead of a user name", () => {
     render(<LoginModal isOpen onClose={jest.fn()} />);
 

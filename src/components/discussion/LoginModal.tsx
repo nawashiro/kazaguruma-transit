@@ -84,26 +84,32 @@ export function LoginModal({ isOpen, onClose, reason }: LoginModalProps) {
           </p>
         )}
         <div className="flex justify-between items-center mb-4">
-          <nav role="tablist" className="join" aria-label="モード選択">
+          <nav
+            role="tablist"
+            className="tabs tabs-box"
+            aria-label="モード選択"
+          >
             <button
-              className={`join-item btn min-h-[44px] rounded-full dark:rounded-sm ${mode === "create" ? "btn-active btn-primary" : ""
-                }`}
-              name="tab-options"
+              className={`tab min-h-[44px] px-4 font-bold ${
+                mode === "create" ? "tab-active" : ""
+              }`}
               aria-label="新規作成タブを開く"
               role="tab"
               aria-selected={mode === "create"}
               onClick={() => setMode("create")}
+              type="button"
             >
               <span className="ruby-text">新規作成</span>
             </button>
             <button
-              className={`join-item btn min-h-[44px] rounded-full dark:rounded-sm ${mode === "login" ? "btn-active btn-primary" : ""
-                }`}
-              name="tab-options"
+              className={`tab min-h-[44px] px-4 font-bold ${
+                mode === "login" ? "tab-active" : ""
+              }`}
               aria-label="ログインを開く"
               role="tab"
               aria-selected={mode === "login"}
               onClick={() => setMode("login")}
+              type="button"
             >
               <span className="ruby-text">ログイン</span>
             </button>

@@ -94,4 +94,50 @@ describe("Home", () => {
 
     expect(screen.getByTestId("mock-destination-selector")).toBeInTheDocument();
   });
+
+  it("非公式サービス案内の直後にAIエージェント向け案内を初期状態で閉じて表示し、開閉できる", () => {
+    render(<Home />);
+
+    const unofficialServiceCard = screen
+      .getByText("※このサービスは非公式のもので、千代田区とは関係ありません")
+      .closest("section");
+    const aiAgentGuidanceCard = screen.getByTestId("ai-agent-guidance-card");
+    const aiAgentGuidance = screen.getByTestId("ai-agent-guidance");
+
+    expect(unofficialServiceCard?.nextElementSibling).toBe(aiAgentGuidanceCard);
+    expect(screen.getByText("AIエージェントのかたへ").tagName).toBe("SUMMARY");
+    expect(aiAgentGuidance).not.toHaveAttribute("open");
+
+    fireEvent.click(screen.getByText("AIエージェントのかたへ"));
+    expect(aiAgentGuidance).toHaveAttribute("open");
+
+    fireEvent.click(screen.getByText("AIエージェントのかたへ"));
+    expect(aiAgentGuidance).not.toHaveAttribute("open");
+  });
+
+  it("AIエージェントに必要な聞き取り、座標調査、検索結果リンクの手順を示す", () => {
+    render(<Home />);
+
+    fireEvent.click(screen.getByText("AIエージェントのかたへ"));
+
+    expect(screen.getByText(/ユーザーの具体的な希望を知らない/)).toBeInTheDocument();
+    expect(
+      screen.getAllByText(
+        /出発地、目的地、到着時刻または出発時刻、速さを優先し歩きを許容するか/,
+      ),
+    ).toHaveLength(2);
+    expect(screen.getByText(/座標がわからない/)).toBeInTheDocument();
+    expect(screen.getByText(/ウェブ検索し、座標を調査する/)).toBeInTheDocument();
+    expect(
+      screen.getAllByText(
+        "Given: あなたはAIエージェントで、ユーザーから「風ぐるま乗換案内を使いたい」と指示されている",
+      ),
+    ).toHaveLength(2);
+    expect(screen.getByText("When: あなたは不明なパラメータがない")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "https://kazaguruma-transit.nawashiro.dev/routes?origin={lat}%2C{lon}&destination={lat}%2C{lon}&time={YYYY}-{MM}-{DD}T{hh}%3A{mm}&isDeparture={boolean}&prioritizeSpeed={boolean}",
+      ),
+    ).toBeInTheDocument();
+  });
 });

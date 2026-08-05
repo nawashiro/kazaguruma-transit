@@ -38,11 +38,11 @@
 
 > 実装前に追加し、実装前に失敗することを確認する。
 
-- [ ] T001 [US1] 非公式サービス案内の直後の配置、見出し、初期状態が閉じていること、標準操作による開閉を検証する失敗テストを `src/app/__tests__/page.test.tsx` に追加する
+- [X] T001 [US1] 非公式サービス案内の直後の配置、見出し、初期状態が閉じていること、標準操作による開閉を検証する失敗テストを `src/app/__tests__/page.test.tsx` に追加する
 
 ### Implementation for User Story 1
 
-- [ ] T002 [US1] 既存の非公式サービス案内 `Card` の直後に、`details`／`summary` と DaisyUI の Collapse クラスを用いた「AIエージェントのかたへ」カードの開閉骨格を `src/app/page.tsx` に実装する
+- [X] T002 [US1] 既存の非公式サービス案内 `Card` の直後に、`details`／`summary` と DaisyUI の Collapse クラスを用いた「AIエージェントのかたへ」カードの開閉骨格を `src/app/page.tsx` に実装する
 
 **Checkpoint**: 見出しは非公式サービス案内の直後に表示され、初期状態で折りたたまれ、マウス・タッチ・キーボードの標準操作で開閉できる。
 
@@ -58,11 +58,11 @@
 
 > T002 の後、案内文を追加する前に実行し、必要な文言が不足して失敗することを確認する。
 
-- [ ] T003 [US2] 開いた案内カードに4つの聞き取り項目、座標調査の条件と行動、完全な検索結果URLテンプレートがあることを検証する失敗テストを `src/app/__tests__/page.test.tsx` に追加する
+- [X] T003 [US2] 開いた案内カードに4つの聞き取り項目、座標調査の条件と行動、完全な検索結果URLテンプレートがあることを検証する失敗テストを `src/app/__tests__/page.test.tsx` に追加する
 
 ### Implementation for User Story 2
 
-- [ ] T004 [US2] 3段階のAIエージェント向け指示と指定された検索結果URLテンプレートを `src/app/page.tsx` の折りたたみ内容へ追加し、長いURLを狭い画面で折り返せるようにする
+- [X] T004 [US2] 3段階のAIエージェント向け指示と指定された検索結果URLテンプレートを `src/app/page.tsx` の折りたたみ内容へ追加し、長いURLを狭い画面で折り返せるようにする
 
 **Checkpoint**: カードを開くと、AIエージェントが必要な情報を聞き取り、座標を調べ、完全な検索結果リンクを返すための指示を一つのまとまりとして読める。
 
@@ -72,8 +72,8 @@
 
 **Purpose**: 機能全体の自動・手動検証とアクセシビリティ確認を行う。
 
-- [ ] T005 `src/app/__tests__/page.test.tsx` を含むテスト、`npm run lint`、全テスト、`npm run build` を [quickstart.md](./quickstart.md) の手順どおりに実行し、失敗を修正する
-- [ ] T006 [quickstart.md](./quickstart.md) に従い、375px・1280px幅でのリフロー、Tab と Enter/Space による開閉、可視フォーカス、支援技術に伝わる開閉状態を手動検証する
+- [X] T005 `src/app/__tests__/page.test.tsx` を含むテスト、`npm run lint`、全テスト、`npm run build` を [quickstart.md](./quickstart.md) の手順どおりに実行し、失敗を修正する
+- [X] T006 [quickstart.md](./quickstart.md) に従い、375px・1280px幅でのリフロー、Tab と Enter/Space による開閉、可視フォーカス、支援技術に伝わる開閉状態を手動検証する
 
 ---
 

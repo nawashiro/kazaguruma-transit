@@ -176,8 +176,8 @@ export default function Home() {
                   <p>Then: あなたはウェブ検索し、座標を調査する。</p>
                 </li>
                 <li className="space-y-1">
-                  <p>Given: あなたは不明なパラメータがない</p>
-                  <p>When: ユーザーから「風ぐるま乗換案内を使いたい」と指示されている</p>
+                  <p>Given: あなたはAIエージェントで、ユーザーから「風ぐるま乗換案内を使いたい」と指示されている</p>
+                  <p>When: あなたは不明なパラメータがない</p>
                   <p>Then: 検索結果ページへのリンクをユーザーに返す。</p>
                   <code className="mt-2 block break-all whitespace-normal">
                     https://kazaguruma-transit.nawashiro.dev/routes?origin={"{lat}"}%2C{"{lon}"}&destination={"{lat}"}%2C{"{lon}"}&time={"{YYYY}"}-{"{MM}"}-{"{DD}"}T{"{hh}"}%3A{"{mm}"}&isDeparture={"{boolean}"}&prioritizeSpeed={"{boolean}"}

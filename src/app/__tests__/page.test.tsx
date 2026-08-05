@@ -129,6 +129,12 @@ describe("Home", () => {
     expect(screen.getByText(/座標がわからない/)).toBeInTheDocument();
     expect(screen.getByText(/ウェブ検索し、座標を調査する/)).toBeInTheDocument();
     expect(
+      screen.getAllByText(
+        "Given: あなたはAIエージェントで、ユーザーから「風ぐるま乗換案内を使いたい」と指示されている",
+      ),
+    ).toHaveLength(2);
+    expect(screen.getByText("When: あなたは不明なパラメータがない")).toBeInTheDocument();
+    expect(
       screen.getByText(
         "https://kazaguruma-transit.nawashiro.dev/routes?origin={lat}%2C{lon}&destination={lat}%2C{lon}&time={YYYY}-{MM}-{DD}T{hh}%3A{mm}&isDeparture={boolean}&prioritizeSpeed={boolean}",
       ),

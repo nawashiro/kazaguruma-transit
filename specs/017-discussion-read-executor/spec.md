@@ -19,6 +19,7 @@
 - Q: 自動再読を行う間、全Discussion画面のUIは初回readのイベントをどのように扱いますか？ → A: 初回結果を暫定表示し、再読はバックグラウンドで結合する。
 - Q: 初回readが非EOSEで、自動再読だけがEOSEになった場合、合成したread結果をどの完了状態としてUIへ渡しますか？ → A: 自動再読がEOSEなら最終状態を完了にする。
 - Q: 参照tagの検証規則は共通read executorの責務ですか？ → A: いいえ。通信を持たない `Discussion Reference Resolver` が正規化・検証を担い、executorは正規化済みread planだけを実行する。
+- Q: 承認・編集・モデレーター画面のリアルタイム購読は本Issueでどう扱いますか？ → A: リアルタイム購読は誤りである。各画面は共通executorによるinitial readだけを行う。
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -103,6 +104,7 @@
 - **FR-020**: `/discussions` の参照先会話readでは、`Discussion Reference Resolver` が重複を除いた有効参照ごとのfilterを一つの `DiscussionReadPlan` にまとめなければならない。
 - **FR-021**: 共通read executorは、複数filterを含むread planの各relay attemptを、一つのmulti-filter Nostr readとして実行しなければならない。filterごとに個別のrelay接続または購読を開始してはならない。
 - **FR-022**: 本featureは参照filterのpage分割、続き取得、filter数上限を導入してはならない。これらは実測による必要性が確認された場合に別途決定する。
+- **FR-023**: 承認、編集、モデレーター画面はリアルタイム購読を開始してはならない。各画面は共通read executorによる完了型のinitial readだけを使う。
 - **FR-017**: 自動再読中、全Discussion画面は初回readで取得済みのeventsを暫定表示として保持しなければならない。後続readのeventsはevent IDで重複排除して結合し、初回結果を空結果で置き換えてはならない。
 - **FR-018**: 初回readが非EOSEであっても、自動再読がEOSEで完了した場合、システムは合成したread結果の最終completion reasonをEOSEとして扱い、部分取得の警告を表示してはならない。
 

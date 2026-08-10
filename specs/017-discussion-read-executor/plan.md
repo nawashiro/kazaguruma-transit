@@ -33,7 +33,7 @@
 - UIは初回eventsを保持し、retryの空結果で消さない。
 - 部分取得状態は日本語、`role="status"`、`aria-live="polite"`で通知する。
 
-**Scale/Scope**:Discussion readの全画面を移行する。対象は一覧、設定、詳細、承認、編集、管理である。
+**Scale/Scope**:Discussion readの全画面を移行する。対象は一覧、設定、詳細、承認、編集、管理である。承認、編集、モデレーター画面のリアルタイム購読は完了型initial readへ置換する。
 
 ## Constitution Check
 
@@ -120,8 +120,8 @@ src/
 
 1. `NostrService.collectEventsWithCompletion()`を変更する。
 2. `for (const filter of filters)`を削除する。
-3. `this.ndk.subscribe(filters, { closeOnEose: true, ... }, relaySet ?? true)`を一回呼ぶ。
-4. EOSEは単一subscriptionの`onEose`で完了する。
+3. `this.ndk.subscribe(filters, { closeOnEose: true, relaySet, ... })`を一回呼ぶ。relay setは第三引数へ渡さない。
+4. EOSEは単一subscriptionの`onEose`で完了する。filter数を数えない。
 5. idle timer、hard timer、event ID重複排除、source relay収集を維持する。
 6. `eoseCount`とsubscriptions配列は単一subscription向けに簡素化する。
 7. transport単体テストで、filter数が二件以上でも`subscribe`呼出が一回であることを固定する。
@@ -163,7 +163,15 @@ src/
 | Edit | `[naddr]/edit/page.tsx`のmetadata読取 | metadata planをexecutorへ渡す。 |
 | Moderators | `[naddr]/moderators/page.tsx`のmetadata読取 | metadata planをexecutorへ渡す。 |
 
-### 6.UI状態
+### 6.リアルタイム購読の置換
+
+1. 承認画面の`streamEventsOnEvent()`と`streamApprovals()`を削除する。
+2. 編集画面のmoderator-request購読をexecutorのinitial readへ置換する。
+3. モデレーター画面のmoderator-request購読をexecutorのinitial readへ置換する。
+4. 各画面は継続接続を開始しない。
+5. 更新後のデータは利用者の再読み込みで取得する。
+
+### 7.UI状態
 
 1. 画面はfirst attempt完了時にeventsを描画する。
 2. retry中は暫定状態を`role="status"`と`aria-live="polite"`で通知する。
@@ -175,7 +183,7 @@ src/
 ## REDテスト計画
 
 1. `src/lib/nostr/__tests__/nostr-service.test.ts`
-   - 二つのfilterで`ndk.subscribe()`が一回だけ呼ばれる。
+   - 二つのfilterで`ndk.subscribe()`が一回だけ呼ばれ、optionsの`relaySet`が選別済みrelayを持つ。
    - `onEose`一回でmulti-filter attemptをEOSE完了にする。
    - source relay、重複、timeoutを維持する。
 2. `src/lib/discussion/__tests__/discussion-reference-resolver.test.ts`を追加する。
@@ -194,9 +202,9 @@ src/
 5. `src/app/settings/__tests__/page.streaming.test.tsx`
    - author readがexecutor経由になる。
    - retry中の暫定表示とEOSE後の状態を確認する。
-6. `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`と既存edit、moderators、manageテスト
-   - 各画面が直接gatewayを呼ばずexecutorを使う。
-   - 状態通知と再読み込み操作を確認する。
+6. `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`と既存approve、edit、moderators、manageテスト
+   - 各画面が直接gatewayまたはstream APIを呼ばずexecutorを使う。
+   - 継続購読を開始しないこと、状態通知、再読み込み操作を確認する。
 
 ## 実装順
 

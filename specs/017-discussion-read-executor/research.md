@@ -17,8 +17,8 @@
 
 ## 決定3:filter群を一回の購読にまとめる
 
-- **Decision**:`NostrService.collectEventsWithCompletion()`はfilterごとの`ndk.subscribe()`ループを廃止する。一回の`ndk.subscribe(filters, options, relaySet)`でfilter配列を渡す。
-- **Rationale**:NDKはfilter配列を購読に渡せる。NostrのREQは複数filterを一つの購読に含められる。現行実装はfilter数と同数の購読を作り、参照先会話のN+1通信を起こす。
+- **Decision**:`NostrService.collectEventsWithCompletion()`はfilterごとの`ndk.subscribe()`ループを廃止する。一回の`ndk.subscribe(filters, { ...options, relaySet })`でfilter配列を渡す。
+- **Rationale**:NDKはfilter配列を一つのsubscriptionに渡せる。subscriptionは選別済みrelayごとに複数filterを含むREQを送る。現行実装はfilter数と同数の購読を作り、参照先会話のN+1通信を起こす。
 - **Alternatives considered**:
   - `fetchEvents()`を使う。completion状態、idle timeout、暫定表示、source relay記録を保持できないため採用しない。
   - filterを一つへOR結合する。authorと`#d`の対応が崩れ、意図しないkind 34550を取得するため採用しない。
@@ -52,3 +52,11 @@
 - **Rationale**:現在の必要性は実証されていない。filter結合は必要な最適化だが、page状態は追加のUXと整合性規則を増やす。
 - **Alternatives considered**:
   - 先行して固定上限を設ける。根拠のない欠落または複雑な続き取得を導入するため採用しない。
+
+## 決定8:リアルタイム購読を廃止する
+
+- **Decision**:承認、編集、モデレーター画面はリアルタイム購読を使わない。共通executorによる完了型initial readへ置換する。
+- **Rationale**:ユーザーがリアルタイム購読は誤りであると決定した。これにより、readの候補選別、timeout、retry、状態表示を一つのexecutorへ統一する。
+- **Alternatives considered**:
+  - executorへstreaming APIを追加する。不要な継続接続と複雑な停止規則を導入するため採用しない。
+  - 既存subscriptionを残す。全Discussion画面の通信DRY化に反するため採用しない。

@@ -25,6 +25,7 @@ npm test -- --runInBand src/app/settings/__tests__/page.streaming.test.tsx
 - 初回eventsを保持したままretry eventsを結合する。
 - retry EOSEが部分取得表示を解除する。
 - `/settings`、`/discussions`、詳細、承認、編集、管理がexecutorを使う。
+- 承認、編集、モデレーター画面が継続購読を開始せず、initial readと再読み込みだけを使う。
 
 ## GREEN確認
 

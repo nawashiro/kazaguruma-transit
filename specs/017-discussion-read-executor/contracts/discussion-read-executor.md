@@ -53,7 +53,7 @@ interface DiscussionReadResult {
 ## Multi-filter規則
 
 - executorは一つのplanの`filters`配列を変更しない。
-- transportは各relay attemptで一回の`ndk.subscribe(filters, options, relaySet)`を使う。
+- transportは各attemptで一回の`ndk.subscribe(filters, { ...options, relaySet })`を使う。選別済みrelayごとに、filter配列を含むREQを送る。
 - transportはfilterごとに`ndk.subscribe()`を呼ばない。
 - transportは一つのsubscriptionのEOSEでattemptを完了する。
 

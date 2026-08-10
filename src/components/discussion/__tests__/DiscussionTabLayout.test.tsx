@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 
 // Mock next/navigation
@@ -19,7 +19,14 @@ jest.mock("@/lib/nostr/nostr-service", () => ({
 }));
 jest.mock("@/lib/config/discussion-config", () => ({
   getNostrServiceConfig: jest.fn(() => ({
-    relays: ["wss://relay.example.com"],
+    relays: [{ url: "wss://relay.example.com", read: true, write: false }],
+    defaultTimeout: 500,
+  })),
+  getDiscussionReadStrategyConfig: jest.fn(() => ({
+    relayLimit: 3,
+    idleTimeoutMs: 500,
+    hardTimeoutMs: 1500,
+    dedupWindowMs: 250,
   })),
 }));
 jest.mock("@/lib/test/test-data-loader", () => ({
@@ -27,7 +34,10 @@ jest.mock("@/lib/test/test-data-loader", () => ({
   isTestMode: jest.fn(() => false),
 }));
 jest.mock("@/lib/nostr/naddr-utils", () => ({
-  extractDiscussionFromNaddr: () => null, // Return null for basic tests
+  extractDiscussionFromNaddr: jest.fn(() => null), // Return null for basic tests
+}));
+jest.mock("@/lib/discussion/discussion-read-executor", () => ({
+  executeDiscussionRead: jest.fn(),
 }));
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => ({ user: { pubkey: null, isLoggedIn: false } }),
@@ -51,6 +61,8 @@ import {
   DiscussionTabLayout,
   useDiscussionMeta,
 } from "../DiscussionTabLayout";
+import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
+import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 
 function DiscussionMetaProbe() {
   const meta = useDiscussionMeta();
@@ -62,6 +74,15 @@ describe("DiscussionTabLayout", () => {
     jest.clearAllMocks();
     mockPathname.mockReturnValue("/discussions/naddr123");
     mockParams.mockReturnValue({ naddr: "naddr123" });
+    jest.mocked(extractDiscussionFromNaddr).mockReturnValue(null);
+    jest.mocked(executeDiscussionRead).mockResolvedValue({
+      events: [],
+      completionReason: "eose",
+      attemptedRelayUrls: [],
+      successfulEventRelayUrls: [],
+      sourceRelayUrlsByEventId: {},
+      attempts: [],
+    });
   });
 
   describe("ARIA attributes", () => {
@@ -248,6 +269,37 @@ describe("DiscussionTabLayout", () => {
   });
 
   describe("renders children", () => {
+    it("loads metadata through the bounded discussion read executor", async () => {
+      jest.mocked(extractDiscussionFromNaddr).mockReturnValue({
+        discussionId: "34550:author:topic",
+        authorPubkey: "author",
+        dTag: "topic",
+        relays: ["wss://hint.example"],
+      });
+
+      render(
+        <DiscussionTabLayout baseHref="/discussions/naddr123">
+          <DiscussionMetaProbe />
+        </DiscussionTabLayout>,
+      );
+
+      await waitFor(() => expect(executeDiscussionRead).toHaveBeenCalled());
+
+      expect(executeDiscussionRead).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          plan: expect.objectContaining({
+            target: "discussion-meta",
+            relayHints: ["wss://hint.example"],
+          }),
+          candidates: expect.objectContaining({
+            configured: ["wss://relay.example.com"],
+          }),
+          onAttemptComplete: expect.any(Function),
+        }),
+      );
+    });
+
     it("不正なNADDRでは読み込みを終了してエラー状態にする", async () => {
       render(
         <DiscussionTabLayout

@@ -161,11 +161,14 @@ describe("NostrService event retrieval", () => {
     ]);
     await flushMicrotasks();
 
+    expect(mockSubscribe).toHaveBeenCalledWith(
+      [{ kinds: [1] }, { authors: ["pk1"] }],
+      expect.any(Object)
+    );
     handlersList[0]?.onEvent?.(createNdkEvent(olderEvent));
     handlersList[0]?.onEvent?.(createNdkEvent(newerEvent));
-    handlersList[1]?.onEvent?.(createNdkEvent(olderEvent));
+    handlersList[0]?.onEvent?.(createNdkEvent(olderEvent));
     handlersList[0]?.onEose?.();
-    handlersList[1]?.onEose?.();
 
     const result = await resultPromise;
     expect(result.map((event) => event.id)).toEqual([
@@ -233,10 +236,12 @@ describe("NostrService event retrieval", () => {
       ["wss://first", "wss://second"],
       expect.anything()
     );
+    expect(mockSubscribe).toHaveBeenCalledTimes(1);
     expect(mockSubscribe).toHaveBeenCalledWith(
-      { kinds: [1] },
-      expect.any(Object),
-      { urls: ["wss://first", "wss://second"] }
+      [{ kinds: [1] }],
+      expect.objectContaining({
+        relaySet: { urls: ["wss://first", "wss://second"] },
+      })
     );
     expect(result.events).toHaveLength(1);
     expect(result.duplicateCount).toBe(1);
@@ -369,8 +374,8 @@ describe("NostrService event retrieval", () => {
 
   it("getApprovalsOnEose normalizes naddr before querying", async () => {
     let receivedFilter: Record<string, unknown> | null = null;
-    mockSubscribe.mockImplementation((filter, opts) => {
-      receivedFilter = filter as Record<string, unknown>;
+    mockSubscribe.mockImplementation((filters, opts) => {
+      receivedFilter = (Array.isArray(filters) ? filters[0] : filters) as Record<string, unknown>;
       opts.onEose?.();
       return { stop: mockStop };
     });

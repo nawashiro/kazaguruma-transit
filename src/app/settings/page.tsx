@@ -14,6 +14,7 @@ import PageHeader from "@/components/layouts/PageHeader";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   isDiscussionsEnabled,
+  getDiscussionReadStrategyConfig,
   getNostrServiceConfig,
 } from "@/lib/config/discussion-config";
 import { parseDiscussionEvent, formatRelativeTime } from "@/lib/nostr/nostr-utils";
@@ -27,9 +28,12 @@ import { LoginModal } from "@/components/discussion/LoginModal";
 import { UserIdentity } from "@/components/ui/UserIdentity";
 import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
+import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
+import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
 import { logger } from "@/utils/logger";
 
 const nostrServiceConfig = getNostrServiceConfig();
+const discussionReadStrategy = getDiscussionReadStrategyConfig();
 const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function SettingsPage() {
@@ -66,20 +70,28 @@ export default function SettingsPage() {
     setDiscussionsCompletionReason(null);
 
     try {
-      const result = await discussionGateway.queryDiscussionsByAuthorWithCompletion(
-        user.pubkey,
-        {
-          idleTimeoutMs: nostrServiceConfig.defaultTimeout,
-          hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
-        }
-      );
+      const plan = createDiscussionReadPlan("discussion-list", discussionReadStrategy, {
+        authorPubkey: user.pubkey,
+      });
+      const result = await executeDiscussionRead(discussionGateway, {
+        plan,
+        candidates: {
+          configured: nostrServiceConfig.relays
+            .filter((relay) => relay.read)
+            .map((relay) => relay.url),
+          defaults: [],
+        },
+      });
       if (loadSequenceRef.current !== loadSequence) return;
 
       logger.info("settings discussions fetch completed", {
         authorPubkey: user.pubkey,
         completionReason: result.completionReason,
-        eventCount: result.eventCount,
-        elapsedMs: result.elapsedMs,
+        eventCount: result.events.length,
+        elapsedMs: result.attempts.reduce(
+          (total, attempt) => total + attempt.elapsedMs,
+          0,
+        ),
       });
 
       updateDiscussions(result.events);

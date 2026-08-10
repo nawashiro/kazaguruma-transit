@@ -15,15 +15,16 @@ import {
   getNostrServiceConfig,
   getDiscussionReadStrategyConfig,
 } from "@/lib/config/discussion-config";
-import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
-import { loadKnownDiscussionData, saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
+
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
 import { ApprovalStatusTabs } from "@/components/discussion/ApprovalStatusTabs";
 import {
   buildDisabledActionState,
   DisabledReasonText,
 } from "@/components/discussion/PermissionGuards";
-import { createNostrService, type Event } from "@/lib/nostr/nostr-service";
+import { createNostrService } from "@/lib/nostr/nostr-service";
+import { createDiscussionNdkGateway } from "@/lib/nostr/discussion-ndk-gateway";
+import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
 import {
   formatRelativeTime,
   getAdminPubkeyHex,
@@ -45,6 +46,7 @@ const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrServiceConfig = getNostrServiceConfig();
 const readStrategy = typeof getDiscussionReadStrategyConfig === "function" ? getDiscussionReadStrategyConfig() : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
 const nostrService = createNostrService(nostrServiceConfig);
+const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function PostApprovalPage() {
   const params = useParams();
@@ -57,7 +59,7 @@ export default function PostApprovalPage() {
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
-  const approvalStreamCleanupRef = useRef<(() => void) | null>(null);
+  const moderationReadGenerationRef = useRef(0);
 
   const { user, signEvent } = useAuth();
   const {
@@ -77,72 +79,47 @@ export default function PostApprovalPage() {
     if (!naddrParam) return null;
     return extractDiscussionFromNaddr(naddrParam);
   }, [naddrParam]);
-  const startStreaming = useCallback(() => {
+  const loadInitialModerationData = useCallback(async () => {
+    const readGeneration = ++moderationReadGenerationRef.current;
     if (!isDiscussionsEnabled() || !discussionInfo) return;
-    approvalStreamCleanupRef.current?.();
-    const knownData = loadKnownDiscussionData<unknown, Event>(discussionInfo.discussionId);
-    const relayUrls = selectRelayCandidates({
-      hints: discussionInfo.relays,
-      successful: knownData?.successfulRelays,
-      configured: (nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
-      defaults: [],
-      limit: readStrategy.relayLimit,
-    }).map((relay) => relay.url);
-
-    const postsStream = nostrService.streamEventsOnEvent(
-      [
-        {
-          kinds: [1111, 1],
-          "#a": [discussionInfo.discussionId],
+    try {
+      const result = await executeDiscussionRead(discussionGateway, {
+        plan: {
+          target: "discussion-approvals",
+          filters: [
+            { kinds: [1111, 1], "#a": [discussionInfo.discussionId], limit: 50 },
+            { kinds: [4550], "#a": [discussionInfo.discussionId], limit: 50 },
+          ],
+          relayHints: discussionInfo.relays ?? [],
+          idleTimeoutMs: readStrategy.idleTimeoutMs,
+          hardTimeoutMs: readStrategy.hardTimeoutMs,
         },
-      ],
-      {
-        onEvent: (events) => {
-          mergeModerationEvents({
-            primaryEvents: events.filter(
-              (event) => !isModeratorRequestEvent(event),
-            ),
-          });
+        candidates: {
+          configured: (nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
+          defaults: [],
         },
-        onEose: (events) => {
-          const normalPosts = events.filter((event) => !isModeratorRequestEvent(event));
-          mergeModerationEvents({ primaryEvents: normalPosts });
-          saveKnownDiscussionData(discussionInfo.discussionId, { metadata: null, eventIds: normalPosts.map((event) => event.id), attemptedRelayUrls: relayUrls, successfulRelays: [], events: normalPosts });
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
-        ...(relayUrls.length > 0 ? { relayUrls } : {}),
-      }
-    );
-
-    const approvalsStream = nostrService.streamApprovals(
-      discussionInfo.discussionId,
-      {
-        onEvent: (events) => {
-          mergeModerationEvents({ approvalEvents: events });
-        },
-        onEose: (events) => {
-          mergeModerationEvents({ approvalEvents: events });
-          saveKnownDiscussionData(discussionInfo.discussionId, { metadata: null, eventIds: events.map((event) => event.id), attemptedRelayUrls: relayUrls, successfulRelays: [], events });
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
-        ...(relayUrls.length > 0 ? { relayUrls } : {}),
-      }
-    );
-
-    approvalStreamCleanupRef.current = () => {
-      postsStream();
-      approvalsStream();
-    };
+      });
+      if (moderationReadGenerationRef.current !== readGeneration) return;
+      mergeModerationEvents({
+        primaryEvents: result.events.filter((event) => event.kind !== 4550 && !isModeratorRequestEvent(event)),
+        approvalEvents: result.events.filter((event) => event.kind === 4550),
+      });
+    } catch (error) {
+      logger.error("Failed to load moderation data:", error);
+    }
   }, [discussionInfo, mergeModerationEvents]);
 
   useEffect(() => {
-    if (isDiscussionsEnabled() && discussionInfo) {
-      startStreaming();
-    }
+    void loadInitialModerationData();
     return () => {
-      approvalStreamCleanupRef.current?.();
+      moderationReadGenerationRef.current += 1;
     };
-  }, [startStreaming, discussionInfo]);
+  }, [loadInitialModerationData]);
+
+  const handleReload = useCallback(() => {
+    void reload();
+    void loadInitialModerationData();
+  }, [loadInitialModerationData, reload]);
 
   const handleApprovePost = async (post: DiscussionPost) => {
     const canModerate = discussion
@@ -347,7 +324,7 @@ export default function PostApprovalPage() {
               completionReason={completionReason}
               hasData={posts.length > 0}
               approvalState={approvalState === "unknown" ? "unknown" : undefined}
-              onReload={() => void reload()}
+              onReload={handleReload}
             />
             {activeTab === "pending" && (
               <section>

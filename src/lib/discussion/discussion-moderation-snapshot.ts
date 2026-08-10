@@ -1,5 +1,7 @@
 import type { DiscussionReadStrategyConfig } from "@/lib/config/discussion-config";
-import type { CompletionReason, Event, EventFetchCompletion, NostrService } from "@/lib/nostr/nostr-service";
+import { executeDiscussionRead, type DiscussionReadTransport } from "@/lib/discussion/discussion-read-executor";
+import type { DiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
+import type { CompletionReason, Event, Filter, NostrService } from "@/lib/nostr/nostr-service";
 import { rankRelayCandidates, type RelayCandidate, selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
 import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 
@@ -66,20 +68,36 @@ export const loadDiscussionModerationSnapshot = async (
 ): Promise<DiscussionModerationSnapshot> => {
   const relayCandidates = rankRelayCandidates(input);
   const relayUrls = selectRelayCandidates({ ...input, limit: strategy.relayLimit }).map((candidate) => candidate.url);
-  const options = { idleTimeoutMs: strategy.idleTimeoutMs, hardTimeoutMs: strategy.hardTimeoutMs, relayUrls };
-  const primaryFilter = {
-    kinds: [1111, 1],
-    "#a": [input.discussionId],
-    ...(input.primaryTags && input.primaryTags.length > 0 ? { "#t": input.primaryTags } : {}),
-    limit: 10,
-    until: input.until,
+  const transport: DiscussionReadTransport = (filters, options) => service.getEventsWithCompletion(filters as Filter[], options);
+  const candidates = { configured: relayUrls, defaults: [] };
+  const primaryPlan: DiscussionReadPlan = {
+    target: "discussion-list",
+    filters: [{
+      kinds: [1111, 1],
+      "#a": [input.discussionId],
+      ...(input.primaryTags && input.primaryTags.length > 0 ? { "#t": input.primaryTags } : {}),
+      limit: 10,
+      until: input.until,
+    }],
+    relayHints: [],
+    idleTimeoutMs: strategy.idleTimeoutMs,
+    hardTimeoutMs: strategy.hardTimeoutMs,
   };
-  const primary = await service.getEventsWithCompletion([primaryFilter], options);
+  const primary = await executeDiscussionRead(transport, { plan: primaryPlan, candidates });
   const primaryEvents = primary.events.filter((event) => !isModeratorRequestEvent(event));
   const postIds = primaryEvents.map((event) => event.id);
-  const approvals: EventFetchCompletion = postIds.length === 0
-    ? { ...primary, events: [], eventCount: 0 }
-    : await service.getEventsWithCompletion([{ kinds: [4550], "#a": [input.discussionId], "#e": postIds, limit: 10 }], options);
+  const approvals = postIds.length === 0
+    ? { ...primary, events: [], successfulEventRelayUrls: [], sourceRelayUrlsByEventId: {} }
+    : await executeDiscussionRead(transport, {
+      plan: {
+        target: "discussion-approvals",
+        filters: [{ kinds: [4550], "#a": [input.discussionId], "#e": postIds, limit: 10 }],
+        relayHints: [],
+        idleTimeoutMs: strategy.idleTimeoutMs,
+        hardTimeoutMs: strategy.hardTimeoutMs,
+      },
+      candidates,
+    });
   const completionReason = primary.completionReason !== "eose"
     ? primary.completionReason
     : approvals.completionReason;
@@ -88,11 +106,11 @@ export const loadDiscussionModerationSnapshot = async (
     primaryEvents,
     approvalEvents: approvals.events,
     relayCandidates,
-    attemptedRelayUrls: relayUrls,
+    attemptedRelayUrls: Array.from(new Set([...primary.attemptedRelayUrls, ...approvals.attemptedRelayUrls])),
     completionReason,
     successfulRelayUrls: Array.from(new Set([
-      ...primary.events.flatMap((event) => primary.sourceRelayUrlsByEventId[event.id] ?? []),
-      ...approvals.events.flatMap((event) => approvals.sourceRelayUrlsByEventId[event.id] ?? []),
+      ...primary.successfulEventRelayUrls,
+      ...approvals.successfulEventRelayUrls,
     ])),
   });
 };

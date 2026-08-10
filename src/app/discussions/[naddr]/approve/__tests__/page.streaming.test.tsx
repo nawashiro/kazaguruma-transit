@@ -40,45 +40,8 @@ jest.mock("@/lib/nostr/naddr-utils", () => ({
 
 jest.mock("@/lib/nostr/nostr-service", () => {
   const serviceMock = {
-    streamEventsOnEvent: jest.fn((_filters, handlers) => {
-      handlers.onEose?.([
-        {
-          id: "discussion-event",
-          pubkey: "author",
-          kind: 34550,
-          created_at: 1,
-          tags: [
-            ["d", "tag"],
-            ["name", "Title"],
-          ],
-          content: "desc",
-          sig: "sig",
-        },
-        {
-          id: "post-1",
-          pubkey: "poster",
-          kind: 1111,
-          created_at: 2,
-          tags: [["a", "34550:author:tag"]],
-          content: "pending post",
-          sig: "sig",
-        },
-        {
-          id: "post-approved",
-          pubkey: "poster",
-          kind: 1111,
-          created_at: 3,
-          tags: [["a", "34550:author:tag"]],
-          content: "approved post",
-          sig: "sig",
-        },
-      ]);
-      return () => {};
-    }),
-    streamApprovals: jest.fn((_id, handlers) => {
-      handlers.onEose?.([]);
-      return () => {};
-    }),
+    streamEventsOnEvent: jest.fn(),
+    streamApprovals: jest.fn(),
   };
   return {
     createNostrService: () => serviceMock,
@@ -87,6 +50,19 @@ jest.mock("@/lib/nostr/nostr-service", () => {
 });
 
 const { __mock: serviceMock } = jest.requireMock("@/lib/nostr/nostr-service");
+
+jest.mock("@/lib/nostr/discussion-ndk-gateway", () => ({
+  createDiscussionNdkGateway: () => ({ queryWithCompletion: jest.fn() }),
+}));
+
+jest.mock("@/lib/discussion/discussion-read-executor", () => {
+  const executeDiscussionRead = jest.fn();
+  return { executeDiscussionRead, __mock: { executeDiscussionRead } };
+});
+
+const { __mock: discussionReadExecutorMock } = jest.requireMock(
+  "@/lib/discussion/discussion-read-executor",
+);
 
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseDiscussionEvent: (event: any) =>
@@ -124,6 +100,14 @@ describe("PostApprovalPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     isModeratorResult = false;
+    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
+      events: [],
+      completionReason: "eose",
+      attemptedRelayUrls: [],
+      successfulEventRelayUrls: [],
+      sourceRelayUrlsByEventId: {},
+      attempts: [],
+    });
     const layoutDiscussion: Discussion = {
       id: "34550:author:tag",
       title: "Title",
@@ -202,7 +186,7 @@ describe("PostApprovalPage streaming", () => {
     });
   });
 
-  it("uses streaming APIs instead of blocking fetches", async () => {
+  it("loads moderation data through a bounded completion-aware read", async () => {
     useAuthMock.mockReturnValue({
       user: { pubkey: "author", isLoggedIn: true },
       signEvent: jest.fn(),
@@ -211,9 +195,10 @@ describe("PostApprovalPage streaming", () => {
     render(<PostApprovalPage />);
 
     await waitFor(() =>
-      expect(serviceMock.streamEventsOnEvent).toHaveBeenCalled()
+      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalled()
     );
-    expect(serviceMock.streamApprovals).toHaveBeenCalled();
+    expect(serviceMock.streamEventsOnEvent).not.toHaveBeenCalled();
+    expect(serviceMock.streamApprovals).not.toHaveBeenCalled();
   });
 
   it("shows disabled approval action with reason for non-moderator users", async () => {

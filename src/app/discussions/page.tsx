@@ -11,6 +11,7 @@ import { DiscussionListTabLayout } from "@/components/discussion/DiscussionListT
 import PageHeader from "@/components/layouts/PageHeader";
 import { formatRelativeTime } from "@/lib/nostr/nostr-utils";
 import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
+import { resolveDiscussionReferences } from "@/lib/discussion/discussion-reference-resolver";
 import { useDiscussionManagementData } from "@/components/discussion/DiscussionManagementDataProvider";
 
 export default function DiscussionsPage() {
@@ -20,22 +21,19 @@ export default function DiscussionsPage() {
     referencedDiscussions,
     isModerationLoading,
     isReferencedDiscussionsLoading,
+    referencedDiscussionCompletionReason,
     moderationError: loadError,
   } = useDiscussionManagementData();
   const visibleDiscussionReferences = useMemo(
     () =>
       new Set(
-        posts
-          .filter(
-            (post) => post.approved || post.approvalState === "unknown",
-          )
-          .flatMap((post) =>
-            (post.event?.tags ?? [])
-              .filter(
-                (tag) => tag[0] === "q" && tag[1]?.startsWith("34550:"),
-              )
-              .map((tag) => tag[1]),
-          ),
+        resolveDiscussionReferences(
+          posts
+            .filter(
+              (post) => post.approved || post.approvalState === "unknown",
+            )
+            .flatMap((post) => post.event?.tags ?? []),
+        ).references.map((reference) => reference.discussionId),
       ),
     [posts],
   );
@@ -87,6 +85,11 @@ export default function DiscussionsPage() {
               ) : loadError ? (
                 <div className="alert alert-error" role="alert">
                   <span>{loadError}</span>
+                </div>
+              ) : referencedDiscussionCompletionReason &&
+                referencedDiscussionCompletionReason !== "eose" ? (
+                <div className="alert alert-warning" role="status">
+                  <span>会話一覧を完全に取得できませんでした。再読み込みしてください。</span>
                 </div>
               ) : discussions.length > 0 ? (
                 <div className="space-y-4">

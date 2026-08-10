@@ -28,7 +28,10 @@ jest.mock("@/lib/nostr/naddr-utils", () => ({
 }));
 
 jest.mock("@/lib/config/discussion-config", () => ({
-  getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 500 }),
+  getNostrServiceConfig: () => ({
+    relays: [{ url: "wss://relay.example", read: true }],
+    defaultTimeout: 500,
+  }),
   getDiscussionReadStrategyConfig: () => ({
     relayLimit: 3,
     idleTimeoutMs: 500,
@@ -53,7 +56,15 @@ const { __mock: serviceMock } = jest.requireMock("@/lib/nostr/nostr-service");
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseApprovalEvent: () => null,
   parseDiscussionEvent: () => null,
-  parsePostEvent: () => null,
+  parsePostEvent: (event: { kind: number; id: string; tags: string[][] }) =>
+    event.kind === 1111
+      ? {
+          id: event.id,
+          approved: true,
+          createdAt: 1,
+          event,
+        }
+      : null,
 }));
 
 jest.mock("@/lib/discussion/discussion-known-data-cache", () => ({
@@ -63,7 +74,7 @@ jest.mock("@/lib/discussion/discussion-known-data-cache", () => ({
 
 function Probe() {
   const data = useDiscussionManagementData();
-  return <div>{data.isModerationLoading ? "loading" : `posts:${data.posts.length}`}</div>;
+  return <div>{data.isModerationLoading ? "loading" : `posts:${data.posts.length}:references:${data.referencedDiscussions.length}`}</div>;
 }
 
 describe("DiscussionManagementDataProvider", () => {
@@ -101,7 +112,7 @@ describe("DiscussionManagementDataProvider", () => {
       </DiscussionManagementDataProvider>,
     );
 
-    await screen.findByText("posts:0");
+    await screen.findByText("posts:0:references:0");
     expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(1);
 
     pathname = "/discussions/manage";
@@ -125,7 +136,7 @@ describe("DiscussionManagementDataProvider", () => {
       </DiscussionManagementDataProvider>,
     );
 
-    await screen.findByText("posts:0");
+    await screen.findByText("posts:0:references:0");
     expect(serviceMock.getEventsWithCompletion).not.toHaveBeenCalled();
   });
 
@@ -138,7 +149,68 @@ describe("DiscussionManagementDataProvider", () => {
       </DiscussionManagementDataProvider>,
     );
 
-    await screen.findByText("posts:0");
+    await screen.findByText("posts:0:references:0");
     expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads canonical published references through a multi-filter reference plan", async () => {
+    const referencedAuthor = "a".repeat(64);
+    const secondReferencedAuthor = "b".repeat(64);
+    serviceMock.getEventsWithCompletion.mockImplementation((filters: Array<{ kinds?: number[] }>) =>
+      Promise.resolve({
+        events: filters[0]?.kinds?.includes(1111)
+          ? [{
+              id: "listing-post",
+              pubkey: "poster",
+              created_at: 1,
+              kind: 1111,
+              tags: [
+                ["q", `34550:${referencedAuthor}:referenced-discussion`],
+                ["q", `34550:${secondReferencedAuthor}:second-discussion`],
+                ["q", `34550:${referencedAuthor}:referenced-discussion`],
+              ],
+              content: "",
+              sig: "sig",
+            }]
+          : [],
+        completionReason: "eose",
+        eventCount: 0,
+        elapsedMs: 1,
+        startedAt: 1,
+        lastEventAt: 1,
+        eoseReceived: true,
+        relayUrls: [],
+        duplicateCount: 0,
+        sourceRelayUrlsByEventId: {},
+      }),
+    );
+
+    render(
+      <DiscussionManagementDataProvider>
+        <Probe />
+      </DiscussionManagementDataProvider>,
+    );
+
+    await waitFor(() =>
+      expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(3),
+    );
+
+    expect(serviceMock.getEventsWithCompletion).toHaveBeenLastCalledWith(
+      [
+        {
+          kinds: [34550],
+          authors: [referencedAuthor],
+          "#d": ["referenced-discussion"],
+          limit: 1,
+        },
+        {
+          kinds: [34550],
+          authors: [secondReferencedAuthor],
+          "#d": ["second-discussion"],
+          limit: 1,
+        },
+      ],
+      expect.objectContaining({ relayUrls: ["wss://relay.example"] }),
+    );
   });
 });

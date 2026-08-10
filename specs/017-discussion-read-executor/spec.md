@@ -60,7 +60,7 @@
 - 同じ kind 34550 が複数relayまたは複数pageから届く場合、event IDで一件に重複排除し、最新のreplaceable eventだけを表示に用いる。
 - 掲載投稿のrelay実績と、参照先会話定義のrelay実績は別read targetとして保存し、候補順位の根拠を混同しない。
 - 古いread世代の結果、timeoutだけの空結果、または自動再読の空結果は、既に取得済みの会話定義を削除する根拠にしない。
-- 参照tagが `34550:pubkey:dTag` 形式ではない場合は読取対象から除外し、他の有効参照の処理を止めない。
+- `/discussions` の掲載投稿・承認イベントにある `q` tagから参照先会話を解決するときだけ、`34550:pubkey:dTag` として解析できない値を読取対象から除外し、他の有効参照の処理を止めない。この規則は、`/settings`、詳細、承認、編集、管理が既に持つDiscussion IDまたはnaddrから得たIDには適用しない。
 
 ## Requirements *(mandatory)*
 

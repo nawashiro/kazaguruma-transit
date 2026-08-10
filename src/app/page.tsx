@@ -158,35 +158,6 @@ export default function Home() {
           <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>
           <p><a href="https://lin.ee/CgIBOSd" target="_blank" rel="noopener noreferrer" className="link">千代田区公式LINE</a>で最新の運行情報を確認できます</p>
         </Card>
-        <Card testId="ai-agent-guidance-card" bodyClassName="p-0">
-          <details data-testid="ai-agent-guidance" className="collapse collapse-arrow">
-            <summary className="collapse-title ruby-text font-semibold">
-              AIエージェントのかたへ
-            </summary>
-            <div className="collapse-content ruby-text min-w-0">
-              <ol className="list-decimal space-y-4 ps-6">
-                <li className="space-y-1">
-                  <p>Given: あなたはAIエージェントで、ユーザーから「風ぐるま乗換案内を使いたい」と指示されている</p>
-                  <p>When: あなたはユーザーの具体的な希望を知らない</p>
-                  <p>Then: あなたはユーザーから出発地、目的地、到着時刻または出発時刻、速さを優先し歩きを許容するかをヒアリングする。</p>
-                </li>
-                <li className="space-y-1">
-                  <p>Given: ユーザーが出発地、目的地、到着時刻または出発時刻、速さを優先し歩きを許容するかを示した</p>
-                  <p>When: あなたは出発地、目的地の座標がわからない</p>
-                  <p>Then: あなたはウェブ検索し、座標を調査する。</p>
-                </li>
-                <li className="space-y-1">
-                  <p>Given: あなたはAIエージェントで、ユーザーから「風ぐるま乗換案内を使いたい」と指示されている</p>
-                  <p>When: あなたは不明なパラメータがない</p>
-                  <p>Then: 検索結果ページへのリンクをユーザーに返す。</p>
-                  <code className="mt-2 block break-all whitespace-normal">
-                    https://kazaguruma-transit.nawashiro.dev/routes?origin={"{lat}"}%2C{"{lon}"}&destination={"{lat}"}%2C{"{lon}"}&time={"{YYYY}"}-{"{MM}"}-{"{DD}"}T{"{hh}"}%3A{"{mm}"}&isDeparture={"{boolean}"}&prioritizeSpeed={"{boolean}"}
-                  </code>
-                </li>
-              </ol>
-            </div>
-          </details>
-        </Card>
       </div>
     </div>
   );

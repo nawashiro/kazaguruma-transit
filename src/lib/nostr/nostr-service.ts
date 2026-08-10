@@ -172,19 +172,18 @@ export class NostrService {
       const startedAt = Date.now();
       let lastEventAt = startedAt;
       let closed = false;
-      let eoseCount = 0;
       let eoseReceived = false;
       let duplicateCount = 0;
       const collected: Event[] = [];
       const sourceRelayUrlsByEventId = new Map<string, Set<string>>();
-      const subscriptions: Array<{ stop: () => void }> = [];
+      const subscriptionRef: { current?: { stop: () => void } } = {};
       const timerRefs: {
         idle?: ReturnType<typeof setTimeout>;
         hard?: ReturnType<typeof setTimeout>;
       } = {};
 
-      const closeSubscriptions = () => {
-        subscriptions.forEach((subscription) => subscription.stop());
+      const closeSubscription = () => {
+        subscriptionRef.current?.stop();
       };
 
       const finalize = (completionReason: CompletionReason) => {
@@ -192,7 +191,7 @@ export class NostrService {
         closed = true;
         if (timerRefs.idle) clearTimeout(timerRefs.idle);
         if (timerRefs.hard) clearTimeout(timerRefs.hard);
-        closeSubscriptions();
+        closeSubscription();
 
         const events = dedupeAndSortEvents(collected);
         const sourceRelays = Object.fromEntries(
@@ -230,46 +229,42 @@ export class NostrService {
       timerRefs.hard = setTimeout(() => finalize("hard-timeout"), hardTimeoutMs);
       resetIdleTimer();
 
-      for (const filter of filters) {
-        const subscription = this.ndk.subscribe(
-          filter,
-          {
-            closeOnEose: true,
-            onEvent: (event) => {
-              if (closed) return;
+      const subscription = this.ndk.subscribe(
+        filters,
+        {
+          closeOnEose: true,
+          ...(relaySet ? { relaySet } : {}),
+          onEvent: (event) => {
+            if (closed) return;
 
-              lastEventAt = Date.now();
-              resetIdleTimer();
+            lastEventAt = Date.now();
+            resetIdleTimer();
 
-              const rawEvent = this.toRawEvent(event);
-              const sourceRelayUrl = getSourceRelayUrl(event);
-              if (sourceRelayUrl) {
-                const sources = sourceRelayUrlsByEventId.get(rawEvent.id) ?? new Set<string>();
-                sources.add(sourceRelayUrl);
-                sourceRelayUrlsByEventId.set(rawEvent.id, sources);
-              }
-              const updated = mergeEvent(collected, rawEvent);
-              if (updated === collected) {
-                duplicateCount += 1;
-                return;
-              }
+            const rawEvent = this.toRawEvent(event);
+            const sourceRelayUrl = getSourceRelayUrl(event);
+            if (sourceRelayUrl) {
+              const sources = sourceRelayUrlsByEventId.get(rawEvent.id) ?? new Set<string>();
+              sources.add(sourceRelayUrl);
+              sourceRelayUrlsByEventId.set(rawEvent.id, sources);
+            }
+            const updated = mergeEvent(collected, rawEvent);
+            if (updated === collected) {
+              duplicateCount += 1;
+              return;
+            }
 
-              collected.length = 0;
-              collected.push(...updated);
-            },
-            onEose: () => {
-              if (closed) return;
-              eoseCount += 1;
-              if (eoseCount >= filters.length) {
-                eoseReceived = true;
-                finalize("eose");
-              }
-            },
+            collected.length = 0;
+            collected.push(...updated);
           },
-          relaySet ?? true
-        );
-        subscriptions.push(subscription);
-      }
+          onEose: () => {
+            if (closed) return;
+            eoseReceived = true;
+            finalize("eose");
+          },
+        }
+      );
+      subscriptionRef.current = subscription;
+      if (closed) subscription.stop();
 
       this.ensureConnected().catch((error) => {
         logger.error("Failed to connect before reading events:", error);

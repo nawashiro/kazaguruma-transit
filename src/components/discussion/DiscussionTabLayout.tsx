@@ -15,8 +15,8 @@ import {
   type NostrEventDTO,
 } from "@/lib/nostr/discussion-ndk-gateway";
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
+import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
 import { loadKnownDiscussionData, saveKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
-import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
 import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
 import { DiscussionMetaReadState } from "@/components/discussion/DiscussionMetaReadState";
@@ -61,7 +61,7 @@ export function useDiscussionMeta(): DiscussionMetaContextValue | undefined {
  *
  * データ取得機能:
  * - 会話タイトル・説明・戻るリンクをレイアウトレベルで表示
- * - streamDiscussionMeta による実時間データ取得
+ * - DiscussionReadExecutor によるcompletion-aware initial read
  * - 段階的ローディング（タブ+戻るリンク → タイトル+説明）
  * - エラー時もタブナビゲーションを維持
  *
@@ -125,7 +125,7 @@ export function DiscussionTabLayout({
   /**
    * データ取得関数 (T014, T040)
    *
-   * queryWithCompletion を使用してディスカッションデータを取得します。
+   * executeDiscussionRead を使用してディスカッションデータを取得します。
    * テストモードの場合は loadTestData を使用して静的データを返します。
    *
    * なぜ completion-aware read を使用するのか:
@@ -179,35 +179,37 @@ export function DiscussionTabLayout({
         dTag: discussionInfo.dTag,
         relayHints: discussionInfo.relays,
       });
-      const relayUrls = selectRelayCandidates({
-        hints: plan.relayHints,
-        successful: knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays,
-        configured: discussionConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
-        defaults: [],
-        limit: discussionReadStrategy.relayLimit,
-      }).map((relay) => relay.url);
-      const discussionResult = await discussionGateway.queryWithCompletion(plan.filters, {
-        idleTimeoutMs: plan.idleTimeoutMs,
-        hardTimeoutMs: plan.hardTimeoutMs,
-        relayUrls,
+      const getLatestMatchingDiscussion = (events: NostrEventDTO[]): Discussion | null =>
+        pickLatestDiscussion(
+          events.filter(
+            (event) =>
+              arePubkeysEqual(event.pubkey, discussionInfo.authorPubkey) &&
+              event.tags.some((tag) => tag[0] === "d" && tag[1] === discussionInfo.dTag),
+          ),
+        );
+      const discussionResult = await executeDiscussionRead(discussionGateway, {
+        plan,
+        candidates: {
+          successful: knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays,
+          configured: discussionConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
+          defaults: [],
+        },
+        onAttemptComplete: ({ events }) => {
+          if (loadSequenceRef.current !== loadSequence) return;
+          const latest = getLatestMatchingDiscussion(events);
+          if (latest) setDiscussion(latest);
+        },
       });
       if (loadSequenceRef.current !== loadSequence) return;
 
-      const matchingEvents = discussionResult.events.filter(
-        (event) =>
-          arePubkeysEqual(event.pubkey, discussionInfo.authorPubkey) &&
-          event.tags.some((tag) => tag[0] === "d" && tag[1] === discussionInfo.dTag),
-      );
-      const latest = pickLatestDiscussion(matchingEvents);
+      const latest = getLatestMatchingDiscussion(discussionResult.events);
       if (latest) {
         setDiscussion(latest);
         saveKnownDiscussionData(discussionInfo.discussionId, {
           metadata: latest,
           eventIds: discussionResult.events.map((event) => event.id),
-          attemptedRelayUrls: discussionResult.relayUrls,
-          successfulEventRelayUrls: Array.from(
-            new Set(Object.values(discussionResult.sourceRelayUrlsByEventId ?? {}).flat())
-          ),
+          attemptedRelayUrls: discussionResult.attemptedRelayUrls,
+          successfulEventRelayUrls: discussionResult.successfulEventRelayUrls,
           successfulRelays: [],
         });
       } else {

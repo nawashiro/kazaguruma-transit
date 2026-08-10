@@ -6,7 +6,8 @@ export type DiscussionReadTarget =
   | "discussion-meta"
   | "discussion-approvals"
   | "discussion-evaluations"
-  | "discussion-edit";
+  | "discussion-edit"
+  | "discussion-references";
 
 export interface DiscussionReadPlan {
   target: DiscussionReadTarget;
@@ -22,8 +23,31 @@ export const sortEventsByTimeAndId = <T extends { created_at: number; id: string
 export const createDiscussionReadPlan = (
   target: DiscussionReadTarget,
   strategy: DiscussionReadStrategyConfig,
-  args: { discussionId?: string; authorPubkey?: string; dTag?: string; postIds?: string[]; until?: number; relayHints?: string[] }
+  args: {
+    discussionId?: string;
+    authorPubkey?: string;
+    dTag?: string;
+    postIds?: string[];
+    until?: number;
+    relayHints?: string[];
+    references?: Array<{ authorPubkey: string; dTag: string }>;
+  }
 ): DiscussionReadPlan => {
+  if (target === "discussion-references") {
+    return {
+      target,
+      filters: (args.references ?? []).map(({ authorPubkey, dTag }) => ({
+        kinds: [34550],
+        authors: [authorPubkey],
+        "#d": [dTag],
+        limit: 1,
+      })),
+      relayHints: args.relayHints ?? [],
+      idleTimeoutMs: strategy.idleTimeoutMs,
+      hardTimeoutMs: strategy.hardTimeoutMs,
+    };
+  }
+
   const limit = target === "discussion-meta" ? 1 : target === "discussion-evaluations" ? 100 : 50;
   let filter: NdkEventFilter;
   switch (target) {

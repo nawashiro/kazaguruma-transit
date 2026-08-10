@@ -27,6 +27,12 @@ jest.mock("@/lib/auth/auth-context", () => ({
 jest.mock("@/lib/config/discussion-config", () => ({
   isDiscussionsEnabled: () => true,
   getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 500 }),
+  getDiscussionReadStrategyConfig: () => ({
+    relayLimit: 3,
+    idleTimeoutMs: 500,
+    hardTimeoutMs: 1500,
+    dedupWindowMs: 250,
+  }),
 }));
 
 jest.mock("@/lib/nostr/nostr-service", () => {
@@ -43,18 +49,22 @@ jest.mock("@/lib/nostr/nostr-service", () => {
 const { __mock: nostrServiceMock } = jest.requireMock("@/lib/nostr/nostr-service");
 
 jest.mock("@/lib/nostr/discussion-ndk-gateway", () => {
-  const gatewayMock = {
-    queryDiscussionsByAuthorWithCompletion: jest.fn(),
+  const gateway = {
+    queryWithCompletion: jest.fn(),
   };
 
   return {
-    createDiscussionNdkGateway: () => gatewayMock,
-    __mock: gatewayMock,
+    createDiscussionNdkGateway: () => gateway,
   };
 });
 
-const { __mock: gatewayMock } = jest.requireMock(
-  "@/lib/nostr/discussion-ndk-gateway"
+jest.mock("@/lib/discussion/discussion-read-executor", () => {
+  const executeDiscussionRead = jest.fn();
+  return { executeDiscussionRead, __mock: { executeDiscussionRead } };
+});
+
+const { __mock: discussionReadExecutorMock } = jest.requireMock(
+  "@/lib/discussion/discussion-read-executor",
 );
 
 jest.mock("@/lib/nostr/nostr-utils", () => ({
@@ -107,22 +117,20 @@ describe("SettingsPage streaming discussions", () => {
   const withCompletion = (events: any[], completionReason: "eose" | "idle-timeout" | "hard-timeout" = "eose") => ({
     events,
     completionReason,
-    eventCount: events.length,
-    elapsedMs: 10,
-    startedAt: 1000,
-    lastEventAt: 1000,
-    eoseReceived: completionReason === "eose",
+    attemptedRelayUrls: [],
+    successfulEventRelayUrls: [],
+    sourceRelayUrlsByEventId: {},
+    attempts: [],
   });
 
   beforeEach(() => {
     jest.clearAllMocks();
+    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
+      withCompletion([]),
+    );
   });
 
   it("displays the derived user name with さん and does not display the old profile user name", async () => {
-    gatewayMock.queryDiscussionsByAuthorWithCompletion.mockResolvedValue(
-      withCompletion([])
-    );
-
     render(<SettingsPage />);
 
     expect(
@@ -132,7 +140,7 @@ describe("SettingsPage streaming discussions", () => {
     expect(screen.queryByText("ユーザー名")).not.toBeInTheDocument();
   });
 
-  it("loads user discussions via completion-aware read and does not use stream API", async () => {
+  it("loads user discussions through the bounded discussion read executor", async () => {
     expect(typeof SettingsPage).toBe("function");
 
     const mockEvent = {
@@ -148,16 +156,21 @@ describe("SettingsPage streaming discussions", () => {
       sig: "sig",
     };
 
-    gatewayMock.queryDiscussionsByAuthorWithCompletion.mockResolvedValue(
-      withCompletion([mockEvent], "idle-timeout")
+    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
+      withCompletion([mockEvent], "idle-timeout"),
     );
 
     render(<SettingsPage />);
 
     await waitFor(() =>
-      expect(gatewayMock.queryDiscussionsByAuthorWithCompletion).toHaveBeenCalledWith(
-        "user-pubkey",
-        expect.any(Object)
+      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          plan: expect.objectContaining({
+            target: "discussion-list",
+            filters: [expect.objectContaining({ authors: ["user-pubkey"] })],
+          }),
+        }),
       )
     );
 
@@ -169,8 +182,8 @@ describe("SettingsPage streaming discussions", () => {
   });
 
   it("shows timeout warning when completion-aware read has no events", async () => {
-    gatewayMock.queryDiscussionsByAuthorWithCompletion.mockResolvedValue(
-      withCompletion([], "hard-timeout")
+    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
+      withCompletion([], "hard-timeout"),
     );
 
     render(<SettingsPage />);

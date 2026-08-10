@@ -21,6 +21,7 @@ import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
 import { ApprovalStatusTabs } from "@/components/discussion/ApprovalStatusTabs";
 import { buildNaddrFromRef } from "@/lib/nostr/naddr-utils";
+import { resolveDiscussionReferences } from "@/lib/discussion/discussion-reference-resolver";
 import type { Discussion, DiscussionPost, PostApproval } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
@@ -42,6 +43,7 @@ export default function DiscussionManagePage() {
     approvals,
     referencedDiscussions,
     isModerationLoading: isLoading,
+    referencedDiscussionCompletionReason,
     completionReason,
     approvalState,
     reloadModeration,
@@ -69,36 +71,31 @@ export default function DiscussionManagePage() {
 
   // qタグ引用をレンダリング（会話一覧風）
   const renderQTagReferences = (post: DiscussionPost) => {
-    const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
-    if (qTags.length === 0) return null;
+    const references = resolveDiscussionReferences(post.event?.tags ?? []).references;
+    if (references.length === 0) return null;
 
     return (
       <div className="space-y-3 break-all">
-        {qTags.map((qTag, index) => {
-          if (!qTag[1] || !qTag[1].startsWith("34550:")) return null;
-
-          const referencedDiscussion = findReferencedDiscussion(qTag[1]);
+        {references.map((reference) => {
+          const referencedDiscussion = findReferencedDiscussion(reference.discussionId);
           if (!referencedDiscussion) {
-            // 内部参照形式をnaddr形式に変換してユーザーに表示
-            try {
-              const naddr = buildNaddrFromRef(qTag[1]);
+            if (referencedDiscussionCompletionReason !== "eose") {
               return (
-                <div key={index} className="text-sm text-gray-400 italic">
-                  会話が見つかりません。参照: {naddr}
-                </div>
-              );
-            } catch {
-              return (
-                <div key={index} className="text-sm text-gray-400 italic">
-                  無効な参照形式。参照: {qTag[1]}
+                <div key={reference.discussionId} className="text-sm text-gray-400 italic">
+                  会話の参照を取得中です。参照: {buildNaddrFromRef(reference.discussionId)}
                 </div>
               );
             }
+            return (
+              <div key={reference.discussionId} className="text-sm text-gray-400 italic">
+                会話が見つかりません。参照: {buildNaddrFromRef(reference.discussionId)}
+              </div>
+            );
           }
 
-          const naddr = buildNaddrFromRef(qTag[1]);
+          const naddr = buildNaddrFromRef(reference.discussionId);
           return (
-            <div key={index}>
+            <div key={reference.discussionId}>
               <Link
                 href={`/discussions/${naddr}`}
                 className="block hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-3 -m-3 transition-colors"
@@ -260,11 +257,10 @@ export default function DiscussionManagePage() {
     );
   }
 
-  // qタグ引用があるもののみをフィルタリング
-  const postsWithQTags = posts.filter((post) => {
-    const qTags = post.event?.tags?.filter((tag) => tag[0] === "q") || [];
-    return qTags.some((qTag) => qTag[1] && qTag[1].startsWith("34550:"));
-  });
+  // 参照先の会話があるもののみをフィルタリング
+  const postsWithQTags = posts.filter(
+    (post) => resolveDiscussionReferences(post.event?.tags ?? []).references.length > 0,
+  );
 
   const pendingPosts = postsWithQTags.filter((post) => !post.approved);
   const pendingPostCount = pendingPosts.filter(

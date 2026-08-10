@@ -1,8 +1,7 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionEditPage from "../page";
-import type { StreamEventsOptions } from "@/lib/nostr/nostr-service";
 import type { Discussion } from "@/types/discussion";
 
 const mockUseDiscussionMeta = jest.fn();
@@ -57,6 +56,19 @@ jest.mock("@/lib/nostr/nostr-service", () => {
 
 const { __mock: serviceMock } = jest.requireMock("@/lib/nostr/nostr-service");
 
+jest.mock("@/lib/nostr/discussion-ndk-gateway", () => ({
+  createDiscussionNdkGateway: () => ({ queryWithCompletion: jest.fn() }),
+}));
+
+jest.mock("@/lib/discussion/discussion-read-executor", () => {
+  const executeDiscussionRead = jest.fn();
+  return { executeDiscussionRead, __mock: { executeDiscussionRead } };
+});
+
+const { __mock: discussionReadExecutorMock } = jest.requireMock(
+  "@/lib/discussion/discussion-read-executor",
+);
+
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseDiscussionEvent: jest.fn((event) => ({
     id: `34550:${event.pubkey}:${event.tags?.find((t: string[]) => t[0] === "d")?.[1] || ""}`,
@@ -97,6 +109,14 @@ jest.mock("@/components/ui/Button", () => {
 describe("DiscussionEditPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
+      events: [],
+      completionReason: "eose",
+      attemptedRelayUrls: [],
+      successfulEventRelayUrls: [],
+      sourceRelayUrlsByEventId: {},
+      attempts: [],
+    });
     const layoutDiscussion: Discussion = {
       id: "34550:author:demo",
       title: "Edit Me",
@@ -128,19 +148,13 @@ describe("DiscussionEditPage streaming", () => {
     });
   });
 
-  it("streams discussion metadata and renders form without waiting for EOSE", async () => {
-    serviceMock.streamEventsOnEvent.mockImplementation(
-      (_filters: unknown, handlers: StreamEventsOptions) => {
-        handlers.onEose?.([]);
-        return () => {};
-      }
-    );
-
+  it("loads promotion requests through a bounded completion-aware read", async () => {
     render(<DiscussionEditPage />);
 
     await waitFor(() =>
-      expect(serviceMock.streamEventsOnEvent).toHaveBeenCalled()
+      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalled()
     );
+    expect(serviceMock.streamEventsOnEvent).not.toHaveBeenCalled();
     expect(serviceMock.getDiscussions).not.toHaveBeenCalled();
 
     await waitFor(() =>
@@ -148,7 +162,34 @@ describe("DiscussionEditPage streaming", () => {
     );
   });
 
+  it("keeps a non-EOSE promotion-request read provisional and retries it locally", async () => {
+    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
+      events: [],
+      completionReason: "hard-timeout",
+      attemptedRelayUrls: [],
+      successfulEventRelayUrls: [],
+      sourceRelayUrlsByEventId: {},
+      attempts: [],
+    });
+
+    render(<DiscussionEditPage />);
+
+    expect(
+      await screen.findByRole("alert", { name: "昇格申請の取得は完了していません" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("申請はまだありません。")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "昇格申請を再取得" }));
+
+    await waitFor(() =>
+      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalledTimes(2),
+    );
+  });
+
   it("does not show not-found while the layout is still loading", () => {
+    discussionReadExecutorMock.executeDiscussionRead.mockImplementationOnce(
+      () => new Promise(() => undefined),
+    );
     mockUseDiscussionMeta.mockReturnValue({
       discussion: null,
       isLoading: true,
@@ -171,12 +212,6 @@ describe("DiscussionEditPage streaming", () => {
       completionReason: "eose",
       reload: jest.fn(),
     });
-    serviceMock.streamEventsOnEvent.mockImplementation(
-      (_filters: unknown, handlers: StreamEventsOptions) => {
-        handlers.onEose?.([]);
-        return () => {};
-      }
-    );
 
     render(<DiscussionEditPage />);
 

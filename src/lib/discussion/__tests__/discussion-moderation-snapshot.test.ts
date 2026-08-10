@@ -2,7 +2,12 @@ import {
   createDiscussionModerationSnapshot,
   loadDiscussionModerationSnapshot,
 } from "@/lib/discussion/discussion-moderation-snapshot";
+import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
 import type { Event } from "@/lib/nostr/nostr-service";
+
+jest.mock("@/lib/discussion/discussion-read-executor", () => ({
+  executeDiscussionRead: jest.fn(),
+}));
 
 const post = (id: string): Event => ({ id, kind: 1111, pubkey: "author", created_at: 1, content: "post", tags: [["a", "34550:author:topic"]], sig: "sig" });
 const moderatorRequest: Event = { id: "moderator-request", kind: 1111, pubkey: "applicant", created_at: 3, content: "request", tags: [["a", "34550:author:topic"], ["t", "moderator-request"]], sig: "sig" };
@@ -85,24 +90,59 @@ describe("createDiscussionModerationSnapshot", () => {
 });
 
 describe("loadDiscussionModerationSnapshot", () => {
+  it("executes separate primary and approval reads through the common executor", async () => {
+    const completion = (events: Event[], completionReason: "eose" | "idle-timeout") => ({
+      events,
+      completionReason,
+      attemptedRelayUrls: ["wss://one"],
+      successfulEventRelayUrls: events.length > 0 ? ["wss://one"] : [],
+      sourceRelayUrlsByEventId: Object.fromEntries(events.map((event) => [event.id, ["wss://one"]])),
+      attempts: [],
+    });
+    const mockedExecuteDiscussionRead = jest.mocked(executeDiscussionRead);
+    mockedExecuteDiscussionRead
+      .mockResolvedValueOnce(completion([post("post-1")], "eose"))
+      .mockResolvedValueOnce(completion([approval("post-1")], "idle-timeout"));
+    const service = { getEventsWithCompletion: jest.fn() };
+
+    const snapshot = await loadDiscussionModerationSnapshot(
+      service,
+      { relayLimit: 3, idleTimeoutMs: 100, hardTimeoutMs: 300, dedupWindowMs: 0 },
+      { discussionId: "34550:author:topic", configured: ["wss://one"], defaults: [] },
+    );
+
+    expect(mockedExecuteDiscussionRead).toHaveBeenCalledTimes(2);
+    expect(mockedExecuteDiscussionRead.mock.calls[0]?.[1].plan).toMatchObject({
+      filters: [{ kinds: [1111, 1], "#a": ["34550:author:topic"], limit: 10 }],
+      idleTimeoutMs: 100,
+      hardTimeoutMs: 300,
+    });
+    expect(mockedExecuteDiscussionRead.mock.calls[1]?.[1].plan).toMatchObject({
+      filters: [{ kinds: [4550], "#a": ["34550:author:topic"], "#e": ["post-1"], limit: 10 }],
+    });
+    expect(snapshot).toMatchObject({
+      primaryEvents: [post("post-1")],
+      approvalEvents: [approval("post-1")],
+      completionReason: "idle-timeout",
+      approvalState: "approved",
+      successfulRelayUrls: ["wss://one"],
+    });
+    expect(service.getEventsWithCompletion).not.toHaveBeenCalled();
+  });
+
   it("preserves an approval read timeout when the post read completed", async () => {
     const completion = (events: Event[], completionReason: "eose" | "idle-timeout") => ({
       events,
       completionReason,
-      eventCount: events.length,
-      elapsedMs: 1,
-      startedAt: 1,
-      lastEventAt: 1,
-      eoseReceived: completionReason === "eose",
-      relayUrls: ["wss://one"],
-      duplicateCount: 0,
+      attemptedRelayUrls: ["wss://one"],
+      successfulEventRelayUrls: [],
       sourceRelayUrlsByEventId: {},
+      attempts: [],
     });
-    const service = {
-      getEventsWithCompletion: jest.fn()
-        .mockResolvedValueOnce(completion([post("post-1")], "eose"))
-        .mockResolvedValueOnce(completion([], "idle-timeout")),
-    };
+    const service = { getEventsWithCompletion: jest.fn() };
+    jest.mocked(executeDiscussionRead)
+      .mockResolvedValueOnce(completion([post("post-1")], "eose"))
+      .mockResolvedValueOnce(completion([], "idle-timeout"));
 
     const snapshot = await loadDiscussionModerationSnapshot(
       service,

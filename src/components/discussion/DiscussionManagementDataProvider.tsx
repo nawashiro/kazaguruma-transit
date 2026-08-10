@@ -22,6 +22,12 @@ import {
   loadKnownDiscussionData,
   saveKnownDiscussionData,
 } from "@/lib/discussion/discussion-known-data-cache";
+import {
+  executeDiscussionRead,
+  type DiscussionReadTransport,
+} from "@/lib/discussion/discussion-read-executor";
+import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
+import { resolveDiscussionReferences } from "@/lib/discussion/discussion-reference-resolver";
 import { createNostrService, type CompletionReason, type Event } from "@/lib/nostr/nostr-service";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import {
@@ -43,6 +49,7 @@ interface DiscussionManagementDataContextValue {
   referencedDiscussions: Discussion[];
   isModerationLoading: boolean;
   isReferencedDiscussionsLoading: boolean;
+  referencedDiscussionCompletionReason: CompletionReason | null;
   moderationError: string | null;
   completionReason: CompletionReason | null;
   approvalState: ApprovalState;
@@ -57,22 +64,12 @@ const DiscussionManagementDataContext =
 const nostrServiceConfig = getNostrServiceConfig();
 const readStrategy = getDiscussionReadStrategyConfig();
 const nostrService = createNostrService(nostrServiceConfig);
+const nostrDiscussionReadTransport = nostrService.getEventsWithCompletion.bind(
+  nostrService,
+) as unknown as DiscussionReadTransport;
 
 const hasDiscussionReference = (post: DiscussionPost): boolean =>
-  post.event?.tags?.some(
-    (tag) => tag[0] === "q" && tag[1]?.startsWith("34550:"),
-  ) ?? false;
-
-const getDiscussionReferences = (posts: DiscussionPost[]): string[] =>
-  Array.from(
-    new Set(
-      posts.flatMap((post) =>
-        (post.event?.tags ?? [])
-          .filter((tag) => tag[0] === "q" && tag[1]?.startsWith("34550:"))
-          .map((tag) => tag[1]),
-      ),
-    ),
-  );
+  resolveDiscussionReferences(post.event?.tags ?? []).references.length > 0;
 
 const getDiscussionReference = (discussion: Discussion): string =>
   `34550:${discussion.authorPubkey}:${discussion.dTag}`;
@@ -116,6 +113,8 @@ export function DiscussionManagementDataProvider({
   const [moderationError, setModerationError] = useState<string | null>(null);
   const [isReferencedDiscussionsLoading, setIsReferencedDiscussionsLoading] =
     useState(false);
+  const [referencedDiscussionCompletionReason, setReferencedDiscussionCompletionReason] =
+    useState<CompletionReason | null>(null);
   const [approvalState, setApprovalState] =
     useState<ApprovalState>("unknown");
   const loadedDiscussionIdRef = useRef<string | null>(null);
@@ -145,6 +144,7 @@ export function DiscussionManagementDataProvider({
     setCompletionReason(null);
     setApprovalState("unknown");
     setModerationError(null);
+    setReferencedDiscussionCompletionReason(null);
     requestedReferenceIdsRef.current.clear();
 
     const knownData = loadKnownDiscussionData<Discussion, Event>(
@@ -237,24 +237,39 @@ export function DiscussionManagementDataProvider({
       : posts.filter(
           (post) => post.approved || post.approvalState === "unknown",
         );
-    const missingReferences = getDiscussionReferences(referenceSource).filter(
+    const referenceResolution = resolveDiscussionReferences(
+      referenceSource.flatMap((post) => post.event?.tags ?? []),
+    );
+    const missingReferences = referenceResolution.references.filter(
       (reference) =>
-        !referencedDiscussionById.has(reference) &&
-        !requestedReferenceIdsRef.current.has(reference),
+        !referencedDiscussionById.has(reference.discussionId) &&
+        !requestedReferenceIdsRef.current.has(reference.discussionId),
     );
     if (missingReferences.length === 0) return;
     missingReferences.forEach((reference) =>
-      requestedReferenceIdsRef.current.add(reference),
+      requestedReferenceIdsRef.current.add(reference.discussionId),
     );
     setIsReferencedDiscussionsLoading(true);
 
-    void nostrService
-      .getReferencedUserDiscussions(missingReferences)
-      .then((events) => {
+    const referencePlan = createDiscussionReadPlan("discussion-references", readStrategy, {
+      references: missingReferences,
+      relayHints: missingReferences.flatMap((reference) => reference.relayHints),
+    });
+    void executeDiscussionRead(nostrDiscussionReadTransport, {
+      plan: referencePlan,
+      candidates: {
+        configured: nostrServiceConfig.relays
+          .filter((relay) => relay.read)
+          .map((relay) => relay.url),
+        defaults: [],
+      },
+    })
+      .then((result) => {
         if (!isMountedRef.current) return;
-        const discussions = events
+        const discussions = result.events
           .map(parseDiscussionEvent)
           .filter((item): item is Discussion => item !== null);
+        setReferencedDiscussionCompletionReason(result.completionReason);
         setReferencedDiscussionById((current) => {
           const next = new Map(current);
           discussions.forEach((item) =>
@@ -266,7 +281,7 @@ export function DiscussionManagementDataProvider({
       .catch((error) => {
         logger.error("Failed to load referenced discussions:", error);
         missingReferences.forEach((reference) =>
-          requestedReferenceIdsRef.current.delete(reference),
+          requestedReferenceIdsRef.current.delete(reference.discussionId),
         );
       })
       .finally(() => {
@@ -332,6 +347,7 @@ export function DiscussionManagementDataProvider({
       referencedDiscussions: Array.from(referencedDiscussionById.values()),
       isModerationLoading,
       isReferencedDiscussionsLoading,
+      referencedDiscussionCompletionReason,
       moderationError,
       completionReason,
       approvalState,
@@ -350,6 +366,7 @@ export function DiscussionManagementDataProvider({
       moderationError,
       posts,
       referencedDiscussionById,
+      referencedDiscussionCompletionReason,
       removeApproval,
     ],
   );

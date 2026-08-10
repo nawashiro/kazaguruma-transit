@@ -1,7 +1,9 @@
 "use client";
 import {
   useEffect,
+  useCallback,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -12,7 +14,11 @@ import { ModeratorManagementSection } from "@/components/discussion/ModeratorMan
 import { LoginModal } from "@/components/discussion/LoginModal";
 import { createNostrService, type Event } from "@/lib/nostr/nostr-service";
 import { createDiscussionNdkGateway } from "@/lib/nostr/discussion-ndk-gateway";
-import { getNostrServiceConfig } from "@/lib/config/discussion-config";
+import {
+  getDiscussionReadStrategyConfig,
+  getNostrServiceConfig,
+} from "@/lib/config/discussion-config";
+import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
 import { createModeratorPromotionRequestEvent } from "@/lib/discussion/user-creation-flow";
 import {
   calculateModeratorUpdateTimestamp,
@@ -27,6 +33,9 @@ import {
 import { logger } from "@/utils/logger";
 import { NpubDisplay } from "@/components/ui/NpubDisplay";
 const config = getNostrServiceConfig();
+const readStrategy = typeof getDiscussionReadStrategyConfig === "function"
+  ? getDiscussionReadStrategyConfig()
+  : { idleTimeoutMs: config.defaultTimeout, hardTimeoutMs: config.defaultTimeout * 3 };
 const service = createNostrService(config);
 const gateway = createDiscussionNdkGateway(config);
 export default function ModeratorsPage() {
@@ -43,20 +52,55 @@ export default function ModeratorsPage() {
     [directError, setDirectError] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  useEffect(() => {
-    if (!discussion) return;
-    return service.streamEventsOnEvent(
-      [
-        {
-          kinds: [1111],
-          "#a": [discussion.id],
-          "#t": ["moderator-request"],
-          limit: 50,
+  const [applicationReadState, setApplicationReadState] = useState<
+    "loading" | "eose" | "partial"
+  >("loading");
+  const applicationReadGenerationRef = useRef(0);
+  const loadModeratorApplications = useCallback(async () => {
+    const readGeneration = ++applicationReadGenerationRef.current;
+    if (!discussion) {
+      setEvents([]);
+      setApplicationReadState("eose");
+      return;
+    }
+    setApplicationReadState("loading");
+    try {
+      const result = await executeDiscussionRead(gateway, {
+        plan: {
+          target: "discussion-edit",
+          filters: [{
+            kinds: [1111],
+            "#a": [discussion.id],
+            "#t": ["moderator-request"],
+            limit: 50,
+          }],
+          relayHints: [],
+          idleTimeoutMs: readStrategy.idleTimeoutMs,
+          hardTimeoutMs: readStrategy.hardTimeoutMs,
         },
-      ],
-      { onEvent: setEvents, onEose: setEvents },
-    );
+        candidates: {
+          configured: (config.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
+          defaults: [],
+        },
+      });
+      if (applicationReadGenerationRef.current !== readGeneration) return;
+      setEvents(result.events);
+      setApplicationReadState(
+        result.completionReason === "eose" ? "eose" : "partial",
+      );
+    } catch (readError) {
+      if (applicationReadGenerationRef.current !== readGeneration) return;
+      logger.error("Failed to load moderator applications:", readError);
+      setEvents([]);
+      setApplicationReadState("partial");
+    }
   }, [discussion]);
+  useEffect(() => {
+    void loadModeratorApplications();
+    return () => {
+      applicationReadGenerationRef.current += 1;
+    };
+  }, [loadModeratorApplications]);
   const applications = useMemo(
     () =>
       discussion ? derivePendingModeratorApplications(discussion, events) : [],
@@ -186,11 +230,15 @@ export default function ModeratorsPage() {
         <span className="ruby-text">会話情報を読み込み中...</span>
       </div>
     );
-  if (!discussion)
+  if (!discussion) {
+    const completionReason = meta?.completionReason;
+    const isPartial = completionReason === "idle-timeout" || completionReason === "hard-timeout" || completionReason === "cancelled";
     return (
-      <div className="alert alert-error" role="alert">
+      <div className={isPartial ? "alert alert-warning" : "alert alert-error"} role="alert">
         <span className="ruby-text">
-          {meta?.error ?? "会話情報が見つかりませんでした。"}
+          {isPartial
+            ? `会話データの取得に時間がかかっています（${completionReason}）。受信待機中または relay 応答遅延の可能性があります。`
+            : meta?.error ?? "会話情報が見つかりませんでした。"}
         </span>
         <button
           type="button"
@@ -201,18 +249,40 @@ export default function ModeratorsPage() {
         </button>
       </div>
     );
+  }
   return (
     <div className="space-y-6">
-      <ModeratorManagementSection
-        moderators={discussion.moderators}
-        applications={applications}
-        applicationsByPubkey={applicationsByPubkey}
-        isCreator={isCreator}
-        approvedPubkeys={approved}
-        removedPubkeys={removed}
-        onToggleApproval={(key) => toggle(setApproved, key)}
-        onToggleRemoval={(key) => toggle(setRemoved, key)}
-      />
+      {applicationReadState === "eose" ? (
+        <ModeratorManagementSection
+          moderators={discussion.moderators}
+          applications={applications}
+          applicationsByPubkey={applicationsByPubkey}
+          isCreator={isCreator}
+          approvedPubkeys={approved}
+          removedPubkeys={removed}
+          onToggleApproval={(key) => toggle(setApproved, key)}
+          onToggleRemoval={(key) => toggle(setRemoved, key)}
+        />
+      ) : applicationReadState === "partial" ? (
+        <div
+          className="alert alert-warning"
+          role="alert"
+          aria-label="モデレーター申請の取得は完了していません"
+        >
+          <span className="ruby-text">
+            モデレーター申請の取得が完了していないため、申請がないとは断定できません。
+          </span>
+          <button
+            type="button"
+            className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            onClick={() => void loadModeratorApplications()}
+          >
+            <span className="ruby-text">モデレーター申請を再取得</span>
+          </button>
+        </div>
+      ) : (
+        <div role="status" className="ruby-text">モデレーター申請を読み込み中...</div>
+      )}
       {error && (
         <p role="alert" className="text-error ruby-text">
           {error}

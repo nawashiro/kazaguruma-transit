@@ -51,7 +51,7 @@ jest.mock("@/components/discussion/DiscussionManagementDataProvider", () => ({
           kind: 1111,
           tags: [
             ["a", "34550:author:discussion-d-tag"],
-            ["q", "34550:ref:tag"],
+            ["q", "34550:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:tag"],
           ],
           content: "approved post",
           sig: "sig",
@@ -67,6 +67,7 @@ jest.mock("@/components/discussion/DiscussionManagementDataProvider", () => ({
     ],
     referencedDiscussions: [],
     isModerationLoading: false,
+    referencedDiscussionCompletionReason: "hard-timeout",
     completionReason: "eose",
     approvalState: "approved",
     reloadModeration: jest.fn(),
@@ -299,6 +300,18 @@ describe("DiscussionManagePage", () => {
       ).not.toBeInTheDocument();
     }
   );
+
+  it("keeps a missing canonical reference pending until its definition read reaches EOSE", async () => {
+    render(<DiscussionManagePage />);
+
+    const approvedTab = await screen.findByRole("tab", {
+      name: "承認済みタブを開く",
+    });
+    fireEvent.click(approvedTab);
+
+    expect(await screen.findByText(/会話の参照を取得中です/)).toBeInTheDocument();
+    expect(screen.queryByText(/会話が見つかりません/)).not.toBeInTheDocument();
+  });
 
   it("keeps the revoke action visible when another moderator approved the post", async () => {
     render(<DiscussionManagePage />);

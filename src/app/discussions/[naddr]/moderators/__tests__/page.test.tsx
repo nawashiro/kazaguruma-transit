@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import ModeratorsPage from "../page";
 
@@ -34,13 +34,16 @@ jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
 }));
 jest.mock("@/components/discussion/ModeratorManagementSection", () => ({
   ModeratorManagementSection: ({
+    applications,
     onToggleApproval,
     onToggleRemoval,
   }: {
+    applications: unknown[];
     onToggleApproval: (pubkey: string) => void;
     onToggleRemoval: (pubkey: string) => void;
   }) => (
     <>
+      {applications.length === 0 && <p>申請中のユーザーはいません。</p>}
       <button onClick={() => onToggleApproval("applicant")}>許可を選択</button>
       <button onClick={() => onToggleRemoval("moderator")}>削除を選択</button>
     </>
@@ -52,17 +55,27 @@ jest.mock("@/components/discussion/LoginModal", () => ({
 jest.mock("@/lib/config/discussion-config", () => ({
   getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 1000 }),
 }));
-jest.mock("@/lib/nostr/nostr-service", () => ({
-  createNostrService: () => ({
-    streamEventsOnEvent: () => () => {},
+jest.mock("@/lib/nostr/nostr-service", () => {
+  const serviceMock = {
+    streamEventsOnEvent: jest.fn(),
     publishSignedEvent: jest.fn(),
-  }),
-}));
+  };
+  return { createNostrService: () => serviceMock, __mock: serviceMock };
+});
+const { __mock: serviceMock } = jest.requireMock("@/lib/nostr/nostr-service");
 jest.mock("@/lib/nostr/discussion-ndk-gateway", () => ({
   createDiscussionNdkGateway: () => ({
+    queryWithCompletion: jest.fn(),
     createModeratorUpdateDraft: jest.fn(),
   }),
 }));
+jest.mock("@/lib/discussion/discussion-read-executor", () => {
+  const executeDiscussionRead = jest.fn();
+  return { executeDiscussionRead, __mock: { executeDiscussionRead } };
+});
+const { __mock: discussionReadExecutorMock } = jest.requireMock(
+  "@/lib/discussion/discussion-read-executor",
+);
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   hexToNpub: (pubkey: string) => `npub-${pubkey}`,
   isValidNpub: () => true,
@@ -75,13 +88,60 @@ jest.mock("@/lib/nostr/mnemonic-utils", () => ({
 
 describe("ModeratorsPage direct moderator management", () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     mockReload.mockReset();
+    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
+      events: [],
+      completionReason: "eose",
+      attemptedRelayUrls: [],
+      successfulEventRelayUrls: [],
+      sourceRelayUrlsByEventId: {},
+      attempts: [],
+    });
     mockUseDiscussionMeta.mockReturnValue({
       discussion: createDiscussion(),
       isLoading: false,
       error: null,
       reload: mockReload,
     });
+  });
+
+  it("loads moderator applications through a bounded completion-aware read", async () => {
+    render(<ModeratorsPage />);
+
+    await waitFor(() =>
+      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalled(),
+    );
+    await screen.findByRole("button", { name: "許可を選択" });
+    expect(serviceMock.streamEventsOnEvent).not.toHaveBeenCalled();
+  });
+
+  it("keeps a rejected moderator-application read provisional and retries it locally", async () => {
+    discussionReadExecutorMock.executeDiscussionRead.mockRejectedValue(
+      new Error("relay rejected the read"),
+    );
+
+    render(<ModeratorsPage />);
+
+    expect(
+      await screen.findByRole("alert", { name: "モデレーター申請の取得は完了していません" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("申請中のユーザーはいません。")).not.toBeInTheDocument();
+
+    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
+      events: [],
+      completionReason: "eose",
+      attemptedRelayUrls: [],
+      successfulEventRelayUrls: [],
+      sourceRelayUrlsByEventId: {},
+      attempts: [],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "モデレーター申請を再取得" }));
+
+    await waitFor(() =>
+      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalledTimes(2),
+    );
+    expect(screen.getByText("申請中のユーザーはいません。")).toBeInTheDocument();
   });
 
   it("keeps Rubyful mutations inside the removable loading text", () => {
@@ -99,6 +159,23 @@ describe("ModeratorsPage direct moderator management", () => {
     expect(screen.getByText("会話情報を読み込み中...")).toHaveClass(
       "ruby-text",
     );
+  });
+
+  it("shows incomplete discussion retrieval as partial instead of not found", () => {
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: false,
+      error: null,
+      completionReason: "hard-timeout",
+      reload: mockReload,
+    });
+
+    render(<ModeratorsPage />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "会話データの取得に時間がかかっています",
+    );
+    expect(screen.queryByText("会話情報が見つかりませんでした。")).not.toBeInTheDocument();
   });
 
   it("取得完了後に会話がなければ読み込み表示を続けない", () => {
@@ -119,19 +196,20 @@ describe("ModeratorsPage direct moderator management", () => {
     expect(mockReload).toHaveBeenCalledTimes(1);
   });
 
-  it("enables confirmation when approval and removal selections change", () => {
+  it("enables confirmation when approval and removal selections change", async () => {
     render(<ModeratorsPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: "許可を選択" }));
+    fireEvent.click(await screen.findByRole("button", { name: "許可を選択" }));
     fireEvent.click(screen.getByRole("button", { name: "削除を選択" }));
 
     expect(screen.getByRole("button", { name: "変更を確定" })).not.toBeDisabled();
     expect(screen.queryByText(/許可予定|削除予定/)).not.toBeInTheDocument();
   });
 
-  it("adds multiple direct moderators and allows each one to be cancelled", () => {
+  it("adds multiple direct moderators and allows each one to be cancelled", async () => {
     render(<ModeratorsPage />);
 
+    await screen.findByRole("button", { name: "許可を選択" });
     const input = screen.getByLabelText("ユーザーID");
     const addButton = screen.getByRole("button", { name: "追加" });
 
@@ -155,9 +233,10 @@ describe("ModeratorsPage direct moderator management", () => {
     expect(screen.getByRole("button", { name: "変更を確定" })).not.toBeDisabled();
   });
 
-  it("keeps the direct moderator button joined to the input", () => {
+  it("keeps the direct moderator button joined to the input", async () => {
     render(<ModeratorsPage />);
 
+    await screen.findByRole("button", { name: "許可を選択" });
     const input = screen.getByLabelText("ユーザーID");
     const addButton = screen.getByRole("button", { name: "追加" });
 
@@ -166,9 +245,10 @@ describe("ModeratorsPage direct moderator management", () => {
     expect(input.closest(".join")).toContainElement(addButton);
   });
 
-  it("associates duplicate-user errors with the direct moderator input", () => {
+  it("associates duplicate-user errors with the direct moderator input", async () => {
     render(<ModeratorsPage />);
 
+    await screen.findByRole("button", { name: "許可を選択" });
     const input = screen.getByLabelText("ユーザーID");
     const addButton = screen.getByRole("button", { name: "追加" });
     fireEvent.change(input, { target: { value: "npub1duplicate" } });

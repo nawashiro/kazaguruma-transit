@@ -1,12 +1,12 @@
 <!--
 Sync Impact Report:
-- Version Change: 1.8.0 -> 1.8.1
-- Reason: WCAG チェック時に各項目のリンク先本文を参照することを必須化。
+- Version Change: 1.8.1 -> 1.9.0
+- Reason: Nostr read実装の責務境界を017仕様へ更新。
 - Modified Principles:
   * Core Principles は引き続き AGENTS.md を参照。
   * 作業言語として日本語を追加。
   * アクセシビリティ方針を constitution gate に追加。
-  * 今後のNostr実装方針を追加。
+  * 今後のNostr実装方針を017仕様の責務境界へ更新。
   * WCAG 2.2 AA の達成基準チェックリストを本文へ追加。
   * ウェブアクセシビリティ方針の対象と目標を本文へ追加。
   * チェック時にリンク先の WCAG 本文を参照する必須ルールを追加。
@@ -170,13 +170,14 @@ WCAG 2.2 の適合レベル AA を目標とする。以下のチェックリス�
 
 ## Nostr実装方針
 
-今後のNostr実装は、高速な通信と既存機能との整合性を確保するため、原則として
-`specs/009-coracle-style-sync` の仕様に従う。
+Nostr readは`specs/017-discussion-read-executor`を正本とする。詳細は同仕様のデータモデルと契約を参照する。
 
-- Nostrリレーをイベントデータの正本として扱う。
-- ブラウザの `sessionStorage` は暫定的な既知データとリレー実績の保持に限って利用する。
-- 009仕様から外れる設計を採用する場合は、性能、互換性、信頼性への影響と採用理由を
-  `plan.md` または `tasks.md` に明記する。
+- 画面とドメイン層はfilter組立て、業務判定、二段階read、UI表示だけを持つ。
+- `q`参照の検証、正規化、重複除去は`DiscussionReferenceResolver`だけが担う。
+- `DiscussionReadPlan`は正規化済みread要求を表す。複数filterは一回の購読で送る。
+- `DiscussionReadExecutor`はrelay順位、relay set通信、completion、retry、relay実績を担う。
+- readは有限initial readとする。non-EOSEは空やNot Foundと同一視せず、partial状態として表示する。
+- Nostrリレーをイベントデータの正本とする。`sessionStorage`は暫定既知データとrelay実績だけを保持する。
 
 ## ユーザー名とパスキー名
 
@@ -192,4 +193,4 @@ WCAG 2.2 の適合レベル AA を目標とする。以下のチェックリス�
 - 変更を完了扱いにする前に、`AGENTS.md` に記載された検証コマンドを実行する。
 - Spec Kit を使う場合は、`spec.md`、`plan.md`、`tasks.md`、実装、検証の順で進める。
 
-**Version**: 1.8.1 | **Ratified**: 2026-01-13 | **Last Amended**: 2026-07-14
+**Version**: 1.9.0 | **Ratified**: 2026-01-13 | **Last Amended**: 2026-08-10

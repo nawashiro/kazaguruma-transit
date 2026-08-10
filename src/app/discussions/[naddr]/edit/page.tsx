@@ -21,7 +21,7 @@ import {
   getNostrServiceConfig,
   getDiscussionReadStrategyConfig,
 } from "@/lib/config/discussion-config";
-import { selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
+
 import { LoginModal } from "@/components/discussion/LoginModal";
 import {
   buildDisabledActionState,
@@ -49,6 +49,7 @@ import {
   createDiscussionNdkGateway,
   type ModeratorDecision,
 } from "@/lib/nostr/discussion-ndk-gateway";
+import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
 import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
@@ -111,6 +112,8 @@ export default function DiscussionEditPage() {
   const [promotionRequests, setPromotionRequests] = useState<
     ModeratorPromotionRequest[]
   >([]);
+  const [isPromotionRequestReadComplete, setIsPromotionRequestReadComplete] =
+    useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
@@ -118,7 +121,6 @@ export default function DiscussionEditPage() {
   const [successType, setSuccessType] = useState<
     "save" | "listing" | "promotion" | null
   >(null);
-  const promotionRequestStreamCleanupRef = useRef<(() => void) | null>(null);
   const readGenerationRef = useRef(0);
 
   const discussionInfo = useMemo(() => {
@@ -151,8 +153,7 @@ export default function DiscussionEditPage() {
     }
   }, [layoutDiscussion, isDiscussionLoading]);
 
-  const startStreamingDiscussion = useCallback(() => {
-    promotionRequestStreamCleanupRef.current?.();
+  const loadPromotionRequests = useCallback(async () => {
     const readGeneration = ++readGenerationRef.current;
 
     if (!isDiscussionsEnabled() || !discussionInfo) {
@@ -161,75 +162,52 @@ export default function DiscussionEditPage() {
     }
 
     setIsLoading(true);
-    const relayUrls = selectRelayCandidates({
-      hints: discussionInfo.relays,
-      configured: (nostrServiceConfig.relays ?? [])
-        .filter((relay) => relay.read)
-        .map((relay) => relay.url),
-      defaults: [],
-      limit: readStrategy.relayLimit,
-    }).map((relay) => relay.url);
-
-    promotionRequestStreamCleanupRef.current = nostrService.streamEventsOnEvent(
-      [
-        {
-          kinds: [1111],
-          "#a": [discussionInfo.discussionId],
-          "#t": ["moderator-request"],
-          limit: 50,
+    setIsPromotionRequestReadComplete(false);
+    try {
+      const result = await executeDiscussionRead(discussionGateway, {
+        plan: {
+          target: "discussion-edit",
+          filters: [{
+            kinds: [1111],
+            "#a": [discussionInfo.discussionId],
+            "#t": ["moderator-request"],
+            limit: 50,
+          }],
+          relayHints: discussionInfo.relays ?? [],
+          idleTimeoutMs: readStrategy.idleTimeoutMs,
+          hardTimeoutMs: readStrategy.hardTimeoutMs,
         },
-      ],
-      {
-        onEvent: (events) => {
-          if (readGenerationRef.current !== readGeneration) return;
-          const requests = events
-            .filter((event) =>
-              event.tags.some(
-                (tag) => tag[0] === "t" && tag[1] === "moderator-request",
-              ),
-            )
-            .map((event) => ({
-              id: event.id,
-              applicantPubkey: event.pubkey,
-              createdAt: event.created_at,
-              event,
-            }))
-            .sort((a, b) => b.createdAt - a.createdAt);
-          setPromotionRequests(requests);
-          setIsLoading(false);
+        candidates: {
+          configured: (nostrServiceConfig.relays ?? [])
+            .filter((relay) => relay.read)
+            .map((relay) => relay.url),
+          defaults: [],
         },
-        onEose: (events) => {
-          if (readGenerationRef.current !== readGeneration) return;
-          const requests = events
-            .filter((event) =>
-              event.tags.some(
-                (tag) => tag[0] === "t" && tag[1] === "moderator-request",
-              ),
-            )
-            .map((event) => ({
-              id: event.id,
-              applicantPubkey: event.pubkey,
-              createdAt: event.created_at,
-              event,
-            }))
-            .sort((a, b) => b.createdAt - a.createdAt);
-          setPromotionRequests(requests);
-          setIsLoading(false);
-        },
-        timeoutMs: nostrServiceConfig.defaultTimeout,
-        ...(relayUrls.length > 0 ? { relayUrls } : {}),
-      },
-    );
+      });
+      if (readGenerationRef.current !== readGeneration) return;
+      const requests = result.events
+        .filter((event) => event.tags.some((tag) => tag[0] === "t" && tag[1] === "moderator-request"))
+        .map((event) => ({ id: event.id, applicantPubkey: event.pubkey, createdAt: event.created_at, event }))
+        .sort((a, b) => b.createdAt - a.createdAt);
+      setPromotionRequests(requests);
+      setIsPromotionRequestReadComplete(result.completionReason === "eose");
+    } catch (error) {
+      if (readGenerationRef.current !== readGeneration) return;
+      logger.error("Failed to load moderator promotion requests:", error);
+      setPromotionRequests([]);
+      setIsPromotionRequestReadComplete(false);
+    } finally {
+      if (readGenerationRef.current === readGeneration) setIsLoading(false);
+    }
   }, [discussionInfo]);
 
   useEffect(() => {
-    startStreamingDiscussion();
+    void loadPromotionRequests();
 
     return () => {
-      promotionRequestStreamCleanupRef.current?.();
-      promotionRequestStreamCleanupRef.current = null;
+      readGenerationRef.current += 1;
     };
-  }, [startStreamingDiscussion]);
+  }, [loadPromotionRequests]);
 
   const handleSave = async () => {
     if (!user.isLoggedIn) {
@@ -599,10 +577,10 @@ export default function DiscussionEditPage() {
           </div>
           <button
             type="button"
-            className="btn btn-outline rounded-full dark:rounded-sm"
-            onClick={() => window.location.reload()}
+            className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            onClick={() => void discussionMeta?.reload()}
           >
-            再読み込み
+            <span className="ruby-text">再読み込み</span>
           </button>
         </div>
       );
@@ -869,6 +847,25 @@ export default function DiscussionEditPage() {
                       </button>
                     </div>
                   </section>
+
+                  {!isPromotionRequestReadComplete && !isLoading && (
+                    <div
+                      className="alert alert-warning"
+                      role="alert"
+                      aria-label="昇格申請の取得は完了していません"
+                    >
+                      <span className="ruby-text">
+                        昇格申請の取得が完了していないため、申請がないとは断定できません。
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                        onClick={() => void loadPromotionRequests()}
+                      >
+                        <span className="ruby-text">昇格申請を再取得</span>
+                      </button>
+                    </div>
+                  )}
 
                   <section
                     aria-labelledby="dangerous-actions-title"

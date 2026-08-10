@@ -254,7 +254,7 @@ describe("DiscussionEditPage listing request", () => {
     ).toBeInTheDocument();
   });
 
-  it("does not expose basic information controls to non-authors", () => {
+  it("does not expose basic information controls to non-authors", async () => {
     authState.user = {
       pubkey: "d".repeat(64),
       isLoggedIn: true,
@@ -263,10 +263,10 @@ describe("DiscussionEditPage listing request", () => {
     render(<DiscussionEditPage />);
 
     expect(
-      screen.getByRole("heading", { name: "基本情報を編集できません" }),
+      await screen.findByRole("heading", { name: "基本情報を編集できません" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("会話の基本情報を編集できるのは会話作成者だけです。"),
+      await screen.findByText("会話の基本情報を編集できるのは会話作成者だけです。"),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: "会話に戻る" }),
@@ -276,6 +276,7 @@ describe("DiscussionEditPage listing request", () => {
   it("does not include moderator management in basic information", async () => {
     render(<DiscussionEditPage />);
 
+    await screen.findByRole("button", { name: "変更を保存" });
     expect(screen.queryByText("モデレーター管理")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "承認" }),
@@ -285,6 +286,7 @@ describe("DiscussionEditPage listing request", () => {
   it("does not show current moderators in basic information", async () => {
     render(<DiscussionEditPage />);
 
+    await screen.findByRole("button", { name: "変更を保存" });
     expect(
       screen.queryByText("現在のモデレーター（Mnemonic）"),
     ).not.toBeInTheDocument();
@@ -316,7 +318,7 @@ describe("DiscussionEditPage listing request", () => {
     render(<DiscussionEditPage />);
 
     expect(
-      screen.getByText("会話の基本情報を編集できるのは会話作成者だけです。"),
+      await screen.findByText("会話の基本情報を編集できるのは会話作成者だけです。"),
     ).toBeInTheDocument();
   });
 });

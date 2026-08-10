@@ -157,4 +157,45 @@ describe("loadDiscussionModerationSnapshot", () => {
     expect(snapshot.completionReason).toBe("idle-timeout");
     expect(snapshot.approvalState).toBe("unknown");
   });
+
+  it("passes the complete relay candidate sources to the common executor", async () => {
+    const completion = (events: Event[]) => ({
+      events,
+      completionReason: "eose" as const,
+      attemptedRelayUrls: [],
+      successfulEventRelayUrls: [],
+      sourceRelayUrlsByEventId: {},
+      attempts: [],
+    });
+    const mockedExecuteDiscussionRead = jest.mocked(executeDiscussionRead);
+    mockedExecuteDiscussionRead.mockReset().mockResolvedValue(completion([]));
+    const service = { getEventsWithCompletion: jest.fn() };
+    const configured = [
+      "wss://configured-1",
+      "wss://configured-2",
+      "wss://configured-3",
+      "wss://configured-4",
+    ];
+
+    await loadDiscussionModerationSnapshot(
+      service,
+      { relayLimit: 3, idleTimeoutMs: 100, hardTimeoutMs: 300, dedupWindowMs: 0 },
+      {
+        discussionId: "34550:author:topic",
+        hints: ["wss://hint"],
+        recommended: ["wss://recommended"],
+        successful: ["wss://successful"],
+        configured,
+        defaults: ["wss://default"],
+      },
+    );
+
+    expect(mockedExecuteDiscussionRead.mock.calls[0]?.[1].candidates).toEqual({
+      hints: ["wss://hint"],
+      recommended: ["wss://recommended"],
+      successful: ["wss://successful"],
+      configured,
+      defaults: ["wss://default"],
+    });
+  });
 });

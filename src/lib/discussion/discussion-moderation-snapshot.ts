@@ -2,7 +2,7 @@ import type { DiscussionReadStrategyConfig } from "@/lib/config/discussion-confi
 import { executeDiscussionRead, type DiscussionReadTransport } from "@/lib/discussion/discussion-read-executor";
 import type { DiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import type { CompletionReason, Event, Filter, NostrService } from "@/lib/nostr/nostr-service";
-import { rankRelayCandidates, type RelayCandidate, selectRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
+import { rankRelayCandidates, type RelayCandidate } from "@/lib/discussion/relay-candidate-selector";
 import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 
 export type ApprovalState = "approved" | "unapproved" | "unknown";
@@ -67,9 +67,14 @@ export const loadDiscussionModerationSnapshot = async (
   input: { discussionId: string; hints?: string[]; recommended?: string[]; successful?: string[]; configured: string[]; defaults: string[]; until?: number; primaryTags?: string[] }
 ): Promise<DiscussionModerationSnapshot> => {
   const relayCandidates = rankRelayCandidates(input);
-  const relayUrls = selectRelayCandidates({ ...input, limit: strategy.relayLimit }).map((candidate) => candidate.url);
   const transport: DiscussionReadTransport = (filters, options) => service.getEventsWithCompletion(filters as Filter[], options);
-  const candidates = { configured: relayUrls, defaults: [] };
+  const candidates = {
+    hints: input.hints,
+    recommended: input.recommended,
+    successful: input.successful,
+    configured: input.configured,
+    defaults: input.defaults,
+  };
   const primaryPlan: DiscussionReadPlan = {
     target: "discussion-list",
     filters: [{

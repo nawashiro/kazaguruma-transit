@@ -18,6 +18,7 @@
 - Q: 初回候補がtimeout・cancelledで終わり未試行候補が残る場合、共通executorはどう扱いますか？ → A: EOSE以外で完了した場合だけ、次候補を最大3 relayで一度だけ自動再読する。
 - Q: 自動再読を行う間、全Discussion画面のUIは初回readのイベントをどのように扱いますか？ → A: 初回結果を暫定表示し、再読はバックグラウンドで結合する。
 - Q: 初回readが非EOSEで、自動再読だけがEOSEになった場合、合成したread結果をどの完了状態としてUIへ渡しますか？ → A: 自動再読がEOSEなら最終状態を完了にする。
+- Q: 参照tagの検証規則は共通read executorの責務ですか？ → A: いいえ。通信を持たない `Discussion Reference Resolver` が正規化・検証を担い、executorは正規化済みread planだけを実行する。
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -60,7 +61,7 @@
 - 同じ kind 34550 が複数relayまたは複数pageから届く場合、event IDで一件に重複排除し、最新のreplaceable eventだけを表示に用いる。
 - 掲載投稿のrelay実績と、参照先会話定義のrelay実績は別read targetとして保存し、候補順位の根拠を混同しない。
 - 古いread世代の結果、timeoutだけの空結果、または自動再読の空結果は、既に取得済みの会話定義を削除する根拠にしない。
-- `/discussions` の掲載投稿・承認イベントにある `q` tagから参照先会話を解決するときだけ、`34550:pubkey:dTag` として解析できない値を読取対象から除外し、他の有効参照の処理を止めない。この規則は、`/settings`、詳細、承認、編集、管理が既に持つDiscussion IDまたはnaddrから得たIDには適用しない。
+- `Discussion Reference Resolver` は、`/discussions` の掲載投稿・承認イベントにある `q` tagから参照先会話を解決するときだけ、`34550:pubkey:dTag` として解析できない値を除外し、他の有効参照の処理を止めない。共通read executorはtag、naddr、文字列IDを解析または検証しない。
 
 ## Requirements *(mandatory)*
 
@@ -82,6 +83,7 @@
 - **FR-014**: システムは `/discussions`、`/settings`、会話詳細、承認、編集、管理の全Discussion画面で共通read executorを使用し、画面ごとのfilter・表示判定以外のrelay候補選別と通信完了処理を重複実装してはならない。
 - **FR-015**: 初回readが `idle-timeout`、`hard-timeout`、`cancelled` で完了し、未試行候補が残る場合、システムは次候補を最大3 relayに限定して一度だけ自動再読しなければならない。EOSEで完了したreadには自動再読してはならない。
 - **FR-016**: 自動再読後も未試行候補が残る場合、システムは自動でさらに拡大せず、部分取得状態と明示的な再読み込み導線を提供しなければならない。
+- **FR-019**: 画面または画面固有のread plan作成層は、`q` tag、naddr、既存Discussion IDを `Discussion Reference Resolver` で正規化してからread planを作成しなければならない。共通read executorは、正規化済みfilterとrelay候補だけを入力とし、参照形式の検証責務を持ってはならない。
 - **FR-017**: 自動再読中、全Discussion画面は初回readで取得済みのeventsを暫定表示として保持しなければならない。後続readのeventsはevent IDで重複排除して結合し、初回結果を空結果で置き換えてはならない。
 - **FR-018**: 初回readが非EOSEであっても、自動再読がEOSEで完了した場合、システムは合成したread結果の最終completion reasonをEOSEとして扱い、部分取得の警告を表示してはならない。
 
@@ -90,6 +92,7 @@
 - **Discussion Read Plan**: 画面目的、filter群、timeout、relay候補入力、page cursorを表す宣言的なread要求。
 - **Discussion Read Executor**: read planからrelay候補を選別し、選別済みrelay setでcompletion-aware readを実行して観測可能な結果を返す共通境界。
 - **Discussion Read Result**: events、completion reason、attempted relay URLs、event IDごとのsource relay URLs、重複数、経過時間を持つ結果。
+- **Discussion Reference Resolver**: 画面入力、`q` tag、naddr、既知Discussion IDを、正規化済みのDiscussion IDまたはread plan引数へ変換する通信を持たない入力境界。不正な参照を除外する責務を持つ。
 - **Listing Read State**: 掲載投稿readと参照先会話readの各完了状態、未解決参照、表示可能な会話を保持する状態。
 
 ## Success Criteria *(mandatory)*

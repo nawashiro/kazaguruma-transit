@@ -12,8 +12,8 @@
 
 **Purpose**:変更前の回帰を確認し、feature専用テストの入口を用意する。
 
-- [ ] T001 現在の関連回帰を実行して記録する: `src/lib/nostr/__tests__/nostr-service.test.ts`、`src/lib/discussion/__tests__/relay-candidate-selector.test.ts`、`src/components/discussion/__tests__/DiscussionReadStatus.test.tsx`
-- [ ] T002 `specs/017-discussion-read-executor/quickstart.md`のREDコマンドを実行できるよう、既存Jest設定と対象test pathを確認する
+- [x] T001 現在の関連回帰を実行して記録する: `src/lib/nostr/__tests__/nostr-service.test.ts`、`src/lib/discussion/__tests__/relay-candidate-selector.test.ts`、`src/components/discussion/__tests__/DiscussionReadStatus.test.tsx`
+- [x] T002 `specs/017-discussion-read-executor/quickstart.md`のREDコマンドを実行できるよう、既存Jest設定と対象test pathを確認する
 
 ---
 
@@ -23,15 +23,15 @@
 
 **⚠️ CRITICAL**:このPhaseが終わるまでUser Storyの画面移行を開始しない。
 
-- [ ] T003 [P] `src/lib/nostr/__tests__/nostr-service.test.ts`へ、複数filterが一回の`ndk.subscribe()`と`options.relaySet`を使い、一回のEOSEで完了するREDテストを追加する
-- [ ] T004 [P] `src/lib/discussion/__tests__/discussion-reference-resolver.test.ts`を追加し、有効`q` tag、重複、kind違い、空dTag、不正pubkeyのREDテストを追加する
-- [ ] T005 [P] `src/lib/discussion/__tests__/discussion-read-executor.test.ts`を追加し、最大3relay、non-EOSE時の一度だけのretry、EOSE時のretry抑止、event ID結合、relay実績合成のREDテストを追加する
-- [ ] T006 サブエージェント1名に`src/lib/nostr/__tests__/nostr-service.test.ts`、`src/lib/discussion/__tests__/discussion-reference-resolver.test.ts`、`src/lib/discussion/__tests__/discussion-read-executor.test.ts`のREDテストをレビューさせ、仕様・契約・既存testとの不整合を修正前に報告させる
-- [ ] T007 `src/lib/nostr/nostr-service.ts`を修正し、`collectEventsWithCompletion()`がfilter群を一回の`ndk.subscribe(filters, { relaySet, ... })`へ渡し、第三引数relay setとfilter数EOSE集計を除去する
-- [ ] T008 `src/lib/discussion/discussion-reference-resolver.ts`を追加し、`q` tag、naddr、既知Discussion IDを通信なしで`DiscussionReference`へ正規化する
-- [ ] T009 `src/lib/discussion/discussion-read-plan.ts`を拡張し、正規化済み参照から複数filterを持つ参照先会話read planを作る
-- [ ] T010 `src/lib/discussion/discussion-read-executor.ts`を追加し、relay順位、first attempt、one-time retry、暫定attempt callback、最終result合成を実装する
-- [ ] T011 `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts`と`src/lib/discussion/discussion-known-data-cache.ts`を更新し、掲載投稿readと参照先会話readのrelay実績を別target keyで保持する
+- [x] T003 [P] `src/lib/nostr/__tests__/nostr-service.test.ts`へ、複数filterが一回の`ndk.subscribe()`と`options.relaySet`を使い、一回のEOSEで完了するREDテストを追加する
+- [x] T004 [P] `src/lib/discussion/__tests__/discussion-reference-resolver.test.ts`を追加し、有効`q` tag、重複、kind違い、空dTag、不正pubkeyのREDテストを追加する
+- [x] T005 [P] `src/lib/discussion/__tests__/discussion-read-executor.test.ts`を追加し、最大3relay、non-EOSE時の一度だけのretry、EOSE時のretry抑止、event ID結合、relay実績合成のREDテストを追加する
+- [x] T006 サブエージェント1名に`src/lib/nostr/__tests__/nostr-service.test.ts`、`src/lib/discussion/__tests__/discussion-reference-resolver.test.ts`、`src/lib/discussion/__tests__/discussion-read-executor.test.ts`のREDテストをレビューさせ、仕様・契約・既存testとの不整合を修正前に報告させる
+- [x] T007 `src/lib/nostr/nostr-service.ts`を修正し、`collectEventsWithCompletion()`がfilter群を一回の`ndk.subscribe(filters, { relaySet, ... })`へ渡し、第三引数relay setとfilter数EOSE集計を除去する
+- [x] T008 `src/lib/discussion/discussion-reference-resolver.ts`を追加し、`q` tag、naddr、既知Discussion IDを通信なしで`DiscussionReference`へ正規化する
+- [x] T009 `src/lib/discussion/discussion-read-plan.ts`を拡張し、正規化済み参照から複数filterを持つ参照先会話read planを作る
+- [x] T010 `src/lib/discussion/discussion-read-executor.ts`を追加し、relay順位、first attempt、one-time retry、暫定attempt callback、最終result合成を実装する
+- [x] T011 `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts`と`src/lib/discussion/discussion-known-data-cache.ts`を更新し、掲載投稿readと参照先会話readのrelay実績を別target keyで保持する
 
 **Checkpoint**:一回のmulti-filter subscription、参照正規化、completion-aware executor、relay実績分離が単体テストで確認できる。
 
@@ -45,18 +45,18 @@
 
 ### Tests for User Story 1
 
-- [ ] T012 [P] [US1] `src/components/discussion/__tests__/DiscussionManagementDataProvider.test.tsx`へ、掲載投稿の参照先kind 34550がexecutor経由で表示されるIssue #68 RED回帰テストを追加する
-- [ ] T013 [P] [US1] `src/app/discussions/__tests__/page.streaming.test.tsx`へ、非EOSEの参照先readで「会話がまだありません。」を確定表示しないREDテストを追加する
-- [ ] T014 [P] [US1] `src/lib/discussion/__tests__/discussion-moderation-snapshot.test.ts`へ、掲載投稿readと承認readのexecutor結果・relay実績を別targetとして保持するREDテストを追加する
-- [ ] T015 [US1] サブエージェント1名に`src/components/discussion/__tests__/DiscussionManagementDataProvider.test.tsx`、`src/app/discussions/__tests__/page.streaming.test.tsx`、`src/lib/discussion/__tests__/discussion-moderation-snapshot.test.ts`のUS1 REDテストをレビューさせ、Issue #68回帰条件と空一覧抑止の不足を報告させる
+- [x] T012 [P] [US1] `src/components/discussion/__tests__/DiscussionManagementDataProvider.test.tsx`へ、掲載投稿の参照先kind 34550がexecutor経由で表示されるIssue #68 RED回帰テストを追加する
+- [x] T013 [P] [US1] `src/app/discussions/__tests__/page.streaming.test.tsx`へ、非EOSEの参照先readで「会話がまだありません。」を確定表示しないREDテストを追加する
+- [x] T014 [P] [US1] `src/lib/discussion/__tests__/discussion-moderation-snapshot.test.ts`へ、掲載投稿readと承認readのexecutor結果・relay実績を別targetとして保持するREDテストを追加する
+- [x] T015 [US1] サブエージェント1名に`src/components/discussion/__tests__/DiscussionManagementDataProvider.test.tsx`、`src/app/discussions/__tests__/page.streaming.test.tsx`、`src/lib/discussion/__tests__/discussion-moderation-snapshot.test.ts`のUS1 REDテストをレビューさせ、Issue #68回帰条件と空一覧抑止の不足を報告させる
 
 ### Implementation for User Story 1
 
-- [ ] T016 [US1] `src/lib/discussion/discussion-moderation-snapshot.ts`を変更し、掲載投稿と承認の有限readを`DiscussionReadExecutor`経由にする
-- [ ] T017 [US1] `src/components/discussion/DiscussionManagementDataProvider.tsx`を変更し、`getReferencedUserDiscussions()`をResolver→batch read plan→executor resultへ置換する
-- [ ] T018 [US1] `src/app/discussions/page.tsx`を変更し、参照形式を再解析せずProviderの正規化済み参照結果とcompletion状態を使う
-- [ ] T019 [US1] `src/app/discussions/manage/page.tsx`を変更し、参照先readが非EOSEのとき未取得を「not found」と確定しない
-- [ ] T020 [US1] `src/components/discussion/DiscussionReadStatus.tsx`を変更し、一覧の暫定・partial・unavailable状態を日本語、`role="status"`、`aria-live="polite"`、44px再読み込み操作で表示する
+- [x] T016 [US1] `src/lib/discussion/discussion-moderation-snapshot.ts`を変更し、掲載投稿と承認の有限readを`DiscussionReadExecutor`経由にする
+- [x] T017 [US1] `src/components/discussion/DiscussionManagementDataProvider.tsx`を変更し、`getReferencedUserDiscussions()`をResolver→batch read plan→executor resultへ置換する
+- [x] T018 [US1] `src/app/discussions/page.tsx`を変更し、参照形式を再解析せずProviderの正規化済み参照結果とcompletion状態を使う
+- [x] T019 [US1] `src/app/discussions/manage/page.tsx`を変更し、参照先readが非EOSEのとき未取得を「not found」と確定しない
+- [x] T020 [US1] `src/components/discussion/DiscussionReadStatus.tsx`を変更し、一覧の暫定・partial・unavailable状態を日本語、`role="status"`、`aria-live="polite"`、44px再読み込み操作で表示する
 
 **Checkpoint**:`/discussions`と`/discussions/manage`が掲載済み会話の欠落を防ぎ、confirmed emptyだけを空一覧として表示する。
 
@@ -70,22 +70,22 @@
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] `src/components/discussion/__tests__/DiscussionReadStatus.test.tsx`へ、first attemptのeventsを保持しretry EOSEで警告を消すREDテストを追加する
-- [ ] T022 [P] [US2] `src/app/settings/__tests__/page.streaming.test.tsx`へ、author readの暫定表示、partial表示、retry EOSEのREDテストを追加する
-- [ ] T023 [P] [US2] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`へ、metadataとevaluationのtimeoutがnot foundへ変換されないREDテストを追加する
-- [ ] T024 [P] [US2] 承認、編集、モデレーター画面の既存testへ、`streamEventsOnEvent()`、`streamApprovals()`、継続subscriptionを開始しないREDテストを追加する: `src/app/discussions/[naddr]/approve/`、`src/app/discussions/[naddr]/edit/`、`src/app/discussions/[naddr]/moderators/`
-- [ ] T025 [US2] サブエージェント1名に`src/components/discussion/__tests__/DiscussionReadStatus.test.tsx`、`src/app/settings/__tests__/page.streaming.test.tsx`、`src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`、`src/app/discussions/[naddr]/approve/`、`src/app/discussions/[naddr]/edit/`、`src/app/discussions/[naddr]/moderators/`のUS2 REDテストをレビューさせ、completion表示、再読み込み、継続購読廃止の不足を報告させる
+- [x] T021 [P] [US2] `src/components/discussion/__tests__/DiscussionReadStatus.test.tsx`へ、first attemptのeventsを保持しretry EOSEで警告を消すREDテストを追加する
+- [x] T022 [P] [US2] `src/app/settings/__tests__/page.streaming.test.tsx`へ、author readの暫定表示、partial表示、retry EOSEのREDテストを追加する
+- [x] T023 [P] [US2] `src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`へ、metadataとevaluationのtimeoutがnot foundへ変換されないREDテストを追加する
+- [x] T024 [P] [US2] 承認、編集、モデレーター画面の既存testへ、`streamEventsOnEvent()`、`streamApprovals()`、継続subscriptionを開始しないREDテストを追加する: `src/app/discussions/[naddr]/approve/`、`src/app/discussions/[naddr]/edit/`、`src/app/discussions/[naddr]/moderators/`
+- [x] T025 [US2] サブエージェント1名に`src/components/discussion/__tests__/DiscussionReadStatus.test.tsx`、`src/app/settings/__tests__/page.streaming.test.tsx`、`src/app/discussions/[naddr]/__tests__/page.streaming.test.tsx`、`src/app/discussions/[naddr]/approve/`、`src/app/discussions/[naddr]/edit/`、`src/app/discussions/[naddr]/moderators/`のUS2 REDテストをレビューさせ、completion表示、再読み込み、継続購読廃止の不足を報告させる
 
 ### Implementation for User Story 2
 
-- [ ] T026 [US2] `src/app/settings/page.tsx`を変更し、author別kind 34550 readをexecutorと共通status表示へ置換する
-- [ ] T027 [US2] `src/components/discussion/DiscussionTabLayout.tsx`を変更し、metadata readの手動relay選別と直接gateway queryをexecutorへ置換する
-- [ ] T028 [US2] `src/components/discussion/DiscussionContentDataProvider.tsx`を変更し、投稿・承認initial readのcompletionとrelay実績をexecutorから受け取る
-- [ ] T029 [US2] `src/app/discussions/[naddr]/page.tsx`を変更し、evaluation readとuser evaluation historyをexecutor用read planへ置換する
-- [ ] T030 [US2] `src/app/discussions/[naddr]/approve/page.tsx`を変更し、`streamEventsOnEvent()`と`streamApprovals()`をexecutorの有限initial readへ置換する
-- [ ] T031 [US2] `src/app/discussions/[naddr]/edit/page.tsx`を変更し、moderator-requestの継続購読をexecutorの有限initial readへ置換する
-- [ ] T032 [US2] `src/app/discussions/[naddr]/moderators/page.tsx`を変更し、moderator-requestの継続購読をexecutorの有限initial readへ置換する
-- [ ] T033 [US2] `src/lib/discussion/__tests__/discussion-read-executor-adoption.test.ts`を追加し、対象画面がexecutorを使いDiscussion readで直接relay選別、gateway query、stream APIを呼ばないことを確認する
+- [x] T026 [US2] `src/app/settings/page.tsx`を変更し、author別kind 34550 readをexecutorと共通status表示へ置換する
+- [x] T027 [US2] `src/components/discussion/DiscussionTabLayout.tsx`を変更し、metadata readの手動relay選別と直接gateway queryをexecutorへ置換する
+- [x] T028 [US2] `src/components/discussion/DiscussionContentDataProvider.tsx`を変更し、投稿・承認initial readのcompletionとrelay実績をexecutorから受け取る
+- [x] T029 [US2] `src/app/discussions/[naddr]/page.tsx`を変更し、evaluation readとuser evaluation historyをexecutor用read planへ置換する
+- [x] T030 [US2] `src/app/discussions/[naddr]/approve/page.tsx`を変更し、`streamEventsOnEvent()`と`streamApprovals()`をexecutorの有限initial readへ置換する
+- [x] T031 [US2] `src/app/discussions/[naddr]/edit/page.tsx`を変更し、moderator-requestの継続購読をexecutorの有限initial readへ置換する
+- [x] T032 [US2] `src/app/discussions/[naddr]/moderators/page.tsx`を変更し、moderator-requestの継続購読をexecutorの有限initial readへ置換する
+- [x] T033 [US2] `src/lib/discussion/__tests__/discussion-read-executor-adoption.test.ts`を追加し、対象画面がexecutorを使いDiscussion readで直接relay選別、gateway query、stream APIを呼ばないことを確認する
 
 **Checkpoint**:設定、詳細、承認、編集、モデレーター、管理が同じ完了型read規則を使い、継続購読を開始しない。
 
@@ -99,16 +99,16 @@
 
 ### Tests for User Story 3
 
-- [ ] T034 [P] [US3] `src/lib/discussion/__tests__/discussion-reference-resolver.test.ts`へ、複数`q` tagを一つのbatch planへ変換するREDテストを追加する
-- [ ] T035 [P] [US3] `src/lib/nostr/__tests__/nostr-service.test.ts`へ、複数filterが一回のsubscriptionとなりfilterごとに購読しないREDテストを追加する
-- [ ] T036 [P] [US3] `src/components/discussion/__tests__/DiscussionManagementDataProvider.test.tsx`へ、複数参照の表示・重複排除・timeout retryのREDテストを追加する
-- [ ] T037 [US3] サブエージェント1名に`src/lib/discussion/__tests__/discussion-reference-resolver.test.ts`、`src/lib/nostr/__tests__/nostr-service.test.ts`、`src/components/discussion/__tests__/DiscussionManagementDataProvider.test.tsx`のUS3 REDテストをレビューさせ、multi-filter一回購読と重複排除の不足を報告させる
+- [x] T034 [P] [US3] `src/lib/discussion/__tests__/discussion-reference-resolver.test.ts`へ、複数`q` tagを一つのbatch planへ変換するREDテストを追加する
+- [x] T035 [P] [US3] `src/lib/nostr/__tests__/nostr-service.test.ts`へ、複数filterが一回のsubscriptionとなりfilterごとに購読しないREDテストを追加する
+- [x] T036 [P] [US3] `src/components/discussion/__tests__/DiscussionManagementDataProvider.test.tsx`へ、複数参照の表示・重複排除・timeout retryのREDテストを追加する
+- [x] T037 [US3] サブエージェント1名に`src/lib/discussion/__tests__/discussion-reference-resolver.test.ts`、`src/lib/nostr/__tests__/nostr-service.test.ts`、`src/components/discussion/__tests__/DiscussionManagementDataProvider.test.tsx`のUS3 REDテストをレビューさせ、multi-filter一回購読と重複排除の不足を報告させる
 
 ### Implementation for User Story 3
 
-- [ ] T038 [US3] `src/lib/discussion/discussion-reference-resolver.ts`と`src/lib/discussion/discussion-read-plan.ts`を変更し、参照filter batchの順序と重複排除を安定化する
-- [ ] T039 [US3] `src/lib/discussion/discussion-read-executor.ts`を変更し、retry時もbatch filtersを変更せず一回のsubscriptionへ渡す
-- [ ] T040 [US3] `src/components/discussion/DiscussionManagementDataProvider.tsx`と`src/app/discussions/page.tsx`を変更し、batch resultから重複のない会話一覧を描画する
+- [x] T038 [US3] `src/lib/discussion/discussion-reference-resolver.ts`と`src/lib/discussion/discussion-read-plan.ts`を変更し、参照filter batchの順序と重複排除を安定化する
+- [x] T039 [US3] `src/lib/discussion/discussion-read-executor.ts`を変更し、retry時もbatch filtersを変更せず一回のsubscriptionへ渡す
+- [x] T040 [US3] `src/components/discussion/DiscussionManagementDataProvider.tsx`と`src/app/discussions/page.tsx`を変更し、batch resultから重複のない会話一覧を描画する
 
 **Checkpoint**:filter数に比例するsubscription作成を防ぎ、複数参照の会話を取りこぼさない。
 
@@ -118,12 +118,12 @@
 
 **Purpose**:全画面の品質、性能、アクセシビリティ、文書を確認する。
 
-- [ ] T041 [P] `src/lib/discussion/__tests__/discussion-read-executor.test.ts`と`src/lib/nostr/__tests__/nostr-service.test.ts`で、attempted relayとsuccessful event relayが混同されないことを追加確認する
-- [ ] T042 [P] `src/components/discussion/__tests__/DiscussionReadStatus.test.tsx`と対象画面testsで、WCAG 2.2 SC 4.1.3のstatus通知とSC 2.5.8の再読み込み操作サイズを確認する
-- [ ] T043 サブエージェント1名に`src/lib/discussion/__tests__/discussion-read-executor.test.ts`、`src/lib/nostr/__tests__/nostr-service.test.ts`、`src/components/discussion/__tests__/DiscussionReadStatus.test.tsx`の横断テストをレビューさせ、relay実績とWCAG確認の不足を報告させる
-- [ ] T044 `specs/017-discussion-read-executor/quickstart.md`のRED、GREEN、手動relay fixtureを実行し、結果を実装PRへ記録する
-- [ ] T045 `src/lib/nostr/nostr-service.ts`、`src/lib/discussion/discussion-read-executor.ts`、対象画面でpage分割、続き取得、filter数上限、継続購読を追加していないことを確認する
-- [ ] T046 `npm run lint`、`npx tsc --noEmit`、`npm run build`、`git diff --check`を実行する
+- [x] T041 [P] `src/lib/discussion/__tests__/discussion-read-executor.test.ts`と`src/lib/nostr/__tests__/nostr-service.test.ts`で、attempted relayとsuccessful event relayが混同されないことを追加確認する
+- [x] T042 [P] `src/components/discussion/__tests__/DiscussionReadStatus.test.tsx`と対象画面testsで、WCAG 2.2 SC 4.1.3のstatus通知とSC 2.5.8の再読み込み操作サイズを確認する
+- [x] T043 サブエージェント1名に`src/lib/discussion/__tests__/discussion-read-executor.test.ts`、`src/lib/nostr/__tests__/nostr-service.test.ts`、`src/components/discussion/__tests__/DiscussionReadStatus.test.tsx`の横断テストをレビューさせ、relay実績とWCAG確認の不足を報告させる
+- [x] T044 `specs/017-discussion-read-executor/quickstart.md`のRED、GREEN、手動relay fixtureを実行し、結果を実装PRへ記録する
+- [x] T045 `src/lib/nostr/nostr-service.ts`、`src/lib/discussion/discussion-read-executor.ts`、対象画面でpage分割、続き取得、filter数上限、継続購読を追加していないことを確認する
+- [x] T046 `npm run lint`、`npx tsc --noEmit`、`npm run build`、`git diff --check`を実行する
 
 ---
 

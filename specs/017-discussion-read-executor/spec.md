@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "Issue #68。`/settings` には表示される掲載済み会話が `/discussions` に表示されない。画面固有のリクエスト組み立ては維持しつつ、relay候補選別から実際の通信までをDRYにする。複数参照のfilter結合とページ分割は別Issueで扱い、本featureの対象外とする。"
+**Input**: User description: "Issue #68。`/settings` には表示される掲載済み会話が `/discussions` に表示されない。画面固有のリクエスト組み立ては維持しつつ、relay候補選別から実際の通信までをDRYにする。複数参照のfilter結合は本featureで行う。ページ分割・続き取得は必要性が実証された時点で別途検討し、本featureでは実装しない。"
 
 > この仕様は `AGENTS.md` と `.specify/memory/constitution.md` に従う。Nostr relay を正本とし、`specs/009-coracle-style-sync` の選別された部分同期、completion-aware read、取得元 relay 実績の分離を引き継ぐ。
 
@@ -54,11 +54,27 @@
 
 ---
 
+### User Story 3 - 複数の掲載参照を一度に解決する (Priority: P3)
+
+利用者は、複数の会話参照を持つ掲載一覧を開いたとき、各参照を個別に購読することなく、必要な会話定義をまとめて取得できる。
+
+**Why this priority**: 参照ごとの通信を避け、relayへの要求数と一覧表示までの待機を抑える。
+
+**Independent Test**: 複数の有効な `q` tagを含む掲載投稿を用意し、一つのrelay attemptが複数filterを含む単一のreadとして実行されることを確認する。
+
+**Acceptance Scenarios**:
+
+1. **Given** 掲載投稿に異なる会話を参照する複数の有効な `q` tagがある、**When** `/discussions` が参照先を読む、**Then** 重複を除いた参照filter群を一つのread planとして作成し、同じ選別済みrelay setへ一回のmulti-filter readを送る。
+2. **Given** 同じ会話を参照する `q` tagが複数ある、**When** read planを作成する、**Then** 同一の参照filterは一度だけ含める。
+3. **Given** 複数参照のmulti-filter readがtimeoutする、**When** 未試行relay候補がある、**Then** filter群全体を保ったまま、既定の一度だけの自動再読を行う。
+
+---
+
 ### Edge Cases
 
 - naddr hint、過去の成功実績、設定済みrelayが重複または不正なURLを含む場合、正規化・重複排除後の優先順を維持する。
 - naddr hintが3件ありすべて無応答で未試行候補が残る場合、EOSE以外の完了後に次候補を最大3 relayだけ一度自動再読する。それでも未試行候補が残るときは、部分取得状態と再読み込み導線を示す。
-- 同じ kind 34550 が複数relayまたは複数pageから届く場合、event IDで一件に重複排除し、最新のreplaceable eventだけを表示に用いる。
+- 同じ kind 34550 が複数relayまたは自動再読から届く場合、event IDで一件に重複排除し、最新のreplaceable eventだけを表示に用いる。
 - 掲載投稿のrelay実績と、参照先会話定義のrelay実績は別read targetとして保存し、候補順位の根拠を混同しない。
 - 古いread世代の結果、timeoutだけの空結果、または自動再読の空結果は、既に取得済みの会話定義を削除する根拠にしない。
 - `Discussion Reference Resolver` は、`/discussions` の掲載投稿・承認イベントにある `q` tagから参照先会話を解決するときだけ、`34550:pubkey:dTag` として解析できない値を除外し、他の有効参照の処理を止めない。共通read executorはtag、naddr、文字列IDを解析または検証しない。
@@ -84,15 +100,19 @@
 - **FR-015**: 初回readが `idle-timeout`、`hard-timeout`、`cancelled` で完了し、未試行候補が残る場合、システムは次候補を最大3 relayに限定して一度だけ自動再読しなければならない。EOSEで完了したreadには自動再読してはならない。
 - **FR-016**: 自動再読後も未試行候補が残る場合、システムは自動でさらに拡大せず、部分取得状態と明示的な再読み込み導線を提供しなければならない。
 - **FR-019**: 画面または画面固有のread plan作成層は、`q` tag、naddr、既存Discussion IDを `Discussion Reference Resolver` で正規化してからread planを作成しなければならない。共通read executorは、正規化済みfilterとrelay候補だけを入力とし、参照形式の検証責務を持ってはならない。
+- **FR-020**: `/discussions` の参照先会話readでは、`Discussion Reference Resolver` が重複を除いた有効参照ごとのfilterを一つの `DiscussionReadPlan` にまとめなければならない。
+- **FR-021**: 共通read executorは、複数filterを含むread planの各relay attemptを、一つのmulti-filter Nostr readとして実行しなければならない。filterごとに個別のrelay接続または購読を開始してはならない。
+- **FR-022**: 本featureは参照filterのpage分割、続き取得、filter数上限を導入してはならない。これらは実測による必要性が確認された場合に別途決定する。
 - **FR-017**: 自動再読中、全Discussion画面は初回readで取得済みのeventsを暫定表示として保持しなければならない。後続readのeventsはevent IDで重複排除して結合し、初回結果を空結果で置き換えてはならない。
 - **FR-018**: 初回readが非EOSEであっても、自動再読がEOSEで完了した場合、システムは合成したread結果の最終completion reasonをEOSEとして扱い、部分取得の警告を表示してはならない。
 
 ### Key Entities
 
-- **Discussion Read Plan**: 画面目的、filter群、timeout、relay候補入力、page cursorを表す宣言的なread要求。
+- **Discussion Read Plan**: 画面目的、filter群、timeout、relay候補入力を表す宣言的なread要求。
 - **Discussion Read Executor**: read planからrelay候補を選別し、選別済みrelay setでcompletion-aware readを実行して観測可能な結果を返す共通境界。
 - **Discussion Read Result**: events、completion reason、attempted relay URLs、event IDごとのsource relay URLs、重複数、経過時間を持つ結果。
 - **Discussion Reference Resolver**: 画面入力、`q` tag、naddr、既知Discussion IDを、正規化済みのDiscussion IDまたはread plan引数へ変換する通信を持たない入力境界。不正な参照を除外する責務を持つ。
+- **Reference Filter Batch**: 重複を除いた参照先会話filter群を持つ一つの `DiscussionReadPlan`。各relay attemptで単一のmulti-filter readとして実行する。
 - **Listing Read State**: 掲載投稿readと参照先会話readの各完了状態、未解決参照、表示可能な会話を保持する状態。
 
 ## Success Criteria *(mandatory)*
@@ -101,14 +121,14 @@
 
 - **SC-001**: 回帰fixtureで、`/settings` の作者別readで取得でき、掲載投稿から有効に参照される kind 34550 が `/discussions` に100%表示される。
 - **SC-002**: hint relayが無応答で、次候補relayにのみ会話定義があるfixtureにおいて、初回結果を暫定表示したまま自動再読のeventを結合し、再読がEOSEなら最終UIを100%完了状態で表示する。
-- **SC-003**: 同じ参照先会話filterを使う各pageで、relay候補の優先順位・最大3 relay・`NDKRelaySet`使用をテストで100%確認できる。
+- **SC-003**: 複数の有効な参照先会話filterを含むfixtureで、各relay attemptが一つのmulti-filter readとして実行され、参照ごとの個別購読を開始しないことを100%確認できる。
 - **SC-004**: 掲載投稿readと参照先会話readのsource relay実績が別々に保存され、問い合わせただけのrelayが成功実績へ混入しないことを100%確認できる。
 - **SC-005**: 変更対象の全テスト、TypeScript型検査、lint、buildが成功する。
 
 ## Assumptions
 
 - 公開一覧に表示すべき会話は、既存の掲載投稿に有効な `q` tagで参照される kind 34550 に限定する。作者自身の会話を無条件に公開一覧へ追加することは本featureの対象外とする。
-- 複数参照のfilter結合、filter数上限、page分割、続き取得は別Issueで扱い、本featureでは変更しない。
+- 複数参照のfilter結合は本featureの対象とする。page分割・続き取得・filter数上限は、実測で必要性が示された時点で別途検討するため、本featureでは導入しない。
 - `NostrService` は汎用のNDK接続・購読境界として維持する。Discussion固有のfilterや候補順位は `src/lib/discussion` 側に置き、全Discussion画面はその共通境界を使用する。
 - 既存の `specs/009-coracle-style-sync` の承認結合、unknown状態、キャッシュ契約を変更しない。009から意図的に外れる設計が必要な場合は、性能・互換性・信頼性への影響を `plan.md` に記録する。
 - このfeatureは新規の永続データベースを導入しない。既知データは既存の `sessionStorage` 契約の範囲に限定する。

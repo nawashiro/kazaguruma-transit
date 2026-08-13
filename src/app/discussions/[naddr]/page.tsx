@@ -12,6 +12,7 @@ import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
   getDiscussionReadStrategyConfig,
+  DEFAULT_RELAYS,
 } from "@/lib/config/discussion-config";
 import { LoginModal } from "@/components/discussion/LoginModal";
 import { PostPreview } from "@/components/discussion/PostPreview";
@@ -23,8 +24,8 @@ import {
   createDiscussionNdkGateway,
 } from "@/lib/nostr/discussion-ndk-gateway";
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
+import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
 import { loadKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
-import type { Event } from "@/lib/nostr/nostr-service";
 import {
   parseEvaluationEvent,
   combinePostsWithStats,
@@ -122,40 +123,49 @@ export default function DiscussionDetailPage() {
       try {
         setEvaluationsLoadError(null);
         const postIds = posts.map((post) => post.id);
-        const relayUrls =
-          loadKnownDiscussionData<unknown, Event>(
-            discussionInfo.discussionId,
-          )?.attemptedRelayUrls ?? [];
+        const knownData = loadKnownDiscussionData<unknown>(
+          discussionInfo.discussionId,
+        );
         const evaluationsResult =
           postIds.length > 0
-            ? await discussionGateway.queryWithCompletion(
-                createDiscussionReadPlan("discussion-evaluations", readStrategy, { postIds, relayHints: discussionInfo.relays }).filters,
-                {
-                  idleTimeoutMs: readStrategy.idleTimeoutMs,
-                  hardTimeoutMs: readStrategy.hardTimeoutMs,
-                  ...(relayUrls.length > 0 ? { relayUrls } : {}),
-                }
-              )
+            ? await executeDiscussionRead(discussionGateway, {
+                plan: createDiscussionReadPlan(
+                  "discussion-evaluations",
+                  readStrategy,
+                  { postIds, relayHints: discussionInfo.relays },
+                ),
+                candidates: {
+                  hints: discussionInfo.relays,
+                  successful:
+                    knownData?.successfulEventRelayUrls ??
+                    knownData?.successfulRelays,
+                  configured: nostrServiceConfig.relays
+                    .filter((relay) => relay.read)
+                    .map((relay) => relay.url),
+                  defaults: DEFAULT_RELAYS,
+                },
+              })
             : {
                 events: [],
                 completionReason: "eose" as const,
-                eventCount: 0,
-                elapsedMs: 0,
-                startedAt: Date.now(),
-                lastEventAt: Date.now(),
-                eoseReceived: true,
+                attemptedRelayUrls: [],
+                successfulEventRelayUrls: [],
+                sourceRelayUrlsByEventId: {},
+                attempts: [],
               };
         logger.info("discussion-detail evaluations fetch completed", {
           discussionId: discussionInfo.discussionId,
           completionReason: evaluationsResult.completionReason,
-          eventCount: evaluationsResult.eventCount,
-          elapsedMs: evaluationsResult.elapsedMs,
+          eventCount: evaluationsResult.events.length,
+          elapsedMs:
+            evaluationsResult.attempts[evaluationsResult.attempts.length - 1]
+              ?.elapsedMs ?? 0,
         });
         const evaluationsEvents = evaluationsResult.events;
         if (loadSequenceRef.current !== loadSequence) return;
 
         const parsedEvaluations = evaluationsEvents
-          .map(parseEvaluationEvent)
+          .map((event) => parseEvaluationEvent(event))
           .filter((e): e is PostEvaluation => e !== null);
 
         setEvaluations(parsedEvaluations);

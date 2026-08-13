@@ -1,7 +1,9 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionDetailPage from "../page";
+import type { NostrEventDTO } from "@/lib/nostr/discussion-ndk-gateway";
+import type { PostWithStats } from "@/types/discussion";
 
 const mockUseDiscussionMeta = jest.fn();
 const mockUseDiscussionContentData = jest.fn();
@@ -32,16 +34,38 @@ jest.mock("@/lib/auth/auth-context", () => ({
 
 jest.mock("@/lib/config/discussion-config", () => ({
   isDiscussionsEnabled: () => true,
-  getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 500 }),
+  getNostrServiceConfig: () => ({
+    relays: [
+      { url: "wss://configured.example", read: true, write: false },
+      { url: "wss://write-only.example", read: false, write: true },
+    ],
+    defaultTimeout: 500,
+  }),
+  getDiscussionReadStrategyConfig: () => ({
+    relayLimit: 3,
+    idleTimeoutMs: 321,
+    hardTimeoutMs: 987,
+    dedupWindowMs: 250,
+  }),
+  DEFAULT_RELAYS: ["wss://default.example"],
 }));
 
-jest.mock("@/lib/nostr/naddr-utils", () => ({
-  extractDiscussionFromNaddr: () => ({
-    dTag: "demo",
-    authorPubkey: "author",
-    discussionId: "34550:author:demo",
-  }),
-}));
+jest.mock("@/lib/nostr/naddr-utils", () => {
+  const actual = jest.requireActual<typeof import("@/lib/nostr/naddr-utils")>(
+    "@/lib/nostr/naddr-utils",
+  );
+
+  return {
+    ...actual,
+    extractDiscussionFromNaddr: jest.fn(() => ({
+      dTag: "demo",
+      authorPubkey: "author",
+      discussionId: "34550:author:demo",
+      relays: ["wss://hint.example"],
+    })),
+    normalizeDiscussionId: jest.fn((value: string) => value),
+  };
+});
 
 jest.mock("@/lib/nostr/nostr-service", () => {
   const serviceMock = {
@@ -73,57 +97,109 @@ const { __mock: gatewayMock } = jest.requireMock(
   "@/lib/nostr/discussion-ndk-gateway"
 );
 
-jest.mock("@/lib/nostr/nostr-utils", () => ({
-  parseDiscussionEvent: jest.fn((event) => ({
-    id: `34550:${event.pubkey}:${event.tags?.find((tag: string[]) => tag[0] === "d")?.[1] || ""}`,
-    title: event.tags?.find((tag: string[]) => tag[0] === "name")?.[1] || "Untitled",
-    description: event.content,
-    authorPubkey: event.pubkey,
-    dTag: event.tags?.find((tag: string[]) => tag[0] === "d")?.[1] || "",
-    moderators: [],
-    createdAt: event.created_at,
-    event,
-  })),
-  parsePostEvent: jest.fn((_post, approvals) => ({
-    id: approvals[0]?.postId || "post-1",
-    content: "approved post",
-    authorPubkey: "author",
-    discussionId: "34550:author:demo",
-    createdAt: approvals[0]?.createdAt || 100,
-    approved: true,
-    event: {
-      id: "post-event",
-      pubkey: "author",
-      kind: 1,
-      created_at: 100,
-      tags: [["q", "34550:author:demo"]],
-      content: "post",
-      sig: "sig",
-    },
-  })),
-  parseApprovalEvent: jest.fn((event) => ({
-    id: event.id,
-    postId: event.tags?.find((tag: string[]) => tag[0] === "e")?.[1] || "post-1",
-    postAuthorPubkey: "author",
-    moderatorPubkey: "mod",
-    discussionId: "34550:author:demo",
-    createdAt: event.created_at,
-    event,
-  })),
-  parseEvaluationEvent: jest.fn((event) => ({
-    id: event.id,
-    postId: event.tags?.find((tag: string[]) => tag[0] === "e")?.[1] || "post-1",
-    evaluatorPubkey: event.pubkey,
-    rating: "+",
-    discussionId: "34550:author:demo",
-    createdAt: event.created_at,
-    event,
-  })),
-  combinePostsWithStats: () => [],
-  validatePostForm: () => [],
-  formatRelativeTime: () => "now",
-  getAdminPubkeyHex: () => "admin-pubkey",
+jest.mock("@/lib/discussion/discussion-known-data-cache", () => ({
+  loadKnownDiscussionData: jest.fn(),
 }));
+
+const { loadKnownDiscussionData: loadKnownDiscussionDataMock } = jest.requireMock(
+  "@/lib/discussion/discussion-known-data-cache"
+);
+
+jest.mock("@/lib/discussion/discussion-read-executor", () => {
+  const executeDiscussionRead = jest.fn();
+  return { executeDiscussionRead, __mock: { executeDiscussionRead } };
+});
+
+const { __mock: discussionReadExecutorMock } = jest.requireMock(
+  "@/lib/discussion/discussion-read-executor"
+);
+
+jest.mock("@/lib/nostr/nostr-utils", () => {
+  const actual = jest.requireActual<typeof import("@/lib/nostr/nostr-utils")>(
+    "@/lib/nostr/nostr-utils",
+  );
+
+  return {
+    ...actual,
+    parseDiscussionEvent: jest.fn((event) => ({
+      id: `34550:${event.pubkey}:${event.tags?.find((tag: string[]) => tag[0] === "d")?.[1] || ""}`,
+      title: event.tags?.find((tag: string[]) => tag[0] === "name")?.[1] || "Untitled",
+      description: event.content,
+      authorPubkey: event.pubkey,
+      dTag: event.tags?.find((tag: string[]) => tag[0] === "d")?.[1] || "",
+      moderators: [],
+      createdAt: event.created_at,
+      event,
+    })),
+    parsePostEvent: jest.fn((_post, approvals) => ({
+      id: approvals[0]?.postId || "post-1",
+      content: "approved post",
+      authorPubkey: "author",
+      discussionId: "34550:author:demo",
+      createdAt: approvals[0]?.createdAt || 100,
+      approved: true,
+      event: {
+        id: "post-event",
+        pubkey: "author",
+        kind: 1,
+        created_at: 100,
+        tags: [["a", "34550:author:demo"]],
+        content: "post",
+        sig: "sig",
+      },
+    })),
+    parseApprovalEvent: jest.fn((event) => ({
+      id: event.id,
+      postId: event.tags?.find((tag: string[]) => tag[0] === "e")?.[1] || "post-1",
+      postAuthorPubkey: "author",
+      moderatorPubkey: "mod",
+      discussionId: "34550:author:demo",
+      createdAt: event.created_at,
+      event,
+    })),
+    // Keep the page-level call observable while exercising the real NIP-25 parser.
+    parseEvaluationEvent: jest.fn((event) => actual.parseEvaluationEvent(event)),
+    combinePostsWithStats: jest.fn(
+      (posts: Array<{ id: string; approved?: boolean }>, evaluations: Array<{ id: string; postId: string; rating: "+" | "-" }>): PostWithStats[] =>
+        posts.map((post) => {
+          const postEvaluations = evaluations.filter((evaluation) => evaluation.postId === post.id);
+          const positive = postEvaluations.filter((evaluation) => evaluation.rating === "+").length;
+          const negative = postEvaluations.filter((evaluation) => evaluation.rating === "-").length;
+          const total = positive + negative;
+          return {
+            ...post,
+            content: `post content ${post.id}`,
+            authorPubkey: "author",
+            discussionId: "34550:author:demo",
+            createdAt: 100,
+            approved: post.approved ?? true,
+            event: {
+              id: post.id,
+              pubkey: "author",
+              kind: 1111,
+              created_at: 100,
+              tags: [["a", "34550:author:demo"]],
+              content: `post content ${post.id}`,
+              sig: "sig",
+            },
+            evaluationStats: {
+              positive,
+              negative,
+              total,
+              score: total > 0 ? (positive - negative) / total : 0,
+            },
+            evaluationIds: postEvaluations.map((evaluation) => evaluation.id),
+          } as PostWithStats & { evaluationIds: string[] };
+        }),
+    ),
+    validatePostForm: () => [],
+    formatRelativeTime: () => "now",
+    getAdminPubkeyHex: () => "admin-pubkey",
+  };
+});
+
+const { parseEvaluationEvent: parseEvaluationEventMock, combinePostsWithStats: combinePostsWithStatsMock } =
+  jest.requireMock("@/lib/nostr/nostr-utils");
 
 jest.mock("@/lib/test/test-data-loader", () => ({
   isTestMode: () => false,
@@ -147,7 +223,23 @@ global.fetch = jest.fn().mockResolvedValue({
 
 jest.mock("@/components/discussion/EvaluationComponent", () => ({
   __esModule: true,
-  EvaluationComponent: () => <div>Evaluation Component</div>,
+  EvaluationComponent: ({
+    posts,
+  }: {
+    posts: PostWithStats[];
+  }) => (
+    <div data-testid="evaluation-component">
+      <span>Evaluation Component</span>
+      {posts.map((post) => (
+        <article key={post.id} data-testid={`evaluation-post-${post.id}`}>
+          <span>{post.content}</span>
+          <span data-testid={`evaluation-total-${post.id}`}>
+            {post.evaluationStats.total}
+          </span>
+        </article>
+      ))}
+    </div>
+  ),
 }));
 
 jest.mock("@/components/discussion/PermissionGuards", () => ({
@@ -184,6 +276,22 @@ describe("DiscussionDetailPage streaming", () => {
     startedAt: 1000,
     lastEventAt: 1000,
     eoseReceived: true,
+  });
+
+  const withDiscussionReadResult = (events: any[]) => ({
+    events,
+    completionReason: "eose",
+    attemptedRelayUrls: [
+      "wss://hint.example",
+      "wss://successful.example",
+      "wss://configured.example",
+      "wss://default.example",
+    ],
+    successfulEventRelayUrls: ["wss://successful.example"],
+    sourceRelayUrlsByEventId: Object.fromEntries(
+      events.map((event) => [event.id, ["wss://successful.example"]]),
+    ),
+    attempts: [],
   });
 
   beforeEach(() => {
@@ -260,44 +368,158 @@ describe("DiscussionDetailPage streaming", () => {
     expect(screen.getByText("Evaluation Component")).toBeInTheDocument();
   });
 
-  it("loads only evaluations after shared posts become available", async () => {
+  it("loads evaluations through the executor with the complete read contract", async () => {
     mockUseDiscussionContentData.mockReturnValue({
       posts: [
         { id: "post-1", approved: true },
-        { id: "post-2", approved: true },
       ],
       isLoading: false,
       error: null,
       addPost: jest.fn(),
     });
-    gatewayMock.queryWithCompletion.mockImplementation((filters: Array<{ kinds?: number[] }>) => {
-      const kinds = filters[0]?.kinds ?? [];
-      if (kinds.includes(7)) {
-        return Promise.resolve(withCompletion([
-          { id: "eval-1", pubkey: "u1", tags: [["e", "post-1"]], created_at: 1 },
-          { id: "eval-2", pubkey: "u2", tags: [["e", "post-1"]], created_at: 2 },
-          { id: "eval-3", pubkey: "u3", tags: [["e", "post-2"]], created_at: 3 },
-          { id: "eval-4", pubkey: "u4", tags: [["e", "post-2"]], created_at: 4 },
-          { id: "eval-5", pubkey: "u5", tags: [["e", "post-1"]], created_at: 5 },
-        ]));
-      }
-      return Promise.resolve(withCompletion([]));
+    const evaluationEvent: NostrEventDTO = {
+      id: "eval-1",
+      pubkey: "u1",
+      kind: 7,
+      content: "+",
+      tags: [["e", "post-1"], ["a", "34550:author:demo"]],
+      created_at: 1,
+      sig: "sig",
+    };
+    loadKnownDiscussionDataMock.mockReturnValue({
+      version: 1,
+      savedAt: Date.now(),
+      metadata: null,
+      eventIds: [],
+      attemptedRelayUrls: ["wss://old-attempt.example"],
+      successfulEventRelayUrls: ["wss://successful.example"],
+      successfulRelays: [],
     });
+    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
+      withDiscussionReadResult([evaluationEvent]),
+    );
+    gatewayMock.queryWithCompletion.mockRejectedValue(
+      new Error("evaluation reads must not call the gateway from the page"),
+    );
     serviceMock.getEvaluations.mockResolvedValue([]);
 
     render(<DiscussionDetailPage />);
 
     await waitFor(() =>
-      expect(gatewayMock.queryWithCompletion).toHaveBeenCalled()
+      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalledWith(
+        gatewayMock,
+        expect.objectContaining({
+          plan: {
+            target: "discussion-evaluations",
+            filters: [
+              {
+                kinds: [7],
+                "#e": ["post-1"],
+                limit: 100,
+              },
+            ],
+            relayHints: ["wss://hint.example"],
+            idleTimeoutMs: 321,
+            hardTimeoutMs: 987,
+          },
+          candidates: {
+            hints: ["wss://hint.example"],
+            successful: ["wss://successful.example"],
+            configured: ["wss://configured.example"],
+            defaults: ["wss://default.example"],
+          },
+        }),
+      ),
     );
 
-    // 投稿・承認・メタデータは共有Providerの責務で、ページは評価だけを読む。
-    await waitFor(() =>
-      expect(gatewayMock.queryWithCompletion).toHaveBeenCalledTimes(1)
+    expect(gatewayMock.queryWithCompletion).not.toHaveBeenCalled();
+    expect(parseEvaluationEventMock).toHaveBeenCalledWith(evaluationEvent);
+    expect(combinePostsWithStatsMock).toHaveBeenCalledWith(
+      [{ id: "post-1", approved: true }],
+      [expect.objectContaining({ id: "eval-1", postId: "post-1" })],
     );
-    expect(gatewayMock.queryWithCompletion.mock.calls[0][0][0].kinds).toEqual([7]);
+    expect(await screen.findByTestId("evaluation-total-post-1")).toHaveTextContent("1");
 
     expect(screen.getByText("意見グループ")).toBeInTheDocument();
+  });
+
+  it("ignores a stale evaluation read after the posts generation changes", async () => {
+    let currentPosts: Array<{ id: string; approved: boolean }> = [
+      { id: "post-1", approved: true },
+    ];
+    const firstEvaluationEvent: NostrEventDTO = {
+      id: "eval-1",
+      pubkey: "u1",
+      kind: 7,
+      content: "+",
+      tags: [["e", "post-1"], ["a", "34550:author:demo"]],
+      created_at: 1,
+      sig: "sig",
+    };
+    const secondEvaluationEvent: NostrEventDTO = {
+      id: "eval-2",
+      pubkey: "u2",
+      kind: 7,
+      content: "+",
+      tags: [["e", "post-2"], ["a", "34550:author:demo"]],
+      created_at: 2,
+      sig: "sig",
+    };
+    type ReadResult = ReturnType<typeof withDiscussionReadResult>;
+    let resolveFirst!: (result: ReadResult) => void;
+    const firstRead = new Promise<ReadResult>((resolve) => {
+      resolveFirst = resolve;
+    });
+
+    mockUseDiscussionContentData.mockImplementation(() => ({
+      posts: currentPosts,
+      isLoading: false,
+      error: null,
+      addPost: jest.fn(),
+    }));
+    loadKnownDiscussionDataMock.mockReturnValue({
+      version: 1,
+      savedAt: Date.now(),
+      metadata: null,
+      eventIds: [],
+      attemptedRelayUrls: [],
+      successfulEventRelayUrls: [],
+      successfulRelays: [],
+    });
+    serviceMock.getEvaluations.mockResolvedValue([]);
+
+    // The executor sequence is the contract under test. The gateway sequence
+    // keeps this stale-result assertion isolated from the separate migration
+    // RED that verifies the page no longer calls the gateway directly.
+    discussionReadExecutorMock.executeDiscussionRead
+      .mockImplementationOnce(() => firstRead)
+      .mockResolvedValueOnce(withDiscussionReadResult([secondEvaluationEvent]));
+    gatewayMock.queryWithCompletion
+      .mockImplementationOnce(() => firstRead)
+      .mockResolvedValueOnce(withDiscussionReadResult([secondEvaluationEvent]));
+
+    const { rerender } = render(<DiscussionDetailPage />);
+
+    currentPosts = [{ id: "post-2", approved: true }];
+    rerender(<DiscussionDetailPage />);
+
+    expect(
+      await screen.findByTestId("evaluation-total-post-2"),
+    ).toHaveTextContent("1");
+    expect(
+      parseEvaluationEventMock.mock.calls.map((call: unknown[]) => call[0]),
+    ).toEqual([secondEvaluationEvent]);
+
+    await act(async () => {
+      resolveFirst(withDiscussionReadResult([firstEvaluationEvent]));
+      await firstRead;
+    });
+
+    expect(
+      parseEvaluationEventMock.mock.calls.map((call: unknown[]) => call[0]),
+    ).toEqual([secondEvaluationEvent]);
+    expect(parseEvaluationEventMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("evaluation-total-post-1")).not.toBeInTheDocument();
   });
 
   it("keeps loading UI while metadata read is in progress (cold start/direct access)", () => {

@@ -46,6 +46,19 @@ describe("DestinationSelector", () => {
     expect(screen.getByTestId("search-button")).toBeInTheDocument();
   });
 
+  it("検索欄に明示的なラベル「目的地」を付け、入力欄と関連付ける", () => {
+    render(
+      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
+    );
+
+    const input = screen.getByTestId("address-input");
+    const label = screen.getByText("目的地", { selector: "label" });
+
+    expect(input.id).not.toBe("");
+    expect(label).toHaveAttribute("for", input.id);
+    expect(screen.getByLabelText("目的地")).toBe(input);
+  });
+
   it("目的地検索を入力欄と検索アイコンのjoinとして表示する", () => {
     render(
       <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
@@ -71,8 +84,10 @@ describe("DestinationSelector", () => {
     const searchButton = screen.getByTestId("search-button");
     fireEvent.click(searchButton);
 
+    expect(await screen.findByText("住所を入力してください")).toBeInTheDocument();
     // コールバックが呼ばれていないことを確認
     expect(mockOnDestinationSelected).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("目的地が入力された場合に検索を実行する", async () => {

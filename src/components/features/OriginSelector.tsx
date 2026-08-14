@@ -89,6 +89,7 @@ export default function OriginSelector({
       <Card testId="origin-selector-card" title="出発地を選択してください">
         <form onSubmit={handleAddressSubmit} className="space-y-4">
           <InputField
+            label="出発地"
             placeholder="千代田区役所"
             value={address}
             onChange={(e) => setAddress(e.target.value)}

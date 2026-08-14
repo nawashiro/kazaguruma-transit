@@ -40,6 +40,17 @@ describe("OriginSelector", () => {
     expect(screen.getByTestId("gps-button")).toBeInTheDocument();
   });
 
+  it("検索欄に明示的なラベル「出発地」を付け、入力欄と関連付ける", () => {
+    render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
+
+    const input = screen.getByTestId("address-input");
+    const label = screen.getByText("出発地", { selector: "label" });
+
+    expect(input.id).not.toBe("");
+    expect(label).toHaveAttribute("for", input.id);
+    expect(screen.getByLabelText("出発地")).toBe(input);
+  });
+
   it("現在地ボタンのアイコンと文字を横並びで表示する", () => {
     render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
 
@@ -104,10 +115,11 @@ describe("OriginSelector", () => {
   it("住所が未入力の場合はコールバックが呼ばれず検索を実行しない", async () => {
     render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
 
-    // 空入力の状態で検索ボタンをクリック
+    // 空入力の状態でフォームを送信
     const searchButton = screen.getByTestId("search-button");
-    fireEvent.click(searchButton);
+    fireEvent.submit(searchButton.closest("form") as HTMLFormElement);
 
+    expect(await screen.findByText("住所を入力してください")).toBeInTheDocument();
     // コールバックが呼ばれていないことを確認
     expect(mockOnOriginSelected).not.toHaveBeenCalled();
     // APIが呼ばれていないことを確認

@@ -40,6 +40,7 @@ export default function DestinationSelector({
         <form onSubmit={handleSubmit} className="space-y-4">
           <h3 className="text-base font-bold ruby-text">名前で検索</h3>
           <InputField
+            label="目的地"
             placeholder="神田駿河台"
             value={address}
             onChange={(e) => setAddress(e.target.value)}

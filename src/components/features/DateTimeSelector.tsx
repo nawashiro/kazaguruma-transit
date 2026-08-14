@@ -80,32 +80,42 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
             時間タイプを選択
           </legend>
           <div className="join">
-            <button
-              type="button"
+            <input
+              id={`departure-radio-${uniqueId}`}
+              name={`time-type-${uniqueId}`}
+              type="radio"
+              className="radio"
+              checked={isDeparture}
+              onChange={() => handleTimeTypeChange(true)}
+              data-testid="departure-radio"
+              disabled={disabled}
+            />
+            <label
+              htmlFor={`departure-radio-${uniqueId}`}
               className={`btn join-item ruby-text ${
                 isDeparture ? "btn-active btn-primary" : ""
               }`}
-              onClick={() => handleTimeTypeChange(true)}
-              data-testid="departure-radio"
-              disabled={disabled}
-              aria-checked={isDeparture}
-              role="radio"
             >
               出発
-            </button>
-            <button
-              type="button"
+            </label>
+            <input
+              id={`arrival-radio-${uniqueId}`}
+              name={`time-type-${uniqueId}`}
+              type="radio"
+              className="radio"
+              checked={!isDeparture}
+              onChange={() => handleTimeTypeChange(false)}
+              data-testid="arrival-radio"
+              disabled={disabled}
+            />
+            <label
+              htmlFor={`arrival-radio-${uniqueId}`}
               className={`btn join-item ruby-text ${
                 !isDeparture ? "btn-active btn-primary" : ""
               }`}
-              onClick={() => handleTimeTypeChange(false)}
-              data-testid="arrival-radio"
-              disabled={disabled}
-              aria-checked={!isDeparture}
-              role="radio"
             >
               到着
-            </button>
+            </label>
           </div>
         </fieldset>
 

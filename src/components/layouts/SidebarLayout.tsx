@@ -35,7 +35,7 @@ export default function SidebarLayout({
           const savedPreference = loadRubyPreference();
 
           // RubyfulV2の初期化
-          (window as any).RubyfulV2?.init({
+          window.RubyfulV2?.init({
             selector: ".ruby-text",
             defaultDisplay: savedPreference,
             observeChanges: true,

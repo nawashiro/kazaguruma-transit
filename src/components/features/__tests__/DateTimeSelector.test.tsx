@@ -128,18 +128,22 @@ describe("DateTimeSelector", () => {
     expect(departureRadio).toHaveAttribute("type", "radio");
     expect(arrivalRadio).toHaveAttribute("type", "radio");
 
-    const departureLabel = screen.getByText("出発", {
-      selector: "label",
-    }) as HTMLLabelElement;
-    const arrivalLabel = screen.getByText("到着", {
-      selector: "label",
-    }) as HTMLLabelElement;
+    const departureLabel = departureRadio.closest("label") as HTMLLabelElement | null;
+    const arrivalLabel = arrivalRadio.closest("label") as HTMLLabelElement | null;
+    expect(departureLabel).not.toBeNull();
+    expect(arrivalLabel).not.toBeNull();
+    if (!departureLabel || !arrivalLabel) {
+      throw new Error("Native radio labels are missing");
+    }
     expect(departureLabel.tagName).toBe("LABEL");
     expect(arrivalLabel.tagName).toBe("LABEL");
     expect(departureLabel.htmlFor).not.toBe("");
     expect(arrivalLabel.htmlFor).not.toBe("");
     expect(departureLabel.htmlFor).toBe(departureRadio.id);
     expect(arrivalLabel.htmlFor).toBe(arrivalRadio.id);
+    expect(fieldsetRadiogroup.querySelector(".join")).toBeNull();
+    expect(departureLabel).not.toHaveClass("btn", "join-item", "btn-primary");
+    expect(arrivalLabel).not.toHaveClass("btn", "join-item", "btn-primary");
 
     // 初期選択とネイティブinputのクリックによる切り替えを検証する
     expect(departureRadio).toBeChecked();

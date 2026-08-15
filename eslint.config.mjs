@@ -16,7 +16,7 @@ const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-explicit-any": "error",
       "@next/next/no-img-element": "warn",
     },
   },
@@ -26,6 +26,8 @@ const eslintConfig = [
       "**/__tests__/**/*.tsx",
       "**/*.test.ts",
       "**/*.test.tsx",
+      "**/__mocks__/**/*.ts",
+      "**/__mocks__/**/*.tsx",
     ],
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",

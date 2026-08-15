@@ -125,11 +125,19 @@ textarea:focus-visible {
 #main-content {
   padding-bottom: max(5rem, calc(4rem + env(safe-area-inset-bottom)));
 }
+/* DaisyUI's muted inactive-tab rule must not override the contrast-safe token. */
+.tabs.tabs-box > .tab.text-base-content {
+  color: var(--color-base-content);
+}
+
+/* Ruby annotations use the ruby line box for cross-browser vertical spacing. */
+ruby {
+  line-height: 1.6;
+}
+
 rt {
-  margin-bottom: 0.3rem;
-  margin-top: 0.3rem;
   font-size: 70%;
-  color: var(--color-secondary-content);
+  color: var(--color-base-content);
 }
 .alert-error rt {
   color: var(--color-error-content);

@@ -48,13 +48,13 @@ export function naddrDecode(naddr: string): AddressPointer {
       throw new Error('Invalid naddr format');
     }
 
-    const decoded = nip19.decode(naddr);
+    const decoded = nip19.decode(naddr as `naddr1${string}`);
     
     if (decoded.type !== 'naddr') {
       throw new Error('Not an naddr');
     }
 
-    const data = decoded.data as any;
+    const data = decoded.data;
     
     return {
       identifier: data.identifier,

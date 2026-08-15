@@ -71,8 +71,8 @@ export default async function LicensePage() {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th scope="col" className="whitespace-normal">データ</th>
-                    <th scope="col" className="whitespace-normal">ライセンス</th>
+                    <th scope="col" className="text-base-content whitespace-normal">データ</th>
+                    <th scope="col" className="text-base-content whitespace-normal">ライセンス</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -100,9 +100,9 @@ export default async function LicensePage() {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th scope="col" className="whitespace-normal">パッケージ</th>
-                    <th scope="col" className="whitespace-normal">バージョン</th>
-                    <th scope="col" className="whitespace-normal">ライセンス</th>
+                    <th scope="col" className="text-base-content whitespace-normal">パッケージ</th>
+                    <th scope="col" className="text-base-content whitespace-normal">バージョン</th>
+                    <th scope="col" className="text-base-content whitespace-normal">ライセンス</th>
                   </tr>
                 </thead>
                 <tbody>

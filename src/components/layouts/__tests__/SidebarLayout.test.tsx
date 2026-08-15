@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import SidebarLayout from "../SidebarLayout";
 
 jest.mock("next/script", () => ({
@@ -71,6 +71,12 @@ describe("SidebarLayout", () => {
     expect(footerLinkContainer).toHaveClass("flex-col", "items-start");
     expect(footerLinkContainer).not.toHaveClass("sm:flex-row");
     expect(footer?.parentElement?.lastElementChild).toBe(footer);
+    within(footer as HTMLElement)
+      .getAllByRole("link")
+      .forEach((link) => {
+        expect(link).toHaveClass("text-base-content");
+        expect(link).not.toHaveClass("text-base-content/60");
+      });
   });
 
   it("FUNDING.ymlにko_fiがなければ支援欄を表示しない", () => {

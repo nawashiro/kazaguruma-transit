@@ -915,7 +915,7 @@ export class NostrService {
     adminPubkey: string,
     options: { limit?: number; until?: number } = {}
   ): Promise<Event[]> {
-    const filter: any = {
+    const filter: Filter = {
       kinds: [34550],
       authors: [adminPubkey],
     };

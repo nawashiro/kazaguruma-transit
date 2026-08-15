@@ -56,7 +56,7 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
           {isLogin ? "アカウントをお持ちでない方は" : "すでにアカウントをお持ちの方は"}{" "}
           <Link
             href={isLogin ? "/signup" : "/login"}
-            className="link link-primary"
+            className="link"
           >
             {isLogin ? "アカウント作成" : "ログイン"}
           </Link>

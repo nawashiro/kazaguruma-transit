@@ -162,6 +162,9 @@ describe("専用ページの共通 semantic/a11y 契約", () => {
     expect(screen.getByRole("heading", { level: 1, name: "ログイン" })).toBeInTheDocument();
     expect(screen.getByRole("form").tagName).toBe("FORM");
     expect(screen.getByRole("button", { name: "ログイン" }).tagName).toBe("BUTTON");
+    const signupLink = screen.getByRole("link", { name: "アカウント作成" });
+    expect(signupLink).not.toHaveClass("link-primary");
+    expect(signupLink).not.toHaveClass("text-primary");
     assertNativeLinks(view.container);
   });
 

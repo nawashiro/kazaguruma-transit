@@ -8,10 +8,11 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import { ModeratorManagementSection } from "@/components/discussion/ModeratorManagementSection";
-import { LoginModal } from "@/components/discussion/LoginModal";
+import { buildLoginRoute } from "@/lib/navigation/auth-route";
 import { createNostrService, type Event } from "@/lib/nostr/nostr-service";
 import { createDiscussionNdkGateway } from "@/lib/nostr/discussion-ndk-gateway";
 import {
@@ -38,13 +39,33 @@ const readStrategy = typeof getDiscussionReadStrategyConfig === "function"
   : { idleTimeoutMs: config.defaultTimeout, hardTimeoutMs: config.defaultTimeout * 3 };
 const service = createNostrService(config);
 const gateway = createDiscussionNdkGateway(config);
+
+function getDiscussionRouteParam(params: {
+  naddr?: string | string[];
+}): string {
+  const routeParam = params.naddr;
+  const candidate = Array.isArray(routeParam)
+    ? routeParam.length === 1
+      ? routeParam[0]
+      : undefined
+    : routeParam;
+
+  if (typeof candidate === "string" && candidate.trim() !== "" && !candidate.includes("/")) {
+    return candidate;
+  }
+
+  return "naddr1discussion";
+}
+
 export default function ModeratorsPage() {
+  const router = useRouter();
+  const params = useParams<{ naddr?: string | string[] }>();
+  const naddrParam = getDiscussionRouteParam(params);
   const { user, signEvent } = useAuth();
   const meta = useDiscussionMeta();
   const discussion = meta?.discussion;
   const [events, setEvents] = useState<Event[]>([]),
     [reason, setReason] = useState(""),
-    [showLogin, setShowLogin] = useState(false),
     [approved, setApproved] = useState(new Set<string>()),
     [removed, setRemoved] = useState(new Set<string>()),
     [direct, setDirect] = useState(""),
@@ -135,8 +156,16 @@ export default function ModeratorsPage() {
     });
   };
   const request = async () => {
+    if (!user.isLoggedIn) {
+      router.push(
+        buildLoginRoute(
+          `/discussions/${naddrParam}/moderators`,
+          "モデレーター申請にはログインが必要です。",
+        ),
+      );
+      return;
+    }
     if (!discussion || !user.pubkey) {
-      setShowLogin(true);
       return;
     }
     setBusy(true);
@@ -398,7 +427,14 @@ export default function ModeratorsPage() {
             </p>
             <button
               className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start sm:ml-0"
-              onClick={() => setShowLogin(true)}
+              onClick={() =>
+                router.push(
+                  buildLoginRoute(
+                    `/discussions/${naddrParam}/moderators`,
+                    "モデレーター申請にはログインが必要です。",
+                  ),
+                )
+              }
             >
               <span className="ruby-text">ログイン</span>
             </button>
@@ -436,7 +472,6 @@ export default function ModeratorsPage() {
           </div>
         </section>
       )}
-      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </div>
   );
 }

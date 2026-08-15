@@ -1,0 +1,46 @@
+{
+  "categoryCount": 16,
+  "duplicateIds": [
+    {
+      "count": 2,
+      "id": "ebb57317-8fa9-4939-9c48-6c91707f0e0b"
+    }
+  ],
+  "emptyOrWhitespaceIds": [],
+  "httpStatus": 200,
+  "invalidIds": [],
+  "locationCount": 170,
+  "missingIdCount": 0,
+  "slashIds": [],
+  "uniqueIdCount": 169,
+  "url": "https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@1.0.0/kazaguruma_json_min/key_locations.json",
+  "validatedIdCount": 170,
+  "foundationVerification": {
+    "combinedFocusedTests": {
+      "command": "npm test -- --runInBand --runTestsByPath src/lib/navigation/__tests__/safe-return-target.test.ts src/lib/navigation/__tests__/rate-limit-source.test.ts src/utils/__tests__/addressLoader.test.ts src/lib/location/__tests__/location-detail-resolver.test.ts",
+      "exitCode": 0,
+      "suites": 4,
+      "tests": 60
+    },
+    "typecheck": {
+      "command": "npx tsc --noEmit --incremental false",
+      "exitCode": 0
+    },
+    "productionEslint": {
+      "command": "npx eslint src/types/access-route-pages.ts src/lib/navigation/safe-return-target.ts src/lib/navigation/rate-limit-source.ts src/utils/addressLoader.ts src/lib/location/location-detail-resolver.ts",
+      "exitCode": 0
+    },
+    "diffCheck": {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  },
+  "validation": {
+    "exitCode": 1,
+    "rejectDuplicateId": true,
+    "rejectEmptyId": true,
+    "rejectSlashId": true,
+    "result": "rejected"
+  },
+  "version": "1.0.0"
+}

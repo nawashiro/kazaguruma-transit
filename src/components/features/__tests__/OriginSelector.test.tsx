@@ -2,6 +2,14 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import OriginSelector from "../OriginSelector";
 
+const mockRouterPush = jest.fn();
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: (url: string) => mockRouterPush(url),
+  }),
+}));
+
 // モックのgeolocation API
 const mockGeolocation = {
   getCurrentPosition: jest.fn(),
@@ -191,6 +199,33 @@ describe("OriginSelector", () => {
       await screen.findByText("ジオコーディングに失敗しました: ZERO_RESULTS")
     ).toBeInTheDocument();
     expect(mockOnOriginSelected).not.toHaveBeenCalled();
+  });
+
+  it("429 + limitExceededでは一度だけrate-limitへ遷移し、旧モーダルを表示しない", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      json: async () => ({ limitExceeded: true }),
+    });
+
+    const view = render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
+    const addressInput = screen.getByTestId("address-input");
+    const searchButton = screen.getByTestId("search-button");
+
+    fireEvent.change(addressInput, { target: { value: "神田駅" } });
+    fireEvent.click(searchButton);
+
+    await waitFor(() => expect(addressInput).not.toBeDisabled());
+    expect(searchButton).not.toBeDisabled();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockRouterPush).toHaveBeenCalledTimes(1);
+    expect(mockRouterPush).toHaveBeenCalledWith("/rate-limit?source=home");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(mockOnOriginSelected).not.toHaveBeenCalled();
+
+    view.rerender(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    expect(mockRouterPush).toHaveBeenCalledTimes(1);
   });
 
   it("現在地ボタンをクリックしたらGeolocation APIを呼び出す", () => {

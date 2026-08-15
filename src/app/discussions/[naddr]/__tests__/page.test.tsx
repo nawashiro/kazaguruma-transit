@@ -1,20 +1,95 @@
 import React from 'react';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, act, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import DiscussionDetailPage from '../page';
+
+const mockRouterPush = jest.fn();
+const mockUseAuth = jest.fn();
+const mockSignEvent = jest.fn();
+const mockPublishSignedEvent = jest.fn();
+const mockCreatePostEvent = jest.fn();
+const mockCreateEvaluationEvent = jest.fn();
+const mockAnalyzeConsensus = jest.fn();
+const mockDiscussionMetaReload = jest.fn();
+const mockDiscussion = {
+  id: 'discussion-id',
+  dTag: 'test-discussion',
+  title: 'Test Discussion',
+  description: 'Test Description',
+  moderators: [],
+  authorPubkey: 'test-author-pubkey',
+  createdAt: 1,
+  event: {
+    id: 'discussion-event-id',
+    pubkey: 'test-author-pubkey',
+    created_at: 1,
+    kind: 34550,
+    tags: [],
+    content: '',
+    sig: 'discussion-signature',
+  },
+};
+const mockDiscussionPost = {
+  id: 'post-1',
+  content: 'A useful post',
+  authorPubkey: 'post-author-pubkey',
+  discussionId: 'discussion-id',
+  busStopTag: 'Stop A',
+  createdAt: 1,
+  approved: true,
+  approvalState: 'approved' as const,
+  approvedBy: [],
+  event: {
+    id: 'post-event-id',
+    pubkey: 'post-author-pubkey',
+    created_at: 1,
+    kind: 1111,
+    tags: [],
+    content: 'A useful post',
+    sig: 'post-signature',
+  },
+};
+const mockDiscussionPosts = [mockDiscussionPost];
 
 // Mock all the modules and hooks
 jest.mock('next/navigation', () => ({
   useParams: () => ({ naddr: 'test-naddr' }),
+  useRouter: () => ({ push: mockRouterPush }),
 }));
 
 jest.mock('@/lib/auth/auth-context', () => ({
-  useAuth: jest.fn(),
+  useAuth: () => mockUseAuth(),
+}));
+
+jest.mock('@/components/discussion/DiscussionTabLayout', () => ({
+  useDiscussionMeta: () => ({
+    discussion: mockDiscussion,
+    isLoading: false,
+    error: null,
+    completionReason: 'eose',
+    reload: mockDiscussionMetaReload,
+  }),
+}));
+
+jest.mock('@/components/discussion/DiscussionContentDataProvider', () => ({
+  useDiscussionContentData: () => ({
+    posts: mockDiscussionPosts,
+    isLoading: false,
+    error: null,
+    addPost: jest.fn(),
+  }),
 }));
 
 jest.mock('@/lib/config/discussion-config', () => ({
   isDiscussionsEnabled: () => true,
-  getNostrServiceConfig: () => ({}),
+  getNostrServiceConfig: () => ({ defaultTimeout: 100, relays: [] }),
+  getDiscussionReadStrategyConfig: () => ({
+    relayLimit: 3,
+    idleTimeoutMs: 100,
+    hardTimeoutMs: 300,
+    dedupWindowMs: 10,
+  }),
+  DEFAULT_RELAYS: [],
 }));
 
 jest.mock('@/lib/nostr/nostr-service', () => ({
@@ -34,6 +109,24 @@ jest.mock('@/lib/nostr/nostr-service', () => ({
     getEvaluationsForPosts: jest.fn().mockResolvedValue([]),
     getEvaluations: jest.fn().mockResolvedValue([]),
     getProfile: jest.fn().mockResolvedValue(null),
+    createPostEvent: (...args: unknown[]) => mockCreatePostEvent(...args),
+    createEvaluationEvent: (...args: unknown[]) => mockCreateEvaluationEvent(...args),
+    publishSignedEvent: (...args: unknown[]) => mockPublishSignedEvent(...args),
+  }),
+}));
+
+jest.mock('@/lib/nostr/discussion-ndk-gateway', () => ({
+  createDiscussionNdkGateway: () => ({}),
+}));
+
+jest.mock('@/lib/discussion/discussion-read-executor', () => ({
+  executeDiscussionRead: jest.fn().mockResolvedValue({
+    events: [],
+    completionReason: 'eose',
+    attemptedRelayUrls: [],
+    successfulEventRelayUrls: [],
+    sourceRelayUrlsByEventId: {},
+    attempts: [],
   }),
 }));
 
@@ -66,7 +159,7 @@ jest.mock('@/lib/test/test-data-loader', () => ({
 
 jest.mock('@/lib/evaluation/evaluation-service', () => ({
   evaluationService: {
-    analyzeConsensus: jest.fn().mockResolvedValue(null),
+    analyzeConsensus: (...args: unknown[]) => mockAnalyzeConsensus(...args),
   },
 }));
 
@@ -80,8 +173,22 @@ global.fetch = jest.fn().mockResolvedValue({
 
 // Mock components that are causing issues
 jest.mock('@/components/discussion/EvaluationComponent', () => {
-  return function MockEvaluationComponent() {
-    return <div>Evaluation Component</div>;
+  return {
+    EvaluationComponent: function MockEvaluationComponent({
+      onEvaluate,
+    }: {
+      onEvaluate: (postId: string, rating: '+' | '-') => Promise<void>;
+    }) {
+      return (
+        <button
+          type="button"
+          aria-label="評価する"
+          onClick={() => void onEvaluate('post-1', '+')}
+        >
+          評価する
+        </button>
+      );
+    },
   };
 });
 
@@ -90,22 +197,135 @@ jest.mock('@/components/discussion/PermissionGuards', () => ({
   AdminCheck: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-jest.mock('@/components/discussion/LoginModal', () => {
-  return function MockLoginModal() {
-    return <div>Login Modal</div>;
-  };
-});
-
 jest.mock('@/components/discussion/PostPreview', () => {
-  return function MockPostPreview() {
-    return <div>Post Preview</div>;
+  return {
+    PostPreview: function MockPostPreview({
+      onConfirm,
+      onCancel,
+    }: {
+      onConfirm: () => void;
+      onCancel: () => void;
+    }) {
+      return (
+        <div>
+          <button type="button" onClick={onCancel}>編集に戻る</button>
+          <button type="button" onClick={onConfirm}>投稿を確定</button>
+        </div>
+      );
+    },
   };
 });
 
 jest.mock('@/components/ui/Button', () => {
-  return function MockButton({ children, ...props }: any) {
+  return function MockButton({
+    children,
+    fullWidth,
+    secondary,
+    loading,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    fullWidth?: boolean;
+    secondary?: boolean;
+    loading?: boolean;
+  }) {
+    void fullWidth;
+    void secondary;
+    void loading;
     return <button {...props}>{children}</button>;
   };
+});
+
+describe('DiscussionDetailPage - unauthenticated public actions', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseAuth.mockReturnValue({
+      user: { pubkey: null, isLoggedIn: false },
+      signEvent: mockSignEvent,
+    });
+    mockCreatePostEvent.mockReset();
+    mockCreateEvaluationEvent.mockReset();
+    mockPublishSignedEvent.mockReset();
+    mockSignEvent.mockReset();
+    mockAnalyzeConsensus.mockReset();
+  });
+
+  it('routes an unauthenticated post action to login without opening a modal or signing', async () => {
+    const view = render(<DiscussionDetailPage />);
+
+    fireEvent.change(await screen.findByRole('textbox', { name: /投稿内容/ }), {
+      target: { value: '投稿本文' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'プレビュー' }));
+    fireEvent.click(screen.getByRole('button', { name: '投稿を確定' }));
+
+    await waitFor(() => {
+      expect(mockRouterPush).toHaveBeenCalledTimes(1);
+    });
+    const target = new URL(
+      mockRouterPush.mock.calls[0][0] as string,
+      'https://kazaguruma.invalid',
+    );
+    expect(target.pathname).toBe('/login');
+    expect(target.searchParams.get('returnTo')).toBe('/discussions/test-naddr');
+    expect(target.searchParams.get('reason')).toBe('投稿するにはログインが必要です。');
+    expect(target.searchParams.has('action')).toBe(false);
+    expect(target.searchParams.has('payload')).toBe(false);
+    expect(target.searchParams.has('draft')).toBe(false);
+    expect(screen.queryByTestId('login-modal')).not.toBeInTheDocument();
+    expect(mockSignEvent).not.toHaveBeenCalled();
+    expect(mockPublishSignedEvent).not.toHaveBeenCalled();
+    expect(mockCreatePostEvent).not.toHaveBeenCalled();
+    expect(mockAnalyzeConsensus).not.toHaveBeenCalled();
+
+    mockUseAuth.mockReturnValue({
+      user: { pubkey: 'authenticated-user', isLoggedIn: true },
+      signEvent: mockSignEvent,
+    });
+    view.rerender(<DiscussionDetailPage />);
+    await waitFor(() => {
+      expect(mockSignEvent).not.toHaveBeenCalled();
+      expect(mockCreatePostEvent).not.toHaveBeenCalled();
+      expect(mockPublishSignedEvent).not.toHaveBeenCalled();
+    });
+  });
+
+  it('routes an unauthenticated evaluation action to login without evaluation side effects', async () => {
+    const view = render(<DiscussionDetailPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '評価する' }));
+
+    await waitFor(() => {
+      expect(mockRouterPush).toHaveBeenCalledTimes(1);
+    });
+    const target = new URL(
+      mockRouterPush.mock.calls[0][0] as string,
+      'https://kazaguruma.invalid',
+    );
+    expect(target.pathname).toBe('/login');
+    expect(target.searchParams.get('returnTo')).toBe('/discussions/test-naddr');
+    expect(target.searchParams.get('reason')).toBe(
+      '投稿を評価するにはログインが必要です。',
+    );
+    expect(target.searchParams.has('action')).toBe(false);
+    expect(target.searchParams.has('payload')).toBe(false);
+    expect(target.searchParams.has('draft')).toBe(false);
+    expect(screen.queryByTestId('login-modal')).not.toBeInTheDocument();
+    expect(mockSignEvent).not.toHaveBeenCalled();
+    expect(mockPublishSignedEvent).not.toHaveBeenCalled();
+    expect(mockCreateEvaluationEvent).not.toHaveBeenCalled();
+    expect(mockAnalyzeConsensus).not.toHaveBeenCalled();
+
+    mockUseAuth.mockReturnValue({
+      user: { pubkey: 'authenticated-user', isLoggedIn: true },
+      signEvent: mockSignEvent,
+    });
+    view.rerender(<DiscussionDetailPage />);
+    await waitFor(() => {
+      expect(mockSignEvent).not.toHaveBeenCalled();
+      expect(mockCreateEvaluationEvent).not.toHaveBeenCalled();
+      expect(mockPublishSignedEvent).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe.skip('DiscussionDetailPage - Role Display', () => {

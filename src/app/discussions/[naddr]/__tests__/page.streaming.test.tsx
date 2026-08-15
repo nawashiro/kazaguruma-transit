@@ -11,6 +11,7 @@ const mockUseDiscussionContentData = jest.fn();
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr-test" }),
   usePathname: () => "/discussions/naddr-test",
+  useRouter: () => ({ push: jest.fn() }),
 }));
 
 // Mock DiscussionTabLayout to isolate page logic from layout
@@ -249,11 +250,6 @@ jest.mock("@/components/discussion/PermissionGuards", () => ({
   AdminCheck: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
-}));
-
-jest.mock("@/components/discussion/LoginModal", () => ({
-  __esModule: true,
-  LoginModal: () => <div>Login Modal</div>,
 }));
 
 jest.mock("@/components/discussion/PostPreview", () => ({

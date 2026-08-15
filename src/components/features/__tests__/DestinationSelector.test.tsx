@@ -2,6 +2,14 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DestinationSelector from "../DestinationSelector";
 
+const mockRouterPush = jest.fn();
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: (url: string) => mockRouterPush(url),
+  }),
+}));
+
 // LocationSuggestionsコンポーネントをモック
 jest.mock("../LocationSuggestions", () => {
   return function MockLocationSuggestions({ onLocationSelected }: { onLocationSelected: (location: { lat: number; lng: number; address: string }) => void }) {
@@ -151,6 +159,37 @@ describe("DestinationSelector", () => {
       await screen.findByText("ジオコーディングに失敗しました: ZERO_RESULTS")
     ).toBeInTheDocument();
     expect(mockOnDestinationSelected).not.toHaveBeenCalled();
+  });
+
+  it("429 + limitExceededでは一度だけrate-limitへ遷移し、旧モーダルを表示しない", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      json: async () => ({ limitExceeded: true }),
+    });
+
+    const view = render(
+      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
+    );
+    const addressInput = screen.getByTestId("address-input");
+    const searchButton = screen.getByTestId("search-button");
+
+    fireEvent.change(addressInput, { target: { value: "神田駅" } });
+    fireEvent.click(searchButton);
+
+    await waitFor(() => expect(addressInput).not.toBeDisabled());
+    expect(searchButton).not.toBeDisabled();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockRouterPush).toHaveBeenCalledTimes(1);
+    expect(mockRouterPush).toHaveBeenCalledWith("/rate-limit?source=home");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(mockOnDestinationSelected).not.toHaveBeenCalled();
+
+    view.rerender(
+      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
+    );
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    expect(mockRouterPush).toHaveBeenCalledTimes(1);
   });
 
   it("LocationSuggestionsから場所を選択すると、onDestinationSelectedが呼ばれる", () => {

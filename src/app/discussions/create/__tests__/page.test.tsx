@@ -5,6 +5,10 @@ import DiscussionCreatePage from "../page";
 
 const pushMock = jest.fn();
 const processDiscussionCreationFlowMock = jest.fn();
+const mockCreateAuthUser = {
+  pubkey: "f".repeat(64),
+  isLoggedIn: true,
+};
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -14,10 +18,7 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => ({
-    user: {
-      pubkey: "f".repeat(64),
-      isLoggedIn: true,
-    },
+    user: mockCreateAuthUser,
     signEvent: jest.fn(async () => ({
       id: "signed-event-id",
       kind: 1111,
@@ -50,13 +51,11 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   getAdminPubkeyHex: () => "a".repeat(64),
 }));
 
-jest.mock("@/components/discussion/LoginModal", () => ({
-  LoginModal: () => <div>Login Modal</div>,
-}));
-
 describe("DiscussionCreatePage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCreateAuthUser.pubkey = "f".repeat(64);
+    mockCreateAuthUser.isLoggedIn = true;
     Object.defineProperty(global, "crypto", {
       value: {
         randomUUID: () => "123e4567-e89b-12d3-a456-426614174000",
@@ -105,5 +104,38 @@ describe("DiscussionCreatePage", () => {
     expect(await screen.findByText("会話作成完了")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "会話を開始する" }));
     expect(pushMock).toHaveBeenCalledWith("/discussions/naddr1created");
+  });
+
+  it("navigates unauthenticated creation to login without opening LoginModal or replaying creation", async () => {
+    mockCreateAuthUser.pubkey = "";
+    mockCreateAuthUser.isLoggedIn = false;
+    const view = render(<DiscussionCreatePage />);
+
+    fireEvent.change(screen.getByLabelText("タイトル *"), {
+      target: { value: "保留したタイトル" },
+    });
+    fireEvent.change(screen.getByLabelText("説明 *"), {
+      target: { value: "保留した説明" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "会話を作成する" }));
+
+    expect(pushMock).toHaveBeenCalledTimes(1);
+    const target = pushMock.mock.calls[0][0] as string;
+    const targetUrl = new URL(target, "https://kazaguruma.invalid");
+    expect(targetUrl.pathname).toBe("/login");
+    expect(targetUrl.searchParams.get("returnTo")).toBe("/discussions/create");
+    expect(targetUrl.searchParams.has("action")).toBe(false);
+    expect(targetUrl.searchParams.has("payload")).toBe(false);
+    expect(targetUrl.searchParams.has("draft")).toBe(false);
+    expect(screen.queryByTestId("login-modal")).not.toBeInTheDocument();
+    expect(processDiscussionCreationFlowMock).not.toHaveBeenCalled();
+
+    mockCreateAuthUser.pubkey = "f".repeat(64);
+    mockCreateAuthUser.isLoggedIn = true;
+    view.rerender(<DiscussionCreatePage />);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "会話を作成する" })).toBeInTheDocument(),
+    );
+    expect(processDiscussionCreationFlowMock).not.toHaveBeenCalled();
   });
 });

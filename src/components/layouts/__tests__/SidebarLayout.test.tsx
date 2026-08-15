@@ -90,4 +90,24 @@ describe("SidebarLayout", () => {
       screen.queryByTitle("開発者を支援する（Ko-fi）"),
     ).not.toBeInTheDocument();
   });
+
+  it("public layout exposes exactly one keyboard-focusable main-content landmark", () => {
+    render(
+      <SidebarLayout
+        koFiUsername={null}
+        koFiContent={{
+          heading: "開発者を支援する",
+          message: "支援をお願いします。",
+        }}
+      >
+        <div>公開ページ本文</div>
+      </SidebarLayout>,
+    );
+
+    const mains = screen.getAllByRole("main");
+    expect(mains).toHaveLength(1);
+    expect(mains[0]).toHaveAttribute("id", "main-content");
+    expect(mains[0]).toHaveAttribute("tabindex", "-1");
+    expect((mains[0] as HTMLElement).tabIndex).toBe(-1);
+  });
 });

@@ -89,12 +89,6 @@ export interface UserAuth {
   profile: NostrProfile | null
 }
 
-export interface LoginModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess: (pwk: PWKBlob) => void
-}
-
 export interface PostPreviewProps {
   content: string
   busStopTag?: string

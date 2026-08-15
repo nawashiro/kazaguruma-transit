@@ -6,11 +6,9 @@ import { useRouter } from "next/navigation";
 import {
   KeyLocationCategory,
   KeyLocation,
-  convertToLocation,
 } from "../../utils/addressLoader";
 import { logger } from "../../utils/logger";
-import RateLimitModal from "@/components/features/RateLimitModal";
-import LocationDetailModal from "@/components/features/LocationDetailModal";
+import LocationCard from "@/components/features/LocationCard";
 import Card from "@/components/ui/Card";
 import CarouselCard from "@/components/ui/CarouselCard";
 import Button from "@/components/ui/Button";
@@ -19,7 +17,6 @@ import CategoryTabs from "@/components/ui/CategoryTabs";
 import PageHeader from "@/components/layouts/PageHeader";
 import {
   calculateDistance,
-  findLocationAreaName,
   geocodeAddress,
   groupCategoryLocationsByArea,
   loadLocationCategories,
@@ -31,6 +28,7 @@ type LocationWithDistance = KeyLocation & {
 };
 
 export default function LocationsPage() {
+  const router = useRouter();
   const [categories, setCategories] = useState<KeyLocationCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,27 +42,17 @@ export default function LocationsPage() {
     LocationWithDistance[]
   >([]);
   const [positionLoading, setPositionLoading] = useState(false);
-  const router = useRouter();
 
   // 住所検索のための状態
   const [address, setAddress] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
 
   // 町村ごとの分類のための状態
   const [locationsByArea, setLocationsByArea] = useState<{
     [areaName: string]: LocationWithDistance[];
   }>({});
   const [geoJsonLoading, setGeoJsonLoading] = useState(false);
-
-  // モーダル表示のための状態
-  const [selectedLocation, setSelectedLocation] =
-    useState<LocationWithDistance | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedLocationAreaName, setSelectedLocationAreaName] = useState<
-    string | null
-  >(null);
 
   // すべてのデータ読み込み状態の管理（Rubyful実行タイミング制御用）
   const [, setAllDataLoaded] = useState(false);
@@ -152,14 +140,6 @@ export default function LocationsPage() {
     }
   };
 
-  const handleGoToLocation = (location: KeyLocation) => {
-    // ホームページに遷移して目的地として設定
-    const locationObj = convertToLocation(location);
-    router.push(
-      `/?destination=${encodeURIComponent(JSON.stringify(locationObj))}`
-    );
-  };
-
   const sortByDistance = useCallback(() => {
     setPositionLoading(true);
     // カテゴリが選択されていない場合はソート状態をリセットしない
@@ -234,8 +214,7 @@ export default function LocationsPage() {
       const result = await geocodeAddress(address);
 
       if (result.status === "rate-limited") {
-        setIsRateLimitModalOpen(true);
-        setSearchLoading(false);
+        router.push("/rate-limit?source=locations");
         return;
       }
 
@@ -295,76 +274,6 @@ export default function LocationsPage() {
     });
 
     return groups;
-  };
-
-  // モーダルを開く関数
-  const openLocationModal = async (location: LocationWithDistance) => {
-    setSelectedLocation(location);
-
-    // 町名を取得
-    try {
-      setSelectedLocationAreaName(await findLocationAreaName(location));
-    } catch (err) {
-      logger.log("町名取得エラー:", err);
-      setSelectedLocationAreaName("不明");
-    }
-
-    setIsModalOpen(true);
-  };
-
-  // モーダルを閉じる関数
-  const closeLocationModal = () => {
-    setIsModalOpen(false);
-  };
-
-  // 施設カードのコンポーネント（再利用のため抽出）
-  const LocationCard = ({ location }: { location: LocationWithDistance }) => {
-    const [areaName, setAreaName] = useState<string | null>(null);
-
-    // コンポーネントマウント時に町名を取得
-    useEffect(() => {
-      const fetchAreaName = async () => {
-        try {
-          setAreaName(await findLocationAreaName(location));
-        } catch (err) {
-          logger.log("町名取得エラー:", err);
-          setAreaName("不明");
-        }
-      };
-
-      fetchAreaName();
-    }, [location.lat, location.lng]);
-
-    return (
-      <button
-        onClick={() => openLocationModal(location)}
-        aria-label={`${location.name}の詳細を表示`}
-        className="card cursor-pointer bg-base-100 shadow-sm hover:shadow-lg transition-all w-full h-fit"
-      >
-        {location.imageUri && (
-          <figure className="relative">
-            <img
-              src={location.imageUri}
-              alt={location.name}
-              className="object-cover h-48 w-full"
-              style={{ width: "100%", height: "192px", objectFit: "cover" }}
-            />
-          </figure>
-        )}
-
-        <div className="card-body text-left">
-          <h2 className="card-title ">{location.name}</h2>
-
-          {areaName && <p className="text-sm /60">{areaName}</p>}
-
-          {location.description && (
-            <p className="text-sm mt-1 inline ruby-text">
-              {location.description}
-            </p>
-          )}
-        </div>
-      </button>
-    );
   };
 
   if (loading) {
@@ -569,7 +478,7 @@ export default function LocationsPage() {
                       </h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                         {locations.map((location) => (
-                          <LocationCard key={location.id} location={location} />
+                          <LocationCard key={location.id} location={location} areaName={areaName} />
                         ))}
                       </div>
                     </div>
@@ -709,22 +618,6 @@ export default function LocationsPage() {
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
-
-      {/* モーダルコンポーネント */}
-      {isModalOpen && (
-        <LocationDetailModal
-          location={selectedLocation}
-          onClose={closeLocationModal}
-          onGoToLocation={handleGoToLocation}
-          areaName={selectedLocationAreaName}
-        />
-      )}
-
-      {/* レート制限モーダル */}
-      <RateLimitModal
-        isOpen={isRateLimitModalOpen}
-        onClose={() => setIsRateLimitModalOpen(false)}
-      />
     </>
   );
 }

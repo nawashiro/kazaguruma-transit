@@ -7,7 +7,6 @@ import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { useGeocodingSearch } from "./useGeocodingSearch";
-import RateLimitModal from "./RateLimitModal";
 import { FiSearch } from "react-icons/fi";
 
 interface DestinationSelectorProps {
@@ -19,7 +18,7 @@ export default function DestinationSelector({
 }: DestinationSelectorProps) {
   const [address, setAddress] = useState("");
   const handleSelected = useCallback((location: Location) => onDestinationSelected(location), [onDestinationSelected]);
-  const { error, loading, isRateLimitModalOpen, setIsRateLimitModalOpen, search } = useGeocodingSearch(handleSelected);
+  const { error, loading, search } = useGeocodingSearch(handleSelected);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,8 +30,7 @@ export default function DestinationSelector({
   };
 
   return (
-    <>
-      <Card title="目的地を選択してください" className="mb-6">
+    <Card title="目的地を選択してください" className="mb-6">
         <LocationSuggestions onLocationSelected={handleLocationSelected} />
 
         <div className="divider">または</div>
@@ -66,12 +64,5 @@ export default function DestinationSelector({
           />
         </form>
       </Card>
-
-      {/* レート制限モーダル */}
-      <RateLimitModal
-        isOpen={isRateLimitModalOpen}
-        onClose={() => setIsRateLimitModalOpen(false)}
-      />
-    </>
   );
 }

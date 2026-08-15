@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useId, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Location } from "@/types/core";
 import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { logger } from "@/utils/logger";
 import { useGeocodingSearch } from "./useGeocodingSearch";
-import RateLimitModal from "./RateLimitModal";
 import { FiSearch } from "react-icons/fi";
 import { MdMyLocation } from "react-icons/md";
 
@@ -18,11 +18,12 @@ interface OriginSelectorProps {
 export default function OriginSelector({
   onOriginSelected,
 }: OriginSelectorProps) {
+  const router = useRouter();
   const [address, setAddress] = useState("");
   const uniqueId = useId();
   const buttonGroupId = `origin-actions-${uniqueId}`;
   const handleSelected = useCallback((location: Location) => onOriginSelected(location), [onOriginSelected]);
-  const { error, setError, loading, setLoading, isRateLimitModalOpen, setIsRateLimitModalOpen, search } = useGeocodingSearch(handleSelected);
+  const { error, setError, loading, setLoading, search } = useGeocodingSearch(handleSelected);
 
   const handleAddressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +57,8 @@ export default function OriginSelector({
             logger.log("Reverse Geocode API Response:", data);
 
             if (response.status === 429 && data.limitExceeded) {
-              setIsRateLimitModalOpen(true);
+              setLoading(false);
+              router.push("/rate-limit?source=home");
               return;
             }
 
@@ -140,12 +142,6 @@ export default function OriginSelector({
           </fieldset>
         </form>
       </Card>
-
-      {/* レート制限モーダル */}
-      <RateLimitModal
-        isOpen={isRateLimitModalOpen}
-        onClose={() => setIsRateLimitModalOpen(false)}
-      />
     </>
   );
 }

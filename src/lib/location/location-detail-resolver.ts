@@ -1,0 +1,138 @@
+import type { LocationDetailResult } from "@/types/access-route-pages";
+import { isKeyLocationCategory } from "@/utils/addressLoader";
+import type {
+  KeyLocation,
+  KeyLocationsDataResult,
+} from "@/utils/addressLoader";
+
+const INVALID_LOCATION_ID_PATTERN = /[\\/?#\u0000-\u001f\u007f-\u009f]/;
+
+type ResolvedLocationDetail = LocationDetailResult<KeyLocation>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function createMalformedDataError(): Error {
+  return new Error("場所データの形式が不正です");
+}
+
+function isKeyLocationsDataResult(value: unknown): value is KeyLocationsDataResult {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  if (value.status === "error") {
+    return value.error instanceof Error;
+  }
+
+  return (
+    value.status === "success" &&
+    Array.isArray(value.categories) &&
+    value.categories.every(isKeyLocationCategory)
+  );
+}
+
+function isValidLocationId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.trim() === value &&
+    !INVALID_LOCATION_ID_PATTERN.test(value)
+  );
+}
+
+function collectLocations(
+  categories: Extract<KeyLocationsDataResult, { status: "success" }>["categories"],
+):
+  | { status: "success"; locations: KeyLocation[] }
+  | { status: "error"; error: Error } {
+  const locations: KeyLocation[] = [];
+  const seenIds = new Set<string>();
+
+  if (!Array.isArray(categories)) {
+    return {
+      status: "error",
+      error: new Error("場所データの形式が不正です"),
+    };
+  }
+
+  for (const category of categories) {
+    if (!isKeyLocationCategory(category)) {
+      return {
+        status: "error",
+        error: new Error("場所データの形式が不正です"),
+      };
+    }
+
+    for (const location of category.locations) {
+      if (
+        typeof location !== "object" ||
+        location === null ||
+        !isValidLocationId(location.id)
+      ) {
+        return {
+          status: "error",
+          error: new Error("場所識別子が不正です"),
+        };
+      }
+
+      if (seenIds.has(location.id)) {
+        return {
+          status: "error",
+          error: new Error("場所識別子が重複しています"),
+        };
+      }
+
+      seenIds.add(location.id);
+      locations.push(location);
+    }
+  }
+
+  return { status: "success", locations };
+}
+
+/** Resolves one location ID while preserving transport and identity failures. */
+export function resolveLocationDetail(
+  id: unknown,
+  data: KeyLocationsDataResult,
+): ResolvedLocationDetail {
+  if (!isValidLocationId(id)) {
+    return {
+      status: "error",
+      error: new Error("場所識別子が不正です"),
+    };
+  }
+
+  if (!isKeyLocationsDataResult(data)) {
+    return {
+      status: "error",
+      error: createMalformedDataError(),
+    };
+  }
+
+  if (data.status === "error") {
+    return {
+      status: "data-load-error",
+      error: data.error,
+    };
+  }
+
+  const collected = collectLocations(data.categories);
+  if (collected.status === "error") {
+    return collected;
+  }
+
+  const matches = collected.locations.filter((location) => location.id === id);
+  if (matches.length === 0) {
+    return { status: "not-found" };
+  }
+  if (matches.length !== 1) {
+    return {
+      status: "error",
+      error: new Error("場所識別子が重複しています"),
+    };
+  }
+
+  return { status: "success", location: matches[0] };
+}

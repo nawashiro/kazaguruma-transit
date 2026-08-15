@@ -6,9 +6,11 @@ import "@testing-library/jest-dom";
 import RoutesPage from "../page";
 
 let mockSearchParams = new URLSearchParams();
+const mockRouterPush = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useSearchParams: () => mockSearchParams,
+  useRouter: () => ({ push: mockRouterPush }),
 }));
 
 jest.mock("@/components/features/IntegratedRouteDisplay", () => () => (
@@ -28,10 +30,6 @@ jest.mock("@/components/discussion", () => ({
 jest.mock("@/lib/config/discussion-config", () => ({
   isDiscussionsEnabled: () => true,
 }));
-jest.mock("@/components/features/RateLimitModal", () =>
-  ({ isOpen }: any) => (isOpen ? <div data-testid="mock-rate-limit-modal" /> : null),
-);
-
 const validSearch =
   "origin=35.68%2C139.76&destination=35.7%2C139.78&time=2026-07-18T09%3A30&isDeparture=true&prioritizeSpeed=false";
 
@@ -128,7 +126,7 @@ describe("RoutesPage", () => {
     expect(screen.getByRole("link", { name: "検索条件をリセット" })).toBeInTheDocument();
   });
 
-  it("429を既存のレート制限モーダルへ接続する", async () => {
+  it("429を公開アラートとレート制限ページへの一度きりの遷移へ接続する", async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: false,
       status: 429,
@@ -138,7 +136,9 @@ describe("RoutesPage", () => {
     render(<RoutesPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("mock-rate-limit-modal")).toBeInTheDocument();
+      expect(screen.getByRole("alert")).toHaveTextContent("利用制限");
+      expect(mockRouterPush).toHaveBeenCalledTimes(1);
     });
+    expect(mockRouterPush).toHaveBeenCalledWith("/rate-limit?source=routes");
   });
 });

@@ -1,7 +1,18 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import SettingsPage from "../page";
+
+const mockSettingsUser = {
+  isLoggedIn: true,
+  pubkey: "user-pubkey",
+  profile: { about: "自己紹介" },
+};
+const mockRouterPush = jest.fn();
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockRouterPush }),
+}));
 
 jest.mock("next/link", () => ({
   __esModule: true,
@@ -12,11 +23,7 @@ jest.mock("next/link", () => ({
 
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => ({
-    user: {
-      isLoggedIn: true,
-      pubkey: "user-pubkey",
-      profile: { about: "自己紹介" },
-    },
+    user: mockSettingsUser,
     logout: jest.fn(),
     isLoading: false,
     error: null,
@@ -93,11 +100,6 @@ jest.mock("@/lib/nostr/mnemonic-utils", () => ({
     "あいうえお かきくけこ さしすせそ",
 }));
 
-jest.mock("@/components/discussion/LoginModal", () => ({
-  __esModule: true,
-  LoginModal: () => <div>Login Modal</div>,
-}));
-
 jest.mock("@/components/ui/Button", () => {
   return function MockButton({
     children,
@@ -125,6 +127,8 @@ describe("SettingsPage streaming discussions", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSettingsUser.isLoggedIn = true;
+    mockSettingsUser.pubkey = "user-pubkey";
     discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
       withCompletion([]),
     );
@@ -191,5 +195,25 @@ describe("SettingsPage streaming discussions", () => {
     expect(
       await screen.findByText(/会話データの取得に時間がかかっています/)
     ).toBeInTheDocument();
+  });
+
+  it("sends an unauthenticated user to the login page instead of opening LoginModal", () => {
+    mockSettingsUser.isLoggedIn = false;
+    mockSettingsUser.pubkey = "";
+
+    render(<SettingsPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "ログイン / アカウント作成" }));
+
+    expect(mockRouterPush).toHaveBeenCalledTimes(1);
+    const target = mockRouterPush.mock.calls[0][0] as string;
+    const targetUrl = new URL(target, "https://kazaguruma.invalid");
+    expect(targetUrl.pathname).toBe("/login");
+    expect(targetUrl.searchParams.get("returnTo")).toBe("/settings");
+    expect(targetUrl.searchParams.has("action")).toBe(false);
+    expect(targetUrl.searchParams.has("payload")).toBe(false);
+    expect(targetUrl.searchParams.has("draft")).toBe(false);
+    expect(screen.queryByTestId("login-modal")).not.toBeInTheDocument();
+    expect(discussionReadExecutorMock.executeDiscussionRead).not.toHaveBeenCalled();
   });
 });

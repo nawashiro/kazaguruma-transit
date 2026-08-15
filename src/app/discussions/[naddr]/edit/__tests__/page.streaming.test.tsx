@@ -86,11 +86,6 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   formatRelativeTime: () => "now",
 }));
 
-jest.mock("@/components/discussion/LoginModal", () => ({
-  __esModule: true,
-  LoginModal: () => <div>Login Modal</div>,
-}));
-
 jest.mock("@/components/ui/Button", () => {
   return function MockButton({
     children,

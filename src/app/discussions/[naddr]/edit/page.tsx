@@ -22,7 +22,6 @@ import {
   getDiscussionReadStrategyConfig,
 } from "@/lib/config/discussion-config";
 
-import { LoginModal } from "@/components/discussion/LoginModal";
 import {
   buildDisabledActionState,
   DisabledReasonText,
@@ -54,6 +53,7 @@ import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import type { Event } from "@/lib/nostr/nostr-service";
+import { buildLoginRoute } from "@/lib/navigation/auth-route";
 
 // const ADMIN_PUBKEY = getAdminPubkeyHex(); // eslint-disable-line @typescript-eslint/no-unused-vars
 const nostrServiceConfig = getNostrServiceConfig();
@@ -114,7 +114,6 @@ export default function DiscussionEditPage() {
   >([]);
   const [isPromotionRequestReadComplete, setIsPromotionRequestReadComplete] =
     useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string>("");
@@ -211,7 +210,7 @@ export default function DiscussionEditPage() {
 
   const handleSave = async () => {
     if (!user.isLoggedIn) {
-      setShowLoginModal(true);
+      router.push(buildLoginRoute(`/discussions/${naddrParam}/edit`));
       return;
     }
 
@@ -305,7 +304,7 @@ export default function DiscussionEditPage() {
 
   const handleDelete = async () => {
     if (!user.isLoggedIn) {
-      setShowLoginModal(true);
+      router.push(buildLoginRoute(`/discussions/${naddrParam}/edit`));
       return;
     }
 
@@ -344,7 +343,9 @@ export default function DiscussionEditPage() {
 
   const handleRequestListing = async () => {
     if (!user.isLoggedIn || !discussion || !user.pubkey) {
-      setShowLoginModal(true);
+      if (!user.isLoggedIn) {
+        router.push(buildLoginRoute(`/discussions/${naddrParam}/edit`));
+      }
       return;
     }
 
@@ -385,7 +386,9 @@ export default function DiscussionEditPage() {
 
   const handleRequestPromotion = async () => {
     if (!user.isLoggedIn || !discussion || !user.pubkey) {
-      setShowLoginModal(true);
+      if (!user.isLoggedIn) {
+        router.push(buildLoginRoute(`/discussions/${naddrParam}/edit`));
+      }
       return;
     }
 
@@ -451,7 +454,11 @@ export default function DiscussionEditPage() {
     request: ModeratorPromotionRequest,
     decision: ModeratorDecision,
   ) => {
-    if (!discussion || !user.isLoggedIn || !user.pubkey || !isAuthor) {
+    if (!user.isLoggedIn) {
+      router.push(buildLoginRoute(`/discussions/${naddrParam}/edit`));
+      return;
+    }
+    if (!discussion || !user.pubkey || !isAuthor) {
       return;
     }
 
@@ -631,6 +638,14 @@ export default function DiscussionEditPage() {
               title="基本情報を編集できません"
               description="会話の基本情報を編集できるのは会話作成者だけです。"
             />
+            {!user.isLoggedIn && (
+              <Link
+                href={buildLoginRoute(`/discussions/${naddrParam}/edit`)}
+                className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+              >
+                <span className="ruby-text">ログイン</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -786,7 +801,9 @@ export default function DiscussionEditPage() {
                         editPermissionReason,
                       )}
                       requiresLogin={!user.isLoggedIn}
-                      onLogin={() => setShowLoginModal(true)}
+                      onLogin={() =>
+                        router.push(buildLoginRoute(`/discussions/${naddrParam}/edit`))
+                      }
                     />
                   </div>
 
@@ -952,7 +969,11 @@ export default function DiscussionEditPage() {
                             requestPromotionReason,
                           )}
                           requiresLogin={false}
-                          onLogin={() => setShowLoginModal(true)}
+                          onLogin={() =>
+                            router.push(
+                              buildLoginRoute(`/discussions/${naddrParam}/edit`),
+                            )
+                          }
                         />
                       </div>
 
@@ -1081,10 +1102,6 @@ export default function DiscussionEditPage() {
         </dialog>
       )}
 
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-      />
     </div>
   );
 }

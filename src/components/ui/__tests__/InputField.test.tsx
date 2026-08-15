@@ -175,4 +175,33 @@ describe("InputField", () => {
     expect(input).toHaveAttribute("name", "test-name");
     expect(input).toHaveAttribute("maxLength", "50");
   });
+
+  it("public field semantics keep native required input, label, and resolved descriptions together", () => {
+    render(
+      <InputField
+        value=""
+        onChange={mockOnChange}
+        label="公開ラベル"
+        description="公開説明"
+        error="公開エラー"
+        required
+        testId="test-input"
+      />,
+    );
+
+    const input = screen.getByTestId("test-input");
+    const label = screen.getByText("公開ラベル", { selector: "label" });
+    const describedByIds = input.getAttribute("aria-describedby")?.split(/\s+/) ?? [];
+
+    expect(input.tagName).toBe("INPUT");
+    expect(input).toBeRequired();
+    expect(label).toHaveAttribute("for", input.id);
+    expect(describedByIds).toHaveLength(2);
+    describedByIds.forEach((id) => {
+      expect(id.trim()).not.toBe("");
+      expect(document.getElementById(id)).not.toBeNull();
+    });
+    expect(describedByIds).toContain(screen.getByText("公開説明").id);
+    expect(describedByIds).toContain(screen.getByRole("alert").id);
+  });
 });

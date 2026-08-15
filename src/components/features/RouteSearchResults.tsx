@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Card from "@/components/ui/Card";
 import IntegratedRouteDisplay from "./IntegratedRouteDisplay";
 import RoutePdfExport from "./RoutePdfExport";
 import RouteCalendarExport from "./RouteCalendarExport";
-import RateLimitModal from "./RateLimitModal";
 import { BusStopDiscussion, BusStopMemo, getBusStopMemoData } from "@/components/discussion";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import {
@@ -36,6 +36,16 @@ type ResultState =
 interface RouteSearchResultsProps {
   searchParams: string;
 }
+
+type RateLimitRouter = {
+  push: (href: string) => void;
+};
+
+const fallbackRateLimitRouter: RateLimitRouter = {
+  push: () => undefined,
+};
+const publicRouterHook = useRouter as (() => RateLimitRouter) | undefined;
+const getRateLimitRouter = publicRouterHook ?? (() => fallbackRateLimitRouter);
 
 function ResetSearchConditionsLink() {
   return (
@@ -79,7 +89,9 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
     [searchParams],
   );
   const [resultState, setResultState] = useState<ResultState>({ status: "loading" });
-  const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
+  const router = getRateLimitRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router;
   const [memoData, setMemoData] = useState<Map<string, PostWithStats>>(new Map());
 
   useEffect(() => {
@@ -87,7 +99,6 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
 
     const abortController = new AbortController();
     setResultState({ status: "loading" });
-    setIsRateLimitModalOpen(false);
 
     const search = async () => {
       try {
@@ -99,8 +110,8 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
         const apiResponse = (await response.json()) as ApiResponse;
 
         if (response.status === 429 && apiResponse.limitExceeded) {
-          setIsRateLimitModalOpen(true);
           setResultState({ status: "error", message: "利用制限に達しました" });
+          routerRef.current.push("/rate-limit?source=routes");
           return;
         }
         if (!response.ok || !apiResponse.success) {
@@ -158,15 +169,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
     );
   }
   if (resultState.status === "error") {
-    return (
-      <>
-        <SearchError message={resultState.message} />
-        <RateLimitModal
-          isOpen={isRateLimitModalOpen}
-          onClose={() => setIsRateLimitModalOpen(false)}
-        />
-      </>
-    );
+    return <SearchError message={resultState.message} />;
   }
 
   const { routeInfo } = resultState;

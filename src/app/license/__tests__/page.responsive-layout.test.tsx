@@ -16,6 +16,12 @@ describe("LicensePage responsive layout", () => {
       expect(table.classList.contains("table-sm")).toBe(false);
     });
 
+    const columnHeaders = screen.getAllByRole("columnheader");
+    expect(columnHeaders).toHaveLength(5);
+    columnHeaders.forEach((header) => {
+      expect(header.classList.contains("text-base-content")).toBe(true);
+    });
+
     expect(
       screen.getByRole("link", { name: /github.com\/nawashiro\/kazaguruma-transit/ }).classList.contains("break-all")
     ).toBe(true);

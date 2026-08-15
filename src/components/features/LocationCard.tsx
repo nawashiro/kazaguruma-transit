@@ -47,7 +47,6 @@ export default function LocationCard({ location, areaName }: LocationCardProps) 
   return (
     <Link
       href={detailHref}
-      aria-label={`${location.name}の詳細を表示`}
       className="card cursor-pointer bg-base-100 shadow-sm hover:shadow-lg transition-all w-full h-fit"
     >
       {location.imageUri && (

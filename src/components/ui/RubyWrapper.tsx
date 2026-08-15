@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 interface RubyWrapperProps {
   className?: string;
   delay?: number;
-  observe?: any;
+  observe?: ReadonlyArray<unknown>;
 }
 
 export default function RubyWrapper({
@@ -17,7 +17,7 @@ export default function RubyWrapper({
 
   useEffect(() => {
     logger.log("RubyWrapper実行");
-    if (typeof window !== "undefined" && (window as any).RubyfulV2) {
+    if (typeof window !== "undefined" && window.RubyfulV2) {
       const sleep = (time: number) =>
         new Promise((resolve) => setTimeout(resolve, time));
 

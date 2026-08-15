@@ -111,6 +111,8 @@ These principles are the operational source of truth for agents working in this 
 - TypeScript 5 strict、React 19、Next.js 15 App Router + Tailwind CSS 4、DaisyUI 5、`@heroicons/react`、`react-icons`、Jest、React Testing Library、Puppeteer (015-accessibility-violation-fix)
 - N/A（新規永続化なし。既存の状態・データ取得を維持） (015-accessibility-violation-fix)
 - TypeScript 5 strict、React 19、Next.js 15 App Router + Tailwind CSS 4、DaisyUI 5、既存TransitService、Jest、React Testing Library (016-bookmarkable-route-results)
+- TypeScript 5 strict、React 19、Next.js 15 App Router、Node.js 22.x + React Testing Library、Jest、Tailwind CSS 4、DaisyUI 5、既存AuthContext、`nosskey-sdk`、既存location loader、既存Nostr/Transitサービス (018-accessible-route-pages)
+- 新規永続化なし。既存のブラウザ内Passkey/PWK状態、CDN場所データ、既存API・SQLite/Prisma境界を利用し、場所loaderだけtransport statusを保持する最小拡張を行う。 (018-accessible-route-pages)
 
 - TypeScript 5, React 19, Next.js 15 (App Router) + DaisyUI 5, Tailwind CSS 4, webpack-license-plugin（導入パッケージライセンス収集）, Prisma（既存） (005-license-page-autogen)
 - 既存SQLite（本機能では新規永続化なし）、`package.json`、オープンデータ用JSONファイル (005-license-page-autogen)

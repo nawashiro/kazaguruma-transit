@@ -1,4 +1,3 @@
-export { LoginModal } from './LoginModal'
 export { PostPreview } from './PostPreview'
 export { EvaluationComponent } from './EvaluationComponent'
 export { AdminCheck, ModeratorCheck, AuthCheck } from './PermissionGuards'

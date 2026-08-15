@@ -15,7 +15,6 @@ import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
 } from "@/lib/config/discussion-config";
-import { LoginModal } from "@/components/discussion/LoginModal";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import { getAdminPubkeyHex } from "@/lib/nostr/nostr-utils";
 import {
@@ -26,6 +25,7 @@ import Button from "@/components/ui/Button";
 import PageHeader from "@/components/layouts/PageHeader";
 import { UserIdentity } from "@/components/ui/UserIdentity";
 import { logger } from "@/utils/logger";
+import { buildLoginRoute } from "@/lib/navigation/auth-route";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
@@ -41,7 +41,6 @@ export default function DiscussionCreatePage() {
   });
   const [moderatorInput, setModeratorInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [createdNaddr, setCreatedNaddr] = useState<string>("");
@@ -62,7 +61,7 @@ export default function DiscussionCreatePage() {
 
   const handleSubmit = async () => {
     if (!user.isLoggedIn) {
-      setShowLoginModal(true);
+      router.push(buildLoginRoute("/discussions/create"));
       return;
     }
 
@@ -413,10 +412,6 @@ export default function DiscussionCreatePage() {
         </div>
       </div>
 
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-      />
     </div>
   );
 }

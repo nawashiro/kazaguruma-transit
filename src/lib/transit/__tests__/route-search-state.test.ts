@@ -49,6 +49,43 @@ describe("route-search-state", () => {
     expect(current).toEqual(loading);
   });
 
+  it("rate-limited action exposes no result and an optional message", () => {
+    const loading = reduceRouteSearchState(createInitialRouteSearchState(), {
+      type: "start",
+      requestId: 1,
+    });
+
+    expect(
+      reduceRouteSearchState(loading, {
+        type: "rate-limited",
+        requestId: 1,
+        message: "1時間待ってから再試行してください",
+      }),
+    ).toEqual({
+      status: "rate-limited",
+      requestId: 1,
+      result: null,
+      message: "1時間待ってから再試行してください",
+    });
+  });
+
+  it("stale rate-limited results cannot replace a newer request", () => {
+    const loading = reduceRouteSearchState(
+      reduceRouteSearchState(createInitialRouteSearchState(), {
+        type: "start",
+        requestId: 1,
+      }),
+      { type: "start", requestId: 2 },
+    );
+
+    expect(
+      reduceRouteSearchState(loading, {
+        type: "rate-limited",
+        requestId: 1,
+      }),
+    ).toEqual(loading);
+  });
+
   it("リセットで入力結果を初期状態へ戻す", () => {
     const loading = reduceRouteSearchState(createInitialRouteSearchState(), {
       type: "start",

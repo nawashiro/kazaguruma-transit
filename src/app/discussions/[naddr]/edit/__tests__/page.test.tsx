@@ -10,6 +10,7 @@ const authState = {
     isLoggedIn: true,
   },
 };
+const routerPushMock = jest.fn();
 const signEventMock = jest.fn(async (event: unknown) => ({
   id: "signed-id",
   kind: 1111,
@@ -56,8 +57,15 @@ const mockUseDiscussionMeta = jest.fn();
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr1discussion" }),
   useRouter: () => ({
-    push: jest.fn(),
+    push: routerPushMock,
   }),
+}));
+
+jest.mock("next/link", () => ({
+  __esModule: true,
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
 }));
 
 jest.mock("@/lib/auth/auth-context", () => ({
@@ -192,14 +200,10 @@ jest.mock("@/lib/discussion/user-creation-flow", () => ({
     )(...args),
 }));
 
-jest.mock("@/components/discussion/LoginModal", () => ({
-  LoginModal: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="login-modal">Login Modal</div> : null,
-}));
-
 describe("DiscussionEditPage listing request", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    routerPushMock.mockReset();
     const layoutDiscussion: Discussion = {
       id: "34550:f:test-discussion",
       title: "Test Discussion",
@@ -312,13 +316,38 @@ describe("DiscussionEditPage listing request", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows only the permission explanation for unauthenticated users", async () => {
+  it("renders an unauthenticated login control without opening LoginModal or auto-saving", async () => {
     authState.user = { pubkey: "", isLoggedIn: false };
-
-    render(<DiscussionEditPage />);
+    const view = render(<DiscussionEditPage />);
 
     expect(
       await screen.findByText("会話の基本情報を編集できるのは会話作成者だけです。"),
     ).toBeInTheDocument();
+    expect(routerPushMock).not.toHaveBeenCalled();
+    const loginLink = await screen.findByRole("link", { name: /ログイン/ });
+    if (loginLink instanceof HTMLButtonElement) {
+      fireEvent.click(loginLink);
+    }
+    const targetUrl = new URL(
+      loginLink.getAttribute("href") ?? "",
+      "https://kazaguruma.invalid",
+    );
+    expect(targetUrl.pathname).toBe("/login");
+    expect(targetUrl.searchParams.get("returnTo")).toBe(
+      "/discussions/naddr1discussion/edit",
+    );
+    expect(targetUrl.searchParams.has("action")).toBe(false);
+    expect(targetUrl.searchParams.has("payload")).toBe(false);
+    expect(targetUrl.searchParams.has("draft")).toBe(false);
+    expect(screen.queryByTestId("login-modal")).not.toBeInTheDocument();
+    expect(signEventMock).not.toHaveBeenCalled();
+    expect(
+      jest.requireMock("@/lib/nostr/nostr-service").__mock.publishSignedEvent,
+    ).not.toHaveBeenCalled();
+
+    authState.user = { pubkey: "f".repeat(64), isLoggedIn: true };
+    view.rerender(<DiscussionEditPage />);
+    await screen.findByRole("button", { name: "変更を保存" });
+    expect(signEventMock).not.toHaveBeenCalled();
   });
 });

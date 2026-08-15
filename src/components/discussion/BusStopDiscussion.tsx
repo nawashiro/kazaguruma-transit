@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { LoginModal } from "./LoginModal";
 import { PostPreview } from "./PostPreview";
 import Button from "@/components/ui/Button";
 import { EvaluationComponent } from "./EvaluationComponent";
@@ -21,6 +21,7 @@ import type {
 } from "@/types/discussion";
 import { projectBusStopSnapshot } from "@/lib/discussion/bus-stop-projection";
 import { logger } from "@/utils/logger";
+import { buildLoginRoute } from "@/lib/navigation/auth-route";
 
 interface BusStopDiscussionProps {
   busStops: string[];
@@ -37,8 +38,7 @@ export function BusStopDiscussion({
     new Set()
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginReason, setLoginReason] = useState<string>("");
+  const router = useRouter();
   const [showPreview, setShowPreview] = useState(false);
   const [postForm, setPostForm] = useState<PostFormData>({
     content: "",
@@ -104,8 +104,9 @@ export function BusStopDiscussion({
 
   const handlePostSubmit = async () => {
     if (!user.isLoggedIn) {
-      setLoginReason("投稿するにはログインが必要です。");
-      setShowLoginModal(true);
+      router.push(
+        buildLoginRoute("/", "投稿するにはログインが必要です。"),
+      );
       return;
     }
 
@@ -145,8 +146,9 @@ export function BusStopDiscussion({
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (!user.isLoggedIn) {
-      setLoginReason("投稿を評価するにはログインが必要です。");
-      setShowLoginModal(true);
+      router.push(
+        buildLoginRoute("/", "投稿を評価するにはログインが必要です。"),
+      );
       return;
     }
 
@@ -297,14 +299,6 @@ export function BusStopDiscussion({
         )}
       </div>
 
-      <LoginModal
-        isOpen={showLoginModal}
-        reason={loginReason}
-        onClose={() => {
-          setShowLoginModal(false);
-          setLoginReason("");
-        }}
-      />
     </div>
   );
 }

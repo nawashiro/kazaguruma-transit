@@ -4,6 +4,7 @@
 export const dynamic = "force-dynamic";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowRightOnRectangleIcon,
   DocumentTextIcon,
@@ -24,9 +25,9 @@ import {
   createDiscussionNdkGateway,
   type NostrEventDTO,
 } from "@/lib/nostr/discussion-ndk-gateway";
-import { LoginModal } from "@/components/discussion/LoginModal";
 import { UserIdentity } from "@/components/ui/UserIdentity";
 import Button from "@/components/ui/Button";
+import { buildLoginRoute } from "@/lib/navigation/auth-route";
 import type { Discussion } from "@/types/discussion";
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
@@ -37,7 +38,7 @@ const discussionReadStrategy = getDiscussionReadStrategyConfig();
 const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function SettingsPage() {
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [myDiscussions, setMyDiscussions] = useState<Discussion[]>([]);
   const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(false);
@@ -215,7 +216,7 @@ export default function SettingsPage() {
 
                 <div className="flex flex-col gap-3">
                   <Button
-                    onClick={() => setShowLoginModal(true)}
+                    onClick={() => router.push(buildLoginRoute("/settings"))}
                     disabled={isLoading}
                     className="whitespace-nowrap text-base"
                   >
@@ -333,10 +334,6 @@ export default function SettingsPage() {
           </div>
         
      
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-      />
     </div>
   );
 }

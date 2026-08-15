@@ -26,7 +26,10 @@ export default function Sidebar({
   koFiUsername,
 }: SidebarProps) {
   return (
-    <aside className="h-full w-80 border-r bg-base-200">
+    <nav
+      aria-label="サイトナビゲーション"
+      className="h-full w-80 border-r bg-base-200"
+    >
       <ul className="menu p-4 space-y-4 w-full bg-base-200">
         <li>
           <details open>
@@ -34,25 +37,21 @@ export default function Sidebar({
               <RocketLaunchIcon className="h-6 w-6" />
               <span className="font-semibold ruby-text">使う</span>
             </summary>
-            <ul role="menu" className="menu w-full ">
+            <ul className="menu w-full ">
               <li>
-                <Link role="menuitem" href="/" onClick={toggleSidebar}>
+                <Link href="/" onClick={toggleSidebar}>
                   <HomeIcon className="h-6 w-6" />
                   <span className="ruby-text">ホーム</span>
                 </Link>
               </li>
               <li>
-                <Link role="menuitem" href="/locations" onClick={toggleSidebar}>
+                <Link href="/locations" onClick={toggleSidebar}>
                   <MapPinIcon className="h-6 w-6" />
                   <span className="ruby-text">場所をさがす</span>
                 </Link>
               </li>
               <li>
-                <Link
-                  role="menuitem"
-                  href="/discussions"
-                  onClick={toggleSidebar}
-                >
+                <Link href="/discussions" onClick={toggleSidebar}>
                   <ChatBubbleLeftRightIcon className="h-6 w-6" />
                   <span className="ruby-text">意見交換</span>
                 </Link>
@@ -68,10 +67,9 @@ export default function Sidebar({
                 使い方やサイト情報
               </span>
             </summary>
-            <ul role="menu" className="menu w-full ">
+            <ul className="menu w-full ">
               <li>
                 <Link
-                  role="menuitem"
                   href="/beginners-guide"
                   onClick={toggleSidebar}
                 >
@@ -86,19 +84,19 @@ export default function Sidebar({
                 </Link>
               </li>
               <li>
-                <Link role="menuitem" href="/usage" onClick={toggleSidebar}>
+                <Link href="/usage" onClick={toggleSidebar}>
                   <BookOpenIcon className="h-6 w-6" />
                   <span className="ruby-text">使い方</span>
                 </Link>
               </li>
               <li>
-                <Link role="menuitem" href="/award" onClick={toggleSidebar}>
+                <Link href="/award" onClick={toggleSidebar}>
                   <TrophyIcon className="h-6 w-6" />
                   <span className="ruby-text">受賞について</span>
                 </Link>
               </li>
               <li>
-                <Link role="menuitem" href="/license" onClick={toggleSidebar}>
+                <Link href="/license" onClick={toggleSidebar}>
                   <DocumentTextIcon className="h-6 w-6" />
                   <span className="ruby-text">ライセンス</span>
                 </Link>
@@ -108,7 +106,6 @@ export default function Sidebar({
                   href="https://github.com/nawashiro/kazaguruma-transit/releases"
                   target="_blank"
                   rel="noopener noreferrer"
-                  role="menuitem"
                 >
                   <span className="inline">
                     <ArrowPathIcon className="h-6 w-6" />
@@ -119,29 +116,30 @@ export default function Sidebar({
             </ul>
           </details>
         </li>
-        <ul role="menu" className="menu w-full ">
-          <li>
-            <Link role="menuitem" href="/settings" onClick={toggleSidebar}>
-              <Cog6ToothIcon className="h-6 w-6" />
-              <span className="ruby-text">設定</span>
-            </Link>
-          </li>
-          {koFiUsername && (
+        <li>
+          <ul className="menu w-full ">
             <li>
-              <a
-                href={buildKoFiPageUrl(koFiUsername)}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={toggleSidebar}
-                role="menuitem"
-              >
-                <HeartIcon className="h-6 w-6 text-error" />
-                <span className="ruby-text">開発者を支援する</span>
-              </a>
+              <Link href="/settings" onClick={toggleSidebar}>
+                <Cog6ToothIcon className="h-6 w-6" />
+                <span className="ruby-text">設定</span>
+              </Link>
             </li>
-          )}
-        </ul>
+            {koFiUsername && (
+              <li>
+                <a
+                  href={buildKoFiPageUrl(koFiUsername)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={toggleSidebar}
+                >
+                  <HeartIcon className="h-6 w-6 text-error" />
+                  <span className="ruby-text">開発者を支援する</span>
+                </a>
+              </li>
+            )}
+          </ul>
+        </li>
       </ul>
-    </aside>
+    </nav>
   );
 }

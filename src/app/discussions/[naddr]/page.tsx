@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/layouts/PageHeader";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   isDiscussionsEnabled,
@@ -14,7 +14,6 @@ import {
   getDiscussionReadStrategyConfig,
   DEFAULT_RELAYS,
 } from "@/lib/config/discussion-config";
-import { LoginModal } from "@/components/discussion/LoginModal";
 import { PostPreview } from "@/components/discussion/PostPreview";
 import { EvaluationComponent } from "@/components/discussion/EvaluationComponent";
 import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
@@ -44,6 +43,7 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
+import { buildLoginRoute } from "@/lib/navigation/auth-route";
 
 const nostrServiceConfig = getNostrServiceConfig();
 const readStrategy = typeof getDiscussionReadStrategyConfig === "function" ? getDiscussionReadStrategyConfig() : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
@@ -52,6 +52,7 @@ const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function DiscussionDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const naddrParam = params.naddr as string;
 
   const [consensusTab, setConsensusTab] = useState<string>("group-consensus");
@@ -76,8 +77,6 @@ export default function DiscussionDetailPage() {
     </div>
   );
 
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginReason, setLoginReason] = useState<string>("");
   const [showPreview, setShowPreview] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState("");
   const [postForm, setPostForm] = useState<PostFormData>({
@@ -336,8 +335,14 @@ export default function DiscussionDetailPage() {
 
   const handlePostSubmit = async () => {
     if (!user.isLoggedIn || !discussion) {
-      setLoginReason("投稿するにはログインが必要です。");
-      setShowLoginModal(true);
+      if (!user.isLoggedIn) {
+        router.push(
+          buildLoginRoute(
+            `/discussions/${naddrParam}`,
+            "投稿するにはログインが必要です。",
+          ),
+        );
+      }
       return;
     }
 
@@ -397,8 +402,14 @@ export default function DiscussionDetailPage() {
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (!user.isLoggedIn || !discussion) {
-      setLoginReason("投稿を評価するにはログインが必要です。");
-      setShowLoginModal(true);
+      if (!user.isLoggedIn) {
+        router.push(
+          buildLoginRoute(
+            `/discussions/${naddrParam}`,
+            "投稿を評価するにはログインが必要です。",
+          ),
+        );
+      }
       return;
     }
 
@@ -861,14 +872,6 @@ export default function DiscussionDetailPage() {
           </section>
         </div>
 
-      <LoginModal
-        isOpen={showLoginModal}
-        reason={loginReason}
-        onClose={() => {
-          setShowLoginModal(false);
-          setLoginReason("");
-        }}
-      />
     </div>
   );
 }

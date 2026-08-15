@@ -1,0 +1,39 @@
+/** A return target that has passed same-site navigation validation. */
+export type SafeReturnTarget = string & {
+  readonly __safeReturnTarget: unique symbol;
+};
+
+/** Identifies the fixed page that originated a rate-limit state. */
+export type RateLimitSource = "home" | "locations" | "routes";
+
+/** Public states rendered by the location detail page. */
+export type LocationPageState =
+  | "loading"
+  | "success"
+  | "not-found"
+  | "error"
+  | "data-load-error";
+
+/** Successful location-data transport result. */
+export interface LocationDataSuccess<TCategory> {
+  status: "success";
+  categories: TCategory[];
+}
+
+/** Failed location-data transport result. */
+export interface LocationDataError {
+  status: "error";
+  error: Error;
+}
+
+/** Status-preserving result returned by the location-data boundary. */
+export type LocationDataLoadResult<TCategory> =
+  | LocationDataSuccess<TCategory>
+  | LocationDataError;
+
+/** Result of resolving one location identifier for the detail page. */
+export type LocationDetailResult<TLocation> =
+  | { status: "success"; location: TLocation }
+  | { status: "not-found" }
+  | { status: "error"; error: Error }
+  | { status: "data-load-error"; error: Error };

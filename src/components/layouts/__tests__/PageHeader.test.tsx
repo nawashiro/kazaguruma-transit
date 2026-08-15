@@ -22,4 +22,15 @@ describe("PageHeader", () => {
     expect(screen.getByText("補足")).toBeInTheDocument();
     expect(screen.getByText("ページの説明")).toBeInTheDocument();
   });
+
+  it("public heading contract exposes exactly one level-one heading and optional description in a header", () => {
+    render(<PageHeader title="公開ページ" description="公開ページの説明" />);
+
+    const headings = screen.getAllByRole("heading", { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0].tagName).toBe("H1");
+    expect(headings[0].closest("header")).toContainElement(
+      screen.getByText("公開ページの説明"),
+    );
+  });
 });

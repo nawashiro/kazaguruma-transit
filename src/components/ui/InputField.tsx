@@ -16,6 +16,7 @@ interface InputFieldProps {
   name?: string;
   maxLength?: number;
   endAdornment?: React.ReactNode;
+  label?: string;
 }
 
 export default function InputField({
@@ -31,6 +32,7 @@ export default function InputField({
   name,
   maxLength,
   endAdornment,
+  label,
 }: InputFieldProps) {
   const uniqueId = useId();
   const inputId = `input-${uniqueId}`;
@@ -44,13 +46,18 @@ export default function InputField({
 
   return (
     <div className="form-control w-full space-y-2">
+      {label && (
+        <label htmlFor={inputId} className="sr-only">
+          {label}
+        </label>
+      )}
       {description && (
-        <div
+        <p
           id={descriptionId}
           className="text-sm opacity-70 leading-relaxed ruby-text"
         >
           {description}
-        </div>
+        </p>
       )}
       <div className={endAdornment ? "join w-full" : undefined}>
         <input

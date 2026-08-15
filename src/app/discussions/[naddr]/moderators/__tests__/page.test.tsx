@@ -22,10 +22,17 @@ const createDiscussion = () => ({
 });
 const mockReload = jest.fn();
 const mockUseDiscussionMeta = jest.fn();
+const mockModeratorAuthUser = { pubkey: "creator", isLoggedIn: true };
+const mockRouterPush = jest.fn();
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockRouterPush }),
+  useParams: () => ({ naddr: "naddr-real-route" }),
+}));
 
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => ({
-    user: { pubkey: "creator", isLoggedIn: true },
+    user: mockModeratorAuthUser,
     signEvent: jest.fn(),
   }),
 }));
@@ -48,9 +55,6 @@ jest.mock("@/components/discussion/ModeratorManagementSection", () => ({
       <button onClick={() => onToggleRemoval("moderator")}>削除を選択</button>
     </>
   ),
-}));
-jest.mock("@/components/discussion/LoginModal", () => ({
-  LoginModal: () => null,
 }));
 jest.mock("@/lib/config/discussion-config", () => ({
   getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 1000 }),
@@ -89,6 +93,8 @@ jest.mock("@/lib/nostr/mnemonic-utils", () => ({
 describe("ModeratorsPage direct moderator management", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockModeratorAuthUser.pubkey = "creator";
+    mockModeratorAuthUser.isLoggedIn = true;
     mockReload.mockReset();
     discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
       events: [],
@@ -260,5 +266,32 @@ describe("ModeratorsPage direct moderator management", () => {
     expect(error).toBeVisible();
     expect(input).toHaveAttribute("aria-describedby", "direct-moderator-error");
     expect(input).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("navigates an unauthenticated moderator request to login without opening LoginModal or auto-publishing", async () => {
+    mockModeratorAuthUser.pubkey = "";
+    mockModeratorAuthUser.isLoggedIn = false;
+    const view = render(<ModeratorsPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "ログイン" }));
+
+    expect(mockRouterPush).toHaveBeenCalledTimes(1);
+    const target = mockRouterPush.mock.calls[0][0] as string;
+    const targetUrl = new URL(target, "https://kazaguruma.invalid");
+    expect(targetUrl.pathname).toBe("/login");
+    expect(targetUrl.searchParams.get("returnTo")).toBe(
+      "/discussions/naddr-real-route/moderators",
+    );
+    expect(targetUrl.searchParams.has("action")).toBe(false);
+    expect(targetUrl.searchParams.has("payload")).toBe(false);
+    expect(targetUrl.searchParams.has("draft")).toBe(false);
+    expect(screen.queryByTestId("login-modal")).not.toBeInTheDocument();
+    expect(serviceMock.publishSignedEvent).not.toHaveBeenCalled();
+
+    mockModeratorAuthUser.pubkey = "creator";
+    mockModeratorAuthUser.isLoggedIn = true;
+    view.rerender(<ModeratorsPage />);
+    await screen.findByRole("button", { name: "許可を選択" });
+    expect(serviceMock.publishSignedEvent).not.toHaveBeenCalled();
   });
 });

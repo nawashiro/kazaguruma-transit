@@ -44,6 +44,26 @@ describe("location-list-state", () => {
     ).toEqual(loading);
   });
 
+  it("429 + limitExceeded returns a structured rate-limited state without retry", async () => {
+    const previousFetch = global.fetch;
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      json: async () => ({ limitExceeded: true }),
+    });
+    global.fetch = fetchMock;
+
+    try {
+      await expect(geocodeAddress("神田")).resolves.toEqual({
+        status: "rate-limited",
+        message: "利用制限に達しました",
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      global.fetch = previousFetch;
+    }
+  });
+
   it("位置情報や詳細取得の失敗を状態として表す", () => {
     const loading = reduceLocationListState(createInitialLocationListState(), {
       type: "start",

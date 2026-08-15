@@ -85,6 +85,9 @@ describe("/rate-limit public page contract (T032)", () => {
 
     const returnLink = screen.getByRole("link");
     expect(returnLink).toHaveAccessibleName();
+    expect(returnLink).toHaveClass("link");
+    expect(returnLink).not.toHaveClass("btn");
+    expect(returnLink).not.toHaveClass("btn-primary");
     expect(returnLink.getAttribute("href")).toBeTruthy();
     expect(returnLink).toHaveAttribute("href", expectedPath);
   });

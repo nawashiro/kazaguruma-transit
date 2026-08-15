@@ -33,7 +33,7 @@ export default async function RateLimitPage({
         </p>
         <Link
           href={returnPath}
-          className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+          className="link"
         >
           発生元の画面へ戻る
         </Link>

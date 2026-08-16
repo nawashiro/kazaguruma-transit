@@ -11,7 +11,7 @@ describe("LicensePage responsive layout", () => {
     tables.forEach((table) => {
       expect(table.classList.contains("table-fixed")).toBe(true);
       expect(table.classList.contains("w-full")).toBe(true);
-      expect(table.classList.contains("text-sm")).toBe(true);
+      expect(table.classList.contains("text-base")).toBe(true);
       expect(table.classList.contains("table-xs")).toBe(false);
       expect(table.classList.contains("table-sm")).toBe(false);
     });
@@ -26,7 +26,7 @@ describe("LicensePage responsive layout", () => {
       screen.getByRole("link", { name: /github.com\/nawashiro\/kazaguruma-transit/ }).classList.contains("break-all")
     ).toBe(true);
     expect(
-      screen.getByRole("rowheader", { name: "@googlemaps/google-maps-services-js" }).classList.contains("break-all")
+      screen.getByRole("rowheader", { name: "@edge-runtime/cookies" }).classList.contains("break-all")
     ).toBe(true);
 
     const dependenciesTable = screen.getByRole("table", { name: "導入パッケージ" });

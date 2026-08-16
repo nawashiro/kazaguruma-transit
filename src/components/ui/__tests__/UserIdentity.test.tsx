@@ -15,7 +15,7 @@ describe("UserIdentity", () => {
 
     const name = screen.getByText("あいうえお かきくけこ さしすせそ");
     expect(name).toHaveClass("text-base", "font-bold", "mr-1");
-    expect(screen.getByText("さん")).toHaveClass("text-base-content/70");
+    expect(screen.getByText("さん")).toHaveClass("text-base-content");
     expect(screen.getByText("npub1example")).toBeInTheDocument();
   });
 });

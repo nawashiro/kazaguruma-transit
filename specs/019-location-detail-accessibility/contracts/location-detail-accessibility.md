@@ -101,6 +101,7 @@ Static:
 - only exact `src/app/globals.css` `rt { font-size: 70%; }` is permitted as ruby assistance;
 - normal text uses `text-base-content` or an equivalent theme-safe token;
 - low-opacity/low-contrast utilities such as `text-black/60` are absent from normal detail text and controls;
+- non-canonical arbitrary color notation such as `text-(color:--color)` and `text-[red]` is outside this static color contract; `text-[length:...]` belongs to the separate typography contract;
 - DaisyUI button default text size is not relied upon; ordinary controls have explicit 16px-equivalent sizing.
 
 Runtime:

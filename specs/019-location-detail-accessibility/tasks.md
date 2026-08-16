@@ -33,10 +33,10 @@ VERDICT: PASS
 
 **Purpose**: 現行worktreeとapproved designの境界を凍結し、既存の場所詳細変更を未検証の完了扱いにしない。
 
-- [ ] T001 `spec.md`、`plan.md`、`research.md`、`data-model.md`、`contracts/location-detail-accessibility.md`、`quickstart.md`を読み合わせ、FR-001〜FR-016、SC-001〜SC-008、CDN `v2.1.1`、認証UIのtypography-only範囲、`KoFiSupport.tsx`のwriter除外、16px全体契約、review gate順序を実装対象として列挙する。`tasks.md`自身の未置換placeholderも確認する。
-- [ ] T002 `git status --short --untracked-files=all`、`git diff --name-only`、`git diff --check`、対象ファイルのSHA-256を記録し、既存dirty pathと本tasksで新たに書き込めるpathを分離する。`src/app/location-detail/[id]/page.tsx`、`src/components/features/LocationDetailContent.tsx`、両テスト、font auditをHEADへ戻してはならない。
-- [ ] T003 現行byteに対して次を実行し、ベースラインを再確認する。`npm test -- --runInBand --runTestsByPath 'src/app/location-detail/[id]/__tests__/page.test.tsx' src/components/features/__tests__/LocationDetailContent.test.tsx src/app/__tests__/font-size-compliance.test.ts --silent`、`npx tsc --noEmit --incremental false`、`npm run lint`、`git diff --check`。既存warning、font auditの74違反、collection failure、未実行を分離して記録する。
-- [ ] T004 `NEXT_PUBLIC_LOCATIONS_DATA_VERSION=v2.1.1`を指定した読み取り専用CDN probeで16カテゴリ・169場所・169一意ID・重複0・不正ID0を再確認し、`千代田区役所`の実ID `5e3b1528-8af6-436a-83af-24ca45b58e12`とoptional fieldの存在を記録する。単体テストから外部CDNへ接続する変更は行わない。
+- [X] T001 `spec.md`、`plan.md`、`research.md`、`data-model.md`、`contracts/location-detail-accessibility.md`、`quickstart.md`を読み合わせ、FR-001〜FR-016、SC-001〜SC-008、CDN `v2.1.1`、認証UIのtypography-only範囲、`KoFiSupport.tsx`のwriter除外、16px全体契約、review gate順序を実装対象として列挙する。`tasks.md`自身の未置換placeholderも確認する。
+- [X] T002 `git status --short --untracked-files=all`、`git diff --name-only`、`git diff --check`、対象ファイルのSHA-256を記録し、既存dirty pathと本tasksで新たに書き込めるpathを分離する。`src/app/location-detail/[id]/page.tsx`、`src/components/features/LocationDetailContent.tsx`、両テスト、font auditをHEADへ戻してはならない。
+- [X] T003 現行byteに対して次を実行し、ベースラインを再確認する。`npm test -- --runInBand --runTestsByPath 'src/app/location-detail/[id]/__tests__/page.test.tsx' src/components/features/__tests__/LocationDetailContent.test.tsx src/app/__tests__/font-size-compliance.test.ts --silent`、`npx tsc --noEmit --incremental false`、`npm run lint`、`git diff --check`。既存warning、font auditの74違反、collection failure、未実行を分離して記録する。
+- [X] T004 `NEXT_PUBLIC_LOCATIONS_DATA_VERSION=v2.1.1`を指定した読み取り専用CDN probeで16カテゴリ・169場所・169一意ID・重複0・不正ID0を再確認し、`千代田区役所`の実ID `5e3b1528-8af6-436a-83af-24ca45b58e12`とoptional fieldの存在を記録する。単体テストから外部CDNへ接続する変更は行わない。
 
 **Checkpoint**: 現行dirty差分、ベースライン失敗、v2.1.1の一意IDデータ、各レビュー対象pathが親側で再確認されている。
 
@@ -48,32 +48,32 @@ VERDICT: PASS
 
 ### Typography RED and test-code review
 
-- [ ] T005 [US3] `src/app/__tests__/font-size-compliance.test.ts`を、font utility/CSSだけを扱う決定的な契約テストへ整理する。対象は`src/app/**/*.tsx`、`src/components/**/*.tsx`、`src/app/globals.css`。`text-xs`、`text-sm`、variant/prefix/important付き16px未満utility、16px未満arbitrary value、未知・解析不能値、CSS `font-size`を検出し、exactな`src/app/globals.css`の`rt { font-size: 70%; }`だけを許可する。色、opacity、button、Ko-fiはこのテストへ混ぜない。実行: `npm test -- --runInBand --runTestsByPath src/app/__tests__/font-size-compliance.test.ts --silent`。期待: collectionではなく、現行production sourceの違反でRED。
-- [ ] T006 `src/app/__tests__/font-size-compliance.test.ts`のsettled bytesをfresh read-only test-code reviewerへ委任する。variant/important/arbitrary構文、unknown fail-closed、local class composition、狭い`rt`例外、test/PDF除外、`rg`外部依存なし、診断のpath/line性を確認し、`VERDICT: PASS`までT007以降のfont本番修正を開始しない。
+- [X] T005 [US3] `src/app/__tests__/font-size-compliance.test.ts`を、font utility/CSSだけを扱う決定的な契約テストへ整理する。対象は`src/app/**/*.tsx`、`src/components/**/*.tsx`、`src/app/globals.css`。`text-xs`、`text-sm`、variant/prefix/important付き16px未満utility、16px未満arbitrary value、未知・解析不能値、CSS `font-size`を検出し、exactな`src/app/globals.css`の`rt { font-size: 70%; }`だけを許可する。色、opacity、button、Ko-fiはこのテストへ混ぜない。実行: `npm test -- --runInBand --runTestsByPath src/app/__tests__/font-size-compliance.test.ts --silent`。期待: collectionではなく、現行production sourceの違反でRED。
+- [X] T006 `src/app/__tests__/font-size-compliance.test.ts`のsettled bytesをfresh read-only test-code reviewerへ委任する。variant/important/arbitrary構文、unknown fail-closed、local class composition、狭い`rt`例外、test/PDF除外、`rg`外部依存なし、診断のpath/line性を確認し、`VERDICT: PASS`までT007以降のfont本番修正を開始しない。
 
 ### Typography production slice: location detail
 
-- [ ] T007 [US3] T006 PASS後、`src/app/location-detail/[id]/page.tsx`、`src/components/features/LocationDetailContent.tsx`、必要な詳細ページ固有のstyle sourceだけを対象に、通常本文・状態文・リンク・CTAを`text-base`相当以上へ修正する。`rt`を理由に通常要素を免除せず、`text-base-content`境界を壊さず、Ko-fiへ触れない。
-- [ ] T008 [US3] T007のproduction bytesに対し、詳細ページfont audit、`src/app/location-detail/[id]/__tests__/page.test.tsx`、`src/components/features/__tests__/LocationDetailContent.test.tsx`のfocused Jest、`npx tsc --noEmit --incremental false`、対象Lint、`git diff --check`、SHA/statusを実行する。期待: T005の違反数から詳細ページ担当分が消え、他の既存違反は別sliceとして残る。
-- [ ] T009 [US3] `src/app/location-detail/[id]/page.tsx`、`src/components/features/LocationDetailContent.tsx`、関連testのsettled bytesをfresh read-only production-code reviewerへ委任する。16px契約、state shell、shared main/header境界、未指定pathへの変更なし、Ko-fi非変更を確認し、`VERDICT: PASS`まで次のfont sliceを開始しない。
+- [X] T007 [US3] T006 PASS後、`src/app/location-detail/[id]/page.tsx`、`src/components/features/LocationDetailContent.tsx`、必要な詳細ページ固有のstyle sourceだけを対象に、通常本文・状態文・リンク・CTAを`text-base`相当以上へ修正する。`rt`を理由に通常要素を免除せず、`text-base-content`境界を壊さず、Ko-fiへ触れない。
+- [X] T008 [US3] T007のproduction bytesに対し、詳細ページfont audit、`src/app/location-detail/[id]/__tests__/page.test.tsx`、`src/components/features/__tests__/LocationDetailContent.test.tsx`のfocused Jest、`npx tsc --noEmit --incremental false`、対象Lint、`git diff --check`、SHA/statusを実行する。期待: T005の違反数から詳細ページ担当分が消え、他の既存違反は別sliceとして残る。
+- [X] T009 [US3] `src/app/location-detail/[id]/page.tsx`、`src/components/features/LocationDetailContent.tsx`、関連testのsettled bytesをfresh read-only production-code reviewerへ委任する。16px契約、state shell、shared main/header境界、未指定pathへの変更なし、Ko-fi非変更を確認し、`VERDICT: PASS`まで次のfont sliceを開始しない。
 
 ### Typography production slice: remaining app routes
 
-- [ ] T010 [US3] T009 PASS後、T005の診断manifestに含まれる`src/app/**/*.tsx`（`location-detail/[id]`とtest除外）だけをbounded production writerへ渡し、通常UIの16px未満指定を`text-base`相当以上へ修正する。動的外部`className`は推測で書き換えず、監査境界を越える変更をしない。
-- [ ] T011 [US3] T010後、font audit、変更された`src/app/**/__tests__/*.test.tsx`、`npx tsc --noEmit --incremental false`、対象Lint、`git diff --check`、変更path/SHAを実行し、T010のmanifest以外に変更がないことを確認する。
-- [ ] T012 [US3] T010のsettled `src/app/**/*.tsx` production bytesをfresh read-only reviewerへ委任する。ページの可読性、native controlの既存挙動、Tailwind utilityの実効サイズ、scopeを確認し、`VERDICT: PASS`を取得する。
+- [X] T010 [US3] T009 PASS後、T005の診断manifestに含まれる`src/app/**/*.tsx`（`location-detail/[id]`とtest除外）だけをbounded production writerへ渡し、通常UIの16px未満指定を`text-base`相当以上へ修正する。動的外部`className`は推測で書き換えず、監査境界を越える変更をしない。
+- [X] T011 [US3] T010後、font audit、変更された`src/app/**/__tests__/*.test.tsx`、`npx tsc --noEmit --incremental false`、対象Lint、`git diff --check`、変更path/SHAを実行し、T010のmanifest以外に変更がないことを確認する。
+- [X] T012 [US3] T010のsettled `src/app/**/*.tsx` production bytesをfresh read-only reviewerへ委任する。ページの可読性、native controlの既存挙動、Tailwind utilityの実効サイズ、scopeを確認し、`VERDICT: PASS`を取得する。
 
 ### Typography production slice: feature/discussion/auth components
 
-- [ ] T013 [US3] T012 PASS後、T005のmanifestに含まれる`src/components/features/**/*.tsx`（ただし`src/components/features/KoFiSupport.tsx`を除く）、`src/components/discussion/**/*.tsx`、`src/components/auth/**/*.tsx`だけをbounded writerへ渡し、通常UIの16px未満指定を修正する。認証コンポーネントは文字サイズ・色だけを変更し、認証の振る舞い・データフローを変更しない。Ruby wrapper、外部`className` boundary、Ko-fi支援欄を勝手に例外化・改変しない。
-- [ ] T014 [US3] T013後、font audit、feature/discussion/authの該当component tests、`npx tsc --noEmit --incremental false`、対象Lint、`git diff --check`、path/SHAを実行する。既存warningと新規failureを分離する。
-- [ ] T015 [US3] T013のsettled feature/discussion/auth production bytesをfresh read-only reviewerへ委任し、通常要素の16px契約、認証UIの振る舞い非変更、Ruby例外の狭さ、主要操作の非退行、`KoFiSupport.tsx`の変更なし、変更境界を確認する。明示的`VERDICT: PASS`を要求する。
+- [X] T013 [US3] T012 PASS後、T005のmanifestに含まれる`src/components/features/**/*.tsx`（ただし`src/components/features/KoFiSupport.tsx`を除く）、`src/components/discussion/**/*.tsx`、`src/components/auth/**/*.tsx`だけをbounded writerへ渡し、通常UIの16px未満指定を修正する。認証コンポーネントは文字サイズ・色だけを変更し、認証の振る舞い・データフローを変更しない。Ruby wrapper、外部`className` boundary、Ko-fi支援欄を勝手に例外化・改変しない。
+- [X] T014 [US3] T013後、font audit、feature/discussion/authの該当component tests、`npx tsc --noEmit --incremental false`、対象Lint、`git diff --check`、path/SHAを実行する。既存warningと新規failureを分離する。
+- [X] T015 [US3] T013のsettled feature/discussion/auth production bytesをfresh read-only reviewerへ委任し、通常要素の16px契約、認証UIの振る舞い非変更、Ruby例外の狭さ、主要操作の非退行、`KoFiSupport.tsx`の変更なし、変更境界を確認する。明示的`VERDICT: PASS`を要求する。
 
 ### Typography production slice: shared UI/layout and CSS
 
-- [ ] T016 [US3] T015 PASS後、T005のmanifestに含まれる`src/components/ui/**/*.tsx`、`src/components/layouts/**/*.tsx`、`src/app/globals.css`だけをbounded writerへ渡し、通常UIを16px相当以上へ修正する。`src/app/globals.css`のexact `rt` rule、focus-visible styling、Ko-fi card構造を維持する。
-- [ ] T017 [US3] T016後、font audit、共有layout/UI tests、`npx tsc --noEmit --incremental false`、対象Lint、`git diff --check`、path/SHAを実行する。全体font契約のREDが解消し、`rt`以外のCSS小サイズが0件であることを確認する。
-- [ ] T018 [US3] T016のsettled shared UI/layout/CSS production bytesをfresh read-only reviewerへ委任し、single `main`、focus-visible、DaisyUI/Ruby境界、CSS例外、Ko-fi非変更を確認する。`VERDICT: PASS`までcolor/button chapterへ進まない。
+- [X] T016 [US3] T015 PASS後、T005のmanifestに含まれる`src/components/ui/**/*.tsx`、`src/components/layouts/**/*.tsx`、`src/app/globals.css`だけをbounded writerへ渡し、通常UIを16px相当以上へ修正する。`src/app/globals.css`のexact `rt` rule、focus-visible styling、Ko-fi card構造を維持する。
+- [X] T017 [US3] T016後、font audit、共有layout/UI tests、`npx tsc --noEmit --incremental false`、対象Lint、`git diff --check`、path/SHAを実行する。全体font契約のREDが解消し、`rt`以外のCSS小サイズが0件であることを確認する。
+- [X] T018 [US3] T016のsettled shared UI/layout/CSS production bytesをfresh read-only reviewerへ委任し、single `main`、focus-visible、DaisyUI/Ruby境界、CSS例外、Ko-fi非変更を確認する。`VERDICT: PASS`までcolor/button chapterへ進まない。
 
 **Typography checkpoint**: 全体font契約がGreen、詳細ページと通常UIの算出サイズが16px以上、strict TypeScript・Lint・diff checkが各sliceで確認済み、各production reviewがPASS。
 
@@ -85,14 +85,14 @@ VERDICT: PASS
 
 ### Color RED and test-code review
 
-- [ ] T019 [US3] `src/app/__tests__/color-compliance.test.ts`を新規作成し、`src/app/**/*.tsx`、`src/components/**/*.tsx`、詳細ページの通常文字について、`text-base-content`等のtheme-safe token、`text-black/60`等の低コントラストutility、通常文字へのopacity utility、低コントラストmuted tokenを検査する。class absenceだけを実コントラスト測定と誤認せず、Ko-fi cardの非対象境界を明示する。実ブラウザ受入ではlight/dark両テーマで通常文字`>=4.5:1`、大きな文字`>=3:1`、適用対象の非テキスト要素`>=3:1`を検証する（大きな文字は18pt通常または14pt太字、約24pxまたは18.66px太字）。実行: `npm test -- --runInBand --runTestsByPath src/app/__tests__/color-compliance.test.ts --silent`。期待:現行sourceの違反を理由とするRED。
-- [ ] T020 `src/app/__tests__/color-compliance.test.ts`のsettled bytesをfresh read-only test-code reviewerへ委任する。通常文字と装飾の境界、opacityの検出、dynamic classのfail-closed方針、Ko-fi除外、実ブラウザcontrast確認との分離を確認し、`VERDICT: PASS`までT021を開始しない。
+- [X] T019 [US3] `src/app/__tests__/color-compliance.test.ts`を新規作成し、`src/app/**/*.tsx`、`src/components/**/*.tsx`、詳細ページの通常文字について、`text-base-content`等のtheme-safe token、`text-black/60`等の低コントラストutility、通常文字へのopacity utility、低コントラストmuted tokenを検査する。`text-(color:--color)`、`text-[red]`、`text-[theme(...)]`等の非典型arbitrary color記法は今回のcolor contractのスコープ外とし、font-size用の`text-[length:...]`もcolor違反にしない。class absenceだけを実コントラスト測定と誤認せず、Ko-fi cardの非対象境界を明示する。実ブラウザ受入ではlight/dark両テーマで通常文字`>=4.5:1`、大きな文字`>=3:1`、適用対象の非テキスト要素`>=3:1`を検証する（大きな文字は18pt通常または14pt太字、約24pxまたは18.66px太字）。実行: `npm test -- --runInBand --runTestsByPath src/app/__tests__/color-compliance.test.ts --silent`。期待:現行sourceの違反を理由とするRED。
+- [X] T020 `src/app/__tests__/color-compliance.test.ts`のsettled bytesをfresh read-only test-code reviewerへ委任する。通常文字と装飾の境界、opacityの検出、dynamic classのfail-closed方針、Ko-fi除外、実ブラウザcontrast確認との分離を確認し、`VERDICT: PASS`までT021を開始しない。
 
 ### Color production slices
 
-- [ ] T021 [US3] T020 PASS後、`src/app/location-detail/[id]/page.tsx`、`src/components/features/LocationDetailContent.tsx`および詳細ページ関連の診断pathだけをbounded writerへ渡し、通常文字・`dt`/`dd`・状態文・CTAの色を`text-base-content`等へ揃える。`text-black/60`、通常文字opacity、不要なmuted tokenを除去する。
-- [ ] T022 [US3] T021後、color contract、location detail focused Jest、strict TypeScript、対象Lint、`git diff --check`、path/SHAを実行する。
-- [ ] T023 [US3] T021のsettled production bytesをfresh read-only reviewerへ委任し、色token、native link focus、状態メッセージ、Ko-fi非変更を確認して`VERDICT: PASS`を取得する。
+- [X] T021 [US3] T020 PASS後、`src/app/location-detail/[id]/page.tsx`、`src/components/features/LocationDetailContent.tsx`および詳細ページ関連の診断pathだけをbounded writerへ渡し、通常文字・`dt`/`dd`・状態文・CTAの色を`text-base-content`等へ揃える。`text-black/60`、通常文字opacity、不要なmuted tokenを除去する。
+- [X] T022 [US3] T021後、color contract、location detail focused Jest、strict TypeScript、対象Lint、`git diff --check`、path/SHAを実行する。
+- [X] T023 [US3] T021のsettled production bytesをfresh read-only reviewerへ委任し、色token、native link focus、状態メッセージ、Ko-fi非変更を確認して`VERDICT: PASS`を取得する。
 - [ ] T024 [US3] T023 PASS後、color manifestに含まれる残りの`src/app/**/*.tsx`、`src/components/**/*.tsx`、対象CSSを責務別にbounded writerへ渡して低コントラスト/opacity指定を修正する。ただし`src/components/features/KoFiSupport.tsx`はwriter対象から除外し、認証UIは通常文字の色だけを対象とする。変更pathをwriter開始前に固定し、未報告の全体置換を行わない。
 - [ ] T025 [US3] T024後、`color-compliance.test.ts`、影響範囲のfocused Jest、strict TypeScript、対象Lint、`git diff --check`、path/SHAを実行する。
 - [ ] T026 [US3] T024のsettled production bytesをfresh read-only reviewerへ委任し、通常文字token、light/dark theme前提、opacity境界、scopeを確認して`VERDICT: PASS`を取得する。

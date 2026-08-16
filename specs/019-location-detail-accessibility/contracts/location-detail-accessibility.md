@@ -102,7 +102,7 @@ Static:
 - normal text uses `text-base-content` or an equivalent theme-safe token;
 - low-opacity/low-contrast utilities such as `text-black/60` are absent from normal detail text and controls;
 - non-canonical arbitrary color notation such as `text-(color:--color)` and `text-[red]` is outside this static color contract; `text-[length:...]` belongs to the separate typography contract;
-- DaisyUI button default text size is not relied upon; ordinary controls have explicit 16px-equivalent sizing.
+- DaisyUI button default text size is not relied upon; ordinary controls have explicit 16px-equivalent sizing. The button contract recognizes canonical named utilities such as `text-base` and larger; non-canonical arbitrary font-size notation such as `text-[...]`, `text-(...)`, or `text-[theme(...)]` is outside this button contract and is not reported here. The current production source inventory has no composition-helper callsites; loop-binding shadowing of helper names is therefore an intentionally out-of-scope, non-typical boundary for this slice.
 
 Runtime:
 
@@ -137,7 +137,7 @@ Runtime:
 | `src/components/features/__tests__/LocationDetailContent.test.tsx` | temporary component boundary: `dl`, empty alt/no role, optional omission, provided-info structure, CTA, card absence; migrate/delete after integration |
 | `src/app/__tests__/font-size-compliance.test.ts` | global named/arbitrary utility and CSS `font-size` 16px contract, exact ruby exception |
 | `src/app/__tests__/color-compliance.test.ts` | low-contrast color/opacity static contract and detail text token |
-| `src/app/__tests__/button-font-size-compliance.test.ts` | ordinary button/control explicit 16px contract |
+| `src/app/__tests__/button-font-size-compliance.test.ts` | ordinary button/control explicit 16px contract using canonical named utilities; non-canonical arbitrary font-size notation is out of scope |
 | `src/app/__tests__/accessibility-source-contract.test.ts` | no nested `main`, no modal-only role in detail route, native navigation markers; update only if settled public contract requires it |
 | `src/components/layouts/__tests__/SidebarLayout.test.tsx` | exactly one main and unchanged Ko-fi placement/card contract |
 

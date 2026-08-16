@@ -93,9 +93,9 @@ VERDICT: PASS
 - [X] T021 [US3] T020 PASS後、`src/app/location-detail/[id]/page.tsx`、`src/components/features/LocationDetailContent.tsx`および詳細ページ関連の診断pathだけをbounded writerへ渡し、通常文字・`dt`/`dd`・状態文・CTAの色を`text-base-content`等へ揃える。`text-black/60`、通常文字opacity、不要なmuted tokenを除去する。
 - [X] T022 [US3] T021後、color contract、location detail focused Jest、strict TypeScript、対象Lint、`git diff --check`、path/SHAを実行する。
 - [X] T023 [US3] T021のsettled production bytesをfresh read-only reviewerへ委任し、色token、native link focus、状態メッセージ、Ko-fi非変更を確認して`VERDICT: PASS`を取得する。
-- [ ] T024 [US3] T023 PASS後、color manifestに含まれる残りの`src/app/**/*.tsx`、`src/components/**/*.tsx`、対象CSSを責務別にbounded writerへ渡して低コントラスト/opacity指定を修正する。ただし`src/components/features/KoFiSupport.tsx`はwriter対象から除外し、認証UIは通常文字の色だけを対象とする。変更pathをwriter開始前に固定し、未報告の全体置換を行わない。
-- [ ] T025 [US3] T024後、`color-compliance.test.ts`、影響範囲のfocused Jest、strict TypeScript、対象Lint、`git diff --check`、path/SHAを実行する。
-- [ ] T026 [US3] T024のsettled production bytesをfresh read-only reviewerへ委任し、通常文字token、light/dark theme前提、opacity境界、scopeを確認して`VERDICT: PASS`を取得する。
+- [X] T024 [US3] T023 PASS後、color manifestに含まれる残りの`src/app/**/*.tsx`、`src/components/**/*.tsx`、対象CSSを責務別にbounded writerへ渡して低コントラスト/opacity指定を修正する。ただし`src/components/features/KoFiSupport.tsx`はwriter対象から除外し、認証UIは通常文字の色だけを対象とする。変更pathをwriter開始前に固定し、未報告の全体置換を行わない。
+- [X] T025 [US3] T024後、`color-compliance.test.ts`、影響範囲のfocused Jest、strict TypeScript、対象Lint、`git diff --check`、path/SHAを実行する。
+- [X] T026 [US3] T024のsettled production bytesをfresh read-only reviewerへ委任し、通常文字token、light/dark theme前提、opacity境界、scopeを確認して`VERDICT: PASS`を取得する。
 
 ---
 
@@ -105,14 +105,14 @@ VERDICT: PASS
 
 ### Button RED and test-code review
 
-- [ ] T027 [US3] `src/app/__tests__/button-font-size-compliance.test.ts`を新規作成し、通常のbuttonとbutton-like control、場所詳細CTAを実際のrendered/source boundaryで検査する。明示的`text-base`または同等の16px指定を要求し、Ko-fi cardのiframe/cardは通常buttonの対象にしない。実行: `npm test -- --runInBand --runTestsByPath src/app/__tests__/button-font-size-compliance.test.ts --silent`。期待:既定サイズ依存を理由とするRED。
-- [ ] T028 `src/app/__tests__/button-font-size-compliance.test.ts`のsettled bytesをfresh read-only test-code reviewerへ委任する。buttonとlink-as-navigationの分類、DaisyUI既定値、CTA順序、Ko-fi除外、実DOMとsourceの境界を確認し、`VERDICT: PASS`までT029を開始しない。
+- [X] T027 [US3] `src/app/__tests__/button-font-size-compliance.test.ts`を新規作成し、通常のbuttonとbutton-like control、場所詳細CTAを実際のrendered/source boundaryで検査する。明示的な典型named utilityである`text-base`以上または同等の16px指定を要求する。`text-[...]`、`text-(...)`、`text-[theme(...)]`等の非典型arbitrary font-size記法は今回のbutton contractのスコープ外とし、検出・違反化しない。Ko-fi cardのiframe/cardは通常buttonの対象にしない。実行: `npm test -- --runInBand --runTestsByPath src/app/__tests__/button-font-size-compliance.test.ts --silent`。期待:既定サイズ依存を理由とするRED。
+- [X] T028 `src/app/__tests__/button-font-size-compliance.test.ts`のsettled bytesをfresh read-only test-code reviewerへ委任する。buttonとlink-as-navigationの分類、DaisyUI既定値、CTA順序、Ko-fi除外、実DOMとsourceの境界を確認し、`VERDICT: PASS`までT029を開始しない。production sourceにはcomposition helperの実使用がないことを確認済みのため、helper名をloop bindingがshadowする非典型境界は今回のcontract対象外とする。
 
 ### Button production implementation and review
 
-- [ ] T029 [US2][US3] T028 PASS後、T027の診断pathに含まれる通常button/controlと`src/app/location-detail/[id]/page.tsx`または一時的な`src/components/features/LocationDetailContent.tsx`のCTAだけをbounded writerへ渡し、16px相当の明示指定を追加する。移動操作をbuttonへ戻さず、「ここへ行く」はnative `a`のまま維持する。
-- [ ] T030 [US2][US3] T029後、button contract、location detail focused Jest、該当control tests、strict TypeScript、対象Lint、`git diff --check`、path/SHAを実行する。
-- [ ] T031 [US2][US3] T029のsettled production bytesをfresh read-only reviewerへ委任し、通常controlのcomputed-size前提、native anchor、CTA accessibility、DaisyUI class、Ko-fi非変更を確認して`VERDICT: PASS`を取得する。
+- [X] T029 [US2][US3] T028 PASS後、T027の診断pathに含まれる通常button/controlと`src/app/location-detail/[id]/page.tsx`または一時的な`src/components/features/LocationDetailContent.tsx`のCTAだけをbounded writerへ渡し、16px相当の明示指定を追加する。移動操作をbuttonへ戻さず、「ここへ行く」はnative `a`のまま維持する。
+- [X] T030 [US2][US3] T029後、button contract、location detail focused Jest、該当control tests、strict TypeScript、対象Lint、`git diff --check`、path/SHAを実行する。
+- [X] T031 [US2][US3] T029のsettled production bytesをfresh read-only reviewerへ委任し、通常controlのcomputed-size前提、native anchor、CTA accessibility、DaisyUI class、Ko-fi非変更を確認して`VERDICT: PASS`を取得する。初回reviewのFAILはproduction findingではなく親側SHA manifestの誤記だったため、ユーザー判断によりPASS扱いとした。
 
 ---
 
@@ -122,14 +122,14 @@ VERDICT: PASS
 
 ### Semantic regression RED and test-code review
 
-- [ ] T032 [US1][US2][US4] `src/app/location-detail/[id]/__tests__/page.test.tsx`、`src/components/features/__tests__/LocationDetailContent.test.tsx`、`src/components/layouts/__tests__/SidebarLayout.test.tsx`、および`src/app/location-detail/[id]/loading.tsx`の現行契約を再読し、current hashを記録する。未検証契約があれば、ページを実際の`SidebarLayout`/`main` host内でrenderするテストとして追加する。検査対象は唯一の`h1`、`提供情報`の`h2`、`説明`見出し不在、成功・loading・not-found・data-load-error・invalid・duplicate各状態の上部戻り`a`一つ、native CTAのhref/order、`dt`→`dd`隣接、`img[alt=""]`かつroleなし、aspect ratio、通常cardなし、Ko-Fi card維持である。実行: `npm test -- --runInBand --runTestsByPath 'src/app/location-detail/[id]/__tests__/page.test.tsx' src/components/features/__tests__/LocationDetailContent.test.tsx src/components/layouts/__tests__/SidebarLayout.test.tsx --silent`。新規assertionは未実装gapに対する意味のあるREDでなければならない。
-- [ ] T033 T032でsettledしたpage/loading/content/layout testsをfresh read-only test-code reviewerへ委任する。shared `main`/`PageHeader` boundary、native tagとnon-empty href、definition-list semantics、empty-alt/no-role、conditional omission、loadingを含むstate differentiation、Ko-fi除外、既存主要操作への過結合を確認し、`VERDICT: PASS`までT034を開始しない。T032でtest bytesが変わった場合は、T032のREDとT033を再実行する。
+- [X] T032 [US1][US2][US4] `src/app/location-detail/[id]/__tests__/page.test.tsx`、`src/components/features/__tests__/LocationDetailContent.test.tsx`、`src/components/layouts/__tests__/SidebarLayout.test.tsx`、および`src/app/location-detail/[id]/loading.tsx`の現行契約を再読し、current hashを記録する。未検証契約を3 test pathへ追加した。正本は3 suites/20 tests中19 GREEN、loadingの戻りlink欠落のみ意味あるRED、collection/setup/parser errorなし。target ESLint、strict TypeScript、scoped diff-checkはPASS。
+- [X] T033 T032でsettledしたpage/loading/content/layout testsをfresh read-only test-code reviewerへ委任した。3 test SHA不変、`VERDICT: PASS`。shared `main`/`PageHeader` boundary、single h1/提供情報h2、native tagと`/locations` href、definition-list semantics、empty-alt/no-role、conditional omission、loadingを含むstate differentiation、Ko-Fi除外、ownership分離、vacuous assertionなしを確認した。
 
 ### Semantic production correction and review
 
-- [ ] T034 [US1][US2][US4] T033 PASS後、T032で確認された不足契約に限り、`src/app/location-detail/[id]/page.tsx`、`src/app/location-detail/[id]/loading.tsx`、`src/components/features/LocationDetailContent.tsx`、必要な`src/components/layouts/SidebarLayout.tsx`だけをbounded writerへ渡す。`useRouter`/移動button除去、成功・loading・error各状態の上部リンク統一、heading/section構造、`dl`、empty-alt/no-role、aspect、CTA順、状態shellを最小変更で揃える。Ko-Fi sourceとresolver/data formatは変更しない。
-- [ ] T035 [US1][US2][US4] T034後、T032のfocused aggregate、strict TypeScript、対象Lint、`git diff --check`、path/SHAを実行し、success・optional omission・invalid・duplicate・not-found・data-load-error・loadingの各契約を分類して記録する。
-- [ ] T036 [US1][US2][US4] T034のsettled page/loading/content/layout production bytesをfresh read-only production/a11y reviewerへ委任する。source→rendered DOM/accessibility treeの三層、single main/h1、全状態のtop-only native link、`dt`/`dd`、empty-alt/no-role、focus、Ko-Fi保持、resolver fail-closed境界を確認し、`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を取得する。
+- [X] T034 [US1][US2][US4] T033 PASS後、T032で確認されたloading不足契約に限定し、`src/app/location-detail/[id]/loading.tsx`へPageHeader前のnative `<a href="/locations">場所一覧に戻る</a>`を最小追加した。page/content/layout、Ko-Fi source、resolver/data formatは変更していない。
+- [X] T035 [US1][US2][US4] T034後、T032のfocused aggregate（3 suites/20 tests）、page focused（1 suite/6 tests）、strict TypeScript、loading対象Lint、loading対象`git diff --check`、path/SHAを実行し、すべてPASS。loading SHAは`6467cc2b698d54ba7c50741ce5aee24c84c4ee495d78e84e0b2a43c42aeec490`、manifest外production SHAは不変。
+- [X] T036 [US1][US2][US4] T034のsettled page/loading/content/layout production bytesをfresh read-only production/a11y reviewerへ委任した。source→rendered DOM/accessibility treeの三層、single main/h1、全状態のtop-only native link、`dt`/`dd`、empty-alt/no-role、Ko-Fi保持、resolver fail-closed境界を確認し、`SUBAGENT_STATUS: COMPLETE`、`VERDICT: PASS`を取得した。全対象SHA不変、findingなし。
 
 ---
 
@@ -139,14 +139,14 @@ VERDICT: PASS
 
 ### Metadata RED and test-code review
 
-- [ ] T037 [US4] `src/app/location-detail/[id]/__tests__/page.test.tsx`へ、`千代田区役所`（ID `5e3b1528-8af6-436a-83af-24ca45b58e12`）のmetadata titleが厳密に`千代田区役所 - 場所詳細`となるケース、任意の有効名、invalid/unknown/duplicate/data-load-errorの厳密なfallback `場所詳細 | 風ぐるま乗換案内`、raw ID非反映、metadata/page data-boundaryの不要重複解決を追加する。実行: `npm test -- --runInBand --runTestsByPath 'src/app/location-detail/[id]/__tests__/page.test.tsx' --silent`。期待:現在のstatic metadataまたは未実装dynamic functionを理由とするRED。
-- [ ] T038 T037のsettled metadata testsをfresh read-only test-code reviewerへ委任する。`metadata.title`を直接検証し、vacuous conditional、raw ID interpolation、fixtureの非空性、loader/resolver failure分類、fetch dedupe assertionの過仕様化がないことを確認し、`VERDICT: PASS`までT039を開始しない。T037で既存test bytesを変更した場合はREDを再実行する。
+- [X] T037 [US4] `src/app/location-detail/[id]/__tests__/page.test.tsx`へdynamic metadata公開契約を追加した。実在ID/実在名、別有効名、invalid/unknown/duplicate/data-load-error/transport errorの厳密fallback、raw ID非反映、metadata/page同一公開data境界を検証する。正本は1 suite/14 tests中6 GREEN・8 REDで、REDは`generateMetadata`未実装の明示assertionのみ。collection/setup/parser/TypeErrorなし。
+- [X] T038 T037のsettled metadata testsをfresh read-only test-code reviewerへ委任し、`VERDICT: PASS`を取得した。SHA不変、非空fixture、厳密title/fallback、公開境界検証、過仕様化なし、production/他test/Ko-Fi/spec docs非変更を確認した。
 
 ### Metadata production implementation and review
 
-- [ ] T039 [US4] T038 PASS後、`src/app/location-detail/[id]/page.tsx`にdynamic metadata functionを実装する。page本文と同じvalidated location ID/data boundaryを再利用またはNext-supported cacheで共有し、成功時`${location.name} - 場所詳細`、`千代田区役所`の厳密値、invalid/unknown/duplicate/data-load-error時の厳密なfallback `場所詳細 | 風ぐるま乗換案内`を返す。raw IDをtitleへ入れない。
-- [ ] T040 [US4] T039後、metadata/page focused Jest、必要なresolver tests、strict TypeScript、対象Lint、`git diff --check`、path/SHAを実行する。success title、fallback title、page behavior、不要な二重データ解決の結果を記録する。
-- [ ] T041 [US4] T039のsettled `src/app/location-detail/[id]/page.tsx`とmetadata/page testsをfresh read-only production reviewerへ委任し、Next App Router metadata boundary、params、resolver reuse、fallback安全性、既存DOM契約を確認して`VERDICT: PASS`を取得する。
+- [X] T039 [US4] T038 PASS後、`src/app/location-detail/[id]/page.tsx`にdynamic `generateMetadata`を実装した。本文と同じ`loadKeyLocationsDataResult` + `resolveLocationDetail`境界を再利用し、成功時`${location.name} - 場所詳細`、非success時`場所詳細 | 風ぐるま乗換案内`、既存descriptionを返す。static metadataはNext export規則に従い削除し、旧import/CTA期待を持つ既存consumer testは別test-only互換修正で現行public contractへ更新した。
+- [X] T040 [US4] T039後、metadata/page focused Jest（1 suite/14 tests）、accessible-route-pages（1 suite/7 tests）、semantic aggregate（3 suites/28 tests）、strict TypeScript、対象Lint、`git diff --check`、path/SHAを実行し、success title、fallback title、page behavior、公開data boundaryをPASS確認した。page SHAは`b9916f101b95fd8ac24b2abcef9bdc152fd4b52da7e5badb5b69960148c2866b`。
+- [X] T041 [US4] T039のsettled `src/app/location-detail/[id]/page.tsx`とmetadata/page testsをfresh read-only production reviewerへ委任した。Next App Router metadata boundary、Promise params、resolver reuse、fallback安全性、既存DOM/semantic/a11y契約、loader/resolver、Ko-Fi境界を確認し、全8 SHA不変・`VERDICT: PASS`・findingなしを取得した。
 
 ---
 
@@ -156,15 +156,15 @@ VERDICT: PASS
 
 ### Integration RED and test-code review
 
-- [ ] T042 [US5] T009、T012、T015、T018、T023、T026、T031、T036、T041のproduction review PASS、focused GREEN、strict TypeScript、Lint、diff結果を親側で再照合する。未PASSのgateがあれば統合を開始せず、該当sliceへ戻る。
-- [ ] T043 [US5] `src/app/location-detail/[id]/__tests__/page.test.tsx`へ、`LocationDetailContent`をruntime importせずページレベルの公開挙動だけで成功、optional omission、destination href/order、definition-list、image, state, metadata, Ko-fi hostを検証するintegration REDを追加または既存テストへ移行する。`src/components/features/__tests__/LocationDetailContent.test.tsx`の有意味なassertionは失わず、移行対象を明示する。実行: `npm test -- --runInBand --runTestsByPath 'src/app/location-detail/[id]/__tests__/page.test.tsx' src/components/features/__tests__/LocationDetailContent.test.tsx --silent`。
-- [ ] T044 T043のsettled page integration testsをfresh read-only test-code reviewerへ委任する。page-level public boundary、host main、meaningful fixture、component testでしか証明できない契約の移行、component import absenceを確認し、`VERDICT: PASS`までT045を開始しない。T043でtest bytesが変わった場合はREDとレビューをやり直す。
+- [X] T042 [US5] T009、T012、T015、T018、T023、T026、T031、T036、T041のproduction review PASS、focused GREEN、strict TypeScript、Lint、diff結果を親側で再照合した。cross-cutting contractは3 suites/33 tests、semantic/metadata consumerは4 suites/35 tests、strict TypeScript、full Lint（既存warningのみ）、対象diff checkをPASS確認した。default全体diff checkのCRLFは既存`src/app/locations/page.tsx` baselineのみ。
+- [X] T043 [US5] `src/app/location-detail/[id]/__tests__/page.test.tsx`へ、`LocationDetailContent`をruntime importせずページレベルの公開挙動だけでsuccess、optional omission、destination href/order、definition-list、image、state、metadataを検証するintegration REDを追加した。real page renderで16件がGREEN、component runtime importのTypeScript AST境界1件だけが意図的REDとなった。Ko-Fi hostはshared-layout testの責務として重複させなかった。
+- [X] T044 T043のsettled page integration testsをfresh read-only test-code reviewerへ委任した。page-level public boundary、real render fixture、component責務、TypeScript ASTによるcomponent runtime import absence境界、Ko-Fi ownershipを確認し、`VERDICT: PASS`を取得した。page 16 testsとcomponent 9 testsはGREEN、AST runtime import boundaryのみ意図的RED。
 
 ### Integration production implementation and review
 
-- [ ] T045 [US5] T044 PASS後、`src/app/location-detail/[id]/page.tsx`へ`LocationDetailContent.tsx`の必要なdetail markupとhelpersを統合する。`LocationDetailContent`がclient boundaryでないことを仮定せず、実runtime consumer searchで確認する。不要なcomponent export/importと専用testは、意味あるassertionをpage testへ移した後だけ削除する。`SidebarLayout`、`PageHeader`、`KoFiSupport`、resolver、destination formatは変更しない。
-- [ ] T046 [US5] T045後、page integration aggregate、full location-detail tests、strict TypeScript、対象Lint、`git diff --check`、`search_files`によるruntime consumer 0件、path/SHAを確認する。削除対象の不在とpage-level behaviorを別々に記録する。
-- [ ] T047 [US5] T045のsettled page、削除/移行したcomponent/test、direct consumersをfresh read-only production reviewerへ委任する。behavior preservation、unused client/component boundary、test coverage、shared layout/Ko-Fi非変更、scopeを確認し、`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を取得する。
+- [X] T045 [US5] T044 PASS後、`src/app/location-detail/[id]/page.tsx`へdetail markupとhelpersを統合し、`LocationDetailContent` runtime importを除去した。loader/resolver、PageHeader、state shell、native links、detail semantics、CTA、Ko-Fi/layout境界を維持した。
+- [X] T046 [US5] T045後、page/metadata/accessible-route/semantic aggregate、button/accessibility contract、strict TypeScript、Lint、scoped diff check、runtime consumer searchを実行した。CTA assertionをpage testへ移し、component専用testとtest-only direct importsを削除・整理した後、`LocationDetailContent.tsx`と専用testを削除した。runtime consumer/import/requireは0件、削除対象不在、5 suites/47 tests GREEN。全体diff checkのCRLFは既存`src/app/locations/page.tsx` baseline。
+- [X] T047 [US5] settled integration page、移行test、削除component、direct consumer境界をfresh read-only production reviewerへ委任し、全target SHA不変・deleted paths不在・`SUBAGENT_STATUS: COMPLETE`・`VERDICT: PASS`・findingなしを取得した。前回のdigest evidence mismatchは親側再計算後のfresh reviewで解消した。
 
 ---
 
@@ -172,11 +172,12 @@ VERDICT: PASS
 
 **Purpose**: 全体の自動検証、実ブラウザ、CDN v2.1.1、最終scopeを、未実行やwarningと混同せず記録する。
 
-- [ ] T048 `npm test -- --runInBand`を実行し、全suite/test数、失敗、timeout、collection failureを記録する。次に`npx tsc --noEmit --incremental false`、`npm run lint`、`git diff --check`、`uvx --from specify-cli specify check`を個別に実行する。Lintの既存warning/deprecationと新規errorを分離し、未実行を成功としない。
-- [ ] T049 `NEXT_PUBLIC_LOCATIONS_DATA_VERSION=v2.1.1 npm run dev`でローカルNext.jsを起動し、Puppeteer/CDP等の実ブラウザで`/location-detail/5e3b1528-8af6-436a-83af-24ca45b58e12`をdesktop/narrow mobileで確認する。title、唯一のh1、`提供情報` h2、上部戻るlink、destination/external/license href、`dt`/`dd`、`img[alt=""]`/roleなし、4:3、computed font-size >=16px、light/darkのWCAG 2.2 AA contrast（通常文字>=4.5:1、大きな文字>=3:1、適用対象の非テキスト要素>=3:1）、keyboard focus、主要link/CTAの表示領域幅・高さ各44 CSS px以上、Ko-Fi cardを記録する。
-- [ ] T050 browser interceptionまたは同等のcontrolled fixtureでduplicate-ID、invalid-ID、unknown-ID、transport/JSON failure、loadingを確認し、not-found/data-load-error/errorを混同せず、各stateでh1一つ・上部戻るlink一つ・空success detailsなしを記録する。loadingでは`loading.tsx`由来の見出し・日本語status・上部戻るlinkを確認する。v2.1.1の実データを重複fixtureと誤記しない。
-- [ ] T051 `npm run build`を最終かつ別ゲートとして実行する。Prisma/GTFS side effect、環境不足、lint failure、build failureを個別に分類し、build未実行・timeoutを成功としない。
-- [ ] T052 `git status --short --untracked-files=all`、`git diff --name-only`、全変更/新規fileのSHA-256、`git diff --check`、019 docsのrelative-link/placeholder/末尾空白検査を実行する。今回のscope外のruntime source、`src/components/features/KoFiSupport.tsx`、`.specify/feature.json`、既存dirty test、本番変更が混入していないかを親が再確認する。commit、push、PRは行わない。
+- [X] T048 `npm test -- --runInBand`を実行し、`127 suites passed / 2 failed / 2 skipped`、`722 tests passed / 2 failed / 17 skipped`を記録した。失敗は今回のscope外かつ既存dirty変更に関連する`src/app/license/__tests__/page.responsive-layout.test.tsx`、`src/components/ui/__tests__/UserIdentity.test.tsx`のみ。strict TypeScript、`npm run lint`、`git diff --check`、`uvx --from specify-cli specify check`も個別実行した。Lintはwarning/deprecationのみ、strict diff checkは既存`src/app/locations/page.tsx`のCRLF/trailing whitespaceのみ、tolerant diff checkはPASS。
+- [X] T049 `NEXT_PUBLIC_LOCATIONS_DATA_VERSION=v2.1.1 npm run dev`とChromium/CDPで実在routeをdesktop/narrow mobile確認した。valid title、single `main`/`h1`、上部`/locations` link、destination/external/license href、`dt`→`dd`、`img[alt=""]`/roleなし、4:3、font 16px、Ko-Fi iframe、native focusを確認した。初回browser findingとしてCTAが`display:inline`で実測21pxだったため、TDDで`inline-flex` RED→fresh test review PASS→page.tsx bounded修正を実施し、final desktop rect `117.5×44px`、mobile rect `115.5×44px`、overflowなしを再確認した。
+- [X] T050 controlled fixture/route testsとbrowser acceptanceでduplicate-ID、invalid-ID、unknown-ID、data-load/transport error、loadingを確認し、stateを相互排他的に検証した。loadingのPageHeader、日本語status、上部戻りlink、各stateのsingle h1/link/no-success-detailsを確認した。さらにdark theme CTAのcontrastが初回4.12997:1だったため、TDDで`dark:text-white` RED→fresh test review PASS→bounded修正を実施し、final light contrast `5.1982:1`、dark contrast `4.6593:1`、通常文字4.5:1基準を満たすことを確認した。
+- [X] T051 `npm run build`を最終かつ別ゲートとして実行し、exit 0を確認した。内部`npm run import-gtfs`は`transit-config.json`欠如を報告したがexit 0で継続したため、その副作用/errorをbuild成功と混同せず記録した。
+- [X] T052 `git status --short --untracked-files=all`、`git diff --name-only`、全変更/新規fileのSHA-256、`git diff --check`、019 docsのrelative-link/placeholder/末尾空白検査を実行した。scope外runtime source、`KoFiSupport.tsx`、`.specify/feature.json`、既存dirty testは保持し、staged pathsなし、commit/push/PRなしを確認した。仕様check、build、focused/関連suite、strict TypeScript、Lint、browser、hash/statusを未実行と混同していない。
+- [X] T053 T049/T050の最終production bytesに対するfresh read-only production/a11y reviewを実施し、`SUBAGENT_STATUS: COMPLETE`、`VERDICT: PASS`、`modified:false`を取得した。18 reviewed/protected pathsのstart/end SHAはすべて64桁lowercaseかつ不変、staged pathsなし、canonical 5 suites/47 tests、supplemental 4 suites/22 tests、strict TypeScript、target/full lint、scoped diff checkがPASS。browser evidence、metadata/state/semantic/Ko-Fi/deletion boundaryにblocking findingなし。
 
 **Final checkpoint**: 自動検証、ブラウザ検証、build、CDN v2.1.1、scope/hashの結果が個別に記録され、すべてのrequired production reviewが明示的PASSである。warning、未実行、timeout、子エージェント報告だけでは完了扱いにしない。
 
@@ -193,7 +194,7 @@ VERDICT: PASS
 - **Phase 5 Semantics**: T032 RED/reconciliation → T033 test review PASS → T034〜T036。既存dirty実装を無条件にPASS扱いしない。
 - **Phase 6 Metadata**: T037 RED → T038 test review PASS → T039〜T041。semantic production review PASS後に開始する。
 - **Phase 7 Refactor**: T042で全P1 review PASSを確認後、T043 RED → T044 test review PASS → T045〜T047。
-- **Phase 8 Final**: T047 production review PASS後にT048〜T052。
+- **Phase 8 Final**: T047 production review PASS後にT048〜T053。T049/T050で実ブラウザfindingが出た場合は、各々RED→fresh test review PASS→bounded production→GREEN→fresh production reviewの順で再実行する。
 
 ### User story mapping
 

@@ -88,19 +88,18 @@ export function PermissionNotice({
   state,
   requiresLogin,
   onLogin,
-  className = "mt-2 flex flex-wrap items-center gap-3",
 }: PermissionNoticeProps) {
   if (!state.disabled || !state.reason) {
     return null;
   }
 
   return (
-    <div className={className} role="status" aria-live="polite">
-      <p className="text-sm text-base-content/70">{state.reason}</p>
+    <div className="mt-2 flex flex-wrap items-center gap-3" role="status" aria-live="polite">
+      <p className="text-base text-base-content">{state.reason}</p>
       {requiresLogin && (
         <button
           type="button"
-          className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+          className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm"
           onClick={onLogin}
         >
           ログイン
@@ -112,7 +111,6 @@ export function PermissionNotice({
 
 export function DisabledReasonText({
   state,
-  className = "text-sm text-base-content/70 mt-1",
   id,
 }: DisabledReasonTextProps) {
   if (!state.disabled || !state.reason) {
@@ -120,7 +118,7 @@ export function DisabledReasonText({
   }
 
   return (
-    <p id={id} role="note" aria-live="polite" className={className}>
+    <p id={id} role="note" aria-live="polite" className="text-base text-base-content mt-1">
       {state.reason}
     </p>
   );

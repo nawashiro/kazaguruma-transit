@@ -18,7 +18,7 @@ interface BusStopMemoProps {
   className?: string;
 }
 
-export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
+export function BusStopMemo({ busStops }: BusStopMemoProps) {
   const [topPostsByStop, setTopPostsByStop] = useState<
     Map<string, PostWithStats>
   >(new Map());
@@ -91,19 +91,19 @@ export function BusStopMemo({ busStops, className = "" }: BusStopMemoProps) {
   if (topPostsByStop.size === 0) return null;
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className="space-y-3">
       {Array.from(topPostsByStop.entries()).map(([busStopName, topPost]) => (
         <div
           key={busStopName}
           className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4"
         >
           <div className="flex items-center gap-2 mb-2 justify-between">
-            <span className="text-sm truncate">{busStopName}</span>
-            <span className="text-sm font-medium text-blue-800 dark:text-blue-200 break-keep">
+            <span className="text-base truncate">{busStopName}</span>
+            <span className="text-base font-medium text-blue-800 dark:text-blue-200 break-keep">
               コミュニティによるメモ
             </span>
           </div>
-          <p className="text-sm text-blue-900 dark:text-blue-100 ruby-text">
+          <p className="text-base text-blue-900 dark:text-blue-100 ruby-text">
             {topPost.content}
           </p>
         </div>

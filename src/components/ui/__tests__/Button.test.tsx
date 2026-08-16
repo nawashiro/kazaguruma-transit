@@ -52,8 +52,8 @@ describe("Button", () => {
     // ローディング状態のアクセシビリティ
     expect(button).toHaveAttribute("aria-busy", "true");
 
-    // ローディング状態では視覚的な無効状態のスタイルが適用される
-    expect(button).toHaveClass("opacity-70");
+    // 色コントラストを損なうopacityに依存せず、操作不能状態を示す
+    expect(button).not.toHaveClass("opacity-70");
     expect(button).toHaveClass("cursor-not-allowed");
   });
 

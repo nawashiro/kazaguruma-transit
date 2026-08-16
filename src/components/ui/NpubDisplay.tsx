@@ -25,13 +25,13 @@ export function NpubDisplay({ pubkey }: Props) {
 
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <span className="min-w-0 flex-1 truncate font-mono text-base-content/70" title={npub}>
+      <span className="min-w-0 flex-1 truncate font-mono text-base-content" title={npub}>
         {npub}
       </span>
       <button
         type="button"
         onClick={handleCopy}
-        className="inline-flex shrink-0 min-h-[44px] min-w-[44px] items-center justify-center rounded-full dark:rounded-sm p-2 transition-colors hover:bg-base-200"
+        className="inline-flex shrink-0 min-h-[44px] min-w-[44px] items-center justify-center rounded-full dark:rounded-sm p-2 transition-colors hover:bg-base-200 text-base"
         title={isCopied ? "ユーザーIDをコピーしました" : "クリップボードにコピー"}
         aria-label={isCopied ? "ユーザーIDをコピーしました" : "ユーザーIDをコピー"}
       >

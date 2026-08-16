@@ -81,13 +81,13 @@ export default function DiscussionManagePage() {
           if (!referencedDiscussion) {
             if (referencedDiscussionCompletionReason !== "eose") {
               return (
-                <div key={reference.discussionId} className="text-sm text-gray-400 italic">
+                <div key={reference.discussionId} className="text-base text-base-content italic">
                   会話の参照を取得中です。参照: {buildNaddrFromRef(reference.discussionId)}
                 </div>
               );
             }
             return (
-              <div key={reference.discussionId} className="text-sm text-gray-400 italic">
+              <div key={reference.discussionId} className="text-base text-base-content italic">
                 会話が見つかりません。参照: {buildNaddrFromRef(reference.discussionId)}
               </div>
             );
@@ -103,13 +103,13 @@ export default function DiscussionManagePage() {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 ruby-text">
                   {referencedDiscussion.title}
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
+                <p className="text-base text-base-content mb-2 ruby-text">
                   {referencedDiscussion.description.length > 100
                     ? `${referencedDiscussion.description.slice(0, 100)}...`
                     : referencedDiscussion.description}
                 </p>
                 <div className="flex justify-between items-center">
-                  <div className="text-gray-500">
+                  <div className="text-base-content">
                     <time
                       dateTime={new Date(
                         referencedDiscussion.createdAt * 1000
@@ -213,7 +213,7 @@ export default function DiscussionManagePage() {
           </span>
           <button
             type="button"
-            className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
             onClick={() => void discussionMeta.reload()}
           >
             <span className="ruby-text">再読み込み</span>
@@ -340,7 +340,7 @@ export default function DiscussionManagePage() {
                             post.approvalState === "unknown" ||
                             approvingIds.has(post.id)
                           }
-                          className="ml-4 btn btn-primary rounded-full dark:rounded-sm"
+                          className="ml-4 btn text-base btn-primary rounded-full dark:rounded-sm"
                         >
                           <span className="ruby-text">
                             {approvingIds.has(post.id) ? "" : "承認"}
@@ -357,12 +357,12 @@ export default function DiscussionManagePage() {
                   <div className="py-8">
                     <CheckBadgeIcon
                       aria-label="承認待ちなし"
-                      className="h-12 w-12 text-gray-400"
+                      className="h-12 w-12 text-base-content"
                     />
                     <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
                       承認待ちの投稿はありません
                     </h3>
-                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    <p className="mt-2 text-base text-base-content">
                       新しい投稿が投稿されると、ここに表示されます。
                     </p>
                   </div>
@@ -386,7 +386,7 @@ export default function DiscussionManagePage() {
                 {approvedPosts.slice(0, 10).map((post) => (
                   <div
                     key={post.id}
-                    className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 opacity-75"
+                    className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
                   >
                     <div className="card-body p-4">
                       <div className="flex justify-between items-start">
@@ -402,7 +402,7 @@ export default function DiscussionManagePage() {
                                 !post.approvedBy?.includes(user.pubkey || "") ||
                                 revokingIds.has(post.id)
                               }
-                              className="btn btn-warning min-h-[44px] rounded-full dark:rounded-sm"
+                              className="btn text-base btn-warning min-h-[44px] rounded-full dark:rounded-sm"
                             >
                               <span className="ruby-text">
                                 {revokingIds.has(post.id) ? "" : "承認を撤回"}
@@ -415,7 +415,7 @@ export default function DiscussionManagePage() {
                   </div>
                 ))}
                 {approvedPosts.length > 10 && (
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-base-content text-base">
                     最新10件を表示中（全{approvedPosts.length}件）
                   </p>
                 )}
@@ -426,12 +426,12 @@ export default function DiscussionManagePage() {
                   <div className="py-8">
                     <CheckBadgeIcon
                       aria-label="承認済みなし"
-                      className="h-12 w-12 text-gray-400"
+                      className="h-12 w-12 text-base-content"
                     />
                     <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
                       承認済みの投稿はありません
                     </h3>
-                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    <p className="mt-2 text-base text-base-content">
                       投稿が承認されると、ここに表示されます。
                     </p>
                   </div>

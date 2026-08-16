@@ -220,7 +220,7 @@ export default function PostApprovalPage() {
           />
           <Link
             href="/discussions"
-            className="btn btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -359,7 +359,7 @@ export default function PostApprovalPage() {
                                 approvingIds.has(post.id) ||
                                 !hasApprovalPermission
                               }
-                              className="ml-4 btn btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+                              className="ml-4 btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm"
                             >
                               <span>
                                 {approvingIds.has(post.id) ? "" : "承認"}
@@ -374,7 +374,7 @@ export default function PostApprovalPage() {
                               )}
                             />
                           )}
-                          <div className="text-gray-500">
+                          <div className="text-base-content">
                             {formatRelativeTime(post.createdAt)}
                           </div>
                         </div>
@@ -392,7 +392,7 @@ export default function PostApprovalPage() {
                         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
                           承認待ちの投稿はありません
                         </h3>
-                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        <p className="mt-2 text-base text-base-content">
                           新しい投稿が投稿されると、ここに表示されます。
                         </p>
                       </div>
@@ -409,7 +409,7 @@ export default function PostApprovalPage() {
                     {approvedPosts.slice(0, 10).map((post) => (
                       <div
                         key={post.id}
-                        className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 opacity-75"
+                        className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
                       >
                         <div className="card-body p-4">
                           <div className="flex justify-between items-start mb-3">
@@ -444,7 +444,7 @@ export default function PostApprovalPage() {
                                     disabled={
                                       revokingIds.has(post.id) || !revokeAllowed
                                     }
-                                    className="btn btn-warning min-h-[44px] rounded-full dark:rounded-sm"
+                                    className="btn text-base btn-warning min-h-[44px] rounded-full dark:rounded-sm"
                                   >
                                     <span>
                                       {revokingIds.has(post.id)
@@ -478,7 +478,7 @@ export default function PostApprovalPage() {
                               ) : null
                             );
                           })()}
-                          <div className="text-gray-500">
+                          <div className="text-base-content">
                             承認:{" "}
                             {formatRelativeTime(
                               post.approvedAt || post.createdAt
@@ -488,7 +488,7 @@ export default function PostApprovalPage() {
                       </div>
                     ))}
                     {approvedPosts.length > 10 && (
-                      <p className="text-gray-500 text-sm">
+                      <p className="text-base-content text-base">
                         最新10件を表示中（全{approvedPosts.length}件）
                       </p>
                     )}
@@ -504,7 +504,7 @@ export default function PostApprovalPage() {
                         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
                           承認済みの投稿はありません
                         </h3>
-                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        <p className="mt-2 text-base text-base-content">
                           投稿が承認されると、ここに表示されます。
                         </p>
                       </div>

@@ -24,7 +24,6 @@ const dedicatedConsumerFiles = [
   "src/components/auth/AuthRoutePage.tsx",
   "src/components/auth/AuthenticationForm.tsx",
   "src/components/features/LocationCard.tsx",
-  "src/components/features/LocationDetailContent.tsx",
   "src/components/features/OriginSelector.tsx",
   "src/components/features/DestinationSelector.tsx",
   "src/components/features/RouteSearchResults.tsx",
@@ -98,7 +97,6 @@ describe("アクセシビリティ実装契約", () => {
         /<Link\b/,
         /encodeURIComponent\(location\.id\)/,
       ],
-      "src/components/features/LocationDetailContent.tsx": [/<a\b/, /<button\b/],
       "src/components/features/OriginSelector.tsx": [
         /<form\b/,
         /<InputField\b/,

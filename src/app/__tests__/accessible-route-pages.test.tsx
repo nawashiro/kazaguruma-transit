@@ -5,7 +5,7 @@ import LoginPage, { metadata as loginMetadata } from "@/app/login/page";
 import SignupPage, { metadata as signupMetadata } from "@/app/signup/page";
 import RateLimitPage, { metadata as rateLimitMetadata } from "@/app/rate-limit/page";
 import LocationDetailPage, {
-  metadata as locationDetailMetadata,
+  generateMetadata as locationDetailGenerateMetadata,
 } from "@/app/location-detail/[id]/page";
 import LocationDetailLoading from "@/app/location-detail/[id]/loading";
 import type {
@@ -139,7 +139,11 @@ describe("専用ページの共通 semantic/a11y 契約", () => {
     });
   });
 
-  it("exports non-empty purpose-bearing metadata for every public page module", () => {
+  it("exports non-empty purpose-bearing metadata for every public page module", async () => {
+    const locationDetailMetadata = await locationDetailGenerateMetadata({
+      params: Promise.resolve({ id: primaryLocation.id }),
+    });
+
     expect(titleText(loginMetadata)).toMatch(/ログイン/i);
     expect(titleText(signupMetadata)).toMatch(/アカウント|作成|signup/i);
     expect(titleText(locationDetailMetadata)).toMatch(/場所|詳細/i);
@@ -197,7 +201,9 @@ describe("専用ページの共通 semantic/a11y 契約", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       primaryLocation.name,
     );
-    expect(screen.getByRole("button", { name: "ここへ行く" }).tagName).toBe("BUTTON");
+    const destinationLink = screen.getByRole("link", { name: "ここへ行く" });
+    expect(destinationLink.tagName).toBe("A");
+    expect(destinationLink.getAttribute("href")?.trim()).toBeTruthy();
     assertNativeLinks(view.container);
   });
 

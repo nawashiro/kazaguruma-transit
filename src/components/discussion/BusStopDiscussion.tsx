@@ -181,8 +181,13 @@ export function BusStopDiscussion({
   const isApprovalCheckPending =
     snapshot?.approvalState === "unknown" && snapshot.primaryEvents.length > 0;
 
+  const safeClassName =
+    className === "border-t border-gray-200 dark:border-gray-700 pt-8"
+      ? "border-t border-gray-200 dark:border-gray-700 pt-8"
+      : "";
+
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-6 ${safeClassName}`}>
       {/* Evaluation component */}
       <DiscussionReadStatus
         isLoading={isStreamLoading}
@@ -212,7 +217,7 @@ export function BusStopDiscussion({
           </div>
         )}
         {!isStreamLoading && !streamError && postsWithStats.length === 0 && !isApprovalCheckPending && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 ruby-text mb-3">
+          <p className="text-base text-base-content ruby-text mb-3">
             承認済みの投稿はまだありません。
           </p>
         )}
@@ -238,7 +243,7 @@ export function BusStopDiscussion({
                 disabled={isSubmitting}
                 maxLength={280}
               />
-              <div className="text-gray-500 mt-1 ruby-text">
+              <div className="text-base-content mt-1 ruby-text">
                 {postForm.content.length}/280文字
               </div>
             </div>
@@ -270,7 +275,7 @@ export function BusStopDiscussion({
 
             {errors.length > 0 && (
               <div className="alert alert-error">
-                <ul className="text-sm">
+                <ul className="text-base">
                   {errors.map((error, index) => (
                     <li key={index}>{error}</li>
                   ))}
@@ -281,7 +286,7 @@ export function BusStopDiscussion({
             <div className="flex gap-2">
               <Button
                 onClick={() => setShowPreview(true)}
-                className="btn btn-primary flex-1 rounded-full dark:rounded-sm"
+                className="btn text-base btn-primary flex-1 rounded-full dark:rounded-sm"
                 disabled={!postForm.content.trim() || isSubmitting}
               >
                 プレビュー

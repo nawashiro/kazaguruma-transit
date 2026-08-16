@@ -64,7 +64,7 @@ export default function CategoryTabs({
             }}
             id={getCategoryId(idPrefix, category)}
             type="button"
-            className={`tab px-4 text-base-content ${isActive ? "tab-active" : ""}`}
+            className={`tab text-base px-4 text-base-content ${isActive ? "tab-active" : ""}`}
             role="tab"
             aria-selected={isActive}
             aria-controls={activePanelId}

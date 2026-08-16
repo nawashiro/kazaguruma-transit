@@ -88,7 +88,7 @@ export default function AwardPage() {
               href={AWARD_PROJECT_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-neutral rounded-full dark:rounded-sm"
+              className="btn text-base btn-neutral rounded-full dark:rounded-sm"
             >
               <span className="ruby-text">東京都の作品紹介を見る</span>
               <ArrowTopRightOnSquareIcon className="h-5 w-5" aria-hidden="true" />
@@ -97,7 +97,7 @@ export default function AwardPage() {
               href={AWARD_BADGE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-outline rounded-full dark:rounded-sm"
+              className="btn text-base btn-outline rounded-full dark:rounded-sm"
             >
               <span className="ruby-text">オープンバッジを確認する</span>
               <ArrowTopRightOnSquareIcon className="h-5 w-5" aria-hidden="true" />

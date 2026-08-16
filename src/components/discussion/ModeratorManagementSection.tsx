@@ -29,7 +29,7 @@ function Selection({
   pubkey: string;
 }) {
   return (
-    <label className="flex shrink-0 flex-col items-center gap-2 text-sm font-medium">
+    <label className="flex shrink-0 flex-col items-center gap-2 text-base font-medium">
       <span className="ruby-text">{label}</span>
       <input
         aria-label={`${formatBip39JapaneseMnemonicPreviewFromPubkey(pubkey)} を${label}対象にする`}
@@ -45,7 +45,7 @@ function Selection({
 function Reason({ application }: { application?: ModeratorApplication }) {
   if (!application)
     return (
-      <p className="mt-3 text-sm text-base-content/70 ruby-text">
+      <p className="mt-3 text-base text-base-content ruby-text">
         会話作成者による直接追加
       </p>
     );
@@ -54,7 +54,7 @@ function Reason({ application }: { application?: ModeratorApplication }) {
       <p className="text-base whitespace-pre-wrap ruby-text">
         申請理由: {application.reason || "未記入"}
       </p>
-      <p className="text-sm text-base-content/70 ruby-text">
+      <p className="text-base text-base-content ruby-text">
         申請日時: {formatRelativeTime(application.createdAt)}
       </p>
     </div>
@@ -85,7 +85,7 @@ export function ModeratorManagementSection({
             モデレーターをしているユーザー
           </h2>
           {moderators.length === 0 ? (
-            <p className="text-base-content/70 ruby-text">
+            <p className="text-base-content ruby-text">
               モデレーターはいません。
             </p>
           ) : (
@@ -129,7 +129,7 @@ export function ModeratorManagementSection({
             <span>申請中のユーザー</span>
           </h2>
           {applications.length === 0 ? (
-            <p className="text-base-content/70 ruby-text">
+            <p className="text-base-content ruby-text">
               申請中のユーザーはいません。
             </p>
           ) : (

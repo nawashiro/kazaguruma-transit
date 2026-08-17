@@ -819,6 +819,69 @@ function findSmallCssDeclarations(sourceFile: SourceFile): string[] {
   return violations;
 }
 
+function extractTopLevelBodyRuleBodies(styles: string): string[] {
+  const content = styles.replace(/\/\*[\s\S]*?\*\//g, (comment) =>
+    comment.replace(/[^\n]/g, " "),
+  );
+  const bodies: string[] = [];
+  let braceDepth = 0;
+  let blockStart = 0;
+  let bodyStart: number | null = null;
+  let quote: '"' | "'" | null = null;
+  let escaped = false;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const character = content[index];
+
+    if (quote !== null) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (character === '"' || character === "'") {
+      quote = character;
+      continue;
+    }
+
+    if (character === ";" && braceDepth === 0) {
+      blockStart = index + 1;
+      continue;
+    }
+
+    if (character === "{") {
+      const selector = content.slice(blockStart, index).replace(/\s+/g, " ").trim();
+      if (braceDepth === 0 && selector === "body") {
+        bodyStart = index + 1;
+      }
+      braceDepth += 1;
+      continue;
+    }
+
+    if (character !== "}") continue;
+    if (braceDepth === 0) {
+      blockStart = index + 1;
+      continue;
+    }
+
+    braceDepth -= 1;
+    if (braceDepth !== 0) continue;
+
+    if (bodyStart !== null) {
+      bodies.push(content.slice(bodyStart, index));
+      bodyStart = null;
+    }
+    blockStart = index + 1;
+  }
+
+  return bodies;
+}
+
 function needsInspection(evaluation: ClassNameExpression): boolean {
   return evaluation.cannotInspect;
 }
@@ -1145,6 +1208,37 @@ describe("UI minimum font-size utility compliance", () => {
     ]);
   });
 
+  it("ignores nested body-like fragments when extracting top-level body rules", () => {
+    const nestedAtRule = [
+      "@media (max-width: 600px) {",
+      "  body { font-size: 16px; }",
+      "}",
+    ].join("\n");
+    const nestedAtRuleAfterRule = [
+      "@media (min-width: 601px) {",
+      "  :root {}",
+      "  body { font-size: 16px; }",
+      "}",
+    ].join("\n");
+    const cssStringFragment = [
+      ":root {",
+      '  --css-fragment: "} body { font-size: 16px; }";',
+      "}",
+    ].join("\n");
+    const cssCommentFragment = [
+      "/* } body { font-size: 16px; } */",
+      ":root { --safe: 1; }",
+    ].join("\n");
+
+    expect(
+      extractTopLevelBodyRuleBodies(
+        [nestedAtRule, nestedAtRuleAfterRule, cssStringFragment, cssCommentFragment].join(
+          "\n",
+        ),
+      ),
+    ).toEqual([]);
+  });
+
   it("rejects named and arbitrary utility classes below 16px in regular UI source", () => {
     const violations = [
       ...loadUiSourceFiles().flatMap(findSmallFontUtilities),
@@ -1152,5 +1246,20 @@ describe("UI minimum font-size utility compliance", () => {
     ];
 
     expect(violations).toEqual([]);
+  });
+
+  it("requires the global body rule to set a 16px font size", () => {
+    const globalStyles = loadUiStyleFiles().find(
+      ({ path: filePath }) => filePath === "src/app/globals.css",
+    );
+    expect(globalStyles).toBeDefined();
+
+    const bodyRule = extractTopLevelBodyRuleBodies(globalStyles?.content ?? "")[0] ?? null;
+    const bodyFontSize = bodyRule?.match(
+      /(?:^|;)\s*font-size\s*:\s*([^;]+)/,
+    )?.[1].trim();
+
+    expect(bodyRule).not.toBeNull();
+    expect(bodyFontSize).toBe("16px");
   });
 });

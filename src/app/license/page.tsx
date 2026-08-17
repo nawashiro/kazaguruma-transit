@@ -13,7 +13,7 @@ export default async function LicensePage() {
           <div className="card-body p-4 sm:p-6">
             <h2 className="card-title"><span>本ソフトウェア</span></h2>
             <div>
-              <table className="table w-full table-fixed text-sm" aria-label="本ソフトウェア">
+              <table className="table w-full table-fixed text-base" aria-label="本ソフトウェア">
                 <colgroup>
                   <col className="w-[38%] sm:w-[28%]" />
                   <col />
@@ -64,7 +64,7 @@ export default async function LicensePage() {
           <div className="card-body p-4 sm:p-6">
             <h2 className="card-title"><span>使用オープンデータ</span></h2>
             <div>
-              <table className="table w-full table-fixed text-sm" aria-label="使用オープンデータ">
+              <table className="table w-full table-fixed text-base" aria-label="使用オープンデータ">
                 <colgroup>
                   <col className="w-[62%] sm:w-[70%]" />
                   <col />
@@ -92,7 +92,7 @@ export default async function LicensePage() {
           <div className="card-body p-4 sm:p-6">
             <h2 className="card-title"><span>導入パッケージ</span></h2>
             <div>
-              <table className="table w-full table-fixed text-sm" aria-label="導入パッケージ">
+              <table className="table w-full table-fixed text-base" aria-label="導入パッケージ">
                 <colgroup>
                   <col className="w-[50%] sm:w-[54%]" />
                   <col className="w-[22%] sm:w-[23%]" />
@@ -115,7 +115,7 @@ export default async function LicensePage() {
                   ))}
                   {payload.dependencies.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="text-base-content/60 whitespace-normal">依存ライセンス情報は未生成です。</td>
+                      <td colSpan={3} className="text-base-content whitespace-normal">依存ライセンス情報は未生成です。</td>
                     </tr>
                   )}
                 </tbody>

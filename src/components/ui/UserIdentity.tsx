@@ -12,7 +12,7 @@ export function UserIdentity({ pubkey }: UserIdentityProps) {
         <span className="text-base font-bold mr-1">
           {formatBip39JapaneseMnemonicPreviewFromPubkey(pubkey)}
         </span>
-        <span className="text-base-content/70">さん</span>
+        <span className="text-base-content">さん</span>
       </p>
       <NpubDisplay pubkey={pubkey} />
     </div>

@@ -45,16 +45,16 @@ export default function CarouselCard({
             <a
               href={`#${prevSlideId}`}
               className="btn text-base btn-primary btn-circle"
+              aria-label="前のスライド"
             >
               <ArrowLeftIcon height="1rem" width="1rem" />
-              <span className="sr-only">前のスライドに移動</span>
             </a>
             <a
               href={`#${nextSlideId}`}
               className="btn text-base btn-primary btn-circle"
+              aria-label="次のスライド"
             >
               <ArrowRightIcon height="1rem" width="1rem" />
-              <span className="sr-only">次のスライドに移動</span>
             </a>
           </div>
         </div>

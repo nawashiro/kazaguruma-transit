@@ -54,7 +54,7 @@ model Stop {
   url             String?       @map("stop_url")
   location_type   Int?
   parent_station  String?
-  timezone        String?
+  timezone        String?       @map("stop_timezone")
   wheelchair_boarding Int?
   stop_times      StopTime[]
   

@@ -19,33 +19,33 @@ export default function BeginnersGuide() {
       />
       <div className="space-y-4">
         <Card title="目次">
-          <ul className="menu bg-base-100 p-0">
-            <li>
+          <ul className="list">
+            <li className="list-row">
               <a href="#what-is">
-                <span>風ぐるまってなに？</span>
+                <span><ruby>風<rt>かざ</rt></ruby>ぐるまってなに？</span>
               </a>
             </li>
-            <li>
+            <li className="list-row">
               <a href="#how-to-ride">
                 <span>乗りかた</span>
               </a>
             </li>
-            <li>
+            <li className="list-row">
               <a href="#how-to-ride-with-wheelchair">
                 <span>車いすやベビーカーのかたへ</span>
               </a>
             </li>
-            <li>
+            <li className="list-row">
               <a href="#about-site">
                 <span>このサイトはなに？</span>
               </a>
             </li>
-            <li>
+            <li className="list-row">
               <a href="#about-me">
                 <span>あなたは誰？</span>
               </a>
             </li>
-            <li>
+            <li className="list-row">
               <a href="#payment">
                 <span>お金をとるの？</span>
               </a>
@@ -172,7 +172,7 @@ export default function BeginnersGuide() {
               作者のNawashiroは、ただの一般市民です。このサイトは千代田区の公式サービスではなく、個人的な取り組みとして運営しています。
             </p>
             <p>
-              きっかけは、母が入院したとき、病院まで風ぐるまで行こうとして時刻表をうまく読めず、区内中をさまよってしまった経験です。同じような困りごとを抱える人のために、このサービスを作りました。
+              きっかけは、母が入院したとき、病院まで<ruby>風<rt>かざ</rt></ruby>ぐるまで行こうとして時刻表をうまく読めず、区内中をさまよってしまった経験です。同じような困りごとを抱える人のために、このサービスを作りました。
             </p>
           </div>
         </Card>

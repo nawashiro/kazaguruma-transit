@@ -788,12 +788,9 @@ function findSmallCssDeclarations(sourceFile: SourceFile): string[] {
 
     const declarations = [...body.matchAll(/(?:^|;)\s*font-size\s*:\s*([^;]+)/g)];
     const selector = block.selector.replace(/\s+/g, " ").trim();
-    const isExactRubyRule =
-      selector === "rt" &&
-      declarations.length === 1 &&
-      declarations[0]?.[1].trim() === "70%";
+    const isRubyAnnotationRule = selector === "rt";
 
-    if (!isExactRubyRule) {
+    if (!isRubyAnnotationRule) {
       for (const declaration of declarations) {
         const value = declaration[1].trim();
         const declarationOffset =
@@ -817,6 +814,51 @@ function findSmallCssDeclarations(sourceFile: SourceFile): string[] {
   }
 
   return violations;
+}
+
+function containsTopLevelSelector(selectorList: string, target: string): boolean {
+  const selectors: string[] = [];
+  let segment = "";
+  let parenthesisDepth = 0;
+  let bracketDepth = 0;
+  let quote: '"' | "'" | null = null;
+  let escaped = false;
+
+  for (const character of selectorList) {
+    if (quote !== null) {
+      segment += character;
+      if (escaped) {
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (character === '"' || character === "'") {
+      quote = character;
+      segment += character;
+      continue;
+    }
+
+    if (character === "(") parenthesisDepth += 1;
+    if (character === ")" && parenthesisDepth > 0) parenthesisDepth -= 1;
+    if (character === "[") bracketDepth += 1;
+    if (character === "]" && bracketDepth > 0) bracketDepth -= 1;
+
+    if (character === "," && parenthesisDepth === 0 && bracketDepth === 0) {
+      selectors.push(segment);
+      segment = "";
+      continue;
+    }
+
+    segment += character;
+  }
+
+  selectors.push(segment);
+  return selectors.some((selector) => selector.replace(/\s+/g, " ").trim() === target);
 }
 
 function extractTopLevelBodyRuleBodies(styles: string): string[] {
@@ -856,7 +898,7 @@ function extractTopLevelBodyRuleBodies(styles: string): string[] {
 
     if (character === "{") {
       const selector = content.slice(blockStart, index).replace(/\s+/g, " ").trim();
-      if (braceDepth === 0 && selector === "body") {
+      if (braceDepth === 0 && containsTopLevelSelector(selector, "body")) {
         bodyStart = index + 1;
       }
       braceDepth += 1;
@@ -1182,12 +1224,12 @@ describe("UI minimum font-size utility compliance", () => {
     ]);
   });
 
-  it("checks CSS font-size declarations except the exact ruby rule", () => {
+  it("checks CSS font-size declarations except ruby annotation rules", () => {
     const fixture: SourceFile = {
       path: "fixture.css",
       content: [
         "rt {",
-        "  font-size: 70%;",
+        "  font-size: 0.7em;",
         "}",
         ".small {",
         "  font-size: 15px;",
@@ -1239,6 +1281,21 @@ describe("UI minimum font-size utility compliance", () => {
     ).toEqual([]);
   });
 
+  it("finds body declarations in top-level selector lists", () => {
+    const bodySelectorList = [
+      "p,",
+      "body,",
+      "span {",
+      "  font-size: 16px;",
+      "}",
+    ].join("\n");
+
+    const bodyRules = extractTopLevelBodyRuleBodies(bodySelectorList);
+
+    expect(bodyRules).toHaveLength(1);
+    expect(bodyRules[0]).toMatch(/font-size:\s*16px/);
+  });
+
   it("rejects named and arbitrary utility classes below 16px in regular UI source", () => {
     const violations = [
       ...loadUiSourceFiles().flatMap(findSmallFontUtilities),
@@ -1248,13 +1305,16 @@ describe("UI minimum font-size utility compliance", () => {
     expect(violations).toEqual([]);
   });
 
-  it("requires the global body rule to set a 16px font size", () => {
+  it("requires a top-level selector list containing body to set a 16px font size", () => {
     const globalStyles = loadUiStyleFiles().find(
       ({ path: filePath }) => filePath === "src/app/globals.css",
     );
     expect(globalStyles).toBeDefined();
 
-    const bodyRule = extractTopLevelBodyRuleBodies(globalStyles?.content ?? "")[0] ?? null;
+    const bodyRule =
+      extractTopLevelBodyRuleBodies(globalStyles?.content ?? "").find((rule) =>
+        /(?:^|;)\s*font-size\s*:\s*([^;]+)/.test(rule),
+      ) ?? null;
     const bodyFontSize = bodyRule?.match(
       /(?:^|;)\s*font-size\s*:\s*([^;]+)/,
     )?.[1].trim();

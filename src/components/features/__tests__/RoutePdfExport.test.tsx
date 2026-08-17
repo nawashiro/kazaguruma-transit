@@ -167,7 +167,7 @@ describe("RoutePdfExport", () => {
     });
   });
 
-  it("PDF生成中もアイコンのDOMノードを維持すること", async () => {
+  it("PDF生成中もアイコンのDOMノードを維持し、ビジー状態を通知すること", async () => {
     let resolvePdfResponse: ((response: object) => void) | undefined;
     const pdfResponse = new Promise<object>((resolve) => {
       resolvePdfResponse = resolve;
@@ -191,8 +191,11 @@ describe("RoutePdfExport", () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "生成中..." })).toBeDisabled();
+      const loadingButton = screen.getByRole("button", { name: "印刷する" });
+      expect(loadingButton).toBeDisabled();
+      expect(loadingButton).toHaveAttribute("aria-busy", "true");
     });
+    expect(screen.queryByRole("button", { name: "生成中..." })).not.toBeInTheDocument();
     expect(button.querySelector("svg")).toBe(downloadIcon);
 
     await act(async () => {
@@ -202,7 +205,11 @@ describe("RoutePdfExport", () => {
           Promise.resolve(new Blob(["test"], { type: "application/pdf" })),
       });
     });
-    expect(screen.getByRole("button", { name: "印刷する" })).toBeEnabled();
+    await waitFor(() => {
+      const idleButton = screen.getByRole("button", { name: "印刷する" });
+      expect(idleButton).toBeEnabled();
+      expect(idleButton).not.toHaveAttribute("aria-busy");
+    });
   });
 
   it("ダウンロードリンクが外部で除去されてもエラー表示に切り替わらないこと", async () => {

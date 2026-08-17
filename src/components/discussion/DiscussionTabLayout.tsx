@@ -357,7 +357,7 @@ export function DiscussionTabLayout({
       <div className="mb-4">
         <Link
           href="/discussions"
-          className="btn btn-ghost rounded-full dark:rounded-sm"
+          className="btn text-base btn-ghost rounded-full dark:rounded-sm"
         >
           <span className="ruby-text">← 会話一覧に戻る</span>
         </Link>

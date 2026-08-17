@@ -142,7 +142,7 @@ export function AuthenticationForm({
           <div>
             <label
               htmlFor={passkeyNameId}
-              className="block text-sm font-medium mb-2 ruby-text"
+              className="block text-base font-medium mb-2 ruby-text"
             >
               パスキー名
             </label>
@@ -163,7 +163,7 @@ export function AuthenticationForm({
           </div>
 
           <fieldset className="space-y-3">
-            <legend className="text-sm font-medium ruby-text">
+            <legend className="text-base font-medium ruby-text">
               利用規約とプライバシーポリシーへの同意
             </legend>
             <label
@@ -181,7 +181,7 @@ export function AuthenticationForm({
                 aria-describedby={attemptError ? errorId : undefined}
                 onInvalid={handleInvalid}
               />
-              <span className="text-sm ruby-text">
+              <span className="text-base ruby-text">
                 <a
                   href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"
                   target="_blank"
@@ -208,7 +208,7 @@ export function AuthenticationForm({
                 aria-describedby={attemptError ? errorId : undefined}
                 onInvalid={handleInvalid}
               />
-              <span className="text-sm ruby-text">
+              <span className="text-base ruby-text">
                 <a
                   href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80b2a6d4d045e850407c"
                   target="_blank"
@@ -231,13 +231,13 @@ export function AuthenticationForm({
           role="alert"
           aria-live="polite"
         >
-          <span className="text-sm ruby-text">{attemptError}</span>
+          <span className="text-base ruby-text">{attemptError}</span>
         </div>
       )}
 
       <button
         type="submit"
-        className="btn btn-primary min-h-[44px] w-full rounded-full dark:rounded-sm"
+        className="btn text-base btn-primary min-h-[44px] w-full rounded-full dark:rounded-sm"
         disabled={isSubmitting}
         aria-busy={isSubmitting}
       >

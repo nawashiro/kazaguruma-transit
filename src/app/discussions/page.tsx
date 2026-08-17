@@ -106,13 +106,13 @@ export default function DiscussionsPage() {
                             <h3 className="card-title text-lg ruby-text">
                               <span>{discussion.title}</span>
                             </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 ruby-text">
+                            <p className="text-base text-base-content ruby-text">
                               {discussion.description.length > 70
                                 ? `${discussion.description.slice(0, 70)}...`
                                 : discussion.description}
                             </p>
                             <div className="flex justify-between items-center mt-2">
-                              <div className="text-gray-500 space-y-1">
+                              <div className="text-base-content space-y-1">
                                 <time
                                   dateTime={new Date(
                                     discussion.createdAt * 1000
@@ -130,7 +130,7 @@ export default function DiscussionsPage() {
                                     <span>参加中</span>
                                   </p>
                                 )}
-                                <p className="text-sm">
+                                <p className="text-base">
                                   {discussion.moderators.length + 1}
                                   モデレーター
                                 </p>
@@ -144,7 +144,7 @@ export default function DiscussionsPage() {
                 </div>
               ) : (
                 <div className="py-8">
-                  <p className="text-gray-600 dark:text-gray-400 ruby-text">
+                  <p className="text-base-content ruby-text">
                     会話がまだありません。
                   </p>
                 </div>
@@ -162,12 +162,12 @@ export default function DiscussionsPage() {
 
               <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="card-body">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 ruby-text mb-4">
+                  <p className="text-base text-base-content ruby-text mb-4">
                     誰でも新しい会話を作成できます。
                   </p>
                   <Link
                     href="/discussions/create"
-                    className="btn btn-primary w-full rounded-full dark:rounded-sm"
+                    className="btn text-base btn-primary w-full rounded-full dark:rounded-sm"
                   >
                     <span className="ruby-text">新しい会話を作成</span>
                   </Link>

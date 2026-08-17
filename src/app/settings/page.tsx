@@ -175,7 +175,7 @@ export default function SettingsPage() {
                       </span>
                     </label>
                     <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <span className="text-sm">{user.profile.about}</span>
+                      <span className="text-base">{user.profile.about}</span>
                     </div>
                   </div>
                 )}
@@ -185,7 +185,7 @@ export default function SettingsPage() {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={handleLogout}
-                    className="btn btn-warning min-h-[44px] rounded-full dark:rounded-sm"
+                    className="btn text-base btn-warning min-h-[44px] rounded-full dark:rounded-sm"
                     disabled={isLoggingOut}
                   >
                     {isLoggingOut ? (
@@ -210,7 +210,7 @@ export default function SettingsPage() {
                 {error && (
                   <div className="alert alert-error mb-4">
                     <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-                    <span className="text-sm">{error}</span>
+                    <span className="text-base">{error}</span>
                   </div>
                 )}
 
@@ -263,10 +263,10 @@ export default function SettingsPage() {
                               >
                                 {discussion.title}
                               </Link>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ruby-text">
+                              <p className="text-base text-base-content mt-1 ruby-text">
                                 {discussion.description}
                               </p>
-                              <p className="text-gray-500 mt-2">
+                              <p className="text-base-content mt-2">
                                 {formatRelativeTime(discussion.createdAt)}
                               </p>
                             </div>
@@ -284,7 +284,7 @@ export default function SettingsPage() {
                     </span>
                     <button
                       type="button"
-                      className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                      className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
                       onClick={() => {
                         void loadDiscussions();
                       }}
@@ -298,12 +298,12 @@ export default function SettingsPage() {
                     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2 ruby-text">
                       まだ会話を作成していません
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4 ruby-text">
+                    <p className="text-base-content mb-4 ruby-text">
                       新しい会話を作成して、地域の話題について話し合いましょう。
                     </p>
                     <Link
                       href="/discussions/create"
-                      className="btn btn-primary rounded-full dark:rounded-sm"
+                      className="btn text-base btn-primary rounded-full dark:rounded-sm"
                     >
                       <span className="ruby-text">会話を作成する</span>
                     </Link>

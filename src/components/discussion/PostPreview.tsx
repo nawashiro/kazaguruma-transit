@@ -53,7 +53,7 @@ export function PostPreview({
         </div>
       </div>
 
-      <div className="text-sm text-gray-600 dark:text-gray-400 mb-4 ruby-text">
+      <div className="text-base text-base-content mb-4 ruby-text">
         <p>この投稿はモデレーターによる承認後に表示されます。</p>
       </div>
 

@@ -56,7 +56,7 @@ export function EvaluationComponent({
         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
           評価可能な投稿がありません
         </h3>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-base text-base-content">
           すべての投稿を評価済みか、承認された投稿がありません。
         </p>
       </div>
@@ -79,7 +79,7 @@ export function EvaluationComponent({
         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
           評価完了
         </h3>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-base text-base-content">
           すべての投稿の評価が完了しました。
         </p>
       </div>
@@ -137,7 +137,7 @@ export function EvaluationComponent({
           <button
             onClick={() => handleEvaluate(currentPost.id, "+")}
             disabled={evaluatingPost !== null}
-            className={`btn btn-primary min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
+            className={`btn text-base btn-primary min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
               }`}
             type="button"
           >
@@ -167,7 +167,7 @@ export function EvaluationComponent({
           <button
             onClick={() => handleEvaluate(currentPost.id, "-")}
             disabled={evaluatingPost !== null}
-            className={`btn btn-warning min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
+            className={`btn text-base btn-warning min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
               }`}
             type="button"
           >

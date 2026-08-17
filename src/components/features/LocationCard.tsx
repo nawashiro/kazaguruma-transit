@@ -63,10 +63,10 @@ export default function LocationCard({ location, areaName }: LocationCardProps) 
       <div className="card-body text-left">
         <h2 className="card-title">{location.name}</h2>
 
-        {displayedAreaName && <p className="text-sm /60">{displayedAreaName}</p>}
+        {displayedAreaName && <p className="text-base">{displayedAreaName}</p>}
 
         {location.description && (
-          <p className="text-sm mt-1 inline ruby-text">{location.description}</p>
+          <p className="text-base mt-1 inline ruby-text">{location.description}</p>
         )}
       </div>
     </Link>

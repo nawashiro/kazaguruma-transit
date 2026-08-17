@@ -103,7 +103,7 @@ export default function Home() {
         <Card title="日時の選択">
           <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
           <div className="form-control mt-4 space-y-2">
-            <p className="text-sm /60 mt-1 ruby-text">
+            <p className="text-base mt-1 ruby-text">
               早く到着したい場合はオンにしてください。<br />
               歩きを最小限にしたい場合はオフにしてください。
             </p>

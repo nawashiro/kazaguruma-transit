@@ -52,7 +52,7 @@ function ResetSearchConditionsLink() {
     <div className="flex justify-center">
       <Link
         href="/"
-        className="btn btn-secondary rounded-full dark:rounded-sm min-h-[44px] min-w-[44px] leading-relaxed font-medium inline-flex items-center justify-center ruby-text"
+        className="btn text-base btn-secondary rounded-full dark:rounded-sm min-h-[44px] min-w-[44px] leading-relaxed font-medium inline-flex items-center justify-center ruby-text"
       >
         <span>検索条件をリセット</span>
       </Link>

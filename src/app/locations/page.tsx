@@ -497,7 +497,7 @@ export default function LocationsPage() {
               prevSlideId="slide3"
               nextSlideId="slide2"
             >
-              <p className="text-sm /80 mb-2">
+              <p className="text-base mb-2">
                 支援が欲しいけど、なにがあるのかわからない。
                 <br />
                 あてはまる悩みにチェックをつけると、役立つ支援がわかります。
@@ -506,7 +506,7 @@ export default function LocationsPage() {
                 href="https://compass.graffer.jp/handbook/landing"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline w-fit h-fit py-2 rounded-full dark:rounded-sm"
               >
                 <p>お悩みハンドブックウェブサイトへ</p>
               </a>
@@ -519,7 +519,7 @@ export default function LocationsPage() {
               prevSlideId="slide1"
               nextSlideId="slide3"
             >
-              <p className="text-sm /80 mb-2">
+              <p className="text-base mb-2">
                 帰る家はありますか？
                 <br />
                 あったとして、安心できる場所ですか？
@@ -530,7 +530,7 @@ export default function LocationsPage() {
                 href="https://sekaibivouac.jp/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>せかいビバークウェブサイトへ</p>
               </a>
@@ -543,14 +543,14 @@ export default function LocationsPage() {
               prevSlideId="slide2"
               nextSlideId="slide1"
             >
-              <p className="text-sm /80 mb-2">
+              <p className="text-base mb-2">
                 千代田区で開催されるイベント情報はこちら。
               </p>
               <a
                 href="https://chiyolab.jp/comunity_event"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>ちよだコミュニティラボ</p>
               </a>
@@ -558,7 +558,7 @@ export default function LocationsPage() {
                 href="https://visit-chiyoda.tokyo/app/event"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>千代田区観光協会</p>
               </a>
@@ -566,7 +566,7 @@ export default function LocationsPage() {
                 href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>千代田区ウェブサイト</p>
               </a>

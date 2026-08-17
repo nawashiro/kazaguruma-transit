@@ -52,7 +52,7 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
 
         <AuthenticationForm mode={mode} onSuccess={handleSuccess} />
 
-        <p className="text-sm ruby-text">
+        <p className="text-base ruby-text">
           {isLogin ? "アカウントをお持ちでない方は" : "すでにアカウントをお持ちの方は"}{" "}
           <Link
             href={isLogin ? "/signup" : "/login"}

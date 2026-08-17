@@ -23,8 +23,7 @@ body {
 .text-resizable {
   /* フォントサイズをrem単位で指定（ルート要素に相対的） */
   font-size: 1rem;
-  /* 最小サイズと最大サイズを設定（200%拡大対応） */
-  font-size: clamp(1rem, 2vw, 2rem);
+  font-size: 1rem;
 }
 
 /* コンテナの横スクロール防止 */

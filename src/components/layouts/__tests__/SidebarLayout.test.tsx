@@ -1,5 +1,52 @@
+import type { ReactNode } from "react";
 import { render, screen, within } from "@testing-library/react";
+import type { KeyLocation } from "@/utils/addressLoader";
 import SidebarLayout from "../SidebarLayout";
+
+const mockLoadKeyLocationsDataResult = jest.fn();
+
+const locationDetailFixture: KeyLocation = {
+  id: "location-detail-host-fixture",
+  name: "神田図書館",
+  lat: 35.694,
+  lng: 139.768,
+  area: "神田",
+  description: "地域の図書館です",
+  descriptionCopyright: "千代田区オープンデータ",
+  imageUri: "https://example.test/kanda-library.jpg",
+  imageCopyright: "市民写真家",
+  uri: "https://example.test/kanda-library",
+  nodeCopyright: "千代田区",
+  licence: "CC BY 4.0",
+  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+};
+
+jest.mock("@/utils/addressLoader", () => {
+  const actual = jest.requireActual("@/utils/addressLoader");
+  return {
+    ...actual,
+    loadKeyLocationsDataResult: mockLoadKeyLocationsDataResult,
+  };
+});
+
+type LocationDetailPage = (props: {
+  params: Promise<{ id: string }>;
+}) => ReactNode | Promise<ReactNode>;
+
+function getLocationDetailPage(): LocationDetailPage {
+  // Load after the loader spy is initialized so the real route observes it.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const loaded: unknown = require("@/app/location-detail/[id]/page");
+  if (typeof loaded !== "object" || loaded === null) {
+    throw new Error("location detail page module did not export an object");
+  }
+
+  const page = (loaded as { default?: unknown }).default;
+  if (typeof page !== "function") {
+    throw new Error("location detail page module did not export a default page");
+  }
+  return page as LocationDetailPage;
+}
 
 jest.mock("next/script", () => ({
   __esModule: true,
@@ -49,6 +96,64 @@ describe("SidebarLayout", () => {
     expect(supportFrame.compareDocumentPosition(cookiePolicyLink)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+  });
+
+  it("renders the location detail page through the shared main host and keeps Ko-fi after page content", async () => {
+    mockLoadKeyLocationsDataResult.mockResolvedValue({
+      status: "success",
+      categories: [
+        {
+          category: "公共施設",
+          "category:en": "public-facilities",
+          locations: [locationDetailFixture],
+        },
+      ],
+    });
+
+    const page = await getLocationDetailPage()({
+      params: Promise.resolve({ id: locationDetailFixture.id }),
+    });
+
+    render(
+      <SidebarLayout
+        koFiUsername="nawashiro"
+        koFiContent={{
+          heading: "開発者を支援する",
+          message: "支援をお願いします。",
+        }}
+      >
+        {page}
+      </SidebarLayout>,
+    );
+
+    const mains = screen.getAllByRole("main");
+    expect(mains).toHaveLength(1);
+
+    const mainContent = mains[0];
+    const locationHeading = within(mainContent).getByRole("heading", {
+      level: 1,
+      name: locationDetailFixture.name,
+    });
+    const providedInformationHeadings = within(mainContent).getAllByRole("heading", {
+      level: 2,
+      name: "提供情報",
+    });
+    const supportFrame = within(mainContent).getByTitle("開発者を支援する（Ko-fi）");
+    const cookiePolicyLink = screen.getByRole("link", {
+      name: "クッキーポリシー",
+    });
+
+    expect(mainContent).toHaveAttribute("id", "main-content");
+    expect(mainContent).toHaveAttribute("tabindex", "-1");
+    expect(within(mainContent).getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(providedInformationHeadings).toHaveLength(1);
+    expect(locationHeading.closest("header")).not.toBeNull();
+
+    expect(mainContent).toContainElement(supportFrame);
+    expect(locationHeading.compareDocumentPosition(supportFrame)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(cookiePolicyLink.closest("footer")).not.toContainElement(supportFrame);
   });
 
   it("規約リンクを共通幅の左端に揃えて最下部に表示する", () => {

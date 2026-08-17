@@ -68,7 +68,7 @@ export default function DiscussionDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const renderInlineLoading = (label: string) => (
     <div
-      className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 ruby-text"
+      className="flex items-center gap-2 text-base text-base-content ruby-text"
       role="status"
       aria-live="polite"
     >
@@ -313,7 +313,7 @@ export default function DiscussionDetailPage() {
           />
           <Link
             href="/discussions"
-            className="btn btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -489,7 +489,7 @@ export default function DiscussionDetailPage() {
           </div>
           <button
             type="button"
-            className="btn btn-outline rounded-full dark:rounded-sm"
+            className="btn text-base btn-outline rounded-full dark:rounded-sm"
             onClick={() => window.location.reload()}
           >
             再読み込み
@@ -504,7 +504,7 @@ export default function DiscussionDetailPage() {
           <PageHeader title="会話が見つかりません" />
           <Link
             href="/discussions"
-            className="btn btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -544,7 +544,7 @@ export default function DiscussionDetailPage() {
                 意見グループ
               </h2>
 
-              <p className="text-gray-600 dark:text-gray-400 mb-4 ruby-text">
+              <p className="text-base-content mb-4 ruby-text">
                 投票を統計処理して、意見はグループ分けされます。どのグループでも共通した意見が評価されます。
               </p>
 
@@ -559,7 +559,7 @@ export default function DiscussionDetailPage() {
                   {isAnalyzing && (
                     <div className="flex items-center justify-center p-4 mb-4">
                       <div className="loading loading-spinner loading-md mr-2"></div>
-                      <span className="text-sm text-gray-600">
+                      <span className="text-base text-base-content">
                         コンセンサス分析中...
                       </span>
                     </div>
@@ -573,7 +573,7 @@ export default function DiscussionDetailPage() {
                         aria-label="意見タブ"
                       >
                         <button
-                          className={`btn border px-3 py-1 h-auto min-h-0 rounded-md font-medium ruby-text ${
+                          className={`btn text-base border px-3 py-1 h-auto min-h-0 rounded-md font-medium ruby-text ${
                             consensusTab === "group-consensus"
                               ? "btn-primary border-primary text-primary-content"
                               : "btn-outline hover:border-primary/50 hover:bg-primary/5"
@@ -589,7 +589,7 @@ export default function DiscussionDetailPage() {
                           (group, index) => (
                             <button
                               key={group.groupId}
-                              className={`btn border px-3 py-1 h-auto min-h-0 rounded-md font-medium ${
+                              className={`btn text-base border px-3 py-1 h-auto min-h-0 rounded-md font-medium ${
                                 consensusTab ===
                                 `group-${String.fromCharCode(97 + index)}`
                                   ? "btn-primary border-primary text-primary-content"
@@ -650,12 +650,12 @@ export default function DiscussionDetailPage() {
                                             </p>
                                           ))
                                       ) : (
-                                        <p className="text-gray-500">
+                                        <p className="text-base-content">
                                           コンテンツがありません
                                         </p>
                                       )}
                                     </div>
-                                    <div className="text-gray-500 mt-2">
+                                    <div className="text-base-content mt-2">
                                       {formatRelativeTime(
                                         item.post?.createdAt || 0
                                       )}
@@ -664,7 +664,7 @@ export default function DiscussionDetailPage() {
                                 </div>
                               ))
                           ) : (
-                            <p className="text-gray-600 dark:text-gray-400 ruby-text">
+                            <p className="text-base-content ruby-text">
                               コンセンサス意見がありません。
                             </p>
                           )}
@@ -721,12 +721,12 @@ export default function DiscussionDetailPage() {
                                             </p>
                                           ))
                                       ) : (
-                                        <p className="text-gray-500">
+                                        <p className="text-base-content">
                                           コンテンツがありません
                                         </p>
                                       )}
                                     </div>
-                                    <div className="text-gray-500 mt-2">
+                                    <div className="text-base-content mt-2">
                                       {formatRelativeTime(
                                         item.post?.createdAt || 0
                                       )}
@@ -735,7 +735,7 @@ export default function DiscussionDetailPage() {
                                 </div>
                               ))
                             ) : (
-                              <p className="text-gray-600 dark:text-gray-400 ruby-text">
+                              <p className="text-base-content ruby-text">
                                 このグループの代表的意見がありません。
                               </p>
                             );
@@ -744,7 +744,7 @@ export default function DiscussionDetailPage() {
                       )}
                     </>
                   ) : (
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-base-content">
                       分析された投稿がまだありません。
                     </p>
                   )}
@@ -788,7 +788,7 @@ export default function DiscussionDetailPage() {
                           maxLength={280}
                           autoComplete="off"
                         />
-                        <div className="text-gray-500 mt-1">
+                        <div className="text-base-content mt-1">
                           {postForm.content.length}/280文字
                         </div>
                       </div>
@@ -842,7 +842,7 @@ export default function DiscussionDetailPage() {
 
                       {errors.length > 0 && (
                         <div className="alert alert-error">
-                          <ul className="text-sm">
+                          <ul className="text-base">
                             {errors.map((error, index) => (
                               <li key={index}>{error}</li>
                             ))}

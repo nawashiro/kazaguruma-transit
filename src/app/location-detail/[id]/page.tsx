@@ -1,22 +1,51 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PageHeader from "@/components/layouts/PageHeader";
-import LocationDetailContent from "@/components/features/LocationDetailContent";
 import {
+  convertToLocation,
   loadKeyLocationsDataResult,
   type KeyLocation,
+  type KeyLocationsDataResult,
 } from "@/utils/addressLoader";
 import { resolveLocationDetail } from "@/lib/location/location-detail-resolver";
 import { findLocationAreaName } from "@/lib/location/location-list-state";
 
-export const metadata: Metadata = {
-  title: "場所詳細 | 風ぐるま乗換案内",
-  description: "風ぐるまで行ける場所の詳細情報",
-};
+const LOCATION_DETAIL_FALLBACK_TITLE = "場所詳細 | 風ぐるま乗換案内";
+const LOCATION_DETAIL_DESCRIPTION = "風ぐるまで行ける場所の詳細情報";
+const LOCATION_DETAIL_TITLE_SUFFIX = " - 場所詳細";
 
 type LocationDetailPageProps = {
   params: Promise<{ id: string }>;
 };
+
+async function resolveLocationDetailForPage(id: unknown) {
+  let data: KeyLocationsDataResult;
+  try {
+    data = await loadKeyLocationsDataResult();
+  } catch (error) {
+    data = {
+      status: "error",
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
+  }
+
+  return resolveLocationDetail(id, data);
+}
+
+export async function generateMetadata({
+  params,
+}: LocationDetailPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const result = await resolveLocationDetailForPage(id);
+
+  return {
+    title:
+      result.status === "success"
+        ? `${result.location.name}${LOCATION_DETAIL_TITLE_SUFFIX}`
+        : LOCATION_DETAIL_FALLBACK_TITLE,
+    description: LOCATION_DETAIL_DESCRIPTION,
+  };
+}
 
 async function getAreaName(location: KeyLocation): Promise<string> {
   if (typeof location.area === "string" && location.area.length > 0) {
@@ -30,6 +59,103 @@ async function getAreaName(location: KeyLocation): Promise<string> {
   }
 }
 
+function DestinationLink({ location }: { location: KeyLocation }) {
+  const locationObject = convertToLocation(location);
+
+  return (
+    <Link
+      href={`/?destination=${encodeURIComponent(JSON.stringify(locationObject))}`}
+      className="btn btn-primary text-base inline-flex rounded-full dark:rounded-sm min-h-[44px] h-fit dark:text-white"
+    >
+      <span className="ruby-text">ここへ行く</span>
+    </Link>
+  );
+}
+
+/** Displays location details without dialog lifecycle or focus management. */
+function LocationDetailMarkup({
+  location,
+  areaName,
+}: {
+  location: KeyLocation;
+  areaName: string | null;
+}) {
+  return (
+    <div className="space-y-4">
+      {areaName && (
+        <dl className="text-base">
+          <dt>地域</dt>
+          <dd>{areaName}</dd>
+        </dl>
+      )}
+
+      {location.imageUri && (
+        <figure className="relative aspect-[4/3] w-full overflow-hidden">
+          <img
+            src={location.imageUri}
+            alt=""
+            className="object-cover w-full h-full"
+          />
+        </figure>
+      )}
+
+      {location.description && (
+        <div className="mt-4 ruby-text">
+          <p className="text-base">{location.description}</p>
+        </div>
+      )}
+
+      {location.uri && (
+        <p className="mt-4">
+          <a
+            href={location.uri}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="link ruby-text"
+          >
+            ウェブサイトを見る
+          </a>
+        </p>
+      )}
+
+      <div className="mt-4">
+        <DestinationLink location={location} />
+      </div>
+
+      <div className="mt-6 ruby-text">
+        <h2 className="font-semibold text-base mb-2">提供情報</h2>
+        <dl className="space-y-2 text-base">
+          <dt>座標データ提供</dt>
+          <dd>{location.nodeCopyright}</dd>
+          {location.imageCopyright && (
+            <>
+              <dt>画像提供</dt>
+              <dd>{location.imageCopyright}</dd>
+            </>
+          )}
+          {location.description && location.descriptionCopyright && (
+            <>
+              <dt>説明文提供</dt>
+              <dd>{location.descriptionCopyright}</dd>
+            </>
+          )}
+          <dt>ライセンス</dt>
+          <dd>
+            <a
+              href={location.licenceUri}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link ml-1"
+            >
+              {location.licence}
+            </a>
+          </dd>
+        </dl>
+      </div>
+    </div>
+  );
+}
+
 function StatePage({
   title,
   message,
@@ -39,12 +165,14 @@ function StatePage({
 }) {
   return (
     <div className="py-8">
-      <PageHeader title={title} />
-      <div className="alert alert-error" role="alert">
-        <p>{message}</p>
+      <p className="mb-4">
         <Link href="/locations" className="link">
           場所一覧に戻る
         </Link>
+      </p>
+      <PageHeader title={title} />
+      <div className="alert alert-error" role="alert">
+        <p>{message}</p>
       </div>
     </div>
   );
@@ -55,18 +183,7 @@ export default async function LocationDetailPage({
   params,
 }: LocationDetailPageProps) {
   const { id } = await params;
-
-  let data;
-  try {
-    data = await loadKeyLocationsDataResult();
-  } catch (error) {
-    data = {
-      status: "error" as const,
-      error: error instanceof Error ? error : new Error(String(error)),
-    };
-  }
-
-  const result = resolveLocationDetail(id, data);
+  const result = await resolveLocationDetailForPage(id);
 
   if (result.status === "not-found") {
     return (
@@ -98,16 +215,16 @@ export default async function LocationDetailPage({
   const location = result.location;
   return (
     <div className="py-8">
-      <PageHeader title={location.name} />
-      <LocationDetailContent
-        location={location}
-        areaName={await getAreaName(location)}
-      />
-      <p className="mt-6">
+      <p className="mb-4">
         <Link href="/locations" className="link">
           場所一覧に戻る
         </Link>
       </p>
+      <PageHeader title={location.name} />
+      <LocationDetailMarkup
+        location={location}
+        areaName={await getAreaName(location)}
+      />
     </div>
   );
 }

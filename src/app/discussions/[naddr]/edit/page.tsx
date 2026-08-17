@@ -531,7 +531,7 @@ export default function DiscussionEditPage() {
           />
           <Link
             href="/discussions"
-            className="btn btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -584,7 +584,7 @@ export default function DiscussionEditPage() {
           </div>
           <button
             type="button"
-            className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
             onClick={() => void discussionMeta?.reload()}
           >
             <span className="ruby-text">再読み込み</span>
@@ -599,7 +599,7 @@ export default function DiscussionEditPage() {
           <PageHeader title="会話が見つかりません" />
           <Link
             href="/discussions"
-            className="btn btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -641,7 +641,7 @@ export default function DiscussionEditPage() {
             {!user.isLoggedIn && (
               <Link
                 href={buildLoginRoute(`/discussions/${naddrParam}/edit`)}
-                className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+                className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm"
               >
                 <span className="ruby-text">ログイン</span>
               </Link>
@@ -666,12 +666,12 @@ export default function DiscussionEditPage() {
                   {successMessage}
                 </h2>
                 {successType === "save" && (
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  <p className="text-base-content mb-4">
                     まもなく会話画面に戻ります...
                   </p>
                 )}
                 {successType === "listing" && (
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  <p className="text-base-content mb-4">
                     反映まで時間がかかる場合があります。
                   </p>
                 )}
@@ -701,7 +701,7 @@ export default function DiscussionEditPage() {
                       maxLength={100}
                       autoComplete="off"
                     />
-                    <div className="text-gray-500 mt-1">
+                    <div className="text-base-content mt-1">
                       {formData.title.length}/100文字
                     </div>
                   </div>
@@ -725,7 +725,7 @@ export default function DiscussionEditPage() {
                       maxLength={500}
                       autoComplete="off"
                     />
-                    <div className="text-gray-500 mt-1">
+                    <div className="text-base-content mt-1">
                       {formData.description.length}/500文字
                     </div>
                   </div>
@@ -736,7 +736,7 @@ export default function DiscussionEditPage() {
                       <span className="label-text">会話ID</span>
                     </label>
                     <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <span className="text-sm font-mono">
+                      <span className="text-base font-mono">
                         {discussion?.dTag || "loading..."}
                       </span>
                     </div>
@@ -758,7 +758,7 @@ export default function DiscussionEditPage() {
                             <button
                               type="button"
                               onClick={() => removeModerator(npub)}
-                              className="btn btn-ghost min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-0"
+                              className="btn text-base btn-ghost min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-0"
                               aria-label={`モデレーター ${npub} を削除`}
                               disabled={
                                 isSaving || isDeleting || !hasEditPermission
@@ -809,7 +809,7 @@ export default function DiscussionEditPage() {
 
                   {errors.length > 0 && (
                     <div className="alert alert-error">
-                      <ul className="text-sm">
+                      <ul className="text-base">
                         {errors.map((error, index) => (
                           <li key={index}>{error}</li>
                         ))}
@@ -829,7 +829,7 @@ export default function DiscussionEditPage() {
                     </h3>
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                       <button
-                        className="btn btn-primary rounded-full dark:rounded-sm"
+                        className="btn text-base btn-primary rounded-full dark:rounded-sm"
                         onClick={handleSave}
                         disabled={
                           isSaving ||
@@ -847,7 +847,7 @@ export default function DiscussionEditPage() {
                       </button>
 
                       <button
-                        className="btn btn-secondary rounded-full dark:rounded-sm"
+                        className="btn text-base btn-secondary rounded-full dark:rounded-sm"
                         onClick={handleRequestListing}
                         disabled={
                           isSaving ||
@@ -876,7 +876,7 @@ export default function DiscussionEditPage() {
                       </span>
                       <button
                         type="button"
-                        className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                        className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
                         onClick={() => void loadPromotionRequests()}
                       >
                         <span className="ruby-text">昇格申請を再取得</span>
@@ -895,7 +895,7 @@ export default function DiscussionEditPage() {
                       危険な操作
                     </h3>
                     <button
-                      className="btn btn-outline btn-error rounded-full dark:rounded-sm min-h-[44px]"
+                      className="btn text-base btn-outline btn-error rounded-full dark:rounded-sm min-h-[44px]"
                       onClick={() => setShowDeleteConfirm(true)}
                       disabled={isSaving || isDeleting || !hasEditPermission}
                     >
@@ -914,7 +914,7 @@ export default function DiscussionEditPage() {
                         モデレーター管理
                       </h3>
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
+                        <p className="text-base text-base-content mb-2 ruby-text">
                           現在のモデレーター（Mnemonic）
                         </p>
                         <div className="flex flex-wrap gap-2">
@@ -930,7 +930,7 @@ export default function DiscussionEditPage() {
                               </span>
                             ))
                           ) : (
-                            <span className="text-sm text-gray-500 ruby-text">
+                            <span className="text-base text-base-content ruby-text">
                               モデレーターは未設定です。
                             </span>
                           )}
@@ -938,7 +938,7 @@ export default function DiscussionEditPage() {
                       </div>
 
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
+                        <p className="text-base text-base-content mb-2 ruby-text">
                           モデレーター昇格申請
                         </p>
                         <textarea
@@ -951,7 +951,7 @@ export default function DiscussionEditPage() {
                           disabled={isRequestingPromotion}
                         />
                         <button
-                          className="btn btn-outline rounded-full dark:rounded-sm"
+                          className="btn text-base btn-outline rounded-full dark:rounded-sm"
                           onClick={handleRequestPromotion}
                           disabled={
                             isRequestingPromotion || !canRequestPromotion
@@ -978,11 +978,11 @@ export default function DiscussionEditPage() {
                       </div>
 
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
+                        <p className="text-base text-base-content mb-2 ruby-text">
                           昇格申請ユーザー一覧
                         </p>
                         {promotionRequests.length === 0 ? (
-                          <p className="text-sm text-gray-500 ruby-text">
+                          <p className="text-base text-base-content ruby-text">
                             申請はまだありません。
                           </p>
                         ) : (
@@ -998,7 +998,7 @@ export default function DiscussionEditPage() {
                                       request.applicantPubkey,
                                     )}
                                   </span>
-                                  <span className="text-sm text-gray-500">
+                                  <span className="text-base text-base-content">
                                     {formatRelativeTime(request.createdAt)}
                                   </span>
                                   <span
@@ -1023,7 +1023,7 @@ export default function DiscussionEditPage() {
                                 <div className="mt-3 flex flex-wrap gap-2">
                                   <button
                                     type="button"
-                                    className="btn btn-primary rounded-full dark:rounded-sm"
+                                    className="btn text-base btn-primary rounded-full dark:rounded-sm"
                                     onClick={() =>
                                       handleModerationDecision(
                                         request,
@@ -1039,7 +1039,7 @@ export default function DiscussionEditPage() {
                                   </button>
                                   <button
                                     type="button"
-                                    className="btn btn-outline rounded-full dark:rounded-sm"
+                                    className="btn text-base btn-outline rounded-full dark:rounded-sm"
                                     onClick={() =>
                                       handleModerationDecision(
                                         request,
@@ -1085,14 +1085,14 @@ export default function DiscussionEditPage() {
             <div className="modal-action">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="btn btn-outline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline rounded-full dark:rounded-sm"
                 disabled={isDeleting}
               >
                 <span className="ruby-text">キャンセル</span>
               </button>
               <button
                 onClick={handleDelete}
-                className="btn btn-error rounded-full dark:rounded-sm"
+                className="btn text-base btn-error rounded-full dark:rounded-sm"
                 disabled={isDeleting}
               >
                 <span className="ruby-text">削除する</span>

@@ -35,7 +35,7 @@ export function DiscussionMetaReadState({
       {error && (
         <div className="alert alert-error mb-8" role="alert">
           <span>{error}</span>
-          <button type="button" className="btn btn-outline min-h-[44px]" onClick={onReload}>
+          <button type="button" className="btn text-base btn-outline min-h-[44px]" onClick={onReload}>
             <span className="ruby-text">再試行</span>
           </button>
         </div>
@@ -43,7 +43,7 @@ export function DiscussionMetaReadState({
       {completionReason && completionReason !== "eose" && !error && (
         <div role="status" aria-live="polite" className="alert alert-warning mb-8">
           <span>一部のrelayからの取得が完了していません。表示内容は暫定です。</span>
-          <button type="button" className="btn btn-outline min-h-[44px]" onClick={onReload}>
+          <button type="button" className="btn text-base btn-outline min-h-[44px]" onClick={onReload}>
             <span className="ruby-text">再読み込み</span>
           </button>
         </div>

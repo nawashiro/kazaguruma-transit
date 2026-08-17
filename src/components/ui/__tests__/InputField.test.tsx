@@ -146,7 +146,8 @@ describe("InputField", () => {
 
     const input = screen.getByTestId("test-input");
     expect(input).toBeDisabled();
-    expect(input).toHaveClass("opacity-70", "cursor-not-allowed");
+    expect(input).not.toHaveClass("opacity-70");
+    expect(input).toHaveClass("cursor-not-allowed");
   });
 
   it("タッチターゲットとテキストサイズ用のクラスを設定する", () => {

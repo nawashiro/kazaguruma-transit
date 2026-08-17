@@ -54,12 +54,12 @@ export default function InputField({
       {description && (
         <p
           id={descriptionId}
-          className="text-sm opacity-70 leading-relaxed ruby-text"
+          className="text-base leading-relaxed ruby-text"
         >
           {description}
         </p>
       )}
-      <div className={endAdornment ? "join w-full" : undefined}>
+      <div className={endAdornment ? "join w-full" : ""}>
         <input
           id={inputId}
           type={type}
@@ -71,7 +71,7 @@ export default function InputField({
           name={name}
           maxLength={maxLength}
           className={`input min-h-[44px] leading-relaxed ${hasError ? "input-error" : ""
-            } ${endAdornment ? "join-item flex-1" : "w-full"} ${disabled ? "opacity-70 cursor-not-allowed" : ""
+            } ${endAdornment ? "join-item flex-1" : "w-full"} ${disabled ? "cursor-not-allowed" : ""
             }`}
           aria-invalid={hasError ? "true" : undefined}
           aria-required={required ? "true" : undefined}
@@ -84,7 +84,7 @@ export default function InputField({
       {hasError && (
         <div
           id={errorId}
-          className="text-error text-sm font-medium leading-relaxed"
+          className="text-error text-base font-medium leading-relaxed"
           role="alert"
         >
           <ExclamationTriangleIcon className="w-4 h-4 inline mr-1" aria-hidden="true" />

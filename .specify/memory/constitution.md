@@ -1,27 +1,18 @@
 <!--
 Sync Impact Report:
-- Version Change: 1.8.1 -> 1.9.0
-- Reason: Nostr read実装の責務境界を017仕様へ更新。
+- Version Change: 1.9.0 -> 1.10.0
+- Reason: 非典型記法の静的監査スコープを、現行production usageに基づき明文化。
 - Modified Principles:
-  * Core Principles は引き続き AGENTS.md を参照。
-  * 作業言語として日本語を追加。
-  * アクセシビリティ方針を constitution gate に追加。
-  * 今後のNostr実装方針を017仕様の責務境界へ更新。
-  * WCAG 2.2 AA の達成基準チェックリストを本文へ追加。
-  * ウェブアクセシビリティ方針の対象と目標を本文へ追加。
-  * チェック時にリンク先の WCAG 本文を参照する必須ルールを追加。
+  * 検証スコープ方針を追加。
 - Added Sections:
-  * 作業言語
-  * アクセシビリティ方針
-  * Nostr実装方針
-  * ユーザー名とパスキー名
+  * 検証スコープ方針
 - Removed Sections:
   * なし
 - Templates Status:
-  ✅ .specify/templates/plan-template.md: Constitution Check は本文の WCAG gate と整合
+  ✅ .specify/templates/constitution-template.md: resolverで解決済み。既存constitutionの章構成を保持
+  ✅ .specify/templates/plan-template.md: Constitution Check は本文の検証スコープ方針と整合
   ✅ .specify/templates/spec-template.md: 要求仕様に追加の必須セクションは不要
-  ✅ .specify/templates/tasks-template.md: アクセシビリティ確認タスクを追加可能な構成と整合
-  ✅ .specify/templates/commands/: ディレクトリが存在せず、更新対象なし
+  ✅ .specify/templates/tasks-template.md: 静的監査のscope記録を含められる構成と整合
 - Follow-up TODOs: None
 -->
 
@@ -153,6 +144,21 @@ WCAG 2.2 の適合レベル AA を目標とする。以下のチェックリス�
 - UIのアイコンは手書きのインラインSVGを避け、`@heroicons/react` や `react-icons` などのReactアイコンコンポーネントを使用しなければならない。
 - アクセシビリティ方針と実装都合が衝突する場合は、方針を優先し、満たせない理由と代替策を `plan.md` または `tasks.md` に明記する。
 
+## 検証スコープ方針
+
+静的契約テストは、現行production codeの使用実態に基づく有限の文法を対象とする。
+非典型またはarbitraryな記述方式がコードベースのproduction codeに一件も存在しない場合、
+その記法は当該テストのスコープ外とし、仮想的な使用例だけを理由に違反へ追加してはならない。
+
+ただし、次の条件を満たさなければならない。
+
+- production code（テスト、fixture、コメント、履歴資料を除く）を事前に一括検索し、使用件数0を記録する。
+- 除外した記法と検索範囲を`spec.md`、`plan.md`、`tasks.md`またはレビュー記録へ明記する。
+- 解析不能な記法を、現行production codeに実際の使用箇所がある状態で黙って通過させてはならない。その場合はfail-closedの違反、または明示的な契約追加として扱う。
+- 後続変更で使用箇所が追加された場合、既存テストのスコープ外判断を再利用せず、使用箇所を含む新しいRED→review→実装の作業単位で再評価する。
+
+この方針は、実在しない使用例に対する過剰な検査拡張を防ぎつつ、実際のproduction usageに対する検出漏れを許可しないためのものである。
+
 ## 技術スタックと制約
 
 - **フレームワーク**: Next.js 15 (App Router), React 19
@@ -193,4 +199,4 @@ Nostr readは`specs/017-discussion-read-executor`を正本とする。詳細は�
 - 変更を完了扱いにする前に、`AGENTS.md` に記載された検証コマンドを実行する。
 - Spec Kit を使う場合は、`spec.md`、`plan.md`、`tasks.md`、実装、検証の順で進める。
 
-**Version**: 1.9.0 | **Ratified**: 2026-01-13 | **Last Amended**: 2026-08-10
+**Version**: 1.10.0 | **Ratified**: 2026-01-13 | **Last Amended**: 2026-08-16

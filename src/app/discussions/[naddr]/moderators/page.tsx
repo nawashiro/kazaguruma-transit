@@ -271,7 +271,7 @@ export default function ModeratorsPage() {
         </span>
         <button
           type="button"
-          className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+          className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
           onClick={() => void meta?.reload()}
         >
           <span className="ruby-text">再読み込み</span>
@@ -303,7 +303,7 @@ export default function ModeratorsPage() {
           </span>
           <button
             type="button"
-            className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
             onClick={() => void loadModeratorApplications()}
           >
             <span className="ruby-text">モデレーター申請を再取得</span>
@@ -346,7 +346,7 @@ export default function ModeratorsPage() {
                       aria-describedby="direct-moderator-error"
                     />
                     <button
-                      className="btn btn-primary join-item h-11 min-h-[44px]"
+                      className="btn text-base btn-primary join-item h-11 min-h-[44px]"
                       onClick={addDirectModerator}
                       disabled={busy || !direct.trim()}
                     >
@@ -359,7 +359,7 @@ export default function ModeratorsPage() {
                 <p
                   id="direct-moderator-error"
                   role="alert"
-                  className="text-sm text-error ruby-text"
+                  className="text-base text-error ruby-text"
                 >
                   {directError}
                 </p>
@@ -385,7 +385,7 @@ export default function ModeratorsPage() {
                         </div>
                         <button
                           type="button"
-                          className="btn btn-ghost min-h-[44px] shrink-0 rounded-full dark:rounded-sm"
+                          className="btn text-base btn-ghost min-h-[44px] shrink-0 rounded-full dark:rounded-sm"
                           onClick={() => removeDirectModerator(pubkey)}
                           disabled={busy}
                         >
@@ -404,7 +404,7 @@ export default function ModeratorsPage() {
                 <span>モデレーターの変更を確定</span>
               </h2>
               <button
-                className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start"
+                className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start"
                 onClick={confirm}
                 disabled={
                   busy ||
@@ -426,7 +426,7 @@ export default function ModeratorsPage() {
               モデレーターに申請するにはログインが必要です。
             </p>
             <button
-              className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start sm:ml-0"
+              className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start sm:ml-0"
               onClick={() =>
                 router.push(
                   buildLoginRoute(
@@ -463,7 +463,7 @@ export default function ModeratorsPage() {
               disabled={busy}
             />
             <button
-              className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start"
+              className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start"
               onClick={request}
               disabled={busy}
             >

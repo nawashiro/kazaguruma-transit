@@ -35,6 +35,11 @@ const parseBoundedInteger = (
   return Math.min(max, Math.max(min, parsed));
 };
 
+const getDefaultTimeout = (): number => {
+  const parsedTimeout = Number(process.env.NEXT_PUBLIC_NOSTR_TIMEOUT_MS);
+  return Number.isFinite(parsedTimeout) ? parsedTimeout : 5000;
+};
+
 export function buildDiscussionId(adminPubkey: string, idPart: string): string {
   return `${DISCUSSION_KIND}:${adminPubkey}:${idPart}`;
 }
@@ -118,8 +123,7 @@ export function getDiscussionConfig(): DiscussionConfig {
     adminPubkey
   );
 
-  const parsedTimeout = Number(process.env.NEXT_PUBLIC_NOSTR_TIMEOUT_MS);
-  const defaultTimeout = Number.isFinite(parsedTimeout) ? parsedTimeout : 5000;
+  const defaultTimeout = getDefaultTimeout();
 
   return {
     enabled,
@@ -141,7 +145,7 @@ export function getNostrServiceConfig(): NostrServiceConfig {
 }
 
 export function getDiscussionReadStrategyConfig(): DiscussionReadStrategyConfig {
-  const fallbackIdleTimeoutMs = getDiscussionConfig().defaultTimeout;
+  const fallbackIdleTimeoutMs = getDefaultTimeout();
   const idleTimeoutMs = parseBoundedInteger(
     process.env.NEXT_PUBLIC_DISCUSSION_READ_IDLE_TIMEOUT_MS,
     fallbackIdleTimeoutMs,

@@ -4,6 +4,21 @@
 // learn more: https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom";
 
+// Keep NDK's protocol codecs real while isolating transport and signing in tests.
+jest.mock("@nostr-dev-kit/ndk", () => {
+  const actual = jest.requireActual("@nostr-dev-kit/ndk");
+  const transportMock = jest.requireActual("./src/__mocks__/ndk");
+
+  return {
+    __esModule: true,
+    ...actual,
+    default: transportMock.default,
+    NDKEvent: transportMock.NDKEvent,
+    NDKPrivateKeySigner: transportMock.NDKPrivateKeySigner,
+    NDKRelaySet: transportMock.NDKRelaySet,
+  };
+});
+
 // localStorage mock for testing browser storage
 const store = {};
 global.localStorage = {

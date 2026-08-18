@@ -506,9 +506,9 @@ export default function LocationsPage() {
                 href="https://compass.graffer.jp/handbook/landing"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn text-base btn-outline w-fit h-fit py-2 rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline w-fit h-fit rounded-full dark:rounded-sm"
               >
-                <p>お悩みハンドブックウェブサイトへ</p>
+                <span>お悩みハンドブックウェブサイトへ</span>
               </a>
             </CarouselCard>
 
@@ -585,7 +585,7 @@ export default function LocationsPage() {
             >
               千代田区主要施設座標データ
             </a>
-            による「風ぐるまの停留所から徒歩圏内（600m以内）であることがわかっている場所」を使用しています。
+            による「<ruby>風<rt>かざ</rt></ruby>ぐるまの停留所から徒歩圏内（600m以内）であることがわかっている場所」を使用しています。
           </p>
           <p>
             誤りが含まれていたり、古いデータが残っていたり、新たに加えてほしい場所があるときは、直接プルリクエストを送るか、

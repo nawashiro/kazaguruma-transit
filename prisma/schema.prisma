@@ -22,7 +22,7 @@ model Agency {
   fare_url        String?  @map("agency_fare_url")
   email           String?  @map("agency_email")
   routes          Route[]
-  
+
   @@map("agency")
 }
 
@@ -39,7 +39,7 @@ model Route {
   sort_order      Int?     @map("route_sort_order")
   agency          Agency   @relation(fields: [agency_id], references: [id])
   trips           Trip[]
-  
+
   @@map("routes")
 }
 
@@ -54,15 +54,15 @@ model Stop {
   url             String?       @map("stop_url")
   location_type   Int?
   parent_station  String?
-  timezone        String?
+  timezone        String?       @map("stop_timezone")
   wheelchair_boarding Int?
   stop_times      StopTime[]
-  
+
   @@map("stops")
 }
 
 model Trip {
-  id              String        @id @map("trip_id") 
+  id              String        @id @map("trip_id")
   route_id        String
   service_id      String
   headsign        String?       @map("trip_headsign")
@@ -74,7 +74,7 @@ model Trip {
   bikes_allowed   Int?
   route           Route         @relation(fields: [route_id], references: [id])
   stop_times      StopTime[]
-  
+
   @@map("trips")
 }
 
@@ -89,7 +89,7 @@ model Calendar {
   sunday          Int
   start_date      String
   end_date        String
-  
+
   @@map("calendar")
 }
 
@@ -97,7 +97,7 @@ model CalendarDate {
   service_id      String
   date            String
   exception_type  Int
-  
+
   @@id([service_id, date])
   @@map("calendar_dates")
 }
@@ -115,7 +115,7 @@ model StopTime {
   timepoint       Int?
   trip            Trip    @relation(fields: [trip_id], references: [id])
   stop            Stop    @relation(fields: [stop_id], references: [id])
-  
+
   @@id([trip_id, stop_id, stop_sequence])
   @@map("stop_times")
 }
@@ -125,6 +125,6 @@ model RateLimit {
   ip              String   @id
   count           Int
   last_access     BigInt   @map("last_access")
-  
+
   @@map("rate_limits")
-} 
+}

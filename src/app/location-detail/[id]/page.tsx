@@ -83,9 +83,9 @@ function LocationDetailMarkup({
   return (
     <div className="space-y-4">
       {areaName && (
-        <dl className="text-base">
-          <dt>地域</dt>
-          <dd>{areaName}</dd>
+        <dl className="text-base join space-x-2">
+          <dt className="font-bold join-item">地域</dt>
+          <dd className="join-item">{areaName}</dd>
         </dl>
       )}
 
@@ -94,7 +94,7 @@ function LocationDetailMarkup({
           <img
             src={location.imageUri}
             alt=""
-            className="object-cover w-full h-full"
+            className="object-cover w-full h-full rounded-xl"
           />
         </figure>
       )}
@@ -118,40 +118,45 @@ function LocationDetailMarkup({
         </p>
       )}
 
+      <div className="mt-6 ruby-text">
+        <h2 className="text-xl font-bold mb-4">提供</h2>
+        <dl className="list">
+          <div className="list-row">
+            <dt>座標データ提供</dt>
+            <dd>{location.nodeCopyright}</dd>
+          </div>
+          {location.imageCopyright && (
+            <div className="list-row">
+              <dt>画像提供</dt>
+              <dd>{location.imageCopyright}</dd>
+            </div>
+          )}
+          {location.description && location.descriptionCopyright && (
+            <div className="list-row">
+              <dt>説明文提供</dt>
+              <dd>{location.descriptionCopyright}</dd>
+            </div>
+          )}
+          <div className="list-row">
+            <dt>ライセンス</dt>
+            <dd>
+              <a
+                href={location.licenceUri}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link ml-1"
+              >
+                {location.licence}
+              </a>
+            </dd>
+          </div>
+        </dl>
+      </div>
+
       <div className="mt-4">
         <DestinationLink location={location} />
       </div>
 
-      <div className="mt-6 ruby-text">
-        <h2 className="font-semibold text-base mb-2">提供情報</h2>
-        <dl className="space-y-2 text-base">
-          <dt>座標データ提供</dt>
-          <dd>{location.nodeCopyright}</dd>
-          {location.imageCopyright && (
-            <>
-              <dt>画像提供</dt>
-              <dd>{location.imageCopyright}</dd>
-            </>
-          )}
-          {location.description && location.descriptionCopyright && (
-            <>
-              <dt>説明文提供</dt>
-              <dd>{location.descriptionCopyright}</dd>
-            </>
-          )}
-          <dt>ライセンス</dt>
-          <dd>
-            <a
-              href={location.licenceUri}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link ml-1"
-            >
-              {location.licence}
-            </a>
-          </dd>
-        </dl>
-      </div>
     </div>
   );
 }

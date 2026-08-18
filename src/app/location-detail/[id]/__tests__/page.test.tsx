@@ -524,8 +524,8 @@ describe("/location-detail/[id] public route", () => {
     );
     expect(screen.queryByRole("button", { name: "ここへ行く" })).not.toBeInTheDocument();
 
-    const infoHeading = screen.getByRole("heading", { level: 2, name: "提供情報" });
-    const infoList = getDefinitionListForHeading("提供情報");
+    const infoHeading = screen.getByRole("heading", { level: 2, name: "提供" });
+    const infoList = getDefinitionListForHeading("提供");
     const infoTerms = Array.from(infoList.querySelectorAll("dt"));
     const infoDefinitions = Array.from(infoList.querySelectorAll("dd"));
 
@@ -549,7 +549,7 @@ describe("/location-detail/[id] public route", () => {
     );
     expectNoSemanticCardPresentationAround(infoHeading);
     expect(
-      destinationLink.compareDocumentPosition(infoHeading) &
+      infoHeading.compareDocumentPosition(destinationLink) &
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
@@ -576,7 +576,7 @@ describe("/location-detail/[id] public route", () => {
     expect(screen.queryByText("画像提供", { selector: "dt" })).not.toBeInTheDocument();
     expect(screen.queryByText("説明文提供", { selector: "dt" })).not.toBeInTheDocument();
 
-    const infoList = getDefinitionListForHeading("提供情報");
+    const infoList = getDefinitionListForHeading("提供");
     const infoTerms = Array.from(infoList.querySelectorAll("dt"));
     expect(infoTerms.map((term) => term.textContent?.trim())).toEqual([
       "座標データ提供",
@@ -600,10 +600,10 @@ describe("/location-detail/[id] public route", () => {
       expectedDestinationHref(optionalOmissionLocation)
     );
     expect(
-      destinationLink.compareDocumentPosition(screen.getByRole("heading", {
+      screen.getByRole("heading", {
         level: 2,
-        name: "提供情報",
-      })) & Node.DOCUMENT_POSITION_FOLLOWING
+        name: "提供",
+      }).compareDocumentPosition(destinationLink) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 

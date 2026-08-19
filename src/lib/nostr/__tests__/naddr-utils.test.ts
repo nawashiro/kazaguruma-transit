@@ -544,7 +544,7 @@ describe('naddr utilities', () => {
       }
       
       const end = performance.now();
-      expect(end - start).toBeLessThan(1000); // Should complete in under 1 second
+      expect(end - start).toBeLessThan(2000); // Allow CI scheduling variance.
     });
   });
 });

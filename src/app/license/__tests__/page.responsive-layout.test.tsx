@@ -1,6 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, jest } from "@jest/globals";
-import LicensePage from "@/app/license/page";
 
 jest.mock("@/lib/license/licensePayload", () => ({
   getLicensePagePayload: jest.fn(async () => ({
@@ -38,6 +37,7 @@ jest.mock("@/lib/license/licensePayload", () => ({
 
 describe("LicensePage responsive layout", () => {
   it("keeps every data table within the card on narrow screens", async () => {
+    const { default: LicensePage } = await import("@/app/license/page");
     render(await LicensePage());
 
     const tables = screen.getAllByRole("table");

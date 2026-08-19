@@ -336,9 +336,27 @@ function expectNonSuccessState(state: NonSuccessState) {
   const heading = screen.getByRole("heading", { level: 1, name: title });
 
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+  expect(heading).toBeVisible();
   expectTopReturnLinkBeforeHeading(heading);
-  const alert = screen.getByRole("alert");
-  expect(alert.textContent?.trim()).toBe(message);
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+  const errorHeading = screen.getByRole("heading", {
+    level: 2,
+    name: "エラー",
+  });
+  expect(errorHeading).toBeVisible();
+
+  const body = screen.getByText(message, { exact: true });
+  expect(body).toBeVisible();
+  const errorPanel = body.closest(".alert");
+  if (!(errorPanel instanceof HTMLElement)) {
+    throw new Error("expected the location error body to be inside an alert panel");
+  }
+  expect(errorPanel).toHaveClass(
+    "alert-error",
+    "alert-soft",
+    "text-base-content!"
+  );
 
   const pageText = document.body.textContent ?? "";
   for (const otherState of Object.values(nonSuccessStates)) {

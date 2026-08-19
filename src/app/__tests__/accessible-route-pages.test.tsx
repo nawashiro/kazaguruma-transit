@@ -207,7 +207,7 @@ describe("専用ページの共通 semantic/a11y 契約", () => {
     assertNativeLinks(view.container);
   });
 
-  it("renders an invalid location detail as one main/h1 with a Japanese alert and return link", async () => {
+  it("renders an invalid location detail as one main/h1 with a Japanese error heading, body, and return link", async () => {
     mockLoadKeyLocationsDataResult.mockResolvedValue({
       status: "success",
       categories: [],
@@ -216,8 +216,37 @@ describe("専用ページの共通 semantic/a11y 契約", () => {
     const view = await renderLocationDetail("unknown-location");
 
     assertSingleProductionMainAndHeading(view.container);
-    expect(screen.getByRole("alert")).toHaveTextContent(/見つかりません|場所/);
-    expect(screen.getByRole("alert").tagName).toBe("DIV");
+    const stateHeading = screen.getByRole("heading", {
+      level: 1,
+      name: "場所が見つかりません",
+    });
+    expect(stateHeading).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    const errorHeading = screen.getByRole("heading", {
+      level: 2,
+      name: "エラー",
+    });
+    expect(errorHeading).toBeVisible();
+
+    const message = "指定された場所は見つかりませんでした。場所一覧から選び直してください。";
+    const body = screen.getByText(message, { exact: true });
+    expect(body).toBeVisible();
+    const errorPanel = body.closest(".alert");
+    if (!(errorPanel instanceof HTMLElement)) {
+      throw new Error("expected the location error body to be inside an alert panel");
+    }
+    expect(errorPanel).toHaveClass(
+      "alert-error",
+      "alert-soft",
+      "text-base-content!"
+    );
+
+    const returnLink = screen.getByRole("link", { name: "場所一覧に戻る" });
+    expect(returnLink).toHaveAttribute("href", "/locations");
+    expect(returnLink.compareDocumentPosition(stateHeading)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
     assertNativeLinks(view.container);
   });
 

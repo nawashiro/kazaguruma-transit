@@ -176,7 +176,8 @@ function StatePage({
         </Link>
       </p>
       <PageHeader title={title} />
-      <div className="alert alert-error" role="alert">
+      <div className="alert alert-error alert-soft text-base-content!">
+        <h2>エラー</h2>
         <p>{message}</p>
       </div>
     </div>

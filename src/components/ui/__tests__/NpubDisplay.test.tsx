@@ -25,6 +25,16 @@ describe("NpubDisplay", () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith("npub1example");
   });
 
+  it("npub値をcode要素でtitleなしに表示し、truncateとfont-monoを維持する", () => {
+    const npubValue = "npub1already-encoded";
+    render(<NpubDisplay pubkey={npubValue} />);
+
+    const value = screen.getByText(npubValue);
+    expect(value.tagName).toBe("CODE");
+    expect(value).not.toHaveAttribute("title");
+    expect(value).toHaveClass("truncate", "font-mono");
+  });
+
   it("すでにnpub形式のIDを再エンコードしない", () => {
     render(<NpubDisplay pubkey="npub1already-encoded" />);
 

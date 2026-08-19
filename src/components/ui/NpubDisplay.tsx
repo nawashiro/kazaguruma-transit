@@ -25,9 +25,9 @@ export function NpubDisplay({ pubkey }: Props) {
 
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <span className="min-w-0 flex-1 truncate font-mono text-base-content" title={npub}>
+      <code className="min-w-0 flex-1 truncate font-mono text-base-content">
         {npub}
-      </span>
+      </code>
       <button
         type="button"
         onClick={handleCopy}

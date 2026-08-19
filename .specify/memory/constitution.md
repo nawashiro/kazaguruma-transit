@@ -1,11 +1,11 @@
 <!--
 Sync Impact Report:
-- Version Change: 1.9.0 -> 1.10.0
-- Reason: 非典型記法の静的監査スコープを、現行production usageに基づき明文化。
+- Version Change: 1.10.0 -> 1.11.0
+- Reason: タスクリストにサブエージェント委任と実装後レビューを必須化。
 - Modified Principles:
-  * 検証スコープ方針を追加。
+  * 開発ワークフロー
 - Added Sections:
-  * 検証スコープ方針
+  * なし（開発ワークフローに規則を追加）
 - Removed Sections:
   * なし
 - Templates Status:
@@ -198,5 +198,7 @@ Nostr readは`specs/017-discussion-read-executor`を正本とする。詳細は�
 - 機能開発は `dev` から始める。
 - 変更を完了扱いにする前に、`AGENTS.md` に記載された検証コマンドを実行する。
 - Spec Kit を使う場合は、`spec.md`、`plan.md`、`tasks.md`、実装、検証の順で進める。
+- `tasks.md` には、テスト実装・本番実装・レビューをサブエージェントへ委任するタスクを明記する。親エージェントは受入条件、書込境界、検証結果を管理する。
+- `tasks.md` では、テスト実装タスクの直後と本番実装タスクの直後に、それぞれレビュータスクを置く。レビュータスクは対応する実装完了後に実行する。
 
-**Version**: 1.10.0 | **Ratified**: 2026-01-13 | **Last Amended**: 2026-08-16
+**Version**: 1.11.0 | **Ratified**: 2026-01-13 | **Last Amended**: 2026-08-19

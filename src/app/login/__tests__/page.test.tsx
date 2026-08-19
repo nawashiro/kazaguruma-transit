@@ -146,6 +146,23 @@ describe("/login public page", () => {
     expect(screen.getByRole("heading", { level: 1, name: /ログイン/i })).toBeInTheDocument();
   });
 
+  it("renders the login reason as a soft informational status message", () => {
+    const reason = "投稿するにはログインが必要です。";
+    mockSearchParams = new URLSearchParams({ reason });
+    const Page = getLoginPage();
+    renderInHostMain(Page);
+
+    const reasonNotice = screen.getByRole("status");
+    expect(reasonNotice).toHaveTextContent(reason);
+    expect(reasonNotice).toHaveAttribute("aria-live", "polite");
+    expect(reasonNotice).toHaveClass(
+      "alert",
+      "alert-info",
+      "alert-soft",
+      "text-base-content!",
+    );
+  });
+
   it.each([
     ["/discussions/create?tab=recent", "/discussions/create?tab=recent"],
     ["https://evil.example/steal?action=post", "/"],

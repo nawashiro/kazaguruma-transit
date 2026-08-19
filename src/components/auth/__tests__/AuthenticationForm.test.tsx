@@ -134,6 +134,7 @@ describe("AuthenticationForm public boundary", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/ログイン|認証|パスキー/);
+    expect(alert).toHaveClass("alert-soft", "text-base-content!");
     expect(mockAuth.login).toHaveBeenCalledTimes(1);
   });
 
@@ -222,6 +223,7 @@ describe("AuthenticationForm public boundary", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/サポート|対応|利用できません/);
+    expect(alert).toHaveClass("alert-soft", "text-base-content!");
     expect(nameInput).toHaveValue("共有端末");
     expect(terms).toBeChecked();
     expect(privacy).toBeChecked();

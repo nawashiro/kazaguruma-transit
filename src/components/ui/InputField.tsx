@@ -84,7 +84,7 @@ export default function InputField({
       {hasError && (
         <div
           id={errorId}
-          className="text-error text-base font-medium leading-relaxed"
+          className="text-base-content text-base font-medium leading-relaxed"
           role="alert"
         >
           <ExclamationTriangleIcon className="w-4 h-4 inline mr-1" aria-hidden="true" />

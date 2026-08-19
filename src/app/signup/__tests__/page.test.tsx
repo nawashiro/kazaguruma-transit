@@ -175,6 +175,23 @@ describe("/signup public page", () => {
     expect(privacy).toBeChecked();
   });
 
+  it("renders the signup reason as a soft informational status message", () => {
+    const reason = "アカウント作成が必要です。";
+    mockSearchParams = new URLSearchParams({ reason });
+    const Page = getSignupPage();
+    renderInHostMain(Page);
+
+    const reasonNotice = screen.getByRole("status");
+    expect(reasonNotice).toHaveTextContent(reason);
+    expect(reasonNotice).toHaveAttribute("aria-live", "polite");
+    expect(reasonNotice).toHaveClass(
+      "alert",
+      "alert-info",
+      "alert-soft",
+      "text-base-content!",
+    );
+  });
+
   it.each([
     ["/discussions/create?tab=recent", "/discussions/create?tab=recent"],
     ["//evil.example/path", "/"],

@@ -101,10 +101,12 @@ describe("InputField", () => {
     );
 
     const input = screen.getByTestId("test-input");
+    const alert = screen.getByRole("alert");
     expect(screen.getByText("エラーメッセージ")).toBeInTheDocument();
-    expect(screen.getByRole("alert").querySelector("svg")).toBeInTheDocument();
+    expect(alert).toHaveClass("text-base-content");
+    expect(alert.querySelector("svg")).toBeInTheDocument();
     expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("alert")).toHaveTextContent("エラーメッセージ");
+    expect(alert).toHaveTextContent("エラーメッセージ");
   });
 
   it("説明文をp要素として出力し、エラーとともにaria-describedbyで参照する", () => {

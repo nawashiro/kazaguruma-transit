@@ -45,7 +45,11 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
         />
 
         {reason && (
-          <p className="alert alert-info" role="status" aria-live="polite">
+          <p
+            className="alert alert-info alert-soft text-base-content!"
+            role="status"
+            aria-live="polite"
+          >
             <span className="ruby-text">{reason}</span>
           </p>
         )}

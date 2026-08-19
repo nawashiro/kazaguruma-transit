@@ -227,7 +227,7 @@ export function AuthenticationForm({
       {attemptError && (
         <div
           id={errorId}
-          className="alert alert-error"
+          className="alert alert-error alert-soft text-base-content!"
           role="alert"
           aria-live="polite"
         >

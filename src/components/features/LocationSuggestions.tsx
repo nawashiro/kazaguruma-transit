@@ -77,7 +77,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
   if (error) {
     return (
       <Card className="mb-6 overflow-hidden">
-        <div className="alert alert-error" role="alert" aria-live="assertive">
+        <div className="alert alert-error alert-soft text-base-content!" role="alert" aria-live="assertive">
           <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
           {/*
             xmlns="http://www.w3.org/2000/svg"

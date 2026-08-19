@@ -31,61 +31,50 @@ jest.mock("next/navigation", () => ({
   }),
 }));
 
-jest.mock("../../../utils/addressLoader", () => ({
-  loadKeyLocationsData: jest.fn(),
-  convertToLocation: jest.fn(),
+jest.mock("../../../lib/location/location-list-state", () => ({
+  ...jest.requireActual("../../../lib/location/location-list-state"),
+  loadLocationCategories: jest.fn(),
+  groupCategoryLocationsByArea: jest.fn(),
 }));
 
-jest.mock("../../../utils/clientGeoUtils", () => ({
-  loadGeoJSON: jest.fn(),
-  groupLocationsByArea: jest.fn(),
-  formatAreaName: jest.fn(),
-  getAreaNameFromCoordinates: jest.fn(),
-}));
-
-const addressLoaderMock = jest.requireMock("../../../utils/addressLoader") as {
-  loadKeyLocationsData: jest.Mock;
-  convertToLocation: jest.Mock;
+const locationListStateMock = jest.requireMock(
+  "../../../lib/location/location-list-state"
+) as {
+  loadLocationCategories: jest.Mock;
+  groupCategoryLocationsByArea: jest.Mock;
 };
-const clientGeoUtilsMock = jest.requireMock("../../../utils/clientGeoUtils") as {
-  loadGeoJSON: jest.Mock;
-  groupLocationsByArea: jest.Mock;
-  formatAreaName: jest.Mock;
-  getAreaNameFromCoordinates: jest.Mock;
-};
-const mockLoadKeyLocationsData = addressLoaderMock.loadKeyLocationsData;
-const mockConvertToLocation = addressLoaderMock.convertToLocation;
-const mockLoadGeoJSON = clientGeoUtilsMock.loadGeoJSON;
-const mockGroupLocationsByArea = clientGeoUtilsMock.groupLocationsByArea;
-const mockFormatAreaName = clientGeoUtilsMock.formatAreaName;
-const mockGetAreaNameFromCoordinates = clientGeoUtilsMock.getAreaNameFromCoordinates;
+const mockLoadLocationCategories = locationListStateMock.loadLocationCategories;
+const mockGroupCategoryLocationsByArea =
+  locationListStateMock.groupCategoryLocationsByArea;
 const mockFetch = global.fetch as jest.Mock;
+let originalGeolocationDescriptor: PropertyDescriptor | undefined;
 
 describe("LocationsPage", () => {
   beforeEach(() => {
+    originalGeolocationDescriptor = Object.getOwnPropertyDescriptor(
+      navigator,
+      "geolocation"
+    );
     mockRouterPush.mockReset();
     mockFetch.mockReset();
-    mockLoadKeyLocationsData.mockReset();
-    mockLoadKeyLocationsData.mockResolvedValue([categoryFixture]);
-    mockConvertToLocation.mockReset();
-    mockConvertToLocation.mockImplementation((location: KeyLocation) => ({
-      lat: location.lat,
-      lng: location.lng,
-      address: location.name,
-    }));
-    mockLoadGeoJSON.mockReset();
-    mockLoadGeoJSON.mockResolvedValue({
-      type: "FeatureCollection",
-      features: [],
-    });
-    mockGroupLocationsByArea.mockReset();
-    mockGroupLocationsByArea.mockImplementation((locations: KeyLocation[]) => ({
+    mockLoadLocationCategories.mockReset();
+    mockLoadLocationCategories.mockResolvedValue([categoryFixture]);
+    mockGroupCategoryLocationsByArea.mockReset();
+    mockGroupCategoryLocationsByArea.mockImplementation((locations: KeyLocation[]) => ({
       千代田: locations,
     }));
-    mockFormatAreaName.mockReset();
-    mockFormatAreaName.mockImplementation((area: string) => area);
-    mockGetAreaNameFromCoordinates.mockReset();
-    mockGetAreaNameFromCoordinates.mockReturnValue("千代田");
+  });
+
+  afterEach(() => {
+    if (originalGeolocationDescriptor) {
+      Object.defineProperty(
+        navigator,
+        "geolocation",
+        originalGeolocationDescriptor
+      );
+    } else {
+      Reflect.deleteProperty(navigator, "geolocation");
+    }
   });
 
   it("カテゴリデータの読み込み後に最初のタブを選択する", async () => {
@@ -132,6 +121,74 @@ describe("LocationsPage", () => {
 
     locationLink.focus();
     expect(document.activeElement).toBe(locationLink);
+  });
+
+  it("初期施設データ取得失敗をエラーアイコン付きalertとして通知する", async () => {
+    mockLoadLocationCategories.mockRejectedValueOnce(
+      new Error("主要施設データの取得に失敗しました")
+    );
+
+    render(<LocationsPage />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/^施設データの読み込みに失敗しました$/);
+    expect(alert).toHaveClass("alert-soft", "text-base-content!");
+    expect(alert.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it("住所検索失敗を入力欄に関連付いたエラーalertとして通知する", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: "住所検索に失敗しました" }),
+    });
+
+    render(<LocationsPage />);
+
+    const addressInput = await screen.findByLabelText("住所");
+    fireEvent.change(addressInput, { target: { value: "神田駅" } });
+    fireEvent.click(screen.getByRole("button", { name: "検索" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/^住所検索に失敗しました$/);
+    expect(alert).toHaveClass("alert-soft", "text-base-content!");
+    expect(alert).toHaveAttribute("id", "location-search-error");
+    expect(alert.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(addressInput).toHaveAttribute(
+      "aria-describedby",
+      "location-search-error"
+    );
+  });
+
+  it("現在地取得成功をチェックアイコン付きstatusとして通知する", async () => {
+    const mockGetCurrentPosition = jest.fn(
+      (onSuccess: (position: GeolocationPosition) => void) => {
+        onSuccess({
+          coords: {
+            latitude: 35.694,
+            longitude: 139.768,
+          },
+        } as GeolocationPosition);
+      }
+    );
+    Object.defineProperty(navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition: mockGetCurrentPosition },
+    });
+
+    render(<LocationsPage />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "現在地を取得" })
+    );
+
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent(
+      /^位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます$/
+    );
+    expect(status).toHaveClass("alert-success");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 
   it("429 + limitExceededではlocations発のrate-limitへ一度だけ遷移し、旧モーダルを表示しない", async () => {

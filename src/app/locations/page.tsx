@@ -292,7 +292,7 @@ export default function LocationsPage() {
     return (
       <div className="py-8">
         <PageHeader title="場所をさがす" />
-        <div className="alert alert-error" role="alert">
+        <div className="alert alert-error alert-soft text-base-content!" role="alert">
           <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
           {/*
             xmlns="http://www.w3.org/2000/svg"
@@ -323,7 +323,7 @@ export default function LocationsPage() {
       <div className="space-y-4">
         <Card title="近いところから表示">
           {searchError && (
-            <div id="location-search-error" className="alert alert-error ruby-text" role="alert">
+            <div id="location-search-error" className="alert alert-error alert-soft text-base-content! ruby-text" role="alert">
               <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
               {/*
                 xmlns="http://www.w3.org/2000/svg"
@@ -394,7 +394,11 @@ export default function LocationsPage() {
           </div>
 
           {currentPosition && (
-            <div className="alert alert-success ruby-text">
+            <div
+              className="alert alert-success alert-soft text-base-content! ruby-text"
+              role="status"
+              aria-live="polite"
+            >
               <CheckCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
               {/*
                 xmlns="http://www.w3.org/2000/svg"

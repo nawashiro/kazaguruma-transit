@@ -25,7 +25,7 @@ const mockManagementData = {
   isModerationLoading: false,
   isReferencedDiscussionsLoading: false,
   referencedDiscussionCompletionReason: "eose" as "eose" | "idle-timeout",
-  moderationError: null,
+  moderationError: null as string | null,
 };
 
 jest.mock("@/lib/auth/auth-context", () => ({
@@ -48,6 +48,7 @@ describe("DiscussionsPage shared data", () => {
       description: "説明", moderators: [], createdAt: 100,
     }];
     mockManagementData.referencedDiscussionCompletionReason = "eose";
+    mockManagementData.moderationError = null;
   });
 
   it("renders a discussion supplied by the persistent management provider", () => {
@@ -60,7 +61,28 @@ describe("DiscussionsPage shared data", () => {
     mockManagementData.referencedDiscussions = [];
     mockManagementData.referencedDiscussionCompletionReason = "idle-timeout";
     render(<DiscussionsPage />);
-    expect(screen.getByRole("status")).toHaveTextContent("会話一覧を完全に取得できませんでした");
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("会話一覧を完全に取得できませんでした");
+    expect(status).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
     expect(screen.queryByText("会話がまだありません。")).not.toBeInTheDocument();
+  });
+
+  it("renders a moderation load error as a soft alert with its message", () => {
+    mockManagementData.moderationError = "会話一覧の取得に失敗しました。";
+    render(<DiscussionsPage />);
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("会話一覧の取得に失敗しました。");
+    expect(alert).toHaveClass(
+      "alert",
+      "alert-error",
+      "alert-soft",
+      "text-base-content!",
+    );
   });
 });

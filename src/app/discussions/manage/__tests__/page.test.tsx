@@ -4,6 +4,17 @@ import "@testing-library/jest-dom";
 import DiscussionManagePage from "../page";
 
 const mockUseAuth = jest.fn();
+const mockUseDiscussionMeta = jest.fn();
+const mockDiscussionMetaReload = jest.fn();
+const mockDiscussion = {
+  id: "34550:author:discussion-d-tag",
+  authorPubkey: "author",
+  dTag: "discussion-d-tag",
+  moderators: [{ pubkey: "moderator" }],
+  createdAt: 1,
+  title: "Title",
+  description: "desc",
+};
 
 jest.mock("next/link", () => ({
   __esModule: true,
@@ -17,19 +28,7 @@ jest.mock("@/lib/auth/auth-context", () => ({
 }));
 
 jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
-  useDiscussionMeta: () => ({
-    discussion: {
-      id: "34550:author:discussion-d-tag",
-      authorPubkey: "author",
-      dTag: "discussion-d-tag",
-      moderators: [{ pubkey: "moderator" }],
-      createdAt: 1,
-      title: "Title",
-      description: "desc",
-    },
-    isLoading: false,
-    error: null,
-  }),
+  useDiscussionMeta: () => mockUseDiscussionMeta(),
 }));
 
 jest.mock("@/components/discussion/DiscussionManagementDataProvider", () => ({
@@ -213,6 +212,12 @@ describe("DiscussionManagePage", () => {
     process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR =
       "naddr1discussionlistplaceholder";
     jest.clearAllMocks();
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: mockDiscussion,
+      isLoading: false,
+      error: null,
+      reload: mockDiscussionMetaReload,
+    });
     mockUseAuth.mockReturnValue({
       user: { pubkey: "viewer", isLoggedIn: true },
       signEvent: jest.fn(),
@@ -231,6 +236,28 @@ describe("DiscussionManagePage", () => {
         screen.getByRole("tab", { name: "承認待ちタブを開く" })
       ).toBeInTheDocument()
     );
+  });
+
+  it("shows discussion metadata errors as a soft alert with reload", () => {
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: false,
+      error: "掲載一覧の会話情報が見つかりませんでした。",
+      reload: mockDiscussionMetaReload,
+    });
+
+    render(<DiscussionManagePage />);
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("掲載一覧の会話情報が見つかりませんでした。");
+    expect(alert).toHaveClass(
+      "alert",
+      "alert-error",
+      "alert-soft",
+      "text-base-content!",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+    expect(mockDiscussionMetaReload).toHaveBeenCalledTimes(1);
   });
 
   it("shows moderator guidance above the tabs for viewers", async () => {

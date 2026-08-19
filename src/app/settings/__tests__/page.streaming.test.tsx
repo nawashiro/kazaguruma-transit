@@ -192,9 +192,15 @@ describe("SettingsPage streaming discussions", () => {
 
     render(<SettingsPage />);
 
-    expect(
-      await screen.findByText(/会話データの取得に時間がかかっています/)
-    ).toBeInTheDocument();
+    const warning = await screen.findByRole("status");
+    expect(warning).toHaveTextContent(/会話データの取得に時間がかかっています/);
+    expect(warning).toHaveAttribute("aria-live", "polite");
+    expect(warning).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
   });
 
   it("sends an unauthenticated user to the login page instead of opening LoginModal", () => {

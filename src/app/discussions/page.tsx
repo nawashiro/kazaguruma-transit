@@ -83,12 +83,12 @@ export default function DiscussionsPage() {
                   ))}
                 </div>
               ) : loadError ? (
-                <div className="alert alert-error" role="alert">
+                <div className="alert alert-error alert-soft text-base-content!" role="alert">
                   <span>{loadError}</span>
                 </div>
               ) : referencedDiscussionCompletionReason &&
                 referencedDiscussionCompletionReason !== "eose" ? (
-                <div className="alert alert-warning" role="status">
+                <div className="alert alert-warning alert-soft text-base-content!" role="status">
                   <span>会話一覧を完全に取得できませんでした。再読み込みしてください。</span>
                 </div>
               ) : discussions.length > 0 ? (

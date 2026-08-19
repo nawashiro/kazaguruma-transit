@@ -1,4 +1,5 @@
 import type { DiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
+import { dedupeAndSortEvents } from "@/lib/nostr/event-deduplication";
 import {
   rankRelayCandidates,
   type RelayCandidateSelectorInput,
@@ -43,14 +44,6 @@ export interface DiscussionReadResult {
   attempts: RelayAttempt[];
 }
 
-const dedupeEvents = (events: NostrEventDTO[]): NostrEventDTO[] => {
-  const byId = new Map<string, NostrEventDTO>();
-  for (const event of events) {
-    if (!byId.has(event.id)) byId.set(event.id, event);
-  }
-  return Array.from(byId.values());
-};
-
 const mergeSourceRelayUrls = (
   target: Record<string, string[]>,
   events: NostrEventDTO[],
@@ -69,7 +62,7 @@ const toAttempt = (
 ): RelayAttempt => ({
   relayUrls,
   completionReason: completion.completionReason,
-  events: dedupeEvents(completion.events),
+  events: dedupeAndSortEvents(completion.events),
   sourceRelayUrlsByEventId: completion.sourceRelayUrlsByEventId,
   elapsedMs: completion.elapsedMs,
 });
@@ -128,7 +121,7 @@ export const executeDiscussionRead = async (
       retryRejected = true;
     }
   }
-  const events = dedupeEvents(mergedEvents);
+  const events = dedupeAndSortEvents(mergedEvents);
   const attemptedRelayUrls = Array.from(
     new Set([
       ...attempts.flatMap((attempt) => attempt.relayUrls),

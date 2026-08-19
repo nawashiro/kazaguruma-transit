@@ -9,6 +9,9 @@ import type { PWKBlob } from "nosskey-sdk";
 import { logger } from "@/utils/logger";
 import { normalizeDiscussionId } from "@/lib/nostr/naddr-utils";
 import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
+import {
+  dedupeAndSortEvents as dedupeAndSortEventsShared,
+} from "@/lib/nostr/event-deduplication";
 
 export type Event = NostrEvent & { id: string; sig: string; kind: number };
 export type Filter = NDKFilter<number>;
@@ -43,27 +46,19 @@ export interface ReadEventsOptions {
   relayUrls?: string[];
 }
 
-export const dedupeAndSortEvents = (events: Event[]): Event[] => {
-  const uniqueById = new Map<string, Event>();
-
-  events.forEach((event) => {
-    const existing = uniqueById.get(event.id);
-    if (!existing || event.created_at > existing.created_at) {
-      uniqueById.set(event.id, event);
-    }
-  });
-
-  return Array.from(uniqueById.values()).sort(
-    (a, b) => b.created_at - a.created_at || a.id.localeCompare(b.id)
-  );
-};
+export const dedupeAndSortEvents = (events: Event[]): Event[] =>
+  dedupeAndSortEventsShared(events);
 
 const mergeEvent = (current: Event[], incoming: Event): Event[] => {
-  if (current.some((event) => event.id === incoming.id)) {
+  const updated = dedupeAndSortEventsShared([...current, incoming]);
+  if (
+    updated.length === current.length &&
+    updated.every((event, index) => event === current[index])
+  ) {
     return current;
   }
 
-  return dedupeAndSortEvents([...current, incoming]);
+  return updated;
 };
 
 const normalizeDiscussionIdForRead = (discussionId: string): string | null => {

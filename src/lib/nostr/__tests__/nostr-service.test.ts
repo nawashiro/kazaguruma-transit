@@ -177,6 +177,45 @@ describe("NostrService event retrieval", () => {
     ]);
   });
 
+  it("getEventsWithCompletion keeps only the newest address version from subscribe", async () => {
+    let handlers: {
+      onEvent?: (event: unknown) => void;
+      onEose?: () => void;
+    } = {};
+    mockSubscribe.mockImplementation((_filter, options) => {
+      handlers = options;
+      return { stop: mockStop };
+    });
+
+    const olderEvent = {
+      id: "f".repeat(64),
+      created_at: 100,
+      kind: 34550,
+      pubkey: "a".repeat(64),
+      content: "older",
+      tags: [["d", "community"]],
+      sig: "sig",
+    };
+    const newerEvent = {
+      ...olderEvent,
+      id: "0".repeat(64),
+      created_at: 200,
+      content: "newer",
+    };
+    const service = new NostrService(config);
+
+    const resultPromise = service.getEventsWithCompletion([{ kinds: [34550] }]);
+    await flushMicrotasks();
+    handlers.onEvent?.(createNdkEvent(olderEvent, "wss://old"));
+    handlers.onEvent?.(createNdkEvent(newerEvent, "wss://new"));
+    handlers.onEose?.();
+
+    const result = await resultPromise;
+
+    expect(result.events).toEqual([newerEvent]);
+    expect(result.eventCount).toBe(1);
+  });
+
   it("getEventsWithCompletion returns idle-timeout when no events arrive", async () => {
     mockSubscribe.mockReturnValue({ stop: mockStop });
     const service = new NostrService(config);

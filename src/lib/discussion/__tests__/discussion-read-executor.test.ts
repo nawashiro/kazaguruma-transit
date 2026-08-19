@@ -162,4 +162,43 @@ describe("executeDiscussionRead", () => {
       "wss://configured-third.example",
     ]);
   });
+
+  it("keeps only the newer addressable discussion event across a retry boundary", async () => {
+    const pubkey = "b".repeat(64);
+    const olderEvent: NostrEventDTO = {
+      ...event("older-discussion"),
+      pubkey,
+      created_at: 100,
+      content: "older",
+      tags: [["d", "community"]],
+    };
+    const newerEvent: NostrEventDTO = {
+      ...olderEvent,
+      id: "newer-discussion",
+      created_at: 200,
+      content: "newer",
+    };
+    const transport: jest.MockedFunction<DiscussionReadTransport> = jest
+      .fn<ReturnType<DiscussionReadTransport>, Parameters<DiscussionReadTransport>>()
+      .mockResolvedValueOnce(completion([olderEvent], "idle-timeout", {
+        [olderEvent.id]: ["wss://old.example"],
+      }))
+      .mockResolvedValueOnce(completion([newerEvent], "eose", {
+        [newerEvent.id]: ["wss://new.example"],
+      }));
+
+    const result = await executeDiscussionRead(transport, {
+      plan,
+      candidates: {
+        configured: ["wss://configured.example", "wss://configured-second.example"],
+        defaults: ["wss://default.example"],
+      },
+    });
+
+    expect(result.completionReason).toBe("eose");
+    expect(result.events).toEqual([newerEvent]);
+    expect(result.events).toHaveLength(1);
+    expect(result.sourceRelayUrlsByEventId[newerEvent.id]).toEqual(["wss://new.example"]);
+    expect(result.successfulEventRelayUrls).toContain("wss://new.example");
+  });
 });

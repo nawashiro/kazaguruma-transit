@@ -1,8 +1,16 @@
 import React from "react";
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { BusStopMemo } from "../BusStopMemo";
 import type { StreamEventsOptions } from "@/lib/nostr/nostr-service";
+
+jest.mock("../useBusStopModeration", () => {
+  const actual = jest.requireActual("../useBusStopModeration");
+  return {
+    ...actual,
+    useBusStopModeration: jest.fn(actual.useBusStopModeration),
+  };
+});
 
 jest.mock("@/lib/config/discussion-config", () => ({
   getDiscussionConfig: () => ({
@@ -46,9 +54,17 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   sortPostsByScore: () => [],
 }));
 
+const actualUseBusStopModeration = jest.requireActual<
+  typeof import("../useBusStopModeration")
+>("../useBusStopModeration").useBusStopModeration;
+const mockUseBusStopModeration = jest.requireMock(
+  "../useBusStopModeration",
+).useBusStopModeration as jest.MockedFunction<typeof actualUseBusStopModeration>;
+
 describe("BusStopMemo streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseBusStopModeration.mockImplementation(actualUseBusStopModeration);
   });
 
   it("uses the same scoped completion-aware read as discussion", async () => {
@@ -108,6 +124,27 @@ describe("BusStopMemo streaming", () => {
 
     return waitFor(() =>
       expect(document.body).toHaveTextContent("承認情報を確認中です。表示内容は暫定です。")
+    );
+  });
+
+  it("shows moderation read errors as a soft alert", () => {
+    const error = "バス停の投稿データを取得できませんでした。";
+    mockUseBusStopModeration.mockReturnValue({
+      snapshot: null,
+      isLoading: false,
+      error,
+      reload: jest.fn(),
+    });
+
+    render(<BusStopMemo busStops={["A"]} />);
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(error);
+    expect(alert).toHaveClass(
+      "alert",
+      "alert-error",
+      "alert-soft",
+      "text-base-content!",
     );
   });
 });

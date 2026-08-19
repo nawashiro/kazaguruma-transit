@@ -49,7 +49,38 @@ describe("DiscussionMetaReadState", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "会話情報" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent("取得に失敗");
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("取得に失敗");
+    expect(alert).toHaveClass(
+      "alert",
+      "alert-error",
+      "alert-soft",
+      "text-base-content!",
+    );
     expect(screen.getByRole("button", { name: "再試行" })).toBeInTheDocument();
+  });
+
+  it("部分取得警告を再読み込み付きのsoftなstatusとして表示する", () => {
+    const onReload = jest.fn();
+    render(
+      <DiscussionMetaReadState
+        discussion={null}
+        isLoading={false}
+        error={null}
+        completionReason="idle-timeout"
+        onReload={onReload}
+      />,
+    );
+
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("表示内容は暫定です");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(screen.getByRole("button", { name: "再読み込み" })).toBeInTheDocument();
   });
 });

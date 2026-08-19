@@ -46,6 +46,7 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseDiscussionEvent: jest.fn(() => null),
   getAdminPubkeyHex: jest.fn(() => "admin-pubkey"),
   isModerator: jest.fn(() => false),
+  npubToHex: jest.fn((pubkey: string) => pubkey),
 }));
 jest.mock("@/utils/logger", () => ({
   logger: {
@@ -63,6 +64,27 @@ import {
 } from "../DiscussionTabLayout";
 import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
+import { parseDiscussionEvent } from "@/lib/nostr/nostr-utils";
+import type { Discussion } from "@/types/discussion";
+
+const discussionMetadata: Discussion = {
+  id: "discussion-id",
+  dTag: "topic",
+  title: "テスト会話",
+  description: "テスト説明",
+  moderators: [],
+  authorPubkey: "author-pubkey",
+  createdAt: 1,
+  event: {
+    id: "discussion-event",
+    kind: 34550,
+    content: "",
+    tags: [["d", "topic"]],
+    created_at: 1,
+    pubkey: "author-pubkey",
+    sig: "signature",
+  },
+};
 
 function DiscussionMetaProbe() {
   const meta = useDiscussionMeta();
@@ -75,6 +97,7 @@ describe("DiscussionTabLayout", () => {
     mockPathname.mockReturnValue("/discussions/naddr123");
     mockParams.mockReturnValue({ naddr: "naddr123" });
     jest.mocked(extractDiscussionFromNaddr).mockReturnValue(null);
+    jest.mocked(parseDiscussionEvent).mockReturnValue(null);
     jest.mocked(executeDiscussionRead).mockResolvedValue({
       events: [],
       completionReason: "eose",
@@ -298,6 +321,40 @@ describe("DiscussionTabLayout", () => {
           onAttemptComplete: expect.any(Function),
         }),
       );
+    });
+
+    it("renders completed metadata role guidance as a soft status banner", async () => {
+      jest.mocked(extractDiscussionFromNaddr).mockReturnValue({
+        discussionId: "34550:author-pubkey:topic",
+        authorPubkey: "author-pubkey",
+        dTag: "topic",
+        relays: ["wss://hint.example"],
+      });
+      jest.mocked(parseDiscussionEvent).mockReturnValue(discussionMetadata);
+      jest.mocked(executeDiscussionRead).mockResolvedValue({
+        events: [discussionMetadata.event],
+        completionReason: "eose",
+        attemptedRelayUrls: ["wss://relay.example.com"],
+        successfulEventRelayUrls: ["wss://relay.example.com"],
+        sourceRelayUrlsByEventId: {
+          [discussionMetadata.event.id]: ["wss://relay.example.com"],
+        },
+        attempts: [],
+      });
+
+      render(
+        <DiscussionTabLayout baseHref="/discussions/naddr123">
+          <div>Content</div>
+        </DiscussionTabLayout>,
+      );
+
+      await screen.findByText("あなたはユーザーです。");
+      const status = screen.getByRole("status");
+      expect(status).toHaveClass("alert", "alert-soft", "text-base-content!");
+      expect(status.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
+      expect(
+        screen.getByText("ユーザーとして、新しい意見を投稿できます。"),
+      ).toBeInTheDocument();
     });
 
     it("不正なNADDRでは読み込みを終了してエラー状態にする", async () => {

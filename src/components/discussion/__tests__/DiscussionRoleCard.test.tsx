@@ -6,6 +6,9 @@ describe("DiscussionRoleCard", () => {
   it("shows only user permissions for users", () => {
     render(<DiscussionRoleCard role="user" />);
 
+    const status = screen.getByRole("status");
+    expect(status).toHaveClass("alert", "alert-soft", "text-base-content!");
+    expect(status.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
     expect(screen.getByText("あなたはユーザーです。"))
       .toBeInTheDocument();
     expect(screen.getByText("ユーザーとして、会話に参加できます。"))

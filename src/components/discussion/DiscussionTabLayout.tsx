@@ -381,7 +381,7 @@ export function DiscussionTabLayout({
         />
 
       {isDiscussionRoleReady && (
-        <div className="alert mb-8" role="status">
+        <div className="alert alert-soft text-base-content! mb-8" role="status">
           <InformationCircleIcon className="h-6 w-6 text-info" aria-hidden="true" />
           <div>
             {isCreator ? (

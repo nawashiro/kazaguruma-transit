@@ -5,6 +5,7 @@ import DiscussionDetailPage from '../page';
 
 const mockRouterPush = jest.fn();
 const mockUseAuth = jest.fn();
+const mockUseDiscussionContentData = jest.fn();
 const mockSignEvent = jest.fn();
 const mockPublishSignedEvent = jest.fn();
 const mockCreatePostEvent = jest.fn();
@@ -72,12 +73,7 @@ jest.mock('@/components/discussion/DiscussionTabLayout', () => ({
 }));
 
 jest.mock('@/components/discussion/DiscussionContentDataProvider', () => ({
-  useDiscussionContentData: () => ({
-    posts: mockDiscussionPosts,
-    isLoading: false,
-    error: null,
-    addPost: jest.fn(),
-  }),
+  useDiscussionContentData: () => mockUseDiscussionContentData(),
 }));
 
 jest.mock('@/lib/config/discussion-config', () => ({
@@ -242,6 +238,12 @@ describe('DiscussionDetailPage - unauthenticated public actions', () => {
       user: { pubkey: null, isLoggedIn: false },
       signEvent: mockSignEvent,
     });
+    mockUseDiscussionContentData.mockReturnValue({
+      posts: mockDiscussionPosts,
+      isLoading: false,
+      error: null,
+      addPost: jest.fn(),
+    });
     mockCreatePostEvent.mockReset();
     mockCreateEvaluationEvent.mockReset();
     mockPublishSignedEvent.mockReset();
@@ -325,6 +327,31 @@ describe('DiscussionDetailPage - unauthenticated public actions', () => {
       expect(mockCreateEvaluationEvent).not.toHaveBeenCalled();
       expect(mockPublishSignedEvent).not.toHaveBeenCalled();
     });
+  });
+
+  it('renders post read errors as soft alert content', async () => {
+    mockUseDiscussionContentData.mockReturnValue({
+      posts: mockDiscussionPosts,
+      isLoading: false,
+      error: '投稿・評価データの取得に失敗しました。',
+      addPost: jest.fn(),
+    });
+
+    render(<DiscussionDetailPage />);
+
+    const errorTexts = await screen.findAllByText('投稿・評価データの取得に失敗しました。');
+    const postsAlert = errorTexts[0].closest<HTMLElement>('[role="alert"]');
+    expect(postsAlert).not.toBeNull();
+    if (!postsAlert) {
+      throw new Error('Expected the post read error to be rendered in an alert');
+    }
+    expect(postsAlert).toHaveTextContent('投稿・評価データの取得に失敗しました。');
+    expect(postsAlert).toHaveClass(
+      'alert',
+      'alert-error',
+      'alert-soft',
+      'text-base-content!',
+    );
   });
 });
 

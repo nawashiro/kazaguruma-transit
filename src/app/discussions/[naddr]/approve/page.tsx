@@ -306,14 +306,22 @@ export default function PostApprovalPage() {
           discussionCompletionReason === "idle-timeout" ||
             discussionCompletionReason === "hard-timeout" ||
             discussionCompletionReason === "cancelled" ? (
-            <div className="alert alert-warning" role="alert">
+            <div
+              className="alert alert-warning alert-soft text-base-content!"
+              role="status"
+              aria-live="polite"
+            >
               <span>
                 会話データの取得に時間がかかっています（{discussionCompletionReason}）。
                 受信待機中または relay 応答遅延の可能性があります。
               </span>
             </div>
           ) : (
-            <div className="alert alert-warning" role="alert">
+            <div
+              className="alert alert-warning alert-soft text-base-content!"
+              role="status"
+              aria-live="polite"
+            >
               <span>会話が見つかりません。</span>
             </div>
           )

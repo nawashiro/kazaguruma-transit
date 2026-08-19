@@ -201,6 +201,72 @@ describe("PostApprovalPage streaming", () => {
     expect(serviceMock.streamApprovals).not.toHaveBeenCalled();
   });
 
+  it("renders timeout as a polite soft status while keeping approval tabs", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "author", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: false,
+      error: null,
+      completionReason: "idle-timeout",
+      reload: jest.fn(),
+    });
+
+    render(<PostApprovalPage />);
+
+    const warningText = await screen.findByText(/会話データの取得に時間がかかっています/);
+    const status = warningText.closest<HTMLElement>('[role="status"]');
+    expect(status).not.toBeNull();
+    if (!status) {
+      throw new Error('Expected the approval timeout to be rendered as a status');
+    }
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(status).toHaveTextContent(/会話データの取得に時間がかかっています/);
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "承認待ちタブを開く" })).toBeInTheDocument();
+  });
+
+  it("renders not-found as a polite soft status while keeping approval tabs", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "author", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: false,
+      error: null,
+      completionReason: "eose",
+      reload: jest.fn(),
+    });
+
+    render(<PostApprovalPage />);
+
+    const notFoundText = await screen.findByText("会話が見つかりません。");
+    const status = notFoundText.closest<HTMLElement>('[role="status"]');
+    expect(status).not.toBeNull();
+    if (!status) {
+      throw new Error('Expected the approval not-found state to be rendered as a status');
+    }
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(status).toHaveTextContent("会話が見つかりません。");
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "承認待ちタブを開く" })).toBeInTheDocument();
+  });
+
   it("shows disabled approval action with reason for non-moderator users", async () => {
     useAuthMock.mockReturnValue({
       user: { pubkey: "viewer", isLoggedIn: true },

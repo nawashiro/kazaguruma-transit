@@ -481,7 +481,11 @@ export default function DiscussionDetailPage() {
     ) {
       return (
         <div className="py-8">
-          <div className="alert alert-warning mb-4" role="alert">
+          <div
+            className="alert alert-warning alert-soft text-base-content! mb-4"
+            role="status"
+            aria-live="polite"
+          >
             <span>
               会話データの取得に時間がかかっています（{discussionCompletionReason}）。
               受信待機中または relay 応答遅延の可能性があります。
@@ -523,7 +527,10 @@ export default function DiscussionDetailPage() {
               {isPostsLoading
                 ? renderInlineLoading("評価データを読み込み中...")
                 : postsLoadError ? (
-                  <div className="alert alert-error" role="alert">
+                  <div
+                    className="alert alert-error alert-soft text-base-content!"
+                    role="alert"
+                  >
                     <span>{postsLoadError}</span>
                   </div>
                 ) : (
@@ -551,7 +558,10 @@ export default function DiscussionDetailPage() {
               {isPostsLoading ? (
                 renderInlineLoading("分析データを読み込み中...")
               ) : postsLoadError ? (
-                <div className="alert alert-error" role="alert">
+                <div
+                  className="alert alert-error alert-soft text-base-content!"
+                  role="alert"
+                >
                   <span>{postsLoadError}</span>
                 </div>
               ) : (

@@ -533,20 +533,33 @@ describe("DiscussionDetailPage streaming", () => {
     expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
   });
 
-  it("shows timeout warning instead of not-found when metadata read ends by timeout", async () => {
+  it("shows timeout warning as a polite soft status instead of not-found", async () => {
+    const reload = jest.fn();
     mockUseDiscussionMeta.mockReturnValue({
       discussion: null,
       isLoading: false,
       completionReason: "idle-timeout" as const,
       error: null,
-      reload: jest.fn(),
+      reload,
     });
 
     render(<DiscussionDetailPage />);
 
-    expect(
-      await screen.findByText(/会話データの取得に時間がかかっています/)
-    ).toBeInTheDocument();
+    const warningText = await screen.findByText(/会話データの取得に時間がかかっています/);
+    const status = warningText.closest<HTMLElement>('[role="status"]');
+    expect(status).not.toBeNull();
+    if (!status) {
+      throw new Error('Expected the metadata timeout to be rendered as a status');
+    }
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(status).toHaveTextContent(/会話データの取得に時間がかかっています/);
+    expect(screen.getByRole("button", { name: "再読み込み" })).toBeInTheDocument();
     expect(screen.queryByText("会話が見つかりません")).not.toBeInTheDocument();
   });
 });

@@ -575,7 +575,11 @@ export default function DiscussionEditPage() {
     ) {
       return (
         <div className="py-8">
-          <div className="alert alert-warning mb-4" role="alert">
+          <div
+            className="alert alert-warning alert-soft text-base-content! mb-4"
+            role="status"
+            aria-live="polite"
+          >
             <span>
               会話データの取得に時間がかかっています（
               {discussionCompletionReason}）。 受信待機中または relay
@@ -867,8 +871,9 @@ export default function DiscussionEditPage() {
 
                   {!isPromotionRequestReadComplete && !isLoading && (
                     <div
-                      className="alert alert-warning"
-                      role="alert"
+                      className="alert alert-warning alert-soft text-base-content!"
+                      role="status"
+                      aria-live="polite"
                       aria-label="昇格申請の取得は完了していません"
                     >
                       <span className="ruby-text">

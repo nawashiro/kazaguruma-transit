@@ -169,9 +169,19 @@ describe("DiscussionEditPage streaming", () => {
 
     render(<DiscussionEditPage />);
 
-    expect(
-      await screen.findByRole("alert", { name: "昇格申請の取得は完了していません" }),
-    ).toBeInTheDocument();
+    const status = await screen.findByRole("status", {
+      name: "昇格申請の取得は完了していません",
+    });
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(status).toHaveTextContent(
+      "昇格申請の取得が完了していないため、申請がないとは断定できません。",
+    );
     expect(screen.queryByText("申請はまだありません。")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "昇格申請を再取得" }));
@@ -179,6 +189,35 @@ describe("DiscussionEditPage streaming", () => {
     await waitFor(() =>
       expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalledTimes(2),
     );
+  });
+
+  it("renders discussion timeout as a polite soft status with reload", async () => {
+    const reload = jest.fn();
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: false,
+      error: null,
+      completionReason: "hard-timeout",
+      reload,
+    });
+
+    render(<DiscussionEditPage />);
+
+    const warningText = await screen.findByText(/会話データの取得に時間がかかっています/);
+    const status = warningText.closest<HTMLElement>('[role="status"]');
+    expect(status).not.toBeNull();
+    if (!status) {
+      throw new Error('Expected the edit timeout to be rendered as a status');
+    }
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(status).toHaveTextContent(/会話データの取得に時間がかかっています/);
+    expect(screen.getByRole("button", { name: "再読み込み" })).toBeInTheDocument();
   });
 
   it("does not show not-found while the layout is still loading", () => {

@@ -59,3 +59,45 @@ test("プライマリ色のカレンダーボタンからicsファイルをダ�
   expect(mockAnchorClick).toHaveBeenCalledTimes(1);
   expect(mockRevokeObjectURL).toHaveBeenCalledWith("blob:calendar-url");
 });
+
+test("不正な日時のカレンダー生成失敗をalertで知らせ、追加操作を維持する", () => {
+  render(
+    <RouteCalendarExport
+      originStop={{ stopId: "from", stopName: "出発", distance: 0 }}
+      destinationStop={{ stopId: "to", stopName: "到着", distance: 0 }}
+      routes={[
+        {
+          routeId: "route",
+          routeName: "神田ルート",
+          routeShortName: "神田",
+          routeLongName: "神田ルート",
+          routeColor: "000000",
+          routeTextColor: "ffffff",
+          departureTime: "09:00:00",
+          arrivalTime: "09:15:00",
+        },
+      ]}
+      selectedDateTime="invalid-date"
+    />
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "カレンダーに追加" }));
+
+  const alert = screen.getByRole("alert");
+  expect(alert).toHaveTextContent(
+    "カレンダー生成エラー: カレンダーに必要な日付情報がありません"
+  );
+  expect(alert).toHaveClass(
+    "alert",
+    "alert-error",
+    "alert-soft",
+    "text-base-content!"
+  );
+
+  const buttonAfterError = screen.getByRole("button", {
+    name: "カレンダーに追加",
+  });
+  expect(buttonAfterError).toBeInTheDocument();
+  fireEvent.click(buttonAfterError);
+  expect(screen.getByRole("alert")).toBeInTheDocument();
+});

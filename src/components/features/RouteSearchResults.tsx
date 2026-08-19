@@ -75,7 +75,7 @@ function getBusStops(routeInfo: RouteResultViewModel): string[] {
 function SearchError({ message }: { message: string }) {
   return (
     <Card>
-      <div role="alert" className="alert alert-error mb-4">
+      <div role="alert" className="alert alert-error alert-soft text-base-content! mb-4">
         {message}
       </div>
       <ResetSearchConditionsLink />

@@ -122,7 +122,9 @@ describe("RoutesPage", () => {
 
     render(<RoutesPage />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("経路APIエラー");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("経路APIエラー");
+    expect(alert).toHaveClass("alert-soft", "text-base-content!");
     expect(screen.getByRole("link", { name: "検索条件をリセット" })).toBeInTheDocument();
   });
 

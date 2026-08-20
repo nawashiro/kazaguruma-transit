@@ -106,6 +106,42 @@ describe("DiscussionCreatePage", () => {
     expect(pushMock).toHaveBeenCalledWith("/discussions/naddr1created");
   });
 
+  it("shows creation errors as an assertive soft alert while preserving form input", async () => {
+    const creationErrors = [
+      "タイトルの内容を確認してください",
+      "説明の内容を確認してください",
+    ];
+    processDiscussionCreationFlowMock.mockResolvedValueOnce({
+      success: false,
+      errors: creationErrors,
+    });
+
+    render(<DiscussionCreatePage />);
+
+    fireEvent.change(screen.getByLabelText("タイトル *"), {
+      target: { value: "入力したタイトル" },
+    });
+    fireEvent.change(screen.getByLabelText("説明 *"), {
+      target: { value: "入力した説明" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "会話を作成する" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveAttribute("aria-live", "assertive");
+    expect(alert).toHaveClass(
+      "alert",
+      "alert-error",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    for (const error of creationErrors) {
+      expect(alert).toHaveTextContent(error);
+    }
+    expect(screen.getByDisplayValue("入力したタイトル")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("入力した説明")).toBeInTheDocument();
+  });
+
   it("navigates unauthenticated creation to login without opening LoginModal or replaying creation", async () => {
     mockCreateAuthUser.pubkey = "";
     mockCreateAuthUser.isLoggedIn = false;

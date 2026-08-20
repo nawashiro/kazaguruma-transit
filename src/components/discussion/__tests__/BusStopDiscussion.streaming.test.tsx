@@ -120,16 +120,25 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
     })),
   filterUnevaluatedPosts: (posts: unknown[]) => posts,
   shuffleArray: (posts: unknown[]) => posts,
-  validatePostForm: () => [],
+  validatePostForm: jest.fn(() => []),
 }));
 
 const mockUseBusStopModeration = jest.requireMock(
   "../useBusStopModeration",
 ).useBusStopModeration as jest.Mock;
+const mockValidatePostForm = jest.requireMock(
+  "@/lib/nostr/nostr-utils",
+).validatePostForm as jest.Mock;
+const actualUseBusStopModeration = jest.requireActual<
+  typeof import("../useBusStopModeration")
+>("../useBusStopModeration").useBusStopModeration;
 
 describe("BusStopDiscussion streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockValidatePostForm.mockReset();
+    mockValidatePostForm.mockReturnValue([]);
+    mockUseBusStopModeration.mockImplementation(actualUseBusStopModeration);
   });
 
   it("uses a scoped completion-aware read for bus-stop posts and approvals", async () => {
@@ -152,6 +161,51 @@ describe("BusStopDiscussion streaming", () => {
       expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(1);
       expect(queryByText("承認情報を確認中です。表示内容は暫定です。")).not.toBeInTheDocument();
     });
+  });
+
+  it("shows stream errors as a soft alert", async () => {
+    const error = "バス停の投稿データを取得できませんでした。";
+    mockUseBusStopModeration.mockReturnValue({
+      snapshot: null,
+      isLoading: false,
+      error,
+      reload: jest.fn(),
+    });
+
+    render(<BusStopDiscussion busStops={["A"]} />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(error);
+    expect(alert).toHaveClass(
+      "alert",
+      "alert-error",
+      "alert-soft",
+      "text-base-content!",
+    );
+  });
+
+  it("shows validation errors as an assertive soft alert after confirming a post", async () => {
+    const validationError = "本文を入力してください";
+    mockValidatePostForm.mockReturnValueOnce([validationError]);
+
+    render(<BusStopDiscussion busStops={["A"]} />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: /投稿内容/ }), {
+      target: { value: "投稿本文" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "プレビュー" }));
+    fireEvent.click(screen.getByRole("button", { name: "投稿を確定" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveAttribute("aria-live", "assertive");
+    expect(alert).toHaveTextContent(validationError);
+    expect(alert).toHaveClass(
+      "alert",
+      "alert-error",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(screen.getByRole("list")).toHaveTextContent(validationError);
   });
 });
 

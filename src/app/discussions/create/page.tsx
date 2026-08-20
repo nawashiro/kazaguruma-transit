@@ -381,7 +381,7 @@ export default function DiscussionCreatePage() {
                 </div>
 
                 {errors.length > 0 && (
-                  <div className="alert alert-error" role="alert" aria-live="assertive">
+                  <div className="alert alert-error alert-soft text-base-content!" role="alert" aria-live="assertive">
                     <ul className="text-base">
                       {errors.map((error, index) => (
                         <li key={index} className="ruby-text">{error}</li>

@@ -212,8 +212,17 @@ export function BusStopDiscussion({
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
         <h3 className="text-lg font-medium mb-4 ruby-text">バス停メモを投稿</h3>
         {streamError && (
-          <div className="alert alert-error mb-3" role="alert">
+          <div className="alert alert-error alert-soft text-base-content! mb-3" role="alert">
             <span>{streamError}</span>
+          </div>
+        )}
+        {errors.length > 0 && (
+          <div className="alert alert-error alert-soft text-base-content!" role="alert" aria-live="assertive">
+            <ul className="text-base">
+              {errors.map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
           </div>
         )}
         {!isStreamLoading && !streamError && postsWithStats.length === 0 && !isApprovalCheckPending && (
@@ -272,16 +281,6 @@ export function BusStopDiscussion({
                 ))}
               </select>
             </div>
-
-            {errors.length > 0 && (
-              <div className="alert alert-error">
-                <ul className="text-base">
-                  {errors.map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
 
             <div className="flex gap-2">
               <Button

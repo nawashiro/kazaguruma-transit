@@ -258,6 +258,30 @@ describe("DiscussionEditPage listing request", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders edit validation errors as an assertive soft alert list", async () => {
+    render(<DiscussionEditPage />);
+
+    fireEvent.change(await screen.findByRole("textbox", { name: "タイトル *" }), {
+      target: { value: "a".repeat(101) },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "説明 *" }), {
+      target: { value: "b".repeat(501) },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "変更を保存" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveAttribute("aria-live", "assertive");
+    expect(alert).toHaveClass(
+      "alert",
+      "alert-error",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(alert.querySelector("ul")).not.toBeNull();
+    expect(alert).toHaveTextContent("タイトルは100文字以内で入力してください");
+    expect(alert).toHaveTextContent("説明は500文字以内で入力してください");
+  });
+
   it("does not expose basic information controls to non-authors", async () => {
     authState.user = {
       pubkey: "d".repeat(64),

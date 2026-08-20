@@ -9,6 +9,7 @@ const mockSettingsUser = {
   profile: { about: "自己紹介" },
 };
 const mockRouterPush = jest.fn();
+const mockAuthError = { value: null as string | null };
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockRouterPush }),
@@ -26,7 +27,7 @@ jest.mock("@/lib/auth/auth-context", () => ({
     user: mockSettingsUser,
     logout: jest.fn(),
     isLoading: false,
-    error: null,
+    error: mockAuthError.value,
     signEvent: jest.fn(),
   }),
 }));
@@ -129,6 +130,7 @@ describe("SettingsPage streaming discussions", () => {
     jest.clearAllMocks();
     mockSettingsUser.isLoggedIn = true;
     mockSettingsUser.pubkey = "user-pubkey";
+    mockAuthError.value = null;
     discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
       withCompletion([]),
     );
@@ -142,6 +144,27 @@ describe("SettingsPage streaming discussions", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("さん")).toBeInTheDocument();
     expect(screen.queryByText("ユーザー名")).not.toBeInTheDocument();
+  });
+
+  it("renders an unauthenticated auth error as an assertive soft alert", async () => {
+    mockSettingsUser.isLoggedIn = false;
+    mockSettingsUser.pubkey = "";
+    mockAuthError.value = "認証に失敗しました。";
+
+    render(<SettingsPage />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveAttribute("role", "alert");
+    expect(alert).toHaveClass(
+      "alert",
+      "alert-error",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(alert).toHaveTextContent("認証に失敗しました。");
+    expect(
+      screen.getByRole("button", { name: "ログイン / アカウント作成" }),
+    ).toBeInTheDocument();
   });
 
   it("loads user discussions through the bounded discussion read executor", async () => {

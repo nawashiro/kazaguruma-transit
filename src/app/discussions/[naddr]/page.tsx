@@ -851,7 +851,11 @@ export default function DiscussionDetailPage() {
                       </div>
 
                       {errors.length > 0 && (
-                        <div className="alert alert-error">
+                        <div
+                          className="alert alert-error alert-soft text-base-content!"
+                          role="alert"
+                          aria-live="assertive"
+                        >
                           <ul className="text-base">
                             {errors.map((error, index) => (
                               <li key={index}>{error}</li>

@@ -208,7 +208,7 @@ export default function SettingsPage() {
                 </div>
 
                 {error && (
-                  <div className="alert alert-error mb-4">
+                  <div className="alert alert-error alert-soft text-base-content! mb-4" role="alert">
                     <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
                     <span className="text-base">{error}</span>
                   </div>

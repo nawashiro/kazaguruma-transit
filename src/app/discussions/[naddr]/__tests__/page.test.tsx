@@ -11,6 +11,7 @@ const mockPublishSignedEvent = jest.fn();
 const mockCreatePostEvent = jest.fn();
 const mockCreateEvaluationEvent = jest.fn();
 const mockAnalyzeConsensus = jest.fn();
+const mockValidatePostForm = jest.fn<string[], [unknown]>();
 const mockDiscussionMetaReload = jest.fn();
 const mockDiscussion = {
   id: 'discussion-id',
@@ -141,7 +142,7 @@ jest.mock('@/lib/nostr/nostr-utils', () => ({
   parseApprovalEvent: () => null,
   parseEvaluationEvent: () => null,
   combinePostsWithStats: () => [],
-  validatePostForm: () => [],
+  validatePostForm: (formData: unknown) => mockValidatePostForm(formData),
   formatRelativeTime: () => '1 hour ago',
   getAdminPubkeyHex: () => 'admin-pubkey',
   isModerator: () => false,
@@ -249,6 +250,36 @@ describe('DiscussionDetailPage - unauthenticated public actions', () => {
     mockPublishSignedEvent.mockReset();
     mockSignEvent.mockReset();
     mockAnalyzeConsensus.mockReset();
+    mockValidatePostForm.mockReset();
+    mockValidatePostForm.mockReturnValue([]);
+  });
+
+  it('renders post validation errors as an assertive soft alert list', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { pubkey: 'authenticated-user', isLoggedIn: true },
+      signEvent: mockSignEvent,
+    });
+    mockValidatePostForm.mockReturnValue(['投稿内容の検証に失敗しました。']);
+
+    render(<DiscussionDetailPage />);
+
+    fireEvent.change(await screen.findByRole('textbox', { name: /投稿内容/ }), {
+      target: { value: '投稿本文' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'プレビュー' }));
+    fireEvent.click(await screen.findByRole('button', { name: '投稿を確定' }));
+    fireEvent.click(screen.getByRole('button', { name: '編集に戻る' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveAttribute('aria-live', 'assertive');
+    expect(alert).toHaveClass(
+      'alert',
+      'alert-error',
+      'alert-soft',
+      'text-base-content!',
+    );
+    expect(alert.querySelector('ul')).not.toBeNull();
+    expect(alert).toHaveTextContent('投稿内容の検証に失敗しました。');
   });
 
   it('routes an unauthenticated post action to login without opening a modal or signing', async () => {

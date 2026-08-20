@@ -129,9 +129,17 @@ describe("ModeratorsPage direct moderator management", () => {
 
     render(<ModeratorsPage />);
 
-    expect(
-      await screen.findByRole("alert", { name: "モデレーター申請の取得は完了していません" }),
-    ).toBeInTheDocument();
+    const applicationStatus = await screen.findByRole("status", {
+      name: "モデレーター申請の取得は完了していません",
+    });
+    expect(applicationStatus).toBeInTheDocument();
+    expect(applicationStatus).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(applicationStatus).toHaveAttribute("aria-live", "polite");
     expect(screen.queryByText("申請中のユーザーはいません。")).not.toBeInTheDocument();
 
     discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
@@ -178,9 +186,18 @@ describe("ModeratorsPage direct moderator management", () => {
 
     render(<ModeratorsPage />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
+    const partialStatus = screen.getByRole("status");
+    expect(partialStatus).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(partialStatus).toHaveAttribute("aria-live", "polite");
+    expect(partialStatus).toHaveTextContent(
       "会話データの取得に時間がかかっています",
     );
+    expect(screen.getByRole("button", { name: "再読み込み" })).toBeInTheDocument();
     expect(screen.queryByText("会話情報が見つかりませんでした。")).not.toBeInTheDocument();
   });
 
@@ -195,7 +212,14 @@ describe("ModeratorsPage direct moderator management", () => {
     render(<ModeratorsPage />);
 
     expect(screen.queryByText("会話情報を読み込み中...")).not.toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent(
+    const notFoundAlert = screen.getByRole("alert");
+    expect(notFoundAlert).toHaveClass(
+      "alert",
+      "alert-error",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(notFoundAlert).toHaveTextContent(
       "会話情報が見つかりませんでした。",
     );
     fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
@@ -262,8 +286,10 @@ describe("ModeratorsPage direct moderator management", () => {
     fireEvent.change(input, { target: { value: "npub1duplicate" } });
     fireEvent.click(addButton);
 
-    const error = screen.getByText("そのユーザーはすでに追加予定です。");
+    const error = screen.getByRole("alert");
     expect(error).toBeVisible();
+    expect(error).toHaveTextContent("そのユーザーはすでに追加予定です。");
+    expect(error).toHaveClass("text-base-content");
     expect(input).toHaveAttribute("aria-describedby", "direct-moderator-error");
     expect(input).toHaveAttribute("aria-invalid", "true");
   });

@@ -263,7 +263,15 @@ export default function ModeratorsPage() {
     const completionReason = meta?.completionReason;
     const isPartial = completionReason === "idle-timeout" || completionReason === "hard-timeout" || completionReason === "cancelled";
     return (
-      <div className={isPartial ? "alert alert-warning" : "alert alert-error"} role="alert">
+      <div
+        className={
+          isPartial
+            ? "alert alert-warning alert-soft text-base-content!"
+            : "alert alert-error alert-soft text-base-content!"
+        }
+        role={isPartial ? "status" : "alert"}
+        aria-live={isPartial ? "polite" : undefined}
+      >
         <span className="ruby-text">
           {isPartial
             ? `会話データの取得に時間がかかっています（${completionReason}）。受信待機中または relay 応答遅延の可能性があります。`
@@ -294,8 +302,9 @@ export default function ModeratorsPage() {
         />
       ) : applicationReadState === "partial" ? (
         <div
-          className="alert alert-warning"
-          role="alert"
+          className="alert alert-warning alert-soft text-base-content!"
+          role="status"
+          aria-live="polite"
           aria-label="モデレーター申請の取得は完了していません"
         >
           <span className="ruby-text">
@@ -313,7 +322,7 @@ export default function ModeratorsPage() {
         <div role="status" className="ruby-text">モデレーター申請を読み込み中...</div>
       )}
       {error && (
-        <p role="alert" className="text-error ruby-text">
+        <p role="alert" className="text-base-content ruby-text">
           {error}
         </p>
       )}
@@ -359,7 +368,7 @@ export default function ModeratorsPage() {
                 <p
                   id="direct-moderator-error"
                   role="alert"
-                  className="text-base text-error ruby-text"
+                  className="text-base text-base-content ruby-text"
                 >
                   {directError}
                 </p>

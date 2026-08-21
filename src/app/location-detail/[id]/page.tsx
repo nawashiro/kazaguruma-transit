@@ -13,6 +13,9 @@ import { findLocationAreaName } from "@/lib/location/location-list-state";
 const LOCATION_DETAIL_FALLBACK_TITLE = "場所詳細 | 風ぐるま乗換案内";
 const LOCATION_DETAIL_DESCRIPTION = "風ぐるまで行ける場所の詳細情報";
 const LOCATION_DETAIL_TITLE_SUFFIX = " - 場所詳細";
+const DUPLICATE_LOCATION_ID_ERROR = "場所識別子が重複しています";
+const DUPLICATE_LOCATION_ID_MESSAGE =
+  `${DUPLICATE_LOCATION_ID_ERROR}。\n\n管理者にお問い合わせください。\nこのエラーはサーバー管理者しか修正できません。`;
 
 type LocationDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -178,7 +181,7 @@ function StatePage({
       <PageHeader title={title} />
       <div className="alert alert-error alert-soft text-base-content!">
         <h2>エラー</h2>
-        <p>{message}</p>
+        <p className="whitespace-pre-line">{message}</p>
       </div>
     </div>
   );
@@ -210,10 +213,15 @@ export default async function LocationDetailPage({
   }
 
   if (result.status === "error") {
+    const message =
+      result.error.message === DUPLICATE_LOCATION_ID_ERROR
+        ? DUPLICATE_LOCATION_ID_MESSAGE
+        : `${result.error.message}。場所一覧から選び直してください。`;
+
     return (
       <StatePage
         title="場所詳細を表示できません"
-        message={`${result.error.message}。場所一覧から選び直してください。`}
+        message={message}
       />
     );
   }

@@ -324,7 +324,8 @@ const nonSuccessStates = {
   },
   duplicateId: {
     title: "場所詳細を表示できません",
-    message: "場所識別子が重複しています。場所一覧から選び直してください。",
+    message:
+      "場所識別子が重複しています。\n\n管理者にお問い合わせください。\nこのエラーはサーバー管理者しか修正できません。",
     marker: "場所識別子が重複しています",
   },
 } as const;
@@ -346,8 +347,11 @@ function expectNonSuccessState(state: NonSuccessState) {
   });
   expect(errorHeading).toBeVisible();
 
-  const body = screen.getByText(message, { exact: true });
+  const body = screen.getByText((_, element) => element?.textContent === message);
   expect(body).toBeVisible();
+  if (state === "duplicateId") {
+    expect(body).toHaveClass("whitespace-pre-line");
+  }
   const errorPanel = body.closest(".alert");
   if (!(errorPanel instanceof HTMLElement)) {
     throw new Error("expected the location error body to be inside an alert panel");

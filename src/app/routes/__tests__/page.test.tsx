@@ -32,6 +32,8 @@ jest.mock("@/lib/config/discussion-config", () => ({
 }));
 const validSearch =
   "origin=35.68%2C139.76&destination=35.7%2C139.78&time=2026-07-18T09%3A30&isDeparture=true&prioritizeSpeed=false";
+const nextValidSearch =
+  "origin=35.68%2C139.76&destination=35.7%2C139.78&time=2026-07-18T10%3A00&isDeparture=true&prioritizeSpeed=false";
 
 const successfulResponse = {
   success: true,
@@ -142,5 +144,31 @@ describe("RoutesPage", () => {
       expect(mockRouterPush).toHaveBeenCalledTimes(1);
     });
     expect(mockRouterPush).toHaveBeenCalledWith("/rate-limit?source=routes");
+  });
+
+  it("新しい検索条件の読み込み中は前回のalertを残さない", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ success: false, error: "経路APIエラー" }),
+    });
+
+    const view = render(<RoutesPage />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("経路APIエラー");
+
+    mockSearchParams = new URLSearchParams(nextValidSearch);
+    let alertDuringNextFetch: HTMLElement | null = null;
+    let statusTextDuringNextFetch = "";
+    (global.fetch as jest.Mock).mockImplementationOnce(() => {
+      alertDuringNextFetch = screen.queryByRole("alert");
+      statusTextDuringNextFetch = screen.queryByRole("status")?.textContent ?? "";
+      return new Promise(() => undefined);
+    });
+    view.rerender(<RoutesPage />);
+
+    expect(alertDuringNextFetch).toBeNull();
+    expect(statusTextDuringNextFetch).toContain("経路を検索中");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("経路を検索中");
   });
 });

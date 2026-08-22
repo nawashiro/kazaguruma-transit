@@ -29,9 +29,9 @@ interface ApiResponse {
 }
 
 type ResultState =
-  | { status: "loading" }
-  | { status: "success"; routeInfo: RouteResultViewModel }
-  | { status: "error"; message: string };
+  | { status: "loading"; searchParams: string }
+  | { status: "success"; searchParams: string; routeInfo: RouteResultViewModel }
+  | { status: "error"; searchParams: string; message: string };
 
 interface RouteSearchResultsProps {
   searchParams: string;
@@ -88,7 +88,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
     () => parseRouteSearchParams(new URLSearchParams(searchParams)),
     [searchParams],
   );
-  const [resultState, setResultState] = useState<ResultState>({ status: "loading" });
+  const [resultState, setResultState] = useState<ResultState>({ status: "loading", searchParams });
   const router = getRateLimitRouter();
   const routerRef = useRef(router);
   routerRef.current = router;
@@ -98,7 +98,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
     if (!parsed.isValid) return;
 
     const abortController = new AbortController();
-    setResultState({ status: "loading" });
+    setResultState({ status: "loading", searchParams });
 
     const search = async () => {
       try {
@@ -110,13 +110,18 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
         const apiResponse = (await response.json()) as ApiResponse;
 
         if (response.status === 429 && apiResponse.limitExceeded) {
-          setResultState({ status: "error", message: "利用制限に達しました" });
+          setResultState({
+            status: "error",
+            searchParams,
+            message: "利用制限に達しました",
+          });
           routerRef.current.push("/rate-limit?source=routes");
           return;
         }
         if (!response.ok || !apiResponse.success) {
           setResultState({
             status: "error",
+            searchParams,
             message: apiResponse.error || "経路検索に失敗しました",
           });
           return;
@@ -124,6 +129,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
 
         setResultState({
           status: "success",
+          searchParams,
           routeInfo: createRouteResultViewModel(
             apiResponse.data,
             parsed.query.origin,
@@ -135,6 +141,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
         logger.error("経路検索リクエストエラー:", error);
         setResultState({
           status: "error",
+          searchParams,
           message: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
         });
       }
@@ -142,7 +149,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
 
     void search();
     return () => abortController.abort();
-  }, [parsed]);
+  }, [parsed, searchParams]);
 
   useEffect(() => {
     if (
@@ -158,7 +165,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
   }, [resultState]);
 
   if (!parsed.isValid) return <SearchError message={parsed.error} />;
-  if (resultState.status === "loading") {
+  if (resultState.status === "loading" || resultState.searchParams !== searchParams) {
     return (
       <Card bodyClassName="items-center">
         <div role="status" className="flex flex-col items-center gap-2">

@@ -66,6 +66,7 @@ export default function SidebarLayout({
         className="drawer-toggle"
         checked={isDrawerOpen}
         onChange={(event) => setIsDrawerOpen(event.target.checked)}
+        tabIndex={-1}
         aria-label="ナビゲーションメニュー"
       />
       <div className="drawer-side z-40">

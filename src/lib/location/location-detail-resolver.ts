@@ -1,4 +1,7 @@
-import type { LocationDetailResult } from "@/types/access-route-pages";
+import type {
+  LocationDetailErrorReason,
+  LocationDetailResult,
+} from "@/types/access-route-pages";
 import { isKeyLocationCategory } from "@/utils/addressLoader";
 import type {
   KeyLocation,
@@ -42,17 +45,38 @@ function isValidLocationId(value: unknown): value is string {
   );
 }
 
+function hasInvalidLoadedLocationId(value: unknown): boolean {
+  if (!isRecord(value) || value.status !== "success" || !Array.isArray(value.categories)) {
+    return false;
+  }
+
+  return value.categories.some((category) => {
+    if (!isRecord(category) || !Array.isArray(category.locations)) {
+      return false;
+    }
+
+    return category.locations.some(
+      (location) => isRecord(location) && !isValidLocationId(location.id),
+    );
+  });
+}
+
 function collectLocations(
   categories: Extract<KeyLocationsDataResult, { status: "success" }>["categories"],
 ):
   | { status: "success"; locations: KeyLocation[] }
-  | { status: "error"; error: Error } {
+  | {
+      status: "error";
+      error: Error;
+      reason: LocationDetailErrorReason;
+    } {
   const locations: KeyLocation[] = [];
   const seenIds = new Set<string>();
 
   if (!Array.isArray(categories)) {
     return {
       status: "error",
+      reason: "invalid-data",
       error: new Error("場所データの形式が不正です"),
     };
   }
@@ -61,6 +85,7 @@ function collectLocations(
     if (!isKeyLocationCategory(category)) {
       return {
         status: "error",
+        reason: "invalid-data",
         error: new Error("場所データの形式が不正です"),
       };
     }
@@ -73,6 +98,7 @@ function collectLocations(
       ) {
         return {
           status: "error",
+          reason: "invalid-data",
           error: new Error("場所識別子が不正です"),
         };
       }
@@ -80,6 +106,7 @@ function collectLocations(
       if (seenIds.has(location.id)) {
         return {
           status: "error",
+          reason: "duplicate-id",
           error: new Error("場所識別子が重複しています"),
         };
       }
@@ -100,13 +127,23 @@ export function resolveLocationDetail(
   if (!isValidLocationId(id)) {
     return {
       status: "error",
+      reason: "invalid-request-id",
       error: new Error("場所識別子が不正です"),
     };
   }
 
   if (!isKeyLocationsDataResult(data)) {
+    if (hasInvalidLoadedLocationId(data)) {
+      return {
+        status: "error",
+        reason: "invalid-data",
+        error: new Error("場所識別子が不正です"),
+      };
+    }
+
     return {
       status: "error",
+      reason: "invalid-data",
       error: createMalformedDataError(),
     };
   }
@@ -130,6 +167,7 @@ export function resolveLocationDetail(
   if (matches.length !== 1) {
     return {
       status: "error",
+      reason: "duplicate-id",
       error: new Error("場所識別子が重複しています"),
     };
   }

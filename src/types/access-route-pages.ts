@@ -31,9 +31,15 @@ export type LocationDataLoadResult<TCategory> =
   | LocationDataSuccess<TCategory>
   | LocationDataError;
 
+/** Reasons for a validation or identity error in the location detail result. */
+export type LocationDetailErrorReason =
+  | "invalid-request-id"
+  | "invalid-data"
+  | "duplicate-id";
+
 /** Result of resolving one location identifier for the detail page. */
 export type LocationDetailResult<TLocation> =
   | { status: "success"; location: TLocation }
   | { status: "not-found" }
-  | { status: "error"; error: Error }
+  | { status: "error"; error: Error; reason: LocationDetailErrorReason }
   | { status: "data-load-error"; error: Error };

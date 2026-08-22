@@ -168,8 +168,48 @@ describe("resolveLocationDetail", () => {
       malformedWireData as unknown as KeyLocationsDataResult,
     );
 
-    expect(result).toMatchObject({ status: "error" });
+    expect(result).toMatchObject({
+      status: "error",
+      reason: "invalid-data",
+    });
     expect(result).not.toMatchObject({ status: "success" });
+    expect(result).not.toHaveProperty("location");
+  });
+
+  it("classifies an invalid route identifier separately from invalid location data", () => {
+    const resolve = getResolver(moduleState);
+
+    const result = resolve("invalid/id", success([
+      {
+        category: "公共施設",
+        "category:en": "public-facilities",
+        locations: [primaryLocation],
+      },
+    ]));
+
+    expect(result).toMatchObject({
+      status: "error",
+      reason: "invalid-request-id",
+    });
+    expect(result).not.toHaveProperty("location");
+  });
+
+  it("classifies an invalid identifier inside loaded data as invalid-data", () => {
+    const resolve = getResolver(moduleState);
+    const invalidData = success([
+      {
+        category: "公共施設",
+        "category:en": "public-facilities",
+        locations: [{ ...primaryLocation, id: "invalid/id" }],
+      },
+    ]);
+
+    const result = resolve("kanda-library", invalidData);
+
+    expect(result).toMatchObject({
+      status: "error",
+      reason: "invalid-data",
+    });
     expect(result).not.toHaveProperty("location");
   });
 
@@ -185,14 +225,26 @@ describe("resolveLocationDetail", () => {
       result = resolve("kanda-library", data as unknown as KeyLocationsDataResult);
     }).not.toThrow();
 
-    expect(result).toMatchObject({ status: "error" });
+    expect(result).toMatchObject({
+      status: "error",
+      reason: "invalid-data",
+    });
     expect(result).not.toHaveProperty("location");
   });
 
   it("classifies an unknown non-empty identifier in an empty dataset as not-found", () => {
     const resolve = getResolver(moduleState);
 
-    const result = resolve("unknown-location", success([]));
+    const result = resolve(
+      "unknown-location",
+      success([
+        {
+          category: "公共施設",
+          "category:en": "public-facilities",
+          locations: [primaryLocation],
+        },
+      ]),
+    );
 
     expect(result).toMatchObject({ status: "not-found" });
     expect(result).not.toHaveProperty("location");
@@ -218,7 +270,10 @@ describe("resolveLocationDetail", () => {
       ]),
     );
 
-    expect(result).toMatchObject({ status: "error" });
+    expect(result).toMatchObject({
+      status: "error",
+      reason: "duplicate-id",
+    });
     expect(result).not.toMatchObject({ status: "success" });
   });
 

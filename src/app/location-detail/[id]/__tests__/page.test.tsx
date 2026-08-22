@@ -228,6 +228,10 @@ function expectedDestinationHref(location: KeyLocation): string {
   )}`;
 }
 
+const ADMINISTRATOR_GUIDANCE =
+  "あなたにできることはありません。管理者にこのエラーメッセージが出ていることを伝えてください！";
+const LOCATION_LIST_GUIDANCE = "場所一覧から選び直してください。";
+
 function getDefinitionListForHeading(name: string): HTMLElement {
   const heading = screen.getByRole("heading", { level: 2, name });
   const definitionList = heading.parentElement?.querySelector("dl");
@@ -306,33 +310,63 @@ function expectTopReturnLinkBeforeHeading(heading: HTMLElement) {
   );
 }
 
+function malformedDataForLocation(): KeyLocationsDataResult {
+  return {
+    status: "success",
+    categories: [
+      {
+        category: "公共施設",
+        "category:en": "public-facilities",
+        locations: [{ id: primaryLocation.id }],
+      },
+    ],
+  } as unknown as KeyLocationsDataResult;
+}
+
+function invalidIdentifierDataForLocation(): KeyLocationsDataResult {
+  return {
+    status: "success",
+    categories: [
+      {
+        category: "公共施設",
+        "category:en": "public-facilities",
+        locations: [{ ...primaryLocation, id: "invalid/id" }],
+      },
+    ],
+  };
+}
+
 const nonSuccessStates = {
   notFound: {
     title: "場所が見つかりません",
     message: "指定された場所は見つかりませんでした。場所一覧から選び直してください。",
-    marker: "指定された場所は見つかりませんでした",
   },
   dataLoadError: {
     title: "場所データを取得できません",
     message: "場所データの取得に失敗しました。時間をおいて再試行してください。",
-    marker: "場所データの取得に失敗しました",
   },
   invalidId: {
     title: "場所詳細を表示できません",
     message: "場所識別子が不正です。場所一覧から選び直してください。",
-    marker: "場所識別子が不正です",
+  },
+  invalidDataFormat: {
+    title: "場所詳細を表示できません",
+    message: `場所データの形式が不正です。${ADMINISTRATOR_GUIDANCE}`,
+  },
+  invalidDataIdentifier: {
+    title: "場所詳細を表示できません",
+    message: `場所識別子が不正です。${ADMINISTRATOR_GUIDANCE}`,
   },
   duplicateId: {
     title: "場所詳細を表示できません",
-    message: "場所識別子が重複しています。場所一覧から選び直してください。",
-    marker: "場所識別子が重複しています",
+    message: `場所識別子が重複しています。${ADMINISTRATOR_GUIDANCE}`,
   },
 } as const;
 
 type NonSuccessState = keyof typeof nonSuccessStates;
 
 function expectNonSuccessState(state: NonSuccessState) {
-  const { title, message, marker } = nonSuccessStates[state];
+  const { title, message } = nonSuccessStates[state];
   const heading = screen.getByRole("heading", { level: 1, name: title });
 
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
@@ -348,6 +382,17 @@ function expectNonSuccessState(state: NonSuccessState) {
 
   const body = screen.getByText(message, { exact: true });
   expect(body).toBeVisible();
+  const bodyText = body.textContent ?? "";
+  const requiresAdministratorGuidance =
+    state === "invalidDataFormat" ||
+    state === "invalidDataIdentifier" ||
+    state === "duplicateId";
+  if (requiresAdministratorGuidance) {
+    expect(bodyText).toContain(ADMINISTRATOR_GUIDANCE);
+    expect(bodyText).not.toContain(LOCATION_LIST_GUIDANCE);
+  } else {
+    expect(bodyText).not.toContain(ADMINISTRATOR_GUIDANCE);
+  }
   const errorPanel = body.closest(".alert");
   if (!(errorPanel instanceof HTMLElement)) {
     throw new Error("expected the location error body to be inside an alert panel");
@@ -358,12 +403,15 @@ function expectNonSuccessState(state: NonSuccessState) {
     "text-base-content!"
   );
 
-  const pageText = document.body.textContent ?? "";
-  for (const otherState of Object.values(nonSuccessStates)) {
-    if (otherState.marker === marker) {
-      expect(pageText).toContain(otherState.marker);
+  for (const [otherState, otherStateDetails] of Object.entries(nonSuccessStates)) {
+    const matchingMessages = screen.queryAllByText(otherStateDetails.message, {
+      exact: true,
+    });
+
+    if (otherState === state) {
+      expect(matchingMessages).toHaveLength(1);
     } else {
-      expect(pageText).not.toContain(otherState.marker);
+      expect(matchingMessages).toHaveLength(0);
     }
   }
 
@@ -634,7 +682,9 @@ describe("/location-detail/[id] public route", () => {
   });
 
   it("renders a Japanese not-found state with its top return link", async () => {
-    mockLoadKeyLocationsDataResult.mockResolvedValue(successData([]));
+    mockLoadKeyLocationsDataResult.mockResolvedValue(
+      successDataForLocation(chiyodaWardOfficeLocation)
+    );
 
     await renderLocationDetailPage("unknown-location");
 
@@ -663,6 +713,24 @@ describe("/location-detail/[id] public route", () => {
     await renderLocationDetailPage("invalid/id");
 
     expectNonSuccessState("invalidId");
+  });
+
+  it("renders malformed location data with exact administrator guidance and no list guidance", async () => {
+    mockLoadKeyLocationsDataResult.mockResolvedValue(malformedDataForLocation());
+
+    await renderLocationDetailPage(primaryLocation.id);
+
+    expectNonSuccessState("invalidDataFormat");
+  });
+
+  it("renders an invalid identifier in loaded data with exact administrator guidance", async () => {
+    mockLoadKeyLocationsDataResult.mockResolvedValue(
+      invalidIdentifierDataForLocation()
+    );
+
+    await renderLocationDetailPage(primaryLocation.id);
+
+    expectNonSuccessState("invalidDataIdentifier");
   });
 
   it("renders a data-load-error state distinct from not-found with its top return link", async () => {

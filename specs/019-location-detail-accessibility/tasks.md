@@ -263,3 +263,42 @@ NEXT_PUBLIC_LOCATIONS_DATA_VERSION=v2.1.1 npm run dev
 - `tasks.md`のチェック状態は、親が実際の変更path、file hash、focused command、review markerを検証した後にだけ更新する。
 - `v2.1.1`実データは一意IDだが、duplicate-ID fixtureはresolverの将来回帰を検出するため必須である。
 - ここでの完了はcommit/pushを意味しない。
+
+---
+
+## Phase 9: Issue #74 — 場所詳細エラー状態の利用者向け案内（US4 / FR-012, FR-016）
+
+**Purpose**: `status: "error"` 内の利用者が復旧できる入力エラーと、管理者しか修正できない場所データ異常を区別し、重複識別子エラーに誤った「一覧から選び直す」案内を付けない。
+
+**Scope boundary**:
+
+- `chiyoda_city_main_facilities@v2.1.1` はバリデーション済みの検証用データとして扱う。
+- 環境変数未指定時の既定値 `1.0.0`、プレースホルダ、CDNデータ自体、`src/utils/addressLoader.ts` は変更しない。
+- 重複は合成 fixture で再現し、resolver の fail-closed 方針を維持する。
+- 新規永続化、データ形式、目的地 query、共通レイアウト、Ko-fi 支援欄は変更しない。
+
+### Acceptance criteria
+
+- duplicate-ID とデータ形式・データ内識別子の異常は、原因を表示したうえで「あなたにできることはありません。管理者にこのエラーメッセージが出ていることを伝えてください！」という管理者向け案内を表示し、「場所一覧から選び直してください」を表示しない。
+- URL の route ID 不正と not-found は、利用者が一覧へ戻れる既存案内を維持する。
+- `data-load-error` は not-found やデータ異常と混同せず、既存の再試行案内を維持する。
+- エラーメッセージ本文の偶然の文字列比較ではなく、resolver から page まで型付きの原因分類を伝播させる。
+- 新規テスト・本番コードは日本語の状態文言、単一 `h1`、上部 `/locations` リンク、alert 境界を壊さない。
+
+### Task list
+
+- [X] T054 [US4] 親エージェントが `dev` と `origin/dev` の SHA、`git status --short --untracked-files=all`、`git diff --check`、`src/lib/location/__tests__/location-detail-resolver.test.ts`、`src/app/location-detail/[id]/__tests__/page.test.tsx`、`src/app/__tests__/accessible-route-pages.test.tsx` および本番候補 `src/types/access-route-pages.ts`、`src/lib/location/location-detail-resolver.ts`、`src/app/location-detail/[id]/page.tsx` の SHA-256 を記録し、Issue #74 の hard write manifest と既存差分境界を凍結する。`src/utils/addressLoader.ts`、`v2.1.1` のデータ、既定バージョンは保護対象として記録する。
+- [X] T055 [US4] テスト実装サブエージェントが、`src/lib/location/__tests__/location-detail-resolver.test.ts` と `src/app/location-detail/[id]/__tests__/page.test.tsx`（必要な既存公開ページ回帰だけ `src/app/__tests__/accessible-route-pages.test.tsx`）のみに failing contract を追加する。不正 route ID、データ形式・データ内 ID 不正、duplicate-ID、not-found、data-load-error の原因分類と、管理者向け本文の完全な DOM text、および一覧案内の不在を実際の resolver/page 境界で検証する。次の focused RED を実行し、collection/setup error ではなく新規公開契約不足だけを残す。`npm test -- --runInBand --runTestsByPath 'src/lib/location/__tests__/location-detail-resolver.test.ts' 'src/app/location-detail/[id]/__tests__/page.test.tsx' 'src/app/__tests__/accessible-route-pages.test.tsx'`
+- [X] T056 [US4] T055 の settled test bytes を fresh read-only test-code reviewer に委任する。`src/lib/location/__tests__/location-detail-resolver.test.ts` と `src/app/location-detail/[id]/__tests__/page.test.tsx` の state matrix、非空 fixture、実 resolver/page 公開境界、exact DOM text、不要な一覧案内の不在、既存 not-found/data-load-error 契約、collection/setup failure の不在を確認し、ファイルを変更せず `SUBAGENT_STATUS: COMPLETE`、`VERDICT: PASS`、`modified: false`、開始終了 SHA 一致を返す。FAIL、別 byte の結果、完了通知だけでは次へ進まない。
+- [X] T057 [US4] T056 の `VERDICT: PASS` 後、本番実装サブエージェントが `src/types/access-route-pages.ts`、`src/lib/location/location-detail-resolver.ts`、`src/app/location-detail/[id]/page.tsx` の hard manifest のみを変更する。`LocationDetailResult` に `invalid-request-id`、`invalid-data`、`duplicate-id` を区別する discriminated field を追加し、resolver の各 return から page へ分類を伝播させ、page は分類値で一覧案内または管理者案内を選択する。Error message の文字列比較、`src/utils/addressLoader.ts` の既定値変更、先頭 duplicate の採用、無関係な UI リファクタリングを行わない。writer は commit、push、reset、clean、stage、依存追加を行わない。
+- [X] T058 [US4] T057 の settled production bytes を fresh read-only production-code reviewer に委任する。reviewer 自身が `src/lib/location/__tests__/location-detail-resolver.test.ts`、`src/app/location-detail/[id]/__tests__/page.test.tsx`、`src/app/__tests__/accessible-route-pages.test.tsx` の focused Jest、`npx tsc --noEmit --incremental false`、`npm run lint`、`git diff --check` を実行し、原因分類の型安全性、各 state の案内、alert/heading/return-link、`v2.1.1` と既定値の境界、hard manifest の SHA 不変を確認する。ファイルを変更せず `SUBAGENT_STATUS: COMPLETE`、`VERDICT: PASS`、`modified: false`、開始終了 SHA 一致を返す。FAIL または production byte の変更があれば T055 から fresh にやり直す。
+- [X] T059 [US4] T058 の production review PASS 後、親エージェントが現在の bytes に対して `npm test -- --runInBand`、`npx tsc --noEmit --incremental false`、`npm run lint`、`git diff --check`、`uvx --from specify-cli specify check` を実行し、exit code・warning・既存 baseline failure・今回の新規 failure を分離して記録する。`npm run build` は Prisma/GTFS の副作用を伴うため最後の別ゲートとして実行し、失敗をテスト成功と混同しない。
+- [X] T060 [US4] T059 後、`NEXT_PUBLIC_LOCATIONS_DATA_VERSION=v2.1.1` を指定した読み取り専用データ smoke probe と controlled fixture の state matrix を確認し、16カテゴリ・169場所・169一意 ID・duplicate 0 という v2.1.1 の前提、success/not-found/invalid/duplicate/data-load-error/loading の相互排他表示、管理者案内の不在/存在、上部 `/locations` リンク1つ、単一 `h1` を記録する。最後に `git status --short --untracked-files=all`、staged path、全変更対象 SHA、`dev`/`origin/dev` の関係を再確認する。完了チェックは親が実結果を確認した後だけ `[X]` に更新する。
+
+### Phase 9 dependency and review gates
+
+- T054 は T055 の前提であり、親が hard manifest と v2.1.1 の対象外境界を凍結する。
+- T055 の failing test 実装後、直ちに T056 の fresh test-code review を実施する。T056 が PASS になるまで T057 を開始しない。
+- T057 の production implementation 後、直ちに T058 の fresh production-code review を実施する。T058 が PASS になるまで T059/T060 を完了扱いにしない。
+- T055/T057 の対象ファイルを 1 byte でも変更した場合、後続 review とその検証結果を無効化し、該当段階から RED/GREEN・SHA・review をやり直す。
+- レビューは並列化しない。shared path のため、テスト writer、test reviewer、production writer、production reviewer は厳密に直列実行する。

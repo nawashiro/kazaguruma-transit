@@ -57,6 +57,6 @@
 - [X] T019 親がfocused aggregate、full Jest、strict TypeScript、full Lint、`git diff --check`、Spec Kit checkを実行し、既存warningと今回のfailureを分離する。
 - [X] T020 必要な前提が整えば`npm run build`を実行し、`transit-config.json`不在などの環境依存ログと終了コードを分離する。
 - [X] T021 親がcurrent bytes、production/test/docs以外の差分、staged/untracked path、SHA、diff stat、statusを確認し、完了タスクだけを`[X]`へ更新する。
-- [ ] T022 ローカル検証後、Issue #93の変更をcommit・pushし、GitHub/Tangledの対象SHAとGitHub CIの実行状態を確認する。CI未実行を成功扱いしない。
+- [X] T022 ローカル検証後、Issue #93の変更をcommit・pushし、GitHub/Tangledの対象SHAとGitHub CIの実行状態を確認する。CI未実行を成功扱いしない。
 
 **Final checkpoint:** 初回取得系だけが非割り込みstatusになり、操作後エラー、本文、視覚クラス、再試行・再読み込み動作が維持され、push後SHAとCI状態が記録されている。

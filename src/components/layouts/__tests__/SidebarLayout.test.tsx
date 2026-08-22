@@ -66,6 +66,33 @@ jest.mock("../../ui/SkipToContent", () => ({
 }));
 
 describe("SidebarLayout", () => {
+  it("drawerの内部checkboxをTab順から除外し、メニューボタンでdrawerを制御する", () => {
+    render(
+      <SidebarLayout
+        koFiUsername={null}
+        koFiContent={{
+          heading: "開発者を支援する",
+          message: "支援をお願いします。",
+        }}
+      >
+        <div>ページ本文</div>
+      </SidebarLayout>,
+    );
+
+    const drawerToggle = screen.getByRole("checkbox", {
+      name: "ナビゲーションメニュー",
+    });
+    const menuButton = screen.getByRole("button", { name: "メニュー" });
+
+    expect(drawerToggle).toHaveAttribute("id", "drawer");
+    expect(drawerToggle).toHaveAttribute("tabindex", "-1");
+    expect((drawerToggle as HTMLInputElement).tabIndex).toBe(-1);
+    expect(menuButton.tagName).toBe("BUTTON");
+    expect(menuButton).toHaveAttribute("aria-controls", "drawer");
+    expect(menuButton).toHaveAttribute("aria-expanded", "false");
+    expect((menuButton as HTMLButtonElement).tabIndex).toBeGreaterThanOrEqual(0);
+  });
+
   it("共通のメインコンテンツ枠内でページ本文後にKo-fi支援欄を表示する", () => {
     render(
       <SidebarLayout

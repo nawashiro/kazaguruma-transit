@@ -529,7 +529,8 @@ export default function DiscussionDetailPage() {
                 : postsLoadError ? (
                   <div
                     className="alert alert-error alert-soft text-base-content!"
-                    role="alert"
+                    role="status"
+                    aria-live="polite"
                   >
                     <span>{postsLoadError}</span>
                   </div>
@@ -560,7 +561,8 @@ export default function DiscussionDetailPage() {
               ) : postsLoadError ? (
                 <div
                   className="alert alert-error alert-soft text-base-content!"
-                  role="alert"
+                  role="status"
+                  aria-live="polite"
                 >
                   <span>{postsLoadError}</span>
                 </div>

@@ -269,8 +269,8 @@ export default function ModeratorsPage() {
             ? "alert alert-warning alert-soft text-base-content!"
             : "alert alert-error alert-soft text-base-content!"
         }
-        role={isPartial ? "status" : "alert"}
-        aria-live={isPartial ? "polite" : undefined}
+        role="status"
+        aria-live="polite"
       >
         <span className="ruby-text">
           {isPartial

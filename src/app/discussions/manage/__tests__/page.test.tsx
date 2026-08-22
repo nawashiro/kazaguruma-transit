@@ -248,9 +248,11 @@ describe("DiscussionManagePage", () => {
 
     render(<DiscussionManagePage />);
 
-    const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent("掲載一覧の会話情報が見つかりませんでした。");
-    expect(alert).toHaveClass(
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(status).toHaveTextContent("掲載一覧の会話情報が見つかりませんでした。");
+    expect(status).toHaveClass(
       "alert",
       "alert-error",
       "alert-soft",

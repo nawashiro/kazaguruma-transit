@@ -207,7 +207,11 @@ export default function DiscussionManagePage() {
   if (!discussion && discussionMeta?.isLoading === false) {
     return (
       <div className="py-8">
-        <div className="alert alert-error alert-soft text-base-content!" role="alert">
+        <div
+          className="alert alert-error alert-soft text-base-content!"
+          role="status"
+          aria-live="polite"
+        >
           <span className="ruby-text">
             {discussionMeta.error ?? "掲載一覧の会話情報が見つかりませんでした。"}
           </span>

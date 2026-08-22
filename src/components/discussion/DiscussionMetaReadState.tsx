@@ -33,7 +33,7 @@ export function DiscussionMetaReadState({
         </div>
       )}
       {error && (
-        <div className="alert alert-error alert-soft text-base-content! mb-8" role="alert">
+        <div className="alert alert-error alert-soft text-base-content! mb-8" role="status" aria-live="polite">
           <span>{error}</span>
           <button type="button" className="btn text-base btn-outline min-h-[44px]" onClick={onReload}>
             <span className="ruby-text">再試行</span>

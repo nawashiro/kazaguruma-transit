@@ -212,14 +212,16 @@ describe("ModeratorsPage direct moderator management", () => {
     render(<ModeratorsPage />);
 
     expect(screen.queryByText("会話情報を読み込み中...")).not.toBeInTheDocument();
-    const notFoundAlert = screen.getByRole("alert");
-    expect(notFoundAlert).toHaveClass(
+    const notFoundStatus = screen.getByRole("status");
+    expect(notFoundStatus).toHaveAttribute("aria-live", "polite");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(notFoundStatus).toHaveClass(
       "alert",
       "alert-error",
       "alert-soft",
       "text-base-content!",
     );
-    expect(notFoundAlert).toHaveTextContent(
+    expect(notFoundStatus).toHaveTextContent(
       "会話情報が見つかりませんでした。",
     );
     fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));

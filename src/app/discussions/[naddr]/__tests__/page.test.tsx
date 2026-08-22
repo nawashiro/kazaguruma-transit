@@ -371,13 +371,15 @@ describe('DiscussionDetailPage - unauthenticated public actions', () => {
     render(<DiscussionDetailPage />);
 
     const errorTexts = await screen.findAllByText('投稿・評価データの取得に失敗しました。');
-    const postsAlert = errorTexts[0].closest<HTMLElement>('[role="alert"]');
-    expect(postsAlert).not.toBeNull();
-    if (!postsAlert) {
-      throw new Error('Expected the post read error to be rendered in an alert');
+    const postsStatus = errorTexts[0].closest<HTMLElement>('[role="status"]');
+    expect(postsStatus).not.toBeNull();
+    if (!postsStatus) {
+      throw new Error('Expected the post read error to be rendered in a status container');
     }
-    expect(postsAlert).toHaveTextContent('投稿・評価データの取得に失敗しました。');
-    expect(postsAlert).toHaveClass(
+    expect(postsStatus).toHaveAttribute('aria-live', 'polite');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(postsStatus).toHaveTextContent('投稿・評価データの取得に失敗しました。');
+    expect(postsStatus).toHaveClass(
       'alert',
       'alert-error',
       'alert-soft',

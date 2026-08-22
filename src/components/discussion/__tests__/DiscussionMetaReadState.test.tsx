@@ -49,14 +49,16 @@ describe("DiscussionMetaReadState", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "会話情報" }),
     ).toBeInTheDocument();
-    const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent("取得に失敗");
-    expect(alert).toHaveClass(
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("取得に失敗");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveClass(
       "alert",
       "alert-error",
       "alert-soft",
       "text-base-content!",
     );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "再試行" })).toBeInTheDocument();
   });
 

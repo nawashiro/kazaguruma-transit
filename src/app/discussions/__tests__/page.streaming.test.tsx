@@ -76,13 +76,15 @@ describe("DiscussionsPage shared data", () => {
     mockManagementData.moderationError = "会話一覧の取得に失敗しました。";
     render(<DiscussionsPage />);
 
-    const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent("会話一覧の取得に失敗しました。");
-    expect(alert).toHaveClass(
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveTextContent("会話一覧の取得に失敗しました。");
+    expect(status).toHaveClass(
       "alert",
       "alert-error",
       "alert-soft",
       "text-base-content!",
     );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

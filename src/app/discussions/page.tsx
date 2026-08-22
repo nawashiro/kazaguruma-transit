@@ -83,7 +83,7 @@ export default function DiscussionsPage() {
                   ))}
                 </div>
               ) : loadError ? (
-                <div className="alert alert-error alert-soft text-base-content!" role="alert">
+                <div className="alert alert-error alert-soft text-base-content!" role="status" aria-live="polite">
                   <span>{loadError}</span>
                 </div>
               ) : referencedDiscussionCompletionReason &&

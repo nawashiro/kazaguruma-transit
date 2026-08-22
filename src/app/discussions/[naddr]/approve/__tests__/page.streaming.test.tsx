@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import PostApprovalPage from "../page";
 import type { Discussion } from "@/types/discussion";
@@ -188,7 +188,7 @@ describe("PostApprovalPage streaming", () => {
     });
   });
 
-  it("loads moderation data through a bounded completion-aware read", async () => {
+  it("uses the shared moderation data without starting a second read", async () => {
     useAuthMock.mockReturnValue({
       user: { pubkey: "author", isLoggedIn: true },
       signEvent: jest.fn(),
@@ -196,11 +196,31 @@ describe("PostApprovalPage streaming", () => {
 
     render(<PostApprovalPage />);
 
-    await waitFor(() =>
-      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalled()
-    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(discussionReadExecutorMock.executeDiscussionRead).not.toHaveBeenCalled();
     expect(serviceMock.streamEventsOnEvent).not.toHaveBeenCalled();
     expect(serviceMock.streamApprovals).not.toHaveBeenCalled();
+  });
+
+  it("disables approval while a post approval state is unknown", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "author", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+    const shared = mockUseDiscussionContentData();
+    mockUseDiscussionContentData.mockReturnValue({
+      ...shared,
+      posts: shared.posts.map((post: { id: string }) =>
+        post.id === "post-1" ? { ...post, approvalState: "unknown" } : post,
+      ),
+    });
+
+    render(<PostApprovalPage />);
+
+    const button = await screen.findByRole("button", { name: "承認" });
+    expect(button).toBeDisabled();
   });
 
   it("renders timeout as a polite soft status while keeping approval tabs", async () => {

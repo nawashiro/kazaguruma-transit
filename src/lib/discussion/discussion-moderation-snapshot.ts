@@ -1,5 +1,10 @@
 import type { DiscussionReadStrategyConfig } from "@/lib/config/discussion-config";
-import { executeDiscussionRead, type DiscussionReadTransport } from "@/lib/discussion/discussion-read-executor";
+import {
+  executeDiscussionRead,
+  type DiscussionReadResult,
+  type DiscussionReadTransport,
+  type RelayAttempt,
+} from "@/lib/discussion/discussion-read-executor";
 import type { DiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import type { CompletionReason, Event, Filter, NostrService } from "@/lib/nostr/nostr-service";
 import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
@@ -62,7 +67,14 @@ export const createDiscussionModerationSnapshot = ({
 export const loadDiscussionModerationSnapshot = async (
   service: Pick<NostrService, "getEventsWithCompletion">,
   strategy: DiscussionReadStrategyConfig,
-  input: { discussionId: string; relayUrls: string[]; until?: number; primaryTags?: string[] }
+  input: {
+    discussionId: string;
+    relayUrls: string[];
+    until?: number;
+    primaryTags?: string[];
+    onPrimaryComplete?: (result: DiscussionReadResult) => void;
+    onPrimaryAttemptComplete?: (attempt: RelayAttempt) => void;
+  }
 ): Promise<DiscussionModerationSnapshot> => {
   const transport: DiscussionReadTransport = (filters, options) => service.getEventsWithCompletion(filters as Filter[], options);
   const primaryPlan: DiscussionReadPlan = {
@@ -77,7 +89,12 @@ export const loadDiscussionModerationSnapshot = async (
     idleTimeoutMs: strategy.idleTimeoutMs,
     hardTimeoutMs: strategy.hardTimeoutMs,
   };
-  const primary = await executeDiscussionRead(transport, { plan: primaryPlan, relayUrls: input.relayUrls });
+  const primary = await executeDiscussionRead(transport, {
+    plan: primaryPlan,
+    relayUrls: input.relayUrls,
+    onAttemptComplete: input.onPrimaryAttemptComplete,
+  });
+  input.onPrimaryComplete?.(primary);
   const primaryEvents = primary.events.filter((event) => !isModeratorRequestEvent(event));
   const postIds = primaryEvents.map((event) => event.id);
   const approvals = postIds.length === 0

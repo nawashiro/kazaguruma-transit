@@ -19,6 +19,12 @@ jest.mock("@/components/discussion/DiscussionManagementDataProvider", () => ({
   ),
 }));
 
+jest.mock("@/components/discussion/DiscussionDataProvider", () => ({
+  DiscussionDataProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="shared-data-provider">{children}</div>
+  ),
+}));
+
 describe("DiscussionManagementShell", () => {
   it.each([
     "/discussions",
@@ -32,6 +38,9 @@ describe("DiscussionManagementShell", () => {
       </DiscussionManagementShell>,
     );
 
+    expect(screen.getByTestId("shared-data-provider")).toContainElement(
+      screen.getByTestId("metadata-provider"),
+    );
     expect(screen.getByTestId("metadata-provider")).toContainElement(
       screen.getByTestId("moderation-provider"),
     );

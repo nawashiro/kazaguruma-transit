@@ -21,6 +21,7 @@ export default function DiscussionsPage() {
     referencedDiscussions,
     isModerationLoading,
     isReferencedDiscussionsLoading,
+    completionReason,
     referencedDiscussionCompletionReason,
     moderationError: loadError,
   } = useDiscussionManagementData();
@@ -48,6 +49,10 @@ export default function DiscussionsPage() {
         .sort((left, right) => right.createdAt - left.createdAt),
     [referencedDiscussions, visibleDiscussionReferences],
   );
+  const isPartialRead =
+    (completionReason && completionReason !== "eose") ||
+    (referencedDiscussionCompletionReason &&
+      referencedDiscussionCompletionReason !== "eose");
   const isLoading =
     isModerationLoading || isReferencedDiscussionsLoading;
 
@@ -86,13 +91,14 @@ export default function DiscussionsPage() {
                 <div className="alert alert-error alert-soft text-base-content!" role="status" aria-live="polite">
                   <span>{loadError}</span>
                 </div>
-              ) : referencedDiscussionCompletionReason &&
-                referencedDiscussionCompletionReason !== "eose" ? (
-                <div className="alert alert-warning alert-soft text-base-content!" role="status">
-                  <span>会話一覧を完全に取得できませんでした。再読み込みしてください。</span>
-                </div>
               ) : discussions.length > 0 ? (
-                <div className="space-y-4">
+                <>
+                  {isPartialRead && (
+                    <div className="alert alert-warning alert-soft text-base-content! mb-4" role="status">
+                      <span>会話一覧を完全に取得できませんでした。再読み込みしてください。</span>
+                    </div>
+                  )}
+                  <div className="space-y-4">
                   {discussions.map((discussion) => (
                     <article key={discussion.id}>
                       <Link
@@ -141,6 +147,11 @@ export default function DiscussionsPage() {
                       </Link>
                     </article>
                   ))}
+                  </div>
+                </>
+              ) : isPartialRead ? (
+                <div className="alert alert-warning alert-soft text-base-content!" role="status">
+                  <span>会話一覧を完全に取得できませんでした。再読み込みしてください。</span>
                 </div>
               ) : (
                 <div className="py-8">

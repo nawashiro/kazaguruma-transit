@@ -256,7 +256,10 @@ export default function DiscussionDetailPage() {
     }
   }, [user.pubkey, loadUserEvaluations]);
 
-  const approvedPosts = useMemo(() => posts.filter((p) => p.approved), [posts]);
+  const approvedPosts = useMemo(
+    () => posts.filter((post) => post.approved && post.approvalState !== "unknown"),
+    [posts],
+  );
 
   const runConsensusAnalysis = useCallback(async () => {
     if (evaluations.length < 5 || approvedPosts.length < 2) {

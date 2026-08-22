@@ -3,7 +3,7 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/layouts/PageHeader";
 import { useParams } from "next/navigation";
@@ -13,7 +13,6 @@ import { useDiscussionContentData } from "@/components/discussion/DiscussionCont
 import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
-  getDiscussionReadStrategyConfig,
 } from "@/lib/config/discussion-config";
 
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
@@ -23,8 +22,6 @@ import {
   DisabledReasonText,
 } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
-import { createDiscussionNdkGateway } from "@/lib/nostr/discussion-ndk-gateway";
-import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
 import {
   formatRelativeTime,
   getAdminPubkeyHex,
@@ -40,13 +37,10 @@ import {
   CheckBadgeIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrServiceConfig = getNostrServiceConfig();
-const readStrategy = typeof getDiscussionReadStrategyConfig === "function" ? getDiscussionReadStrategyConfig() : { idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
 const nostrService = createNostrService(nostrServiceConfig);
-const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function PostApprovalPage() {
   const params = useParams();
@@ -59,8 +53,6 @@ export default function PostApprovalPage() {
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
-  const moderationReadGenerationRef = useRef(0);
-
   const { user, signEvent } = useAuth();
   const {
     posts,
@@ -69,56 +61,18 @@ export default function PostApprovalPage() {
     completionReason,
     approvalState,
     reload,
-    mergeModerationEvents,
     addApproval,
     removeApproval,
   } = useDiscussionContentData();
 
-  // Parse naddr and extract discussion info
   const discussionInfo = useMemo(() => {
     if (!naddrParam) return null;
     return extractDiscussionFromNaddr(naddrParam);
   }, [naddrParam]);
-  const loadInitialModerationData = useCallback(async () => {
-    const readGeneration = ++moderationReadGenerationRef.current;
-    if (!isDiscussionsEnabled() || !discussionInfo) return;
-    try {
-      const result = await executeDiscussionRead(discussionGateway, {
-        plan: {
-          target: "discussion-approvals",
-          filters: [
-            { kinds: [1111, 1], "#a": [discussionInfo.discussionId], limit: 50 },
-            { kinds: [4550], "#a": [discussionInfo.discussionId], limit: 50 },
-          ],
-          idleTimeoutMs: readStrategy.idleTimeoutMs,
-          hardTimeoutMs: readStrategy.hardTimeoutMs,
-        },
-        relayUrls: Array.from(new Set([
-          ...(discussionInfo.relays ?? []),
-          ...(nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
-        ])),
-      });
-      if (moderationReadGenerationRef.current !== readGeneration) return;
-      mergeModerationEvents({
-        primaryEvents: result.events.filter((event) => event.kind !== 4550 && !isModeratorRequestEvent(event)),
-        approvalEvents: result.events.filter((event) => event.kind === 4550),
-      });
-    } catch (error) {
-      logger.error("Failed to load moderation data:", error);
-    }
-  }, [discussionInfo, mergeModerationEvents]);
-
-  useEffect(() => {
-    void loadInitialModerationData();
-    return () => {
-      moderationReadGenerationRef.current += 1;
-    };
-  }, [loadInitialModerationData]);
 
   const handleReload = useCallback(() => {
     void reload();
-    void loadInitialModerationData();
-  }, [loadInitialModerationData, reload]);
+  }, [reload]);
 
   const handleApprovePost = async (post: DiscussionPost) => {
     const canModerate = discussion
@@ -239,8 +193,12 @@ export default function PostApprovalPage() {
     );
   }
 
-  const pendingPosts = posts.filter((post) => !post.approved);
-  const approvedPosts = posts.filter((post) => post.approved);
+  const pendingPosts = posts.filter(
+    (post) => !post.approved || post.approvalState === "unknown",
+  );
+  const approvedPosts = posts.filter(
+    (post) => post.approved && post.approvalState !== "unknown",
+  );
   const hasApprovalPermission = Boolean(
     discussion &&
     (user.pubkey === discussion.authorPubkey ||
@@ -363,8 +321,9 @@ export default function PostApprovalPage() {
                             <button
                               onClick={() => handleApprovePost(post)}
                               disabled={
-                                approvingIds.has(post.id) ||
-                                !hasApprovalPermission
+                                !hasApprovalPermission ||
+                                post.approvalState === "unknown" ||
+                                approvingIds.has(post.id)
                               }
                               className="ml-4 btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm"
                             >

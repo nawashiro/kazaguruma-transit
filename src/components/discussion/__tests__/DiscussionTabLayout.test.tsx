@@ -23,7 +23,7 @@ jest.mock("@/lib/config/discussion-config", () => ({
     defaultTimeout: 500,
   })),
   getDiscussionReadStrategyConfig: jest.fn(() => ({
-    relayLimit: 3,
+
     idleTimeoutMs: 500,
     hardTimeoutMs: 1500,
     dedupWindowMs: 250,
@@ -101,6 +101,8 @@ describe("DiscussionTabLayout", () => {
     jest.mocked(executeDiscussionRead).mockResolvedValue({
       events: [],
       completionReason: "eose",
+      duplicateCount: 0,
+      elapsedMs: 0,
       attemptedRelayUrls: [],
       successfulEventRelayUrls: [],
       sourceRelayUrlsByEventId: {},
@@ -313,11 +315,8 @@ describe("DiscussionTabLayout", () => {
         expect.objectContaining({
           plan: expect.objectContaining({
             target: "discussion-meta",
-            relayHints: ["wss://hint.example"],
           }),
-          candidates: expect.objectContaining({
-            configured: ["wss://relay.example.com"],
-          }),
+          relayUrls: ["wss://hint.example", "wss://relay.example.com"],
           onAttemptComplete: expect.any(Function),
         }),
       );
@@ -334,6 +333,8 @@ describe("DiscussionTabLayout", () => {
       jest.mocked(executeDiscussionRead).mockResolvedValue({
         events: [discussionMetadata.event],
         completionReason: "eose",
+        duplicateCount: 0,
+        elapsedMs: 1,
         attemptedRelayUrls: ["wss://relay.example.com"],
         successfulEventRelayUrls: ["wss://relay.example.com"],
         sourceRelayUrlsByEventId: {

@@ -12,7 +12,6 @@ export type DiscussionReadTarget =
 export interface DiscussionReadPlan {
   target: DiscussionReadTarget;
   filters: NdkEventFilter[];
-  relayHints: string[];
   idleTimeoutMs: number;
   hardTimeoutMs: number;
 }
@@ -29,7 +28,6 @@ export const createDiscussionReadPlan = (
     dTag?: string;
     postIds?: string[];
     until?: number;
-    relayHints?: string[];
     references?: Array<{ authorPubkey: string; dTag: string }>;
   }
 ): DiscussionReadPlan => {
@@ -42,7 +40,6 @@ export const createDiscussionReadPlan = (
         "#d": [dTag],
         limit: 1,
       })),
-      relayHints: args.relayHints ?? [],
       idleTimeoutMs: strategy.idleTimeoutMs,
       hardTimeoutMs: strategy.hardTimeoutMs,
     };
@@ -64,5 +61,5 @@ export const createDiscussionReadPlan = (
     default:
       filter = { kinds: [4550], "#a": args.discussionId ? [args.discussionId] : [], limit };
   }
-  return { target, filters: [filter], relayHints: args.relayHints ?? [], idleTimeoutMs: strategy.idleTimeoutMs, hardTimeoutMs: strategy.hardTimeoutMs };
+  return { target, filters: [filter], idleTimeoutMs: strategy.idleTimeoutMs, hardTimeoutMs: strategy.hardTimeoutMs };
 };

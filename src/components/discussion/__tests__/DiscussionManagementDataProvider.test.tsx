@@ -23,7 +23,7 @@ jest.mock("@/lib/nostr/naddr-utils", () => ({
     discussionId: "34550:admin:list",
     authorPubkey: "admin",
     dTag: "list",
-    relays: [],
+    relays: ["wss://list-hint.example"],
   }),
 }));
 
@@ -33,7 +33,7 @@ jest.mock("@/lib/config/discussion-config", () => ({
     defaultTimeout: 500,
   }),
   getDiscussionReadStrategyConfig: () => ({
-    relayLimit: 3,
+
     idleTimeoutMs: 500,
     hardTimeoutMs: 1500,
     dedupWindowMs: 250,
@@ -114,6 +114,10 @@ describe("DiscussionManagementDataProvider", () => {
 
     await screen.findByText("posts:0:references:0");
     expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(1);
+    expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ relayUrls: ["wss://relay.example"] }),
+    );
 
     pathname = "/discussions/manage";
     rerender(

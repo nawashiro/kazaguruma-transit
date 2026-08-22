@@ -64,6 +64,9 @@ const DiscussionManagementDataContext =
 const nostrServiceConfig = getNostrServiceConfig();
 const readStrategy = getDiscussionReadStrategyConfig();
 const nostrService = createNostrService(nostrServiceConfig);
+const readableRelayUrls = nostrServiceConfig.relays
+  .filter((relay) => relay.read)
+  .map((relay) => relay.url);
 const nostrDiscussionReadTransport = nostrService.getEventsWithCompletion.bind(
   nostrService,
 ) as unknown as DiscussionReadTransport;
@@ -156,13 +159,10 @@ export function DiscussionManagementDataProvider({
         readStrategy,
         {
           discussionId: targetDiscussionId,
-          hints: discussionListInfo?.relays,
-          configured: nostrServiceConfig.relays
-            .filter((relay) => relay.read)
-            .map((relay) => relay.url),
-          defaults: [],
-          successful:
-            knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays,
+          relayUrls: Array.from(new Set([
+            ...(knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays ?? []),
+            ...readableRelayUrls,
+          ])),
         },
       );
       if (readGenerationRef.current !== readGeneration) return;
@@ -214,7 +214,7 @@ export function DiscussionManagementDataProvider({
         setIsModerationLoading(false);
       }
     }
-  }, [discussion, discussionListInfo?.relays, targetDiscussionId]);
+  }, [discussion, targetDiscussionId]);
 
   useEffect(() => {
     if (!shouldLoadModeration || !targetDiscussionId) {
@@ -253,16 +253,10 @@ export function DiscussionManagementDataProvider({
 
     const referencePlan = createDiscussionReadPlan("discussion-references", readStrategy, {
       references: missingReferences,
-      relayHints: missingReferences.flatMap((reference) => reference.relayHints),
     });
     void executeDiscussionRead(nostrDiscussionReadTransport, {
       plan: referencePlan,
-      candidates: {
-        configured: nostrServiceConfig.relays
-          .filter((relay) => relay.read)
-          .map((relay) => relay.url),
-        defaults: [],
-      },
+      relayUrls: readableRelayUrls,
     })
       .then((result) => {
         if (!isMountedRef.current) return;

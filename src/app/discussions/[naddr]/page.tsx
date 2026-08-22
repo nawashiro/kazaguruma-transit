@@ -46,7 +46,7 @@ import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
 import { buildLoginRoute } from "@/lib/navigation/auth-route";
 
 const nostrServiceConfig = getNostrServiceConfig();
-const readStrategy = typeof getDiscussionReadStrategyConfig === "function" ? getDiscussionReadStrategyConfig() : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
+const readStrategy = typeof getDiscussionReadStrategyConfig === "function" ? getDiscussionReadStrategyConfig() : { idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
 const nostrService = createNostrService(nostrServiceConfig);
 const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
@@ -131,22 +131,20 @@ export default function DiscussionDetailPage() {
                 plan: createDiscussionReadPlan(
                   "discussion-evaluations",
                   readStrategy,
-                  { postIds, relayHints: discussionInfo.relays },
+                  { postIds },
                 ),
-                candidates: {
-                  hints: discussionInfo.relays,
-                  successful:
-                    knownData?.successfulEventRelayUrls ??
-                    knownData?.successfulRelays,
-                  configured: nostrServiceConfig.relays
-                    .filter((relay) => relay.read)
-                    .map((relay) => relay.url),
-                  defaults: DEFAULT_RELAYS,
-                },
+                relayUrls: Array.from(new Set([
+                  ...(discussionInfo.relays ?? []),
+                  ...(knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays ?? []),
+                  ...nostrServiceConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
+                  ...DEFAULT_RELAYS,
+                ])),
               })
             : {
                 events: [],
                 completionReason: "eose" as const,
+                duplicateCount: 0,
+                elapsedMs: 0,
                 attemptedRelayUrls: [],
                 successfulEventRelayUrls: [],
                 sourceRelayUrlsByEventId: {},

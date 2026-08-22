@@ -95,14 +95,10 @@ export default function ModeratorsPage() {
             "#t": ["moderator-request"],
             limit: 50,
           }],
-          relayHints: [],
           idleTimeoutMs: readStrategy.idleTimeoutMs,
           hardTimeoutMs: readStrategy.hardTimeoutMs,
         },
-        candidates: {
-          configured: (config.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
-          defaults: [],
-        },
+        relayUrls: (config.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
       });
       if (applicationReadGenerationRef.current !== readGeneration) return;
       setEvents(result.events);

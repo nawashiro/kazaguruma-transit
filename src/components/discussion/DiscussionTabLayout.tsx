@@ -46,7 +46,7 @@ const discussionConfig = getNostrServiceConfig();
 const discussionReadStrategy =
   typeof getDiscussionReadStrategyConfig === "function"
     ? getDiscussionReadStrategyConfig()
-    : { relayLimit: 3, idleTimeoutMs: discussionConfig.defaultTimeout, hardTimeoutMs: discussionConfig.defaultTimeout * 3, dedupWindowMs: 250 };
+    : { idleTimeoutMs: discussionConfig.defaultTimeout, hardTimeoutMs: discussionConfig.defaultTimeout * 3, dedupWindowMs: 250 };
 const discussionGateway = createDiscussionNdkGateway(discussionConfig);
 const DiscussionMetaContext = React.createContext<
   DiscussionMetaContextValue | undefined
@@ -177,7 +177,6 @@ export function DiscussionTabLayout({
       const plan = createDiscussionReadPlan("discussion-meta", discussionReadStrategy, {
         authorPubkey: discussionInfo.authorPubkey,
         dTag: discussionInfo.dTag,
-        relayHints: discussionInfo.relays,
       });
       const getLatestMatchingDiscussion = (events: NostrEventDTO[]): Discussion | null =>
         pickLatestDiscussion(
@@ -189,11 +188,11 @@ export function DiscussionTabLayout({
         );
       const discussionResult = await executeDiscussionRead(discussionGateway, {
         plan,
-        candidates: {
-          successful: knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays,
-          configured: discussionConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
-          defaults: [],
-        },
+        relayUrls: Array.from(new Set([
+          ...(discussionInfo.relays ?? []),
+          ...(knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays ?? []),
+          ...discussionConfig.relays.filter((relay) => relay.read).map((relay) => relay.url),
+        ])),
         onAttemptComplete: ({ events }) => {
           if (loadSequenceRef.current !== loadSequence) return;
           const latest = getLatestMatchingDiscussion(events);

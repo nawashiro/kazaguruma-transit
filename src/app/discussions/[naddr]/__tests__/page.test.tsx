@@ -81,7 +81,7 @@ jest.mock('@/lib/config/discussion-config', () => ({
   isDiscussionsEnabled: () => true,
   getNostrServiceConfig: () => ({ defaultTimeout: 100, relays: [] }),
   getDiscussionReadStrategyConfig: () => ({
-    relayLimit: 3,
+
     idleTimeoutMs: 100,
     hardTimeoutMs: 300,
     dedupWindowMs: 10,
@@ -120,6 +120,8 @@ jest.mock('@/lib/discussion/discussion-read-executor', () => ({
   executeDiscussionRead: jest.fn().mockResolvedValue({
     events: [],
     completionReason: 'eose',
+    duplicateCount: 0,
+    elapsedMs: 0,
     attemptedRelayUrls: [],
     successfulEventRelayUrls: [],
     sourceRelayUrlsByEventId: {},

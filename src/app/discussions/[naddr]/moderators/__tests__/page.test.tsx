@@ -99,6 +99,8 @@ describe("ModeratorsPage direct moderator management", () => {
     discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
       events: [],
       completionReason: "eose",
+      duplicateCount: 0,
+      elapsedMs: 0,
       attemptedRelayUrls: [],
       successfulEventRelayUrls: [],
       sourceRelayUrlsByEventId: {},
@@ -145,6 +147,8 @@ describe("ModeratorsPage direct moderator management", () => {
     discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
       events: [],
       completionReason: "eose",
+      duplicateCount: 0,
+      elapsedMs: 0,
       attemptedRelayUrls: [],
       successfulEventRelayUrls: [],
       sourceRelayUrlsByEventId: {},

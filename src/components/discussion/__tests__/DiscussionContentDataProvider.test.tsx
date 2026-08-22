@@ -14,7 +14,7 @@ jest.mock("next/navigation", () => ({
 jest.mock("@/lib/config/discussion-config", () => ({
   getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 500 }),
   getDiscussionReadStrategyConfig: () => ({
-    relayLimit: 3,
+
     idleTimeoutMs: 500,
     hardTimeoutMs: 1500,
     dedupWindowMs: 250,

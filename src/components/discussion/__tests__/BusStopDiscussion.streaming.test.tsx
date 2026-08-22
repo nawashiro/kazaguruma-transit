@@ -36,7 +36,7 @@ const mockBusStopPost = {
 const mockBusStopSnapshot = {
   primaryEvents: [mockBusStopEvent],
   approvalEvents: [],
-  relayCandidates: [],
+  relayUrls: [],
   initialRelayUrls: [],
   attemptedRelayUrls: [],
   nextRelayUrls: [],

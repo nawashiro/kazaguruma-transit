@@ -44,7 +44,7 @@ import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrServiceConfig = getNostrServiceConfig();
-const readStrategy = typeof getDiscussionReadStrategyConfig === "function" ? getDiscussionReadStrategyConfig() : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
+const readStrategy = typeof getDiscussionReadStrategyConfig === "function" ? getDiscussionReadStrategyConfig() : { idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
 const nostrService = createNostrService(nostrServiceConfig);
 const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
@@ -90,14 +90,13 @@ export default function PostApprovalPage() {
             { kinds: [1111, 1], "#a": [discussionInfo.discussionId], limit: 50 },
             { kinds: [4550], "#a": [discussionInfo.discussionId], limit: 50 },
           ],
-          relayHints: discussionInfo.relays ?? [],
           idleTimeoutMs: readStrategy.idleTimeoutMs,
           hardTimeoutMs: readStrategy.hardTimeoutMs,
         },
-        candidates: {
-          configured: (nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
-          defaults: [],
-        },
+        relayUrls: Array.from(new Set([
+          ...(discussionInfo.relays ?? []),
+          ...(nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
+        ])),
       });
       if (moderationReadGenerationRef.current !== readGeneration) return;
       mergeModerationEvents({

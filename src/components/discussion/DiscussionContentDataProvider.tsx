@@ -23,7 +23,6 @@ import {
   loadKnownDiscussionData,
   saveKnownDiscussionData,
 } from "@/lib/discussion/discussion-known-data-cache";
-import { rankRelayCandidates } from "@/lib/discussion/relay-candidate-selector";
 import { createNostrService, type CompletionReason, type Event } from "@/lib/nostr/nostr-service";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import { parseApprovalEvent, parsePostEvent } from "@/lib/nostr/nostr-utils";
@@ -59,7 +58,6 @@ const readStrategy =
   typeof getDiscussionReadStrategyConfig === "function"
     ? getDiscussionReadStrategyConfig()
     : {
-        relayLimit: 3,
         idleTimeoutMs: nostrServiceConfig.defaultTimeout,
         hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
         dedupWindowMs: 250,
@@ -139,13 +137,11 @@ export function DiscussionContentDataProvider({
         discussionId: discussionInfo.discussionId,
         primaryEvents,
         approvalEvents,
-        relayCandidates: rankRelayCandidates({
-          hints: discussionInfo.relays,
-          successful:
-            knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays,
-          configured: readableRelayUrls,
-          defaults: [],
-        }),
+        relayUrls: Array.from(new Set([
+          ...(discussionInfo.relays ?? []),
+          ...(knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays ?? []),
+          ...readableRelayUrls,
+        ])),
         attemptedRelayUrls: attemptedRelayUrlsRef.current,
         completionReason: nextCompletionReason,
       });
@@ -221,6 +217,11 @@ export function DiscussionContentDataProvider({
     const knownData = loadKnownDiscussionData<unknown, Event>(
       discussionInfo.discussionId,
     );
+    const relayUrls = Array.from(new Set([
+      ...(discussionInfo.relays ?? []),
+      ...(knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays ?? []),
+      ...readableRelayUrls,
+    ]));
     attemptedRelayUrlsRef.current = knownData?.attemptedRelayUrls ?? [];
     if (knownData?.events?.length) {
       rebuildFromEvents(
@@ -236,11 +237,7 @@ export function DiscussionContentDataProvider({
         readStrategy,
         {
           discussionId: discussionInfo.discussionId,
-          hints: discussionInfo.relays,
-          successful:
-            knownData?.successfulEventRelayUrls ?? knownData?.successfulRelays,
-          configured: readableRelayUrls,
-          defaults: [],
+          relayUrls,
         },
       );
       if (readGenerationRef.current !== readGeneration) return;

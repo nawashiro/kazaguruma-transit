@@ -107,6 +107,8 @@ describe("DiscussionEditPage streaming", () => {
     discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
       events: [],
       completionReason: "eose",
+      duplicateCount: 0,
+      elapsedMs: 0,
       attemptedRelayUrls: [],
       successfulEventRelayUrls: [],
       sourceRelayUrlsByEventId: {},
@@ -161,6 +163,8 @@ describe("DiscussionEditPage streaming", () => {
     discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
       events: [],
       completionReason: "hard-timeout",
+      duplicateCount: 0,
+      elapsedMs: 0,
       attemptedRelayUrls: [],
       successfulEventRelayUrls: [],
       sourceRelayUrlsByEventId: {},

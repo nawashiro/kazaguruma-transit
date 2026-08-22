@@ -12,7 +12,7 @@
 
 **Purpose**:変更前の回帰を確認し、feature専用テストの入口を用意する。
 
-- [x] T001 現在の関連回帰を実行して記録する: `src/lib/nostr/__tests__/nostr-service.test.ts`、`src/lib/discussion/__tests__/relay-candidate-selector.test.ts`、`src/components/discussion/__tests__/DiscussionReadStatus.test.tsx`
+- [x] T001 現在の関連回帰を実行して記録する: `src/lib/nostr/__tests__/nostr-service.test.ts`、`src/lib/discussion/__tests__/discussion-read-executor.test.ts`、`src/components/discussion/__tests__/DiscussionReadStatus.test.tsx`
 - [x] T002 `specs/017-discussion-read-executor/quickstart.md`のREDコマンドを実行できるよう、既存Jest設定と対象test pathを確認する
 
 ---
@@ -30,7 +30,7 @@
 - [x] T007 `src/lib/nostr/nostr-service.ts`を修正し、`collectEventsWithCompletion()`がfilter群を一回の`ndk.subscribe(filters, { relaySet, ... })`へ渡し、第三引数relay setとfilter数EOSE集計を除去する
 - [x] T008 `src/lib/discussion/discussion-reference-resolver.ts`を追加し、`q` tag、naddr、既知Discussion IDを通信なしで`DiscussionReference`へ正規化する
 - [x] T009 `src/lib/discussion/discussion-read-plan.ts`を拡張し、正規化済み参照から複数filterを持つ参照先会話read planを作る
-- [x] T010 `src/lib/discussion/discussion-read-executor.ts`を追加し、relay順位、first attempt、one-time retry、暫定attempt callback、最終result合成を実装する
+- [x] T010 `src/lib/discussion/discussion-read-executor.ts`を追加し、Provider選択relay URL、first attempt、one-time retry、暫定attempt callback、最終result合成を実装する
 - [x] T011 `src/lib/discussion/__tests__/discussion-known-data-cache.test.ts`と`src/lib/discussion/discussion-known-data-cache.ts`を更新し、掲載投稿readと参照先会話readのrelay実績を別target keyで保持する
 
 **Checkpoint**:一回のmulti-filter subscription、参照正規化、completion-aware executor、relay実績分離が単体テストで確認できる。
@@ -41,7 +41,7 @@
 
 **Goal**:掲載投稿が見つかっている場合、参照先会話定義のrelay取得が不完全でも、`/discussions`が会話を表示するか、未確定状態を示す。
 
-**Independent Test**:hint relayが無応答でも、設定relayが参照先kind 34550を返すfixtureで、一覧が会話を表示する。両readがEOSEで空の場合だけ空一覧を表示する。
+**Independent Test**:Providerが選択した初回relay群が無応答でも、次候補relayが参照先kind 34550を返すfixtureで一覧が会話を表示する。両readがEOSEで空の場合だけ空一覧を表示する。
 
 ### Tests for User Story 1
 
@@ -160,7 +160,7 @@ US2 + US3 → Polish
 
 1. T001からT011でtransport、Resolver、Executorを完成させる。
 2. T012からT020で`/discussions`と`/discussions/manage`のIssue #68回帰を解消する。
-3. US1のfixtureでhint relay timeoutと設定relay成功を確認する。
+3. US1のfixtureでProvider選択relayの初回timeoutと次候補relay成功を確認する。
 4. MVP確認後にUS2とUS3へ進む。
 
 ### Incremental Delivery

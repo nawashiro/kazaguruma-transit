@@ -2,7 +2,6 @@ import type { DiscussionReadStrategyConfig } from "@/lib/config/discussion-confi
 import { executeDiscussionRead, type DiscussionReadTransport } from "@/lib/discussion/discussion-read-executor";
 import type { DiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import type { CompletionReason, Event, Filter, NostrService } from "@/lib/nostr/nostr-service";
-import { rankRelayCandidates, type RelayCandidate } from "@/lib/discussion/relay-candidate-selector";
 import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 
 export type ApprovalState = "approved" | "unapproved" | "unknown";
@@ -10,7 +9,7 @@ export type ApprovalState = "approved" | "unapproved" | "unknown";
 export interface DiscussionModerationSnapshot {
   primaryEvents: Event[];
   approvalEvents: Event[];
-  relayCandidates: RelayCandidate[];
+  relayUrls: string[];
   initialRelayUrls: string[];
   attemptedRelayUrls: string[];
   nextRelayUrls: string[];
@@ -23,7 +22,7 @@ export interface DiscussionModerationReadInput {
   discussionId: string;
   primaryEvents: Event[];
   approvalEvents: Event[];
-  relayCandidates: RelayCandidate[];
+  relayUrls: string[];
   attemptedRelayUrls: string[];
   completionReason: CompletionReason;
   successfulRelayUrls?: string[];
@@ -40,7 +39,7 @@ const dedupeAndSortEvents = (events: Event[]): Event[] => {
 export const createDiscussionModerationSnapshot = ({
   primaryEvents,
   approvalEvents,
-  relayCandidates,
+  relayUrls,
   attemptedRelayUrls,
   completionReason,
   successfulRelayUrls = [],
@@ -48,33 +47,24 @@ export const createDiscussionModerationSnapshot = ({
   const primary = dedupeAndSortEvents(primaryEvents.filter((event) => !isModeratorRequestEvent(event)));
   const primaryEventIds = new Set(primary.map((event) => event.id));
   const approvals = dedupeAndSortEvents(approvalEvents.filter((event) => isApprovalForPrimaryEvent(event, primaryEventIds)));
-  const initialRelayUrls = relayCandidates.slice(0, 3).map((candidate) => candidate.url);
-  const nextRelayUrls = relayCandidates
-    .filter((candidate) => !attemptedRelayUrls.includes(candidate.url))
-    .slice(0, 3)
-    .map((candidate) => candidate.url);
+  const initialRelayUrls = relayUrls.slice(0, 3);
+  const nextRelayUrls = relayUrls
+    .filter((relayUrl) => !attemptedRelayUrls.includes(relayUrl))
+    .slice(0, 3);
   const approvalState: ApprovalState = approvals.length > 0
     ? "approved"
     : completionReason !== "eose" || nextRelayUrls.length > 0
       ? "unknown"
       : "unapproved";
-  return { primaryEvents: primary, approvalEvents: approvals, relayCandidates, initialRelayUrls, attemptedRelayUrls, nextRelayUrls, successfulRelayUrls, completionReason, approvalState };
+  return { primaryEvents: primary, approvalEvents: approvals, relayUrls, initialRelayUrls, attemptedRelayUrls, nextRelayUrls, successfulRelayUrls, completionReason, approvalState };
 };
 
 export const loadDiscussionModerationSnapshot = async (
   service: Pick<NostrService, "getEventsWithCompletion">,
   strategy: DiscussionReadStrategyConfig,
-  input: { discussionId: string; hints?: string[]; recommended?: string[]; successful?: string[]; configured: string[]; defaults: string[]; until?: number; primaryTags?: string[] }
+  input: { discussionId: string; relayUrls: string[]; until?: number; primaryTags?: string[] }
 ): Promise<DiscussionModerationSnapshot> => {
-  const relayCandidates = rankRelayCandidates(input);
   const transport: DiscussionReadTransport = (filters, options) => service.getEventsWithCompletion(filters as Filter[], options);
-  const candidates = {
-    hints: input.hints,
-    recommended: input.recommended,
-    successful: input.successful,
-    configured: input.configured,
-    defaults: input.defaults,
-  };
   const primaryPlan: DiscussionReadPlan = {
     target: "discussion-list",
     filters: [{
@@ -84,11 +74,10 @@ export const loadDiscussionModerationSnapshot = async (
       limit: 10,
       until: input.until,
     }],
-    relayHints: [],
     idleTimeoutMs: strategy.idleTimeoutMs,
     hardTimeoutMs: strategy.hardTimeoutMs,
   };
-  const primary = await executeDiscussionRead(transport, { plan: primaryPlan, candidates });
+  const primary = await executeDiscussionRead(transport, { plan: primaryPlan, relayUrls: input.relayUrls });
   const primaryEvents = primary.events.filter((event) => !isModeratorRequestEvent(event));
   const postIds = primaryEvents.map((event) => event.id);
   const approvals = postIds.length === 0
@@ -97,11 +86,10 @@ export const loadDiscussionModerationSnapshot = async (
       plan: {
         target: "discussion-approvals",
         filters: [{ kinds: [4550], "#a": [input.discussionId], "#e": postIds, limit: 10 }],
-        relayHints: [],
         idleTimeoutMs: strategy.idleTimeoutMs,
         hardTimeoutMs: strategy.hardTimeoutMs,
       },
-      candidates,
+      relayUrls: input.relayUrls,
     });
   const completionReason = primary.completionReason !== "eose"
     ? primary.completionReason
@@ -110,7 +98,7 @@ export const loadDiscussionModerationSnapshot = async (
     discussionId: input.discussionId,
     primaryEvents,
     approvalEvents: approvals.events,
-    relayCandidates,
+    relayUrls: input.relayUrls,
     attemptedRelayUrls: Array.from(new Set([...primary.attemptedRelayUrls, ...approvals.attemptedRelayUrls])),
     completionReason,
     successfulRelayUrls: Array.from(new Set([

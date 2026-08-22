@@ -1,9 +1,5 @@
 import type { DiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import { dedupeAndSortEvents } from "@/lib/nostr/event-deduplication";
-import {
-  rankRelayCandidates,
-  type RelayCandidateSelectorInput,
-} from "@/lib/discussion/relay-candidate-selector";
 import type {
   DiscussionNdkGateway,
   NdkEventFilter,
@@ -26,18 +22,21 @@ export interface RelayAttempt {
   completionReason: CompletionReason;
   events: NostrEventDTO[];
   sourceRelayUrlsByEventId: Record<string, string[]>;
+  duplicateCount: number;
   elapsedMs: number;
 }
 
 export interface ExecuteDiscussionReadInput {
   plan: DiscussionReadPlan;
-  candidates: Omit<RelayCandidateSelectorInput, "limit">;
+  relayUrls: string[];
   onAttemptComplete?: (attempt: RelayAttempt) => void;
 }
 
 export interface DiscussionReadResult {
   events: NostrEventDTO[];
   completionReason: CompletionReason;
+  duplicateCount: number;
+  elapsedMs: number;
   attemptedRelayUrls: string[];
   successfulEventRelayUrls: string[];
   sourceRelayUrlsByEventId: Record<string, string[]>;
@@ -64,6 +63,7 @@ const toAttempt = (
   completionReason: completion.completionReason,
   events: dedupeAndSortEvents(completion.events),
   sourceRelayUrlsByEventId: completion.sourceRelayUrlsByEventId,
+  duplicateCount: completion.duplicateCount,
   elapsedMs: completion.elapsedMs,
 });
 
@@ -74,17 +74,13 @@ const getTransport = (
     ? transportOrGateway
     : (filters, options) => transportOrGateway.queryWithCompletion(filters, options);
 
-/** Executes at most two completion-aware reads over ranked relay candidates. */
+/** Executes at most two completion-aware reads over Provider-selected relay URLs. */
 export const executeDiscussionRead = async (
   transportOrGateway: DiscussionReadTransport | DiscussionReadGateway,
-  { plan, candidates, onAttemptComplete }: ExecuteDiscussionReadInput
+  { plan, relayUrls: providerRelayUrls, onAttemptComplete }: ExecuteDiscussionReadInput
 ): Promise<DiscussionReadResult> => {
   const transport = getTransport(transportOrGateway);
-  const rankedCandidates = rankRelayCandidates({
-    ...candidates,
-    hints: [...plan.relayHints, ...(candidates.hints ?? [])],
-  });
-  const relayUrls = rankedCandidates.map((candidate) => candidate.url);
+  const relayUrls = Array.from(new Set(providerRelayUrls));
   const firstRelayUrls = relayUrls.slice(0, RELAYS_PER_ATTEMPT);
 
   const options = {
@@ -132,6 +128,8 @@ export const executeDiscussionRead = async (
   return {
     events,
     completionReason: finalAttempt.completionReason,
+    duplicateCount: attempts.reduce((total, attempt) => total + attempt.duplicateCount, 0),
+    elapsedMs: attempts.reduce((total, attempt) => total + attempt.elapsedMs, 0),
     attemptedRelayUrls,
     successfulEventRelayUrls: Array.from(
       new Set(events.flatMap((event) => mergedSourceRelayUrlsByEventId[event.id] ?? []))

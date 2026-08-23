@@ -91,6 +91,13 @@ export default function DiscussionsPage() {
               ) : loadError ? (
                 <div className="alert alert-error alert-soft text-base-content!" role="status" aria-live="polite">
                   <span>{loadError}</span>
+                  <button
+                    type="button"
+                    className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                    onClick={() => void reloadModeration()}
+                  >
+                    <span className="ruby-text">再読み込み</span>
+                  </button>
                 </div>
               ) : discussions.length > 0 ? (
                 <>

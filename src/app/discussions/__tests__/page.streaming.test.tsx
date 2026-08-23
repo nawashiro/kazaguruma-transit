@@ -119,4 +119,13 @@ describe("DiscussionsPage shared data", () => {
     );
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  it("offers a reload action for a moderation load error", () => {
+    mockManagementData.moderationError = "会話一覧の取得に失敗しました。";
+    render(<DiscussionsPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+
+    expect(mockManagementData.reloadModeration).toHaveBeenCalledTimes(1);
+  });
 });

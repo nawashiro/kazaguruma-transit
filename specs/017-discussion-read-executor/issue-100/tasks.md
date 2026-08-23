@@ -45,6 +45,7 @@
 - [x] primary listingがpartial、または参照先definitionがpartialで空表示を抑止する既存ケースに、accessible name `再読み込み` のbuttonが存在する契約を追加する。
 - [x] button clickで `reloadModeration` が1回呼ばれることを検証する。
 - [x] focused testを実行し、現行pageにbuttonがないためREDになることを確認する。
+- [x] `moderationError` のerror alertにも再読み込みbuttonが必要であることを回帰テストで固定する。
 
 ### 2B. テスト実装のfresh review gate
 
@@ -54,7 +55,7 @@
 
 ### 2C. 最小実装
 
-- [x] `src/app/discussions/page.tsx` で `reloadModeration` を取得し、2つのpartial warningに既存DaisyUI button契約で再読み込み操作を追加する。
+- [x] `src/app/discussions/page.tsx` で `reloadModeration` を取得し、partial warningとerror alertに既存DaisyUI button契約で再読み込み操作を追加する。
 - [x] empty/not-found判定、表示対象filter、一覧の掲載条件は変更しない。
 - [x] Work Unit 2Aのfocused testをGREENにする。
 
@@ -94,8 +95,8 @@
 
 ### Verification record
 
-- focused suites: 6 suites / 47 tests passed
-- full Jest: 130 passed, 2 skipped / 798 passed, 17 skipped
+- focused suites: 6 suites / 48 tests passed
+- full Jest: 130 passed, 2 skipped / 799 passed, 17 skipped
 - strict TypeScript: `npx tsc --noEmit --incremental false` exit 0
 - lint: `npm run lint` exit 0; existing warnings only
 - build: `npm run build` exit 0

@@ -55,7 +55,7 @@
 
 - `/discussions/moderator` の `DiscussionDataProvider` はmetadata readに加えてmanagement content readを一度開始する。
 - `/discussions/moderator` の共有content readが部分状態になっても、空一覧/不存在を確定せず、Providerの状態を保持する。
-- `/discussions` の部分取得警告に、accessible name `再読み込み` の44px以上のbuttonがあり、クリックで `reloadModeration` が一度呼ばれる。
+- `/discussions` の部分取得警告またはcontent取得エラーに、accessible name `再読み込み` の44px以上のbuttonがあり、クリックで `reloadModeration` が一度呼ばれる。
 - 詳細ページのcontent readが `idle-timeout`、`hard-timeout`、`cancelled` の場合、取得済みcontentを残したstatusと再読み込みbuttonを表示する。EOSEでは表示しない。
 - 新しいテストは実装前にREDとなり、テスト実装のfresh read-only reviewを通過する。
 - focused test、TypeScript strict、lint、全Jest、build、`git diff --check` が成功する。

@@ -104,8 +104,15 @@
 
 ## Work Unit 5: 配達
 
-- [ ] 受入条件と検証結果を確認して、`fix: restore moderator discussion reads` など既存prefixに従うcommitを作成する。
-- [ ] feature branchをoriginへpushする。
-- [ ] PRを作成し、Issue #100をリンクする。本文に変更理由、検証コマンド、scope外、CI状態を明記する。
-- [ ] PRのbase/head SHA、変更ファイル、checksを読み戻して確認する。
-- [ ] CIはlive stateで確認し、未実行・pending・failureをsuccessと報告しない。
+- [x] 受入条件と検証結果を確認して、`fix: restore moderator discussion reads` など既存prefixに従うcommitを作成する。
+- [x] feature branchをoriginへpushする。
+- [x] PRを作成し、Issue #100をリンクする。本文に変更理由、検証コマンド、scope外、CI状態を明記する。
+- [x] PRのbase/head SHA、変更ファイル、checksを読み戻して確認する。
+- [x] CIはlive stateで確認し、未実行・pending・failureをsuccessと報告しない。初回確認時点はpendingとして記録する。
+
+### Delivery record
+
+- PR: [#103](https://github.com/nawashiro/kazaguruma-transit/pull/103)
+- base: `dev`
+- initial head: `ec664bafa01ddb426f22e3e5c73cc9ae9a508200`
+- initial CI: Quality Gate `pending`（run `32632862110`）

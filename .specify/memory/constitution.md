@@ -1,13 +1,13 @@
 <!--
 Sync Impact Report:
-- Version Change: 1.10.0 -> 1.11.0
-- Reason: タスクリストにサブエージェント委任と実装後レビューを必須化。
+- Version Change: 1.11.0 -> 2.0.0
+- Reason: テスト実装レビューのみを必須とし、本番実装レビューの必須要件を廃止。
 - Modified Principles:
   * 開発ワークフロー
 - Added Sections:
-  * なし（開発ワークフローに規則を追加）
-- Removed Sections:
   * なし
+- Removed Sections:
+  * 本番実装後のレビュー必須要件（開発ワークフローから削除）
 - Templates Status:
   ✅ .specify/templates/constitution-template.md: resolverで解決済み。既存constitutionの章構成を保持
   ✅ .specify/templates/plan-template.md: Constitution Check は本文の検証スコープ方針と整合
@@ -198,7 +198,7 @@ Nostr readは`specs/017-discussion-read-executor`を正本とする。詳細は�
 - 機能開発は `dev` から始める。
 - 変更を完了扱いにする前に、`AGENTS.md` に記載された検証コマンドを実行する。
 - Spec Kit を使う場合は、`spec.md`、`plan.md`、`tasks.md`、実装、検証の順で進める。
-- `tasks.md` には、テスト実装・本番実装・レビューをサブエージェントへ委任するタスクを明記する。親エージェントは受入条件、書込境界、検証結果を管理する。
-- `tasks.md` では、テスト実装タスクの直後と本番実装タスクの直後に、それぞれレビュータスクを置く。レビュータスクは対応する実装完了後に実行する。
+- `tasks.md` には、テスト実装のレビューをサブエージェントへ委任するタスクを明記する。親エージェントは受入条件、書込境界、検証結果を管理する。
+- `tasks.md` では、テスト実装タスクの直後にレビュータスクを置く。レビュータスクは対応するテスト実装完了後に実行する。本番実装後のレビュータスクは置かない。
 
-**Version**: 1.11.0 | **Ratified**: 2026-01-13 | **Last Amended**: 2026-08-19
+**Version**: 2.0.0 | **Ratified**: 2026-01-13 | **Last Amended**: 2026-08-23

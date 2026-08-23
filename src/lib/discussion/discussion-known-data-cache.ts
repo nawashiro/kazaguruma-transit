@@ -13,6 +13,36 @@ export interface KnownDiscussionData<TMetadata = unknown, TEvent = unknown> {
   events?: TEvent[];
 }
 
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
+const isObjectOrNull = (value: unknown): boolean =>
+  value === null || (typeof value === "object" && !Array.isArray(value));
+
+const isCachedEvent = (value: unknown): boolean => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const event = value as {
+    id?: unknown;
+    kind?: unknown;
+    pubkey?: unknown;
+    created_at?: unknown;
+    content?: unknown;
+    sig?: unknown;
+    tags?: unknown;
+  };
+  return typeof event.id === "string" &&
+    typeof event.kind === "number" &&
+    typeof event.pubkey === "string" &&
+    typeof event.created_at === "number" &&
+    Number.isFinite(event.created_at) &&
+    typeof event.content === "string" &&
+    typeof event.sig === "string" &&
+    Array.isArray(event.tags) &&
+    event.tags.every(
+      (tag) => Array.isArray(tag) && tag.every((item) => typeof item === "string"),
+    );
+};
+
 const canUseStorage = (): boolean => typeof window !== "undefined" && !!window.sessionStorage;
 
 export const loadKnownDiscussionData = <TMetadata, TEvent = unknown>(
@@ -24,15 +54,31 @@ export const loadKnownDiscussionData = <TMetadata, TEvent = unknown>(
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<KnownDiscussionData<TMetadata, TEvent>>;
     if (parsed.version !== 1 || typeof parsed.savedAt !== "number" || Date.now() - parsed.savedAt > CACHE_TTL_MS) return null;
+    const eventIds = isStringArray(parsed.eventIds) ? parsed.eventIds : [];
+    const attemptedRelayUrls = isStringArray(parsed.attemptedRelayUrls)
+      ? parsed.attemptedRelayUrls
+      : [];
+    const successfulEventRelayUrls = isStringArray(parsed.successfulEventRelayUrls)
+      ? parsed.successfulEventRelayUrls
+      : isStringArray(parsed.successfulRelays)
+        ? parsed.successfulRelays
+        : [];
+    const successfulRelays = isStringArray(parsed.successfulRelays)
+      ? parsed.successfulRelays
+      : successfulEventRelayUrls;
+    const metadata = isObjectOrNull(parsed.metadata) ? parsed.metadata : null;
+    const events = Array.isArray(parsed.events)
+      ? parsed.events.filter(isCachedEvent)
+      : [];
     return {
       version: 1,
       savedAt: parsed.savedAt,
-      metadata: parsed.metadata ?? null,
-      eventIds: parsed.eventIds ?? [],
-      attemptedRelayUrls: parsed.attemptedRelayUrls ?? [],
-      successfulEventRelayUrls: parsed.successfulEventRelayUrls ?? parsed.successfulRelays ?? [],
-      successfulRelays: parsed.successfulRelays ?? parsed.successfulEventRelayUrls ?? [],
-      events: parsed.events ?? [],
+      metadata: metadata as TMetadata | null,
+      eventIds,
+      attemptedRelayUrls,
+      successfulEventRelayUrls,
+      successfulRelays,
+      events,
     };
   } catch {
     return null;

@@ -19,4 +19,54 @@ describe("known discussion data cache", () => {
       successfulRelays: ["wss://found"],
     });
   });
+
+  it("ignores malformed cached event members", () => {
+    window.sessionStorage.setItem(
+      "kazaguruma-discussion-read-v1:34550:a:malformed-members",
+      JSON.stringify({
+        version: 1,
+        savedAt: Date.now(),
+        metadata: null,
+        eventIds: [],
+        successfulRelays: [],
+        events: [null, {}, {
+          id: "valid",
+          kind: 1,
+          pubkey: "author",
+          created_at: 1,
+          content: "",
+          sig: "sig",
+          tags: [],
+        }],
+      }),
+    );
+
+    expect(loadKnownDiscussionData("34550:a:malformed-members")?.events).toEqual([
+      {
+        id: "valid",
+        kind: 1,
+        pubkey: "author",
+        created_at: 1,
+        content: "",
+        sig: "sig",
+        tags: [],
+      },
+    ]);
+  });
+
+  it("ignores malformed cached event collections", () => {
+    window.sessionStorage.setItem(
+      "kazaguruma-discussion-read-v1:34550:a:malformed",
+      JSON.stringify({
+        version: 1,
+        savedAt: Date.now(),
+        metadata: null,
+        eventIds: [],
+        successfulRelays: [],
+        events: { id: "not-an-array" },
+      }),
+    );
+
+    expect(loadKnownDiscussionData("34550:a:malformed")?.events).toEqual([]);
+  });
 });

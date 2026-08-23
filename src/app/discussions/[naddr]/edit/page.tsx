@@ -61,7 +61,6 @@ const readStrategy =
   typeof getDiscussionReadStrategyConfig === "function"
     ? getDiscussionReadStrategyConfig()
     : {
-      relayLimit: 3,
       idleTimeoutMs: nostrServiceConfig.defaultTimeout,
       hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
       dedupWindowMs: 250,
@@ -172,16 +171,13 @@ export default function DiscussionEditPage() {
             "#t": ["moderator-request"],
             limit: 50,
           }],
-          relayHints: discussionInfo.relays ?? [],
           idleTimeoutMs: readStrategy.idleTimeoutMs,
           hardTimeoutMs: readStrategy.hardTimeoutMs,
         },
-        candidates: {
-          configured: (nostrServiceConfig.relays ?? [])
-            .filter((relay) => relay.read)
-            .map((relay) => relay.url),
-          defaults: [],
-        },
+        relayUrls: Array.from(new Set([
+          ...(discussionInfo.relays ?? []),
+          ...(nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
+        ])),
       });
       if (readGenerationRef.current !== readGeneration) return;
       const requests = result.events

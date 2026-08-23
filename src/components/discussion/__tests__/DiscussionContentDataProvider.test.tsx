@@ -1,116 +1,50 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import React from "react";
+import { render, screen } from "@testing-library/react";
 import {
   DiscussionContentDataProvider,
   useDiscussionContentData,
 } from "../DiscussionContentDataProvider";
 
-let pathname = "/discussions/naddr-test";
-
-jest.mock("next/navigation", () => ({
-  usePathname: () => pathname,
-  useParams: () => ({ naddr: "naddr-test" }),
-}));
-
-jest.mock("@/lib/config/discussion-config", () => ({
-  getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 500 }),
-  getDiscussionReadStrategyConfig: () => ({
-    relayLimit: 3,
-    idleTimeoutMs: 500,
-    hardTimeoutMs: 1500,
-    dedupWindowMs: 250,
-  }),
-}));
-
-jest.mock("@/lib/nostr/naddr-utils", () => ({
-  extractDiscussionFromNaddr: () => ({
-    discussionId: "34550:author:topic",
-    authorPubkey: "author",
-    dTag: "topic",
-    relays: [],
-  }),
-}));
-
-jest.mock("@/lib/nostr/nostr-service", () => {
-  const service = { getEventsWithCompletion: jest.fn() };
-  return { createNostrService: () => service, __mock: service };
-});
-
-const { __mock: serviceMock } = jest.requireMock("@/lib/nostr/nostr-service");
-
-jest.mock("@/lib/nostr/nostr-utils", () => ({
-  parseApprovalEvent: () => null,
-  parsePostEvent: () => null,
-}));
-
-jest.mock("@/lib/discussion/discussion-known-data-cache", () => ({
-  loadKnownDiscussionData: () => null,
-  saveKnownDiscussionData: jest.fn(),
-}));
-
-jest.mock("@/lib/test/test-data-loader", () => ({
-  isTestMode: () => false,
-  loadTestData: jest.fn(),
-}));
-
-function Probe() {
-  const data = useDiscussionContentData();
-  return <div>{data.isLoading ? "loading" : `posts:${data.posts.length}`}</div>;
-}
-
-const completion = {
-  events: [],
-  completionReason: "eose",
-  eventCount: 0,
-  elapsedMs: 1,
-  startedAt: 1,
-  lastEventAt: 1,
-  eoseReceived: true,
-  relayUrls: [],
-  duplicateCount: 0,
-  sourceRelayUrlsByEventId: {},
+const sharedContent = {
+  posts: [],
+  approvals: [],
+  isLoading: false,
+  error: null,
+  completionReason: "eose" as const,
+  approvalState: "unapproved" as const,
+  reload: jest.fn(),
+  mergeModerationEvents: jest.fn(),
+  addPost: jest.fn(),
+  addApproval: jest.fn(),
+  removeApproval: jest.fn(),
 };
 
-describe("DiscussionContentDataProvider", () => {
-  beforeEach(() => {
-    pathname = "/discussions/naddr-test";
-    serviceMock.getEventsWithCompletion.mockReset().mockResolvedValue(completion);
-  });
+jest.mock("@/components/discussion/DiscussionDataProvider", () => ({
+  useDiscussionContentData: () => sharedContent,
+}));
 
-  it("reuses the moderation snapshot when navigating to all posts", async () => {
-    const { rerender } = render(
+jest.mock("@/lib/discussion/discussion-read-executor", () => ({
+  executeDiscussionRead: jest.fn(),
+}));
+
+const { executeDiscussionRead } = jest.requireMock(
+  "@/lib/discussion/discussion-read-executor",
+) as { executeDiscussionRead: jest.Mock };
+
+function Probe() {
+  const content = useDiscussionContentData();
+  return <span>{`posts:${content.posts.length}`}</span>;
+}
+
+describe("DiscussionContentDataProvider adapter", () => {
+  it("exposes shared content state without starting its own read", () => {
+    render(
       <DiscussionContentDataProvider>
         <Probe />
       </DiscussionContentDataProvider>,
     );
 
-    await screen.findByText("posts:0");
-    expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(1);
-
-    pathname = "/discussions/naddr-test/approve";
-    rerender(
-      <DiscussionContentDataProvider>
-        <Probe />
-      </DiscussionContentDataProvider>,
-    );
-
-    await waitFor(() =>
-      expect(serviceMock.getEventsWithCompletion).toHaveBeenCalledTimes(1),
-    );
+    expect(screen.getByText("posts:0")).toBeInTheDocument();
+    expect(executeDiscussionRead).not.toHaveBeenCalled();
   });
-
-  it.each(["moderators", "edit"])(
-    "does not read posts on a direct %s-tab visit",
-    async (tab) => {
-      pathname = `/discussions/naddr-test/${tab}`;
-
-      render(
-        <DiscussionContentDataProvider>
-          <Probe />
-        </DiscussionContentDataProvider>,
-      );
-
-      await screen.findByText("posts:0");
-      expect(serviceMock.getEventsWithCompletion).not.toHaveBeenCalled();
-    },
-  );
 });

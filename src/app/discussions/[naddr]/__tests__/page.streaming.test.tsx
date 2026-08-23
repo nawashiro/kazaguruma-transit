@@ -43,7 +43,7 @@ jest.mock("@/lib/config/discussion-config", () => ({
     defaultTimeout: 500,
   }),
   getDiscussionReadStrategyConfig: () => ({
-    relayLimit: 3,
+
     idleTimeoutMs: 321,
     hardTimeoutMs: 987,
     dedupWindowMs: 250,
@@ -267,16 +267,21 @@ describe("DiscussionDetailPage streaming", () => {
   const withCompletion = (events: any[]) => ({
     events,
     completionReason: "eose",
+    duplicateCount: 0,
     eventCount: events.length,
     elapsedMs: 10,
     startedAt: 1000,
     lastEventAt: 1000,
     eoseReceived: true,
+    relayUrls: [],
+    sourceRelayUrlsByEventId: {},
   });
 
   const withDiscussionReadResult = (events: any[]) => ({
     events,
     completionReason: "eose",
+    duplicateCount: 0,
+    elapsedMs: 10,
     attemptedRelayUrls: [
       "wss://hint.example",
       "wss://successful.example",
@@ -414,16 +419,15 @@ describe("DiscussionDetailPage streaming", () => {
                 limit: 100,
               },
             ],
-            relayHints: ["wss://hint.example"],
             idleTimeoutMs: 321,
             hardTimeoutMs: 987,
           },
-          candidates: {
-            hints: ["wss://hint.example"],
-            successful: ["wss://successful.example"],
-            configured: ["wss://configured.example"],
-            defaults: ["wss://default.example"],
-          },
+          relayUrls: [
+            "wss://hint.example",
+            "wss://successful.example",
+            "wss://configured.example",
+            "wss://default.example",
+          ],
         }),
       ),
     );

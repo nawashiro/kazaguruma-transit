@@ -24,7 +24,8 @@ const mockManagementData = {
   ],
   isModerationLoading: false,
   isReferencedDiscussionsLoading: false,
-  referencedDiscussionCompletionReason: "eose" as "eose" | "idle-timeout",
+  completionReason: "eose" as "eose" | "idle-timeout",
+  referencedDiscussionCompletionReason: "eose" as "eose" | "idle-timeout" | null,
   moderationError: null as string | null,
 };
 
@@ -47,6 +48,7 @@ describe("DiscussionsPage shared data", () => {
       id: `34550:${pubkey}:demo`, authorPubkey: pubkey, dTag: "demo", title: "共有取得された会話",
       description: "説明", moderators: [], createdAt: 100,
     }];
+    mockManagementData.completionReason = "eose";
     mockManagementData.referencedDiscussionCompletionReason = "eose";
     mockManagementData.moderationError = null;
   });
@@ -68,6 +70,24 @@ describe("DiscussionsPage shared data", () => {
       "alert-warning",
       "alert-soft",
       "text-base-content!",
+    );
+    expect(screen.queryByText("会話がまだありません。")).not.toBeInTheDocument();
+  });
+
+  it("does not conclude empty when the primary listing read is partial", () => {
+    mockManagementData.posts = [{
+      id: "partial-post",
+      approved: true,
+      approvalState: "unknown",
+      event: { tags: [["q", `34550:${pubkey}:missing`]] },
+    }];
+    mockManagementData.referencedDiscussions = [];
+    mockManagementData.completionReason = "idle-timeout";
+    mockManagementData.referencedDiscussionCompletionReason = null;
+    render(<DiscussionsPage />);
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "会話一覧を完全に取得できませんでした",
     );
     expect(screen.queryByText("会話がまだありません。")).not.toBeInTheDocument();
   });

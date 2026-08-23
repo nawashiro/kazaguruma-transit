@@ -76,12 +76,9 @@ export default function SettingsPage() {
       });
       const result = await executeDiscussionRead(discussionGateway, {
         plan,
-        candidates: {
-          configured: nostrServiceConfig.relays
-            .filter((relay) => relay.read)
-            .map((relay) => relay.url),
-          defaults: [],
-        },
+        relayUrls: nostrServiceConfig.relays
+          .filter((relay) => relay.read)
+          .map((relay) => relay.url),
       });
       if (loadSequenceRef.current !== loadSequence) return;
 

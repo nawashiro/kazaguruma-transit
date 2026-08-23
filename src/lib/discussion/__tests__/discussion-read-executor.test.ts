@@ -11,10 +11,18 @@ import type {
 const plan: DiscussionReadPlan = {
   target: "discussion-list",
   filters: [{ kinds: [34550], limit: 50 }],
-  relayHints: ["wss://hint.example"],
   idleTimeoutMs: 100,
   hardTimeoutMs: 300,
 };
+
+const providerRelayUrls = [
+  "wss://provider-one.example",
+  "wss://provider-two.example",
+  "wss://provider-three.example",
+  "wss://provider-four.example",
+  "wss://provider-five.example",
+  "wss://provider-six.example",
+];
 
 const event = (id: string): NostrEventDTO => ({
   id,
@@ -29,17 +37,19 @@ const event = (id: string): NostrEventDTO => ({
 const completion = (
   events: NostrEventDTO[],
   completionReason: NdkQueryCompletion["completionReason"],
-  sourceRelayUrlsByEventId: Record<string, string[]>
+  sourceRelayUrlsByEventId: Record<string, string[]>,
+  duplicateCount = 0,
+  elapsedMs = 10,
 ): NdkQueryCompletion => ({
   events,
   completionReason,
   eventCount: events.length,
-  elapsedMs: 10,
+  elapsedMs,
   startedAt: 1,
   lastEventAt: 2,
   eoseReceived: completionReason === "eose",
   relayUrls: [],
-  duplicateCount: 0,
+  duplicateCount,
   sourceRelayUrlsByEventId,
 });
 
@@ -49,32 +59,27 @@ describe("executeDiscussionRead", () => {
     const retryEvent = event("retry");
     const transport: jest.MockedFunction<DiscussionReadTransport> = jest
       .fn<ReturnType<DiscussionReadTransport>, Parameters<DiscussionReadTransport>>()
-      .mockResolvedValueOnce(completion([firstEvent], "idle-timeout", { first: ["wss://hint.example"] }))
+      .mockResolvedValueOnce(completion([firstEvent], "idle-timeout", { first: ["wss://provider-one.example"] }, 2, 11))
       .mockResolvedValueOnce(completion([firstEvent, retryEvent], "eose", {
-        first: ["wss://configured.example"],
-        retry: ["wss://default.example"],
-      }));
+        first: ["wss://provider-four.example"],
+        retry: ["wss://provider-six.example"],
+      }, 3, 13));
     const onAttemptComplete = jest.fn();
 
     const result = await executeDiscussionRead(transport, {
       plan,
-      candidates: {
-        recommended: ["wss://recommended.example"],
-        successful: ["wss://successful.example"],
-        configured: ["wss://configured.example", "wss://configured-second.example"],
-        defaults: ["wss://default.example"],
-      },
+      relayUrls: providerRelayUrls,
       onAttemptComplete,
     });
 
     expect(transport).toHaveBeenCalledTimes(2);
     expect(transport).toHaveBeenNthCalledWith(1, plan.filters, {
-      relayUrls: ["wss://hint.example", "wss://recommended.example", "wss://successful.example"],
+      relayUrls: providerRelayUrls.slice(0, 3),
       idleTimeoutMs: 100,
       hardTimeoutMs: 300,
     });
     expect(transport).toHaveBeenNthCalledWith(2, plan.filters, {
-      relayUrls: ["wss://configured.example", "wss://configured-second.example", "wss://default.example"],
+      relayUrls: providerRelayUrls.slice(3, 6),
       idleTimeoutMs: 100,
       hardTimeoutMs: 300,
     });
@@ -82,35 +87,30 @@ describe("executeDiscussionRead", () => {
     expect(result).toMatchObject({
       events: [firstEvent, retryEvent],
       completionReason: "eose",
-      attemptedRelayUrls: [
-        "wss://hint.example",
-        "wss://recommended.example",
-        "wss://successful.example",
-        "wss://configured.example",
-        "wss://configured-second.example",
-        "wss://default.example",
-      ],
+      duplicateCount: 5,
+      elapsedMs: 24,
+      attemptedRelayUrls: providerRelayUrls,
       successfulEventRelayUrls: [
-        "wss://hint.example",
-        "wss://configured.example",
-        "wss://default.example",
+        "wss://provider-one.example",
+        "wss://provider-four.example",
+        "wss://provider-six.example",
       ],
       sourceRelayUrlsByEventId: {
-        first: ["wss://hint.example", "wss://configured.example"],
-        retry: ["wss://default.example"],
+        first: ["wss://provider-one.example", "wss://provider-four.example"],
+        retry: ["wss://provider-six.example"],
       },
     });
     expect(result.attempts).toHaveLength(2);
   });
 
-  it("uses the configured default read set when no relay candidate is available", async () => {
+  it("passes an empty provider relay list as one attempt", async () => {
     const transport: jest.MockedFunction<DiscussionReadTransport> = jest
       .fn<ReturnType<DiscussionReadTransport>, Parameters<DiscussionReadTransport>>()
       .mockResolvedValue(completion([], "eose", {}));
 
     const result = await executeDiscussionRead(transport, {
-      plan: { ...plan, relayHints: [] },
-      candidates: { configured: [], defaults: [] },
+      plan,
+      relayUrls: [],
     });
 
     expect(transport).toHaveBeenCalledWith(plan.filters, {
@@ -126,40 +126,31 @@ describe("executeDiscussionRead", () => {
 
     const result = await executeDiscussionRead(transport, {
       plan,
-      candidates: {
-        configured: ["wss://configured.example"],
-        defaults: ["wss://default.example"],
-      },
+      relayUrls: providerRelayUrls.slice(0, 3),
     });
 
     expect(transport).toHaveBeenCalledTimes(1);
     expect(result.completionReason).toBe("eose");
-    expect(result.attemptedRelayUrls).toEqual(["wss://hint.example", "wss://configured.example", "wss://default.example"]);
+    expect(result.attemptedRelayUrls).toEqual(providerRelayUrls.slice(0, 3));
   });
 
   it("retains first-attempt partial events when the one retry rejects", async () => {
     const firstEvent = event("first");
     const transport: jest.MockedFunction<DiscussionReadTransport> = jest
       .fn<ReturnType<DiscussionReadTransport>, Parameters<DiscussionReadTransport>>()
-      .mockResolvedValueOnce(completion([firstEvent], "idle-timeout", { first: ["wss://hint.example"] }))
+      .mockResolvedValueOnce(completion([firstEvent], "idle-timeout", { first: ["wss://provider-one.example"] }))
       .mockRejectedValueOnce(new Error("retry relay failed"));
 
     const result = await executeDiscussionRead(transport, {
       plan,
-      candidates: {
-        configured: ["wss://configured.example", "wss://configured-second.example", "wss://configured-third.example"],
-        defaults: [],
-      },
+      relayUrls: providerRelayUrls.slice(0, 4),
     });
 
     expect(transport).toHaveBeenCalledTimes(2);
     expect(result.events).toEqual([firstEvent]);
     expect(result.completionReason).toBe("idle-timeout");
     expect(result.attemptedRelayUrls).toEqual([
-      "wss://hint.example",
-      "wss://configured.example",
-      "wss://configured-second.example",
-      "wss://configured-third.example",
+      ...providerRelayUrls.slice(0, 4),
     ]);
   });
 
@@ -189,10 +180,7 @@ describe("executeDiscussionRead", () => {
 
     const result = await executeDiscussionRead(transport, {
       plan,
-      candidates: {
-        configured: ["wss://configured.example", "wss://configured-second.example"],
-        defaults: ["wss://default.example"],
-      },
+      relayUrls: providerRelayUrls.slice(0, 4),
     });
 
     expect(result.completionReason).toBe("eose");

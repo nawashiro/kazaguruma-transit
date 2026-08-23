@@ -4,6 +4,7 @@ import React from "react";
 import { useParams } from "next/navigation";
 import { DiscussionTabLayout } from "@/components/discussion/DiscussionTabLayout";
 import { DiscussionContentDataProvider } from "@/components/discussion/DiscussionContentDataProvider";
+import { DiscussionDataProvider } from "@/components/discussion/DiscussionDataProvider";
 
 /**
  * 会話詳細ページのレイアウト
@@ -19,10 +20,12 @@ export default function DiscussionLayout({
   const baseHref = `/discussions/${naddr}`;
 
   return (
-    <DiscussionTabLayout baseHref={baseHref}>
-      <DiscussionContentDataProvider>
-        {children}
-      </DiscussionContentDataProvider>
-    </DiscussionTabLayout>
+    <DiscussionDataProvider>
+      <DiscussionTabLayout baseHref={baseHref}>
+        <DiscussionContentDataProvider>
+          {children}
+        </DiscussionContentDataProvider>
+      </DiscussionTabLayout>
+    </DiscussionDataProvider>
   );
 }

@@ -36,7 +36,7 @@ jest.mock("@/lib/config/discussion-config", () => ({
   isDiscussionsEnabled: () => true,
   getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 500 }),
   getDiscussionReadStrategyConfig: () => ({
-    relayLimit: 3,
+
     idleTimeoutMs: 500,
     hardTimeoutMs: 1500,
     dedupWindowMs: 250,
@@ -120,6 +120,8 @@ describe("SettingsPage streaming discussions", () => {
   const withCompletion = (events: any[], completionReason: "eose" | "idle-timeout" | "hard-timeout" = "eose") => ({
     events,
     completionReason,
+    duplicateCount: 0,
+    elapsedMs: 0,
     attemptedRelayUrls: [],
     successfulEventRelayUrls: [],
     sourceRelayUrlsByEventId: {},

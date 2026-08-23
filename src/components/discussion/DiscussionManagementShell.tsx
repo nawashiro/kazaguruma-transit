@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { DiscussionManagementDataProvider } from "@/components/discussion/DiscussionManagementDataProvider";
 import { DiscussionTabLayout } from "@/components/discussion/DiscussionTabLayout";
+import { DiscussionDataProvider } from "@/components/discussion/DiscussionDataProvider";
 
 const MANAGEMENT_PATHS = new Set([
   "/discussions",
@@ -21,14 +22,16 @@ export function DiscussionManagementShell({
   if (!MANAGEMENT_PATHS.has(pathname)) return children;
 
   return (
-    <DiscussionTabLayout
-      baseHref="/discussions"
-      naddr={discussionListNaddr}
-      showNavigation={false}
-    >
-      <DiscussionManagementDataProvider>
-        {children}
-      </DiscussionManagementDataProvider>
-    </DiscussionTabLayout>
+    <DiscussionDataProvider discussionListNaddr={discussionListNaddr}>
+      <DiscussionTabLayout
+        baseHref="/discussions"
+        naddr={discussionListNaddr}
+        showNavigation={false}
+      >
+        <DiscussionManagementDataProvider>
+          {children}
+        </DiscussionManagementDataProvider>
+      </DiscussionTabLayout>
+    </DiscussionDataProvider>
   );
 }

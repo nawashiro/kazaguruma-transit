@@ -18,7 +18,6 @@ export interface DiscussionConfig {
 }
 
 export interface DiscussionReadStrategyConfig {
-  relayLimit: number;
   idleTimeoutMs: number;
   hardTimeoutMs: number;
   dedupWindowMs: number;
@@ -160,12 +159,6 @@ export function getDiscussionReadStrategyConfig(): DiscussionReadStrategyConfig 
   );
 
   return {
-    relayLimit: parseBoundedInteger(
-      process.env.NEXT_PUBLIC_DISCUSSION_READ_RELAY_LIMIT,
-      3,
-      1,
-      3
-    ),
     idleTimeoutMs,
     hardTimeoutMs: Math.max(configuredHardTimeoutMs, idleTimeoutMs + 1),
     dedupWindowMs: parseBoundedInteger(

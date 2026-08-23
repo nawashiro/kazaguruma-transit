@@ -12,7 +12,7 @@ const discussionEnvKeys = [
   "NEXT_PUBLIC_DISCUSSION_LIST_NADDR",
   "NEXT_PUBLIC_NOSTR_RELAYS",
   "NEXT_PUBLIC_NOSTR_TIMEOUT_MS",
-  "NEXT_PUBLIC_DISCUSSION_READ_RELAY_LIMIT",
+
   "NEXT_PUBLIC_DISCUSSION_READ_IDLE_TIMEOUT_MS",
   "NEXT_PUBLIC_DISCUSSION_READ_HARD_TIMEOUT_MS",
   "NEXT_PUBLIC_DISCUSSION_READ_DEDUP_WINDOW_MS",
@@ -71,21 +71,19 @@ describe("getDiscussionConfig", () => {
 });
 
 describe("getDiscussionReadStrategyConfig", () => {
-  it("bounds relay limits and falls back from invalid timeout values", async () => {
-    process.env.NEXT_PUBLIC_DISCUSSION_READ_RELAY_LIMIT = "99";
+  it("falls back from invalid timeout values", async () => {
     process.env.NEXT_PUBLIC_DISCUSSION_READ_IDLE_TIMEOUT_MS = "invalid";
     process.env.NEXT_PUBLIC_DISCUSSION_READ_HARD_TIMEOUT_MS = "1";
     const { getDiscussionReadStrategyConfig } = await import("../discussion-config");
     const config = getDiscussionReadStrategyConfig();
 
-    expect(config.relayLimit).toBe(3);
     expect(config.idleTimeoutMs).toBe(5000);
     expect(config.hardTimeoutMs).toBeGreaterThan(config.idleTimeoutMs);
   });
 
   it("calculates read strategy without decoding an invalid bus stop naddr", async () => {
     process.env.NEXT_PUBLIC_BUS_STOP_DISCUSSION_ID = "naddr1invalid";
-    process.env.NEXT_PUBLIC_DISCUSSION_READ_RELAY_LIMIT = "2";
+
     process.env.NEXT_PUBLIC_DISCUSSION_READ_IDLE_TIMEOUT_MS = "1500";
     process.env.NEXT_PUBLIC_DISCUSSION_READ_HARD_TIMEOUT_MS = "5000";
     process.env.NEXT_PUBLIC_DISCUSSION_READ_DEDUP_WINDOW_MS = "400";
@@ -94,7 +92,6 @@ describe("getDiscussionReadStrategyConfig", () => {
     const config = getDiscussionReadStrategyConfig();
 
     expect(config).toEqual({
-      relayLimit: 2,
       idleTimeoutMs: 1500,
       hardTimeoutMs: 5000,
       dedupWindowMs: 400,

@@ -44,7 +44,18 @@ describe("DiscussionManagementTabLayout", () => {
   beforeEach(() => {
     mockUserPubkey = null;
     mockUseDiscussionMeta.mockReturnValue(undefined);
-    mockQueryWithCompletion.mockReset().mockResolvedValue({ events: [] });
+    mockQueryWithCompletion.mockReset().mockResolvedValue({
+      events: [],
+      completionReason: "eose",
+      eventCount: 0,
+      elapsedMs: 0,
+      startedAt: 0,
+      lastEventAt: 0,
+      eoseReceived: true,
+      relayUrls: [],
+      duplicateCount: 0,
+      sourceRelayUrlsByEventId: {},
+    });
   });
 
   it("renders the shared management tabs as a tabs-box", () => {

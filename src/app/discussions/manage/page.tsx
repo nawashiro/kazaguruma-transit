@@ -266,11 +266,15 @@ export default function DiscussionManagePage() {
     (post) => resolveDiscussionReferences(post.event?.tags ?? []).references.length > 0,
   );
 
-  const pendingPosts = postsWithQTags.filter((post) => !post.approved);
+  const pendingPosts = postsWithQTags.filter(
+    (post) => !post.approved || post.approvalState === "unknown",
+  );
   const pendingPostCount = pendingPosts.filter(
     (post) => post.approvalState !== "unknown"
   ).length;
-  const approvedPosts = postsWithQTags.filter((post) => post.approved);
+  const approvedPosts = postsWithQTags.filter(
+    (post) => post.approved && post.approvalState !== "unknown",
+  );
 
   return (
     <div className="py-8">

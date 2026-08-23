@@ -1,10 +1,11 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 
 // Mock next/navigation
 const mockPathname = jest.fn();
 const mockParams = jest.fn();
+const mockUseDiscussionMeta = jest.fn();
 jest.mock("next/navigation", () => ({
   usePathname: () => mockPathname(),
   useParams: () => mockParams(),
@@ -23,7 +24,7 @@ jest.mock("@/lib/config/discussion-config", () => ({
     defaultTimeout: 500,
   })),
   getDiscussionReadStrategyConfig: jest.fn(() => ({
-    relayLimit: 3,
+
     idleTimeoutMs: 500,
     hardTimeoutMs: 1500,
     dedupWindowMs: 250,
@@ -55,6 +56,10 @@ jest.mock("@/utils/logger", () => ({
     info: jest.fn(),
     debug: jest.fn(),
   },
+}));
+
+jest.mock("@/components/discussion/DiscussionDataProvider", () => ({
+  useDiscussionMeta: () => mockUseDiscussionMeta(),
 }));
 
 // Import after mocking
@@ -96,11 +101,14 @@ describe("DiscussionTabLayout", () => {
     jest.clearAllMocks();
     mockPathname.mockReturnValue("/discussions/naddr123");
     mockParams.mockReturnValue({ naddr: "naddr123" });
+    mockUseDiscussionMeta.mockReturnValue(undefined);
     jest.mocked(extractDiscussionFromNaddr).mockReturnValue(null);
     jest.mocked(parseDiscussionEvent).mockReturnValue(null);
     jest.mocked(executeDiscussionRead).mockResolvedValue({
       events: [],
       completionReason: "eose",
+      duplicateCount: 0,
+      elapsedMs: 0,
       attemptedRelayUrls: [],
       successfulEventRelayUrls: [],
       sourceRelayUrlsByEventId: {},
@@ -166,6 +174,13 @@ describe("DiscussionTabLayout", () => {
 
   it("does not expose the basic information tab to a non-creator", () => {
       mockPathname.mockReturnValue("/discussions/naddr123/edit");
+      mockUseDiscussionMeta.mockReturnValue({
+        discussion: discussionMetadata,
+        isLoading: false,
+        error: null,
+        completionReason: "eose",
+        reload: jest.fn(),
+      });
 
       render(
         <DiscussionTabLayout baseHref="/discussions/naddr123">
@@ -292,12 +307,13 @@ describe("DiscussionTabLayout", () => {
   });
 
   describe("renders children", () => {
-    it("loads metadata through the bounded discussion read executor", async () => {
-      jest.mocked(extractDiscussionFromNaddr).mockReturnValue({
-        discussionId: "34550:author:topic",
-        authorPubkey: "author",
-        dTag: "topic",
-        relays: ["wss://hint.example"],
+    it("reads metadata from the shared provider instead of starting a network read", async () => {
+      mockUseDiscussionMeta.mockReturnValue({
+        discussion: discussionMetadata,
+        isLoading: false,
+        error: null,
+        completionReason: "eose",
+        reload: jest.fn(),
       });
 
       render(
@@ -306,40 +322,20 @@ describe("DiscussionTabLayout", () => {
         </DiscussionTabLayout>,
       );
 
-      await waitFor(() => expect(executeDiscussionRead).toHaveBeenCalled());
-
-      expect(executeDiscussionRead).toHaveBeenCalledWith(
-        expect.any(Object),
-        expect.objectContaining({
-          plan: expect.objectContaining({
-            target: "discussion-meta",
-            relayHints: ["wss://hint.example"],
-          }),
-          candidates: expect.objectContaining({
-            configured: ["wss://relay.example.com"],
-          }),
-          onAttemptComplete: expect.any(Function),
-        }),
-      );
+      expect(screen.getByText("ready")).toBeInTheDocument();
+      expect(executeDiscussionRead).not.toHaveBeenCalled();
     });
 
     it("renders completed metadata role guidance as a soft status banner", async () => {
-      jest.mocked(extractDiscussionFromNaddr).mockReturnValue({
-        discussionId: "34550:author-pubkey:topic",
-        authorPubkey: "author-pubkey",
-        dTag: "topic",
-        relays: ["wss://hint.example"],
-      });
-      jest.mocked(parseDiscussionEvent).mockReturnValue(discussionMetadata);
-      jest.mocked(executeDiscussionRead).mockResolvedValue({
-        events: [discussionMetadata.event],
-        completionReason: "eose",
-        attemptedRelayUrls: ["wss://relay.example.com"],
-        successfulEventRelayUrls: ["wss://relay.example.com"],
-        sourceRelayUrlsByEventId: {
-          [discussionMetadata.event.id]: ["wss://relay.example.com"],
+      mockUseDiscussionMeta.mockReturnValue({
+        discussion: {
+          ...discussionMetadata,
+          authorPubkey: "author-pubkey",
         },
-        attempts: [],
+        isLoading: false,
+        error: null,
+        completionReason: "eose",
+        reload: jest.fn(),
       });
 
       render(
@@ -355,9 +351,17 @@ describe("DiscussionTabLayout", () => {
       expect(
         screen.getByText("ユーザーとして、新しい意見を投稿できます。"),
       ).toBeInTheDocument();
+      expect(executeDiscussionRead).not.toHaveBeenCalled();
     });
 
     it("不正なNADDRでは読み込みを終了してエラー状態にする", async () => {
+      mockUseDiscussionMeta.mockReturnValue({
+        discussion: null,
+        isLoading: false,
+        error: "会話情報の指定が正しくありません。",
+        completionReason: "cancelled",
+        reload: jest.fn(),
+      });
       render(
         <DiscussionTabLayout
           baseHref="/discussions/moderator"

@@ -9,19 +9,14 @@
 ```ts
 interface ExecuteDiscussionReadInput {
   plan: DiscussionReadPlan;
-  candidates: {
-    hints?: string[];
-    recommended?: string[];
-    successful?: string[];
-    configured: string[];
-    defaults: string[];
-  };
+  relayUrls: string[];
   onAttemptComplete?: (attempt: RelayAttempt) => void;
 }
 ```
 
 - 呼出側は正規化済みfilterだけを渡す。
-- executorは候補を順位付けする。
+- 呼出側は利用するrelay URLを優先順に決定して渡す。
+- executorはrelay URLの意味や候補源を解釈しない。
 - executorは初回と必要時の一度だけのretryを実行する。
 - `onAttemptComplete`は各attemptの完了時に呼ぶ。
 
@@ -31,6 +26,8 @@ interface ExecuteDiscussionReadInput {
 interface DiscussionReadResult {
   events: NostrEventDTO[];
   completionReason: CompletionReason;
+  duplicateCount: number;
+  elapsedMs: number;
   attemptedRelayUrls: string[];
   successfulEventRelayUrls: string[];
   sourceRelayUrlsByEventId: Record<string, string[]>;
@@ -39,15 +36,17 @@ interface DiscussionReadResult {
 ```
 
 - eventsはevent IDで重複排除する。
+- duplicateCountは全attemptの重複配送数を合計する。
+- elapsedMsは全attemptの経過時間を合計する。
 - source relayはeventを配送したrelayだけを含む。
 - retryがEOSEなら、最終`completionReason`は`eose`になる。
 
 ## Relay試行規則
 
-1. `rankRelayCandidates()`で全候補を作る。
+1. Providerが渡したrelay URLの順序を保持する。空配列の場合も一つの明示的なattemptとして扱い、executor自身はrelayを追加しない。transport側の設定relay pool利用は`NostrService`の契約に従う。
 2. 先頭の最大3件でfirst attemptを実行する。
 3. EOSEで終わった場合は終了する。
-4. 非EOSEで未試行候補がある場合、次の最大3件で一度だけretryする。
+4. 非EOSEで未試行relayがある場合、次の最大3件で一度だけretryする。
 5. retry後は自動拡大しない。
 
 ## Multi-filter規則

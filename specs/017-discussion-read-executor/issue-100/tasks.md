@@ -116,3 +116,5 @@
 - base: `dev`
 - initial head: `ec664bafa01ddb426f22e3e5c73cc9ae9a508200`
 - initial CI: Quality Gate `pending`（run `32632862110`）
+- final head: `1c9bac61a7375aed4a9aacb6a0f9a2cf50811f9a`
+- final CI at the recorded head: Quality Gate `pass`（run `32632908918`）

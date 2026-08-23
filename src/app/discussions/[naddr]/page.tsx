@@ -16,6 +16,7 @@ import {
 } from "@/lib/config/discussion-config";
 import { PostPreview } from "@/components/discussion/PostPreview";
 import { EvaluationComponent } from "@/components/discussion/EvaluationComponent";
+import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
 import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import { useDiscussionContentData } from "@/components/discussion/DiscussionContentDataProvider";
 import { createNostrService } from "@/lib/nostr/nostr-service";
@@ -103,6 +104,8 @@ export default function DiscussionDetailPage() {
     posts,
     isLoading: isContentLoading,
     error: contentLoadError,
+    completionReason: contentCompletionReason,
+    reload: reloadContent,
     addPost,
   } = useDiscussionContentData();
   const isPostsLoading = isContentLoading || isEvaluationsLoading;
@@ -521,6 +524,13 @@ export default function DiscussionDetailPage() {
     return (
       <div className="py-8">
       {/* タブナビゲーションはlayout.tsxに移動 */}
+
+      <DiscussionReadStatus
+        isLoading={isContentLoading}
+        completionReason={contentCompletionReason}
+        hasData={posts.length > 0}
+        onReload={() => void reloadContent()}
+      />
 
       <div className="space-y-8">
           <div className="space-y-6">

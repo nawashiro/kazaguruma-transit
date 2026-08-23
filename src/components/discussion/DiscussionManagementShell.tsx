@@ -22,7 +22,10 @@ export function DiscussionManagementShell({
   if (!MANAGEMENT_PATHS.has(pathname)) return children;
 
   return (
-    <DiscussionDataProvider discussionListNaddr={discussionListNaddr}>
+    <DiscussionDataProvider
+      discussionListNaddr={discussionListNaddr}
+      scope="management"
+    >
       <DiscussionTabLayout
         baseHref="/discussions"
         naddr={discussionListNaddr}

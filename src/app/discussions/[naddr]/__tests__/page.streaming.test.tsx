@@ -1,5 +1,5 @@
 import React from "react";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionDetailPage from "../page";
 import type { NostrEventDTO } from "@/lib/nostr/discussion-ndk-gateway";
@@ -328,6 +328,8 @@ describe("DiscussionDetailPage streaming", () => {
       posts: [],
       isLoading: false,
       error: null,
+      completionReason: null,
+      reload: jest.fn(),
       addPost: jest.fn(),
     });
   });
@@ -535,6 +537,55 @@ describe("DiscussionDetailPage streaming", () => {
 
     expect(screen.queryByText("会話が見つかりません")).not.toBeInTheDocument();
     expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
+  });
+
+  it("shows a reload action while preserving posts from a partial content read", async () => {
+    const reload = jest.fn();
+    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
+      withDiscussionReadResult([]),
+    );
+    mockUseDiscussionContentData.mockReturnValue({
+      posts: [{ id: "post-1", approved: true }],
+      isLoading: false,
+      error: null,
+      completionReason: "idle-timeout" as const,
+      reload,
+      addPost: jest.fn(),
+    });
+
+    render(<DiscussionDetailPage />);
+
+    const statusText = await screen.findByText(
+      "一部のrelayからの取得が完了していません。表示内容は暫定です。",
+    );
+    expect(statusText.closest('[role="status"]')).not.toBeNull();
+    expect(screen.getByText("post content post-1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not show a content reload status after an EOSE completion", async () => {
+    const reload = jest.fn();
+    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
+      withDiscussionReadResult([]),
+    );
+    mockUseDiscussionContentData.mockReturnValue({
+      posts: [{ id: "post-1", approved: true }],
+      isLoading: false,
+      error: null,
+      completionReason: "eose" as const,
+      reload,
+      addPost: jest.fn(),
+    });
+
+    render(<DiscussionDetailPage />);
+
+    expect(await screen.findByText("post content post-1")).toBeInTheDocument();
+    expect(
+      screen.queryByText("一部のrelayからの取得が完了していません。表示内容は暫定です。"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "再読み込み" })).not.toBeInTheDocument();
   });
 
   it("shows timeout warning as a polite soft status instead of not-found", async () => {

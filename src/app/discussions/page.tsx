@@ -24,6 +24,7 @@ export default function DiscussionsPage() {
     completionReason,
     referencedDiscussionCompletionReason,
     moderationError: loadError,
+    reloadModeration,
   } = useDiscussionManagementData();
   const visibleDiscussionReferences = useMemo(
     () =>
@@ -90,12 +91,26 @@ export default function DiscussionsPage() {
               ) : loadError ? (
                 <div className="alert alert-error alert-soft text-base-content!" role="status" aria-live="polite">
                   <span>{loadError}</span>
+                  <button
+                    type="button"
+                    className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                    onClick={() => void reloadModeration()}
+                  >
+                    <span className="ruby-text">再読み込み</span>
+                  </button>
                 </div>
               ) : discussions.length > 0 ? (
                 <>
                   {isPartialRead && (
-                    <div className="alert alert-warning alert-soft text-base-content! mb-4" role="status">
+                    <div className="alert alert-warning alert-soft text-base-content! mb-4" role="status" aria-live="polite">
                       <span>会話一覧を完全に取得できませんでした。再読み込みしてください。</span>
+                      <button
+                        type="button"
+                        className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                        onClick={() => void reloadModeration()}
+                      >
+                        <span className="ruby-text">再読み込み</span>
+                      </button>
                     </div>
                   )}
                   <div className="space-y-4">
@@ -150,8 +165,15 @@ export default function DiscussionsPage() {
                   </div>
                 </>
               ) : isPartialRead ? (
-                <div className="alert alert-warning alert-soft text-base-content!" role="status">
+                <div className="alert alert-warning alert-soft text-base-content!" role="status" aria-live="polite">
                   <span>会話一覧を完全に取得できませんでした。再読み込みしてください。</span>
+                  <button
+                    type="button"
+                    className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                    onClick={() => void reloadModeration()}
+                  >
+                    <span className="ruby-text">再読み込み</span>
+                  </button>
                 </div>
               ) : (
                 <div className="py-8">

@@ -30,28 +30,6 @@ const createDiscussionListingRequestMock = jest.fn(() => ({
   ],
   created_at: 1,
 }));
-const createModeratorPromotionRequestMock = jest.fn(() => ({
-  kind: 1111,
-  content: "",
-  tags: [
-    ["a", "34550:f:test-discussion"],
-    ["p", "f".repeat(64)],
-    ["t", "moderator-request"],
-  ],
-  created_at: 1,
-}));
-const createModeratorDecisionDraftMock = jest.fn(() => ({
-  kind: 34550,
-  content: "Test Description",
-  tags: [
-    ["d", "test-discussion"],
-    ["name", "Test Discussion"],
-    ["description", "Test Description"],
-    ["p", "e".repeat(64), "", "moderator"],
-  ],
-  created_at: 11,
-  pubkey: "f".repeat(64),
-}));
 const mockUseDiscussionMeta = jest.fn();
 
 jest.mock("next/navigation", () => ({
@@ -111,25 +89,6 @@ jest.mock("@/lib/nostr/nostr-service", () => ({
             sig: "s".repeat(128),
           },
         ]);
-      } else if (
-        kinds.includes(1111) &&
-        filters[0]?.["#t"]?.includes("moderator-request")
-      ) {
-        handlers.onEose?.([
-          {
-            id: "promotion-request-1",
-            pubkey: "e".repeat(64),
-            kind: 1111,
-            created_at: 2,
-            tags: [
-              ["a", "34550:f:test-discussion"],
-              ["p", "f".repeat(64)],
-              ["t", "moderator-request"],
-            ],
-            content: "",
-            sig: "s".repeat(128),
-          },
-        ]);
       } else {
         handlers.onEose?.([]);
       }
@@ -137,15 +96,6 @@ jest.mock("@/lib/nostr/nostr-service", () => ({
     },
     publishSignedEvent: jest.requireMock("@/lib/nostr/nostr-service").__mock
       .publishSignedEvent,
-  }),
-}));
-
-jest.mock("@/lib/nostr/discussion-ndk-gateway", () => ({
-  createDiscussionNdkGateway: () => ({
-    createModeratorDecisionDraft: (...args: unknown[]) =>
-      (createModeratorDecisionDraftMock as (...mockArgs: unknown[]) => unknown)(
-        ...args,
-      ),
   }),
 }));
 
@@ -181,12 +131,6 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   isValidNpub: () => true,
   npubToHex: () => "f".repeat(64),
   getAdminPubkeyHex: () => "a".repeat(64),
-  formatRelativeTime: () => "now",
-}));
-
-jest.mock("@/lib/nostr/mnemonic-utils", () => ({
-  formatBip39JapaneseMnemonicPreviewFromPubkey: () =>
-    "あいこくしん あいさつ あいだ",
 }));
 
 jest.mock("@/lib/discussion/user-creation-flow", () => ({
@@ -194,10 +138,6 @@ jest.mock("@/lib/discussion/user-creation-flow", () => ({
     (createDiscussionListingRequestMock as (...mockArgs: unknown[]) => unknown)(
       ...args,
     ),
-  createModeratorPromotionRequestEvent: (...args: unknown[]) =>
-    (
-      createModeratorPromotionRequestMock as (...mockArgs: unknown[]) => unknown
-    )(...args),
 }));
 
 describe("DiscussionEditPage listing request", () => {
@@ -305,10 +245,14 @@ describe("DiscussionEditPage listing request", () => {
     render(<DiscussionEditPage />);
 
     await screen.findByRole("button", { name: "変更を保存" });
-    expect(screen.queryByText("モデレーター管理")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "承認" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "モデレーター管理" })).not.toBeInTheDocument();
+    expect(screen.queryByText("現在のモデレーター（Mnemonic）")).not.toBeInTheDocument();
+    expect(screen.queryByText("昇格申請ユーザー一覧")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("申請理由（任意）")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "モデレーター昇格を申請" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "昇格申請を再取得" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "承認" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "却下" })).not.toBeInTheDocument();
   });
 
   it("does not show current moderators in basic information", async () => {

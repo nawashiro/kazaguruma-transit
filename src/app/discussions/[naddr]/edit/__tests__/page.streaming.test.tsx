@@ -63,19 +63,6 @@ jest.mock("@/lib/nostr/nostr-service", () => {
 
 const { __mock: serviceMock } = jest.requireMock("@/lib/nostr/nostr-service");
 
-jest.mock("@/lib/nostr/discussion-ndk-gateway", () => ({
-  createDiscussionNdkGateway: () => ({ queryWithCompletion: jest.fn() }),
-}));
-
-jest.mock("@/lib/nostr/nostr-read-executor", () => {
-  const executeNostrRead = jest.fn();
-  return { executeNostrRead, __mock: { executeNostrRead } };
-});
-
-const { __mock: discussionReadExecutorMock } = jest.requireMock(
-  "@/lib/nostr/nostr-read-executor",
-);
-
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseDiscussionEvent: jest.fn((event) => ({
     id: `34550:${event.pubkey}:${event.tags?.find((t: string[]) => t[0] === "d")?.[1] || ""}`,
@@ -90,7 +77,6 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   isValidNpub: () => true,
   npubToHex: (npub: string) => npub,
   getAdminPubkeyHex: () => "a".repeat(64),
-  formatRelativeTime: () => "now",
 }));
 
 jest.mock("@/components/ui/Button", () => {
@@ -183,16 +169,6 @@ describe("DiscussionEditPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseDiscussionDetail.mockReturnValue(createDetailModel());
-    discussionReadExecutorMock.executeNostrRead.mockResolvedValue({
-      events: [promotionRequestEvent],
-      completionReason: "eose",
-      duplicateCount: 0,
-      elapsedMs: 0,
-      attemptedRelayUrls: [],
-      successfulEventRelayUrls: [],
-      sourceRelayUrlsByEventId: {},
-      attempts: [],
-    });
     const layoutDiscussion: Discussion = {
       id: "34550:author:demo",
       title: "Edit Me",
@@ -224,45 +200,34 @@ describe("DiscussionEditPage streaming", () => {
     });
   });
 
-  it("uses promotion requests from the detail snapshot without a page-owned read", async () => {
+  it("does not render moderator-management controls from promotion requests", async () => {
     mockUseDiscussionDetail.mockReturnValue(createDetailModel());
     render(<DiscussionEditPage />);
 
-    expect(discussionReadExecutorMock.executeNostrRead).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(screen.getByLabelText("タイトル *")).toHaveValue("Edit Me")
     );
-    expect(screen.getByText("昇格申請ユーザー一覧")).toBeInTheDocument();
-    expect(screen.getByText(/昇格を希望します/)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "モデレーター管理" })).not.toBeInTheDocument();
+    expect(screen.queryByText("現在のモデレーター（Mnemonic）")).not.toBeInTheDocument();
+    expect(screen.queryByText("昇格申請ユーザー一覧")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("申請理由（任意）")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "モデレーター昇格を申請" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "昇格申請を再取得" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "承認" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "却下" })).not.toBeInTheDocument();
     expect(serviceMock.streamEventsOnEvent).not.toHaveBeenCalled();
     expect(serviceMock.getDiscussions).not.toHaveBeenCalled();
   });
 
-  it("keeps a partial detail snapshot provisional without a local promotion-request retry", async () => {
+  it("renders the basic information form for a partial detail snapshot", async () => {
     mockUseDiscussionDetail.mockReturnValue(
       createDetailModel({ state: "partial" }),
     );
-    discussionReadExecutorMock.executeNostrRead.mockReset();
 
     render(<DiscussionEditPage />);
 
-    expect(discussionReadExecutorMock.executeNostrRead).not.toHaveBeenCalled();
-    const status = await screen.findByRole("status", {
-      name: "昇格申請の取得は完了していません",
-    });
-    expect(status).toHaveAttribute("aria-live", "polite");
-    expect(status).toHaveClass(
-      "alert",
-      "alert-warning",
-      "alert-soft",
-      "text-base-content!",
-    );
-    expect(status).toHaveTextContent(
-      "昇格申請の取得が完了していないため、申請がないとは断定できません。",
-    );
-    expect(screen.queryByText("申請はまだありません。")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "昇格申請を再取得" })).not.toBeInTheDocument();
-    expect(discussionReadExecutorMock.executeNostrRead).not.toHaveBeenCalled();
+    expect(await screen.findByLabelText("タイトル *")).toHaveValue("Edit Me");
+    expect(screen.getByRole("heading", { name: "危険な操作" })).toBeInTheDocument();
   });
 
   it("renders discussion timeout as a polite soft status with reload", async () => {
@@ -295,9 +260,6 @@ describe("DiscussionEditPage streaming", () => {
   });
 
   it("does not show not-found while the layout is still loading", () => {
-    discussionReadExecutorMock.executeNostrRead.mockImplementationOnce(
-      () => new Promise(() => undefined),
-    );
     mockUseDiscussionMeta.mockReturnValue({
       discussion: null,
       isLoading: true,

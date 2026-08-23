@@ -22,7 +22,6 @@ import {
 
 import {
   buildDisabledActionState,
-  DisabledReasonText,
   PermissionNotice,
 } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
@@ -30,7 +29,6 @@ import {
   isValidNpub,
   npubToHex,
   getAdminPubkeyHex,
-  formatRelativeTime,
 } from "@/lib/nostr/nostr-utils";
 import {
   extractDiscussionFromNaddr,
@@ -38,37 +36,22 @@ import {
 } from "@/lib/nostr/naddr-utils";
 import {
   createDiscussionListingRequest,
-  createModeratorPromotionRequestEvent,
 } from "@/lib/discussion/user-creation-flow";
-import { formatBip39JapaneseMnemonicPreviewFromPubkey } from "@/lib/nostr/mnemonic-utils";
 import { UserIdentity } from "@/components/ui/UserIdentity";
-import {
-  createDiscussionNdkGateway,
-  type ModeratorDecision,
-} from "@/lib/nostr/discussion-ndk-gateway";
 import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import type { Event } from "@/lib/nostr/nostr-service";
 import { buildLoginRoute } from "@/lib/navigation/auth-route";
 
 // const ADMIN_PUBKEY = getAdminPubkeyHex(); // eslint-disable-line @typescript-eslint/no-unused-vars
 const nostrServiceConfig = getNostrServiceConfig();
 const nostrService = createNostrService(nostrServiceConfig);
-const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 
 interface EditFormData {
   title: string;
   description: string;
   moderators: string[];
-}
-
-interface ModeratorPromotionRequest {
-  id: string;
-  applicantPubkey: string;
-  createdAt: number;
-  event: Event;
 }
 
 export default function DiscussionEditPage() {
@@ -114,19 +97,11 @@ export default function DiscussionEditPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRequestingListing, setIsRequestingListing] = useState(false);
-  const [isRequestingPromotion, setIsRequestingPromotion] = useState(false);
-  const [decidingPromotionIds, setDecidingPromotionIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [promotionRequestMessage, setPromotionRequestMessage] = useState("");
-  const [localPromotionRequests, setLocalPromotionRequests] = useState<
-    ModeratorPromotionRequest[]
-  >([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [successType, setSuccessType] = useState<
-    "save" | "listing" | "promotion" | null
+    "save" | "listing" | null
   >(null);
 
   const discussionInfo = useMemo(() => {
@@ -153,21 +128,6 @@ export default function DiscussionEditPage() {
       setDiscussion(null);
     }
   }, [isDiscussionLoading, layoutDiscussion]);
-
-  const promotionRequests = useMemo(() => {
-    const snapshotRequests = detail.snapshot?.moderatorRequests.map((request) => ({
-      id: request.id,
-      applicantPubkey: request.applicantPubkey,
-      createdAt: request.createdAt,
-      event: request.event,
-    })) ?? [];
-    const byId = new Map<string, ModeratorPromotionRequest>();
-    [...snapshotRequests, ...localPromotionRequests].forEach((request) => {
-      byId.set(request.id, request);
-    });
-    return Array.from(byId.values()).sort((left, right) => right.createdAt - left.createdAt);
-  }, [detail.snapshot?.moderatorRequests, localPromotionRequests]);
-  const isPromotionRequestReadComplete = hasDetailSession && detail.state === "ready";
 
   const handleSave = async () => {
     if (!user.isLoggedIn) {
@@ -345,54 +305,6 @@ export default function DiscussionEditPage() {
     }
   };
 
-  const handleRequestPromotion = async () => {
-    if (!user.isLoggedIn || !discussion || !user.pubkey) {
-      if (!user.isLoggedIn) {
-        router.push(buildLoginRoute(`/discussions/${naddrParam}/edit`));
-      }
-      return;
-    }
-
-    setIsRequestingPromotion(true);
-    setErrors([]);
-    setSuccessMessage("");
-    setSuccessType(null);
-    try {
-      const eventTemplate = createModeratorPromotionRequestEvent(
-        discussion.id,
-        discussion.authorPubkey,
-        user.pubkey,
-        promotionRequestMessage,
-      );
-
-      const signedEvent = await signEvent(
-        eventTemplate as unknown as Record<string, unknown>,
-      );
-      const published = await nostrService.publishSignedEvent(signedEvent);
-      if (!published) {
-        throw new Error("Failed to publish moderator promotion request");
-      }
-
-      setLocalPromotionRequests((prev) => [
-        {
-          id: signedEvent.id,
-          applicantPubkey: user.pubkey || "",
-          createdAt: signedEvent.created_at,
-          event: signedEvent,
-        },
-        ...prev.filter((request) => request.id !== signedEvent.id),
-      ]);
-      setPromotionRequestMessage("");
-      setSuccessMessage("モデレーター昇格申請を送信しました");
-      setSuccessType("promotion");
-    } catch (error) {
-      logger.error("Failed to request moderator promotion:", error);
-      setErrors(["モデレーター昇格申請の送信に失敗しました"]);
-    } finally {
-      setIsRequestingPromotion(false);
-    }
-  };
-
   const addModerator = () => {
     const trimmedInput = moderatorInput.trim();
     if (trimmedInput && !formData.moderators.includes(trimmedInput)) {
@@ -409,76 +321,6 @@ export default function DiscussionEditPage() {
       ...prev,
       moderators: prev.moderators.filter((m) => m !== npub),
     }));
-  };
-
-  const handleModerationDecision = async (
-    request: ModeratorPromotionRequest,
-    decision: ModeratorDecision,
-  ) => {
-    if (!user.isLoggedIn) {
-      router.push(buildLoginRoute(`/discussions/${naddrParam}/edit`));
-      return;
-    }
-    if (!discussion || !user.pubkey || !isAuthor) {
-      return;
-    }
-
-    setDecidingPromotionIds((prev) => new Set(prev).add(request.id));
-    try {
-      const eventTemplate = discussionGateway.createModeratorDecisionDraft({
-        discussionEvent: discussion.event,
-        applicantPubkey: request.applicantPubkey,
-        decision,
-        actorPubkey: user.pubkey,
-      });
-
-      const signedEvent = await signEvent(
-        eventTemplate as unknown as Record<string, unknown>,
-      );
-      const published = await nostrService.publishSignedEvent(signedEvent);
-      if (!published) {
-        throw new Error("Failed to publish moderator decision");
-      }
-
-      setDiscussion((prev) => {
-        if (!prev) return prev;
-        const hasApplicant = prev.moderators.some(
-          (moderator) => moderator.pubkey === request.applicantPubkey,
-        );
-        const nextModerators =
-          decision === "approved"
-            ? hasApplicant
-              ? prev.moderators
-              : [...prev.moderators, { pubkey: request.applicantPubkey }]
-            : prev.moderators.filter(
-              (moderator) => moderator.pubkey !== request.applicantPubkey,
-            );
-
-        return {
-          ...prev,
-          moderators: nextModerators,
-          event: {
-            ...signedEvent,
-          },
-        };
-      });
-
-      setSuccessMessage(
-        decision === "approved"
-          ? "モデレーター昇格を承認しました"
-          : "モデレーター昇格を却下しました",
-      );
-      setSuccessType("promotion");
-    } catch (error) {
-      logger.error("Failed to decide moderator promotion:", error);
-      setErrors(["モデレーター昇格審査に失敗しました"]);
-    } finally {
-      setDecidingPromotionIds((prev) => {
-        const next = new Set(prev);
-        next.delete(request.id);
-        return next;
-      });
-    }
   };
 
   // 権限チェック
@@ -577,18 +419,6 @@ export default function DiscussionEditPage() {
   const editPermissionReason = !user.isLoggedIn
     ? "編集操作にはログインが必要です。"
     : "会話作成者のみ編集できます。";
-  const isCurrentModerator = Boolean(
-    user.pubkey &&
-    discussion.moderators.some((moderator) => moderator.pubkey === user.pubkey),
-  );
-  const canRequestPromotion = Boolean(
-    user.isLoggedIn && !isAuthor && !isCurrentModerator,
-  );
-  const requestPromotionReason = !user.isLoggedIn
-    ? "昇格申請にはログインが必要です。"
-    : isAuthor
-      ? "会話作成者は昇格申請の対象ではありません。"
-      : "すでにモデレーターです。";
 
   if (!hasEditPermission) {
     return (
@@ -834,19 +664,6 @@ export default function DiscussionEditPage() {
                     </div>
                   </section>
 
-                  {!isPromotionRequestReadComplete && !isDiscussionLoading && (
-                    <div
-                      className="alert alert-warning alert-soft text-base-content!"
-                      role="status"
-                      aria-live="polite"
-                      aria-label="昇格申請の取得は完了していません"
-                    >
-                      <span className="ruby-text">
-                        昇格申請の取得が完了していないため、申請がないとは断定できません。
-                      </span>
-                    </div>
-                  )}
-
                   <section
                     aria-labelledby="dangerous-actions-title"
                     className="space-y-3 border-t border-base-300 pt-5"
@@ -868,173 +685,6 @@ export default function DiscussionEditPage() {
                     </button>
                   </section>
 
-                  {isPromotionRequestReadComplete && promotionRequests.length > 0 && discussion && (
-                    <section aria-labelledby="moderator-section-title">
-                      <h3
-                        id="moderator-section-title"
-                        className="text-lg font-semibold ruby-text"
-                      >
-                        モデレーター管理
-                      </h3>
-                      <div>
-                        <p className="text-base text-base-content mb-2 ruby-text">
-                          現在のモデレーター（Mnemonic）
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {discussion!.moderators.length > 0 ? (
-                            discussion!.moderators.map((moderator) => (
-                              <span
-                                key={moderator.pubkey}
-                                className="badge badge-outline"
-                              >
-                                {formatBip39JapaneseMnemonicPreviewFromPubkey(
-                                  moderator.pubkey,
-                                )}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-base text-base-content ruby-text">
-                              モデレーターは未設定です。
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-base text-base-content mb-2 ruby-text">
-                          モデレーター昇格申請
-                        </p>
-                        <textarea
-                          value={promotionRequestMessage}
-                          onChange={(e) =>
-                            setPromotionRequestMessage(e.target.value)
-                          }
-                          className="textarea w-full h-24 mb-2"
-                          placeholder="申請理由（任意）"
-                          disabled={isRequestingPromotion}
-                        />
-                        <button
-                          className="btn text-base btn-outline rounded-full dark:rounded-sm"
-                          onClick={handleRequestPromotion}
-                          disabled={
-                            isRequestingPromotion || !canRequestPromotion
-                          }
-                        >
-                          <span className="ruby-text">
-                            {isRequestingPromotion
-                              ? "申請中..."
-                              : "モデレーター昇格を申請"}
-                          </span>
-                        </button>
-                        <PermissionNotice
-                          state={buildDisabledActionState(
-                            canRequestPromotion,
-                            requestPromotionReason,
-                          )}
-                          requiresLogin={false}
-                          onLogin={() =>
-                            router.push(
-                              buildLoginRoute(`/discussions/${naddrParam}/edit`),
-                            )
-                          }
-                        />
-                      </div>
-
-                      <div>
-                        <p className="text-base text-base-content mb-2 ruby-text">
-                          昇格申請ユーザー一覧
-                        </p>
-                        {promotionRequests.length === 0 ? (
-                          <p className="text-base text-base-content ruby-text">
-                            申請はまだありません。
-                          </p>
-                        ) : (
-                          <div className="space-y-2">
-                            {promotionRequests.map((request) => (
-                              <div
-                                key={request.id}
-                                className="p-3 border border-base-300 rounded-lg"
-                              >
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="badge badge-outline">
-                                    {formatBip39JapaneseMnemonicPreviewFromPubkey(
-                                      request.applicantPubkey,
-                                    )}
-                                  </span>
-                                  <span className="text-base text-base-content">
-                                    {formatRelativeTime(request.createdAt)}
-                                  </span>
-                                  <span
-                                    className={`badge ${discussion!.moderators.some(
-                                      (moderator) =>
-                                        moderator.pubkey ===
-                                        request.applicantPubkey,
-                                    )
-                                        ? "badge-success"
-                                        : "badge-ghost"
-                                      }`}
-                                  >
-                                    {discussion!.moderators.some(
-                                      (moderator) =>
-                                        moderator.pubkey ===
-                                        request.applicantPubkey,
-                                    )
-                                      ? "approved"
-                                      : "unapproved"}
-                                  </span>
-                                </div>
-                                {request.event.content && (
-                                  <p className="mt-2 text-base text-base-content ruby-text">
-                                    {request.event.content}
-                                  </p>
-                                )}
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  <button
-                                    type="button"
-                                    className="btn text-base btn-primary rounded-full dark:rounded-sm"
-                                    onClick={() =>
-                                      handleModerationDecision(
-                                        request,
-                                        "approved",
-                                      )
-                                    }
-                                    disabled={
-                                      !isAuthor ||
-                                      decidingPromotionIds.has(request.id)
-                                    }
-                                  >
-                                    <span className="ruby-text">承認</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn text-base btn-outline rounded-full dark:rounded-sm"
-                                    onClick={() =>
-                                      handleModerationDecision(
-                                        request,
-                                        "unapproved",
-                                      )
-                                    }
-                                    disabled={
-                                      !isAuthor ||
-                                      decidingPromotionIds.has(request.id)
-                                    }
-                                  >
-                                    <span className="ruby-text">却下</span>
-                                  </button>
-                                </div>
-                                <DisabledReasonText
-                                  state={buildDisabledActionState(
-                                    Boolean(isAuthor),
-                                    "昇格審査は会話作成者のみ操作できます。",
-                                  )}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </section>
-                  )}
                 </div>
               </div>
             </div>

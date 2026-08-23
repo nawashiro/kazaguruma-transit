@@ -161,6 +161,23 @@ function SharedDataProbe() {
   );
 }
 
+function DetailContentProbe() {
+  const content = useDiscussionContentData();
+  return (
+    <div>
+      <span data-testid="detail-content-completion">
+        {content.completionReason ?? "none"}
+      </span>
+      <span data-testid="detail-content-posts">
+        {content.posts.map((post) => post.id).join(",")}
+      </span>
+      <button type="button" onClick={() => void content.reload()}>
+        reload-detail-content
+      </button>
+    </div>
+  );
+}
+
 function ActionProbe() {
   const content = useDiscussionContentData();
   const localPost: DiscussionPost = {
@@ -507,7 +524,7 @@ describe("DiscussionDataProvider", () => {
   it.each([
     "/discussions/naddr-test/moderators",
     "/discussions/naddr-test/edit",
-  ])("does not load detail content on %s", async (detailPath) => {
+  ])("loads shared detail content on %s", async (detailPath) => {
     pathname = detailPath;
     render(
       <DiscussionDataProvider>
@@ -515,14 +532,121 @@ describe("DiscussionDataProvider", () => {
       </DiscussionDataProvider>,
     );
     await waitFor(() => expect(executeDiscussionRead).toHaveBeenCalledTimes(1));
-    expect(loadDiscussionModerationSnapshot).not.toHaveBeenCalled();
+    await waitFor(() => expect(loadDiscussionModerationSnapshot).toHaveBeenCalledTimes(1));
+  });
+
+  it("keeps one shared detail content lifecycle across main and moderator tabs", async () => {
+    const { rerender } = render(
+      <DiscussionDataProvider>
+        <SharedDataProbe />
+      </DiscussionDataProvider>,
+    );
+
+    await waitFor(() => expect(loadDiscussionModerationSnapshot).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("posts:1")).toBeInTheDocument();
+
+    pathname = "/discussions/naddr-test/moderators";
+    rerender(
+      <DiscussionDataProvider>
+        <SharedDataProbe />
+      </DiscussionDataProvider>,
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    pathname = "/discussions/naddr-test";
+    rerender(
+      <DiscussionDataProvider>
+        <SharedDataProbe />
+      </DiscussionDataProvider>,
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(loadDiscussionModerationSnapshot).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("posts:1")).toBeInTheDocument();
+  });
+
+  it("preserves provisional detail content through a moderator tab transition", async () => {
+    const primaryEvent = {
+      id: "partial-post",
+      kind: 1111,
+      pubkey: "author",
+      created_at: 2,
+      content: "暫定投稿",
+      tags: [["a", "34550:author:topic"]],
+      sig: "sig",
+    };
+    const partialResult = {
+      primaryEvents: [primaryEvent],
+      approvalEvents: [],
+      relayUrls: ["wss://relay.example"],
+      initialRelayUrls: ["wss://relay.example"],
+      attemptedRelayUrls: ["wss://relay.example"],
+      nextRelayUrls: [],
+      successfulRelayUrls: [],
+      completionReason: "idle-timeout",
+      approvalState: "unknown",
+    };
+    loadDiscussionModerationSnapshot.mockImplementationOnce(
+      (_service, _strategy, input) => {
+        (input as { onPrimaryComplete?: (result: unknown) => void }).onPrimaryComplete?.({
+          events: [primaryEvent],
+          completionReason: "idle-timeout",
+          duplicateCount: 0,
+          elapsedMs: 1,
+          attemptedRelayUrls: ["wss://relay.example"],
+          successfulEventRelayUrls: [],
+          sourceRelayUrlsByEventId: {},
+          attempts: [],
+        });
+        return Promise.resolve(partialResult);
+      },
+    );
+
+    const { rerender } = render(
+      <DiscussionDataProvider>
+        <DetailContentProbe />
+      </DiscussionDataProvider>,
+    );
+
+    expect(await screen.findByTestId("detail-content-posts")).toHaveTextContent(
+      "partial-post",
+    );
+    expect(screen.getByTestId("detail-content-completion")).toHaveTextContent(
+      "idle-timeout",
+    );
+
+    pathname = "/discussions/naddr-test/moderators";
+    rerender(
+      <DiscussionDataProvider>
+        <DetailContentProbe />
+      </DiscussionDataProvider>,
+    );
+    pathname = "/discussions/naddr-test";
+    rerender(
+      <DiscussionDataProvider>
+        <DetailContentProbe />
+      </DiscussionDataProvider>,
+    );
+
+    expect(screen.getByTestId("detail-content-posts")).toHaveTextContent("partial-post");
+    expect(screen.getByTestId("detail-content-completion")).toHaveTextContent(
+      "idle-timeout",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "reload-detail-content" }));
+    await waitFor(() => expect(loadDiscussionModerationSnapshot).toHaveBeenCalledTimes(2));
   });
 
   it("loads management content through the shared lifecycle on the moderator tab", async () => {
     pathname = "/discussions/moderator";
     process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR = "naddr1list";
     render(
-      <DiscussionDataProvider>
+      <DiscussionDataProvider scope="management">
         <SharedDataProbe />
       </DiscussionDataProvider>,
     );
@@ -561,7 +685,7 @@ describe("DiscussionDataProvider", () => {
     });
 
     render(
-      <DiscussionDataProvider>
+      <DiscussionDataProvider scope="management">
         <SharedDataProbe />
       </DiscussionDataProvider>,
     );
@@ -651,7 +775,7 @@ describe("DiscussionDataProvider", () => {
     };
 
     render(
-      <DiscussionDataProvider>
+      <DiscussionDataProvider scope="management">
         <SharedDataProbe />
       </DiscussionDataProvider>,
     );
@@ -687,7 +811,7 @@ describe("DiscussionDataProvider", () => {
     };
 
     render(
-      <DiscussionDataProvider>
+      <DiscussionDataProvider scope="management">
         <SharedDataProbe />
       </DiscussionDataProvider>,
     );
@@ -849,7 +973,7 @@ describe("DiscussionDataProvider", () => {
     );
 
     render(
-      <DiscussionDataProvider>
+      <DiscussionDataProvider scope="management">
         <ManagementProbe />
       </DiscussionDataProvider>,
     );

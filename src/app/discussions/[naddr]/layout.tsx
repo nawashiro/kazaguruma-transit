@@ -20,7 +20,7 @@ export default function DiscussionLayout({
   const baseHref = `/discussions/${naddr}`;
 
   return (
-    <DiscussionDataProvider>
+    <DiscussionDataProvider scope="detail">
       <DiscussionTabLayout baseHref={baseHref}>
         <DiscussionContentDataProvider>
           {children}

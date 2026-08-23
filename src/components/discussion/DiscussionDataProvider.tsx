@@ -52,17 +52,6 @@ import type {
 import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import { logger } from "@/utils/logger";
 
-const MANAGEMENT_PATHS = new Set([
-  "/discussions",
-  "/discussions/manage",
-  "/discussions/moderator",
-]);
-const CONTENT_PATHS = new Set([
-  "/discussions",
-  "/discussions/manage",
-  "/discussions/moderator",
-]);
-
 const nostrServiceConfig = getNostrServiceConfig();
 const readStrategy = getDiscussionReadStrategyConfig();
 const nostrService = createNostrService(nostrServiceConfig);
@@ -139,18 +128,6 @@ const mergeEvents = (current: Event[], incoming: Event[]): Event[] => {
 const getDiscussionReference = (discussion: Discussion): string =>
   `34550:${discussion.authorPubkey}:${discussion.dTag}`;
 
-const isManagementPath = (pathname: string): boolean =>
-  MANAGEMENT_PATHS.has(pathname);
-
-const shouldLoadManagementContent = (pathname: string): boolean =>
-  CONTENT_PATHS.has(pathname);
-
-const shouldLoadDetailContent = (pathname: string, naddr: string | undefined): boolean => {
-  if (!naddr) return false;
-  const baseHref = `/discussions/${naddr}`;
-  return pathname === baseHref || pathname === `${baseHref}/approve`;
-};
-
 const normalizeRelayUrl = (url: string): string => url.replace(/\/+$/, "");
 
 const isUsableDiscussionMetadata = (value: unknown): value is Discussion => {
@@ -209,17 +186,21 @@ export function useDiscussionManagementData(): DiscussionManagementState {
   return useDiscussionData().management;
 }
 
+export type DiscussionDataScope = "management" | "detail";
+
 export function DiscussionDataProvider({
   children,
   discussionListNaddr,
+  scope = "detail",
 }: {
   children: React.ReactNode;
   discussionListNaddr?: string;
+  scope?: DiscussionDataScope;
 }) {
   const pathname = usePathname().replace(/\/$/, "") || "/";
   const params = useParams();
   const routeNaddr = typeof params?.naddr === "string" ? params.naddr : undefined;
-  const managementScope = isManagementPath(pathname);
+  const managementScope = scope === "management";
   const targetNaddr = managementScope
     ? discussionListNaddr ?? process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR
     : routeNaddr;
@@ -227,9 +208,7 @@ export function DiscussionDataProvider({
     () => (targetNaddr ? extractDiscussionFromNaddr(targetNaddr) : null),
     [targetNaddr],
   );
-  const shouldLoadContent = managementScope
-    ? shouldLoadManagementContent(pathname)
-    : shouldLoadDetailContent(pathname, routeNaddr);
+  const shouldLoadContent = Boolean(discussionInfo);
 
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [metadataLoading, setMetadataLoading] = useState(Boolean(discussionInfo));

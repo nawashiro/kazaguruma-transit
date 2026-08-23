@@ -60,6 +60,7 @@ const MANAGEMENT_PATHS = new Set([
 const CONTENT_PATHS = new Set([
   "/discussions",
   "/discussions/manage",
+  "/discussions/moderator",
 ]);
 
 const nostrServiceConfig = getNostrServiceConfig();

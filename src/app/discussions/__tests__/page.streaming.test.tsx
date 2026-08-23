@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import DiscussionsPage from "../page";
 
 const pubkey = "a".repeat(64);
@@ -27,6 +27,7 @@ const mockManagementData = {
   completionReason: "eose" as "eose" | "idle-timeout",
   referencedDiscussionCompletionReason: "eose" as "eose" | "idle-timeout" | null,
   moderationError: null as string | null,
+  reloadModeration: jest.fn(),
 };
 
 jest.mock("@/lib/auth/auth-context", () => ({
@@ -51,6 +52,7 @@ describe("DiscussionsPage shared data", () => {
     mockManagementData.completionReason = "eose";
     mockManagementData.referencedDiscussionCompletionReason = "eose";
     mockManagementData.moderationError = null;
+    mockManagementData.reloadModeration.mockReset();
   });
 
   it("renders a discussion supplied by the persistent management provider", () => {
@@ -72,6 +74,16 @@ describe("DiscussionsPage shared data", () => {
       "text-base-content!",
     );
     expect(screen.queryByText("会話がまだありません。")).not.toBeInTheDocument();
+  });
+
+  it("offers a reload action for a partial referenced-definition read", () => {
+    mockManagementData.referencedDiscussions = [];
+    mockManagementData.referencedDiscussionCompletionReason = "idle-timeout";
+    render(<DiscussionsPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+
+    expect(mockManagementData.reloadModeration).toHaveBeenCalledTimes(1);
   });
 
   it("does not conclude empty when the primary listing read is partial", () => {

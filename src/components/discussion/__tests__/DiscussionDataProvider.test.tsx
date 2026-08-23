@@ -518,7 +518,7 @@ describe("DiscussionDataProvider", () => {
     expect(loadDiscussionModerationSnapshot).not.toHaveBeenCalled();
   });
 
-  it("does not load management content on the moderator tab", async () => {
+  it("loads management content through the shared lifecycle on the moderator tab", async () => {
     pathname = "/discussions/moderator";
     process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR = "naddr1list";
     render(
@@ -527,7 +527,7 @@ describe("DiscussionDataProvider", () => {
       </DiscussionDataProvider>,
     );
     await waitFor(() => expect(executeDiscussionRead).toHaveBeenCalledTimes(1));
-    expect(loadDiscussionModerationSnapshot).not.toHaveBeenCalled();
+    expect(loadDiscussionModerationSnapshot).toHaveBeenCalledTimes(1);
   });
 
   it("deduplicates management references into one filter per discussion", async () => {

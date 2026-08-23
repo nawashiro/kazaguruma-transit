@@ -1,4 +1,3 @@
-import type { DiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import { dedupeAndSortEvents } from "@/lib/nostr/event-deduplication";
 import type {
   DiscussionNdkGateway,
@@ -10,14 +9,14 @@ import type { CompletionReason, ReadEventsOptions } from "@/lib/nostr/nostr-serv
 
 const RELAYS_PER_ATTEMPT = 3;
 
-export type DiscussionReadTransport = (
+export type NostrReadTransport = (
   filters: NdkEventFilter[],
   options: ReadEventsOptions
 ) => Promise<NdkQueryCompletion>;
 
-export type DiscussionReadGateway = Pick<DiscussionNdkGateway, "queryWithCompletion">;
+export type NostrReadGateway = Pick<DiscussionNdkGateway, "queryWithCompletion">;
 
-export interface RelayAttempt {
+export interface NostrReadAttempt {
   relayUrls: string[];
   completionReason: CompletionReason;
   events: NostrEventDTO[];
@@ -26,13 +25,21 @@ export interface RelayAttempt {
   elapsedMs: number;
 }
 
-export interface ExecuteDiscussionReadInput {
-  plan: DiscussionReadPlan;
-  relayUrls: string[];
-  onAttemptComplete?: (attempt: RelayAttempt) => void;
+export interface NostrReadPlan {
+  filters: NdkEventFilter[];
+  idleTimeoutMs: number;
+  hardTimeoutMs: number;
+  /** Retained only for existing DiscussionReadPlan callers during the rename migration. */
+  target?: string;
 }
 
-export interface DiscussionReadResult {
+export interface ExecuteNostrReadInput {
+  plan: NostrReadPlan;
+  relayUrls: string[];
+  onAttemptComplete?: (attempt: NostrReadAttempt) => void;
+}
+
+export interface NostrReadResult {
   events: NostrEventDTO[];
   completionReason: CompletionReason;
   duplicateCount: number;
@@ -40,7 +47,7 @@ export interface DiscussionReadResult {
   attemptedRelayUrls: string[];
   successfulEventRelayUrls: string[];
   sourceRelayUrlsByEventId: Record<string, string[]>;
-  attempts: RelayAttempt[];
+  attempts: NostrReadAttempt[];
 }
 
 const mergeSourceRelayUrls = (
@@ -58,7 +65,7 @@ const mergeSourceRelayUrls = (
 const toAttempt = (
   relayUrls: string[],
   completion: NdkQueryCompletion
-): RelayAttempt => ({
+): NostrReadAttempt => ({
   relayUrls,
   completionReason: completion.completionReason,
   events: dedupeAndSortEvents(completion.events),
@@ -68,17 +75,17 @@ const toAttempt = (
 });
 
 const getTransport = (
-  transportOrGateway: DiscussionReadTransport | DiscussionReadGateway
-): DiscussionReadTransport =>
+  transportOrGateway: NostrReadTransport | NostrReadGateway
+): NostrReadTransport =>
   typeof transportOrGateway === "function"
     ? transportOrGateway
     : (filters, options) => transportOrGateway.queryWithCompletion(filters, options);
 
 /** Executes at most two completion-aware reads over Provider-selected relay URLs. */
-export const executeDiscussionRead = async (
-  transportOrGateway: DiscussionReadTransport | DiscussionReadGateway,
-  { plan, relayUrls: providerRelayUrls, onAttemptComplete }: ExecuteDiscussionReadInput
-): Promise<DiscussionReadResult> => {
+export const executeNostrRead = async (
+  transportOrGateway: NostrReadTransport | NostrReadGateway,
+  { plan, relayUrls: providerRelayUrls, onAttemptComplete }: ExecuteNostrReadInput
+): Promise<NostrReadResult> => {
   const transport = getTransport(transportOrGateway);
   const relayUrls = Array.from(new Set(providerRelayUrls));
   const firstRelayUrls = relayUrls.slice(0, RELAYS_PER_ATTEMPT);
@@ -87,11 +94,11 @@ export const executeDiscussionRead = async (
     idleTimeoutMs: plan.idleTimeoutMs,
     hardTimeoutMs: plan.hardTimeoutMs,
   };
-  const attempts: RelayAttempt[] = [];
+  const attempts: NostrReadAttempt[] = [];
   const mergedSourceRelayUrlsByEventId: Record<string, string[]> = {};
   const mergedEvents: NostrEventDTO[] = [];
 
-  const executeAttempt = async (attemptRelayUrls: string[]): Promise<RelayAttempt> => {
+  const executeAttempt = async (attemptRelayUrls: string[]): Promise<NostrReadAttempt> => {
     const completion = await transport(plan.filters, { relayUrls: attemptRelayUrls, ...options });
     const attempt = toAttempt(attemptRelayUrls, completion);
     attempts.push(attempt);

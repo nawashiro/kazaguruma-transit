@@ -30,7 +30,7 @@ import Button from "@/components/ui/Button";
 import { buildLoginRoute } from "@/lib/navigation/auth-route";
 import type { Discussion } from "@/types/discussion";
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
-import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
+import { executeNostrRead } from "@/lib/nostr/nostr-read-executor";
 import { logger } from "@/utils/logger";
 
 const nostrServiceConfig = getNostrServiceConfig();
@@ -74,7 +74,7 @@ export default function SettingsPage() {
       const plan = createDiscussionReadPlan("discussion-list", discussionReadStrategy, {
         authorPubkey: user.pubkey,
       });
-      const result = await executeDiscussionRead(discussionGateway, {
+      const result = await executeNostrRead(discussionGateway, {
         plan,
         relayUrls: nostrServiceConfig.relays
           .filter((relay) => relay.read)

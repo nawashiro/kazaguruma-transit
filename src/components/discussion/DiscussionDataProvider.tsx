@@ -24,9 +24,9 @@ import {
   saveKnownDiscussionData,
 } from "@/lib/discussion/discussion-known-data-cache";
 import {
-  executeDiscussionRead,
-  type DiscussionReadTransport,
-} from "@/lib/discussion/discussion-read-executor";
+  executeNostrRead,
+  type NostrReadTransport,
+} from "@/lib/nostr/nostr-read-executor";
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import { resolveDiscussionReferences } from "@/lib/discussion/discussion-reference-resolver";
 import { isTestMode, loadTestData } from "@/lib/test/test-data-loader";
@@ -60,7 +60,7 @@ const readableRelayUrls = nostrServiceConfig.relays
   .map((relay) => relay.url);
 const discussionReadTransport = nostrService.getEventsWithCompletion.bind(
   nostrService,
-) as unknown as DiscussionReadTransport;
+) as unknown as NostrReadTransport;
 
 export interface DiscussionMetaState {
   discussion: Discussion | null;
@@ -113,6 +113,20 @@ interface DiscussionDataContextValue {
   content: DiscussionContentState;
   management: DiscussionManagementState;
 }
+
+const EMPTY_CONTENT_STATE: DiscussionContentState = {
+  posts: [],
+  approvals: [],
+  isLoading: false,
+  error: null,
+  completionReason: null,
+  approvalState: "unknown",
+  reload: async () => undefined,
+  mergeModerationEvents: () => undefined,
+  addPost: () => undefined,
+  addApproval: () => undefined,
+  removeApproval: () => undefined,
+};
 
 const DiscussionDataContext = createContext<DiscussionDataContextValue | null>(null);
 
@@ -179,7 +193,7 @@ export function useDiscussionMeta(): DiscussionMetaState | undefined {
 }
 
 export function useDiscussionContentData(): DiscussionContentState {
-  return useDiscussionData().content;
+  return useContext(DiscussionDataContext)?.content ?? EMPTY_CONTENT_STATE;
 }
 
 export function useDiscussionManagementData(): DiscussionManagementState {
@@ -189,6 +203,29 @@ export function useDiscussionManagementData(): DiscussionManagementState {
 export type DiscussionDataScope = "management" | "detail";
 
 export function DiscussionDataProvider({
+  children,
+  discussionListNaddr,
+  scope = "detail",
+  read = true,
+}: {
+  children: React.ReactNode;
+  discussionListNaddr?: string;
+  scope?: DiscussionDataScope;
+  /** Compatibility mode for route owners that already own the snapshot lifecycle. */
+  read?: boolean;
+}) {
+  if (read === false) return <>{children}</>;
+  return (
+    <DiscussionDataProviderReadable
+      discussionListNaddr={discussionListNaddr}
+      scope={scope}
+    >
+      {children}
+    </DiscussionDataProviderReadable>
+  );
+}
+
+function DiscussionDataProviderReadable({
   children,
   discussionListNaddr,
   scope = "detail",
@@ -416,7 +453,7 @@ export function DiscussionDataProvider({
           authorPubkey: discussionInfo.authorPubkey,
           dTag: discussionInfo.dTag,
         });
-        const metadataResult = await executeDiscussionRead(discussionReadTransport, {
+        const metadataResult = await executeNostrRead(discussionReadTransport, {
           plan,
           relayUrls: metadataRelayUrls,
           onAttemptComplete: ({ events }) => {
@@ -679,7 +716,7 @@ export function DiscussionDataProvider({
     const referencePlan = createDiscussionReadPlan("discussion-references", readStrategy, {
       references: missingReferences,
     });
-    void executeDiscussionRead(discussionReadTransport, {
+    void executeNostrRead(discussionReadTransport, {
       plan: referencePlan,
       relayUrls: readableRelayUrls,
     })

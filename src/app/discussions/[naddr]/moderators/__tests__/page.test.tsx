@@ -1,13 +1,14 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import ModeratorsPage from "../page";
+import type { NostrEventDTO } from "@/lib/nostr/discussion-ndk-gateway";
 
 const createDiscussion = () => ({
   id: "34550:creator:topic",
   dTag: "topic",
   title: "テスト会話",
   description: "説明",
-  moderators: [],
+  moderators: [{ pubkey: "moderator" }],
   authorPubkey: "creator",
   createdAt: 10,
   event: {
@@ -22,6 +23,8 @@ const createDiscussion = () => ({
 });
 const mockReload = jest.fn();
 const mockUseDiscussionMeta = jest.fn();
+const mockUseDiscussionDetail = jest.fn();
+const mockModeratorManagementSection = jest.fn();
 const mockModeratorAuthUser = { pubkey: "creator", isLoggedIn: true };
 const mockRouterPush = jest.fn();
 
@@ -29,6 +32,12 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockRouterPush }),
   useParams: () => ({ naddr: "naddr-real-route" }),
 }));
+
+jest.mock(
+  "../../../../../components/discussion/DiscussionDetailProvider",
+  () => ({ useDiscussionDetail: () => mockUseDiscussionDetail() }),
+  { virtual: true },
+);
 
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => ({
@@ -40,21 +49,41 @@ jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
   useDiscussionMeta: () => mockUseDiscussionMeta(),
 }));
 jest.mock("@/components/discussion/ModeratorManagementSection", () => ({
-  ModeratorManagementSection: ({
-    applications,
-    onToggleApproval,
-    onToggleRemoval,
-  }: {
-    applications: unknown[];
+  ModeratorManagementSection: (props: {
+    applications: Array<{
+      id: string;
+      applicantPubkey: string;
+      reason?: string;
+    }>;
+    moderators: Array<{ pubkey: string }>;
     onToggleApproval: (pubkey: string) => void;
     onToggleRemoval: (pubkey: string) => void;
-  }) => (
-    <>
-      {applications.length === 0 && <p>申請中のユーザーはいません。</p>}
-      <button onClick={() => onToggleApproval("applicant")}>許可を選択</button>
-      <button onClick={() => onToggleRemoval("moderator")}>削除を選択</button>
-    </>
-  ),
+  }) => {
+    mockModeratorManagementSection(props);
+    return (
+      <section data-testid="moderator-management-section">
+        {props.applications.map((application) => (
+          <div
+            key={application.id}
+            data-testid={`moderator-application-${application.id}`}
+          >
+            <span>{application.reason ?? application.id}</span>
+            <button onClick={() => props.onToggleApproval(application.applicantPubkey)}>
+              許可を選択
+            </button>
+          </div>
+        ))}
+        {props.moderators.map((moderator) => (
+          <button
+            key={moderator.pubkey}
+            onClick={() => props.onToggleRemoval(moderator.pubkey)}
+          >
+            削除を選択
+          </button>
+        ))}
+      </section>
+    );
+  },
 }));
 jest.mock("@/lib/config/discussion-config", () => ({
   getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 1000 }),
@@ -73,12 +102,12 @@ jest.mock("@/lib/nostr/discussion-ndk-gateway", () => ({
     createModeratorUpdateDraft: jest.fn(),
   }),
 }));
-jest.mock("@/lib/discussion/discussion-read-executor", () => {
-  const executeDiscussionRead = jest.fn();
-  return { executeDiscussionRead, __mock: { executeDiscussionRead } };
+jest.mock("@/lib/nostr/nostr-read-executor", () => {
+  const executeNostrRead = jest.fn();
+  return { executeNostrRead, __mock: { executeNostrRead } };
 });
 const { __mock: discussionReadExecutorMock } = jest.requireMock(
-  "@/lib/discussion/discussion-read-executor",
+  "@/lib/nostr/nostr-read-executor",
 );
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   hexToNpub: (pubkey: string) => `npub-${pubkey}`,
@@ -90,14 +119,64 @@ jest.mock("@/lib/nostr/mnemonic-utils", () => ({
     "とんかつ やたい うごかす",
 }));
 
+const moderatorRequestEvent: NostrEventDTO = {
+  id: "moderator-request-1",
+  kind: 1111,
+  pubkey: "applicant",
+  created_at: 20,
+  content: "モデレーターになりたいです",
+  tags: [
+    ["a", "34550:creator:topic"],
+    ["t", "moderator-request"],
+  ],
+  sig: "request-signature",
+};
+const detailSnapshotFixture = {
+  discussion: createDiscussion(),
+  posts: [],
+  approvals: [],
+  moderatorRequests: [
+    {
+      id: moderatorRequestEvent.id,
+      applicantPubkey: moderatorRequestEvent.pubkey,
+      createdAt: moderatorRequestEvent.created_at,
+      reason: moderatorRequestEvent.content,
+      event: moderatorRequestEvent,
+    },
+  ],
+  evaluations: [],
+  userEvaluationIds: new Set<string>(),
+};
+const createDetailModel = (
+  overrides: Partial<{
+    state: "loading" | "ready" | "partial" | "error";
+    snapshot: typeof detailSnapshotFixture | null;
+    error: string | null;
+    reload: jest.Mock;
+    addPost: jest.Mock;
+    addApproval: jest.Mock;
+    removeApproval: jest.Mock;
+  }> = {},
+) => ({
+  state: "ready" as const,
+  snapshot: detailSnapshotFixture,
+  error: null,
+  reload: mockReload,
+  addPost: jest.fn(),
+  addApproval: jest.fn(),
+  removeApproval: jest.fn(),
+  ...overrides,
+});
+
 describe("ModeratorsPage direct moderator management", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseDiscussionDetail.mockReturnValue(createDetailModel());
     mockModeratorAuthUser.pubkey = "creator";
     mockModeratorAuthUser.isLoggedIn = true;
     mockReload.mockReset();
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
-      events: [],
+    discussionReadExecutorMock.executeNostrRead.mockResolvedValue({
+      events: [moderatorRequestEvent],
       completionReason: "eose",
       duplicateCount: 0,
       elapsedMs: 0,
@@ -114,23 +193,36 @@ describe("ModeratorsPage direct moderator management", () => {
     });
   });
 
-  it("loads moderator applications through a bounded completion-aware read", async () => {
+  it("reads moderator applications from the detail snapshot without a page-owned read", async () => {
     render(<ModeratorsPage />);
 
-    await waitFor(() =>
-      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalled(),
+    expect(discussionReadExecutorMock.executeNostrRead).not.toHaveBeenCalled();
+    expect(
+      screen.getByTestId("moderator-application-moderator-request-1"),
+    ).toHaveTextContent("モデレーターになりたいです");
+    expect(mockModeratorManagementSection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        applications: [
+          expect.objectContaining({
+            id: "moderator-request-1",
+            applicantPubkey: "applicant",
+          }),
+        ],
+      }),
     );
-    await screen.findByRole("button", { name: "許可を選択" });
+    expect(await screen.findByRole("button", { name: "許可を選択" })).toBeInTheDocument();
     expect(serviceMock.streamEventsOnEvent).not.toHaveBeenCalled();
   });
 
-  it("keeps a rejected moderator-application read provisional and retries it locally", async () => {
-    discussionReadExecutorMock.executeDiscussionRead.mockRejectedValue(
-      new Error("relay rejected the read"),
+  it("keeps a partial detail snapshot provisional without a local moderator-request retry", async () => {
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({ state: "partial" }),
     );
+    discussionReadExecutorMock.executeNostrRead.mockReset();
 
     render(<ModeratorsPage />);
 
+    expect(discussionReadExecutorMock.executeNostrRead).not.toHaveBeenCalled();
     const applicationStatus = await screen.findByRole("status", {
       name: "モデレーター申請の取得は完了していません",
     });
@@ -143,23 +235,8 @@ describe("ModeratorsPage direct moderator management", () => {
     );
     expect(applicationStatus).toHaveAttribute("aria-live", "polite");
     expect(screen.queryByText("申請中のユーザーはいません。")).not.toBeInTheDocument();
-
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
-      events: [],
-      completionReason: "eose",
-      duplicateCount: 0,
-      elapsedMs: 0,
-      attemptedRelayUrls: [],
-      successfulEventRelayUrls: [],
-      sourceRelayUrlsByEventId: {},
-      attempts: [],
-    });
-    fireEvent.click(screen.getByRole("button", { name: "モデレーター申請を再取得" }));
-
-    await waitFor(() =>
-      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalledTimes(2),
-    );
-    expect(screen.getByText("申請中のユーザーはいません。")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "モデレーター申請を再取得" })).not.toBeInTheDocument();
+    expect(discussionReadExecutorMock.executeNostrRead).not.toHaveBeenCalled();
   });
 
   it("keeps Rubyful mutations inside the removable loading text", () => {

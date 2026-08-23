@@ -57,8 +57,8 @@ jest.mock("@/lib/nostr/discussion-ndk-gateway", () => ({
   }),
 }));
 
-jest.mock("@/lib/discussion/discussion-read-executor", () => ({
-  executeDiscussionRead: jest.fn(),
+jest.mock("@/lib/nostr/nostr-read-executor", () => ({
+  executeNostrRead: jest.fn(),
 }));
 
 jest.mock("@/lib/discussion/discussion-moderation-snapshot", () => ({
@@ -136,9 +136,9 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   ),
 }));
 
-const { executeDiscussionRead } = jest.requireMock(
-  "@/lib/discussion/discussion-read-executor",
-) as { executeDiscussionRead: jest.Mock };
+const { executeNostrRead } = jest.requireMock(
+  "@/lib/nostr/nostr-read-executor",
+) as { executeNostrRead: jest.Mock };
 const { loadDiscussionModerationSnapshot } = jest.requireMock(
   "@/lib/discussion/discussion-moderation-snapshot",
 ) as { loadDiscussionModerationSnapshot: jest.Mock };
@@ -267,7 +267,7 @@ describe("DiscussionDataProvider", () => {
       dTag: "topic",
       relays: [],
     };
-    executeDiscussionRead.mockReset().mockResolvedValue({
+    executeNostrRead.mockReset().mockResolvedValue({
       events: [
         {
           id: "discussion-event",
@@ -322,7 +322,7 @@ describe("DiscussionDataProvider", () => {
     );
 
     expect(await screen.findByText("meta:共有会話")).toBeInTheDocument();
-    expect(executeDiscussionRead).toHaveBeenCalledTimes(1);
+    expect(executeNostrRead).toHaveBeenCalledTimes(1);
     expect(loadDiscussionModerationSnapshot).toHaveBeenCalledTimes(1);
     expect(await screen.findByText("posts:1")).toBeInTheDocument();
   });
@@ -419,7 +419,7 @@ describe("DiscussionDataProvider", () => {
         sig: "sig",
       }],
     };
-    executeDiscussionRead.mockImplementationOnce(
+    executeNostrRead.mockImplementationOnce(
       () => new Promise((resolve) => {
         resolveMetadata = resolve;
       }),
@@ -436,7 +436,7 @@ describe("DiscussionDataProvider", () => {
     expect(screen.getByTestId("meta-loading")).toHaveTextContent("false");
     expect(screen.getByTestId("content-loading")).toHaveTextContent("false");
     expect(screen.getByText("post-state:unknown")).toBeInTheDocument();
-    expect(executeDiscussionRead).toHaveBeenCalledTimes(1);
+    expect(executeNostrRead).toHaveBeenCalledTimes(1);
     expect(resolveMetadata).toBeDefined();
     await act(async () => {
       resolveMetadata?.({
@@ -496,7 +496,7 @@ describe("DiscussionDataProvider", () => {
 
     expect(await screen.findByText("meta:Fixture conversation")).toBeInTheDocument();
     expect(await screen.findByText("posts:1")).toBeInTheDocument();
-    expect(executeDiscussionRead).not.toHaveBeenCalled();
+    expect(executeNostrRead).not.toHaveBeenCalled();
     expect(loadDiscussionModerationSnapshot).not.toHaveBeenCalled();
   });
 
@@ -531,7 +531,7 @@ describe("DiscussionDataProvider", () => {
         <SharedDataProbe />
       </DiscussionDataProvider>,
     );
-    await waitFor(() => expect(executeDiscussionRead).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(executeNostrRead).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(loadDiscussionModerationSnapshot).toHaveBeenCalledTimes(1));
   });
 
@@ -650,7 +650,7 @@ describe("DiscussionDataProvider", () => {
         <SharedDataProbe />
       </DiscussionDataProvider>,
     );
-    await waitFor(() => expect(executeDiscussionRead).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(executeNostrRead).toHaveBeenCalledTimes(1));
     expect(loadDiscussionModerationSnapshot).toHaveBeenCalledTimes(1);
   });
 
@@ -689,8 +689,8 @@ describe("DiscussionDataProvider", () => {
         <SharedDataProbe />
       </DiscussionDataProvider>,
     );
-    await waitFor(() => expect(executeDiscussionRead).toHaveBeenCalledTimes(2));
-    expect(executeDiscussionRead.mock.calls[1]?.[1].plan.filters).toEqual([
+    await waitFor(() => expect(executeNostrRead).toHaveBeenCalledTimes(2));
+    expect(executeNostrRead.mock.calls[1]?.[1].plan.filters).toEqual([
       {
         kinds: [34550],
         authors: ["a".repeat(64)],
@@ -707,7 +707,7 @@ describe("DiscussionDataProvider", () => {
   });
 
   it("rejects metadata events that do not match the requested address", async () => {
-    executeDiscussionRead.mockResolvedValueOnce({
+    executeNostrRead.mockResolvedValueOnce({
       events: [{
         id: "other-discussion",
         kind: 34550,
@@ -733,14 +733,14 @@ describe("DiscussionDataProvider", () => {
     );
 
     await waitFor(() => {
-      expect(executeDiscussionRead).toHaveBeenCalledTimes(1);
+      expect(executeNostrRead).toHaveBeenCalledTimes(1);
       expect(screen.getByText("error:会話情報が見つかりませんでした。")).toBeInTheDocument();
     });
     expect(screen.queryByText("meta:別会話")).not.toBeInTheDocument();
   });
 
   it("does not classify a partial metadata read as not-found", async () => {
-    executeDiscussionRead.mockResolvedValueOnce({
+    executeNostrRead.mockResolvedValueOnce({
       events: [],
       completionReason: "idle-timeout",
       duplicateCount: 0,
@@ -758,7 +758,7 @@ describe("DiscussionDataProvider", () => {
     );
 
     await waitFor(() => {
-      expect(executeDiscussionRead).toHaveBeenCalledTimes(1);
+      expect(executeNostrRead).toHaveBeenCalledTimes(1);
       expect(screen.getByTestId("meta-completion")).toHaveTextContent("idle-timeout");
     });
     expect(screen.queryByText("error:会話情報が見つかりませんでした。")).not.toBeInTheDocument();
@@ -780,8 +780,8 @@ describe("DiscussionDataProvider", () => {
       </DiscussionDataProvider>,
     );
 
-    await waitFor(() => expect(executeDiscussionRead).toHaveBeenCalledTimes(1));
-    expect(executeDiscussionRead.mock.calls[0]?.[1].relayUrls).toEqual(
+    await waitFor(() => expect(executeNostrRead).toHaveBeenCalledTimes(1));
+    expect(executeNostrRead.mock.calls[0]?.[1].relayUrls).toEqual(
       expect.arrayContaining(["wss://hint.example"]),
     );
     expect(loadDiscussionModerationSnapshot.mock.calls[0]?.[2].relayUrls).toEqual(
@@ -842,7 +842,7 @@ describe("DiscussionDataProvider", () => {
       sourceRelayUrlsByEventId: {},
       attempts: [],
     };
-    executeDiscussionRead
+    executeNostrRead
       .mockImplementationOnce(
         () => new Promise((resolve) => {
           resolveOldMetadata = resolve;
@@ -855,7 +855,7 @@ describe("DiscussionDataProvider", () => {
         <SharedDataProbe />
       </DiscussionDataProvider>,
     );
-    await waitFor(() => expect(executeDiscussionRead).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(executeNostrRead).toHaveBeenCalledTimes(1));
 
     mockNaddr = "naddr-new";
     mockDiscussionInfo = {
@@ -907,7 +907,7 @@ describe("DiscussionDataProvider", () => {
     );
 
     expect(await screen.findByText("error:会話情報の指定が正しくありません。")).toBeInTheDocument();
-    expect(executeDiscussionRead).not.toHaveBeenCalled();
+    expect(executeNostrRead).not.toHaveBeenCalled();
     expect(loadDiscussionModerationSnapshot).not.toHaveBeenCalled();
   });
 
@@ -962,11 +962,11 @@ describe("DiscussionDataProvider", () => {
       sourceRelayUrlsByEventId: {},
       attempts: [],
     };
-    executeDiscussionRead.mockReset().mockResolvedValue(managementMetadataResult);
-    executeDiscussionRead.mockImplementationOnce(() =>
+    executeNostrRead.mockReset().mockResolvedValue(managementMetadataResult);
+    executeNostrRead.mockImplementationOnce(() =>
       Promise.resolve(managementMetadataResult),
     );
-    executeDiscussionRead.mockImplementationOnce(
+    executeNostrRead.mockImplementationOnce(
       () => new Promise((resolve) => {
         resolveReference = resolve;
       }),
@@ -977,10 +977,10 @@ describe("DiscussionDataProvider", () => {
         <ManagementProbe />
       </DiscussionDataProvider>,
     );
-    await waitFor(() => expect(executeDiscussionRead).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(executeNostrRead).toHaveBeenCalledTimes(2));
 
     fireEvent.click(screen.getByRole("button", { name: "reload-management" }));
-    await waitFor(() => expect(executeDiscussionRead).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(executeNostrRead).toHaveBeenCalledTimes(4));
 
     await act(async () => {
       resolveReference?.({
@@ -1026,7 +1026,7 @@ describe("DiscussionDataProvider", () => {
       dTag: "new-topic",
       relays: [],
     };
-    executeDiscussionRead.mockResolvedValue({
+    executeNostrRead.mockResolvedValue({
       events: [{
         id: "new-discussion",
         kind: 34550,
@@ -1098,7 +1098,7 @@ describe("DiscussionDataProvider", () => {
       dTag: "new-topic",
       relays: [],
     };
-    executeDiscussionRead.mockResolvedValue({
+    executeNostrRead.mockResolvedValue({
       events: [{
         id: "new-discussion",
         kind: 34550,
@@ -1125,13 +1125,13 @@ describe("DiscussionDataProvider", () => {
       </DiscussionDataProvider>,
     );
     await screen.findByText("新会話");
-    const callsAfterRouteChange = executeDiscussionRead.mock.calls.length;
+    const callsAfterRouteChange = executeNostrRead.mock.calls.length;
 
     await act(async () => {
       await oldReload?.();
       await Promise.resolve();
     });
-    expect(executeDiscussionRead).toHaveBeenCalledTimes(callsAfterRouteChange);
+    expect(executeNostrRead).toHaveBeenCalledTimes(callsAfterRouteChange);
   });
 
   it("ignores a mutation callback from before a same-discussion reload", async () => {

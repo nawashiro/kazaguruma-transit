@@ -23,13 +23,13 @@ jest.mock("@/components/discussion/DiscussionDataProvider", () => ({
   useDiscussionContentData: () => sharedContent,
 }));
 
-jest.mock("@/lib/discussion/discussion-read-executor", () => ({
-  executeDiscussionRead: jest.fn(),
+jest.mock("@/lib/nostr/nostr-read-executor", () => ({
+  executeNostrRead: jest.fn(),
 }));
 
-const { executeDiscussionRead } = jest.requireMock(
-  "@/lib/discussion/discussion-read-executor",
-) as { executeDiscussionRead: jest.Mock };
+const { executeNostrRead } = jest.requireMock(
+  "@/lib/nostr/nostr-read-executor",
+) as { executeNostrRead: jest.Mock };
 
 function Probe() {
   const content = useDiscussionContentData();
@@ -45,6 +45,6 @@ describe("DiscussionContentDataProvider adapter", () => {
     );
 
     expect(screen.getByText("posts:0")).toBeInTheDocument();
-    expect(executeDiscussionRead).not.toHaveBeenCalled();
+    expect(executeNostrRead).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { DiscussionManagementProvider } from "./DiscussionManagementProvider";
 import { DiscussionManagementDataProvider } from "@/components/discussion/DiscussionManagementDataProvider";
 import { DiscussionTabLayout } from "@/components/discussion/DiscussionTabLayout";
 import { DiscussionDataProvider } from "@/components/discussion/DiscussionDataProvider";
@@ -25,16 +26,19 @@ export function DiscussionManagementShell({
     <DiscussionDataProvider
       discussionListNaddr={discussionListNaddr}
       scope="management"
+      read={false}
     >
-      <DiscussionTabLayout
-        baseHref="/discussions"
-        naddr={discussionListNaddr}
-        showNavigation={false}
-      >
-        <DiscussionManagementDataProvider>
-          {children}
-        </DiscussionManagementDataProvider>
-      </DiscussionTabLayout>
+      <DiscussionManagementProvider discussionListNaddr={discussionListNaddr}>
+        <DiscussionTabLayout
+          baseHref="/discussions"
+          naddr={discussionListNaddr}
+          showNavigation={false}
+        >
+          <DiscussionManagementDataProvider>
+            {children}
+          </DiscussionManagementDataProvider>
+        </DiscussionTabLayout>
+      </DiscussionManagementProvider>
     </DiscussionDataProvider>
   );
 }

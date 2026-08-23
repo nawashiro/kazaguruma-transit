@@ -11,6 +11,7 @@ import {
   useDiscussionMeta as useSharedDiscussionMeta,
   type DiscussionMetaState,
 } from "@/components/discussion/DiscussionDataProvider";
+import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 
 interface DiscussionTabLayoutProps {
@@ -43,12 +44,34 @@ export function DiscussionTabLayout({
   const pathname = usePathname();
   const { user } = useAuth();
   const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-  const discussionMeta = useSharedDiscussionMeta();
-  const discussion = discussionMeta?.discussion ?? null;
-  const isDiscussionLoading = discussionMeta?.isLoading ?? false;
-  const discussionError = discussionMeta?.error ?? null;
-  const discussionCompletionReason = discussionMeta?.completionReason ?? null;
-  const reload = discussionMeta?.reload ?? (async () => undefined);
+  const detail = useDiscussionDetail();
+  const legacyMeta = useSharedDiscussionMeta();
+  const hasDetailSession = Boolean(
+    detail.snapshot ||
+    detail.error ||
+    detail.state !== "loading" ||
+    !legacyMeta,
+  );
+  const discussion = hasDetailSession
+    ? detail.snapshot?.discussion ?? null
+    : legacyMeta?.discussion ?? null;
+  const isDiscussionLoading = hasDetailSession
+    ? detail.state === "loading"
+    : legacyMeta?.isLoading ?? false;
+  const discussionError = hasDetailSession
+    ? detail.error
+    : legacyMeta?.error ?? null;
+  const discussionCompletionReason = hasDetailSession
+    ? detail.completionReason ??
+      (detail.state === "partial"
+        ? "idle-timeout"
+        : detail.state === "error"
+          ? "hard-timeout"
+          : detail.state === "ready"
+            ? "eose"
+            : null)
+    : legacyMeta?.completionReason ?? null;
+  const reload = hasDetailSession ? detail.reload : legacyMeta?.reload ?? (async () => undefined);
 
   const normalizedBase = baseHref.replace(/\/$/, "");
   const normalizedPath = pathname.replace(/\/$/, "");

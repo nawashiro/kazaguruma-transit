@@ -1,18 +1,29 @@
 import React from "react";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionDetailPage from "../page";
 import type { NostrEventDTO } from "@/lib/nostr/discussion-ndk-gateway";
-import type { PostWithStats } from "@/types/discussion";
+import type {
+  Discussion,
+  DiscussionPost,
+  PostEvaluation,
+  PostWithStats,
+} from "@/types/discussion";
 
 const mockUseDiscussionMeta = jest.fn();
 const mockUseDiscussionContentData = jest.fn();
+const mockUseDiscussionDetail = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr-test" }),
   usePathname: () => "/discussions/naddr-test",
   useRouter: () => ({ push: jest.fn() }),
 }));
+
+jest.mock(
+  "@/components/discussion/DiscussionDetailProvider",
+  () => ({ useDiscussionDetail: () => mockUseDiscussionDetail() }),
+);
 
 // Mock DiscussionTabLayout to isolate page logic from layout
 jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
@@ -102,17 +113,13 @@ jest.mock("@/lib/discussion/discussion-known-data-cache", () => ({
   loadKnownDiscussionData: jest.fn(),
 }));
 
-const { loadKnownDiscussionData: loadKnownDiscussionDataMock } = jest.requireMock(
-  "@/lib/discussion/discussion-known-data-cache"
-);
-
-jest.mock("@/lib/discussion/discussion-read-executor", () => {
-  const executeDiscussionRead = jest.fn();
-  return { executeDiscussionRead, __mock: { executeDiscussionRead } };
+jest.mock("@/lib/nostr/nostr-read-executor", () => {
+  const executeNostrRead = jest.fn();
+  return { executeNostrRead, __mock: { executeNostrRead } };
 });
 
 const { __mock: discussionReadExecutorMock } = jest.requireMock(
-  "@/lib/discussion/discussion-read-executor"
+  "@/lib/nostr/nostr-read-executor"
 );
 
 jest.mock("@/lib/nostr/nostr-utils", () => {
@@ -199,7 +206,7 @@ jest.mock("@/lib/nostr/nostr-utils", () => {
   };
 });
 
-const { parseEvaluationEvent: parseEvaluationEventMock, combinePostsWithStats: combinePostsWithStatsMock } =
+const { combinePostsWithStats: combinePostsWithStatsMock } =
   jest.requireMock("@/lib/nostr/nostr-utils");
 
 jest.mock("@/lib/test/test-data-loader", () => ({
@@ -263,6 +270,105 @@ jest.mock("@/components/ui/Button", () => {
   };
 });
 
+type DetailSnapshotFixture = {
+  discussion: Discussion | null;
+  posts: DiscussionPost[];
+  approvals: Array<{ id: string; postId: string }>;
+  moderatorRequests: Array<{
+    id: string;
+    applicantPubkey: string;
+    createdAt: number;
+    reason: string;
+    event: NostrEventDTO;
+  }>;
+  evaluations: PostEvaluation[];
+  userEvaluationIds: Set<string>;
+};
+
+type DetailModelFixture = {
+  state: "loading" | "ready" | "partial" | "error";
+  snapshot: DetailSnapshotFixture | null;
+  error: string | null;
+  reload: jest.Mock;
+  addPost: jest.Mock;
+  addApproval: jest.Mock;
+  removeApproval: jest.Mock;
+};
+
+const detailDiscussion: Discussion = {
+  id: "34550:author:demo",
+  title: "Streamed Discussion",
+  description: "Streaming description",
+  authorPubkey: "author",
+  dTag: "demo",
+  moderators: [],
+  createdAt: 999,
+  event: {
+    id: "discussion-1",
+    pubkey: "author",
+    kind: 34550,
+    created_at: 999,
+    tags: [["d", "demo"], ["name", "Streamed Discussion"]],
+    content: "Streaming description",
+    sig: "sig",
+  },
+};
+const detailPost: DiscussionPost = {
+  id: "post-1",
+  content: "approved post",
+  authorPubkey: "author",
+  discussionId: "34550:author:demo",
+  createdAt: 100,
+  approved: true,
+  approvalState: "approved",
+  event: {
+    id: "post-1",
+    pubkey: "author",
+    kind: 1111,
+    created_at: 100,
+    tags: [["a", "34550:author:demo"]],
+    content: "approved post",
+    sig: "sig",
+  },
+};
+const detailEvaluation: PostEvaluation = {
+  id: "eval-1",
+  postId: "post-1",
+  evaluatorPubkey: "u1",
+  rating: "+",
+  discussionId: "34550:author:demo",
+  createdAt: 1,
+  event: {
+    id: "eval-1",
+    pubkey: "u1",
+    kind: 7,
+    content: "+",
+    tags: [["e", "post-1"], ["a", "34550:author:demo"]],
+    created_at: 1,
+    sig: "sig",
+  },
+};
+const detailSnapshotFixture: DetailSnapshotFixture = {
+  discussion: detailDiscussion,
+  posts: [detailPost],
+  approvals: [],
+  moderatorRequests: [],
+  evaluations: [detailEvaluation],
+  userEvaluationIds: new Set(["eval-1"]),
+};
+const createDetailModel = (
+  overrides: Partial<DetailModelFixture> = {},
+): DetailModelFixture => ({
+  state: "ready",
+  snapshot: detailSnapshotFixture,
+  error: null,
+  reload: jest.fn(),
+  addPost: jest.fn(),
+  addApproval: jest.fn(),
+  removeApproval: jest.fn(),
+  ...overrides,
+});
+
 describe("DiscussionDetailPage streaming", () => {
   const withCompletion = (events: any[]) => ({
     events,
@@ -277,7 +383,7 @@ describe("DiscussionDetailPage streaming", () => {
     sourceRelayUrlsByEventId: {},
   });
 
-  const withDiscussionReadResult = (events: any[]) => ({
+  const withNostrReadResult = (events: any[]) => ({
     events,
     completionReason: "eose",
     duplicateCount: 0,
@@ -297,6 +403,10 @@ describe("DiscussionDetailPage streaming", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseDiscussionDetail.mockReturnValue(createDetailModel());
+    discussionReadExecutorMock.executeNostrRead.mockResolvedValue(
+      withNostrReadResult([]),
+    );
     mockUseDiscussionMeta.mockReturnValue({
       discussion: {
         id: "34550:author:demo",
@@ -348,9 +458,12 @@ describe("DiscussionDetailPage streaming", () => {
 
     // Title is now displayed in the layout, not in page content
     // Check for loading state instead to verify streaming works
-    expect(
-      await screen.findByText("評価データを読み込み中...")
-    ).toBeInTheDocument();
+    const loadingText = await screen.findByText("評価データを読み込み中...");
+    expect(loadingText).toBeInTheDocument();
+    expect(loadingText.closest('[role="status"]')).toHaveAttribute(
+      "aria-live",
+      "polite",
+    );
     expect(
       screen.queryByText("Evaluation Component")
     ).not.toBeInTheDocument();
@@ -371,164 +484,55 @@ describe("DiscussionDetailPage streaming", () => {
     expect(screen.getByText("Evaluation Component")).toBeInTheDocument();
   });
 
-  it("loads evaluations through the executor with the complete read contract", async () => {
+  it("uses evaluations from the final detail snapshot without a page-owned read", async () => {
     mockUseDiscussionContentData.mockReturnValue({
-      posts: [
-        { id: "post-1", approved: true },
-      ],
+      posts: [detailPost],
       isLoading: false,
       error: null,
       addPost: jest.fn(),
     });
-    const evaluationEvent: NostrEventDTO = {
-      id: "eval-1",
-      pubkey: "u1",
-      kind: 7,
-      content: "+",
-      tags: [["e", "post-1"], ["a", "34550:author:demo"]],
-      created_at: 1,
-      sig: "sig",
-    };
-    loadKnownDiscussionDataMock.mockReturnValue({
-      version: 1,
-      savedAt: Date.now(),
-      metadata: null,
-      eventIds: [],
-      attemptedRelayUrls: ["wss://old-attempt.example"],
-      successfulEventRelayUrls: ["wss://successful.example"],
-      successfulRelays: [],
-    });
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
-      withDiscussionReadResult([evaluationEvent]),
-    );
-    gatewayMock.queryWithCompletion.mockRejectedValue(
-      new Error("evaluation reads must not call the gateway from the page"),
-    );
-    serviceMock.getEvaluations.mockResolvedValue([]);
+    mockUseDiscussionDetail.mockReturnValue(createDetailModel());
 
     render(<DiscussionDetailPage />);
 
-    await waitFor(() =>
-      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalledWith(
-        gatewayMock,
-        expect.objectContaining({
-          plan: {
-            target: "discussion-evaluations",
-            filters: [
-              {
-                kinds: [7],
-                "#e": ["post-1"],
-                limit: 100,
-              },
-            ],
-            idleTimeoutMs: 321,
-            hardTimeoutMs: 987,
-          },
-          relayUrls: [
-            "wss://hint.example",
-            "wss://successful.example",
-            "wss://configured.example",
-            "wss://default.example",
-          ],
-        }),
-      ),
-    );
-
+    expect(discussionReadExecutorMock.executeNostrRead).not.toHaveBeenCalled();
     expect(gatewayMock.queryWithCompletion).not.toHaveBeenCalled();
-    expect(parseEvaluationEventMock).toHaveBeenCalledWith(evaluationEvent);
+    expect(serviceMock.getEvaluations).not.toHaveBeenCalled();
     expect(combinePostsWithStatsMock).toHaveBeenCalledWith(
-      [{ id: "post-1", approved: true }],
-      [expect.objectContaining({ id: "eval-1", postId: "post-1" })],
+      [expect.objectContaining({ id: "post-1", approved: true })],
+      [expect.objectContaining({ id: "eval-1", postId: "post-1", rating: "+" })],
     );
     expect(await screen.findByTestId("evaluation-total-post-1")).toHaveTextContent("1");
 
     expect(screen.getByText("意見グループ")).toBeInTheDocument();
   });
 
-  it("ignores a stale evaluation read after the posts generation changes", async () => {
-    let currentPosts: Array<{ id: string; approved: boolean }> = [
-      { id: "post-1", approved: true },
-    ];
-    const firstEvaluationEvent: NostrEventDTO = {
-      id: "eval-1",
-      pubkey: "u1",
-      kind: 7,
-      content: "+",
-      tags: [["e", "post-1"], ["a", "34550:author:demo"]],
-      created_at: 1,
-      sig: "sig",
-    };
-    const secondEvaluationEvent: NostrEventDTO = {
-      id: "eval-2",
-      pubkey: "u2",
-      kind: 7,
-      content: "+",
-      tags: [["e", "post-2"], ["a", "34550:author:demo"]],
-      created_at: 2,
-      sig: "sig",
-    };
-    type ReadResult = ReturnType<typeof withDiscussionReadResult>;
-    let resolveFirst!: (result: ReadResult) => void;
-    const firstRead = new Promise<ReadResult>((resolve) => {
-      resolveFirst = resolve;
-    });
-
-    mockUseDiscussionContentData.mockImplementation(() => ({
-      posts: currentPosts,
+  it("does not restart a page-owned evaluation read when the detail snapshot rerenders", async () => {
+    mockUseDiscussionContentData.mockReturnValue({
+      posts: [{ id: "post-1", approved: true }],
       isLoading: false,
       error: null,
       addPost: jest.fn(),
-    }));
-    loadKnownDiscussionDataMock.mockReturnValue({
-      version: 1,
-      savedAt: Date.now(),
-      metadata: null,
-      eventIds: [],
-      attemptedRelayUrls: [],
-      successfulEventRelayUrls: [],
-      successfulRelays: [],
     });
-    serviceMock.getEvaluations.mockResolvedValue([]);
-
-    // The executor sequence is the contract under test. The gateway sequence
-    // keeps this stale-result assertion isolated from the separate migration
-    // RED that verifies the page no longer calls the gateway directly.
-    discussionReadExecutorMock.executeDiscussionRead
-      .mockImplementationOnce(() => firstRead)
-      .mockResolvedValueOnce(withDiscussionReadResult([secondEvaluationEvent]));
-    gatewayMock.queryWithCompletion
-      .mockImplementationOnce(() => firstRead)
-      .mockResolvedValueOnce(withDiscussionReadResult([secondEvaluationEvent]));
+    mockUseDiscussionDetail.mockReturnValue(createDetailModel());
 
     const { rerender } = render(<DiscussionDetailPage />);
-
-    currentPosts = [{ id: "post-2", approved: true }];
+    await waitFor(() => expect(screen.getByText("Evaluation Component")).toBeInTheDocument());
     rerender(<DiscussionDetailPage />);
 
-    expect(
-      await screen.findByTestId("evaluation-total-post-2"),
-    ).toHaveTextContent("1");
-    expect(
-      parseEvaluationEventMock.mock.calls.map((call: unknown[]) => call[0]),
-    ).toEqual([secondEvaluationEvent]);
-
-    await act(async () => {
-      resolveFirst(withDiscussionReadResult([firstEvaluationEvent]));
-      await firstRead;
-    });
-
-    expect(
-      parseEvaluationEventMock.mock.calls.map((call: unknown[]) => call[0]),
-    ).toEqual([secondEvaluationEvent]);
-    expect(parseEvaluationEventMock).toHaveBeenCalledTimes(1);
-    expect(screen.queryByTestId("evaluation-total-post-1")).not.toBeInTheDocument();
+    expect(discussionReadExecutorMock.executeNostrRead).not.toHaveBeenCalled();
+    expect(gatewayMock.queryWithCompletion).not.toHaveBeenCalled();
+    expect(serviceMock.getEvaluations).not.toHaveBeenCalled();
   });
 
-  it("keeps loading UI while metadata read is in progress (cold start/direct access)", () => {
+  it("keeps loading UI while the new detail model is loading (cold start/direct access)", () => {
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({ state: "loading" }),
+    );
     mockUseDiscussionMeta.mockReturnValue({
-      discussion: null,
-      isLoading: true,
-      completionReason: null,
+      discussion: detailDiscussion,
+      isLoading: false,
+      completionReason: "eose" as const,
       error: null,
       reload: jest.fn(),
     });
@@ -536,13 +540,15 @@ describe("DiscussionDetailPage streaming", () => {
     render(<DiscussionDetailPage />);
 
     expect(screen.queryByText("会話が見つかりません")).not.toBeInTheDocument();
-    expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveTextContent(/読み込み中/);
   });
 
   it("shows a reload action while preserving posts from a partial content read", async () => {
     const reload = jest.fn();
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
-      withDiscussionReadResult([]),
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({ state: "partial" }),
     );
     mockUseDiscussionContentData.mockReturnValue({
       posts: [{ id: "post-1", approved: true }],
@@ -559,6 +565,10 @@ describe("DiscussionDetailPage streaming", () => {
       "一部のrelayからの取得が完了していません。表示内容は暫定です。",
     );
     expect(statusText.closest('[role="status"]')).not.toBeNull();
+    expect(statusText.closest('[role="status"]')).toHaveAttribute(
+      "aria-live",
+      "polite",
+    );
     expect(screen.getByText("post content post-1")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
 
@@ -567,9 +577,7 @@ describe("DiscussionDetailPage streaming", () => {
 
   it("does not show a content reload status after an EOSE completion", async () => {
     const reload = jest.fn();
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
-      withDiscussionReadResult([]),
-    );
+    mockUseDiscussionDetail.mockReturnValue(createDetailModel());
     mockUseDiscussionContentData.mockReturnValue({
       posts: [{ id: "post-1", approved: true }],
       isLoading: false,
@@ -586,6 +594,7 @@ describe("DiscussionDetailPage streaming", () => {
       screen.queryByText("一部のrelayからの取得が完了していません。表示内容は暫定です。"),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "再読み込み" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("shows timeout warning as a polite soft status instead of not-found", async () => {
@@ -616,5 +625,30 @@ describe("DiscussionDetailPage streaming", () => {
     expect(status).toHaveTextContent(/会話データの取得に時間がかかっています/);
     expect(screen.getByRole("button", { name: "再読み込み" })).toBeInTheDocument();
     expect(screen.queryByText("会話が見つかりません")).not.toBeInTheDocument();
+  });
+
+  it("announces a shared detail error and exposes its reload boundary", async () => {
+    const reload = jest.fn();
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({
+        state: "error",
+        snapshot: null,
+        error: "詳細データの取得に失敗しました。",
+        reload,
+      }),
+    );
+
+    render(<DiscussionDetailPage />);
+
+    const errorTexts = await screen.findAllByText("詳細データの取得に失敗しました。");
+    expect(errorTexts).toHaveLength(2);
+    for (const errorText of errorTexts) {
+      expect(errorText.closest('[role="status"]')).toHaveAttribute(
+        "aria-live",
+        "polite",
+      );
+    }
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });

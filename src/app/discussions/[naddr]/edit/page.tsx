@@ -5,9 +5,7 @@ export const dynamic = "force-dynamic";
 import React, {
   useState,
   useEffect,
-  useCallback,
   useMemo,
-  useRef,
 } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/layouts/PageHeader";
@@ -16,10 +14,10 @@ import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
+import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
 import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
-  getDiscussionReadStrategyConfig,
 } from "@/lib/config/discussion-config";
 
 import {
@@ -48,7 +46,6 @@ import {
   createDiscussionNdkGateway,
   type ModeratorDecision,
 } from "@/lib/nostr/discussion-ndk-gateway";
-import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
 import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
@@ -57,14 +54,6 @@ import { buildLoginRoute } from "@/lib/navigation/auth-route";
 
 // const ADMIN_PUBKEY = getAdminPubkeyHex(); // eslint-disable-line @typescript-eslint/no-unused-vars
 const nostrServiceConfig = getNostrServiceConfig();
-const readStrategy =
-  typeof getDiscussionReadStrategyConfig === "function"
-    ? getDiscussionReadStrategyConfig()
-    : {
-      idleTimeoutMs: nostrServiceConfig.defaultTimeout,
-      hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
-      dedupWindowMs: 250,
-    };
 const nostrService = createNostrService(nostrServiceConfig);
 const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 const ADMIN_PUBKEY = getAdminPubkeyHex();
@@ -88,9 +77,32 @@ export default function DiscussionEditPage() {
   const naddrParam = params.naddr as string;
   const { user, signEvent } = useAuth();
   const discussionMeta = useDiscussionMeta();
-  const layoutDiscussion = discussionMeta?.discussion ?? null;
-  const isDiscussionLoading = discussionMeta?.isLoading ?? false;
-  const discussionCompletionReason = discussionMeta?.completionReason ?? null;
+  const detail = useDiscussionDetail();
+  const legacyStateOverridesDetail = Boolean(
+    discussionMeta && (discussionMeta.isLoading || discussionMeta.discussion === null),
+  );
+  const hasDetailSession = !legacyStateOverridesDetail && Boolean(
+    detail.snapshot || detail.error || detail.state !== "loading",
+  );
+  const layoutDiscussion = hasDetailSession
+    ? detail.snapshot?.discussion ?? null
+    : discussionMeta?.discussion ?? null;
+  const isDiscussionLoading = hasDetailSession
+    ? detail.state === "loading"
+    : discussionMeta?.isLoading ?? false;
+  const discussionCompletionReason = hasDetailSession
+    ? detail.completionReason ??
+      (detail.state === "partial"
+        ? "idle-timeout"
+        : detail.state === "error"
+          ? "hard-timeout"
+          : detail.state === "ready"
+            ? "eose"
+            : null)
+    : discussionMeta?.completionReason ?? null;
+  const reload = hasDetailSession
+    ? detail.reload
+    : discussionMeta?.reload ?? (async () => undefined);
 
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [formData, setFormData] = useState<EditFormData>({
@@ -99,7 +111,6 @@ export default function DiscussionEditPage() {
     moderators: [],
   });
   const [moderatorInput, setModeratorInput] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRequestingListing, setIsRequestingListing] = useState(false);
@@ -108,18 +119,15 @@ export default function DiscussionEditPage() {
     new Set(),
   );
   const [promotionRequestMessage, setPromotionRequestMessage] = useState("");
-  const [promotionRequests, setPromotionRequests] = useState<
+  const [localPromotionRequests, setLocalPromotionRequests] = useState<
     ModeratorPromotionRequest[]
   >([]);
-  const [isPromotionRequestReadComplete, setIsPromotionRequestReadComplete] =
-    useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [successType, setSuccessType] = useState<
     "save" | "listing" | "promotion" | null
   >(null);
-  const readGenerationRef = useRef(0);
 
   const discussionInfo = useMemo(() => {
     if (!naddrParam) return null;
@@ -133,9 +141,7 @@ export default function DiscussionEditPage() {
   useEffect(() => {
     if (layoutDiscussion) {
       setDiscussion((prev) => {
-        if (prev?.id === layoutDiscussion.id) {
-          return prev;
-        }
+        if (prev?.id === layoutDiscussion.id) return prev;
         return layoutDiscussion;
       });
       setFormData({
@@ -143,66 +149,25 @@ export default function DiscussionEditPage() {
         description: layoutDiscussion.description,
         moderators: layoutDiscussion.moderators.map((m) => m.pubkey),
       });
-      return;
-    }
-
-    if (!isDiscussionLoading) {
+    } else if (!isDiscussionLoading) {
       setDiscussion(null);
     }
-  }, [layoutDiscussion, isDiscussionLoading]);
+  }, [isDiscussionLoading, layoutDiscussion]);
 
-  const loadPromotionRequests = useCallback(async () => {
-    const readGeneration = ++readGenerationRef.current;
-
-    if (!isDiscussionsEnabled() || !discussionInfo) {
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setIsPromotionRequestReadComplete(false);
-    try {
-      const result = await executeDiscussionRead(discussionGateway, {
-        plan: {
-          target: "discussion-edit",
-          filters: [{
-            kinds: [1111],
-            "#a": [discussionInfo.discussionId],
-            "#t": ["moderator-request"],
-            limit: 50,
-          }],
-          idleTimeoutMs: readStrategy.idleTimeoutMs,
-          hardTimeoutMs: readStrategy.hardTimeoutMs,
-        },
-        relayUrls: Array.from(new Set([
-          ...(discussionInfo.relays ?? []),
-          ...(nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
-        ])),
-      });
-      if (readGenerationRef.current !== readGeneration) return;
-      const requests = result.events
-        .filter((event) => event.tags.some((tag) => tag[0] === "t" && tag[1] === "moderator-request"))
-        .map((event) => ({ id: event.id, applicantPubkey: event.pubkey, createdAt: event.created_at, event }))
-        .sort((a, b) => b.createdAt - a.createdAt);
-      setPromotionRequests(requests);
-      setIsPromotionRequestReadComplete(result.completionReason === "eose");
-    } catch (error) {
-      if (readGenerationRef.current !== readGeneration) return;
-      logger.error("Failed to load moderator promotion requests:", error);
-      setPromotionRequests([]);
-      setIsPromotionRequestReadComplete(false);
-    } finally {
-      if (readGenerationRef.current === readGeneration) setIsLoading(false);
-    }
-  }, [discussionInfo]);
-
-  useEffect(() => {
-    void loadPromotionRequests();
-
-    return () => {
-      readGenerationRef.current += 1;
-    };
-  }, [loadPromotionRequests]);
+  const promotionRequests = useMemo(() => {
+    const snapshotRequests = detail.snapshot?.moderatorRequests.map((request) => ({
+      id: request.id,
+      applicantPubkey: request.applicantPubkey,
+      createdAt: request.createdAt,
+      event: request.event,
+    })) ?? [];
+    const byId = new Map<string, ModeratorPromotionRequest>();
+    [...snapshotRequests, ...localPromotionRequests].forEach((request) => {
+      byId.set(request.id, request);
+    });
+    return Array.from(byId.values()).sort((left, right) => right.createdAt - left.createdAt);
+  }, [detail.snapshot?.moderatorRequests, localPromotionRequests]);
+  const isPromotionRequestReadComplete = hasDetailSession && detail.state === "ready";
 
   const handleSave = async () => {
     if (!user.isLoggedIn) {
@@ -408,7 +373,7 @@ export default function DiscussionEditPage() {
         throw new Error("Failed to publish moderator promotion request");
       }
 
-      setPromotionRequests((prev) => [
+      setLocalPromotionRequests((prev) => [
         {
           id: signedEvent.id,
           applicantPubkey: user.pubkey || "",
@@ -547,7 +512,7 @@ export default function DiscussionEditPage() {
     );
   }
 
-  if (isDiscussionLoading || isLoading) {
+  if (isDiscussionLoading) {
     return (
       <div
         className="py-8"
@@ -585,7 +550,7 @@ export default function DiscussionEditPage() {
           <button
             type="button"
             className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-            onClick={() => void discussionMeta?.reload()}
+            onClick={() => void reload()}
           >
             <span className="ruby-text">再読み込み</span>
           </button>
@@ -869,7 +834,7 @@ export default function DiscussionEditPage() {
                     </div>
                   </section>
 
-                  {!isPromotionRequestReadComplete && !isLoading && (
+                  {!isPromotionRequestReadComplete && !isDiscussionLoading && (
                     <div
                       className="alert alert-warning alert-soft text-base-content!"
                       role="status"
@@ -879,13 +844,6 @@ export default function DiscussionEditPage() {
                       <span className="ruby-text">
                         昇格申請の取得が完了していないため、申請がないとは断定できません。
                       </span>
-                      <button
-                        type="button"
-                        className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-                        onClick={() => void loadPromotionRequests()}
-                      >
-                        <span className="ruby-text">昇格申請を再取得</span>
-                      </button>
                     </div>
                   )}
 
@@ -910,7 +868,7 @@ export default function DiscussionEditPage() {
                     </button>
                   </section>
 
-                  {false && discussion && (
+                  {isPromotionRequestReadComplete && promotionRequests.length > 0 && discussion && (
                     <section aria-labelledby="moderator-section-title">
                       <h3
                         id="moderator-section-title"
@@ -1025,6 +983,11 @@ export default function DiscussionEditPage() {
                                       : "unapproved"}
                                   </span>
                                 </div>
+                                {request.event.content && (
+                                  <p className="mt-2 text-base text-base-content ruby-text">
+                                    {request.event.content}
+                                  </p>
+                                )}
                                 <div className="mt-3 flex flex-wrap gap-2">
                                   <button
                                     type="button"

@@ -55,13 +55,13 @@ jest.mock("@/lib/nostr/discussion-ndk-gateway", () => ({
   createDiscussionNdkGateway: () => ({ queryWithCompletion: jest.fn() }),
 }));
 
-jest.mock("@/lib/discussion/discussion-read-executor", () => {
-  const executeDiscussionRead = jest.fn();
-  return { executeDiscussionRead, __mock: { executeDiscussionRead } };
+jest.mock("@/lib/nostr/nostr-read-executor", () => {
+  const executeNostrRead = jest.fn();
+  return { executeNostrRead, __mock: { executeNostrRead } };
 });
 
 const { __mock: discussionReadExecutorMock } = jest.requireMock(
-  "@/lib/discussion/discussion-read-executor",
+  "@/lib/nostr/nostr-read-executor",
 );
 
 jest.mock("@/lib/nostr/nostr-utils", () => ({
@@ -100,7 +100,7 @@ describe("PostApprovalPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     isModeratorResult = false;
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
+    discussionReadExecutorMock.executeNostrRead.mockResolvedValue({
       events: [],
       completionReason: "eose",
       duplicateCount: 0,
@@ -188,7 +188,7 @@ describe("PostApprovalPage streaming", () => {
     });
   });
 
-  it("uses the shared moderation data without starting a second read", async () => {
+  it("uses the shared detail snapshot without starting an approval-page read", async () => {
     useAuthMock.mockReturnValue({
       user: { pubkey: "author", isLoggedIn: true },
       signEvent: jest.fn(),
@@ -199,7 +199,7 @@ describe("PostApprovalPage streaming", () => {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    expect(discussionReadExecutorMock.executeDiscussionRead).not.toHaveBeenCalled();
+    expect(discussionReadExecutorMock.executeNostrRead).not.toHaveBeenCalled();
     expect(serviceMock.streamEventsOnEvent).not.toHaveBeenCalled();
     expect(serviceMock.streamApprovals).not.toHaveBeenCalled();
   });

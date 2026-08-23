@@ -9,6 +9,7 @@ import PageHeader from "@/components/layouts/PageHeader";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
+import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
 import { useDiscussionContentData } from "@/components/discussion/DiscussionContentDataProvider";
 import {
   isDiscussionsEnabled,
@@ -45,25 +46,42 @@ const nostrService = createNostrService(nostrServiceConfig);
 export default function PostApprovalPage() {
   const params = useParams();
   const naddrParam = params.naddr as string;
+  const detail = useDiscussionDetail();
   const discussionMeta = useDiscussionMeta();
-  const discussion = discussionMeta?.discussion ?? null;
-  const isDiscussionLoading = discussionMeta?.isLoading ?? false;
-  const discussionCompletionReason = discussionMeta?.completionReason ?? null;
+  const legacyContent = useDiscussionContentData();
+  const hasDetailSnapshot = Boolean(detail.snapshot);
+  const discussion = hasDetailSnapshot
+    ? detail.snapshot?.discussion ?? null
+    : discussionMeta?.discussion ?? null;
+  const isDiscussionLoading = hasDetailSnapshot
+    ? detail.state === "loading"
+    : discussionMeta?.isLoading ?? false;
+  const discussionCompletionReason = hasDetailSnapshot
+    ? detail.completionReason ?? null
+    : discussionMeta?.completionReason ?? null;
 
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
   const { user, signEvent } = useAuth();
-  const {
-    posts,
-    approvals,
-    isLoading,
-    completionReason,
-    approvalState,
-    reload,
-    addApproval,
-    removeApproval,
-  } = useDiscussionContentData();
+  const posts = hasDetailSnapshot ? detail.snapshot?.posts ?? [] : legacyContent.posts;
+  const approvals = hasDetailSnapshot ? detail.snapshot?.approvals ?? [] : legacyContent.approvals;
+  const isLoading = hasDetailSnapshot
+    ? detail.state === "loading"
+    : legacyContent.isLoading;
+  const completionReason = hasDetailSnapshot
+    ? detail.completionReason
+    : legacyContent.completionReason;
+  const approvalState = hasDetailSnapshot
+    ? posts.some((post) => post.approvalState === "unknown")
+      ? "unknown"
+      : detail.state === "ready"
+        ? "approved"
+        : "unknown"
+    : legacyContent.approvalState;
+  const reload = hasDetailSnapshot ? detail.reload : legacyContent.reload;
+  const addApproval = hasDetailSnapshot ? detail.addApproval : legacyContent.addApproval;
+  const removeApproval = hasDetailSnapshot ? detail.removeApproval : legacyContent.removeApproval;
 
   const discussionInfo = useMemo(() => {
     if (!naddrParam) return null;

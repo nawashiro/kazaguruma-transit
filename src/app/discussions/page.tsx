@@ -12,50 +12,33 @@ import PageHeader from "@/components/layouts/PageHeader";
 import { formatRelativeTime } from "@/lib/nostr/nostr-utils";
 import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
 import { resolveDiscussionReferences } from "@/lib/discussion/discussion-reference-resolver";
-import { useDiscussionManagementData } from "@/components/discussion/DiscussionManagementDataProvider";
+import { useDiscussionManagement } from "@/components/discussion/DiscussionManagementProvider";
 
 export default function DiscussionsPage() {
   const { user } = useAuth();
-  const {
-    posts,
-    referencedDiscussions,
-    isModerationLoading,
-    isReferencedDiscussionsLoading,
-    completionReason,
-    referencedDiscussionCompletionReason,
-    moderationError: loadError,
-    reloadModeration,
-  } = useDiscussionManagementData();
-  const visibleDiscussionReferences = useMemo(
-    () =>
-      new Set(
-        resolveDiscussionReferences(
-          posts
-            .filter(
-              (post) => post.approved || post.approvalState === "unknown",
-            )
-            .flatMap((post) => post.event?.tags ?? []),
-        ).references.map((reference) => reference.discussionId),
-      ),
-    [posts],
-  );
-  const discussions = useMemo(
-    () =>
-      referencedDiscussions
-        .filter((discussion) =>
-          visibleDiscussionReferences.has(
-            `34550:${discussion.authorPubkey}:${discussion.dTag}`,
-          ),
+  const management = useDiscussionManagement();
+  const snapshot = management.snapshot;
+  const posts = snapshot?.listingPosts;
+  const referencedDiscussions = snapshot?.referencedDiscussions;
+  const discussions = useMemo(() => {
+    const listingPosts = posts ?? [];
+    const referenced = referencedDiscussions ?? [];
+    const approvedReferenceIds = new Set(
+      listingPosts
+        .filter((post) => post.approved && post.approvalState === "approved")
+        .flatMap((post) =>
+          resolveDiscussionReferences(post.event?.tags ?? []).references,
         )
-        .sort((left, right) => right.createdAt - left.createdAt),
-    [referencedDiscussions, visibleDiscussionReferences],
-  );
-  const isPartialRead =
-    (completionReason && completionReason !== "eose") ||
-    (referencedDiscussionCompletionReason &&
-      referencedDiscussionCompletionReason !== "eose");
-  const isLoading =
-    isModerationLoading || isReferencedDiscussionsLoading;
+        .map((reference) => reference.discussionId),
+    );
+    return referenced
+      .filter((discussion) => approvedReferenceIds.has(discussion.id))
+      .sort((left, right) => right.createdAt - left.createdAt);
+  }, [posts, referencedDiscussions]);
+  const isLoading = management.state === "loading";
+  const isPartialRead = management.state === "partial";
+  const loadError = management.state === "error" ? management.error : null;
+  const reload = management.reload;
 
   // ディスカッション機能が有効になっているか確認し、それに応じて表示を切り替える
   if (!isDiscussionsEnabled()) {
@@ -81,12 +64,15 @@ export default function DiscussionsPage() {
               </h2>
 
               {isLoading ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-                    </div>
-                  ))}
+                <div role="status" aria-live="polite" className="space-y-4">
+                  <span className="sr-only">会話一覧を読み込み中...</span>
+                  <div className="animate-pulse space-y-4" aria-hidden="true">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i}>
+                        <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : loadError ? (
                 <div className="alert alert-error alert-soft text-base-content!" role="status" aria-live="polite">
@@ -94,7 +80,7 @@ export default function DiscussionsPage() {
                   <button
                     type="button"
                     className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-                    onClick={() => void reloadModeration()}
+                    onClick={() => void reload()}
                   >
                     <span className="ruby-text">再読み込み</span>
                   </button>
@@ -107,7 +93,7 @@ export default function DiscussionsPage() {
                       <button
                         type="button"
                         className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-                        onClick={() => void reloadModeration()}
+                        onClick={() => void reload()}
                       >
                         <span className="ruby-text">再読み込み</span>
                       </button>
@@ -170,7 +156,7 @@ export default function DiscussionsPage() {
                   <button
                     type="button"
                     className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-                    onClick={() => void reloadModeration()}
+                    onClick={() => void reload()}
                   >
                     <span className="ruby-text">再読み込み</span>
                   </button>

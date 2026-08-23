@@ -7,8 +7,9 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { getAdminPubkeyHex } from "@/lib/nostr/nostr-utils";
 import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import { DiscussionRoleCard, type DiscussionRole } from "@/components/discussion/DiscussionRoleCard";
-import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import PageHeader from "@/components/layouts/PageHeader";
+import { useDiscussionManagement } from "@/components/discussion/DiscussionManagementProvider";
+import { useDiscussionMeta as useLegacyDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 
 const MANAGEMENT_TABS = [
   { href: "/discussions", label: "会話一覧" },
@@ -30,9 +31,10 @@ export function DiscussionManagementTabLayout({
   );
   const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const { user } = useAuth();
-  const discussionMeta = useDiscussionMeta();
+  const management = useDiscussionManagement();
+  const legacyMeta = useLegacyDiscussionMeta();
+  const discussion = management.snapshot?.listDiscussion ?? legacyMeta?.discussion ?? null;
   const isAdminUser = arePubkeysEqual(user.pubkey, getAdminPubkeyHex());
-  const discussion = discussionMeta?.discussion;
   const role: DiscussionRole | null = roleOverride
     ? roleOverride
     : isAdminUser

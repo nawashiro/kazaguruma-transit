@@ -373,4 +373,39 @@ describe("readDiscussionDetail", () => {
       }),
     );
   });
+
+  it("rejects metadata events that do not match the requested discussion address", async () => {
+    const mismatchedAuthorMetadata = event({
+      id: "metadata-other-author",
+      kind: 34550,
+      pubkey: "other-author",
+      content: "別会話",
+      tags: [["d", "other-topic"], ["name", "別会話"]],
+      createdAt: 99,
+    });
+    const mismatchedDTagMetadata = event({
+      id: "metadata-other-dtag",
+      kind: 34550,
+      pubkey: "author",
+      content: "別トピック",
+      tags: [["d", "other-topic"], ["name", "別トピック"]],
+      createdAt: 100,
+    });
+    executeNostrRead
+      .mockResolvedValueOnce(
+        result([metadataEvent, mismatchedAuthorMetadata, mismatchedDTagMetadata]),
+      )
+      .mockResolvedValueOnce(result([postEvent]))
+      .mockResolvedValueOnce(result([]))
+      .mockResolvedValueOnce(result([]));
+
+    const readResult = await readDetail(baseInput());
+
+    expect(readResult.state).toBe("ready");
+    expect(readResult.snapshot?.discussion).toEqual(
+      expect.objectContaining({ id: "34550:author:topic", title: "共有会話" }),
+    );
+    expect(readResult.snapshot?.discussion?.title).not.toBe("別会話");
+    expect(readResult.snapshot?.discussion?.title).not.toBe("別トピック");
+  });
 });

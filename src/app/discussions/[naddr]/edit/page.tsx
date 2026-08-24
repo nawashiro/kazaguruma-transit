@@ -13,7 +13,6 @@ import { useParams, useRouter } from "next/navigation";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
 import {
   isDiscussionsEnabled,
@@ -59,33 +58,19 @@ export default function DiscussionEditPage() {
   const router = useRouter();
   const naddrParam = params.naddr as string;
   const { user, signEvent } = useAuth();
-  const discussionMeta = useDiscussionMeta();
   const detail = useDiscussionDetail();
-  const legacyStateOverridesDetail = Boolean(
-    discussionMeta && (discussionMeta.isLoading || discussionMeta.discussion === null),
-  );
-  const hasDetailSession = !legacyStateOverridesDetail && Boolean(
-    detail.snapshot || detail.error || detail.state !== "loading",
-  );
-  const layoutDiscussion = hasDetailSession
-    ? detail.snapshot?.discussion ?? null
-    : discussionMeta?.discussion ?? null;
-  const isDiscussionLoading = hasDetailSession
-    ? detail.state === "loading"
-    : discussionMeta?.isLoading ?? false;
-  const discussionCompletionReason = hasDetailSession
-    ? detail.completionReason ??
-      (detail.state === "partial"
-        ? "idle-timeout"
-        : detail.state === "error"
-          ? "hard-timeout"
-          : detail.state === "ready"
-            ? "eose"
-            : null)
-    : discussionMeta?.completionReason ?? null;
-  const reload = hasDetailSession
-    ? detail.reload
-    : discussionMeta?.reload ?? (async () => undefined);
+  const layoutDiscussion = detail.snapshot?.discussion ?? null;
+  const isDiscussionLoading = detail.state === "loading";
+  const discussionCompletionReason =
+    detail.completionReason ??
+    (detail.state === "partial"
+      ? "idle-timeout"
+      : detail.state === "error"
+        ? "hard-timeout"
+        : detail.state === "ready"
+          ? "eose"
+          : null);
+  const reload = detail.reload;
 
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [formData, setFormData] = useState<EditFormData>({
@@ -371,6 +356,27 @@ export default function DiscussionEditPage() {
   }
 
   if (!discussion) {
+    if (detail.state === "error") {
+      return (
+        <div className="py-8">
+          <div
+            className="alert alert-error alert-soft text-base-content!"
+            role="status"
+            aria-live="polite"
+          >
+            <span>{detail.error ?? "会話データの取得に失敗しました。"}</span>
+            <button
+              type="button"
+              className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+              onClick={() => void reload()}
+            >
+              <span className="ruby-text">再読み込み</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     if (
       discussionCompletionReason === "idle-timeout" ||
       discussionCompletionReason === "hard-timeout" ||

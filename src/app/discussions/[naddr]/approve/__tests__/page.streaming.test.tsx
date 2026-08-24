@@ -2,6 +2,7 @@ import React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import PostApprovalPage from "../page";
+import type { DiscussionDetailModel } from "@/components/discussion/DiscussionDetailProvider";
 import type {
   Discussion,
   DiscussionPost,
@@ -10,7 +11,6 @@ import type {
 
 const useAuthMock = jest.fn();
 const mockUseDiscussionMeta = jest.fn();
-const mockUseDiscussionContentData = jest.fn();
 const mockUseDiscussionDetail = jest.fn();
 let isModeratorResult = false;
 
@@ -24,10 +24,6 @@ jest.mock("@/lib/auth/auth-context", () => ({
 
 jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
   useDiscussionMeta: () => mockUseDiscussionMeta(),
-}));
-
-jest.mock("@/components/discussion/DiscussionContentDataProvider", () => ({
-  useDiscussionContentData: () => mockUseDiscussionContentData(),
 }));
 
 jest.mock("@/components/discussion/DiscussionDetailProvider", () => ({
@@ -190,8 +186,10 @@ const approvedPostApproval: PostApproval = {
   },
 };
 
-const createReadyDetailModel = () => ({
-  state: "ready" as const,
+const createReadyDetailModel = (
+  overrides: Partial<DiscussionDetailModel> = {},
+): DiscussionDetailModel => ({
+  state: "ready",
   snapshot: {
     discussion: layoutDiscussion,
     posts: [pendingPost, approvedPost],
@@ -202,12 +200,14 @@ const createReadyDetailModel = () => ({
     relayProvenance: { successfulRelayUrlsByPhase: {} },
   },
   error: null,
-  completionReason: "eose" as const,
+  completionReason: "eose",
   relayProvenance: { successfulRelayUrlsByPhase: {} },
-  reload: jest.fn(),
+  isFallback: false,
+  reload: jest.fn(async () => undefined),
   addPost: jest.fn(),
   addApproval: jest.fn(),
   removeApproval: jest.fn(),
+  ...overrides,
 });
 
 describe("PostApprovalPage streaming", () => {
@@ -224,24 +224,8 @@ describe("PostApprovalPage streaming", () => {
       sourceRelayUrlsByEventId: {},
       attempts: [],
     });
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: layoutDiscussion,
-      isLoading: false,
-      error: null,
-      completionReason: "eose",
-      reload: jest.fn(),
-    });
-    mockUseDiscussionContentData.mockReturnValue({
-      posts: [pendingPost, approvedPost],
-      approvals: [],
-      isLoading: false,
-      completionReason: "eose",
-      approvalState: "unapproved",
-      reload: jest.fn(),
-      mergeModerationEvents: jest.fn(),
-      addApproval: jest.fn(),
-      removeApproval: jest.fn(),
-    });
+    // The route fixture is supplied only by the public detail model.
+    mockUseDiscussionMeta.mockReturnValue(undefined);
     mockUseDiscussionDetail.mockReturnValue(createReadyDetailModel());
   });
 
@@ -266,29 +250,13 @@ describe("PostApprovalPage streaming", () => {
       user: { pubkey: "viewer", isLoggedIn: true },
       signEvent: jest.fn(),
     });
-    mockUseDiscussionMeta.mockReturnValue(undefined);
-    mockUseDiscussionContentData.mockReturnValue({
-      posts: [],
-      approvals: [],
-      isLoading: false,
-      completionReason: null,
-      approvalState: "unknown",
-      reload: jest.fn(),
-      mergeModerationEvents: jest.fn(),
-      addApproval: jest.fn(),
-      removeApproval: jest.fn(),
-    });
-    mockUseDiscussionDetail.mockReturnValue({
-      state: "loading",
-      snapshot: null,
-      error: null,
-      completionReason: null,
-      relayProvenance: null,
-      reload: jest.fn(),
-      addPost: jest.fn(),
-      addApproval: jest.fn(),
-      removeApproval: jest.fn(),
-    });
+    mockUseDiscussionDetail.mockReturnValue(
+      createReadyDetailModel({
+        state: "loading",
+        snapshot: null,
+        completionReason: null,
+      }),
+    );
 
     render(<PostApprovalPage />);
 
@@ -333,15 +301,15 @@ describe("PostApprovalPage streaming", () => {
       user: { pubkey: "author", isLoggedIn: true },
       signEvent: jest.fn(),
     });
-    const shared = mockUseDiscussionDetail();
-    if (!shared.snapshot) {
-      throw new Error("Expected the default detail fixture to be ready");
-    }
-    mockUseDiscussionDetail.mockReturnValue({
-      ...shared,
-      snapshot: { ...shared.snapshot, discussion: null },
-      completionReason: "idle-timeout",
-    });
+    const reload = jest.fn(async () => undefined);
+    mockUseDiscussionDetail.mockReturnValue(
+      createReadyDetailModel({
+        state: "partial",
+        snapshot: null,
+        completionReason: "idle-timeout",
+        reload,
+      }),
+    );
 
     render(<PostApprovalPage />);
 
@@ -361,22 +329,49 @@ describe("PostApprovalPage streaming", () => {
     expect(status).toHaveTextContent(/会話データの取得に時間がかかっています/);
     expect(screen.getByRole("tablist")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "承認待ちタブを開く" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it("renders not-found as a polite soft status while keeping approval tabs", async () => {
+  it("renders detail errors with the public model and reload action", async () => {
     useAuthMock.mockReturnValue({
       user: { pubkey: "author", isLoggedIn: true },
       signEvent: jest.fn(),
     });
-    const shared = mockUseDiscussionDetail();
-    if (!shared.snapshot) {
-      throw new Error("Expected the default detail fixture to be ready");
-    }
-    mockUseDiscussionDetail.mockReturnValue({
-      ...shared,
-      snapshot: { ...shared.snapshot, discussion: null },
-      completionReason: "eose",
+    const reload = jest.fn(async () => undefined);
+    mockUseDiscussionDetail.mockReturnValue(
+      createReadyDetailModel({
+        state: "error",
+        snapshot: null,
+        error: "詳細データの取得に失敗しました。",
+        completionReason: "cancelled",
+        reload,
+      }),
+    );
+
+    render(<PostApprovalPage />);
+
+    expect(await screen.findByText("詳細データの取得に失敗しました。"))
+      .toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders not-found from a completed detail model and uses its reload action", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "author", isLoggedIn: true },
+      signEvent: jest.fn(),
     });
+    const reload = jest.fn(async () => undefined);
+    mockUseDiscussionDetail.mockReturnValue(
+      createReadyDetailModel({
+        state: "ready",
+        snapshot: null,
+        error: "会話が見つかりません。",
+        completionReason: "eose",
+        reload,
+      }),
+    );
 
     render(<PostApprovalPage />);
 
@@ -396,6 +391,8 @@ describe("PostApprovalPage streaming", () => {
     expect(status).toHaveTextContent("会話が見つかりません。");
     expect(screen.getByRole("tablist")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "承認待ちタブを開く" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it("shows disabled approval action with reason for non-moderator users", async () => {

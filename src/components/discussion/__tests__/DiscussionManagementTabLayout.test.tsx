@@ -1,10 +1,11 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import type { DiscussionManagementModel } from "../DiscussionManagementProvider";
 import { DiscussionManagementTabLayout } from "../DiscussionManagementTabLayout";
 
 const usePathname = jest.fn(() => "/discussions/manage");
-const mockUseDiscussionMeta = jest.fn();
+const mockUseDiscussionManagement = jest.fn<DiscussionManagementModel, []>();
 let mockUserPubkey: string | null = null;
 
 jest.mock("next/navigation", () => ({
@@ -13,8 +14,17 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("next/link", () => ({
   __esModule: true,
-  default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -24,55 +34,81 @@ jest.mock("@/lib/auth/auth-context", () => ({
   }),
 }));
 
-jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
-  useDiscussionMeta: () => mockUseDiscussionMeta(),
+jest.mock("@/lib/nostr/nostr-utils", () => ({
+  getAdminPubkeyHex: () => "admin-pubkey",
+  npubToHex: (pubkey: string) => pubkey,
 }));
 
-jest.mock("@/lib/nostr/discussion-ndk-gateway", () => {
-  const queryWithCompletion = jest.fn();
-  return {
-    createDiscussionNdkGateway: () => ({ queryWithCompletion }),
-    queryWithCompletion,
-  };
-});
+jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
+  useDiscussionMeta: () => undefined,
+}));
 
-const { queryWithCompletion: mockQueryWithCompletion } = jest.requireMock(
-  "@/lib/nostr/discussion-ndk-gateway",
-);
+jest.mock("@/components/discussion/DiscussionManagementProvider", () => ({
+  useDiscussionManagement: () => mockUseDiscussionManagement(),
+}));
+
+const managementDiscussion = {
+  id: "34550:author:management-list",
+  authorPubkey: "author",
+  dTag: "management-list",
+  moderators: [{ pubkey: "moderator-pubkey" }],
+  createdAt: 1,
+  title: "管理モデルの掲載一覧",
+  description: "管理モデルから取得した説明",
+  event: {
+    id: "management-list-event",
+    pubkey: "author",
+    created_at: 1,
+    kind: 34550,
+    tags: [["d", "management-list"], ["name", "管理モデルの掲載一覧"]],
+    content: "管理モデルから取得した説明",
+    sig: "management-list-sig",
+  },
+};
+
+const createManagementModel = (
+  overrides: Partial<DiscussionManagementModel> = {},
+): DiscussionManagementModel => ({
+  state: "ready",
+  snapshot: {
+    listDiscussion: managementDiscussion,
+    listingPosts: [],
+    listingApprovals: [],
+    referencedDiscussions: [],
+  },
+  error: null,
+  completionReason: "eose",
+  relayProvenance: null,
+  reload: jest.fn(async () => undefined),
+  ...overrides,
+});
 
 describe("DiscussionManagementTabLayout", () => {
   beforeEach(() => {
     mockUserPubkey = null;
-    mockUseDiscussionMeta.mockReturnValue(undefined);
-    mockQueryWithCompletion.mockReset().mockResolvedValue({
-      events: [],
-      completionReason: "eose",
-      eventCount: 0,
-      elapsedMs: 0,
-      startedAt: 0,
-      lastEventAt: 0,
-      eoseReceived: true,
-      relayUrls: [],
-      duplicateCount: 0,
-      sourceRelayUrlsByEventId: {},
-    });
+    usePathname.mockReturnValue("/discussions/manage");
+    mockUseDiscussionManagement.mockReset();
+    mockUseDiscussionManagement.mockReturnValue(createManagementModel());
   });
 
-  it("renders the shared management tabs as a tabs-box", () => {
+  it("renders title and role from the management snapshot when legacy metadata is undefined", () => {
+    mockUserPubkey = "moderator-pubkey";
+
     render(
-      <DiscussionManagementTabLayout role="user">
+      <DiscussionManagementTabLayout>
         <div>content</div>
       </DiscussionManagementTabLayout>,
     );
 
+    expect(
+      screen.getByRole("heading", { level: 1, name: "管理モデルの掲載一覧" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("管理モデルから取得した説明")).toBeInTheDocument();
+    expect(screen.getByText("あなたはモデレーターです。")).toBeInTheDocument();
     expect(screen.getByRole("tablist")).toHaveClass("tabs", "tabs-box");
     expect(screen.getByRole("tab", { name: "会話一覧" })).toHaveAttribute(
       "href",
       "/discussions",
-    );
-    expect(screen.getByRole("tab", { name: "会話一覧" })).toHaveAttribute(
-      "aria-controls",
-      "discussion-management-panel",
     );
     expect(screen.getByRole("tab", { name: "掲載依頼" })).toHaveAttribute(
       "href",
@@ -82,20 +118,15 @@ describe("DiscussionManagementTabLayout", () => {
       "href",
       "/discussions/moderator",
     );
-    expect(screen.getByRole("heading", { level: 1, name: "意見交換" })).toBeInTheDocument();
-    expect(
-      screen.getByText("意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("あなたはユーザーです。"))
-      .toBeInTheDocument();
     expect(screen.getByRole("tabpanel")).toHaveAttribute(
       "aria-labelledby",
       "discussion-management-1-tab",
     );
   });
 
-  it("marks the current management route active", () => {
+  it("keeps the current management route active", () => {
     usePathname.mockReturnValue("/discussions/moderator");
+
     render(<DiscussionManagementTabLayout><div /></DiscussionManagementTabLayout>);
 
     expect(screen.getByRole("tab", { name: "モデレーター" })).toHaveAttribute(
@@ -104,26 +135,57 @@ describe("DiscussionManagementTabLayout", () => {
     );
   });
 
-  it("uses metadata from the discussion layout without starting another read", () => {
-    mockUserPubkey = "moderator-pubkey";
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: {
-        authorPubkey: "creator-pubkey",
-        moderators: [{ pubkey: "moderator-pubkey" }],
-      },
-      isLoading: false,
-      error: null,
-      completionReason: "eose",
-      reload: jest.fn(),
-    });
-
-    render(
-      <DiscussionManagementTabLayout>
-        <div>content</div>
-      </DiscussionManagementTabLayout>,
+  it("renders the public loading state without a legacy discussion", () => {
+    mockUseDiscussionManagement.mockReturnValue(
+      createManagementModel({
+        state: "loading",
+        snapshot: null,
+        completionReason: null,
+      }),
     );
 
-    expect(screen.getByText("あなたはモデレーターです。")).toBeInTheDocument();
-    expect(mockQueryWithCompletion).not.toHaveBeenCalled();
+    render(<DiscussionManagementTabLayout><div>content</div></DiscussionManagementTabLayout>);
+
+    expect(screen.getByRole("status")).toHaveTextContent("会話データを読み込み中...");
+    expect(screen.queryByText("あなたはユーザーです。")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
+  });
+
+  it("renders partial management state with a public reload action", () => {
+    const reload = jest.fn(async () => undefined);
+    mockUseDiscussionManagement.mockReturnValue(
+      createManagementModel({
+        state: "partial",
+        completionReason: "idle-timeout",
+        reload,
+      }),
+    );
+
+    render(<DiscussionManagementTabLayout><div>content</div></DiscussionManagementTabLayout>);
+
+    expect(
+      screen.getByText("一部のrelayからの取得が完了していません。表示内容は暫定です。"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders management errors and reloads through the public model", () => {
+    const reload = jest.fn(async () => undefined);
+    mockUseDiscussionManagement.mockReturnValue(
+      createManagementModel({
+        state: "error",
+        snapshot: null,
+        error: "管理モデルの取得に失敗しました。",
+        completionReason: null,
+        reload,
+      }),
+    );
+
+    render(<DiscussionManagementTabLayout><div>content</div></DiscussionManagementTabLayout>);
+
+    expect(screen.getByRole("status")).toHaveTextContent("管理モデルの取得に失敗しました。");
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });

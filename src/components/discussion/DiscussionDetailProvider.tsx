@@ -229,8 +229,11 @@ export function DiscussionDetailProvider({
   }, [identity, isCurrentGeneration, runRead]);
 
   const reload = useCallback(async (): Promise<void> => {
+    // A reload callback belongs to the identity it was created for. If the
+    // active route has moved on, the retained callback must not hijack the
+    // active identity or start a new generation for the old discussion.
+    if (activeIdentityRef.current !== identity) return;
     const generation = ++generationRef.current;
-    activeIdentityRef.current = identity;
     committedGenerationRef.current = -1;
     setSession((current) => ({
       ...current,
@@ -243,12 +246,19 @@ export function DiscussionDetailProvider({
     await runRead(generation, identity);
   }, [identity, runRead]);
 
+  // A mutation callback is valid only for the generation in which it was
+  // created. Capturing the generation at render time (and including it in
+  // the useCallback deps) lets a callback retained from before a reload or
+  // a route change be gated out against the newer generation.
+  const mutationGeneration = generationRef.current;
+
   const canMutate = useCallback(
     () =>
       Boolean(identity) &&
       activeIdentityRef.current === identity &&
-      committedGenerationRef.current === generationRef.current,
-    [identity],
+      committedGenerationRef.current === generationRef.current &&
+      mutationGeneration === generationRef.current,
+    [identity, mutationGeneration],
   );
 
   const addPost = useCallback(

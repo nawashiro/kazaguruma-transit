@@ -31,15 +31,9 @@ jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
   ),
 }));
 
-jest.mock("@/components/discussion/DiscussionContentDataProvider", () => ({
-  DiscussionContentDataProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="discussion-content-provider">{children}</div>
-  ),
-}));
-
-jest.mock("@/components/discussion/DiscussionDataProvider", () => ({
-  DiscussionDataProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="discussion-data-provider">{children}</div>
+jest.mock("@/components/discussion/DiscussionDetailProvider", () => ({
+  DiscussionDetailProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="discussion-detail-provider">{children}</div>
   ),
 }));
 
@@ -48,19 +42,22 @@ describe("DiscussionLayout", () => {
     authProviderMock.mockClear();
   });
 
-  it("does not nest an additional AuthProvider under app root", () => {
+  it("uses the detail provider for the shared route shell without legacy wrappers", () => {
     render(
       <DiscussionLayout>
-        <div>child content</div>
+        <div data-testid="discussion-child">child content</div>
       </DiscussionLayout>
     );
 
-    expect(screen.getByTestId("discussion-data-provider")).toContainElement(
+    const detailProvider = screen.getByTestId("discussion-detail-provider");
+    expect(detailProvider).toContainElement(
       screen.getByTestId("discussion-tab-layout"),
     );
-    expect(screen.getByTestId("discussion-data-provider")).toContainElement(
-      screen.getByTestId("discussion-content-provider"),
+    expect(detailProvider).toContainElement(
+      screen.getByTestId("discussion-child"),
     );
+    expect(screen.queryByTestId("discussion-data-provider")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("discussion-content-provider")).not.toBeInTheDocument();
     expect(screen.queryByTestId("auth-provider")).not.toBeInTheDocument();
     expect(authProviderMock).not.toHaveBeenCalled();
   });

@@ -3,7 +3,7 @@ import React, { useEffect } from "react";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type { NostrEventDTO } from "@/lib/nostr/discussion-ndk-gateway";
-import type { PostApproval } from "@/types/discussion";
+import type { DiscussionPost, PostApproval } from "@/types/discussion";
 
 let pathname = "/discussions/naddr-test";
 let mockNaddr = "naddr-test";
@@ -26,8 +26,9 @@ jest.mock("@/lib/config/discussion-config", () => ({
 }));
 
 jest.mock("@/lib/nostr/naddr-utils", () => ({
-  extractDiscussionFromNaddr: () =>
-    mockNaddr === "naddr-new"
+  extractDiscussionFromNaddr: () => {
+    if (mockNaddr === "naddr-invalid") return null;
+    return mockNaddr === "naddr-new"
       ? {
           discussionId: "34550:author:new-topic",
           authorPubkey: "author",
@@ -39,7 +40,8 @@ jest.mock("@/lib/nostr/naddr-utils", () => ({
           authorPubkey: "author",
           dTag: "topic",
           relays: ["wss://hint.example"],
-        },
+        };
+  },
 }));
 
 jest.mock("@/lib/nostr/discussion-ndk-gateway", () => ({
@@ -71,6 +73,7 @@ type DetailModel = {
     userEvaluationIds: Set<string>;
   } | null;
   error: string | null;
+  completionReason: "eose" | "idle-timeout" | "hard-timeout" | "cancelled" | null;
   reload: () => Promise<void>;
   addPost: (post: unknown) => void;
   addApproval: (approval: unknown) => void;
@@ -243,6 +246,70 @@ const configurePartialReadFixture = (): void => {
     return readResult([evaluationEvent]);
   });
 };
+
+/**
+ * Route-aware read fixture: events are chosen from the plan so each naddr
+ * generation gets its own discussion/post data (naddr-test -> topic events,
+ * naddr-new -> replacement events). The old route is not rewritten in-place;
+ * a route change always issues fresh reads with the new dTag/#a plan.
+ */
+const configureRouteAwareReadFixture = (): void => {
+  executeNostrRead.mockImplementation(
+    async (_transport: unknown, input: unknown) => {
+      const plan = (
+        input as {
+          plan?: {
+            target?: string;
+            filters?: Array<{
+              kinds?: number[];
+              "#d"?: string[];
+              "#a"?: string[];
+            }>;
+          };
+        }
+      ).plan;
+      const target = plan?.target;
+      const kinds = plan?.filters?.[0]?.kinds ?? [];
+      const dTag = plan?.filters?.[0]?.["#d"]?.[0];
+      const aTag = plan?.filters?.[0]?.["#a"]?.[0];
+      if (target === "discussion-meta" || kinds.includes(34550)) {
+        return readResult(
+          dTag === "new-topic" ? [replacementMetadataEvent] : [metadataEvent],
+        );
+      }
+      if (target === "discussion-approvals" || kinds.includes(4550)) {
+        return readResult([]);
+      }
+      if (target === "discussion-evaluations" || kinds.includes(7)) {
+        return readResult([]);
+      }
+      return readResult(
+        aTag === "34550:author:new-topic"
+          ? [replacementPostEvent]
+          : [postEvent],
+      );
+    },
+  );
+};
+
+const stalePost = (id: string): DiscussionPost => ({
+  id,
+  content: "stale",
+  authorPubkey: "author",
+  discussionId: "34550:author:topic",
+  createdAt: 3,
+  approved: true,
+  approvedBy: [],
+  event: {
+    id,
+    kind: 1111,
+    pubkey: "author",
+    created_at: 3,
+    content: "stale",
+    tags: [["a", "34550:author:topic"]],
+    sig: `${id}-signature`,
+  },
+});
 
 function DetailModelProbe({
   onModel,
@@ -603,6 +670,176 @@ describe("DiscussionDetailProvider", () => {
     });
 
     expect(latestModel?.snapshot?.approvals).toHaveLength(0);
+  });
+
+  it("reports an uninterpretable conversation URL without starting any read", async () => {
+    mockNaddr = "naddr-invalid";
+    const provider = loadProvider();
+    if (!provider.DiscussionDetailProvider) {
+      throw new Error(
+        "T013 RED: DiscussionDetailProvider is not a public provider export",
+      );
+    }
+
+    let latestModel: DetailModel | undefined;
+    const Provider = provider.DiscussionDetailProvider;
+    render(
+      <Provider>
+        <DetailModelProbe onModel={(model) => { latestModel = model; }} />
+      </Provider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("detail-state")).toHaveTextContent("error"),
+    );
+    expect(screen.getByTestId("detail-title")).toHaveTextContent("no-snapshot");
+    expect(latestModel).toEqual(
+      expect.objectContaining({
+        state: "error",
+        snapshot: null,
+        error: "会話URLを解釈できません。",
+        completionReason: "cancelled",
+      }),
+    );
+    expect(executeNostrRead).not.toHaveBeenCalled();
+  });
+
+  it("ignores a mutation callback retained from a previous route", async () => {
+    configureRouteAwareReadFixture();
+    const provider = loadProvider();
+    if (!provider.DiscussionDetailProvider) {
+      throw new Error(
+        "T013 RED: DiscussionDetailProvider is not a public provider export",
+      );
+    }
+
+    let latestModel: DetailModel | undefined;
+    const Provider = provider.DiscussionDetailProvider;
+    const view = render(
+      <Provider>
+        <DetailModelProbe onModel={(model) => { latestModel = model; }} />
+      </Provider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("detail-state")).toHaveTextContent("ready"),
+    );
+    const retainedAddPost = latestModel?.addPost;
+    expect(retainedAddPost).toBeDefined();
+
+    mockNaddr = "naddr-new";
+    view.rerender(
+      <Provider>
+        <DetailModelProbe onModel={(model) => { latestModel = model; }} />
+      </Provider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("detail-title")).toHaveTextContent("新しい会話"),
+    );
+    expect(screen.getByTestId("detail-posts")).toHaveTextContent("post-new-1");
+
+    await act(async () => {
+      retainedAddPost?.(stalePost("stale-post-18"));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("detail-posts")).toHaveTextContent("post-new-1");
+    expect(screen.getByTestId("detail-posts")).not.toHaveTextContent(
+      "stale-post-18",
+    );
+  });
+
+  it("ignores a reload callback retained from a previous route", async () => {
+    // T177 #19 RED: the current implementation lets a reload callback
+    // captured on the previous route overwrite the new route's snapshot,
+    // because reload() re-writes activeIdentityRef with its closure identity
+    // and commits the old discussion under a fresh generation. This test
+    // asserts the ideal contract (no overwrite) and therefore fails now.
+    configureRouteAwareReadFixture();
+    const provider = loadProvider();
+    if (!provider.DiscussionDetailProvider) {
+      throw new Error(
+        "T013 RED: DiscussionDetailProvider is not a public provider export",
+      );
+    }
+
+    let latestModel: DetailModel | undefined;
+    const Provider = provider.DiscussionDetailProvider;
+    const view = render(
+      <Provider>
+        <DetailModelProbe onModel={(model) => { latestModel = model; }} />
+      </Provider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("detail-state")).toHaveTextContent("ready"),
+    );
+    const retainedReload = latestModel?.reload;
+    expect(retainedReload).toBeDefined();
+
+    mockNaddr = "naddr-new";
+    view.rerender(
+      <Provider>
+        <DetailModelProbe onModel={(model) => { latestModel = model; }} />
+      </Provider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("detail-title")).toHaveTextContent("新しい会話"),
+    );
+    expect(screen.getByTestId("detail-posts")).toHaveTextContent("post-new-1");
+
+    await act(async () => {
+      await retainedReload?.();
+    });
+
+    // The retained reload must not commit the old discussion over the new
+    // route; the new snapshot keeps its own title and posts.
+    expect(screen.getByTestId("detail-title")).toHaveTextContent("新しい会話");
+    expect(screen.getByTestId("detail-posts")).toHaveTextContent("post-new-1");
+    expect(screen.getByTestId("detail-posts")).not.toHaveTextContent("post-1");
+  });
+
+  it("ignores a mutation callback from before a same-discussion reload", async () => {
+    configureRouteAwareReadFixture();
+    const provider = loadProvider();
+    if (!provider.DiscussionDetailProvider) {
+      throw new Error(
+        "T013 RED: DiscussionDetailProvider is not a public provider export",
+      );
+    }
+
+    let latestModel: DetailModel | undefined;
+    const Provider = provider.DiscussionDetailProvider;
+    render(
+      <Provider>
+        <DetailModelProbe onModel={(model) => { latestModel = model; }} />
+      </Provider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("detail-state")).toHaveTextContent("ready"),
+    );
+    const retainedAddPost = latestModel?.addPost;
+    const reload = latestModel?.reload;
+    expect(retainedAddPost).toBeDefined();
+    expect(reload).toBeDefined();
+
+    await act(async () => {
+      await reload?.();
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("detail-state")).toHaveTextContent("ready"),
+    );
+
+    await act(async () => {
+      retainedAddPost?.(stalePost("stale-post-20"));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("detail-posts")).toHaveTextContent("post-1");
+    expect(screen.getByTestId("detail-posts")).not.toHaveTextContent(
+      "stale-post-20",
+    );
   });
 
 });

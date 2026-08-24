@@ -2,7 +2,6 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
 import { ModeratorManagementSection } from "@/components/discussion/ModeratorManagementSection";
 import { buildLoginRoute } from "@/lib/navigation/auth-route";
@@ -50,18 +49,9 @@ export default function ModeratorsPage() {
   const params = useParams<{ naddr?: string | string[] }>();
   const naddrParam = getDiscussionRouteParam(params);
   const { user, signEvent } = useAuth();
-  const meta = useDiscussionMeta();
   const detail = useDiscussionDetail();
-  const isDetailLoading = detail.state === "loading" && detail.snapshot === null;
-  const legacyStateOverridesDetail = Boolean(
-    meta && (meta.isLoading || meta.discussion === null),
-  );
-  const hasDetailSession = !legacyStateOverridesDetail && Boolean(
-    detail.snapshot || detail.error || detail.state !== "loading",
-  );
-  const discussion = hasDetailSession
-    ? detail.snapshot?.discussion ?? null
-    : meta?.discussion;
+  const isDetailLoading = detail.state === "loading";
+  const discussion = detail.snapshot?.discussion ?? null;
   const [localEvents, setLocalEvents] = useState<Event[]>([]),
     [reason, setReason] = useState(""),
     [approved, setApproved] = useState(new Set<string>()),
@@ -77,18 +67,13 @@ export default function ModeratorsPage() {
     [...snapshotEvents, ...localEvents].forEach((event) => byId.set(event.id, event));
     return Array.from(byId.values());
   }, [detail.snapshot?.moderatorRequests, localEvents]);
-  const applicationReadState: "loading" | "eose" | "partial" = hasDetailSession
-    ? detail.state === "loading"
+  const applicationReadState: "loading" | "eose" | "partial" =
+    detail.state === "loading"
       ? "loading"
       : detail.state === "ready"
         ? "eose"
-        : "partial"
-    : meta?.isLoading
-      ? "loading"
-      : meta?.completionReason === "eose"
-        ? "eose"
         : "partial";
-  const reload = hasDetailSession ? detail.reload : meta?.reload ?? (async () => undefined);
+  const reload = detail.reload;
   const applications = useMemo(
     () =>
       discussion ? derivePendingModeratorApplications(discussion, events) : [],
@@ -220,16 +205,34 @@ export default function ModeratorsPage() {
       setBusy(false);
     }
   };
-  if (isDetailLoading || (!discussion && applicationReadState === "loading"))
+  if (isDetailLoading)
     return (
       <div role="status">
         <span className="ruby-text">会話情報を読み込み中...</span>
       </div>
     );
+  if (detail.state === "error") {
+    return (
+      <div
+        className="alert alert-error alert-soft text-base-content!"
+        role="status"
+        aria-live="polite"
+      >
+        <span>{detail.error ?? "会話データの取得に失敗しました。"}</span>
+        <button
+          type="button"
+          className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+          onClick={() => void reload()}
+        >
+          <span className="ruby-text">再読み込み</span>
+        </button>
+      </div>
+    );
+  }
   if (!discussion) {
-    const completionReason = detail.completionReason ?? meta?.completionReason;
-    const isPartial = detail.state === "partial" || detail.state === "error" ||
-      completionReason === "idle-timeout" || completionReason === "hard-timeout" || completionReason === "cancelled";
+    const completionReason =
+      detail.completionReason ?? (detail.state === "partial" ? "idle-timeout" : "eose");
+    const isPartial = detail.state === "partial";
     return (
       <div
         className={
@@ -240,10 +243,10 @@ export default function ModeratorsPage() {
         role="status"
         aria-live="polite"
       >
-        <span className="ruby-text">
+        <span>
           {isPartial
-            ? `会話データの取得に時間がかかっています（${completionReason ?? "unknown"}）。受信待機中または relay 応答遅延の可能性があります。`
-            : detail.error ?? meta?.error ?? "会話情報が見つかりませんでした。"}
+            ? `会話データの取得に時間がかかっています（${completionReason}）。受信待機中または relay 応答遅延の可能性があります。`
+            : "会話情報が見つかりませんでした。"}
         </span>
         <button
           type="button"

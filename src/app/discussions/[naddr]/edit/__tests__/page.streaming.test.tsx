@@ -4,6 +4,7 @@ import "@testing-library/jest-dom";
 import DiscussionEditPage from "../page";
 import type { Discussion } from "@/types/discussion";
 import type { NostrEventDTO } from "@/lib/nostr/discussion-ndk-gateway";
+import type { DiscussionDetailModel } from "@/components/discussion/DiscussionDetailProvider";
 
 const mockUseDiscussionMeta = jest.fn();
 const mockUseDiscussionDetail = jest.fn();
@@ -143,22 +144,18 @@ const detailSnapshotFixture = {
   ],
   evaluations: [],
   userEvaluationIds: new Set<string>(),
+  relayProvenance: { successfulRelayUrlsByPhase: {} },
 };
 const createDetailModel = (
-  overrides: Partial<{
-    state: "loading" | "ready" | "partial" | "error";
-    snapshot: typeof detailSnapshotFixture | null;
-    error: string | null;
-    reload: jest.Mock;
-    addPost: jest.Mock;
-    addApproval: jest.Mock;
-    removeApproval: jest.Mock;
-  }> = {},
-) => ({
+  overrides: Partial<DiscussionDetailModel> = {},
+): DiscussionDetailModel => ({
   state: "ready" as const,
   snapshot: detailSnapshotFixture,
   error: null,
-  reload: jest.fn(),
+  completionReason: "eose",
+  relayProvenance: detailSnapshotFixture.relayProvenance,
+  isFallback: false,
+  reload: jest.fn(async () => undefined),
   addPost: jest.fn(),
   addApproval: jest.fn(),
   removeApproval: jest.fn(),
@@ -169,35 +166,8 @@ describe("DiscussionEditPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseDiscussionDetail.mockReturnValue(createDetailModel());
-    const layoutDiscussion: Discussion = {
-      id: "34550:author:demo",
-      title: "Edit Me",
-      description: "Updated description",
-      authorPubkey: "author",
-      dTag: "demo",
-      moderators: [],
-      createdAt: 123,
-      event: {
-        id: "event-1",
-        pubkey: "author",
-        kind: 34550,
-        created_at: 123,
-        tags: [
-          ["d", "demo"],
-          ["name", "Edit Me"],
-          ["description", "desc"],
-        ],
-        content: "Updated description",
-        sig: "sig",
-      },
-    };
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: layoutDiscussion,
-      isLoading: false,
-      error: null,
-      completionReason: "eose",
-      reload: jest.fn(),
-    });
+    // The edit route fixture is supplied only by the public detail model.
+    mockUseDiscussionMeta.mockReturnValue(undefined);
   });
 
   it("does not render moderator-management controls from promotion requests", async () => {
@@ -232,13 +202,14 @@ describe("DiscussionEditPage streaming", () => {
 
   it("renders discussion timeout as a polite soft status with reload", async () => {
     const reload = jest.fn();
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: null,
-      isLoading: false,
-      error: null,
-      completionReason: "hard-timeout",
-      reload,
-    });
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({
+        state: "partial",
+        snapshot: null,
+        completionReason: "hard-timeout",
+        reload,
+      }),
+    );
 
     render(<DiscussionEditPage />);
 
@@ -260,13 +231,13 @@ describe("DiscussionEditPage streaming", () => {
   });
 
   it("does not show not-found while the layout is still loading", () => {
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: null,
-      isLoading: true,
-      error: null,
-      completionReason: null,
-      reload: jest.fn(),
-    });
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({
+        state: "loading",
+        snapshot: null,
+        completionReason: null,
+      }),
+    );
 
     render(<DiscussionEditPage />);
 
@@ -275,16 +246,35 @@ describe("DiscussionEditPage streaming", () => {
   });
 
   it("shows not-found only after retrieval has completed without data", async () => {
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: null,
-      isLoading: false,
-      error: null,
-      completionReason: "eose",
-      reload: jest.fn(),
-    });
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({
+        state: "ready",
+        snapshot: null,
+        completionReason: "eose",
+      }),
+    );
 
     render(<DiscussionEditPage />);
 
     expect(await screen.findByText("会話が見つかりません")).toBeInTheDocument();
+  });
+
+  it("renders detail errors with the public model and reload action", async () => {
+    const reload = jest.fn(async () => undefined);
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({
+        state: "error",
+        snapshot: null,
+        error: "詳細データの取得に失敗しました。",
+        reload,
+      }),
+    );
+
+    render(<DiscussionEditPage />);
+
+    expect(
+      await screen.findByText("詳細データの取得に失敗しました。"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "再読み込み" })).toBeInTheDocument();
   });
 });

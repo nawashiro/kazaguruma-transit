@@ -3,8 +3,6 @@
 import React from "react";
 import { useParams } from "next/navigation";
 import { DiscussionTabLayout } from "@/components/discussion/DiscussionTabLayout";
-import { DiscussionDataProvider } from "@/components/discussion/DiscussionDataProvider";
-import { DiscussionContentDataProvider } from "@/components/discussion/DiscussionContentDataProvider";
 import { DiscussionDetailProvider } from "@/components/discussion/DiscussionDetailProvider";
 import { useAuth } from "@/lib/auth/auth-context";
 
@@ -34,14 +32,10 @@ export default function DiscussionLayout({
   const baseHref = `/discussions/${naddr}`;
 
   return (
-    <DiscussionDataProvider read={false}>
-      <DiscussionDetailProvider userPubkey={userPubkey}>
-        <DiscussionContentDataProvider>
-          <DiscussionTabLayout baseHref={baseHref}>
-            {children}
-          </DiscussionTabLayout>
-        </DiscussionContentDataProvider>
-      </DiscussionDetailProvider>
-    </DiscussionDataProvider>
+    <DiscussionDetailProvider userPubkey={userPubkey}>
+      <DiscussionTabLayout baseHref={baseHref}>
+        {children}
+      </DiscussionTabLayout>
+    </DiscussionDetailProvider>
   );
 }

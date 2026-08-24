@@ -7,71 +7,76 @@ import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
 import { DiscussionMetaReadState } from "@/components/discussion/DiscussionMetaReadState";
 import { useAuth } from "@/lib/auth/auth-context";
-import {
-  useDiscussionMeta as useSharedDiscussionMeta,
-  type DiscussionMetaState,
-} from "@/components/discussion/DiscussionDataProvider";
 import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
+import type { CompletionReason } from "@/lib/nostr/nostr-service";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import type { Discussion } from "@/types/discussion";
 
 interface DiscussionTabLayoutProps {
   /** タブナビゲーションのベースURL（例: "/discussions" または "/discussions/[naddr]"） */
   baseHref: string;
-  /** 動的ルートを持たない管理画面が明示的に使用する会話 naddr */
-  naddr?: string;
   /** 会話固有の戻るリンク・見出し・タブを表示するか */
   showNavigation?: boolean;
   /** 子コンポーネント（ページコンテンツ） */
   children: React.ReactNode;
 }
 
-/** Shared metadata selector kept at the historical import path for consumers. */
-export function useDiscussionMeta(): DiscussionMetaState | undefined {
-  return useSharedDiscussionMeta();
-}
+type DiscussionTabReadState = {
+  discussion: Discussion | null;
+  isLoading: boolean;
+  error: string | null;
+  completionReason: CompletionReason | null;
+  reload: () => Promise<void>;
+};
 
-/**
- * 会話ページと監査ページを切り替えるタブナビゲーションを提供するレイアウトコンポーネント
- *
- * データ取得は DiscussionDataProvider が所有し、このコンポーネントは
- * metadata を表示する責務だけを持ちます。
- */
-export function DiscussionTabLayout({
-  baseHref,
-  showNavigation = true,
-  children,
-}: DiscussionTabLayoutProps) {
-  const pathname = usePathname();
-  const { user } = useAuth();
-  const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+function useDetailTabReadState(): DiscussionTabReadState {
   const detail = useDiscussionDetail();
-  const legacyMeta = useSharedDiscussionMeta();
-  const hasDetailSession = Boolean(
-    detail.snapshot ||
-    detail.error ||
-    detail.state !== "loading" ||
-    !legacyMeta,
-  );
-  const discussion = hasDetailSession
-    ? detail.snapshot?.discussion ?? null
-    : legacyMeta?.discussion ?? null;
-  const isDiscussionLoading = hasDetailSession
-    ? detail.state === "loading"
-    : legacyMeta?.isLoading ?? false;
-  const discussionError = hasDetailSession
-    ? detail.error
-    : legacyMeta?.error ?? null;
-  const discussionCompletionReason = hasDetailSession
-    ? detail.completionReason ??
+  return {
+    discussion: detail.snapshot?.discussion ?? null,
+    isLoading: detail.state === "loading",
+    error: detail.error,
+    completionReason:
+      detail.completionReason ??
       (detail.state === "partial"
         ? "idle-timeout"
         : detail.state === "error"
           ? "hard-timeout"
           : detail.state === "ready"
             ? "eose"
-            : null)
-    : legacyMeta?.completionReason ?? null;
-  const reload = hasDetailSession ? detail.reload : legacyMeta?.reload ?? (async () => undefined);
+            : null),
+    reload: detail.reload,
+  };
+}
+
+/**
+ * Detail routes use only the DiscussionDetailProvider selector. The legacy
+ * naddr-compatible branch was removed together with the dead provider sources.
+ */
+export function DiscussionTabLayout(props: DiscussionTabLayoutProps) {
+  return <DetailDiscussionTabLayout {...props} />;
+}
+
+function DetailDiscussionTabLayout(props: DiscussionTabLayoutProps) {
+  const readState = useDetailTabReadState();
+  return <DiscussionTabLayoutContent {...props} readState={readState} />;
+}
+
+/**
+ * 会話ページと監査ページを切り替えるタブナビゲーションを提供するレイアウトコンポーネント
+ *
+ * 読み取り状態は route owner の selector から受け取り、このコンポーネントは
+ * metadata と navigation を表示する責務だけを持ちます。
+ */
+function DiscussionTabLayoutContent({
+  baseHref,
+  showNavigation = true,
+  children,
+  readState,
+}: DiscussionTabLayoutProps & { readState: DiscussionTabReadState }) {
+  const pathname = usePathname();
+  const { user } = useAuth();
+  const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const { discussion, isLoading: isDiscussionLoading, error: discussionError, completionReason: discussionCompletionReason, reload } = readState;
 
   const normalizedBase = baseHref.replace(/\/$/, "");
   const normalizedPath = pathname.replace(/\/$/, "");

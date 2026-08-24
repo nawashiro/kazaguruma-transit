@@ -9,7 +9,7 @@ import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import { DiscussionRoleCard, type DiscussionRole } from "@/components/discussion/DiscussionRoleCard";
 import PageHeader from "@/components/layouts/PageHeader";
 import { useDiscussionManagement } from "@/components/discussion/DiscussionManagementProvider";
-import { useDiscussionMeta as useLegacyDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
+import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
 
 const MANAGEMENT_TABS = [
   { href: "/discussions", label: "会話一覧" },
@@ -17,7 +17,21 @@ const MANAGEMENT_TABS = [
   { href: "/discussions/moderator", label: "モデレーター" },
 ] as const;
 
-export function DiscussionManagementTabLayout({
+const DEFAULT_TITLE = "意見交換";
+const DEFAULT_DESCRIPTION =
+  "意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。";
+
+export function DiscussionManagementTabLayout(props: {
+  children: React.ReactNode;
+  role?: DiscussionRole;
+  /** Nested management routes render their own layout boundary. */
+  renderLayout?: boolean;
+}) {
+  if (props.renderLayout === false) return <>{props.children}</>;
+  return <DiscussionManagementTabLayoutContent {...props} />;
+}
+
+function DiscussionManagementTabLayoutContent({
   children,
   role: roleOverride,
 }: {
@@ -32,15 +46,26 @@ export function DiscussionManagementTabLayout({
   const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const { user } = useAuth();
   const management = useDiscussionManagement();
-  const legacyMeta = useLegacyDiscussionMeta();
-  const discussion = management.snapshot?.listDiscussion ?? legacyMeta?.discussion ?? null;
+  const discussion = management.snapshot?.listDiscussion ?? null;
+  const isLoading = management.state === "loading";
+  const completionReason =
+    management.completionReason ??
+    (management.state === "partial"
+      ? "idle-timeout"
+      : management.state === "error"
+        ? "hard-timeout"
+        : management.state === "ready"
+          ? "eose"
+          : null);
+  const title = discussion?.title ?? DEFAULT_TITLE;
+  const description = discussion?.description ?? DEFAULT_DESCRIPTION;
   const isAdminUser = arePubkeysEqual(user.pubkey, getAdminPubkeyHex());
   const role: DiscussionRole | null = roleOverride
     ? roleOverride
     : isAdminUser
       ? "admin"
       : discussion
-        ? discussion.moderators.some((moderator) =>
+        ? (discussion.moderators ?? []).some((moderator) =>
             arePubkeysEqual(user.pubkey, moderator.pubkey),
           )
           ? "moderator"
@@ -72,10 +97,32 @@ export function DiscussionManagementTabLayout({
 
   return (
     <div>
-      <PageHeader
-        title="意見交換"
-        description="意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。"
-      />
+      <PageHeader title={title} description={description} />
+      {management.state === "error" ? (
+        <div
+          className="alert alert-error alert-soft text-base-content! mb-8"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="ruby-text">
+            {management.error ?? "掲載一覧の会話情報を取得できませんでした。"}
+          </span>
+          <button
+            type="button"
+            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            onClick={() => void management.reload()}
+          >
+            <span className="ruby-text">再読み込み</span>
+          </button>
+        </div>
+      ) : (
+        <DiscussionReadStatus
+          isLoading={isLoading}
+          completionReason={completionReason}
+          hasData={Boolean(discussion)}
+          onReload={() => void management.reload()}
+        />
+      )}
       {role && <DiscussionRoleCard role={role} />}
       <nav
         className="tabs tabs-box mb-6 w-full overflow-x-auto"

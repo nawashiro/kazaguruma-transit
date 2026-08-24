@@ -15,9 +15,7 @@ import {
 import { PostPreview } from "@/components/discussion/PostPreview";
 import { EvaluationComponent } from "@/components/discussion/EvaluationComponent";
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
-import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
-import { useDiscussionContentData } from "@/components/discussion/DiscussionContentDataProvider";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
   combinePostsWithStats,
@@ -77,93 +75,50 @@ export default function DiscussionDetailPage() {
 
   const { user, signEvent } = useAuth();
   const detail = useDiscussionDetail();
-  const discussionMeta = useDiscussionMeta();
-  const legacyContent = useDiscussionContentData();
-  const legacyStateOverridesDetail = Boolean(
-    (discussionMeta && (discussionMeta.isLoading || discussionMeta.discussion === null)) ||
-      legacyContent.isLoading,
-  );
-  const isNewDetailModel = detail.isFallback !== true;
-  const newDetailLoading =
-    isNewDetailModel && detail.state === "loading" && detail.snapshot === null;
-  const newDetailError =
-    isNewDetailModel && detail.state === "error" && detail.snapshot === null;
-  const hasDetailSnapshot = !legacyStateOverridesDetail && Boolean(detail.snapshot);
-  const discussion = hasDetailSnapshot
-    ? detail.snapshot?.discussion ?? null
-    : discussionMeta?.discussion ?? null;
-  const posts = useMemo(
-    () => (hasDetailSnapshot ? detail.snapshot?.posts ?? [] : legacyContent.posts),
-    [detail.snapshot?.posts, hasDetailSnapshot, legacyContent.posts],
-  );
+  const discussion = detail.snapshot?.discussion ?? null;
+  const posts = useMemo(() => detail.snapshot?.posts ?? [], [detail.snapshot?.posts]);
   const evaluations = useMemo(
-    () => [
-      ...(hasDetailSnapshot ? detail.snapshot?.evaluations ?? [] : []),
-      ...optimisticEvaluations,
-    ],
-    [detail.snapshot?.evaluations, hasDetailSnapshot, optimisticEvaluations],
+    () => [...(detail.snapshot?.evaluations ?? []), ...optimisticEvaluations],
+    [detail.snapshot?.evaluations, optimisticEvaluations],
   );
   const userEvaluations = useMemo(() => {
     const viewerEvaluations = evaluations.filter(
       (evaluation) => evaluation.evaluatorPubkey === user.pubkey,
     );
     return new Set([
-      ...(hasDetailSnapshot ? detail.snapshot?.userEvaluationIds ?? [] : []),
+      ...(detail.snapshot?.userEvaluationIds ?? []),
       ...viewerEvaluations.flatMap((evaluation) => [evaluation.id, evaluation.postId]),
       ...optimisticUserEvaluationIds,
     ]);
   }, [
     detail.snapshot?.userEvaluationIds,
     evaluations,
-    hasDetailSnapshot,
     optimisticUserEvaluationIds,
     user.pubkey,
   ]);
-  const isDiscussionLoading = newDetailLoading
-    ? true
-    : hasDetailSnapshot
-      ? detail.state === "loading"
-      : discussionMeta?.isLoading ?? false;
-  const discussionCompletionReason = hasDetailSnapshot
-    ? detail.completionReason ??
-      (detail.state === "partial"
-        ? "idle-timeout"
-        : detail.state === "error"
-          ? "hard-timeout"
-          : detail.state === "ready"
-            ? "eose"
-            : null)
-    : discussionMeta?.completionReason ?? null;
-  const isPostsLoading = newDetailLoading
-    ? true
-    : newDetailError
-      ? false
-      : hasDetailSnapshot
-        ? detail.state === "loading"
-        : legacyContent.isLoading;
-  const postsLoadError = newDetailError
-    ? detail.error
-    : hasDetailSnapshot
-      ? detail.error
-      : legacyContent.error;
-  const contentCompletionReason = newDetailError
-    ? detail.completionReason
-    : hasDetailSnapshot
-      ? detail.completionReason ??
-        (detail.state === "partial"
-          ? "idle-timeout"
-          : detail.state === "error"
-            ? "hard-timeout"
-            : detail.state === "ready"
-              ? "eose"
-              : null)
-      : legacyContent.completionReason;
-  const reloadContent = newDetailLoading || newDetailError
-    ? detail.reload
-    : hasDetailSnapshot && legacyContent.completionReason == null
-      ? detail.reload
-      : legacyContent.reload;
-  const addPost = hasDetailSnapshot ? detail.addPost : legacyContent.addPost;
+  const isDiscussionLoading = detail.state === "loading";
+  const discussionCompletionReason =
+    detail.completionReason ??
+    (detail.state === "partial"
+      ? "idle-timeout"
+      : detail.state === "error"
+        ? "hard-timeout"
+        : detail.state === "ready"
+          ? "eose"
+          : null);
+  const isPostsLoading = detail.state === "loading";
+  const postsLoadError = detail.error;
+  const contentCompletionReason =
+    detail.completionReason ??
+    (detail.state === "partial"
+      ? "idle-timeout"
+      : detail.state === "error"
+        ? "hard-timeout"
+        : detail.state === "ready"
+          ? "eose"
+          : null);
+  const reloadContent = detail.reload;
+  const addPost = detail.addPost;
 
   const discussionInfo = useMemo(() => {
     if (!naddrParam) return null;
@@ -417,7 +372,7 @@ export default function DiscussionDetailPage() {
   }
 
   if (!discussion) {
-    if (newDetailError) {
+    if (detail.state === "error") {
       return (
         <div className="py-8">
           <div

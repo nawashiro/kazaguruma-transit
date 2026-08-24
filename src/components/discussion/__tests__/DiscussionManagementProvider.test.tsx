@@ -36,20 +36,13 @@ jest.mock("../DiscussionManagementProvider", () => ({
     return <>{children}</>;
   },
   useDiscussionManagement: () => mockUseDiscussionManagementRoute(),
-}), { virtual: true });
+}));
 
-jest.mock("@/components/discussion/DiscussionDataProvider", () => ({
-  DiscussionDataProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}), { virtual: true });
-
-jest.mock("@/components/discussion/DiscussionManagementDataProvider", () => ({
-  DiscussionManagementDataProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}), { virtual: true });
-
-jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
-  DiscussionTabLayout: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useDiscussionMeta: () => undefined,
-}), { virtual: true });
+jest.mock("@/components/discussion/DiscussionManagementTabLayout", () => ({
+  DiscussionManagementTabLayout: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="management-tab-layout">{children}</div>
+  ),
+}));
 
 jest.mock(
   "@/lib/config/discussion-config",

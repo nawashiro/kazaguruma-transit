@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import ModeratorsPage from "../page";
+import type { DiscussionDetailModel } from "@/components/discussion/DiscussionDetailProvider";
 import type { NostrEventDTO } from "@/lib/nostr/discussion-ndk-gateway";
 
 const createDiscussion = () => ({
@@ -131,7 +132,7 @@ const moderatorRequestEvent: NostrEventDTO = {
   ],
   sig: "request-signature",
 };
-const detailSnapshotFixture = {
+const detailSnapshotFixture: NonNullable<DiscussionDetailModel["snapshot"]> = {
   discussion: createDiscussion(),
   posts: [],
   approvals: [],
@@ -146,21 +147,17 @@ const detailSnapshotFixture = {
   ],
   evaluations: [],
   userEvaluationIds: new Set<string>(),
+  relayProvenance: { successfulRelayUrlsByPhase: {} },
 };
 const createDetailModel = (
-  overrides: Partial<{
-    state: "loading" | "ready" | "partial" | "error";
-    snapshot: typeof detailSnapshotFixture | null;
-    error: string | null;
-    reload: jest.Mock;
-    addPost: jest.Mock;
-    addApproval: jest.Mock;
-    removeApproval: jest.Mock;
-  }> = {},
-) => ({
-  state: "ready" as const,
+  overrides: Partial<DiscussionDetailModel> = {},
+): DiscussionDetailModel => ({
+  state: "ready",
   snapshot: detailSnapshotFixture,
   error: null,
+  completionReason: "eose",
+  relayProvenance: detailSnapshotFixture.relayProvenance,
+  isFallback: false,
   reload: mockReload,
   addPost: jest.fn(),
   addApproval: jest.fn(),
@@ -185,12 +182,8 @@ describe("ModeratorsPage direct moderator management", () => {
       sourceRelayUrlsByEventId: {},
       attempts: [],
     });
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: createDiscussion(),
-      isLoading: false,
-      error: null,
-      reload: mockReload,
-    });
+    // The route fixture is supplied only by the public detail model.
+    mockUseDiscussionMeta.mockReturnValue(undefined);
   });
 
   it("reads moderator applications from the detail snapshot without a page-owned read", async () => {
@@ -215,9 +208,12 @@ describe("ModeratorsPage direct moderator management", () => {
   });
 
   it("shows the detail loading boundary before any moderator state is finalized", () => {
-    mockUseDiscussionMeta.mockReturnValue(undefined);
     mockUseDiscussionDetail.mockReturnValue(
-      createDetailModel({ state: "loading", snapshot: null }),
+      createDetailModel({
+        state: "loading",
+        snapshot: null,
+        completionReason: null,
+      }),
     );
 
     render(<ModeratorsPage />);
@@ -260,12 +256,13 @@ describe("ModeratorsPage direct moderator management", () => {
   });
 
   it("keeps Rubyful mutations inside the removable loading text", () => {
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: null,
-      isLoading: true,
-      error: null,
-      reload: mockReload,
-    });
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({
+        state: "loading",
+        snapshot: null,
+        completionReason: null,
+      }),
+    );
 
     render(<ModeratorsPage />);
 
@@ -277,13 +274,14 @@ describe("ModeratorsPage direct moderator management", () => {
   });
 
   it("shows incomplete discussion retrieval as partial instead of not found", () => {
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: null,
-      isLoading: false,
-      error: null,
-      completionReason: "hard-timeout",
-      reload: mockReload,
-    });
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({
+        state: "partial",
+        snapshot: null,
+        completionReason: "hard-timeout",
+        reload: mockReload,
+      }),
+    );
 
     render(<ModeratorsPage />);
 
@@ -300,15 +298,39 @@ describe("ModeratorsPage direct moderator management", () => {
     );
     expect(screen.getByRole("button", { name: "再読み込み" })).toBeInTheDocument();
     expect(screen.queryByText("会話情報が見つかりませんでした。")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+    expect(mockReload).toHaveBeenCalledTimes(1);
   });
 
+  it("renders detail errors with the public model and reload action", () => {
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({
+        state: "error",
+        snapshot: null,
+        error: "詳細データの取得に失敗しました。",
+        completionReason: "cancelled",
+        reload: mockReload,
+      }),
+    );
+
+    render(<ModeratorsPage />);
+
+    const errorStatus = screen.getByRole("status");
+    expect(errorStatus).toHaveTextContent("詳細データの取得に失敗しました。");
+    expect(errorStatus).toHaveAttribute("aria-live", "polite");
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+    expect(mockReload).toHaveBeenCalledTimes(1);
+  });
   it("取得完了後に会話がなければ読み込み表示を続けない", () => {
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: null,
-      isLoading: false,
-      error: "会話情報が見つかりませんでした。",
-      reload: mockReload,
-    });
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({
+        state: "ready",
+        snapshot: null,
+        error: "会話情報が見つかりませんでした。",
+        completionReason: "eose",
+        reload: mockReload,
+      }),
+    );
 
     render(<ModeratorsPage />);
 

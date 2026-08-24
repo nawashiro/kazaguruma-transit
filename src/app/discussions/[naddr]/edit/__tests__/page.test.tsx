@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionEditPage from "../page";
 import type { Discussion } from "@/types/discussion";
+import type { DiscussionDetailModel } from "@/components/discussion/DiscussionDetailProvider";
 
 const authState = {
   user: {
@@ -31,6 +32,7 @@ const createDiscussionListingRequestMock = jest.fn(() => ({
   created_at: 1,
 }));
 const mockUseDiscussionMeta = jest.fn();
+const mockUseDiscussionDetail = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr1discussion" }),
@@ -38,6 +40,11 @@ jest.mock("next/navigation", () => ({
     push: routerPushMock,
   }),
 }));
+
+jest.mock(
+  "@/components/discussion/DiscussionDetailProvider",
+  () => ({ useDiscussionDetail: () => mockUseDiscussionDetail() }),
+);
 
 jest.mock("next/link", () => ({
   __esModule: true,
@@ -140,35 +147,58 @@ jest.mock("@/lib/discussion/user-creation-flow", () => ({
     ),
 }));
 
+const detailDiscussion: Discussion = {
+  id: "34550:f:test-discussion",
+  title: "Test Discussion",
+  description: "Test Description",
+  authorPubkey: "f".repeat(64),
+  dTag: "test-discussion",
+  moderators: [{ pubkey: "e".repeat(64) }],
+  createdAt: 1,
+  event: {
+    id: "discussion-event",
+    kind: 34550,
+    pubkey: "f".repeat(64),
+    created_at: 1,
+    tags: [["d", "test-discussion"]],
+    content: "Test Description",
+    sig: "s".repeat(128),
+  },
+};
+
+const detailSnapshotFixture: NonNullable<DiscussionDetailModel["snapshot"]> = {
+  discussion: detailDiscussion,
+  posts: [],
+  approvals: [],
+  moderatorRequests: [],
+  evaluations: [],
+  userEvaluationIds: new Set<string>(),
+  relayProvenance: { successfulRelayUrlsByPhase: {} },
+};
+
+const createDetailModel = (
+  overrides: Partial<DiscussionDetailModel> = {},
+): DiscussionDetailModel => ({
+  state: "ready",
+  snapshot: detailSnapshotFixture,
+  error: null,
+  completionReason: "eose",
+  relayProvenance: detailSnapshotFixture.relayProvenance,
+  isFallback: false,
+  reload: jest.fn(async () => undefined),
+  addPost: jest.fn(),
+  addApproval: jest.fn(),
+  removeApproval: jest.fn(),
+  ...overrides,
+});
+
 describe("DiscussionEditPage listing request", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     routerPushMock.mockReset();
-    const layoutDiscussion: Discussion = {
-      id: "34550:f:test-discussion",
-      title: "Test Discussion",
-      description: "Test Description",
-      authorPubkey: "f".repeat(64),
-      dTag: "test-discussion",
-      moderators: [{ pubkey: "e".repeat(64) }],
-      createdAt: 1,
-      event: {
-        id: "discussion-event",
-        kind: 34550,
-        pubkey: "f".repeat(64),
-        created_at: 1,
-        tags: [["d", "test-discussion"]],
-        content: "Test Description",
-        sig: "s".repeat(128),
-      },
-    };
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: layoutDiscussion,
-      isLoading: false,
-      error: null,
-      completionReason: "eose",
-      reload: jest.fn(),
-    });
+    mockUseDiscussionDetail.mockReturnValue(createDetailModel());
+    // The edit page is driven by the detail public model; legacy metadata is absent.
+    mockUseDiscussionMeta.mockReturnValue(undefined);
     authState.user = {
       pubkey: "f".repeat(64),
       isLoggedIn: true,
@@ -196,6 +226,23 @@ describe("DiscussionEditPage listing request", () => {
     expect(
       await screen.findByText("会話一覧への掲載を申請しました"),
     ).toBeInTheDocument();
+  });
+
+  it("publishes an updated discussion from the detail-backed form", async () => {
+    render(<DiscussionEditPage />);
+
+    fireEvent.change(await screen.findByRole("textbox", { name: "タイトル *" }), {
+      target: { value: "Updated title" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "変更を保存" }));
+
+    await waitFor(() => {
+      expect(signEventMock).toHaveBeenCalled();
+      expect(
+        jest.requireMock("@/lib/nostr/nostr-service").__mock.publishSignedEvent,
+      ).toHaveBeenCalled();
+    });
+    expect(await screen.findByText("会話が更新されました")).toBeInTheDocument();
   });
 
   it("renders edit validation errors as an assertive soft alert list", async () => {

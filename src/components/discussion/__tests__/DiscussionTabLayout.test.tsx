@@ -5,7 +5,7 @@ import "@testing-library/jest-dom";
 // Mock next/navigation
 const mockPathname = jest.fn();
 const mockParams = jest.fn();
-const mockUseDiscussionMeta = jest.fn();
+const mockUseDiscussionDetail = jest.fn();
 jest.mock("next/navigation", () => ({
   usePathname: () => mockPathname(),
   useParams: () => mockParams(),
@@ -43,6 +43,9 @@ jest.mock("@/lib/nostr/nostr-read-executor", () => ({
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => ({ user: { pubkey: null, isLoggedIn: false } }),
 }));
+jest.mock("@/components/discussion/DiscussionDetailProvider", () => ({
+  useDiscussionDetail: () => mockUseDiscussionDetail(),
+}));
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseDiscussionEvent: jest.fn(() => null),
   getAdminPubkeyHex: jest.fn(() => "admin-pubkey"),
@@ -58,15 +61,11 @@ jest.mock("@/utils/logger", () => ({
   },
 }));
 
-jest.mock("@/components/discussion/DiscussionDataProvider", () => ({
-  useDiscussionMeta: () => mockUseDiscussionMeta(),
-}));
-
 // Import after mocking
 import {
   DiscussionTabLayout,
-  useDiscussionMeta,
 } from "../DiscussionTabLayout";
+import type { DiscussionDetailModel } from "@/components/discussion/DiscussionDetailProvider";
 import { executeNostrRead } from "@/lib/nostr/nostr-read-executor";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import { parseDiscussionEvent } from "@/lib/nostr/nostr-utils";
@@ -91,17 +90,38 @@ const discussionMetadata: Discussion = {
   },
 };
 
-function DiscussionMetaProbe() {
-  const meta = useDiscussionMeta();
-  return <div>{meta?.isLoading ? "loading" : meta?.error ?? "ready"}</div>;
-}
+const detailSnapshot: NonNullable<DiscussionDetailModel["snapshot"]> = {
+  discussion: discussionMetadata,
+  posts: [],
+  approvals: [],
+  moderatorRequests: [],
+  evaluations: [],
+  userEvaluationIds: new Set<string>(),
+  relayProvenance: { successfulRelayUrlsByPhase: {} },
+};
+
+const createDetailModel = (
+  overrides: Partial<DiscussionDetailModel> = {},
+): DiscussionDetailModel => ({
+  state: "loading",
+  snapshot: null,
+  error: null,
+  completionReason: null,
+  relayProvenance: null,
+  isFallback: false,
+  reload: jest.fn(async () => undefined),
+  addPost: jest.fn(),
+  addApproval: jest.fn(),
+  removeApproval: jest.fn(),
+  ...overrides,
+});
 
 describe("DiscussionTabLayout", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockPathname.mockReturnValue("/discussions/naddr123");
     mockParams.mockReturnValue({ naddr: "naddr123" });
-    mockUseDiscussionMeta.mockReturnValue(undefined);
+    mockUseDiscussionDetail.mockReturnValue(createDetailModel());
     jest.mocked(extractDiscussionFromNaddr).mockReturnValue(null);
     jest.mocked(parseDiscussionEvent).mockReturnValue(null);
     jest.mocked(executeNostrRead).mockResolvedValue({
@@ -174,13 +194,12 @@ describe("DiscussionTabLayout", () => {
 
   it("does not expose the basic information tab to a non-creator", () => {
       mockPathname.mockReturnValue("/discussions/naddr123/edit");
-      mockUseDiscussionMeta.mockReturnValue({
-        discussion: discussionMetadata,
-        isLoading: false,
-        error: null,
-        completionReason: "eose",
-        reload: jest.fn(),
-      });
+      mockUseDiscussionDetail.mockReturnValue(
+        createDetailModel({
+          state: "ready",
+          snapshot: detailSnapshot,
+        }),
+      );
 
       render(
         <DiscussionTabLayout baseHref="/discussions/naddr123">
@@ -307,36 +326,13 @@ describe("DiscussionTabLayout", () => {
   });
 
   describe("renders children", () => {
-    it("reads metadata from the shared provider instead of starting a network read", async () => {
-      mockUseDiscussionMeta.mockReturnValue({
-        discussion: discussionMetadata,
-        isLoading: false,
-        error: null,
-        completionReason: "eose",
-        reload: jest.fn(),
-      });
-
-      render(
-        <DiscussionTabLayout baseHref="/discussions/naddr123">
-          <DiscussionMetaProbe />
-        </DiscussionTabLayout>,
+    it("renders detail metadata from the detail provider", () => {
+      mockUseDiscussionDetail.mockReturnValue(
+        createDetailModel({
+          state: "ready",
+          snapshot: detailSnapshot,
+        }),
       );
-
-      expect(screen.getByText("ready")).toBeInTheDocument();
-      expect(executeNostrRead).not.toHaveBeenCalled();
-    });
-
-    it("renders completed metadata role guidance as a soft status banner", async () => {
-      mockUseDiscussionMeta.mockReturnValue({
-        discussion: {
-          ...discussionMetadata,
-          authorPubkey: "author-pubkey",
-        },
-        isLoading: false,
-        error: null,
-        completionReason: "eose",
-        reload: jest.fn(),
-      });
 
       render(
         <DiscussionTabLayout baseHref="/discussions/naddr123">
@@ -344,37 +340,94 @@ describe("DiscussionTabLayout", () => {
         </DiscussionTabLayout>,
       );
 
-      await screen.findByText("あなたはユーザーです。");
+      expect(screen.getByRole("heading", { name: "テスト会話" })).toBeInTheDocument();
+      expect(screen.getByText("あなたはユーザーです。")).toBeInTheDocument();
+      expect(screen.getAllByRole("tab")).toHaveLength(3);
+    });
+
+    it("renders completed detail role guidance as a soft status banner", () => {
+      mockUseDiscussionDetail.mockReturnValue(
+        createDetailModel({
+          state: "ready",
+          snapshot: detailSnapshot,
+        }),
+      );
+
+      render(
+        <DiscussionTabLayout baseHref="/discussions/naddr123">
+          <div>Content</div>
+        </DiscussionTabLayout>,
+      );
+
+      expect(screen.getByText("あなたはユーザーです。")).toBeInTheDocument();
       const status = screen.getByRole("status");
       expect(status).toHaveClass("alert", "alert-soft", "text-base-content!");
       expect(status.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
       expect(
         screen.getByText("ユーザーとして、新しい意見を投稿できます。"),
       ).toBeInTheDocument();
-      expect(executeNostrRead).not.toHaveBeenCalled();
     });
 
-    it("不正なNADDRでは読み込みを終了してエラー状態にする", async () => {
-      mockUseDiscussionMeta.mockReturnValue({
-        discussion: null,
-        isLoading: false,
-        error: "会話情報の指定が正しくありません。",
-        completionReason: "cancelled",
-        reload: jest.fn(),
-      });
+    it("renders detail loading state while preserving navigation", () => {
+      mockUseDiscussionDetail.mockReturnValue(createDetailModel());
+
       render(
-        <DiscussionTabLayout
-          baseHref="/discussions/moderator"
-          naddr="invalid"
-          showNavigation={false}
-        >
-          <DiscussionMetaProbe />
+        <DiscussionTabLayout baseHref="/discussions/naddr123">
+          <div>Content</div>
+        </DiscussionTabLayout>,
+      );
+
+      expect(screen.getByText("会話情報を読み込み中...")).toBeInTheDocument();
+      expect(screen.getAllByRole("tab")).toHaveLength(3);
+    });
+
+    it("renders detail partial state and reload action without legacy metadata", () => {
+      const reload = jest.fn(async () => undefined);
+      mockUseDiscussionDetail.mockReturnValue(
+        createDetailModel({
+          state: "partial",
+          snapshot: detailSnapshot,
+          completionReason: "idle-timeout",
+          reload,
+        }),
+      );
+
+      render(
+        <DiscussionTabLayout baseHref="/discussions/naddr123">
+          <div>Content</div>
         </DiscussionTabLayout>,
       );
 
       expect(
-        await screen.findByText("会話情報の指定が正しくありません。"),
-      ).toBeInTheDocument();
+        screen.getAllByText(
+          "一部のrelayからの取得が完了していません。表示内容は暫定です。",
+        ),
+      ).toHaveLength(2);
+      expect(screen.getAllByRole("tab")).toHaveLength(3);
+      fireEvent.click(screen.getAllByRole("button", { name: "再読み込み" })[0]);
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
+
+    it("renders detail error and reload action without legacy metadata", () => {
+      const reload = jest.fn(async () => undefined);
+      mockUseDiscussionDetail.mockReturnValue(
+        createDetailModel({
+          state: "error",
+          error: "詳細データの取得に失敗しました。",
+          reload,
+        }),
+      );
+
+      render(
+        <DiscussionTabLayout baseHref="/discussions/naddr123">
+          <div>Content</div>
+        </DiscussionTabLayout>,
+      );
+
+      expect(screen.getByText("詳細データの取得に失敗しました。")).toBeInTheDocument();
+      expect(screen.getAllByRole("tab")).toHaveLength(3);
+      fireEvent.click(screen.getByRole("button", { name: "再試行" }));
+      expect(reload).toHaveBeenCalledTimes(1);
     });
 
     it("renders children content", () => {

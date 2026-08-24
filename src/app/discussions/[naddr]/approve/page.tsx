@@ -8,9 +8,7 @@ import Link from "next/link";
 import PageHeader from "@/components/layouts/PageHeader";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
-import { useDiscussionContentData } from "@/components/discussion/DiscussionContentDataProvider";
 import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
@@ -47,41 +45,34 @@ export default function PostApprovalPage() {
   const params = useParams();
   const naddrParam = params.naddr as string;
   const detail = useDiscussionDetail();
-  const discussionMeta = useDiscussionMeta();
-  const legacyContent = useDiscussionContentData();
-  const hasDetailSnapshot = Boolean(detail.snapshot);
-  const discussion = hasDetailSnapshot
-    ? detail.snapshot?.discussion ?? null
-    : discussionMeta?.discussion ?? null;
-  const isDiscussionLoading = hasDetailSnapshot
-    ? detail.state === "loading"
-    : discussionMeta?.isLoading ?? false;
-  const discussionCompletionReason = hasDetailSnapshot
-    ? detail.completionReason ?? null
-    : discussionMeta?.completionReason ?? null;
+  const discussion = detail.snapshot?.discussion ?? null;
+  const isDiscussionLoading = detail.state === "loading";
+  const discussionCompletionReason =
+    detail.completionReason ??
+    (detail.state === "partial"
+      ? "idle-timeout"
+      : detail.state === "error"
+        ? "hard-timeout"
+        : detail.state === "ready"
+          ? "eose"
+          : null);
 
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
   const { user, signEvent } = useAuth();
-  const posts = hasDetailSnapshot ? detail.snapshot?.posts ?? [] : legacyContent.posts;
-  const approvals = hasDetailSnapshot ? detail.snapshot?.approvals ?? [] : legacyContent.approvals;
-  const isLoading = hasDetailSnapshot
-    ? detail.state === "loading"
-    : legacyContent.isLoading;
-  const completionReason = hasDetailSnapshot
-    ? detail.completionReason
-    : legacyContent.completionReason;
-  const approvalState = hasDetailSnapshot
-    ? posts.some((post) => post.approvalState === "unknown")
-      ? "unknown"
-      : detail.state === "ready"
-        ? "approved"
-        : "unknown"
-    : legacyContent.approvalState;
-  const reload = hasDetailSnapshot ? detail.reload : legacyContent.reload;
-  const addApproval = hasDetailSnapshot ? detail.addApproval : legacyContent.addApproval;
-  const removeApproval = hasDetailSnapshot ? detail.removeApproval : legacyContent.removeApproval;
+  const posts = detail.snapshot?.posts ?? [];
+  const approvals = detail.snapshot?.approvals ?? [];
+  const isLoading = detail.state === "loading";
+  const completionReason = discussionCompletionReason;
+  const approvalState = posts.some((post) => post.approvalState === "unknown")
+    ? "unknown"
+    : detail.state === "ready"
+      ? "approved"
+      : "unknown";
+  const reload = detail.reload;
+  const addApproval = detail.addApproval;
+  const removeApproval = detail.removeApproval;
 
   const discussionInfo = useMemo(() => {
     if (!naddrParam) return null;
@@ -211,7 +202,7 @@ export default function PostApprovalPage() {
     );
   }
 
-  if (detail.state === "loading" && !detail.snapshot) {
+  if (detail.state === "loading") {
     return (
       <div role="status">
         <span className="ruby-text">会話情報を読み込み中...</span>
@@ -240,7 +231,7 @@ export default function PostApprovalPage() {
 
   return (
     <div className="py-8">
-      {!hasApprovalPermission && (
+      {discussion && detail.state !== "error" && !hasApprovalPermission && (
         <div className="card bg-base-100 shadow-sm mb-6" role="status">
           <div className="card-body">
             <div className="flex flex-nowrap gap-2 items-center">
@@ -285,10 +276,23 @@ export default function PostApprovalPage() {
               ></div>
             ))}
           </div>
+        ) : detail.state === "error" ? (
+            <div
+              className="alert alert-error alert-soft text-base-content!"
+              role="status"
+              aria-live="polite"
+            >
+              <span>{detail.error ?? "会話データの取得に失敗しました。"}</span>
+              <button
+                type="button"
+                className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                onClick={() => void reload()}
+              >
+                <span className="ruby-text">再読み込み</span>
+              </button>
+            </div>
         ) : !discussion ? (
-          discussionCompletionReason === "idle-timeout" ||
-            discussionCompletionReason === "hard-timeout" ||
-            discussionCompletionReason === "cancelled" ? (
+          detail.state === "partial" ? (
             <div
               className="alert alert-warning alert-soft text-base-content!"
               role="status"
@@ -298,6 +302,13 @@ export default function PostApprovalPage() {
                 会話データの取得に時間がかかっています（{discussionCompletionReason}）。
                 受信待機中または relay 応答遅延の可能性があります。
               </span>
+              <button
+                type="button"
+                className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                onClick={() => void reload()}
+              >
+                <span className="ruby-text">再読み込み</span>
+              </button>
             </div>
           ) : (
             <div
@@ -306,6 +317,13 @@ export default function PostApprovalPage() {
               aria-live="polite"
             >
               <span>会話が見つかりません。</span>
+              <button
+                type="button"
+                className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                onClick={() => void reload()}
+              >
+                <span className="ruby-text">再読み込み</span>
+              </button>
             </div>
           )
         ) : (

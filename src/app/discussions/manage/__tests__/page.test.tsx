@@ -6,10 +6,13 @@ import DiscussionManagePage from "../page";
 const mockUseAuth = jest.fn();
 const mockUseDiscussionMeta = jest.fn();
 const mockUseDiscussionManagement = jest.fn();
-const mockExecuteNostrRead = jest.fn();
 const mockManagementReload = jest.fn();
 const mockDiscussionMetaReload = jest.fn();
-const mockLegacyManagementReload = jest.fn();
+const mockManagementAddApproval = jest.fn();
+const mockManagementRemoveApproval = jest.fn();
+const mockCreateApprovalEvent = jest.fn();
+const mockCreateRevocationEvent = jest.fn();
+const mockPublishSignedEvent = jest.fn();
 const mockDiscussion = {
   id: "34550:author:discussion-d-tag",
   authorPubkey: "author",
@@ -37,116 +40,6 @@ const createManagementModel = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const legacyOnlyDiscussion = {
-  id: `34550:${"e".repeat(64)}:legacy-management-only`,
-  authorPubkey: "e".repeat(64),
-  dTag: "legacy-management-only",
-  moderators: [],
-  createdAt: 0,
-  title: "旧管理データだけの投稿",
-  description: "新しい管理モデルでは表示されない投稿",
-};
-const legacyOnlyPost = {
-  id: "legacy-pending-post",
-  content: "legacy pending post",
-  authorPubkey: "legacy-poster",
-  discussionId: mockDiscussion.id,
-  createdAt: 2,
-  approved: false,
-  approvedBy: [],
-  approvalState: "unapproved" as const,
-  event: {
-    id: "legacy-pending-post",
-    pubkey: "legacy-poster",
-    created_at: 2,
-    kind: 1111,
-    tags: [["a", mockDiscussion.id], ["q", legacyOnlyDiscussion.id]],
-    content: "legacy pending post",
-    sig: "legacy-sig",
-  },
-};
-const legacyReadyManagementData = {
-  posts: [legacyOnlyPost],
-  approvals: [],
-  referencedDiscussions: [legacyOnlyDiscussion],
-  isModerationLoading: false,
-  referencedDiscussionCompletionReason: "eose" as const,
-  completionReason: "eose" as const,
-  approvalState: "approved" as const,
-  moderationError: null,
-  reloadModeration: mockLegacyManagementReload,
-  addApproval: jest.fn(),
-  removeApproval: jest.fn(),
-};
-const legacyApprovedPost = {
-  id: "post-approved",
-  content: "approved post",
-  authorPubkey: "poster",
-  discussionId: mockDiscussion.id,
-  createdAt: 2,
-  approved: true,
-  approvedBy: ["other-moderator"],
-  approvalState: "approved" as const,
-  event: {
-    id: "post-approved",
-    pubkey: "poster",
-    created_at: 2,
-    kind: 1111,
-    tags: [["a", mockDiscussion.id], ["q", "34550:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:tag"]],
-    content: "approved post",
-    sig: "sig",
-  },
-};
-const defaultLegacyManagementData = {
-  posts: [legacyApprovedPost],
-  approvals: [
-    {
-      id: "approval-event",
-      postId: "post-approved",
-      moderatorPubkey: "other-moderator",
-    },
-  ],
-  referencedDiscussions: [],
-  isModerationLoading: false,
-  referencedDiscussionCompletionReason: "hard-timeout" as const,
-  completionReason: "eose" as const,
-  approvalState: "approved" as const,
-  moderationError: null,
-  reloadModeration: mockLegacyManagementReload,
-  addApproval: jest.fn(),
-  removeApproval: jest.fn(),
-};
-const mockLegacyManagementData = jest.fn(
-  () => defaultLegacyManagementData as
-    | typeof defaultLegacyManagementData
-    | typeof legacyReadyManagementData,
-);
-
-const projectLegacyManagementData = () => {
-  const legacyData = mockLegacyManagementData();
-  const isPartial = [
-    legacyData.completionReason,
-    legacyData.referencedDiscussionCompletionReason,
-  ].some((reason) => reason !== null && reason !== "eose");
-  const state = legacyData.moderationError
-    ? "error"
-    : legacyData.isModerationLoading
-      ? "loading"
-      : isPartial
-        ? "partial"
-        : "ready";
-
-  return createManagementModel({
-    state,
-    snapshot: {
-      listDiscussion: mockDiscussion,
-      listingPosts: legacyData.posts,
-      listingApprovals: legacyData.approvals,
-      referencedDiscussions: legacyData.referencedDiscussions,
-    },
-    error: legacyData.moderationError,
-  });
-};
 
 const modelApprovedReferenceId = `34550:${"a".repeat(64)}:approved-management-model`;
 const modelPendingReferenceId = `34550:${"b".repeat(64)}:pending-management-model`;
@@ -230,14 +123,6 @@ jest.mock(
   { virtual: true },
 );
 
-jest.mock("@/lib/nostr/nostr-read-executor", () => ({
-  executeNostrRead: mockExecuteNostrRead,
-}));
-
-jest.mock("@/components/discussion/DiscussionManagementDataProvider", () => ({
-  useDiscussionManagementData: () => mockLegacyManagementData(),
-}));
-
 jest.mock("@/lib/config/discussion-config", () => ({
   isDiscussionsEnabled: () => true,
   getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 500 }),
@@ -309,9 +194,12 @@ jest.mock("@/lib/nostr/nostr-service", () => {
       duplicateCount: 0,
       sourceRelayUrlsByEventId: {},
     })),
-    publishSignedEvent: jest.fn().mockResolvedValue(true),
-    createApprovalEvent: jest.fn(),
-    createRevocationEvent: jest.fn(),
+    publishSignedEvent: (...args: Parameters<typeof mockPublishSignedEvent>) =>
+      mockPublishSignedEvent(...args),
+    createApprovalEvent: (...args: Parameters<typeof mockCreateApprovalEvent>) =>
+      mockCreateApprovalEvent(...args),
+    createRevocationEvent: (...args: Parameters<typeof mockCreateRevocationEvent>) =>
+      mockCreateRevocationEvent(...args),
   };
 
   return {
@@ -377,17 +265,32 @@ describe("DiscussionManagePage", () => {
     jest.clearAllMocks();
     mockUseDiscussionManagement.mockReset();
     mockManagementReload.mockReset();
-    mockExecuteNostrRead.mockReset();
-    mockLegacyManagementReload.mockReset();
-    mockLegacyManagementData.mockReset();
-    mockLegacyManagementData.mockReturnValue(defaultLegacyManagementData);
-    mockUseDiscussionManagement.mockImplementation(projectLegacyManagementData);
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: mockDiscussion,
-      isLoading: false,
-      error: null,
-      reload: mockDiscussionMetaReload,
-    });
+    mockManagementAddApproval.mockReset();
+    mockManagementRemoveApproval.mockReset();
+    mockCreateApprovalEvent.mockReset();
+    mockCreateRevocationEvent.mockReset();
+    mockPublishSignedEvent.mockReset().mockResolvedValue(true);
+    mockUseDiscussionManagement.mockReturnValue(
+      createManagementModel({
+        state: "partial",
+        completionReason: "hard-timeout",
+        snapshot: {
+          listDiscussion: managementModelDiscussion,
+          listingPosts: [modelApprovedPost],
+          listingApprovals: [
+            {
+              id: "new-management-model-approval",
+              postId: modelApprovedPost.id,
+              moderatorPubkey: "other-moderator",
+            },
+          ],
+          referencedDiscussions: [],
+        },
+        addApproval: mockManagementAddApproval,
+        removeApproval: mockManagementRemoveApproval,
+      }),
+    );
+    mockUseDiscussionMeta.mockReturnValue(undefined);
     mockUseAuth.mockReturnValue({
       user: { pubkey: "viewer", isLoggedIn: true },
       signEvent: jest.fn(),
@@ -408,20 +311,25 @@ describe("DiscussionManagePage", () => {
     );
   });
 
-  it("shows discussion metadata errors as a soft alert with reload", () => {
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: null,
-      isLoading: false,
-      error: "掲載一覧の会話情報が見つかりませんでした。",
-      reload: mockDiscussionMetaReload,
-    });
+  it("shows management model errors as a soft alert with reload", () => {
+    mockUseDiscussionManagement.mockReturnValue(
+      createManagementModel({
+        state: "error",
+        snapshot: null,
+        error: "管理モデルの取得に失敗しました。",
+        completionReason: null,
+        reload: mockManagementReload,
+        addApproval: mockManagementAddApproval,
+        removeApproval: mockManagementRemoveApproval,
+      }),
+    );
 
     render(<DiscussionManagePage />);
 
     const status = screen.getByRole("status");
     expect(status).toHaveAttribute("aria-live", "polite");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(status).toHaveTextContent("掲載一覧の会話情報が見つかりませんでした。");
+    expect(status).toHaveTextContent("管理モデルの取得に失敗しました。");
     expect(status).toHaveClass(
       "alert",
       "alert-error",
@@ -429,7 +337,37 @@ describe("DiscussionManagePage", () => {
       "text-base-content!",
     );
     fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
-    expect(mockDiscussionMetaReload).toHaveBeenCalledTimes(1);
+    expect(mockManagementReload).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a legacy metadata error when the management snapshot is usable", () => {
+    mockUseDiscussionMeta.mockReturnValue({
+      discussion: null,
+      isLoading: false,
+      error: "旧メタデータのエラーは管理画面を置き換えない。",
+      reload: mockDiscussionMetaReload,
+    });
+    mockUseDiscussionManagement.mockReturnValue(
+      createManagementModel({
+        state: "ready",
+        snapshot: {
+          listDiscussion: managementModelDiscussion,
+          listingPosts: [modelPendingPost],
+          listingApprovals: [],
+          referencedDiscussions: [modelPendingReference],
+        },
+        addApproval: mockManagementAddApproval,
+        removeApproval: mockManagementRemoveApproval,
+      }),
+    );
+
+    render(<DiscussionManagePage />);
+
+    expect(
+      screen.queryByText("旧メタデータのエラーは管理画面を置き換えない。"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("新モデルで保留中の参照会話")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "再読み込み" })).not.toBeInTheDocument();
   });
 
   it("shows moderator guidance above the tabs for viewers", async () => {
@@ -535,6 +473,54 @@ describe("DiscussionManagePage", () => {
     expect(screen.getByText("新モデルで承認済みの参照会話")).toBeInTheDocument();
   });
 
+  it("publishes approval and sends the result to the management model action", async () => {
+    const signedApprovalEvent = {
+      id: "management-approval-signed",
+      pubkey: "moderator",
+      created_at: 10,
+      kind: 4550,
+      tags: [["a", mockDiscussion.id], ["e", modelPendingPost.id], ["p", modelPendingPost.authorPubkey]],
+      content: "",
+      sig: "management-approval-signature",
+    };
+    const signEvent = jest.fn().mockResolvedValue(signedApprovalEvent);
+    mockUseAuth.mockReturnValue({
+      user: { pubkey: "moderator", isLoggedIn: true },
+      signEvent,
+    });
+    mockCreateApprovalEvent.mockReturnValue({ kind: 4550, tags: [] });
+    mockUseDiscussionManagement.mockReturnValue(
+      createManagementModel({
+        state: "ready",
+        completionReason: "eose",
+        snapshot: {
+          listDiscussion: managementModelDiscussion,
+          listingPosts: [modelPendingPost],
+          listingApprovals: [],
+          referencedDiscussions: [modelPendingReference],
+        },
+        addApproval: mockManagementAddApproval,
+        removeApproval: mockManagementRemoveApproval,
+      }),
+    );
+
+    render(<DiscussionManagePage />);
+    fireEvent.click(screen.getByRole("button", { name: "承認" }));
+
+    await waitFor(() =>
+      expect(mockManagementAddApproval).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: signedApprovalEvent.id,
+          postId: modelPendingPost.id,
+          moderatorPubkey: "moderator",
+          discussionId: mockDiscussion.id,
+        }),
+      ),
+    );
+    expect(mockCreateApprovalEvent).toHaveBeenCalledTimes(1);
+    expect(mockPublishSignedEvent).toHaveBeenCalledWith(signedApprovalEvent);
+  });
+
   it("keeps the revoke action visible when another moderator approved the post", async () => {
     render(<DiscussionManagePage />);
 
@@ -553,7 +539,6 @@ describe("DiscussionManagePage", () => {
   });
 
   it("renders a ready empty management list from the shared snapshot", () => {
-    mockLegacyManagementData.mockReturnValue(legacyReadyManagementData);
     mockUseDiscussionManagement.mockReturnValue(
       createManagementModel({
         state: "ready",
@@ -570,12 +555,9 @@ describe("DiscussionManagePage", () => {
 
     expect(mockUseDiscussionManagement).toHaveBeenCalledTimes(1);
     expect(screen.getByText("承認待ちの投稿はありません")).toBeInTheDocument();
-    expect(screen.queryByText("旧管理データだけの投稿")).not.toBeInTheDocument();
-    expect(mockExecuteNostrRead).not.toHaveBeenCalled();
   });
 
   it("does not conclude an empty management list while the shared snapshot is partial", () => {
-    mockLegacyManagementData.mockReturnValue(legacyReadyManagementData);
     mockUseDiscussionManagement.mockReturnValue(
       createManagementModel({
         state: "partial",
@@ -593,12 +575,9 @@ describe("DiscussionManagePage", () => {
     expect(mockUseDiscussionManagement).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("承認待ちの投稿はありません")).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toBeInTheDocument();
-    expect(screen.queryByText("旧管理データだけの投稿")).not.toBeInTheDocument();
-    expect(mockExecuteNostrRead).not.toHaveBeenCalled();
   });
 
   it("reloads the shared management snapshot rather than starting a page-owned read", () => {
-    mockLegacyManagementData.mockReturnValue(legacyReadyManagementData);
     mockUseDiscussionManagement.mockReturnValue(
       createManagementModel({
         state: "partial",
@@ -617,7 +596,5 @@ describe("DiscussionManagePage", () => {
     expect(mockUseDiscussionManagement).toHaveBeenCalledTimes(1);
     expect(mockManagementReload).toHaveBeenCalledTimes(1);
     expect(mockDiscussionMetaReload).not.toHaveBeenCalled();
-    expect(mockLegacyManagementReload).not.toHaveBeenCalled();
-    expect(mockExecuteNostrRead).not.toHaveBeenCalled();
   });
 });

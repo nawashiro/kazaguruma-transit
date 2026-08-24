@@ -129,9 +129,6 @@ jest.mock("@/lib/config/discussion-config", () => ({ isDiscussionsEnabled: () =>
 jest.mock("@/components/discussion/DiscussionListTabLayout", () => ({
   DiscussionListTabLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
-jest.mock("@/components/discussion/DiscussionManagementDataProvider", () => ({
-  useDiscussionManagementData: () => mockManagementData,
-}));
 jest.mock(
   "../../../components/discussion/DiscussionManagementProvider",
   () => ({

@@ -25,7 +25,6 @@ import { resolveDiscussionReferences } from "@/lib/discussion/discussion-referen
 import type { Discussion, DiscussionPost, PostApproval } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { useDiscussionManagement } from "@/components/discussion/DiscussionManagementProvider";
-import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
 
 const nostrServiceConfig = getNostrServiceConfig();
 const nostrService = createNostrService(nostrServiceConfig);
@@ -37,29 +36,18 @@ export default function DiscussionManagePage() {
 
   const { user, signEvent } = useAuth();
   const management = useDiscussionManagement();
-  const legacyMeta = useDiscussionMeta();
-  const hasLegacyMetadataError = Boolean(
-    legacyMeta?.error && !legacyMeta.discussion,
-  );
   const snapshot = management.snapshot;
   const discussion = snapshot?.listDiscussion ?? null;
   const posts = snapshot?.listingPosts ?? [];
   const approvals = snapshot?.listingApprovals ?? [];
   const referencedDiscussions = snapshot?.referencedDiscussions ?? [];
   const isLoading = management.state === "loading";
-  const loadError = hasLegacyMetadataError
-    ? legacyMeta?.error ?? null
-    : management.state === "error"
-      ? management.error
-      : null;
-  const effectiveState = hasLegacyMetadataError ? "error" : management.state;
+  const loadError = management.state === "error" ? management.error : null;
   const completionReason = management.completionReason;
   const approvalState = posts.some((post) => post.approvalState === "unknown")
     ? "unknown"
     : undefined;
-  const reloadManagement = hasLegacyMetadataError
-    ? legacyMeta?.reload ?? management.reload
-    : management.reload;
+  const reloadManagement = management.reload;
   const addManagementApproval = management.addApproval;
   const removeManagementApproval = management.removeApproval;
 
@@ -216,7 +204,7 @@ export default function DiscussionManagePage() {
     }
   };
 
-  if (effectiveState === "error") {
+  if (management.state === "error") {
     return (
       <div className="py-8">
         <div
@@ -273,7 +261,7 @@ export default function DiscussionManagePage() {
     );
   }
 
-  if (!discussion && effectiveState === "ready") {
+  if (!discussion && management.state === "ready") {
     return (
       <div className="py-8">
         <div

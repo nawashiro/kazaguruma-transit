@@ -475,4 +475,35 @@ describe("readDiscussionManagement", () => {
       metadata: [relayUrls[0]],
     });
   });
+
+  it("keeps caller-provided relay hints on every management phase read", async () => {
+    executeNostrRead.mockImplementation(async (_gateway: unknown, input: unknown) => {
+      const phase = phaseFromCall([null, input]);
+      switch (phase) {
+        case "list-metadata":
+          return result([listMetadataEvent]);
+        case "listing-content":
+          return result([approvedListingPostOne]);
+        case "approval":
+          return result([approvalOne]);
+        case "referenced-metadata":
+          return result([referencedMetadataOne]);
+        default:
+          return result([]);
+      }
+    });
+
+    const relayUrlsWithHint = ["wss://naddr-hint.example", ...relayUrls];
+    const readResult = await readManagement({
+      ...baseInput(),
+      relayUrls: relayUrlsWithHint,
+    });
+
+    expect(readResult.state).toBe("ready");
+    expect(executeNostrRead).toHaveBeenCalledTimes(4);
+    for (const call of executeNostrRead.mock.calls) {
+      const transportInput = call[1] as { relayUrls: string[] };
+      expect(transportInput.relayUrls).toEqual(relayUrlsWithHint);
+    }
+  });
 });

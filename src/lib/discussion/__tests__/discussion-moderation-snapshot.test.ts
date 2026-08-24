@@ -2,11 +2,11 @@ import {
   createDiscussionModerationSnapshot,
   loadDiscussionModerationSnapshot,
 } from "@/lib/discussion/discussion-moderation-snapshot";
-import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
+import { executeNostrRead } from "@/lib/nostr/nostr-read-executor";
 import type { Event } from "@/lib/nostr/nostr-service";
 
-jest.mock("@/lib/discussion/discussion-read-executor", () => ({
-  executeDiscussionRead: jest.fn(),
+jest.mock("@/lib/nostr/nostr-read-executor", () => ({
+  executeNostrRead: jest.fn(),
 }));
 
 const post = (id: string): Event => ({ id, kind: 1111, pubkey: "author", created_at: 1, content: "post", tags: [["a", "34550:author:topic"]], sig: "sig" });
@@ -101,7 +101,7 @@ describe("loadDiscussionModerationSnapshot", () => {
       sourceRelayUrlsByEventId: Object.fromEntries(events.map((event) => [event.id, ["wss://one"]])),
       attempts: [],
     });
-    const mockedExecuteDiscussionRead = jest.mocked(executeDiscussionRead);
+    const mockedExecuteDiscussionRead = jest.mocked(executeNostrRead);
     mockedExecuteDiscussionRead
       .mockResolvedValueOnce(completion([post("post-1")], "eose"))
       .mockResolvedValueOnce(completion([approval("post-1")], "idle-timeout"));
@@ -146,7 +146,7 @@ describe("loadDiscussionModerationSnapshot", () => {
       attempts: [],
     });
     const service = { getEventsWithCompletion: jest.fn() };
-    jest.mocked(executeDiscussionRead)
+    jest.mocked(executeNostrRead)
       .mockResolvedValueOnce(completion([post("post-1")], "eose"))
       .mockResolvedValueOnce(completion([], "idle-timeout"));
 
@@ -174,7 +174,7 @@ describe("loadDiscussionModerationSnapshot", () => {
       sourceRelayUrlsByEventId: {},
       attempts: [],
     });
-    const mockedExecuteDiscussionRead = jest.mocked(executeDiscussionRead);
+    const mockedExecuteDiscussionRead = jest.mocked(executeNostrRead);
     mockedExecuteDiscussionRead.mockReset().mockResolvedValue(completion([]));
     const service = { getEventsWithCompletion: jest.fn() };
     const providerRelayUrls = [

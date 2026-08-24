@@ -24,8 +24,8 @@ import { buildNaddrFromRef } from "@/lib/nostr/naddr-utils";
 import { resolveDiscussionReferences } from "@/lib/discussion/discussion-reference-resolver";
 import type { Discussion, DiscussionPost, PostApproval } from "@/types/discussion";
 import { logger } from "@/utils/logger";
+import { useDiscussionManagement } from "@/components/discussion/DiscussionManagementProvider";
 import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
-import { useDiscussionManagementData } from "@/components/discussion/DiscussionManagementDataProvider";
 
 const nostrServiceConfig = getNostrServiceConfig();
 const nostrService = createNostrService(nostrServiceConfig);
@@ -36,20 +36,32 @@ export default function DiscussionManagePage() {
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
 
   const { user, signEvent } = useAuth();
-  const discussionMeta = useDiscussionMeta();
-  const discussion = discussionMeta?.discussion;
-  const {
-    posts,
-    approvals,
-    referencedDiscussions,
-    isModerationLoading: isLoading,
-    referencedDiscussionCompletionReason,
-    completionReason,
-    approvalState,
-    reloadModeration,
-    addApproval,
-    removeApproval,
-  } = useDiscussionManagementData();
+  const management = useDiscussionManagement();
+  const legacyMeta = useDiscussionMeta();
+  const hasLegacyMetadataError = Boolean(
+    legacyMeta?.error && !legacyMeta.discussion,
+  );
+  const snapshot = management.snapshot;
+  const discussion = snapshot?.listDiscussion ?? null;
+  const posts = snapshot?.listingPosts ?? [];
+  const approvals = snapshot?.listingApprovals ?? [];
+  const referencedDiscussions = snapshot?.referencedDiscussions ?? [];
+  const isLoading = management.state === "loading";
+  const loadError = hasLegacyMetadataError
+    ? legacyMeta?.error ?? null
+    : management.state === "error"
+      ? management.error
+      : null;
+  const effectiveState = hasLegacyMetadataError ? "error" : management.state;
+  const completionReason = management.completionReason;
+  const approvalState = posts.some((post) => post.approvalState === "unknown")
+    ? "unknown"
+    : undefined;
+  const reloadManagement = hasLegacyMetadataError
+    ? legacyMeta?.reload ?? management.reload
+    : management.reload;
+  const addManagementApproval = management.addApproval;
+  const removeManagementApproval = management.removeApproval;
 
   const canManagePosts = Boolean(
     discussion &&
@@ -79,7 +91,7 @@ export default function DiscussionManagePage() {
         {references.map((reference) => {
           const referencedDiscussion = findReferencedDiscussion(reference.discussionId);
           if (!referencedDiscussion) {
-            if (referencedDiscussionCompletionReason !== "eose") {
+            if (management.state !== "ready") {
               return (
                 <div key={reference.discussionId} className="text-base text-base-content italic">
                   会話の参照を取得中です。参照: {buildNaddrFromRef(reference.discussionId)}
@@ -158,7 +170,7 @@ export default function DiscussionManagePage() {
         event: signedEvent,
       };
 
-      addApproval(newApproval);
+      addManagementApproval?.(newApproval);
     } catch (error) {
       logger.error("Failed to approve post:", error);
     } finally {
@@ -192,7 +204,7 @@ export default function DiscussionManagePage() {
         throw new Error("Failed to publish revocation to relays");
       }
 
-      removeApproval(approval.id, post.id, user.pubkey || "");
+      removeManagementApproval?.(approval.id);
     } catch (error) {
       logger.error("Failed to revoke approval:", error);
     } finally {
@@ -204,7 +216,7 @@ export default function DiscussionManagePage() {
     }
   };
 
-  if (!discussion && discussionMeta?.isLoading === false) {
+  if (effectiveState === "error") {
     return (
       <div className="py-8">
         <div
@@ -213,12 +225,12 @@ export default function DiscussionManagePage() {
           aria-live="polite"
         >
           <span className="ruby-text">
-            {discussionMeta.error ?? "掲載一覧の会話情報が見つかりませんでした。"}
+            {loadError ?? "掲載一覧の会話情報が見つかりませんでした。"}
           </span>
           <button
             type="button"
             className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-            onClick={() => void discussionMeta.reload()}
+            onClick={() => void reloadManagement()}
           >
             <span className="ruby-text">再読み込み</span>
           </button>
@@ -238,7 +250,7 @@ export default function DiscussionManagePage() {
     );
   }
 
-  if (isLoading || discussionMeta?.isLoading) {
+  if (isLoading) {
     return (
       <div className="py-8">
         <div
@@ -256,6 +268,50 @@ export default function DiscussionManagePage() {
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded" />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!discussion && effectiveState === "ready") {
+    return (
+      <div className="py-8">
+        <div
+          className="alert alert-error alert-soft text-base-content!"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="ruby-text">掲載一覧の会話情報が見つかりませんでした。</span>
+          <button
+            type="button"
+            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            onClick={() => void reloadManagement()}
+          >
+            <span className="ruby-text">再読み込み</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (management.state === "partial" && posts.length === 0) {
+    return (
+      <div className="py-8">
+        <div
+          className="alert alert-warning alert-soft text-base-content!"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="ruby-text">
+            掲載依頼一覧を完全に取得できませんでした。再読み込みしてください。
+          </span>
+          <button
+            type="button"
+            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            onClick={() => void reloadManagement()}
+          >
+            <span className="ruby-text">再読み込み</span>
+          </button>
         </div>
       </div>
     );
@@ -280,10 +336,10 @@ export default function DiscussionManagePage() {
     <div className="py-8">
       <DiscussionReadStatus
         isLoading={false}
-        completionReason={completionReason}
+        completionReason={completionReason ?? null}
         hasData={posts.length > 0}
         approvalState={approvalState === "unknown" ? "unknown" : undefined}
-        onReload={() => void reloadModeration()}
+        onReload={() => void reloadManagement()}
       />
       {!canManagePosts && (
         <div className="card bg-base-100 shadow-sm mb-6" role="status">

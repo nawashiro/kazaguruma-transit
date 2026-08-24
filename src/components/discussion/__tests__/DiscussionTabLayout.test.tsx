@@ -37,8 +37,8 @@ jest.mock("@/lib/test/test-data-loader", () => ({
 jest.mock("@/lib/nostr/naddr-utils", () => ({
   extractDiscussionFromNaddr: jest.fn(() => null), // Return null for basic tests
 }));
-jest.mock("@/lib/discussion/discussion-read-executor", () => ({
-  executeDiscussionRead: jest.fn(),
+jest.mock("@/lib/nostr/nostr-read-executor", () => ({
+  executeNostrRead: jest.fn(),
 }));
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => ({ user: { pubkey: null, isLoggedIn: false } }),
@@ -67,7 +67,7 @@ import {
   DiscussionTabLayout,
   useDiscussionMeta,
 } from "../DiscussionTabLayout";
-import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
+import { executeNostrRead } from "@/lib/nostr/nostr-read-executor";
 import { extractDiscussionFromNaddr } from "@/lib/nostr/naddr-utils";
 import { parseDiscussionEvent } from "@/lib/nostr/nostr-utils";
 import type { Discussion } from "@/types/discussion";
@@ -104,7 +104,7 @@ describe("DiscussionTabLayout", () => {
     mockUseDiscussionMeta.mockReturnValue(undefined);
     jest.mocked(extractDiscussionFromNaddr).mockReturnValue(null);
     jest.mocked(parseDiscussionEvent).mockReturnValue(null);
-    jest.mocked(executeDiscussionRead).mockResolvedValue({
+    jest.mocked(executeNostrRead).mockResolvedValue({
       events: [],
       completionReason: "eose",
       duplicateCount: 0,
@@ -323,7 +323,7 @@ describe("DiscussionTabLayout", () => {
       );
 
       expect(screen.getByText("ready")).toBeInTheDocument();
-      expect(executeDiscussionRead).not.toHaveBeenCalled();
+      expect(executeNostrRead).not.toHaveBeenCalled();
     });
 
     it("renders completed metadata role guidance as a soft status banner", async () => {
@@ -351,7 +351,7 @@ describe("DiscussionTabLayout", () => {
       expect(
         screen.getByText("ユーザーとして、新しい意見を投稿できます。"),
       ).toBeInTheDocument();
-      expect(executeDiscussionRead).not.toHaveBeenCalled();
+      expect(executeNostrRead).not.toHaveBeenCalled();
     });
 
     it("不正なNADDRでは読み込みを終了してエラー状態にする", async () => {

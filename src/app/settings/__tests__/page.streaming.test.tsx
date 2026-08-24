@@ -66,13 +66,13 @@ jest.mock("@/lib/nostr/discussion-ndk-gateway", () => {
   };
 });
 
-jest.mock("@/lib/discussion/discussion-read-executor", () => {
-  const executeDiscussionRead = jest.fn();
-  return { executeDiscussionRead, __mock: { executeDiscussionRead } };
+jest.mock("@/lib/nostr/nostr-read-executor", () => {
+  const executeNostrRead = jest.fn();
+  return { executeNostrRead, __mock: { executeNostrRead } };
 });
 
 const { __mock: discussionReadExecutorMock } = jest.requireMock(
-  "@/lib/discussion/discussion-read-executor",
+  "@/lib/nostr/nostr-read-executor",
 );
 
 jest.mock("@/lib/nostr/nostr-utils", () => ({
@@ -133,7 +133,7 @@ describe("SettingsPage streaming discussions", () => {
     mockSettingsUser.isLoggedIn = true;
     mockSettingsUser.pubkey = "user-pubkey";
     mockAuthError.value = null;
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
+    discussionReadExecutorMock.executeNostrRead.mockResolvedValue(
       withCompletion([]),
     );
   });
@@ -185,14 +185,14 @@ describe("SettingsPage streaming discussions", () => {
       sig: "sig",
     };
 
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
+    discussionReadExecutorMock.executeNostrRead.mockResolvedValue(
       withCompletion([mockEvent], "idle-timeout"),
     );
 
     render(<SettingsPage />);
 
     await waitFor(() =>
-      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalledWith(
+      expect(discussionReadExecutorMock.executeNostrRead).toHaveBeenCalledWith(
         expect.any(Object),
         expect.objectContaining({
           plan: expect.objectContaining({
@@ -211,7 +211,7 @@ describe("SettingsPage streaming discussions", () => {
   });
 
   it("shows timeout warning when completion-aware read has no events", async () => {
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
+    discussionReadExecutorMock.executeNostrRead.mockResolvedValue(
       withCompletion([], "hard-timeout"),
     );
 
@@ -245,6 +245,6 @@ describe("SettingsPage streaming discussions", () => {
     expect(targetUrl.searchParams.has("payload")).toBe(false);
     expect(targetUrl.searchParams.has("draft")).toBe(false);
     expect(screen.queryByTestId("login-modal")).not.toBeInTheDocument();
-    expect(discussionReadExecutorMock.executeDiscussionRead).not.toHaveBeenCalled();
+    expect(discussionReadExecutorMock.executeNostrRead).not.toHaveBeenCalled();
   });
 });

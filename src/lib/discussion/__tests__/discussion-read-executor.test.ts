@@ -1,7 +1,7 @@
 import {
-  executeDiscussionRead,
-  type DiscussionReadTransport,
-} from "@/lib/discussion/discussion-read-executor";
+  executeNostrRead,
+  type NostrReadTransport,
+} from "@/lib/nostr/nostr-read-executor";
 import type { DiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import type {
   NdkQueryCompletion,
@@ -53,12 +53,12 @@ const completion = (
   sourceRelayUrlsByEventId,
 });
 
-describe("executeDiscussionRead", () => {
+describe("executeNostrRead", () => {
   it("retries once with the next three relays after a non-EOSE first attempt and merges results", async () => {
     const firstEvent = event("first");
     const retryEvent = event("retry");
-    const transport: jest.MockedFunction<DiscussionReadTransport> = jest
-      .fn<ReturnType<DiscussionReadTransport>, Parameters<DiscussionReadTransport>>()
+    const transport: jest.MockedFunction<NostrReadTransport> = jest
+      .fn<ReturnType<NostrReadTransport>, Parameters<NostrReadTransport>>()
       .mockResolvedValueOnce(completion([firstEvent], "idle-timeout", { first: ["wss://provider-one.example"] }, 2, 11))
       .mockResolvedValueOnce(completion([firstEvent, retryEvent], "eose", {
         first: ["wss://provider-four.example"],
@@ -66,7 +66,7 @@ describe("executeDiscussionRead", () => {
       }, 3, 13));
     const onAttemptComplete = jest.fn();
 
-    const result = await executeDiscussionRead(transport, {
+    const result = await executeNostrRead(transport, {
       plan,
       relayUrls: providerRelayUrls,
       onAttemptComplete,
@@ -104,11 +104,11 @@ describe("executeDiscussionRead", () => {
   });
 
   it("passes an empty provider relay list as one attempt", async () => {
-    const transport: jest.MockedFunction<DiscussionReadTransport> = jest
-      .fn<ReturnType<DiscussionReadTransport>, Parameters<DiscussionReadTransport>>()
+    const transport: jest.MockedFunction<NostrReadTransport> = jest
+      .fn<ReturnType<NostrReadTransport>, Parameters<NostrReadTransport>>()
       .mockResolvedValue(completion([], "eose", {}));
 
-    const result = await executeDiscussionRead(transport, {
+    const result = await executeNostrRead(transport, {
       plan,
       relayUrls: [],
     });
@@ -120,11 +120,11 @@ describe("executeDiscussionRead", () => {
   });
 
   it("does not retry after an EOSE first attempt", async () => {
-    const transport: jest.MockedFunction<DiscussionReadTransport> = jest
-      .fn<ReturnType<DiscussionReadTransport>, Parameters<DiscussionReadTransport>>()
+    const transport: jest.MockedFunction<NostrReadTransport> = jest
+      .fn<ReturnType<NostrReadTransport>, Parameters<NostrReadTransport>>()
       .mockResolvedValue(completion([], "eose", {}));
 
-    const result = await executeDiscussionRead(transport, {
+    const result = await executeNostrRead(transport, {
       plan,
       relayUrls: providerRelayUrls.slice(0, 3),
     });
@@ -136,12 +136,12 @@ describe("executeDiscussionRead", () => {
 
   it("retains first-attempt partial events when the one retry rejects", async () => {
     const firstEvent = event("first");
-    const transport: jest.MockedFunction<DiscussionReadTransport> = jest
-      .fn<ReturnType<DiscussionReadTransport>, Parameters<DiscussionReadTransport>>()
+    const transport: jest.MockedFunction<NostrReadTransport> = jest
+      .fn<ReturnType<NostrReadTransport>, Parameters<NostrReadTransport>>()
       .mockResolvedValueOnce(completion([firstEvent], "idle-timeout", { first: ["wss://provider-one.example"] }))
       .mockRejectedValueOnce(new Error("retry relay failed"));
 
-    const result = await executeDiscussionRead(transport, {
+    const result = await executeNostrRead(transport, {
       plan,
       relayUrls: providerRelayUrls.slice(0, 4),
     });
@@ -169,8 +169,8 @@ describe("executeDiscussionRead", () => {
       created_at: 200,
       content: "newer",
     };
-    const transport: jest.MockedFunction<DiscussionReadTransport> = jest
-      .fn<ReturnType<DiscussionReadTransport>, Parameters<DiscussionReadTransport>>()
+    const transport: jest.MockedFunction<NostrReadTransport> = jest
+      .fn<ReturnType<NostrReadTransport>, Parameters<NostrReadTransport>>()
       .mockResolvedValueOnce(completion([olderEvent], "idle-timeout", {
         [olderEvent.id]: ["wss://old.example"],
       }))
@@ -178,7 +178,7 @@ describe("executeDiscussionRead", () => {
         [newerEvent.id]: ["wss://new.example"],
       }));
 
-    const result = await executeDiscussionRead(transport, {
+    const result = await executeNostrRead(transport, {
       plan,
       relayUrls: providerRelayUrls.slice(0, 4),
     });

@@ -116,8 +116,8 @@ jest.mock('@/lib/nostr/discussion-ndk-gateway', () => ({
   createDiscussionNdkGateway: () => ({}),
 }));
 
-jest.mock('@/lib/discussion/discussion-read-executor', () => ({
-  executeDiscussionRead: jest.fn().mockResolvedValue({
+jest.mock('@/lib/nostr/nostr-read-executor', () => ({
+  executeNostrRead: jest.fn().mockResolvedValue({
     events: [],
     completionReason: 'eose',
     duplicateCount: 0,

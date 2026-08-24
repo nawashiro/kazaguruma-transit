@@ -1,9 +1,8 @@
 "use client";
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
-import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
+import { useDiscussionManagement } from "@/components/discussion/DiscussionManagementProvider";
 import { ModeratorManagementSection } from "@/components/discussion/ModeratorManagementSection";
 import { buildLoginRoute } from "@/lib/navigation/auth-route";
 import { createNostrService, type Event } from "@/lib/nostr/nostr-service";
@@ -28,39 +27,22 @@ const config = getNostrServiceConfig();
 const service = createNostrService(config);
 const gateway = createDiscussionNdkGateway(config);
 
-function getDiscussionRouteParam(params: {
-  naddr?: string | string[];
-}): string {
-  const routeParam = params.naddr;
-  const candidate = Array.isArray(routeParam)
-    ? routeParam.length === 1
-      ? routeParam[0]
-      : undefined
-    : routeParam;
-
-  if (typeof candidate === "string" && candidate.trim() !== "" && !candidate.includes("/")) {
-    return candidate;
-  }
-
-  return "naddr1discussion";
-}
-
-export default function ModeratorsPage() {
+export default function DiscussionManagementModeratorPage() {
   const router = useRouter();
-  const params = useParams<{ naddr?: string | string[] }>();
-  const naddrParam = getDiscussionRouteParam(params);
+  const naddrParam = "moderator";
   const { user, signEvent } = useAuth();
-  const meta = useDiscussionMeta();
-  const detail = useDiscussionDetail();
-  const legacyStateOverridesDetail = Boolean(
-    meta && (meta.isLoading || meta.discussion === null),
+  const management = useDiscussionManagement();
+  const managementDiscussion = management.snapshot?.listDiscussion;
+  const discussion = useMemo(
+    () =>
+      managementDiscussion
+        ? {
+            ...managementDiscussion,
+            moderators: managementDiscussion.moderators ?? [],
+          }
+        : null,
+    [managementDiscussion],
   );
-  const hasDetailSession = !legacyStateOverridesDetail && Boolean(
-    detail.snapshot || detail.error || detail.state !== "loading",
-  );
-  const discussion = hasDetailSession
-    ? detail.snapshot?.discussion ?? null
-    : meta?.discussion;
   const [localEvents, setLocalEvents] = useState<Event[]>([]),
     [reason, setReason] = useState(""),
     [approved, setApproved] = useState(new Set<string>()),
@@ -71,23 +53,20 @@ export default function ModeratorsPage() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const events = useMemo(() => {
-    const snapshotEvents = detail.snapshot?.moderatorRequests.map((request) => request.event) ?? [];
+    const snapshotEvents = management.snapshot?.moderatorRequests?.map(
+      (request) => request.event,
+    ) ?? [];
     const byId = new Map<string, Event>();
     [...snapshotEvents, ...localEvents].forEach((event) => byId.set(event.id, event));
     return Array.from(byId.values());
-  }, [detail.snapshot?.moderatorRequests, localEvents]);
-  const applicationReadState: "loading" | "eose" | "partial" = hasDetailSession
-    ? detail.state === "loading"
+  }, [localEvents, management.snapshot?.moderatorRequests]);
+  const applicationReadState: "loading" | "eose" | "partial" =
+    management.state === "loading"
       ? "loading"
-      : detail.state === "ready"
-        ? "eose"
-        : "partial"
-    : meta?.isLoading
-      ? "loading"
-      : meta?.completionReason === "eose"
+      : management.state === "ready"
         ? "eose"
         : "partial";
-  const reload = hasDetailSession ? detail.reload : meta?.reload ?? (async () => undefined);
+  const reload = management.reload;
   const applications = useMemo(
     () =>
       discussion ? derivePendingModeratorApplications(discussion, events) : [],
@@ -226,9 +205,12 @@ export default function ModeratorsPage() {
       </div>
     );
   if (!discussion) {
-    const completionReason = detail.completionReason ?? meta?.completionReason;
-    const isPartial = detail.state === "partial" || detail.state === "error" ||
-      completionReason === "idle-timeout" || completionReason === "hard-timeout" || completionReason === "cancelled";
+    const completionReason = management.completionReason;
+    const isPartial = management.state === "partial" ||
+      management.state === "error" ||
+      completionReason === "idle-timeout" ||
+      completionReason === "hard-timeout" ||
+      completionReason === "cancelled";
     return (
       <div
         className={
@@ -242,7 +224,7 @@ export default function ModeratorsPage() {
         <span className="ruby-text">
           {isPartial
             ? `会話データの取得に時間がかかっています（${completionReason ?? "unknown"}）。受信待機中または relay 応答遅延の可能性があります。`
-            : detail.error ?? meta?.error ?? "会話情報が見つかりませんでした。"}
+            : management.error ?? "会話情報が見つかりませんでした。"}
         </span>
         <button
           type="button"

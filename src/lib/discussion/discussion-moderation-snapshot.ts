@@ -1,10 +1,10 @@
 import type { DiscussionReadStrategyConfig } from "@/lib/config/discussion-config";
 import {
-  executeDiscussionRead,
-  type DiscussionReadResult,
-  type DiscussionReadTransport,
-  type RelayAttempt,
-} from "@/lib/discussion/discussion-read-executor";
+  executeNostrRead,
+  type NostrReadResult,
+  type NostrReadTransport,
+  type NostrReadAttempt,
+} from "@/lib/nostr/nostr-read-executor";
 import type { DiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import type { CompletionReason, Event, Filter, NostrService } from "@/lib/nostr/nostr-service";
 import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
@@ -13,6 +13,7 @@ export type ApprovalState = "approved" | "unapproved" | "unknown";
 
 export interface DiscussionModerationSnapshot {
   primaryEvents: Event[];
+  moderatorRequestEvents: Event[];
   approvalEvents: Event[];
   relayUrls: string[];
   initialRelayUrls: string[];
@@ -49,7 +50,12 @@ export const createDiscussionModerationSnapshot = ({
   completionReason,
   successfulRelayUrls = [],
 }: DiscussionModerationReadInput): DiscussionModerationSnapshot => {
-  const primary = dedupeAndSortEvents(primaryEvents.filter((event) => !isModeratorRequestEvent(event)));
+  const moderatorRequestEvents = dedupeAndSortEvents(
+    primaryEvents.filter((event) => isModeratorRequestEvent(event)),
+  );
+  const primary = dedupeAndSortEvents(
+    primaryEvents.filter((event) => !isModeratorRequestEvent(event)),
+  );
   const primaryEventIds = new Set(primary.map((event) => event.id));
   const approvals = dedupeAndSortEvents(approvalEvents.filter((event) => isApprovalForPrimaryEvent(event, primaryEventIds)));
   const initialRelayUrls = relayUrls.slice(0, 3);
@@ -61,7 +67,7 @@ export const createDiscussionModerationSnapshot = ({
     : completionReason !== "eose" || nextRelayUrls.length > 0
       ? "unknown"
       : "unapproved";
-  return { primaryEvents: primary, approvalEvents: approvals, relayUrls, initialRelayUrls, attemptedRelayUrls, nextRelayUrls, successfulRelayUrls, completionReason, approvalState };
+  return { primaryEvents: primary, moderatorRequestEvents, approvalEvents: approvals, relayUrls, initialRelayUrls, attemptedRelayUrls, nextRelayUrls, successfulRelayUrls, completionReason, approvalState };
 };
 
 export const loadDiscussionModerationSnapshot = async (
@@ -72,11 +78,11 @@ export const loadDiscussionModerationSnapshot = async (
     relayUrls: string[];
     until?: number;
     primaryTags?: string[];
-    onPrimaryComplete?: (result: DiscussionReadResult) => void;
-    onPrimaryAttemptComplete?: (attempt: RelayAttempt) => void;
+    onPrimaryComplete?: (result: NostrReadResult) => void;
+    onPrimaryAttemptComplete?: (attempt: NostrReadAttempt) => void;
   }
 ): Promise<DiscussionModerationSnapshot> => {
-  const transport: DiscussionReadTransport = (filters, options) => service.getEventsWithCompletion(filters as Filter[], options);
+  const transport: NostrReadTransport = (filters, options) => service.getEventsWithCompletion(filters as Filter[], options);
   const primaryPlan: DiscussionReadPlan = {
     target: "discussion-list",
     filters: [{
@@ -89,7 +95,7 @@ export const loadDiscussionModerationSnapshot = async (
     idleTimeoutMs: strategy.idleTimeoutMs,
     hardTimeoutMs: strategy.hardTimeoutMs,
   };
-  const primary = await executeDiscussionRead(transport, {
+  const primary = await executeNostrRead(transport, {
     plan: primaryPlan,
     relayUrls: input.relayUrls,
     onAttemptComplete: input.onPrimaryAttemptComplete,
@@ -99,7 +105,7 @@ export const loadDiscussionModerationSnapshot = async (
   const postIds = primaryEvents.map((event) => event.id);
   const approvals = postIds.length === 0
     ? { ...primary, events: [], successfulEventRelayUrls: [], sourceRelayUrlsByEventId: {} }
-    : await executeDiscussionRead(transport, {
+    : await executeNostrRead(transport, {
       plan: {
         target: "discussion-approvals",
         filters: [{ kinds: [4550], "#a": [input.discussionId], "#e": postIds, limit: 10 }],

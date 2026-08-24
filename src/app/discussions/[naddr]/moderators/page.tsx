@@ -52,6 +52,7 @@ export default function ModeratorsPage() {
   const { user, signEvent } = useAuth();
   const meta = useDiscussionMeta();
   const detail = useDiscussionDetail();
+  const isDetailLoading = detail.state === "loading" && detail.snapshot === null;
   const legacyStateOverridesDetail = Boolean(
     meta && (meta.isLoading || meta.discussion === null),
   );
@@ -219,7 +220,7 @@ export default function ModeratorsPage() {
       setBusy(false);
     }
   };
-  if (!discussion && applicationReadState === "loading")
+  if (isDetailLoading || (!discussion && applicationReadState === "loading"))
     return (
       <div role="status">
         <span className="ruby-text">会話情報を読み込み中...</span>

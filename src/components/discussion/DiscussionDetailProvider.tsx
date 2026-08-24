@@ -145,6 +145,8 @@ export function DiscussionDetailProvider({
   const generationRef = useRef(0);
   const activeIdentityRef = useRef<string | null>(null);
   const committedGenerationRef = useRef(-1);
+  const userPubkeyRef = useRef<string | null>(userPubkey);
+  userPubkeyRef.current = userPubkey;
   const [session, setSession] = useState<DiscussionDetailModel>(() => ({
     ...EMPTY_DETAIL_MODEL,
     isFallback: false,
@@ -183,7 +185,7 @@ export function DiscussionDetailProvider({
         dTag: discussionInfo.dTag,
         relayUrls,
         strategy,
-        userPubkey,
+        userPubkey: userPubkeyRef.current,
         isCurrent: () => isCurrentGeneration(generation, expectedIdentity),
       });
 
@@ -198,7 +200,7 @@ export function DiscussionDetailProvider({
         relayProvenance: result.snapshot?.relayProvenance ?? null,
       }));
     },
-    [discussionInfo, isCurrentGeneration, relayUrls, userPubkey],
+    [discussionInfo, isCurrentGeneration, relayUrls],
   );
 
   useEffect(() => {
@@ -309,15 +311,32 @@ export function DiscussionDetailProvider({
     [canMutate],
   );
 
+  const snapshotForViewer = useMemo(() => {
+    if (!session.snapshot) return null;
+    const userEvaluationIds = new Set(
+      session.snapshot.evaluations
+        .filter(
+          (evaluation) =>
+            evaluation.evaluatorPubkey === (userPubkey ?? null),
+        )
+        .map((evaluation) => evaluation.id),
+    );
+    return {
+      ...session.snapshot,
+      userEvaluationIds,
+    };
+  }, [session.snapshot, userPubkey]);
+
   const model = useMemo<DiscussionDetailModel>(
     () => ({
       ...session,
+      snapshot: snapshotForViewer,
       reload,
       addPost,
       addApproval,
       removeApproval,
     }),
-    [addApproval, addPost, reload, removeApproval, session],
+    [addApproval, addPost, reload, removeApproval, session, snapshotForViewer],
   );
 
   return (

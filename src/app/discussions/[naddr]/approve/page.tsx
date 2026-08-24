@@ -211,6 +211,14 @@ export default function PostApprovalPage() {
     );
   }
 
+  if (detail.state === "loading" && !detail.snapshot) {
+    return (
+      <div role="status">
+        <span className="ruby-text">会話情報を読み込み中...</span>
+      </div>
+    );
+  }
+
   const pendingPosts = posts.filter(
     (post) => !post.approved || post.approvalState === "unknown",
   );

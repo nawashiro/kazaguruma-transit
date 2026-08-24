@@ -2,11 +2,16 @@ import React from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import PostApprovalPage from "../page";
-import type { Discussion } from "@/types/discussion";
+import type {
+  Discussion,
+  DiscussionPost,
+  PostApproval,
+} from "@/types/discussion";
 
 const useAuthMock = jest.fn();
 const mockUseDiscussionMeta = jest.fn();
 const mockUseDiscussionContentData = jest.fn();
+const mockUseDiscussionDetail = jest.fn();
 let isModeratorResult = false;
 
 jest.mock("next/navigation", () => ({
@@ -23,6 +28,10 @@ jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
 
 jest.mock("@/components/discussion/DiscussionContentDataProvider", () => ({
   useDiscussionContentData: () => mockUseDiscussionContentData(),
+}));
+
+jest.mock("@/components/discussion/DiscussionDetailProvider", () => ({
+  useDiscussionDetail: () => mockUseDiscussionDetail(),
 }));
 
 jest.mock("@/lib/config/discussion-config", () => ({
@@ -96,6 +105,111 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   isModerator: () => isModeratorResult,
 }));
 
+const layoutDiscussion: Discussion = {
+  id: "34550:author:tag",
+  title: "Title",
+  description: "desc",
+  authorPubkey: "author",
+  dTag: "tag",
+  moderators: [{ pubkey: "moderator-1" }],
+  createdAt: 1,
+  event: {
+    id: "discussion-event",
+    pubkey: "author",
+    kind: 34550,
+    created_at: 1,
+    tags: [
+      ["d", "tag"],
+      ["name", "Title"],
+    ],
+    content: "desc",
+    sig: "sig",
+  },
+};
+
+const pendingPost: DiscussionPost = {
+  id: "post-1",
+  content: "pending post",
+  authorPubkey: "poster",
+  discussionId: "34550:author:tag",
+  createdAt: 2,
+  approved: false,
+  approvalState: "unapproved",
+  approvedBy: [],
+  event: {
+    id: "post-1",
+    pubkey: "poster",
+    kind: 1111,
+    created_at: 2,
+    tags: [["a", "34550:author:tag"]],
+    content: "pending post",
+    sig: "sig",
+  },
+};
+
+const approvedPost: DiscussionPost = {
+  id: "post-approved",
+  content: "approved post",
+  authorPubkey: "poster",
+  discussionId: "34550:author:tag",
+  createdAt: 3,
+  approved: true,
+  approvalState: "approved",
+  approvedBy: ["moderator-1"],
+  approvedAt: 4,
+  event: {
+    id: "post-approved",
+    pubkey: "poster",
+    kind: 1111,
+    created_at: 3,
+    tags: [["a", "34550:author:tag"]],
+    content: "approved post",
+    sig: "sig",
+  },
+};
+
+const approvedPostApproval: PostApproval = {
+  id: "approval-approved",
+  postId: "post-approved",
+  postAuthorPubkey: "poster",
+  moderatorPubkey: "moderator-1",
+  discussionId: "34550:author:tag",
+  createdAt: 4,
+  event: {
+    id: "approval-approved",
+    pubkey: "moderator-1",
+    kind: 4550,
+    created_at: 4,
+    tags: [
+      ["a", "34550:author:tag"],
+      ["e", "post-approved"],
+      ["p", "poster"],
+    ],
+    content: "",
+    sig: "sig",
+  },
+};
+
+const createReadyDetailModel = () => ({
+  state: "ready" as const,
+  snapshot: {
+    discussion: layoutDiscussion,
+    posts: [pendingPost, approvedPost],
+    approvals: [approvedPostApproval],
+    moderatorRequests: [],
+    evaluations: [],
+    userEvaluationIds: new Set<string>(),
+    relayProvenance: { successfulRelayUrlsByPhase: {} },
+  },
+  error: null,
+  completionReason: "eose" as const,
+  relayProvenance: { successfulRelayUrlsByPhase: {} },
+  reload: jest.fn(),
+  addPost: jest.fn(),
+  addApproval: jest.fn(),
+  removeApproval: jest.fn(),
+});
+
 describe("PostApprovalPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -110,27 +224,6 @@ describe("PostApprovalPage streaming", () => {
       sourceRelayUrlsByEventId: {},
       attempts: [],
     });
-    const layoutDiscussion: Discussion = {
-      id: "34550:author:tag",
-      title: "Title",
-      description: "desc",
-      authorPubkey: "author",
-      dTag: "tag",
-      moderators: [{ pubkey: "moderator-1" }],
-      createdAt: 1,
-      event: {
-        id: "discussion-event",
-        pubkey: "author",
-        kind: 34550,
-        created_at: 1,
-        tags: [
-          ["d", "tag"],
-          ["name", "Title"],
-        ],
-        content: "desc",
-        sig: "sig",
-      },
-    };
     mockUseDiscussionMeta.mockReturnValue({
       discussion: layoutDiscussion,
       isLoading: false,
@@ -139,44 +232,7 @@ describe("PostApprovalPage streaming", () => {
       reload: jest.fn(),
     });
     mockUseDiscussionContentData.mockReturnValue({
-      posts: [
-        {
-          id: "post-1",
-          content: "pending post",
-          authorPubkey: "poster",
-          discussionId: "34550:author:tag",
-          createdAt: 2,
-          approved: false,
-          approvalState: "unapproved",
-          event: {
-            id: "post-1",
-            pubkey: "poster",
-            kind: 1111,
-            created_at: 2,
-            tags: [["a", "34550:author:tag"]],
-            content: "pending post",
-            sig: "sig",
-          },
-        },
-        {
-          id: "post-approved",
-          content: "approved post",
-          authorPubkey: "poster",
-          discussionId: "34550:author:tag",
-          createdAt: 3,
-          approved: true,
-          approvalState: "approved",
-          event: {
-            id: "post-approved",
-            pubkey: "poster",
-            kind: 1111,
-            created_at: 3,
-            tags: [["a", "34550:author:tag"]],
-            content: "approved post",
-            sig: "sig",
-          },
-        },
-      ],
+      posts: [pendingPost, approvedPost],
       approvals: [],
       isLoading: false,
       completionReason: "eose",
@@ -186,6 +242,7 @@ describe("PostApprovalPage streaming", () => {
       addApproval: jest.fn(),
       removeApproval: jest.fn(),
     });
+    mockUseDiscussionDetail.mockReturnValue(createReadyDetailModel());
   });
 
   it("uses the shared detail snapshot without starting an approval-page read", async () => {
@@ -204,17 +261,65 @@ describe("PostApprovalPage streaming", () => {
     expect(serviceMock.streamApprovals).not.toHaveBeenCalled();
   });
 
+  it("shows detail loading before finalizing empty or permission states", () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "viewer", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+    mockUseDiscussionMeta.mockReturnValue(undefined);
+    mockUseDiscussionContentData.mockReturnValue({
+      posts: [],
+      approvals: [],
+      isLoading: false,
+      completionReason: null,
+      approvalState: "unknown",
+      reload: jest.fn(),
+      mergeModerationEvents: jest.fn(),
+      addApproval: jest.fn(),
+      removeApproval: jest.fn(),
+    });
+    mockUseDiscussionDetail.mockReturnValue({
+      state: "loading",
+      snapshot: null,
+      error: null,
+      completionReason: null,
+      relayProvenance: null,
+      reload: jest.fn(),
+      addPost: jest.fn(),
+      addApproval: jest.fn(),
+      removeApproval: jest.fn(),
+    });
+
+    render(<PostApprovalPage />);
+
+    expect(screen.getByText("会話情報を読み込み中...")).toBeInTheDocument();
+    expect(screen.queryByText("承認待ちの投稿はありません")).not.toBeInTheDocument();
+    expect(screen.queryByText("会話が見つかりません。")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("投稿を承認するにはモデレーターになる必要があります。"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "承認" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "承認を撤回" })).not.toBeInTheDocument();
+  });
+
   it("disables approval while a post approval state is unknown", async () => {
     useAuthMock.mockReturnValue({
       user: { pubkey: "author", isLoggedIn: true },
       signEvent: jest.fn(),
     });
-    const shared = mockUseDiscussionContentData();
-    mockUseDiscussionContentData.mockReturnValue({
+    const shared = mockUseDiscussionDetail();
+    if (!shared.snapshot) {
+      throw new Error("Expected the default detail fixture to be ready");
+    }
+    mockUseDiscussionDetail.mockReturnValue({
       ...shared,
-      posts: shared.posts.map((post: { id: string }) =>
-        post.id === "post-1" ? { ...post, approvalState: "unknown" } : post,
-      ),
+      snapshot: {
+        ...shared.snapshot,
+        posts: shared.snapshot.posts.map((post: { id: string }) =>
+          post.id === "post-1" ? { ...post, approvalState: "unknown" } : post,
+        ),
+      },
     });
 
     render(<PostApprovalPage />);
@@ -228,12 +333,14 @@ describe("PostApprovalPage streaming", () => {
       user: { pubkey: "author", isLoggedIn: true },
       signEvent: jest.fn(),
     });
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: null,
-      isLoading: false,
-      error: null,
+    const shared = mockUseDiscussionDetail();
+    if (!shared.snapshot) {
+      throw new Error("Expected the default detail fixture to be ready");
+    }
+    mockUseDiscussionDetail.mockReturnValue({
+      ...shared,
+      snapshot: { ...shared.snapshot, discussion: null },
       completionReason: "idle-timeout",
-      reload: jest.fn(),
     });
 
     render(<PostApprovalPage />);
@@ -261,12 +368,14 @@ describe("PostApprovalPage streaming", () => {
       user: { pubkey: "author", isLoggedIn: true },
       signEvent: jest.fn(),
     });
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: null,
-      isLoading: false,
-      error: null,
+    const shared = mockUseDiscussionDetail();
+    if (!shared.snapshot) {
+      throw new Error("Expected the default detail fixture to be ready");
+    }
+    mockUseDiscussionDetail.mockReturnValue({
+      ...shared,
+      snapshot: { ...shared.snapshot, discussion: null },
       completionReason: "eose",
-      reload: jest.fn(),
     });
 
     render(<PostApprovalPage />);

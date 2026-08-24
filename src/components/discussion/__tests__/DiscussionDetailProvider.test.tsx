@@ -78,7 +78,10 @@ type DetailModel = {
 };
 
 type DetailProviderModule = {
-  DiscussionDetailProvider?: React.ComponentType<{ children: React.ReactNode }>;
+  DiscussionDetailProvider?: React.ComponentType<{
+    children: React.ReactNode;
+    userPubkey?: string | null;
+  }>;
   useDiscussionDetail?: () => DetailModel;
 };
 
@@ -318,6 +321,62 @@ describe("DiscussionDetailProvider", () => {
         addPost: expect.any(Function),
         addApproval: expect.any(Function),
         removeApproval: expect.any(Function),
+      }),
+    );
+  });
+
+  it("keeps the completed detail read and snapshot when the viewer pubkey arrives", async () => {
+    const provider = loadProvider();
+    if (!provider.DiscussionDetailProvider) {
+      throw new Error(
+        "T013 RED: DiscussionDetailProvider is not a public provider export",
+      );
+    }
+    if (typeof provider.useDiscussionDetail !== "function") {
+      throw new Error(
+        "T013 RED: useDiscussionDetail is not a public provider model hook",
+      );
+    }
+
+    let latestModel: DetailModel | undefined;
+    const Provider = provider.DiscussionDetailProvider;
+    const view = render(
+      <Provider userPubkey={null}>
+        <DetailModelProbe onModel={(model) => { latestModel = model; }} />
+      </Provider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("detail-state")).toHaveTextContent("ready"),
+    );
+    const initialReadCount = executeNostrRead.mock.calls.length;
+    const initialSnapshot = latestModel?.snapshot;
+    expect(initialReadCount).toBe(4);
+    expect(initialSnapshot).not.toBeNull();
+    expect(initialSnapshot).toEqual(
+      expect.objectContaining({
+        discussion: expect.objectContaining({ title: "共有会話" }),
+        posts: [expect.objectContaining({ id: "post-1" })],
+      }),
+    );
+
+    view.rerender(
+      <Provider userPubkey="viewer">
+        <DetailModelProbe onModel={(model) => { latestModel = model; }} />
+      </Provider>,
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(executeNostrRead).toHaveBeenCalledTimes(initialReadCount);
+    expect(latestModel?.snapshot).toEqual(
+      expect.objectContaining({
+        discussion: initialSnapshot?.discussion,
+        posts: initialSnapshot?.posts,
+        approvals: initialSnapshot?.approvals,
+        moderatorRequests: initialSnapshot?.moderatorRequests,
       }),
     );
   });

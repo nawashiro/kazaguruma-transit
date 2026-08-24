@@ -214,6 +214,26 @@ describe("ModeratorsPage direct moderator management", () => {
     expect(serviceMock.streamEventsOnEvent).not.toHaveBeenCalled();
   });
 
+  it("shows the detail loading boundary before any moderator state is finalized", () => {
+    mockUseDiscussionMeta.mockReturnValue(undefined);
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({ state: "loading", snapshot: null }),
+    );
+
+    render(<ModeratorsPage />);
+
+    expect(screen.getByText("会話情報を読み込み中...")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/会話データの取得に時間がかかっています/),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("会話情報が見つかりませんでした。")).not.toBeInTheDocument();
+    expect(screen.queryByText("申請中のユーザーはいません。")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "モデレーターになる" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "申請する" })).not.toBeInTheDocument();
+  });
+
   it("keeps a partial detail snapshot provisional without a local moderator-request retry", async () => {
     mockUseDiscussionDetail.mockReturnValue(
       createDetailModel({ state: "partial" }),

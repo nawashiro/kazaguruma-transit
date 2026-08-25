@@ -7,7 +7,6 @@ import React, { useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
-import { DiscussionListTabLayout } from "@/components/discussion/DiscussionListTabLayout";
 import PageHeader from "@/components/layouts/PageHeader";
 import { formatRelativeTime } from "@/lib/nostr/nostr-utils";
 import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
@@ -53,8 +52,7 @@ export default function DiscussionsPage() {
   }
 
   return (
-    <DiscussionListTabLayout baseHref="/discussions">
-      <div className="space-y-6 py-8">
+    <div className="space-y-6 py-8">
             <section aria-labelledby="discussions-list-heading">
               <h2
                 id="discussions-list-heading"
@@ -193,7 +191,6 @@ export default function DiscussionsPage() {
                 </div>
               </div>
             </section>
-      </div>
-    </DiscussionListTabLayout>
+    </div>
   );
 }

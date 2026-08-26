@@ -340,7 +340,9 @@ describe("DiscussionTabLayout", () => {
         </DiscussionTabLayout>,
       );
 
-      expect(screen.getByRole("heading", { name: "テスト会話" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "テスト会話" }),
+      ).toBeInTheDocument();
       expect(screen.getByText("あなたはユーザーです。")).toBeInTheDocument();
       expect(screen.getAllByRole("tab")).toHaveLength(3);
     });

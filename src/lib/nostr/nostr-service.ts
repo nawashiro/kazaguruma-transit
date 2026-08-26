@@ -265,12 +265,10 @@ export class NostrService {
         if (closed) subscription.stop();
       };
 
-      this.ensureConnected()
-        .then(startSubscription)
-        .catch((error) => {
-          logger.error("Failed to connect before reading events:", error);
-          finalize("hard-timeout");
-        });
+      startSubscription();
+      void this.ensureConnected().catch((error: unknown) => {
+        logger.error("Failed to connect before reading events:", error);
+      });
     });
   }
 

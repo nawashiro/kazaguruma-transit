@@ -113,6 +113,24 @@ describe("NostrService event retrieval", () => {
       "c98215056966766d3aafb43471cc72d59a9dfd2885aad27a33da31685f7cfef8",
     identifier: "-989250",
   };
+  const metadataFilter = {
+    kinds: [34550],
+    authors: [discussionPointer.pubkey],
+    "#d": [discussionPointer.identifier],
+  };
+  const metadataEvent = {
+    id: "1".repeat(64),
+    created_at: 1756166400,
+    kind: 34550,
+    pubkey: discussionPointer.pubkey,
+    content: "",
+    tags: [
+      ["d", discussionPointer.identifier],
+      ["name", "Issue 101 discussion"],
+      ["description", "Metadata returned by a responsive relay"],
+    ],
+    sig: "2".repeat(128),
+  };
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -127,7 +145,7 @@ describe("NostrService event retrieval", () => {
     jest.useRealTimers();
   });
 
-  it("waits for connection before starting a read subscription", async () => {
+  it("starts a read subscription while connection is pending", async () => {
     let resolveConnect: (() => void) | undefined;
     mockConnect.mockImplementation(
       () =>
@@ -143,17 +161,83 @@ describe("NostrService event retrieval", () => {
 
     await flushMicrotasks();
     expect(mockConnect).toHaveBeenCalledTimes(1);
-    expect(mockSubscribe).not.toHaveBeenCalled();
-
-    resolveConnect?.();
-    await flushMicrotasks();
     expect(mockSubscribe).toHaveBeenCalledTimes(1);
 
     const handlers = mockSubscribe.mock.calls[0]?.[1] as {
       onEose?: () => void;
     };
+    resolveConnect?.();
     handlers.onEose?.();
     await resultPromise;
+  });
+
+  it("starts the completion-aware metadata read before all relays connect and keeps the responsive relay event", async () => {
+    const relayUrls = [
+      "wss://slow.example",
+      "wss://responsive.example",
+      "wss://unavailable.example",
+    ];
+    const responsiveRelayUrl = relayUrls[1];
+    let resolveConnect: (() => void) | undefined;
+    let handlers: {
+      onEvent?: (event: unknown) => void;
+      onEose?: () => void;
+    } = {};
+
+    mockConnect.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveConnect = resolve;
+        }),
+    );
+    mockSubscribe.mockImplementation((_filters, options) => {
+      handlers = options;
+      return { stop: mockStop };
+    });
+
+    const service = new NostrService({
+      relays: relayUrls.map((url) => ({ url, read: true, write: false })),
+      defaultTimeout: 2000,
+    });
+    const resultPromise = service.getEventsWithCompletion(
+      [metadataFilter],
+      {
+        relayUrls,
+        idleTimeoutMs: 1000,
+        hardTimeoutMs: 2000,
+      },
+    );
+
+    await flushMicrotasks();
+
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    expect(mockSubscribe).toHaveBeenCalledTimes(1);
+    expect(mockNDKRelaySet.fromRelayUrls).toHaveBeenCalledWith(
+      relayUrls,
+      expect.anything(),
+    );
+    expect(mockSubscribe).toHaveBeenCalledWith(
+      [metadataFilter],
+      expect.objectContaining({
+        closeOnEose: true,
+        relaySet: { urls: relayUrls },
+      }),
+    );
+
+    resolveConnect?.();
+    await flushMicrotasks();
+    expect(mockSubscribe).toHaveBeenCalledTimes(1);
+
+    handlers.onEvent?.(createNdkEvent(metadataEvent, responsiveRelayUrl));
+    handlers.onEose?.();
+
+    const result = await resultPromise;
+    expect(result.events).toEqual([metadataEvent]);
+    expect(result.eventCount).toBe(1);
+    expect(result.relayUrls).toEqual(relayUrls);
+    expect(result.sourceRelayUrlsByEventId).toEqual({
+      [metadataEvent.id]: [responsiveRelayUrl],
+    });
   });
 
   it("getEventsOnEose deduplicates and sorts events by created_at desc", async () => {
@@ -279,8 +363,8 @@ describe("NostrService event retrieval", () => {
     await jest.advanceTimersByTimeAsync(101);
 
     expect(completionReason).toBe("idle-timeout");
-    expect(mockSubscribe).not.toHaveBeenCalled();
-    expect(mockStop).not.toHaveBeenCalled();
+    expect(mockSubscribe).toHaveBeenCalledTimes(1);
+    expect(mockStop).toHaveBeenCalledTimes(1);
   });
 
   it("limits a selected read with NDKRelaySet and preserves duplicate source relays", async () => {

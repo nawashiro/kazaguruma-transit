@@ -195,11 +195,6 @@ export default function DiscussionEditPage() {
 
       setSuccessMessage("会話が更新されました");
       setSuccessType("save");
-
-      // 数秒後に会話詳細画面に戻る
-      setTimeout(() => {
-        router.push(`/discussions/${naddrParam}`);
-      }, 2000);
     } catch (error) {
       logger.error("Failed to update discussion:", error);
       setErrors(["会話の更新に失敗しました"]);
@@ -467,9 +462,12 @@ export default function DiscussionEditPage() {
                   {successMessage}
                 </h2>
                 {successType === "save" && (
-                  <p className="text-base-content mb-4">
-                    まもなく会話画面に戻ります...
-                  </p>
+                  <Link
+                    href={`/discussions/${naddrParam}`}
+                    className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+                  >
+                    <span className="ruby-text">会話画面に戻る</span>
+                  </Link>
                 )}
                 {successType === "listing" && (
                   <p className="text-base-content mb-4">

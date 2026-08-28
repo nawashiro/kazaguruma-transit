@@ -109,7 +109,7 @@ VERDICT: PASS
 
 - [x] T010 親エージェントが現行worktreeを再確認する。`git status --short --untracked-files=all`、`git diff --name-status`、`git diff --check`、変更pathのSHA-256を取り、凍結対象（`src/app/icon.svg`、`src/app/apple-icon.png`）が不変であること、依存・source・test・docsの変更が受入範囲内であることを確認する。旧import、`xmlns`、手書きSVG断片、旧package名をproductionとpackageで再検索する。実測: 旧import・SVG断片0件、凍結path保持、未指定source変更なし。
 
-- [x] T011 親エージェントがNode 22.23.2でfocused suite、`PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npx tsc --noEmit --incremental false`、`PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm run lint`、`PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm test -- --runInBand` を実行する。全Jestの失敗は変更起因か、pre-existing baselineか、環境起因かを分類し、baseline再現なしに成功扱いしない。実測: TypeScript/Lint/各focusedはPASS、full Jestは136 PASS・1 FAIL・2 skipped suitesで、唯一の色監査FAILはベースSHAでも再現。
+- [x] T011 親エージェントがNode 22.23.2でfocused suite、`PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npx tsc --noEmit --incremental false`、`PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm run lint`、`PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm test -- --runInBand` を実行する。全Jestの失敗は変更起因か、pre-existing baselineか、環境起因かを分類し、baseline再現なしに成功扱いしない。実測: 初回full Jestは136 PASS・1 FAIL・2 skipped suitesだったが、失敗はLucide名でcolor auditの装飾判定が崩れた今回の回帰。T018後に再実行し、full Jestは137 PASS・2 skipped suites、FAIL 0。
 
 - [x] T012 `PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm run build` を最終ゲートとして実行し、Prisma/GTFS副作用とwarningを結果から分離して記録する。buildが変更と無関係な環境要因で失敗した場合は、代替成功を捏造せず明示する。実測: exit 0。`transit-config.json`不在のGTFS importエラー表示、既存warning、Next production build成功を分離記録。
 
@@ -117,7 +117,19 @@ VERDICT: PASS
 
 - [x] T014 変更差分を親が再レビューし、conventional prefixの日本語commitを作成して`origin/chore/issue-108-lucide`へpushする。PRを作成する場合はbaseを`dev`に明示し、Issue #108をcloseする本文、変更理由、検証結果、未変更範囲、Node 22条件を日本語で記載する。PR作成後にtitle/body、head/base、changed filesを読み戻す。実測: commit `14bb9b77bfb8101e8987a0f802ec548374573f67`、remote SHA一致、PR #115（base=`dev`）を確認。
 
-- [x] T015 pushしたexact SHAに対してGitHub checksを確認する。CIが未triggerなら成功扱いにせず「未trigger」と報告し、failureならログを調査して変更起因・baseline・infrastructureを分類する。mergeはユーザーの明示承認なしに行わない。実測: run `33182440600` はJestのcolor compliance 5件でfailure。ベースSHAでも同一結果を再現し、Issue #108起因ではない。PRはopen、mergeなし。
+- [x] T015 pushしたexact SHAに対してGitHub checksを確認する。CIが未triggerなら成功扱いにせず「未trigger」と報告し、failureならログを調査して変更起因・baseline・infrastructureを分類する。mergeはユーザーの明示承認なしに行わない。実測: 初回run `33182440600` はJestのcolor compliance 5件でfailure。PR #114 run `33170956429`とpre-#114 dev tipでは同じcolor testがPASSしており、Lucide名変更に伴う監査境界回帰と分類した。PR #115はopen、mergeなし。
+
+## Phase 5: CI regression repair caused by Lucide component names
+
+- [x] T016 [TEST] 既存の`src/app/__tests__/color-compliance.test.ts`へ、`import { Clipboard } from "lucide-react"`と`<Clipboard className="text-gray-600" />`を含む実在相当fixtureを追加し、scanner未対応による意味あるREDを確認した。production codeは変更していない。実測: 1 suite / 8 tests中6 PASS・2 FAIL、collection/setup clean。
+
+- [x] T017 [REVIEW] T016の`src/app/__tests__/color-compliance.test.ts`をfresh read-only subagentへ委任した。実測: SHA `d8be54aed5d1dfc55050ebf09366231bf5639e9b7d06e2522d1451d00649de0c`、`VERDICT: PASS`、レビュー中の変更なし。
+
+- [x] T018 [TEST] T017 PASS後、同じ`src/app/__tests__/color-compliance.test.ts`へ、runtime `lucide-react` named importのlocal bindingをTypeScript ASTで収集し、JSX tagの完全一致を装飾要素として扱うtest-only修正を実装した。type-only importは除外し、任意のcomponent名はglobal whitelistしない。実測: color audit 1 suite / 8 tests、strict TypeScript、Lint、diff check、full JestがPASS。
+
+- [ ] T019 T016〜T018の原因分析・検証結果・T018後のfull Jest（137 PASS / 2 skipped suites / FAIL 0）をこの文書と`investigation.md`へ反映し、追補commit/pushする。`src/app/apple-icon.png`は凍結し、変更pathを再確認する。
+
+- [ ] T020 T019後にpushしたexact SHAのPR #115 Quality Gateを確認する。Jest、ESLint、strict TypeScriptの終端結果を読み、成功を実測できない限り成功扱いにしない。mergeは行わない。
 
 ## 依存関係
 

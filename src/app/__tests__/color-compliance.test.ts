@@ -248,6 +248,27 @@ function collectNextFontFactories(sourceFile: TypeScript.SourceFile): Set<string
   return factories;
 }
 
+function collectLucideRuntimeImports(sourceFile: TypeScript.SourceFile): Set<string> {
+  const imports = new Set<string>();
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) {
+      continue;
+    }
+    if (statement.moduleSpecifier.text !== "lucide-react") continue;
+
+    const clause = statement.importClause;
+    if (!clause || clause.isTypeOnly || !clause.namedBindings) continue;
+    if (!ts.isNamedImports(clause.namedBindings)) continue;
+
+    for (const element of clause.namedBindings.elements) {
+      if (!element.isTypeOnly) imports.add(element.name.text);
+    }
+  }
+
+  return imports;
+}
+
 function isNextFontVariableReceiver(
   receiverName: string,
   bindings: Bindings,
@@ -349,11 +370,15 @@ function evaluateExpression(
   return unknownExpression();
 }
 
-function isDecorativeElement(elementName: string): boolean {
+function isDecorativeElement(
+  elementName: string,
+  lucideRuntimeImports: ReadonlySet<string>,
+): boolean {
   const normalized = elementName.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
   return (
     normalized.endsWith("icon") ||
-    ["svg", "path", "img", "circle", "line", "polygon", "polyline"].includes(normalized)
+    ["svg", "path", "img", "circle", "line", "polygon", "polyline"].includes(normalized) ||
+    lucideRuntimeImports.has(elementName)
   );
 }
 
@@ -366,14 +391,16 @@ function extractClassNameExpressions(sourceFile: SourceFile): ClassNameExpressio
     ts.ScriptKind.TSX,
   );
   const nextFontFactories = collectNextFontFactories(parsed);
+  const lucideRuntimeImports = collectLucideRuntimeImports(parsed);
   const expressions: ClassNameExpression[] = [];
 
   function inspectElement(
     element: TypeScript.JsxOpeningLikeElement,
     bindings: Bindings,
+    runtimeImports: ReadonlySet<string>,
   ): void {
     const elementName = jsxNameText(element.tagName);
-    if (isDecorativeElement(elementName)) return;
+    if (isDecorativeElement(elementName, runtimeImports)) return;
 
     const className = element.attributes.properties.find(
       (property): property is TypeScript.JsxAttribute =>
@@ -421,8 +448,8 @@ function extractClassNameExpressions(sourceFile: SourceFile): ClassNameExpressio
       }
     }
 
-    if (ts.isJsxElement(node)) inspectElement(node.openingElement, bindings);
-    if (ts.isJsxSelfClosingElement(node)) inspectElement(node, bindings);
+    if (ts.isJsxElement(node)) inspectElement(node.openingElement, bindings, lucideRuntimeImports);
+    if (ts.isJsxSelfClosingElement(node)) inspectElement(node, bindings, lucideRuntimeImports);
     ts.forEachChild(node, (child) => visit(child, bindings));
   }
 
@@ -563,6 +590,7 @@ describe("UI color and opacity compliance", () => {
       content: [
         '// className="text-black/60"',
         'const text = "text-gray-600";',
+        'import { Clipboard } from "lucide-react";',
         "const Fixture = () => (",
         "  <>",
         '    {/* className="text-black/60" */}',
@@ -572,6 +600,7 @@ describe("UI color and opacity compliance", () => {
         '    <p className="text-(color:--color) text-[red] text-[theme(colors.red.500)] text-[length:16px] text-base-content" />',
         '    <svg className="text-gray-600" />',
         '    <StatusIcon className="text-gray-600" />',
+        '    <Clipboard className="text-gray-600" />',
         "  </>",
         ");",
       ].join("\n"),

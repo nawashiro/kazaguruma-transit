@@ -23,10 +23,12 @@ export function DiscussionMetaReadState({
 }: DiscussionMetaReadStateProps) {
   return (
     <>
-      <PageHeader
-        title={discussion?.title ?? "会話情報"}
-        description={discussion?.description}
-      />
+      {discussion && (
+        <PageHeader
+          title={discussion.title}
+          description={discussion.description}
+        />
+      )}
       {isLoading && (
         <div role="status" aria-live="polite" className="mb-8">
           会話情報を読み込み中...

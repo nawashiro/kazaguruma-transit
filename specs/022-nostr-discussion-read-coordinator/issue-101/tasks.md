@@ -218,6 +218,8 @@ git status --short --untracked-files=all
 
 ### T011: feature branchへcommit、push、CI確認
 
+**Status:** Complete with CI boundary. Commit `f422d2b5071ee4d0c6c84ec7e7a7d8613f9a5e6f`をfeature branchへpushし、local／remote SHA一致を確認した。Quality Gateは`dev`／`master` pushまたは対象PRだけを対象とするため、feature branch pushでは実行されず、成功扱いにしていない。
+
 **Preconditions:** T003、T004、T005、T006、T007、T008、T009、T010が親検証済みであること。
 
 **Commands:**

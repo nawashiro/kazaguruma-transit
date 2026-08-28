@@ -1,12 +1,17 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import PostApprovalPage from "../page";
-import type { Discussion } from "@/types/discussion";
+import type { DiscussionDetailModel } from "@/components/discussion/DiscussionDetailProvider";
+import type {
+  Discussion,
+  DiscussionPost,
+  PostApproval,
+} from "@/types/discussion";
 
 const useAuthMock = jest.fn();
 const mockUseDiscussionMeta = jest.fn();
-const mockUseDiscussionContentData = jest.fn();
+const mockUseDiscussionDetail = jest.fn();
 let isModeratorResult = false;
 
 jest.mock("next/navigation", () => ({
@@ -21,8 +26,8 @@ jest.mock("@/components/discussion/DiscussionTabLayout", () => ({
   useDiscussionMeta: () => mockUseDiscussionMeta(),
 }));
 
-jest.mock("@/components/discussion/DiscussionContentDataProvider", () => ({
-  useDiscussionContentData: () => mockUseDiscussionContentData(),
+jest.mock("@/components/discussion/DiscussionDetailProvider", () => ({
+  useDiscussionDetail: () => mockUseDiscussionDetail(),
 }));
 
 jest.mock("@/lib/config/discussion-config", () => ({
@@ -55,13 +60,13 @@ jest.mock("@/lib/nostr/discussion-ndk-gateway", () => ({
   createDiscussionNdkGateway: () => ({ queryWithCompletion: jest.fn() }),
 }));
 
-jest.mock("@/lib/discussion/discussion-read-executor", () => {
-  const executeDiscussionRead = jest.fn();
-  return { executeDiscussionRead, __mock: { executeDiscussionRead } };
+jest.mock("@/lib/nostr/nostr-read-executor", () => {
+  const executeNostrRead = jest.fn();
+  return { executeNostrRead, __mock: { executeNostrRead } };
 });
 
 const { __mock: discussionReadExecutorMock } = jest.requireMock(
-  "@/lib/discussion/discussion-read-executor",
+  "@/lib/nostr/nostr-read-executor",
 );
 
 jest.mock("@/lib/nostr/nostr-utils", () => ({
@@ -96,97 +101,135 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   isModerator: () => isModeratorResult,
 }));
 
+const layoutDiscussion: Discussion = {
+  id: "34550:author:tag",
+  title: "Title",
+  description: "desc",
+  authorPubkey: "author",
+  dTag: "tag",
+  moderators: [{ pubkey: "moderator-1" }],
+  createdAt: 1,
+  event: {
+    id: "discussion-event",
+    pubkey: "author",
+    kind: 34550,
+    created_at: 1,
+    tags: [
+      ["d", "tag"],
+      ["name", "Title"],
+    ],
+    content: "desc",
+    sig: "sig",
+  },
+};
+
+const pendingPost: DiscussionPost = {
+  id: "post-1",
+  content: "pending post",
+  authorPubkey: "poster",
+  discussionId: "34550:author:tag",
+  createdAt: 2,
+  approved: false,
+  approvalState: "unapproved",
+  approvedBy: [],
+  event: {
+    id: "post-1",
+    pubkey: "poster",
+    kind: 1111,
+    created_at: 2,
+    tags: [["a", "34550:author:tag"]],
+    content: "pending post",
+    sig: "sig",
+  },
+};
+
+const approvedPost: DiscussionPost = {
+  id: "post-approved",
+  content: "approved post",
+  authorPubkey: "poster",
+  discussionId: "34550:author:tag",
+  createdAt: 3,
+  approved: true,
+  approvalState: "approved",
+  approvedBy: ["moderator-1"],
+  approvedAt: 4,
+  event: {
+    id: "post-approved",
+    pubkey: "poster",
+    kind: 1111,
+    created_at: 3,
+    tags: [["a", "34550:author:tag"]],
+    content: "approved post",
+    sig: "sig",
+  },
+};
+
+const approvedPostApproval: PostApproval = {
+  id: "approval-approved",
+  postId: "post-approved",
+  postAuthorPubkey: "poster",
+  moderatorPubkey: "moderator-1",
+  discussionId: "34550:author:tag",
+  createdAt: 4,
+  event: {
+    id: "approval-approved",
+    pubkey: "moderator-1",
+    kind: 4550,
+    created_at: 4,
+    tags: [
+      ["a", "34550:author:tag"],
+      ["e", "post-approved"],
+      ["p", "poster"],
+    ],
+    content: "",
+    sig: "sig",
+  },
+};
+
+const createReadyDetailModel = (
+  overrides: Partial<DiscussionDetailModel> = {},
+): DiscussionDetailModel => ({
+  state: "ready",
+  snapshot: {
+    discussion: layoutDiscussion,
+    posts: [pendingPost, approvedPost],
+    approvals: [approvedPostApproval],
+    moderatorRequests: [],
+    evaluations: [],
+    userEvaluationIds: new Set<string>(),
+    relayProvenance: { successfulRelayUrlsByPhase: {} },
+  },
+  error: null,
+  completionReason: "eose",
+  relayProvenance: { successfulRelayUrlsByPhase: {} },
+  isFallback: false,
+  reload: jest.fn(async () => undefined),
+  addPost: jest.fn(),
+  addApproval: jest.fn(),
+  removeApproval: jest.fn(),
+  ...overrides,
+});
+
 describe("PostApprovalPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     isModeratorResult = false;
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
+    discussionReadExecutorMock.executeNostrRead.mockResolvedValue({
       events: [],
       completionReason: "eose",
+      duplicateCount: 0,
+      elapsedMs: 0,
       attemptedRelayUrls: [],
       successfulEventRelayUrls: [],
       sourceRelayUrlsByEventId: {},
       attempts: [],
     });
-    const layoutDiscussion: Discussion = {
-      id: "34550:author:tag",
-      title: "Title",
-      description: "desc",
-      authorPubkey: "author",
-      dTag: "tag",
-      moderators: [{ pubkey: "moderator-1" }],
-      createdAt: 1,
-      event: {
-        id: "discussion-event",
-        pubkey: "author",
-        kind: 34550,
-        created_at: 1,
-        tags: [
-          ["d", "tag"],
-          ["name", "Title"],
-        ],
-        content: "desc",
-        sig: "sig",
-      },
-    };
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: layoutDiscussion,
-      isLoading: false,
-      error: null,
-      completionReason: "eose",
-      reload: jest.fn(),
-    });
-    mockUseDiscussionContentData.mockReturnValue({
-      posts: [
-        {
-          id: "post-1",
-          content: "pending post",
-          authorPubkey: "poster",
-          discussionId: "34550:author:tag",
-          createdAt: 2,
-          approved: false,
-          approvalState: "unapproved",
-          event: {
-            id: "post-1",
-            pubkey: "poster",
-            kind: 1111,
-            created_at: 2,
-            tags: [["a", "34550:author:tag"]],
-            content: "pending post",
-            sig: "sig",
-          },
-        },
-        {
-          id: "post-approved",
-          content: "approved post",
-          authorPubkey: "poster",
-          discussionId: "34550:author:tag",
-          createdAt: 3,
-          approved: true,
-          approvalState: "approved",
-          event: {
-            id: "post-approved",
-            pubkey: "poster",
-            kind: 1111,
-            created_at: 3,
-            tags: [["a", "34550:author:tag"]],
-            content: "approved post",
-            sig: "sig",
-          },
-        },
-      ],
-      approvals: [],
-      isLoading: false,
-      completionReason: "eose",
-      approvalState: "unapproved",
-      reload: jest.fn(),
-      mergeModerationEvents: jest.fn(),
-      addApproval: jest.fn(),
-      removeApproval: jest.fn(),
-    });
+    // The route fixture is supplied only by the public detail model.
+    mockUseDiscussionMeta.mockReturnValue(undefined);
+    mockUseDiscussionDetail.mockReturnValue(createReadyDetailModel());
   });
 
-  it("loads moderation data through a bounded completion-aware read", async () => {
+  it("uses the shared detail snapshot without starting an approval-page read", async () => {
     useAuthMock.mockReturnValue({
       user: { pubkey: "author", isLoggedIn: true },
       signEvent: jest.fn(),
@@ -194,11 +237,162 @@ describe("PostApprovalPage streaming", () => {
 
     render(<PostApprovalPage />);
 
-    await waitFor(() =>
-      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalled()
-    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(discussionReadExecutorMock.executeNostrRead).not.toHaveBeenCalled();
     expect(serviceMock.streamEventsOnEvent).not.toHaveBeenCalled();
     expect(serviceMock.streamApprovals).not.toHaveBeenCalled();
+  });
+
+  it("shows detail loading before finalizing empty or permission states", () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "viewer", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+    mockUseDiscussionDetail.mockReturnValue(
+      createReadyDetailModel({
+        state: "loading",
+        snapshot: null,
+        completionReason: null,
+      }),
+    );
+
+    render(<PostApprovalPage />);
+
+    expect(screen.getByText("会話情報を読み込み中...")).toBeInTheDocument();
+    expect(screen.queryByText("承認待ちの投稿はありません")).not.toBeInTheDocument();
+    expect(screen.queryByText("会話が見つかりません。")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("投稿を承認するにはモデレーターになる必要があります。"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "承認" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "承認を撤回" })).not.toBeInTheDocument();
+  });
+
+  it("disables approval while a post approval state is unknown", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "author", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+    const shared = mockUseDiscussionDetail();
+    if (!shared.snapshot) {
+      throw new Error("Expected the default detail fixture to be ready");
+    }
+    mockUseDiscussionDetail.mockReturnValue({
+      ...shared,
+      snapshot: {
+        ...shared.snapshot,
+        posts: shared.snapshot.posts.map((post: { id: string }) =>
+          post.id === "post-1" ? { ...post, approvalState: "unknown" } : post,
+        ),
+      },
+    });
+
+    render(<PostApprovalPage />);
+
+    const button = await screen.findByRole("button", { name: "承認" });
+    expect(button).toBeDisabled();
+  });
+
+  it("renders timeout as a polite soft status while keeping approval tabs", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "author", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+    const reload = jest.fn(async () => undefined);
+    mockUseDiscussionDetail.mockReturnValue(
+      createReadyDetailModel({
+        state: "partial",
+        snapshot: null,
+        completionReason: "idle-timeout",
+        reload,
+      }),
+    );
+
+    render(<PostApprovalPage />);
+
+    const warningText = await screen.findByText(/会話データの取得に時間がかかっています/);
+    const status = warningText.closest<HTMLElement>('[role="status"]');
+    expect(status).not.toBeNull();
+    if (!status) {
+      throw new Error('Expected the approval timeout to be rendered as a status');
+    }
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(status).toHaveTextContent(/会話データの取得に時間がかかっています/);
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "承認待ちタブを開く" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders detail errors with the public model and reload action", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "author", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+    const reload = jest.fn(async () => undefined);
+    mockUseDiscussionDetail.mockReturnValue(
+      createReadyDetailModel({
+        state: "error",
+        snapshot: null,
+        error: "詳細データの取得に失敗しました。",
+        completionReason: "cancelled",
+        reload,
+      }),
+    );
+
+    render(<PostApprovalPage />);
+
+    expect(await screen.findByText("詳細データの取得に失敗しました。"))
+      .toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders not-found from a completed detail model and uses its reload action", async () => {
+    useAuthMock.mockReturnValue({
+      user: { pubkey: "author", isLoggedIn: true },
+      signEvent: jest.fn(),
+    });
+    const reload = jest.fn(async () => undefined);
+    mockUseDiscussionDetail.mockReturnValue(
+      createReadyDetailModel({
+        state: "ready",
+        snapshot: null,
+        error: "会話が見つかりません。",
+        completionReason: "eose",
+        reload,
+      }),
+    );
+
+    render(<PostApprovalPage />);
+
+    const notFoundText = await screen.findByText("会話が見つかりません。");
+    const status = notFoundText.closest<HTMLElement>('[role="status"]');
+    expect(status).not.toBeNull();
+    if (!status) {
+      throw new Error('Expected the approval not-found state to be rendered as a status');
+    }
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(status).toHaveTextContent("会話が見つかりません。");
+    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "承認待ちタブを開く" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "再読み込み" }));
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it("shows disabled approval action with reason for non-moderator users", async () => {

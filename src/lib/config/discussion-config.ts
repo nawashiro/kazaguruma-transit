@@ -18,7 +18,6 @@ export interface DiscussionConfig {
 }
 
 export interface DiscussionReadStrategyConfig {
-  relayLimit: number;
   idleTimeoutMs: number;
   hardTimeoutMs: number;
   dedupWindowMs: number;
@@ -33,6 +32,11 @@ const parseBoundedInteger = (
   const parsed = Number(value);
   if (!Number.isInteger(parsed)) return fallback;
   return Math.min(max, Math.max(min, parsed));
+};
+
+const getDefaultTimeout = (): number => {
+  const parsedTimeout = Number(process.env.NEXT_PUBLIC_NOSTR_TIMEOUT_MS);
+  return Number.isFinite(parsedTimeout) ? parsedTimeout : 5000;
 };
 
 export function buildDiscussionId(adminPubkey: string, idPart: string): string {
@@ -118,8 +122,7 @@ export function getDiscussionConfig(): DiscussionConfig {
     adminPubkey
   );
 
-  const parsedTimeout = Number(process.env.NEXT_PUBLIC_NOSTR_TIMEOUT_MS);
-  const defaultTimeout = Number.isFinite(parsedTimeout) ? parsedTimeout : 5000;
+  const defaultTimeout = getDefaultTimeout();
 
   return {
     enabled,
@@ -141,7 +144,7 @@ export function getNostrServiceConfig(): NostrServiceConfig {
 }
 
 export function getDiscussionReadStrategyConfig(): DiscussionReadStrategyConfig {
-  const fallbackIdleTimeoutMs = getDiscussionConfig().defaultTimeout;
+  const fallbackIdleTimeoutMs = getDefaultTimeout();
   const idleTimeoutMs = parseBoundedInteger(
     process.env.NEXT_PUBLIC_DISCUSSION_READ_IDLE_TIMEOUT_MS,
     fallbackIdleTimeoutMs,
@@ -156,12 +159,6 @@ export function getDiscussionReadStrategyConfig(): DiscussionReadStrategyConfig 
   );
 
   return {
-    relayLimit: parseBoundedInteger(
-      process.env.NEXT_PUBLIC_DISCUSSION_READ_RELAY_LIMIT,
-      3,
-      1,
-      3
-    ),
     idleTimeoutMs,
     hardTimeoutMs: Math.max(configuredHardTimeoutMs, idleTimeoutMs + 1),
     dedupWindowMs: parseBoundedInteger(

@@ -13,7 +13,7 @@ export default async function LicensePage() {
           <div className="card-body p-4 sm:p-6">
             <h2 className="card-title"><span>本ソフトウェア</span></h2>
             <div>
-              <table className="table w-full table-fixed text-sm" aria-label="本ソフトウェア">
+              <table className="table w-full table-fixed text-base" aria-label="本ソフトウェア">
                 <colgroup>
                   <col className="w-[38%] sm:w-[28%]" />
                   <col />
@@ -29,7 +29,7 @@ export default async function LicensePage() {
                   </tr>
                   <tr>
                     <th scope="row" className="whitespace-normal">ライセンス</th>
-                    <td className="whitespace-normal"><span className="badge badge-primary h-auto max-w-full break-all py-1 text-center whitespace-normal">{payload.software.license}</span></td>
+                    <td className="whitespace-normal"><span className="badge badge-primary badge-md h-auto max-w-full break-all py-1 text-center whitespace-normal">{payload.software.license}</span></td>
                   </tr>
                   <tr>
                     <th scope="row" className="whitespace-normal">権利者</th>
@@ -64,22 +64,22 @@ export default async function LicensePage() {
           <div className="card-body p-4 sm:p-6">
             <h2 className="card-title"><span>使用オープンデータ</span></h2>
             <div>
-              <table className="table w-full table-fixed text-sm" aria-label="使用オープンデータ">
+              <table className="table w-full table-fixed text-base" aria-label="使用オープンデータ">
                 <colgroup>
                   <col className="w-[62%] sm:w-[70%]" />
                   <col />
                 </colgroup>
                 <thead>
                   <tr>
-                    <th scope="col" className="whitespace-normal">データ</th>
-                    <th scope="col" className="whitespace-normal">ライセンス</th>
+                    <th scope="col" className="text-base-content whitespace-normal">データ</th>
+                    <th scope="col" className="text-base-content whitespace-normal">ライセンス</th>
                   </tr>
                 </thead>
                 <tbody>
                   {payload.openData.map((entry) => (
                     <tr key={entry.id}>
                       <th scope="row" className="break-words whitespace-normal"><a href={entry.sourceUrl} className="link">{entry.name}</a></th>
-                      <td className="whitespace-normal"><a href={entry.licenseUrl} className="badge badge-primary h-auto max-w-full break-words py-1 text-center whitespace-normal">{entry.licenseName}</a></td>
+                      <td className="whitespace-normal"><a href={entry.licenseUrl} className="badge badge-primary badge-md h-auto max-w-full break-words py-1 text-center whitespace-normal">{entry.licenseName}</a></td>
                     </tr>
                   ))}
                 </tbody>
@@ -92,7 +92,7 @@ export default async function LicensePage() {
           <div className="card-body p-4 sm:p-6">
             <h2 className="card-title"><span>導入パッケージ</span></h2>
             <div>
-              <table className="table w-full table-fixed text-sm" aria-label="導入パッケージ">
+              <table className="table w-full table-fixed text-base" aria-label="導入パッケージ">
                 <colgroup>
                   <col className="w-[50%] sm:w-[54%]" />
                   <col className="w-[22%] sm:w-[23%]" />
@@ -100,9 +100,9 @@ export default async function LicensePage() {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th scope="col" className="whitespace-normal">パッケージ</th>
-                    <th scope="col" className="whitespace-normal">バージョン</th>
-                    <th scope="col" className="whitespace-normal">ライセンス</th>
+                    <th scope="col" className="text-base-content whitespace-normal">パッケージ</th>
+                    <th scope="col" className="text-base-content whitespace-normal">バージョン</th>
+                    <th scope="col" className="text-base-content whitespace-normal">ライセンス</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -110,12 +110,12 @@ export default async function LicensePage() {
                     <tr key={`${entry.packageName}@${entry.version}`}>
                       <th scope="row" className="break-all whitespace-normal">{entry.packageName}</th>
                       <td className="break-all whitespace-normal">{entry.version}</td>
-                      <td className="whitespace-normal"><span className="badge badge-primary h-auto max-w-full break-all py-1 text-center whitespace-normal">{entry.license || "UNKNOWN"}</span></td>
+                      <td className="whitespace-normal"><span className="badge badge-primary badge-md h-auto max-w-full break-all py-1 text-center whitespace-normal">{entry.license || "UNKNOWN"}</span></td>
                     </tr>
                   ))}
                   {payload.dependencies.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="text-base-content/60 whitespace-normal">依存ライセンス情報は未生成です。</td>
+                      <td colSpan={3} className="text-base-content whitespace-normal">依存ライセンス情報は未生成です。</td>
                     </tr>
                   )}
                 </tbody>

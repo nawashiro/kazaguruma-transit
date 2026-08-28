@@ -3,7 +3,7 @@ import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan"
 const strategy = {
   idleTimeoutMs: 100,
   hardTimeoutMs: 300,
-  relayLimit: 3,
+
   dedupWindowMs: 1_000,
 };
 const pubkey = "a".repeat(64);

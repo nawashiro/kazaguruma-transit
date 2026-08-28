@@ -16,6 +16,9 @@ describe("CategoryTabs", () => {
 
     expect(screen.getByRole("tablist")).toHaveClass("tabs", "tabs-box");
     expect(screen.getAllByRole("tab")).toHaveLength(categories.length);
+    screen.getAllByRole("tab").forEach((tab) => {
+      expect(tab).toHaveClass("text-base-content");
+    });
     expect(screen.getByRole("tab", { name: "公共施設" })).toHaveClass(
       "tab",
       "tab-active"
@@ -70,11 +73,6 @@ describe("CategoryTabs", () => {
       />
     );
 
-    expect(screen.getAllByRole("tab")).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({}),
-      ])
-    );
     screen.getAllByRole("tab").forEach((tab) => {
       expect(tab).toHaveAttribute("aria-controls", "location-panel");
     });

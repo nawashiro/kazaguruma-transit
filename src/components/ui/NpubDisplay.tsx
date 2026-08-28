@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline";
+import { Check, Clipboard } from "lucide-react";
 import { hexToNpub } from "@/lib/nostr/nostr-utils";
 import { logger } from "@/utils/logger";
 
@@ -25,20 +25,20 @@ export function NpubDisplay({ pubkey }: Props) {
 
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <span className="min-w-0 flex-1 truncate font-mono text-base-content/70" title={npub}>
+      <code className="min-w-0 flex-1 truncate font-mono text-base-content">
         {npub}
-      </span>
+      </code>
       <button
         type="button"
         onClick={handleCopy}
-        className="inline-flex shrink-0 min-h-[44px] min-w-[44px] items-center justify-center rounded-full dark:rounded-sm p-2 transition-colors hover:bg-base-200"
+        className="inline-flex shrink-0 min-h-[44px] min-w-[44px] items-center justify-center rounded-full dark:rounded-sm p-2 transition-colors hover:bg-base-200 text-base"
         title={isCopied ? "ユーザーIDをコピーしました" : "クリップボードにコピー"}
         aria-label={isCopied ? "ユーザーIDをコピーしました" : "ユーザーIDをコピー"}
       >
         {isCopied ? (
-          <CheckIcon className="h-5 w-5 text-success" aria-hidden="true" />
+          <Check className="h-5 w-5 text-success" aria-hidden="true" />
         ) : (
-          <ClipboardDocumentIcon className="h-5 w-5 text-base-content/60" aria-hidden="true" />
+          <Clipboard className="h-5 w-5 text-base-content/60" aria-hidden="true" />
         )}
       </button>
     </div>

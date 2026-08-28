@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useId } from "react";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { TriangleAlert } from "lucide-react";
 
 interface InputFieldProps {
   value: string;
@@ -16,6 +16,7 @@ interface InputFieldProps {
   name?: string;
   maxLength?: number;
   endAdornment?: React.ReactNode;
+  label?: string;
 }
 
 export default function InputField({
@@ -31,6 +32,7 @@ export default function InputField({
   name,
   maxLength,
   endAdornment,
+  label,
 }: InputFieldProps) {
   const uniqueId = useId();
   const inputId = `input-${uniqueId}`;
@@ -44,15 +46,20 @@ export default function InputField({
 
   return (
     <div className="form-control w-full space-y-2">
+      {label && (
+        <label htmlFor={inputId} className="sr-only">
+          {label}
+        </label>
+      )}
       {description && (
-        <div
+        <p
           id={descriptionId}
-          className="text-sm opacity-70 leading-relaxed ruby-text"
+          className="text-base leading-relaxed ruby-text"
         >
           {description}
-        </div>
+        </p>
       )}
-      <div className={endAdornment ? "join w-full" : undefined}>
+      <div className={endAdornment ? "join w-full" : ""}>
         <input
           id={inputId}
           type={type}
@@ -64,7 +71,7 @@ export default function InputField({
           name={name}
           maxLength={maxLength}
           className={`input min-h-[44px] leading-relaxed ${hasError ? "input-error" : ""
-            } ${endAdornment ? "join-item flex-1" : "w-full"} ${disabled ? "opacity-70 cursor-not-allowed" : ""
+            } ${endAdornment ? "join-item flex-1" : "w-full"} ${disabled ? "cursor-not-allowed" : ""
             }`}
           aria-invalid={hasError ? "true" : undefined}
           aria-required={required ? "true" : undefined}
@@ -77,10 +84,10 @@ export default function InputField({
       {hasError && (
         <div
           id={errorId}
-          className="text-error text-sm font-medium leading-relaxed"
+          className="text-base-content text-base font-medium leading-relaxed"
           role="alert"
         >
-          <ExclamationTriangleIcon className="w-4 h-4 inline mr-1" aria-hidden="true" />
+          <TriangleAlert className="w-4 h-4 inline mr-1" aria-hidden="true" />
           {error}
         </div>
       )}

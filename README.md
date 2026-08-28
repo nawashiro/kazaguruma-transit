@@ -28,6 +28,31 @@ npm run lint         # ESLintによるコードチェック
 npx tsc --noEmit     # TypeScriptの型チェックのみ実行
 ```
 
+### アクセシビリティ検査
+
+Lighthouseで主要ページを検査します。アクセシビリティカテゴリに加えて、WCAG 2.2の1.4.3（コントラスト最低）の検査に対応する`color-contrast`監査も実行します。各ページのHTML／JSONレポートは`artifacts/lighthouse/`に保存されます。
+
+```bash
+# 既に http://127.0.0.1:3000 で開発サーバーを起動している場合
+npm run a11y
+
+# 開発サーバーを起動してから検査する場合（違反時は終了コード1）
+npm run accessibility:ci
+
+# 開発サーバーを起動済みの環境でstrict検査する場合
+npm run accessibility:strict
+```
+
+`npm run a11y`は確認用の警告モード、`accessibility:strict`と`accessibility:ci`は違反時に失敗するstrictモードです。既定では`/`、`/beginners-guide`、`/locations`、`/license`、`/login`を検査します。対象URLやページを変更する場合は、次の環境変数を指定できます。
+
+```bash
+LIGHTHOUSE_BASE_URL=https://staging.example.test \
+LIGHTHOUSE_ROUTES=/,/beginners-guide \
+npm run a11y
+```
+
+既定の警告をCIエラーに昇格する場合は`LIGHTHOUSE_ASSERTION_LEVEL=error`を指定してください。Chromeの起動引数を追加する必要がある環境では`LIGHTHOUSE_CHROME_FLAGS`で指定できます。自動検査だけでは判断できない動的コンテンツ、キーボード操作、実際の支援技術との組み合わせは、手動確認も必要です。
+
 ### データベース & ビルド
 
 ```bash

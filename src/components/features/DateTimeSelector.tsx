@@ -74,38 +74,44 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
   return (
     <div>
       <div className="space-y-4">
-        {/* 出発/到着の切り替えボタングループ */}
+        {/* 出発/到着のラジオボタングループ */}
         <fieldset role="radiogroup" aria-labelledby={`legend-${uniqueId}`}>
           <legend id={`legend-${uniqueId}`} className="sr-only">
             時間タイプを選択
           </legend>
-          <div className="join">
-            <button
-              type="button"
-              className={`btn join-item ruby-text ${
-                isDeparture ? "btn-active btn-primary" : ""
-              }`}
-              onClick={() => handleTimeTypeChange(true)}
-              data-testid="departure-radio"
-              disabled={disabled}
-              aria-checked={isDeparture}
-              role="radio"
+          <div className="space-y-2">
+            <label
+              htmlFor={`departure-radio-${uniqueId}`}
+              className="flex cursor-pointer items-center gap-2"
             >
-              出発
-            </button>
-            <button
-              type="button"
-              className={`btn join-item ruby-text ${
-                !isDeparture ? "btn-active btn-primary" : ""
-              }`}
-              onClick={() => handleTimeTypeChange(false)}
-              data-testid="arrival-radio"
-              disabled={disabled}
-              aria-checked={!isDeparture}
-              role="radio"
+              <input
+                id={`departure-radio-${uniqueId}`}
+                name={`time-type-${uniqueId}`}
+                type="radio"
+                className="radio"
+                checked={isDeparture}
+                onChange={() => handleTimeTypeChange(true)}
+                data-testid="departure-radio"
+                disabled={disabled}
+              />
+              <span className="ruby-text">出発</span>
+            </label>
+            <label
+              htmlFor={`arrival-radio-${uniqueId}`}
+              className="flex cursor-pointer items-center gap-2"
             >
-              到着
-            </button>
+              <input
+                id={`arrival-radio-${uniqueId}`}
+                name={`time-type-${uniqueId}`}
+                type="radio"
+                className="radio"
+                checked={!isDeparture}
+                onChange={() => handleTimeTypeChange(false)}
+                data-testid="arrival-radio"
+                disabled={disabled}
+              />
+              <span className="ruby-text">到着</span>
+            </label>
           </div>
         </fieldset>
 
@@ -134,7 +140,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
           />
           <div
             id={`${inputId}-description`}
-            className="text-sm /60 mt-1 sr-only"
+            className="text-base mt-1 sr-only"
           >
             {timeDescription}
           </div>

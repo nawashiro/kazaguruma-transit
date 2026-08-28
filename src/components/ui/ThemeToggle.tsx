@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { MoonIcon, SunIcon } from "@heroicons/react/24/outline";
+import { Moon, Sun } from "lucide-react";
 /**
  * ダークモードとライトモードを切り替えるトグルボタン
  */
@@ -46,7 +46,7 @@ export default function ThemeToggle() {
 
   return (
     <div className="flex cursor-pointer gap-2 items-center">
-      <SunIcon className="h-5 w-5" aria-hidden="true" />
+      <Sun className="h-5 w-5" aria-hidden="true" />
       <label
         htmlFor="theme-toggle"
         className="inline-flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center"
@@ -65,7 +65,7 @@ export default function ThemeToggle() {
           }
         />
       </label>
-      <MoonIcon className="h-5 w-5" aria-hidden="true" />
+      <Moon className="h-5 w-5" aria-hidden="true" />
     </div>
   );
 }

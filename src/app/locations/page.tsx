@@ -1,16 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircleIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
+import { CircleAlert, CircleCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   KeyLocationCategory,
   KeyLocation,
-  convertToLocation,
 } from "../../utils/addressLoader";
 import { logger } from "../../utils/logger";
-import RateLimitModal from "@/components/features/RateLimitModal";
-import LocationDetailModal from "@/components/features/LocationDetailModal";
+import LocationCard from "@/components/features/LocationCard";
 import Card from "@/components/ui/Card";
 import CarouselCard from "@/components/ui/CarouselCard";
 import Button from "@/components/ui/Button";
@@ -19,7 +17,6 @@ import CategoryTabs from "@/components/ui/CategoryTabs";
 import PageHeader from "@/components/layouts/PageHeader";
 import {
   calculateDistance,
-  findLocationAreaName,
   geocodeAddress,
   groupCategoryLocationsByArea,
   loadLocationCategories,
@@ -31,6 +28,7 @@ type LocationWithDistance = KeyLocation & {
 };
 
 export default function LocationsPage() {
+  const router = useRouter();
   const [categories, setCategories] = useState<KeyLocationCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,27 +42,17 @@ export default function LocationsPage() {
     LocationWithDistance[]
   >([]);
   const [positionLoading, setPositionLoading] = useState(false);
-  const router = useRouter();
 
   // 住所検索のための状態
   const [address, setAddress] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
 
   // 町村ごとの分類のための状態
   const [locationsByArea, setLocationsByArea] = useState<{
     [areaName: string]: LocationWithDistance[];
   }>({});
   const [geoJsonLoading, setGeoJsonLoading] = useState(false);
-
-  // モーダル表示のための状態
-  const [selectedLocation, setSelectedLocation] =
-    useState<LocationWithDistance | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedLocationAreaName, setSelectedLocationAreaName] = useState<
-    string | null
-  >(null);
 
   // すべてのデータ読み込み状態の管理（Rubyful実行タイミング制御用）
   const [, setAllDataLoaded] = useState(false);
@@ -152,14 +140,6 @@ export default function LocationsPage() {
     }
   };
 
-  const handleGoToLocation = (location: KeyLocation) => {
-    // ホームページに遷移して目的地として設定
-    const locationObj = convertToLocation(location);
-    router.push(
-      `/?destination=${encodeURIComponent(JSON.stringify(locationObj))}`
-    );
-  };
-
   const sortByDistance = useCallback(() => {
     setPositionLoading(true);
     // カテゴリが選択されていない場合はソート状態をリセットしない
@@ -234,8 +214,7 @@ export default function LocationsPage() {
       const result = await geocodeAddress(address);
 
       if (result.status === "rate-limited") {
-        setIsRateLimitModalOpen(true);
-        setSearchLoading(false);
+        router.push("/rate-limit?source=locations");
         return;
       }
 
@@ -297,76 +276,6 @@ export default function LocationsPage() {
     return groups;
   };
 
-  // モーダルを開く関数
-  const openLocationModal = async (location: LocationWithDistance) => {
-    setSelectedLocation(location);
-
-    // 町名を取得
-    try {
-      setSelectedLocationAreaName(await findLocationAreaName(location));
-    } catch (err) {
-      logger.log("町名取得エラー:", err);
-      setSelectedLocationAreaName("不明");
-    }
-
-    setIsModalOpen(true);
-  };
-
-  // モーダルを閉じる関数
-  const closeLocationModal = () => {
-    setIsModalOpen(false);
-  };
-
-  // 施設カードのコンポーネント（再利用のため抽出）
-  const LocationCard = ({ location }: { location: LocationWithDistance }) => {
-    const [areaName, setAreaName] = useState<string | null>(null);
-
-    // コンポーネントマウント時に町名を取得
-    useEffect(() => {
-      const fetchAreaName = async () => {
-        try {
-          setAreaName(await findLocationAreaName(location));
-        } catch (err) {
-          logger.log("町名取得エラー:", err);
-          setAreaName("不明");
-        }
-      };
-
-      fetchAreaName();
-    }, [location.lat, location.lng]);
-
-    return (
-      <button
-        onClick={() => openLocationModal(location)}
-        aria-label={`${location.name}の詳細を表示`}
-        className="card cursor-pointer bg-base-100 shadow-sm hover:shadow-lg transition-all w-full h-fit"
-      >
-        {location.imageUri && (
-          <figure className="relative">
-            <img
-              src={location.imageUri}
-              alt={location.name}
-              className="object-cover h-48 w-full"
-              style={{ width: "100%", height: "192px", objectFit: "cover" }}
-            />
-          </figure>
-        )}
-
-        <div className="card-body text-left">
-          <h2 className="card-title ">{location.name}</h2>
-
-          {areaName && <p className="text-sm /60">{areaName}</p>}
-
-          {location.description && (
-            <p className="text-sm mt-1 inline ruby-text">
-              {location.description}
-            </p>
-          )}
-        </div>
-      </button>
-    );
-  };
-
   if (loading) {
     return (
       <div className="py-8">
@@ -383,21 +292,8 @@ export default function LocationsPage() {
     return (
       <div className="py-8">
         <PageHeader title="場所をさがす" />
-        <div className="alert alert-error" role="alert">
-          <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-          {/*
-            xmlns="http://www.w3.org/2000/svg"
-            className="stroke-current shrink-0 h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          */}
+        <div className="alert alert-error alert-soft text-base-content!" role="alert">
+          <CircleAlert className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
           <span>{error}</span>
         </div>
       </div>
@@ -414,21 +310,8 @@ export default function LocationsPage() {
       <div className="space-y-4">
         <Card title="近いところから表示">
           {searchError && (
-            <div id="location-search-error" className="alert alert-error ruby-text" role="alert">
-              <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-              {/*
-                xmlns="http://www.w3.org/2000/svg"
-                className="stroke-current shrink-0 h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              */}
+            <div id="location-search-error" className="alert alert-error alert-soft text-base-content! ruby-text" role="alert">
+              <CircleAlert className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
               <span>{searchError}</span>
             </div>
           )}
@@ -485,21 +368,12 @@ export default function LocationsPage() {
           </div>
 
           {currentPosition && (
-            <div className="alert alert-success ruby-text">
-              <CheckCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-              {/*
-                xmlns="http://www.w3.org/2000/svg"
-                className="stroke-current shrink-0 h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              */}
+            <div
+              className="alert alert-success alert-soft text-base-content! ruby-text"
+              role="status"
+              aria-live="polite"
+            >
+              <CircleCheck className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
               <span>
                 位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます
               </span>
@@ -569,7 +443,7 @@ export default function LocationsPage() {
                       </h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                         {locations.map((location) => (
-                          <LocationCard key={location.id} location={location} />
+                          <LocationCard key={location.id} location={location} areaName={areaName} />
                         ))}
                       </div>
                     </div>
@@ -588,7 +462,7 @@ export default function LocationsPage() {
               prevSlideId="slide3"
               nextSlideId="slide2"
             >
-              <p className="text-sm /80 mb-2">
+              <p className="text-base mb-2">
                 支援が欲しいけど、なにがあるのかわからない。
                 <br />
                 あてはまる悩みにチェックをつけると、役立つ支援がわかります。
@@ -597,9 +471,9 @@ export default function LocationsPage() {
                 href="https://compass.graffer.jp/handbook/landing"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline w-fit h-fit rounded-full dark:rounded-sm"
               >
-                <p>お悩みハンドブックウェブサイトへ</p>
+                <span>お悩みハンドブックウェブサイトへ</span>
               </a>
             </CarouselCard>
 
@@ -610,7 +484,7 @@ export default function LocationsPage() {
               prevSlideId="slide1"
               nextSlideId="slide3"
             >
-              <p className="text-sm /80 mb-2">
+              <p className="text-base mb-2">
                 帰る家はありますか？
                 <br />
                 あったとして、安心できる場所ですか？
@@ -621,7 +495,7 @@ export default function LocationsPage() {
                 href="https://sekaibivouac.jp/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>せかいビバークウェブサイトへ</p>
               </a>
@@ -634,14 +508,14 @@ export default function LocationsPage() {
               prevSlideId="slide2"
               nextSlideId="slide1"
             >
-              <p className="text-sm /80 mb-2">
+              <p className="text-base mb-2">
                 千代田区で開催されるイベント情報はこちら。
               </p>
               <a
                 href="https://chiyolab.jp/comunity_event"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>ちよだコミュニティラボ</p>
               </a>
@@ -649,7 +523,7 @@ export default function LocationsPage() {
                 href="https://visit-chiyoda.tokyo/app/event"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>千代田区観光協会</p>
               </a>
@@ -657,7 +531,7 @@ export default function LocationsPage() {
                 href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>千代田区ウェブサイト</p>
               </a>
@@ -676,7 +550,7 @@ export default function LocationsPage() {
             >
               千代田区主要施設座標データ
             </a>
-            による「風ぐるまの停留所から徒歩圏内（600m以内）であることがわかっている場所」を使用しています。
+            による「<ruby>風<rt>かざ</rt></ruby>ぐるまの停留所から徒歩圏内（600m以内）であることがわかっている場所」を使用しています。
           </p>
           <p>
             誤りが含まれていたり、古いデータが残っていたり、新たに加えてほしい場所があるときは、直接プルリクエストを送るか、
@@ -709,22 +583,6 @@ export default function LocationsPage() {
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
-
-      {/* モーダルコンポーネント */}
-      {isModalOpen && (
-        <LocationDetailModal
-          location={selectedLocation}
-          onClose={closeLocationModal}
-          onGoToLocation={handleGoToLocation}
-          areaName={selectedLocationAreaName}
-        />
-      )}
-
-      {/* レート制限モーダル */}
-      <RateLimitModal
-        isOpen={isRateLimitModalOpen}
-        onClose={() => setIsRateLimitModalOpen(false)}
-      />
     </>
   );
 }

@@ -2,6 +2,14 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import OriginSelector from "../OriginSelector";
 
+const mockRouterPush = jest.fn();
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: (url: string) => mockRouterPush(url),
+  }),
+}));
+
 // モックのgeolocation API
 const mockGeolocation = {
   getCurrentPosition: jest.fn(),
@@ -38,6 +46,17 @@ describe("OriginSelector", () => {
     expect(screen.getByTestId("address-input")).toBeInTheDocument();
     expect(screen.getByTestId("search-button")).toBeInTheDocument();
     expect(screen.getByTestId("gps-button")).toBeInTheDocument();
+  });
+
+  it("検索欄に明示的なラベル「出発地」を付け、入力欄と関連付ける", () => {
+    render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
+
+    const input = screen.getByTestId("address-input");
+    const label = screen.getByText("出発地", { selector: "label" });
+
+    expect(input.id).not.toBe("");
+    expect(label).toHaveAttribute("for", input.id);
+    expect(screen.getByLabelText("出発地")).toBe(input);
   });
 
   it("現在地ボタンのアイコンと文字を横並びで表示する", () => {
@@ -104,10 +123,11 @@ describe("OriginSelector", () => {
   it("住所が未入力の場合はコールバックが呼ばれず検索を実行しない", async () => {
     render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
 
-    // 空入力の状態で検索ボタンをクリック
+    // 空入力の状態でフォームを送信
     const searchButton = screen.getByTestId("search-button");
-    fireEvent.click(searchButton);
+    fireEvent.submit(searchButton.closest("form") as HTMLFormElement);
 
+    expect(await screen.findByText("住所を入力してください")).toBeInTheDocument();
     // コールバックが呼ばれていないことを確認
     expect(mockOnOriginSelected).not.toHaveBeenCalled();
     // APIが呼ばれていないことを確認
@@ -179,6 +199,33 @@ describe("OriginSelector", () => {
       await screen.findByText("ジオコーディングに失敗しました: ZERO_RESULTS")
     ).toBeInTheDocument();
     expect(mockOnOriginSelected).not.toHaveBeenCalled();
+  });
+
+  it("429 + limitExceededでは一度だけrate-limitへ遷移し、旧モーダルを表示しない", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 429,
+      json: async () => ({ limitExceeded: true }),
+    });
+
+    const view = render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
+    const addressInput = screen.getByTestId("address-input");
+    const searchButton = screen.getByTestId("search-button");
+
+    fireEvent.change(addressInput, { target: { value: "神田駅" } });
+    fireEvent.click(searchButton);
+
+    await waitFor(() => expect(addressInput).not.toBeDisabled());
+    expect(searchButton).not.toBeDisabled();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockRouterPush).toHaveBeenCalledTimes(1);
+    expect(mockRouterPush).toHaveBeenCalledWith("/rate-limit?source=home");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(mockOnOriginSelected).not.toHaveBeenCalled();
+
+    view.rerender(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
+    expect(mockRouterPush).toHaveBeenCalledTimes(1);
   });
 
   it("現在地ボタンをクリックしたらGeolocation APIを呼び出す", () => {

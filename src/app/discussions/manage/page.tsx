@@ -5,10 +5,7 @@ export const dynamic = "force-dynamic";
 
 import React, { useState } from "react";
 import Link from "next/link";
-import {
-  CheckBadgeIcon,
-  InformationCircleIcon,
-} from "@heroicons/react/24/outline";
+import { BadgeCheck, Info } from "lucide-react";
 import PageHeader from "@/components/layouts/PageHeader";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
@@ -24,8 +21,7 @@ import { buildNaddrFromRef } from "@/lib/nostr/naddr-utils";
 import { resolveDiscussionReferences } from "@/lib/discussion/discussion-reference-resolver";
 import type { Discussion, DiscussionPost, PostApproval } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
-import { useDiscussionManagementData } from "@/components/discussion/DiscussionManagementDataProvider";
+import { useDiscussionManagement } from "@/components/discussion/DiscussionManagementProvider";
 
 const nostrServiceConfig = getNostrServiceConfig();
 const nostrService = createNostrService(nostrServiceConfig);
@@ -36,20 +32,21 @@ export default function DiscussionManagePage() {
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
 
   const { user, signEvent } = useAuth();
-  const discussionMeta = useDiscussionMeta();
-  const discussion = discussionMeta?.discussion;
-  const {
-    posts,
-    approvals,
-    referencedDiscussions,
-    isModerationLoading: isLoading,
-    referencedDiscussionCompletionReason,
-    completionReason,
-    approvalState,
-    reloadModeration,
-    addApproval,
-    removeApproval,
-  } = useDiscussionManagementData();
+  const management = useDiscussionManagement();
+  const snapshot = management.snapshot;
+  const discussion = snapshot?.listDiscussion ?? null;
+  const posts = snapshot?.listingPosts ?? [];
+  const approvals = snapshot?.listingApprovals ?? [];
+  const referencedDiscussions = snapshot?.referencedDiscussions ?? [];
+  const isLoading = management.state === "loading";
+  const loadError = management.state === "error" ? management.error : null;
+  const completionReason = management.completionReason;
+  const approvalState = posts.some((post) => post.approvalState === "unknown")
+    ? "unknown"
+    : undefined;
+  const reloadManagement = management.reload;
+  const addManagementApproval = management.addApproval;
+  const removeManagementApproval = management.removeApproval;
 
   const canManagePosts = Boolean(
     discussion &&
@@ -79,15 +76,15 @@ export default function DiscussionManagePage() {
         {references.map((reference) => {
           const referencedDiscussion = findReferencedDiscussion(reference.discussionId);
           if (!referencedDiscussion) {
-            if (referencedDiscussionCompletionReason !== "eose") {
+            if (management.state !== "ready") {
               return (
-                <div key={reference.discussionId} className="text-sm text-gray-400 italic">
+                <div key={reference.discussionId} className="text-base text-base-content italic">
                   会話の参照を取得中です。参照: {buildNaddrFromRef(reference.discussionId)}
                 </div>
               );
             }
             return (
-              <div key={reference.discussionId} className="text-sm text-gray-400 italic">
+              <div key={reference.discussionId} className="text-base text-base-content italic">
                 会話が見つかりません。参照: {buildNaddrFromRef(reference.discussionId)}
               </div>
             );
@@ -103,13 +100,13 @@ export default function DiscussionManagePage() {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 ruby-text">
                   {referencedDiscussion.title}
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
+                <p className="text-base text-base-content mb-2 ruby-text">
                   {referencedDiscussion.description.length > 100
                     ? `${referencedDiscussion.description.slice(0, 100)}...`
                     : referencedDiscussion.description}
                 </p>
                 <div className="flex justify-between items-center">
-                  <div className="text-gray-500">
+                  <div className="text-base-content">
                     <time
                       dateTime={new Date(
                         referencedDiscussion.createdAt * 1000
@@ -118,7 +115,7 @@ export default function DiscussionManagePage() {
                       {formatRelativeTime(referencedDiscussion.createdAt)}
                     </time>
                   </div>
-                  <span className="badge badge-outline">
+                  <span className="badge badge-outline badge-md">
                     {referencedDiscussion.moderators.length + 1} モデレーター
                   </span>
                 </div>
@@ -158,7 +155,7 @@ export default function DiscussionManagePage() {
         event: signedEvent,
       };
 
-      addApproval(newApproval);
+      addManagementApproval?.(newApproval);
     } catch (error) {
       logger.error("Failed to approve post:", error);
     } finally {
@@ -192,7 +189,7 @@ export default function DiscussionManagePage() {
         throw new Error("Failed to publish revocation to relays");
       }
 
-      removeApproval(approval.id, post.id, user.pubkey || "");
+      removeManagementApproval?.(approval.id);
     } catch (error) {
       logger.error("Failed to revoke approval:", error);
     } finally {
@@ -204,17 +201,21 @@ export default function DiscussionManagePage() {
     }
   };
 
-  if (!discussion && discussionMeta?.isLoading === false) {
+  if (management.state === "error") {
     return (
       <div className="py-8">
-        <div className="alert alert-error" role="alert">
+        <div
+          className="alert alert-error alert-soft text-base-content!"
+          role="status"
+          aria-live="polite"
+        >
           <span className="ruby-text">
-            {discussionMeta.error ?? "掲載一覧の会話情報が見つかりませんでした。"}
+            {loadError ?? "掲載一覧の会話情報が見つかりませんでした。"}
           </span>
           <button
             type="button"
-            className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-            onClick={() => void discussionMeta.reload()}
+            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            onClick={() => void reloadManagement()}
           >
             <span className="ruby-text">再読み込み</span>
           </button>
@@ -234,7 +235,7 @@ export default function DiscussionManagePage() {
     );
   }
 
-  if (isLoading || discussionMeta?.isLoading) {
+  if (isLoading) {
     return (
       <div className="py-8">
         <div
@@ -257,31 +258,79 @@ export default function DiscussionManagePage() {
     );
   }
 
+  if (!discussion && management.state === "ready") {
+    return (
+      <div className="py-8">
+        <div
+          className="alert alert-error alert-soft text-base-content!"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="ruby-text">掲載一覧の会話情報が見つかりませんでした。</span>
+          <button
+            type="button"
+            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            onClick={() => void reloadManagement()}
+          >
+            <span className="ruby-text">再読み込み</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (management.state === "partial" && posts.length === 0) {
+    return (
+      <div className="py-8">
+        <div
+          className="alert alert-warning alert-soft text-base-content!"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="ruby-text">
+            掲載依頼一覧を完全に取得できませんでした。再読み込みしてください。
+          </span>
+          <button
+            type="button"
+            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            onClick={() => void reloadManagement()}
+          >
+            <span className="ruby-text">再読み込み</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // 参照先の会話があるもののみをフィルタリング
   const postsWithQTags = posts.filter(
     (post) => resolveDiscussionReferences(post.event?.tags ?? []).references.length > 0,
   );
 
-  const pendingPosts = postsWithQTags.filter((post) => !post.approved);
+  const pendingPosts = postsWithQTags.filter(
+    (post) => !post.approved || post.approvalState === "unknown",
+  );
   const pendingPostCount = pendingPosts.filter(
     (post) => post.approvalState !== "unknown"
   ).length;
-  const approvedPosts = postsWithQTags.filter((post) => post.approved);
+  const approvedPosts = postsWithQTags.filter(
+    (post) => post.approved && post.approvalState !== "unknown",
+  );
 
   return (
     <div className="py-8">
       <DiscussionReadStatus
         isLoading={false}
-        completionReason={completionReason}
+        completionReason={completionReason ?? null}
         hasData={posts.length > 0}
         approvalState={approvalState === "unknown" ? "unknown" : undefined}
-        onReload={() => void reloadModeration()}
+        onReload={() => void reloadManagement()}
       />
       {!canManagePosts && (
         <div className="card bg-base-100 shadow-sm mb-6" role="status">
           <div className="card-body">
             <div className="flex flex-nowrap gap-2 items-center">
-              <InformationCircleIcon
+              <Info
                 className="h-6 w-6 shrink-0 text-info"
                 aria-hidden="true"
               />
@@ -340,7 +389,7 @@ export default function DiscussionManagePage() {
                             post.approvalState === "unknown" ||
                             approvingIds.has(post.id)
                           }
-                          className="ml-4 btn btn-primary rounded-full dark:rounded-sm"
+                          className="ml-4 btn text-base btn-primary rounded-full dark:rounded-sm"
                         >
                           <span className="ruby-text">
                             {approvingIds.has(post.id) ? "" : "承認"}
@@ -355,14 +404,14 @@ export default function DiscussionManagePage() {
               <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="card-body">
                   <div className="py-8">
-                    <CheckBadgeIcon
+                    <BadgeCheck
                       aria-label="承認待ちなし"
-                      className="h-12 w-12 text-gray-400"
+                      className="h-12 w-12 text-base-content"
                     />
                     <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
                       承認待ちの投稿はありません
                     </h3>
-                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    <p className="mt-2 text-base text-base-content">
                       新しい投稿が投稿されると、ここに表示されます。
                     </p>
                   </div>
@@ -386,7 +435,7 @@ export default function DiscussionManagePage() {
                 {approvedPosts.slice(0, 10).map((post) => (
                   <div
                     key={post.id}
-                    className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 opacity-75"
+                    className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
                   >
                     <div className="card-body p-4">
                       <div className="flex justify-between items-start">
@@ -402,7 +451,7 @@ export default function DiscussionManagePage() {
                                 !post.approvedBy?.includes(user.pubkey || "") ||
                                 revokingIds.has(post.id)
                               }
-                              className="btn btn-warning min-h-[44px] rounded-full dark:rounded-sm"
+                              className="btn text-base btn-warning min-h-[44px] rounded-full dark:rounded-sm"
                             >
                               <span className="ruby-text">
                                 {revokingIds.has(post.id) ? "" : "承認を撤回"}
@@ -415,7 +464,7 @@ export default function DiscussionManagePage() {
                   </div>
                 ))}
                 {approvedPosts.length > 10 && (
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-base-content text-base">
                     最新10件を表示中（全{approvedPosts.length}件）
                   </p>
                 )}
@@ -424,14 +473,14 @@ export default function DiscussionManagePage() {
               <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="card-body">
                   <div className="py-8">
-                    <CheckBadgeIcon
+                    <BadgeCheck
                       aria-label="承認済みなし"
-                      className="h-12 w-12 text-gray-400"
+                      className="h-12 w-12 text-base-content"
                     />
                     <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
                       承認済みの投稿はありません
                     </h3>
-                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    <p className="mt-2 text-base text-base-content">
                       投稿が承認されると、ここに表示されます。
                     </p>
                   </div>

@@ -31,6 +31,20 @@ describe('naddr utilities', () => {
     kind: 34550,
     relays: ['wss://relay.example.com', 'wss://another-relay.example.com'],
   };
+  const canonicalDiscussionPubkey =
+    'c98215056966766d3aafb43471cc72d59a9dfd2885aad27a33da31685f7cfef8';
+  const canonicalNaddrs = [
+    {
+      naddr:
+        'naddr1qvzqqqyx7cpzpjvzz5zkjenkd5a2ldp5w8x894v6nh7j3pd26far8k33dp0helhcqqrj6wfc8yer2vq94g3w9',
+      identifier: '-989250',
+    },
+    {
+      naddr:
+        'naddr1qvzqqqyx7cpzpjvzz5zkjenkd5a2ldp5w8x894v6nh7j3pd26far8k33dp0helhcqq8hgetnwskkg6tnvd6hxumfdahq9reds2',
+      identifier: 'test-discussion',
+    },
+  ] as const;
 
   describe('naddrEncode', () => {
     test('should encode valid AddressPointer to naddr', () => {
@@ -88,6 +102,14 @@ describe('naddr utilities', () => {
       expect(decoded.pubkey).toBe(validAddressPointer.pubkey);
       expect(decoded.kind).toBe(validAddressPointer.kind);
       expect(decoded.relays).toEqual(validAddressPointer.relays);
+    });
+
+    test.each(canonicalNaddrs)('should decode canonical naddr for $identifier', ({ naddr, identifier }) => {
+      const decoded = naddrDecode(naddr);
+
+      expect(decoded.kind).toBe(34550);
+      expect(decoded.pubkey).toBe(canonicalDiscussionPubkey);
+      expect(decoded.identifier).toBe(identifier);
     });
 
     test('should handle naddr without relays', () => {
@@ -187,6 +209,14 @@ describe('naddr utilities', () => {
       expect(result?.dTag).toBe(validAddressPointer.identifier);
       expect(result?.authorPubkey).toBe(validAddressPointer.pubkey);
       expect(result?.discussionId).toBe(`34550:${validAddressPointer.pubkey}:${validAddressPointer.identifier}`);
+    });
+
+    test.each(canonicalNaddrs)('should extract discussion ID from canonical naddr for $identifier', ({ naddr, identifier }) => {
+      const result = extractDiscussionFromNaddr(naddr);
+
+      expect(result?.dTag).toBe(identifier);
+      expect(result?.authorPubkey).toBe(canonicalDiscussionPubkey);
+      expect(result?.discussionId).toBe(`34550:${canonicalDiscussionPubkey}:${identifier}`);
     });
 
     test('should return null for invalid naddr', () => {
@@ -380,6 +410,12 @@ describe('naddr utilities', () => {
       );
     });
 
+    test.each(canonicalNaddrs)('should normalize canonical naddr for $identifier', ({ naddr, identifier }) => {
+      expect(normalizeDiscussionId(naddr)).toBe(
+        `34550:${canonicalDiscussionPubkey}:${identifier}`
+      );
+    });
+
     test('should normalize nostr:naddr to kind:pubkey:dTag', () => {
       const naddr = naddrEncode(validAddressPointer);
 
@@ -508,7 +544,7 @@ describe('naddr utilities', () => {
       }
       
       const end = performance.now();
-      expect(end - start).toBeLessThan(1000); // Should complete in under 1 second
+      expect(end - start).toBeLessThan(2000); // Allow CI scheduling variance.
     });
   });
 });

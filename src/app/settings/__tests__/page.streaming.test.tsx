@@ -3,6 +3,18 @@ import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import SettingsPage from "../page";
 
+const mockSettingsUser = {
+  isLoggedIn: true,
+  pubkey: "user-pubkey",
+  profile: { about: "自己紹介" },
+};
+const mockRouterPush = jest.fn();
+const mockAuthError = { value: null as string | null };
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockRouterPush }),
+}));
+
 jest.mock("next/link", () => ({
   __esModule: true,
   default: ({ children, href }: { children: React.ReactNode; href: string }) => (
@@ -12,14 +24,10 @@ jest.mock("next/link", () => ({
 
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => ({
-    user: {
-      isLoggedIn: true,
-      pubkey: "user-pubkey",
-      profile: { about: "自己紹介" },
-    },
+    user: mockSettingsUser,
     logout: jest.fn(),
     isLoading: false,
-    error: null,
+    error: mockAuthError.value,
     signEvent: jest.fn(),
   }),
 }));
@@ -28,7 +36,7 @@ jest.mock("@/lib/config/discussion-config", () => ({
   isDiscussionsEnabled: () => true,
   getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 500 }),
   getDiscussionReadStrategyConfig: () => ({
-    relayLimit: 3,
+
     idleTimeoutMs: 500,
     hardTimeoutMs: 1500,
     dedupWindowMs: 250,
@@ -58,13 +66,13 @@ jest.mock("@/lib/nostr/discussion-ndk-gateway", () => {
   };
 });
 
-jest.mock("@/lib/discussion/discussion-read-executor", () => {
-  const executeDiscussionRead = jest.fn();
-  return { executeDiscussionRead, __mock: { executeDiscussionRead } };
+jest.mock("@/lib/nostr/nostr-read-executor", () => {
+  const executeNostrRead = jest.fn();
+  return { executeNostrRead, __mock: { executeNostrRead } };
 });
 
 const { __mock: discussionReadExecutorMock } = jest.requireMock(
-  "@/lib/discussion/discussion-read-executor",
+  "@/lib/nostr/nostr-read-executor",
 );
 
 jest.mock("@/lib/nostr/nostr-utils", () => ({
@@ -93,11 +101,6 @@ jest.mock("@/lib/nostr/mnemonic-utils", () => ({
     "あいうえお かきくけこ さしすせそ",
 }));
 
-jest.mock("@/components/discussion/LoginModal", () => ({
-  __esModule: true,
-  LoginModal: () => <div>Login Modal</div>,
-}));
-
 jest.mock("@/components/ui/Button", () => {
   return function MockButton({
     children,
@@ -113,10 +116,26 @@ jest.mock("@/components/ui/Button", () => {
   };
 });
 
+function assertSettingsAuthLink(element: HTMLElement, expectedPathname: string) {
+  expect(element.tagName).toBe("A");
+  const href = element.getAttribute("href");
+  expect(href).not.toBeNull();
+  if (href === null) {
+    throw new Error("settings auth link did not expose a native href");
+  }
+
+  const target = new URL(href, "https://kazaguruma.invalid");
+  expect(target.pathname).toBe(expectedPathname);
+  expect(target.searchParams.get("returnTo")).toBe("/settings");
+  expect([...target.searchParams.keys()]).toEqual(["returnTo"]);
+}
+
 describe("SettingsPage streaming discussions", () => {
   const withCompletion = (events: any[], completionReason: "eose" | "idle-timeout" | "hard-timeout" = "eose") => ({
     events,
     completionReason,
+    duplicateCount: 0,
+    elapsedMs: 0,
     attemptedRelayUrls: [],
     successfulEventRelayUrls: [],
     sourceRelayUrlsByEventId: {},
@@ -125,7 +144,10 @@ describe("SettingsPage streaming discussions", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
+    mockSettingsUser.isLoggedIn = true;
+    mockSettingsUser.pubkey = "user-pubkey";
+    mockAuthError.value = null;
+    discussionReadExecutorMock.executeNostrRead.mockResolvedValue(
       withCompletion([]),
     );
   });
@@ -138,6 +160,29 @@ describe("SettingsPage streaming discussions", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("さん")).toBeInTheDocument();
     expect(screen.queryByText("ユーザー名")).not.toBeInTheDocument();
+  });
+
+  it("renders an unauthenticated auth error as an assertive soft alert", async () => {
+    mockSettingsUser.isLoggedIn = false;
+    mockSettingsUser.pubkey = "";
+    mockAuthError.value = "認証に失敗しました。";
+
+    render(<SettingsPage />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveAttribute("role", "alert");
+    expect(alert).toHaveClass(
+      "alert",
+      "alert-error",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(alert).toHaveTextContent("認証に失敗しました。");
+    expect(screen.getByRole("link", { name: "ログイン" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "アカウント作成" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "ログイン / アカウント作成" }),
+    ).not.toBeInTheDocument();
   });
 
   it("loads user discussions through the bounded discussion read executor", async () => {
@@ -156,14 +201,14 @@ describe("SettingsPage streaming discussions", () => {
       sig: "sig",
     };
 
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
+    discussionReadExecutorMock.executeNostrRead.mockResolvedValue(
       withCompletion([mockEvent], "idle-timeout"),
     );
 
     render(<SettingsPage />);
 
     await waitFor(() =>
-      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalledWith(
+      expect(discussionReadExecutorMock.executeNostrRead).toHaveBeenCalledWith(
         expect.any(Object),
         expect.objectContaining({
           plan: expect.objectContaining({
@@ -182,14 +227,68 @@ describe("SettingsPage streaming discussions", () => {
   });
 
   it("shows timeout warning when completion-aware read has no events", async () => {
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue(
+    discussionReadExecutorMock.executeNostrRead.mockResolvedValue(
       withCompletion([], "hard-timeout"),
     );
 
     render(<SettingsPage />);
 
+    const warning = await screen.findByRole("status");
+    expect(warning).toHaveTextContent(/会話データの取得に時間がかかっています/);
+    expect(warning).toHaveAttribute("aria-live", "polite");
+    expect(warning).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
+  });
+
+  it("renders separate native login and signup links without opening LoginModal", () => {
+    mockSettingsUser.isLoggedIn = false;
+    mockSettingsUser.pubkey = "";
+
+    render(<SettingsPage />);
+
+    const loginLink = screen.getByRole("link", { name: "ログイン" });
+    const signupLink = screen.getByRole("link", { name: "アカウント作成" });
+
+    expect(screen.getAllByRole("link")).toHaveLength(2);
     expect(
-      await screen.findByText(/会話データの取得に時間がかかっています/)
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "ログイン / アカウント作成" }),
+    ).not.toBeInTheDocument();
+    assertSettingsAuthLink(loginLink, "/login");
+    assertSettingsAuthLink(signupLink, "/signup");
+    expect(mockRouterPush).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("login-modal")).not.toBeInTheDocument();
+    expect(discussionReadExecutorMock.executeNostrRead).not.toHaveBeenCalled();
+  });
+
+  it("keeps the page spacing while using the default size for the unauthenticated account message", () => {
+    mockSettingsUser.isLoggedIn = false;
+    mockSettingsUser.pubkey = "";
+
+    render(<SettingsPage />);
+
+    const heading = screen.getByRole("heading", { name: "ログインしていません" });
+    expect(heading).not.toHaveClass("text-lg");
+
+    const unauthenticatedContent = heading.parentElement?.parentElement;
+    expect(unauthenticatedContent).not.toBeNull();
+    if (!unauthenticatedContent) {
+      throw new Error("unauthenticated settings content wrapper was not found");
+    }
+    expect(unauthenticatedContent).not.toHaveClass("py-8");
+
+    const accountCard = heading.closest("div.card");
+    expect(accountCard).not.toBeNull();
+    if (!accountCard) throw new Error("settings account card was not found");
+
+    const settingsPage = accountCard.parentElement?.parentElement;
+    expect(settingsPage).not.toBeNull();
+    expect(settingsPage).toHaveClass("py-8");
+    expect(screen.getByRole("heading", { name: "アカウント情報" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ログイン" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "アカウント作成" })).toBeInTheDocument();
   });
 });

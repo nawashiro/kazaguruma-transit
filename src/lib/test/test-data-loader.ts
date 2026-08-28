@@ -12,7 +12,7 @@ import type {
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 
-interface TestComment {
+interface TestComment extends Record<string, string> {
   timestamp: string;
   datetime: string;
   "comment-id": string;
@@ -66,7 +66,7 @@ function parseTestCSV(csvText: string): TestComment[] {
           isFirstLine = false;
         } else {
           // データ行を処理
-          const comment: any = {};
+          const comment: Record<string, string> = {};
           headers.forEach((header, index) => {
             const cleanHeader = header.replace(/"/g, "").trim();
             const value = values[index]?.replace(/^"|"$/g, "").trim() || "";
@@ -88,7 +88,7 @@ function parseTestCSV(csvText: string): TestComment[] {
   if (current.trim() || values.length > 0) {
     values.push(current.trim());
     if (!isFirstLine && values.length > 0) {
-      const comment: any = {};
+      const comment: Record<string, string> = {};
       headers.forEach((header, index) => {
         const cleanHeader = header.replace(/"/g, "").trim();
         const value = values[index]?.replace(/^"|"$/g, "").trim() || "";

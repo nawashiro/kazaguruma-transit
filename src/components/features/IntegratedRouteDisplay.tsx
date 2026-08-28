@@ -132,7 +132,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 href={originToStopMapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="link text-sm"
+                className="link text-base"
               >
                 出発地 → {originStop.stopName} Googleマップ
               </a>
@@ -176,7 +176,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
 
                   {/* ルート情報 */}
                   <div className="flex items-center my-3">
-                    <div className="badge badge-primary mr-2">
+                    <div className="badge badge-primary badge-md mr-2">
                       {route.routeName}
                     </div>
                   </div>
@@ -243,7 +243,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
 
                             {/* 次のルート情報 */}
                             <div className="flex items-center my-3">
-                              <div className="badge badge-primary mr-2">
+                              <div className="badge badge-primary badge-md mr-2">
                                 {transfer.nextRoute.routeName}
                               </div>
                             </div>
@@ -274,7 +274,7 @@ const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
                 href={stopToDestinationMapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="link text-sm"
+                className="link text-base"
               >
                 {destinationStop.stopName} → 目的地 Googleマップ
               </a>

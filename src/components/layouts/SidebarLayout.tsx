@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bars3Icon } from "@heroicons/react/24/outline";
+import { Menu } from "lucide-react";
 import Sidebar from "./Sidebar";
 import ThemeToggle from "../ui/ThemeToggle";
 import SkipToContent from "../ui/SkipToContent";
@@ -35,7 +35,7 @@ export default function SidebarLayout({
           const savedPreference = loadRubyPreference();
 
           // RubyfulV2の初期化
-          (window as any).RubyfulV2?.init({
+          window.RubyfulV2?.init({
             selector: ".ruby-text",
             defaultDisplay: savedPreference,
             observeChanges: true,
@@ -66,6 +66,7 @@ export default function SidebarLayout({
         className="drawer-toggle"
         checked={isDrawerOpen}
         onChange={(event) => setIsDrawerOpen(event.target.checked)}
+        tabIndex={-1}
         aria-label="ナビゲーションメニュー"
       />
       <div className="drawer-side z-40">
@@ -86,12 +87,12 @@ export default function SidebarLayout({
           <span>
             <button
               type="button"
-              className="btn btn-ghost drawer-button lg:hidden rounded-full dark:rounded-sm"
+              className="btn text-base btn-ghost drawer-button lg:hidden rounded-full dark:rounded-sm"
               aria-expanded={isDrawerOpen}
               aria-controls="drawer"
               onClick={() => setIsDrawerOpen(true)}
             >
-              <Bars3Icon className="inline-block w-6 h-6 stroke-current" aria-hidden="true" />
+              <Menu className="inline-block w-6 h-6 stroke-current" aria-hidden="true" />
               <span className="ruby-text">メニュー</span>
             </button>
           </span>
@@ -115,7 +116,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80019017cfc156b181e3"
               target="_blank"
               rel="noopener noreferrer"
-              className="link inline-block text-sm text-base-content/60 hover:underline ruby-text"
+              className="link inline-block text-base text-base-content hover:underline ruby-text"
             >
               利用規約
             </a>
@@ -123,7 +124,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80b2a6d4d045e850407c"
               target="_blank"
               rel="noopener noreferrer"
-              className="link inline-block text-sm text-base-content/60 hover:underline ruby-text"
+              className="link inline-block text-base text-base-content hover:underline ruby-text"
             >
               プライバシーポリシー
             </a>
@@ -131,7 +132,7 @@ export default function SidebarLayout({
               href="https://halved-hamster-4a1.notion.site/1cf78db44c3d80d0ba82d66f451b9ff1"
               target="_blank"
               rel="noopener noreferrer"
-              className="link inline-block text-sm text-base-content/60 hover:underline ruby-text"
+              className="link inline-block text-base text-base-content hover:underline ruby-text"
             >
               クッキーポリシー
             </a>

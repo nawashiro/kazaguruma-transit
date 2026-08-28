@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useId, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Location } from "@/types/core";
 import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { logger } from "@/utils/logger";
 import { useGeocodingSearch } from "./useGeocodingSearch";
-import RateLimitModal from "./RateLimitModal";
-import { FiSearch } from "react-icons/fi";
-import { MdMyLocation } from "react-icons/md";
+import { LocateFixed, Search } from "lucide-react";
 
 interface OriginSelectorProps {
   onOriginSelected: (location: Location) => void;
@@ -18,11 +17,12 @@ interface OriginSelectorProps {
 export default function OriginSelector({
   onOriginSelected,
 }: OriginSelectorProps) {
+  const router = useRouter();
   const [address, setAddress] = useState("");
   const uniqueId = useId();
   const buttonGroupId = `origin-actions-${uniqueId}`;
   const handleSelected = useCallback((location: Location) => onOriginSelected(location), [onOriginSelected]);
-  const { error, setError, loading, setLoading, isRateLimitModalOpen, setIsRateLimitModalOpen, search } = useGeocodingSearch(handleSelected);
+  const { error, setError, loading, setLoading, search } = useGeocodingSearch(handleSelected);
 
   const handleAddressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +56,8 @@ export default function OriginSelector({
             logger.log("Reverse Geocode API Response:", data);
 
             if (response.status === 429 && data.limitExceeded) {
-              setIsRateLimitModalOpen(true);
+              setLoading(false);
+              router.push("/rate-limit?source=home");
               return;
             }
 
@@ -89,6 +90,7 @@ export default function OriginSelector({
       <Card testId="origin-selector-card" title="出発地を選択してください">
         <form onSubmit={handleAddressSubmit} className="space-y-4">
           <InputField
+            label="出発地"
             placeholder="千代田区役所"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
@@ -108,7 +110,7 @@ export default function OriginSelector({
                 testId="search-button"
                 aria-label="住所や場所を検索"
               >
-                <FiSearch className="h-5 w-5" aria-hidden="true" />
+                <Search className="h-5 w-5" aria-hidden="true" />
               </Button>
             }
           />
@@ -128,7 +130,7 @@ export default function OriginSelector({
                 aria-label="現在地を使用して経路を検索"
               >
                 <span className="flex items-center justify-center gap-2 whitespace-nowrap">
-                  <MdMyLocation
+                  <LocateFixed
                     className="h-5 w-5 shrink-0"
                     aria-hidden="true"
                   />
@@ -139,12 +141,6 @@ export default function OriginSelector({
           </fieldset>
         </form>
       </Card>
-
-      {/* レート制限モーダル */}
-      <RateLimitModal
-        isOpen={isRateLimitModalOpen}
-        onClose={() => setIsRateLimitModalOpen(false)}
-      />
     </>
   );
 }

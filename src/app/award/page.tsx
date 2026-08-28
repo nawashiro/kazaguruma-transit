@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import PageHeader from "@/components/layouts/PageHeader";
 import {
   AWARD_BADGE_IMAGE_URL,
@@ -88,19 +87,17 @@ export default function AwardPage() {
               href={AWARD_PROJECT_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-neutral rounded-full dark:rounded-sm"
+              className="btn text-base btn-neutral rounded-full dark:rounded-sm"
             >
               <span className="ruby-text">東京都の作品紹介を見る</span>
-              <ArrowTopRightOnSquareIcon className="h-5 w-5" aria-hidden="true" />
             </a>
             <a
               href={AWARD_BADGE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-outline rounded-full dark:rounded-sm"
+              className="btn text-base btn-outline rounded-full dark:rounded-sm"
             >
               <span className="ruby-text">オープンバッジを確認する</span>
-              <ArrowTopRightOnSquareIcon className="h-5 w-5" aria-hidden="true" />
             </a>
           </div>
         </div>

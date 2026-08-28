@@ -1,24 +1,15 @@
 "use client";
-import {
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from "react";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
+import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
 import { ModeratorManagementSection } from "@/components/discussion/ModeratorManagementSection";
-import { LoginModal } from "@/components/discussion/LoginModal";
+import { buildLoginRoute } from "@/lib/navigation/auth-route";
 import { createNostrService, type Event } from "@/lib/nostr/nostr-service";
 import { createDiscussionNdkGateway } from "@/lib/nostr/discussion-ndk-gateway";
 import {
-  getDiscussionReadStrategyConfig,
   getNostrServiceConfig,
 } from "@/lib/config/discussion-config";
-import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
 import { createModeratorPromotionRequestEvent } from "@/lib/discussion/user-creation-flow";
 import {
   calculateModeratorUpdateTimestamp,
@@ -33,18 +24,36 @@ import {
 import { logger } from "@/utils/logger";
 import { NpubDisplay } from "@/components/ui/NpubDisplay";
 const config = getNostrServiceConfig();
-const readStrategy = typeof getDiscussionReadStrategyConfig === "function"
-  ? getDiscussionReadStrategyConfig()
-  : { idleTimeoutMs: config.defaultTimeout, hardTimeoutMs: config.defaultTimeout * 3 };
 const service = createNostrService(config);
 const gateway = createDiscussionNdkGateway(config);
+
+function getDiscussionRouteParam(params: {
+  naddr?: string | string[];
+}): string {
+  const routeParam = params.naddr;
+  const candidate = Array.isArray(routeParam)
+    ? routeParam.length === 1
+      ? routeParam[0]
+      : undefined
+    : routeParam;
+
+  if (typeof candidate === "string" && candidate.trim() !== "" && !candidate.includes("/")) {
+    return candidate;
+  }
+
+  return "naddr1discussion";
+}
+
 export default function ModeratorsPage() {
+  const router = useRouter();
+  const params = useParams<{ naddr?: string | string[] }>();
+  const naddrParam = getDiscussionRouteParam(params);
   const { user, signEvent } = useAuth();
-  const meta = useDiscussionMeta();
-  const discussion = meta?.discussion;
-  const [events, setEvents] = useState<Event[]>([]),
+  const detail = useDiscussionDetail();
+  const isDetailLoading = detail.state === "loading";
+  const discussion = detail.snapshot?.discussion ?? null;
+  const [localEvents, setLocalEvents] = useState<Event[]>([]),
     [reason, setReason] = useState(""),
-    [showLogin, setShowLogin] = useState(false),
     [approved, setApproved] = useState(new Set<string>()),
     [removed, setRemoved] = useState(new Set<string>()),
     [direct, setDirect] = useState(""),
@@ -52,55 +61,19 @@ export default function ModeratorsPage() {
     [directError, setDirectError] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const [applicationReadState, setApplicationReadState] = useState<
-    "loading" | "eose" | "partial"
-  >("loading");
-  const applicationReadGenerationRef = useRef(0);
-  const loadModeratorApplications = useCallback(async () => {
-    const readGeneration = ++applicationReadGenerationRef.current;
-    if (!discussion) {
-      setEvents([]);
-      setApplicationReadState("eose");
-      return;
-    }
-    setApplicationReadState("loading");
-    try {
-      const result = await executeDiscussionRead(gateway, {
-        plan: {
-          target: "discussion-edit",
-          filters: [{
-            kinds: [1111],
-            "#a": [discussion.id],
-            "#t": ["moderator-request"],
-            limit: 50,
-          }],
-          relayHints: [],
-          idleTimeoutMs: readStrategy.idleTimeoutMs,
-          hardTimeoutMs: readStrategy.hardTimeoutMs,
-        },
-        candidates: {
-          configured: (config.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
-          defaults: [],
-        },
-      });
-      if (applicationReadGenerationRef.current !== readGeneration) return;
-      setEvents(result.events);
-      setApplicationReadState(
-        result.completionReason === "eose" ? "eose" : "partial",
-      );
-    } catch (readError) {
-      if (applicationReadGenerationRef.current !== readGeneration) return;
-      logger.error("Failed to load moderator applications:", readError);
-      setEvents([]);
-      setApplicationReadState("partial");
-    }
-  }, [discussion]);
-  useEffect(() => {
-    void loadModeratorApplications();
-    return () => {
-      applicationReadGenerationRef.current += 1;
-    };
-  }, [loadModeratorApplications]);
+  const events = useMemo(() => {
+    const snapshotEvents = detail.snapshot?.moderatorRequests.map((request) => request.event) ?? [];
+    const byId = new Map<string, Event>();
+    [...snapshotEvents, ...localEvents].forEach((event) => byId.set(event.id, event));
+    return Array.from(byId.values());
+  }, [detail.snapshot?.moderatorRequests, localEvents]);
+  const applicationReadState: "loading" | "eose" | "partial" =
+    detail.state === "loading"
+      ? "loading"
+      : detail.state === "ready"
+        ? "eose"
+        : "partial";
+  const reload = detail.reload;
   const applications = useMemo(
     () =>
       discussion ? derivePendingModeratorApplications(discussion, events) : [],
@@ -135,8 +108,16 @@ export default function ModeratorsPage() {
     });
   };
   const request = async () => {
+    if (!user.isLoggedIn) {
+      router.push(
+        buildLoginRoute(
+          `/discussions/${naddrParam}/moderators`,
+          "モデレーター申請にはログインが必要です。",
+        ),
+      );
+      return;
+    }
     if (!discussion || !user.pubkey) {
-      setShowLogin(true);
       return;
     }
     setBusy(true);
@@ -151,7 +132,7 @@ export default function ModeratorsPage() {
         ) as unknown as Record<string, unknown>,
       );
       if (!(await service.publishSignedEvent(signed))) throw new Error();
-      setEvents((old) => [signed as Event, ...old]);
+      setLocalEvents((old) => [signed as Event, ...old]);
       setReason("");
     } catch {
       setError("モデレーター申請の送信に失敗しました。");
@@ -216,7 +197,7 @@ export default function ModeratorsPage() {
       setDirectModerators([]);
       setDirect("");
       setDirectError("");
-      await meta?.reload();
+      await reload();
     } catch (error) {
       logger.error(error);
       setError("モデレーター変更の確定に失敗しました。");
@@ -224,26 +205,53 @@ export default function ModeratorsPage() {
       setBusy(false);
     }
   };
-  if (!discussion && meta?.isLoading !== false)
+  if (isDetailLoading)
     return (
       <div role="status">
         <span className="ruby-text">会話情報を読み込み中...</span>
       </div>
     );
-  if (!discussion) {
-    const completionReason = meta?.completionReason;
-    const isPartial = completionReason === "idle-timeout" || completionReason === "hard-timeout" || completionReason === "cancelled";
+  if (detail.state === "error") {
     return (
-      <div className={isPartial ? "alert alert-warning" : "alert alert-error"} role="alert">
-        <span className="ruby-text">
+      <div
+        className="alert alert-error alert-soft text-base-content!"
+        role="status"
+        aria-live="polite"
+      >
+        <span>{detail.error ?? "会話データの取得に失敗しました。"}</span>
+        <button
+          type="button"
+          className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+          onClick={() => void reload()}
+        >
+          <span className="ruby-text">再読み込み</span>
+        </button>
+      </div>
+    );
+  }
+  if (!discussion) {
+    const completionReason =
+      detail.completionReason ?? (detail.state === "partial" ? "idle-timeout" : "eose");
+    const isPartial = detail.state === "partial";
+    return (
+      <div
+        className={
+          isPartial
+            ? "alert alert-warning alert-soft text-base-content!"
+            : "alert alert-error alert-soft text-base-content!"
+        }
+        role="status"
+        aria-live="polite"
+      >
+        <span>
           {isPartial
             ? `会話データの取得に時間がかかっています（${completionReason}）。受信待機中または relay 応答遅延の可能性があります。`
-            : meta?.error ?? "会話情報が見つかりませんでした。"}
+            : "会話情報が見つかりませんでした。"}
         </span>
         <button
           type="button"
-          className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-          onClick={() => void meta?.reload()}
+          className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+          onClick={() => void reload()}
         >
           <span className="ruby-text">再読み込み</span>
         </button>
@@ -265,26 +273,20 @@ export default function ModeratorsPage() {
         />
       ) : applicationReadState === "partial" ? (
         <div
-          className="alert alert-warning"
-          role="alert"
+          className="alert alert-warning alert-soft text-base-content!"
+          role="status"
+          aria-live="polite"
           aria-label="モデレーター申請の取得は完了していません"
         >
           <span className="ruby-text">
             モデレーター申請の取得が完了していないため、申請がないとは断定できません。
           </span>
-          <button
-            type="button"
-            className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-            onClick={() => void loadModeratorApplications()}
-          >
-            <span className="ruby-text">モデレーター申請を再取得</span>
-          </button>
         </div>
       ) : (
         <div role="status" className="ruby-text">モデレーター申請を読み込み中...</div>
       )}
       {error && (
-        <p role="alert" className="text-error ruby-text">
+        <p role="alert" className="text-base-content ruby-text">
           {error}
         </p>
       )}
@@ -317,7 +319,7 @@ export default function ModeratorsPage() {
                       aria-describedby="direct-moderator-error"
                     />
                     <button
-                      className="btn btn-primary join-item h-11 min-h-[44px]"
+                      className="btn text-base btn-primary join-item h-11 min-h-[44px]"
                       onClick={addDirectModerator}
                       disabled={busy || !direct.trim()}
                     >
@@ -330,7 +332,7 @@ export default function ModeratorsPage() {
                 <p
                   id="direct-moderator-error"
                   role="alert"
-                  className="text-sm text-error ruby-text"
+                  className="text-base text-base-content ruby-text"
                 >
                   {directError}
                 </p>
@@ -356,7 +358,7 @@ export default function ModeratorsPage() {
                         </div>
                         <button
                           type="button"
-                          className="btn btn-ghost min-h-[44px] shrink-0 rounded-full dark:rounded-sm"
+                          className="btn text-base btn-ghost min-h-[44px] shrink-0 rounded-full dark:rounded-sm"
                           onClick={() => removeDirectModerator(pubkey)}
                           disabled={busy}
                         >
@@ -375,7 +377,7 @@ export default function ModeratorsPage() {
                 <span>モデレーターの変更を確定</span>
               </h2>
               <button
-                className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start"
+                className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start"
                 onClick={confirm}
                 disabled={
                   busy ||
@@ -397,8 +399,15 @@ export default function ModeratorsPage() {
               モデレーターに申請するにはログインが必要です。
             </p>
             <button
-              className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start sm:ml-0"
-              onClick={() => setShowLogin(true)}
+              className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start sm:ml-0"
+              onClick={() =>
+                router.push(
+                  buildLoginRoute(
+                    `/discussions/${naddrParam}/moderators`,
+                    "モデレーター申請にはログインが必要です。",
+                  ),
+                )
+              }
             >
               <span className="ruby-text">ログイン</span>
             </button>
@@ -427,7 +436,7 @@ export default function ModeratorsPage() {
               disabled={busy}
             />
             <button
-              className="btn btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start"
+              className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start"
               onClick={request}
               disabled={busy}
             >
@@ -436,7 +445,6 @@ export default function ModeratorsPage() {
           </div>
         </section>
       )}
-      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </div>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { LoginModal } from "./LoginModal";
 import { PostPreview } from "./PostPreview";
 import Button from "@/components/ui/Button";
 import { EvaluationComponent } from "./EvaluationComponent";
@@ -21,6 +21,7 @@ import type {
 } from "@/types/discussion";
 import { projectBusStopSnapshot } from "@/lib/discussion/bus-stop-projection";
 import { logger } from "@/utils/logger";
+import { buildLoginRoute } from "@/lib/navigation/auth-route";
 
 interface BusStopDiscussionProps {
   busStops: string[];
@@ -37,8 +38,7 @@ export function BusStopDiscussion({
     new Set()
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginReason, setLoginReason] = useState<string>("");
+  const router = useRouter();
   const [showPreview, setShowPreview] = useState(false);
   const [postForm, setPostForm] = useState<PostFormData>({
     content: "",
@@ -104,8 +104,9 @@ export function BusStopDiscussion({
 
   const handlePostSubmit = async () => {
     if (!user.isLoggedIn) {
-      setLoginReason("投稿するにはログインが必要です。");
-      setShowLoginModal(true);
+      router.push(
+        buildLoginRoute("/", "投稿するにはログインが必要です。"),
+      );
       return;
     }
 
@@ -145,8 +146,9 @@ export function BusStopDiscussion({
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (!user.isLoggedIn) {
-      setLoginReason("投稿を評価するにはログインが必要です。");
-      setShowLoginModal(true);
+      router.push(
+        buildLoginRoute("/", "投稿を評価するにはログインが必要です。"),
+      );
       return;
     }
 
@@ -179,8 +181,13 @@ export function BusStopDiscussion({
   const isApprovalCheckPending =
     snapshot?.approvalState === "unknown" && snapshot.primaryEvents.length > 0;
 
+  const safeClassName =
+    className === "border-t border-gray-200 dark:border-gray-700 pt-8"
+      ? "border-t border-gray-200 dark:border-gray-700 pt-8"
+      : "";
+
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-6 ${safeClassName}`}>
       {/* Evaluation component */}
       <DiscussionReadStatus
         isLoading={isStreamLoading}
@@ -205,12 +212,21 @@ export function BusStopDiscussion({
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
         <h3 className="text-lg font-medium mb-4 ruby-text">バス停メモを投稿</h3>
         {streamError && (
-          <div className="alert alert-error mb-3" role="alert">
+          <div className="alert alert-error alert-soft text-base-content! mb-3" role="alert">
             <span>{streamError}</span>
           </div>
         )}
+        {errors.length > 0 && (
+          <div className="alert alert-error alert-soft text-base-content!" role="alert" aria-live="assertive">
+            <ul className="text-base">
+              {errors.map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         {!isStreamLoading && !streamError && postsWithStats.length === 0 && !isApprovalCheckPending && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 ruby-text mb-3">
+          <p className="text-base text-base-content ruby-text mb-3">
             承認済みの投稿はまだありません。
           </p>
         )}
@@ -236,7 +252,7 @@ export function BusStopDiscussion({
                 disabled={isSubmitting}
                 maxLength={280}
               />
-              <div className="text-gray-500 mt-1 ruby-text">
+              <div className="text-base-content mt-1 ruby-text">
                 {postForm.content.length}/280文字
               </div>
             </div>
@@ -266,20 +282,10 @@ export function BusStopDiscussion({
               </select>
             </div>
 
-            {errors.length > 0 && (
-              <div className="alert alert-error">
-                <ul className="text-sm">
-                  {errors.map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
             <div className="flex gap-2">
               <Button
                 onClick={() => setShowPreview(true)}
-                className="btn btn-primary flex-1 rounded-full dark:rounded-sm"
+                className="btn text-base btn-primary flex-1 rounded-full dark:rounded-sm"
                 disabled={!postForm.content.trim() || isSubmitting}
               >
                 プレビュー
@@ -297,14 +303,6 @@ export function BusStopDiscussion({
         )}
       </div>
 
-      <LoginModal
-        isOpen={showLoginModal}
-        reason={loginReason}
-        onClose={() => {
-          setShowLoginModal(false);
-          setLoginReason("");
-        }}
-      />
     </div>
   );
 }

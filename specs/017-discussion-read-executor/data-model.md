@@ -9,7 +9,6 @@
 | `discussionId` | `string` | `34550:<64桁hex pubkey>:<dTag>`形式 |
 | `authorPubkey` | `string` | 64桁hex文字列 |
 | `dTag` | `string` | 空文字列ではない |
-| `relayHints` | `string[]` | naddr由来の場合だけ保持 |
 
 Resolverは不正な`q` tagを除外する。executorはこの型の構文を再検証しない。
 
@@ -19,7 +18,6 @@ Resolverは不正な`q` tagを除外する。executorはこの型の構文を再
 |---|---|---|
 | `target` | `DiscussionReadTarget` | read対象を識別する |
 | `filters` | `NdkEventFilter[]` | 一つ以上のfilterを許可する |
-| `relayHints` | `string[]` | relay候補順位の第一入力 |
 | `idleTimeoutMs` | `number` | strategy設定値を使う |
 | `hardTimeoutMs` | `number` | idle timeoutより大きい |
 
@@ -29,10 +27,11 @@ Resolverは不正な`q` tagを除外する。executorはこの型の構文を再
 
 | Field | Type | Rule |
 |---|---|---|
-| `relayUrls` | `string[]` | 1から3件。順位付け済み |
+| `relayUrls` | `string[]` | 0から3件。Providerが決めた順序。空配列も一つのattemptとして許可し、executorはrelayを追加しない |
 | `completionReason` | `CompletionReason` | `eose`、`idle-timeout`、`hard-timeout`、`cancelled` |
 | `events` | `NostrEventDTO[]` | event IDで重複排除する |
 | `sourceRelayUrlsByEventId` | `Record<string,string[]>` | event配送元だけを保持する |
+| `duplicateCount` | `number` | attempt内の重複配送数 |
 | `elapsedMs` | `number` | attempt経過時間 |
 
 ## DiscussionReadResult
@@ -41,6 +40,8 @@ Resolverは不正な`q` tagを除外する。executorはこの型の構文を再
 |---|---|---|
 | `events` | `NostrEventDTO[]` | 全attemptのeventsを安定順序で結合する |
 | `completionReason` | `CompletionReason` | retryがEOSEなら`eose` |
+| `duplicateCount` | `number` | 全attemptの重複配送数を合計する |
+| `elapsedMs` | `number` | 全attemptの経過時間を合計する |
 | `attemptedRelayUrls` | `string[]` | 全attemptで問い合わせたrelayを重複排除する |
 | `successfulEventRelayUrls` | `string[]` | eventを返したrelayだけを重複排除する |
 | `sourceRelayUrlsByEventId` | `Record<string,string[]>` | 全attemptの配送元を結合する |

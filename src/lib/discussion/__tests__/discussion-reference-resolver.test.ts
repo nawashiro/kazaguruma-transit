@@ -16,13 +16,11 @@ describe("resolveDiscussionReferences", () => {
         discussionId: `34550:${pubkey}:first-discussion`,
         authorPubkey: pubkey,
         dTag: "first-discussion",
-        relayHints: [],
       },
       {
         discussionId: `34550:${secondPubkey}:second-discussion`,
         authorPubkey: secondPubkey,
         dTag: "second-discussion",
-        relayHints: [],
       },
     ]);
     expect(result.filters).toEqual([
@@ -47,7 +45,6 @@ describe("resolveDiscussionReferences", () => {
         discussionId: `34550:${pubkey}:valid`,
         authorPubkey: pubkey,
         dTag: "valid",
-        relayHints: [],
       },
     ]);
   });

@@ -1,4 +1,4 @@
-import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import { Info } from "lucide-react";
 
 export type DiscussionRole = "user" | "moderator" | "admin";
 
@@ -8,8 +8,8 @@ interface DiscussionRoleCardProps {
 
 export function DiscussionRoleCard({ role }: DiscussionRoleCardProps) {
   return (
-    <div className="alert mb-8" role="status">
-      <InformationCircleIcon className="h-6 w-6 text-info" aria-hidden="true" />
+    <div className="alert alert-soft text-base-content! mb-8" role="status">
+      <Info className="h-6 w-6 text-info" aria-hidden="true" />
       <div>
         {role === "admin" ? (
           <>

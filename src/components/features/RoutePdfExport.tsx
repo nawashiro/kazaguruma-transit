@@ -5,7 +5,7 @@ import { logger } from "@/utils/logger";
 import { Departure } from "@/types/core";
 import type { PostWithStats } from "@/types/discussion";
 import Button from "@/components/ui/Button";
-import { FiDownload } from "react-icons/fi";
+import { Download } from "lucide-react";
 
 // IntegratedRouteDisplayと同様の型定義を使用
 interface StopInfo {
@@ -149,22 +149,11 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
         disabled={isGenerating}
         loading={isGenerating}
       >
-        <FiDownload
+        <Download
           className={`h-5 w-5 ${isGenerating ? "hidden" : ""}`}
           aria-hidden="true"
         />
-        <span
-          className={`ruby-text ${isGenerating ? "hidden" : ""}`}
-          aria-hidden={isGenerating}
-        >
-          印刷する
-        </span>
-        <span
-          className={`ruby-text ${isGenerating ? "" : "hidden"}`}
-          aria-hidden={!isGenerating}
-        >
-          生成中...
-        </span>
+        <span>印刷する</span>
       </Button>
     </>
   );

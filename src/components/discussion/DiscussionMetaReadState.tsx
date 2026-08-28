@@ -23,27 +23,29 @@ export function DiscussionMetaReadState({
 }: DiscussionMetaReadStateProps) {
   return (
     <>
-      <PageHeader
-        title={discussion?.title ?? "会話情報"}
-        description={discussion?.description}
-      />
+      {discussion && (
+        <PageHeader
+          title={discussion.title}
+          description={discussion.description}
+        />
+      )}
       {isLoading && (
         <div role="status" aria-live="polite" className="mb-8">
           会話情報を読み込み中...
         </div>
       )}
       {error && (
-        <div className="alert alert-error mb-8" role="alert">
+        <div className="alert alert-error alert-soft text-base-content! mb-8" role="status" aria-live="polite">
           <span>{error}</span>
-          <button type="button" className="btn btn-outline min-h-[44px]" onClick={onReload}>
+          <button type="button" className="btn text-base btn-outline min-h-[44px]" onClick={onReload}>
             <span className="ruby-text">再試行</span>
           </button>
         </div>
       )}
       {completionReason && completionReason !== "eose" && !error && (
-        <div role="status" aria-live="polite" className="alert alert-warning mb-8">
+        <div role="status" aria-live="polite" className="alert alert-warning alert-soft text-base-content! mb-8">
           <span>一部のrelayからの取得が完了していません。表示内容は暫定です。</span>
-          <button type="button" className="btn btn-outline min-h-[44px]" onClick={onReload}>
+          <button type="button" className="btn text-base btn-outline min-h-[44px]" onClick={onReload}>
             <span className="ruby-text">再読み込み</span>
           </button>
         </div>

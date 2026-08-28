@@ -2,17 +2,17 @@ import {
   createDiscussionModerationSnapshot,
   loadDiscussionModerationSnapshot,
 } from "@/lib/discussion/discussion-moderation-snapshot";
-import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
+import { executeNostrRead } from "@/lib/nostr/nostr-read-executor";
 import type { Event } from "@/lib/nostr/nostr-service";
 
-jest.mock("@/lib/discussion/discussion-read-executor", () => ({
-  executeDiscussionRead: jest.fn(),
+jest.mock("@/lib/nostr/nostr-read-executor", () => ({
+  executeNostrRead: jest.fn(),
 }));
 
 const post = (id: string): Event => ({ id, kind: 1111, pubkey: "author", created_at: 1, content: "post", tags: [["a", "34550:author:topic"]], sig: "sig" });
 const moderatorRequest: Event = { id: "moderator-request", kind: 1111, pubkey: "applicant", created_at: 3, content: "request", tags: [["a", "34550:author:topic"], ["t", "moderator-request"]], sig: "sig" };
 const approval = (postId: string): Event => ({ id: `approval-${postId}`, kind: 4550, pubkey: "moderator", created_at: 2, content: "", tags: [["e", postId]], sig: "sig" });
-const candidates = ["wss://one", "wss://two", "wss://three", "wss://four"].map((url) => ({ url, source: "configured" as const }));
+const relayUrls = ["wss://one", "wss://two", "wss://three", "wss://four"];
 
 describe("createDiscussionModerationSnapshot", () => {
   it("excludes moderator requests from primary events", () => {
@@ -20,8 +20,8 @@ describe("createDiscussionModerationSnapshot", () => {
       discussionId: "34550:author:topic",
       primaryEvents: [post("post-1"), moderatorRequest],
       approvalEvents: [],
-      relayCandidates: candidates,
-      attemptedRelayUrls: candidates.map((candidate) => candidate.url),
+      relayUrls: relayUrls,
+      attemptedRelayUrls: relayUrls,
       completionReason: "eose",
     });
 
@@ -29,15 +29,15 @@ describe("createDiscussionModerationSnapshot", () => {
   });
 
   it("marks a primary event approved when its approval is observed", () => {
-    expect(createDiscussionModerationSnapshot({ discussionId: "d", primaryEvents: [post("post-1")], approvalEvents: [approval("post-1")], relayCandidates: candidates, attemptedRelayUrls: ["wss://one"], completionReason: "eose" }).approvalState).toBe("approved");
+    expect(createDiscussionModerationSnapshot({ discussionId: "d", primaryEvents: [post("post-1")], approvalEvents: [approval("post-1")], relayUrls: relayUrls, attemptedRelayUrls: ["wss://one"], completionReason: "eose" }).approvalState).toBe("approved");
   });
 
   it("keeps an unobserved approval unknown after a partial read", () => {
-    expect(createDiscussionModerationSnapshot({ discussionId: "d", primaryEvents: [post("post-1")], approvalEvents: [], relayCandidates: candidates, attemptedRelayUrls: ["wss://one", "wss://two", "wss://three"], completionReason: "idle-timeout" }).approvalState).toBe("unknown");
+    expect(createDiscussionModerationSnapshot({ discussionId: "d", primaryEvents: [post("post-1")], approvalEvents: [], relayUrls: relayUrls, attemptedRelayUrls: ["wss://one", "wss://two", "wss://three"], completionReason: "idle-timeout" }).approvalState).toBe("unknown");
   });
 
   it("marks unapproved only after every candidate reaches EOSE without approval", () => {
-    expect(createDiscussionModerationSnapshot({ discussionId: "d", primaryEvents: [post("post-1")], approvalEvents: [], relayCandidates: candidates, attemptedRelayUrls: candidates.map((candidate) => candidate.url), completionReason: "eose" }).approvalState).toBe("unapproved");
+    expect(createDiscussionModerationSnapshot({ discussionId: "d", primaryEvents: [post("post-1")], approvalEvents: [], relayUrls: relayUrls, attemptedRelayUrls: relayUrls, completionReason: "eose" }).approvalState).toBe("unapproved");
   });
 
   it("does not treat an approval for another post as approval", () => {
@@ -45,8 +45,8 @@ describe("createDiscussionModerationSnapshot", () => {
       discussionId: "d",
       primaryEvents: [post("post-1")],
       approvalEvents: [approval("post-2")],
-      relayCandidates: candidates,
-      attemptedRelayUrls: candidates.map((candidate) => candidate.url),
+      relayUrls: relayUrls,
+      attemptedRelayUrls: relayUrls,
       completionReason: "eose",
     }).approvalState).toBe("unapproved");
   });
@@ -56,8 +56,8 @@ describe("createDiscussionModerationSnapshot", () => {
       discussionId: "d",
       primaryEvents: [post("post-1")],
       approvalEvents: [approval("post-1")],
-      relayCandidates: candidates,
-      attemptedRelayUrls: candidates.map((candidate) => candidate.url),
+      relayUrls: relayUrls,
+      attemptedRelayUrls: relayUrls,
       completionReason: "eose" as const,
     };
     expect([
@@ -72,7 +72,7 @@ describe("createDiscussionModerationSnapshot", () => {
       discussionId: "d",
       primaryEvents: [post("post-1")],
       approvalEvents: [],
-      relayCandidates: candidates,
+      relayUrls: relayUrls,
       attemptedRelayUrls: ["wss://one"],
       completionReason: "idle-timeout",
     });
@@ -80,7 +80,7 @@ describe("createDiscussionModerationSnapshot", () => {
       discussionId: "d",
       primaryEvents: [post("post-1")],
       approvalEvents: [approval("post-1")],
-      relayCandidates: candidates,
+      relayUrls: relayUrls,
       attemptedRelayUrls: ["wss://two", "wss://three", "wss://four"],
       completionReason: "eose",
     });
@@ -94,12 +94,14 @@ describe("loadDiscussionModerationSnapshot", () => {
     const completion = (events: Event[], completionReason: "eose" | "idle-timeout") => ({
       events,
       completionReason,
+      duplicateCount: 0,
+      elapsedMs: 1,
       attemptedRelayUrls: ["wss://one"],
       successfulEventRelayUrls: events.length > 0 ? ["wss://one"] : [],
       sourceRelayUrlsByEventId: Object.fromEntries(events.map((event) => [event.id, ["wss://one"]])),
       attempts: [],
     });
-    const mockedExecuteDiscussionRead = jest.mocked(executeDiscussionRead);
+    const mockedExecuteDiscussionRead = jest.mocked(executeNostrRead);
     mockedExecuteDiscussionRead
       .mockResolvedValueOnce(completion([post("post-1")], "eose"))
       .mockResolvedValueOnce(completion([approval("post-1")], "idle-timeout"));
@@ -107,11 +109,13 @@ describe("loadDiscussionModerationSnapshot", () => {
 
     const snapshot = await loadDiscussionModerationSnapshot(
       service,
-      { relayLimit: 3, idleTimeoutMs: 100, hardTimeoutMs: 300, dedupWindowMs: 0 },
-      { discussionId: "34550:author:topic", configured: ["wss://one"], defaults: [] },
+      { idleTimeoutMs: 100, hardTimeoutMs: 300, dedupWindowMs: 0 },
+      { discussionId: "34550:author:topic", relayUrls },
     );
 
     expect(mockedExecuteDiscussionRead).toHaveBeenCalledTimes(2);
+    expect(mockedExecuteDiscussionRead.mock.calls[0]?.[1].relayUrls).toEqual(relayUrls);
+    expect(mockedExecuteDiscussionRead.mock.calls[1]?.[1].relayUrls).toEqual(relayUrls);
     expect(mockedExecuteDiscussionRead.mock.calls[0]?.[1].plan).toMatchObject({
       filters: [{ kinds: [1111, 1], "#a": ["34550:author:topic"], limit: 10 }],
       idleTimeoutMs: 100,
@@ -134,23 +138,24 @@ describe("loadDiscussionModerationSnapshot", () => {
     const completion = (events: Event[], completionReason: "eose" | "idle-timeout") => ({
       events,
       completionReason,
+      duplicateCount: 0,
+      elapsedMs: 1,
       attemptedRelayUrls: ["wss://one"],
       successfulEventRelayUrls: [],
       sourceRelayUrlsByEventId: {},
       attempts: [],
     });
     const service = { getEventsWithCompletion: jest.fn() };
-    jest.mocked(executeDiscussionRead)
+    jest.mocked(executeNostrRead)
       .mockResolvedValueOnce(completion([post("post-1")], "eose"))
       .mockResolvedValueOnce(completion([], "idle-timeout"));
 
     const snapshot = await loadDiscussionModerationSnapshot(
       service,
-      { relayLimit: 3, idleTimeoutMs: 100, hardTimeoutMs: 300, dedupWindowMs: 0 },
+      { idleTimeoutMs: 100, hardTimeoutMs: 300, dedupWindowMs: 0 },
       {
         discussionId: "34550:author:topic",
-        configured: ["wss://one"],
-        defaults: [],
+        relayUrls,
       },
     );
 
@@ -158,44 +163,36 @@ describe("loadDiscussionModerationSnapshot", () => {
     expect(snapshot.approvalState).toBe("unknown");
   });
 
-  it("passes the complete relay candidate sources to the common executor", async () => {
+  it("passes provider-selected relay URLs to the common executor", async () => {
     const completion = (events: Event[]) => ({
       events,
       completionReason: "eose" as const,
+      duplicateCount: 0,
+      elapsedMs: 1,
       attemptedRelayUrls: [],
       successfulEventRelayUrls: [],
       sourceRelayUrlsByEventId: {},
       attempts: [],
     });
-    const mockedExecuteDiscussionRead = jest.mocked(executeDiscussionRead);
+    const mockedExecuteDiscussionRead = jest.mocked(executeNostrRead);
     mockedExecuteDiscussionRead.mockReset().mockResolvedValue(completion([]));
     const service = { getEventsWithCompletion: jest.fn() };
-    const configured = [
-      "wss://configured-1",
-      "wss://configured-2",
-      "wss://configured-3",
-      "wss://configured-4",
+    const providerRelayUrls = [
+      "wss://provider-1",
+      "wss://provider-2",
+      "wss://provider-3",
+      "wss://provider-4",
     ];
 
     await loadDiscussionModerationSnapshot(
       service,
-      { relayLimit: 3, idleTimeoutMs: 100, hardTimeoutMs: 300, dedupWindowMs: 0 },
+      { idleTimeoutMs: 100, hardTimeoutMs: 300, dedupWindowMs: 0 },
       {
         discussionId: "34550:author:topic",
-        hints: ["wss://hint"],
-        recommended: ["wss://recommended"],
-        successful: ["wss://successful"],
-        configured,
-        defaults: ["wss://default"],
+        relayUrls: providerRelayUrls,
       },
     );
 
-    expect(mockedExecuteDiscussionRead.mock.calls[0]?.[1].candidates).toEqual({
-      hints: ["wss://hint"],
-      recommended: ["wss://recommended"],
-      successful: ["wss://successful"],
-      configured,
-      defaults: ["wss://default"],
-    });
+    expect(mockedExecuteDiscussionRead.mock.calls[0]?.[1].relayUrls).toEqual(providerRelayUrls);
   });
 });

@@ -3,11 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import React, { useState } from "react";
-import {
-  LightBulbIcon,
-  ShieldCheckIcon,
-  UserGroupIcon,
-} from "@heroicons/react/24/outline";
+import { Lightbulb, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -15,7 +11,6 @@ import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
 } from "@/lib/config/discussion-config";
-import { LoginModal } from "@/components/discussion/LoginModal";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import { getAdminPubkeyHex } from "@/lib/nostr/nostr-utils";
 import {
@@ -26,6 +21,7 @@ import Button from "@/components/ui/Button";
 import PageHeader from "@/components/layouts/PageHeader";
 import { UserIdentity } from "@/components/ui/UserIdentity";
 import { logger } from "@/utils/logger";
+import { buildLoginRoute } from "@/lib/navigation/auth-route";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
@@ -41,7 +37,6 @@ export default function DiscussionCreatePage() {
   });
   const [moderatorInput, setModeratorInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [createdNaddr, setCreatedNaddr] = useState<string>("");
@@ -62,7 +57,7 @@ export default function DiscussionCreatePage() {
 
   const handleSubmit = async () => {
     if (!user.isLoggedIn) {
-      setShowLoginModal(true);
+      router.push(buildLoginRoute("/discussions/create"));
       return;
     }
 
@@ -197,7 +192,7 @@ export default function DiscussionCreatePage() {
         <div className="mb-8">
           <Link
             href="/discussions"
-            className="btn btn-ghost min-h-[44px] rounded-full dark:rounded-sm mb-4"
+            className="btn text-base btn-ghost min-h-[44px] rounded-full dark:rounded-sm mb-4"
           >
             <span>← 会話一覧に戻る</span>
           </Link>
@@ -213,54 +208,25 @@ export default function DiscussionCreatePage() {
               <div className="space-y-4 ruby-text">
                 <div className="flex gap-4 items-center">
                   <div className="flex-shrink-0">
-                    <LightBulbIcon className="w-6 h-6 text-primary" aria-hidden="true" />
-                    {/*
-                      className="w-6 h-6 text-primary"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z"
-                        clipRule="evenodd"
-                      />
-                    */}
+                    <Lightbulb className="w-6 h-6 text-primary" aria-hidden="true" />
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-base text-base-content">
                     作成すればURLが作られて、すぐに会話を始めることができます。
                   </p>
                 </div>
                 <div className="flex gap-4 items-center">
                   <div className="flex-shrink-0">
-                    <ShieldCheckIcon className="w-6 h-6 text-primary" aria-hidden="true" />
-                    {/*
-                      className="w-6 h-6 text-primary"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                        clipRule="evenodd"
-                      />
-                    */}
+                    <ShieldCheck className="w-6 h-6 text-primary" aria-hidden="true" />
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-base text-base-content">
                     会話一覧への掲載は、基本情報タブから申請できます。管理人が確認します。
                   </p>
                 </div>
                 <div className="flex gap-4 items-center">
                   <div className="flex-shrink-0">
-                    <UserGroupIcon className="w-6 h-6 text-primary" aria-hidden="true" />
-                    {/*
-                      className="w-6 h-6 text-primary"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                    */}
+                    <Users className="w-6 h-6 text-primary" aria-hidden="true" />
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-base text-base-content">
                     悪意のある書き込みを防ぐために、投稿を手作業で承認する必要があります。一日の終わりなどにまとめてやるのがおすすめです。仲間と一緒に作業することもできます。
                   </p>
                 </div>
@@ -298,7 +264,7 @@ export default function DiscussionCreatePage() {
                     maxLength={100}
                     autoComplete="off"
                   />
-                  <div className="text-gray-500 mt-1">
+                  <div className="text-base-content mt-1">
                     {formData.title.length}/100文字
                   </div>
                 </div>
@@ -323,7 +289,7 @@ export default function DiscussionCreatePage() {
                     maxLength={500}
                     autoComplete="off"
                   />
-                  <div className="text-gray-500 mt-1">
+                  <div className="text-base-content mt-1">
                     {formData.description.length}/500文字
                   </div>
                 </div>
@@ -344,7 +310,7 @@ export default function DiscussionCreatePage() {
                           <button
                             type="button"
                             onClick={() => removeModerator(npub)}
-                            className="btn btn-ghost min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-0"
+                            className="btn text-base btn-ghost min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-0"
                             aria-label={`モデレーター ${npub} を削除`}
                             disabled={isSubmitting}
                           >
@@ -355,7 +321,7 @@ export default function DiscussionCreatePage() {
                     </div>
                   )}
 
-                  <div className="text-gray-600 dark:text-gray-400 mt-1 mb-2 ruby-text">
+                  <div className="text-base-content mt-1 mb-2 ruby-text">
                     投稿の承認を手伝ってくれる人のユーザーIDを入力してください。
                   </div>
 
@@ -382,8 +348,8 @@ export default function DiscussionCreatePage() {
                 </div>
 
                 {errors.length > 0 && (
-                  <div className="alert alert-error" role="alert" aria-live="assertive">
-                    <ul className="text-sm">
+                  <div className="alert alert-error alert-soft text-base-content!" role="alert" aria-live="assertive">
+                    <ul className="text-base">
                       {errors.map((error, index) => (
                         <li key={index} className="ruby-text">{error}</li>
                       ))}
@@ -413,10 +379,6 @@ export default function DiscussionCreatePage() {
         </div>
       </div>
 
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-      />
     </div>
   );
 }

@@ -3,17 +3,15 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/layouts/PageHeader";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
-import { useDiscussionContentData } from "@/components/discussion/DiscussionContentDataProvider";
+import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
 import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
-  getDiscussionReadStrategyConfig,
 } from "@/lib/config/discussion-config";
 
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
@@ -23,8 +21,6 @@ import {
   DisabledReasonText,
 } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
-import { createDiscussionNdkGateway } from "@/lib/nostr/discussion-ndk-gateway";
-import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
 import {
   formatRelativeTime,
   getAdminPubkeyHex,
@@ -36,90 +32,53 @@ import type {
   PostApproval,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import {
-  CheckBadgeIcon,
-  InformationCircleIcon,
-} from "@heroicons/react/24/outline";
-import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
+import { BadgeCheck, Info } from "lucide-react";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrServiceConfig = getNostrServiceConfig();
-const readStrategy = typeof getDiscussionReadStrategyConfig === "function" ? getDiscussionReadStrategyConfig() : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
 const nostrService = createNostrService(nostrServiceConfig);
-const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function PostApprovalPage() {
   const params = useParams();
   const naddrParam = params.naddr as string;
-  const discussionMeta = useDiscussionMeta();
-  const discussion = discussionMeta?.discussion ?? null;
-  const isDiscussionLoading = discussionMeta?.isLoading ?? false;
-  const discussionCompletionReason = discussionMeta?.completionReason ?? null;
+  const detail = useDiscussionDetail();
+  const discussion = detail.snapshot?.discussion ?? null;
+  const isDiscussionLoading = detail.state === "loading";
+  const discussionCompletionReason =
+    detail.completionReason ??
+    (detail.state === "partial"
+      ? "idle-timeout"
+      : detail.state === "error"
+        ? "hard-timeout"
+        : detail.state === "ready"
+          ? "eose"
+          : null);
 
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const [revokingIds, setRevokingIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
-  const moderationReadGenerationRef = useRef(0);
-
   const { user, signEvent } = useAuth();
-  const {
-    posts,
-    approvals,
-    isLoading,
-    completionReason,
-    approvalState,
-    reload,
-    mergeModerationEvents,
-    addApproval,
-    removeApproval,
-  } = useDiscussionContentData();
+  const posts = detail.snapshot?.posts ?? [];
+  const approvals = detail.snapshot?.approvals ?? [];
+  const isLoading = detail.state === "loading";
+  const completionReason = discussionCompletionReason;
+  const approvalState = posts.some((post) => post.approvalState === "unknown")
+    ? "unknown"
+    : detail.state === "ready"
+      ? "approved"
+      : "unknown";
+  const reload = detail.reload;
+  const addApproval = detail.addApproval;
+  const removeApproval = detail.removeApproval;
 
-  // Parse naddr and extract discussion info
   const discussionInfo = useMemo(() => {
     if (!naddrParam) return null;
     return extractDiscussionFromNaddr(naddrParam);
   }, [naddrParam]);
-  const loadInitialModerationData = useCallback(async () => {
-    const readGeneration = ++moderationReadGenerationRef.current;
-    if (!isDiscussionsEnabled() || !discussionInfo) return;
-    try {
-      const result = await executeDiscussionRead(discussionGateway, {
-        plan: {
-          target: "discussion-approvals",
-          filters: [
-            { kinds: [1111, 1], "#a": [discussionInfo.discussionId], limit: 50 },
-            { kinds: [4550], "#a": [discussionInfo.discussionId], limit: 50 },
-          ],
-          relayHints: discussionInfo.relays ?? [],
-          idleTimeoutMs: readStrategy.idleTimeoutMs,
-          hardTimeoutMs: readStrategy.hardTimeoutMs,
-        },
-        candidates: {
-          configured: (nostrServiceConfig.relays ?? []).filter((relay) => relay.read).map((relay) => relay.url),
-          defaults: [],
-        },
-      });
-      if (moderationReadGenerationRef.current !== readGeneration) return;
-      mergeModerationEvents({
-        primaryEvents: result.events.filter((event) => event.kind !== 4550 && !isModeratorRequestEvent(event)),
-        approvalEvents: result.events.filter((event) => event.kind === 4550),
-      });
-    } catch (error) {
-      logger.error("Failed to load moderation data:", error);
-    }
-  }, [discussionInfo, mergeModerationEvents]);
-
-  useEffect(() => {
-    void loadInitialModerationData();
-    return () => {
-      moderationReadGenerationRef.current += 1;
-    };
-  }, [loadInitialModerationData]);
 
   const handleReload = useCallback(() => {
     void reload();
-    void loadInitialModerationData();
-  }, [loadInitialModerationData, reload]);
+  }, [reload]);
 
   const handleApprovePost = async (post: DiscussionPost) => {
     const canModerate = discussion
@@ -220,7 +179,7 @@ export default function PostApprovalPage() {
           />
           <Link
             href="/discussions"
-            className="btn btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -240,8 +199,20 @@ export default function PostApprovalPage() {
     );
   }
 
-  const pendingPosts = posts.filter((post) => !post.approved);
-  const approvedPosts = posts.filter((post) => post.approved);
+  if (detail.state === "loading") {
+    return (
+      <div role="status">
+        <span className="ruby-text">会話情報を読み込み中...</span>
+      </div>
+    );
+  }
+
+  const pendingPosts = posts.filter(
+    (post) => !post.approved || post.approvalState === "unknown",
+  );
+  const approvedPosts = posts.filter(
+    (post) => post.approved && post.approvalState !== "unknown",
+  );
   const hasApprovalPermission = Boolean(
     discussion &&
     (user.pubkey === discussion.authorPubkey ||
@@ -257,11 +228,11 @@ export default function PostApprovalPage() {
 
   return (
     <div className="py-8">
-      {!hasApprovalPermission && (
+      {discussion && detail.state !== "error" && !hasApprovalPermission && (
         <div className="card bg-base-100 shadow-sm mb-6" role="status">
           <div className="card-body">
             <div className="flex flex-nowrap gap-2 items-center">
-              <InformationCircleIcon
+              <Info
                 className="h-6 w-6 shrink-0 text-info"
                 aria-hidden="true"
               />
@@ -302,19 +273,54 @@ export default function PostApprovalPage() {
               ></div>
             ))}
           </div>
+        ) : detail.state === "error" ? (
+            <div
+              className="alert alert-error alert-soft text-base-content!"
+              role="status"
+              aria-live="polite"
+            >
+              <span>{detail.error ?? "会話データの取得に失敗しました。"}</span>
+              <button
+                type="button"
+                className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                onClick={() => void reload()}
+              >
+                <span className="ruby-text">再読み込み</span>
+              </button>
+            </div>
         ) : !discussion ? (
-          discussionCompletionReason === "idle-timeout" ||
-            discussionCompletionReason === "hard-timeout" ||
-            discussionCompletionReason === "cancelled" ? (
-            <div className="alert alert-warning" role="alert">
+          detail.state === "partial" ? (
+            <div
+              className="alert alert-warning alert-soft text-base-content!"
+              role="status"
+              aria-live="polite"
+            >
               <span>
                 会話データの取得に時間がかかっています（{discussionCompletionReason}）。
                 受信待機中または relay 応答遅延の可能性があります。
               </span>
+              <button
+                type="button"
+                className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                onClick={() => void reload()}
+              >
+                <span className="ruby-text">再読み込み</span>
+              </button>
             </div>
           ) : (
-            <div className="alert alert-warning" role="alert">
+            <div
+              className="alert alert-warning alert-soft text-base-content!"
+              role="status"
+              aria-live="polite"
+            >
               <span>会話が見つかりません。</span>
+              <button
+                type="button"
+                className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                onClick={() => void reload()}
+              >
+                <span className="ruby-text">再読み込み</span>
+              </button>
             </div>
           )
         ) : (
@@ -356,10 +362,11 @@ export default function PostApprovalPage() {
                             <button
                               onClick={() => handleApprovePost(post)}
                               disabled={
-                                approvingIds.has(post.id) ||
-                                !hasApprovalPermission
+                                !hasApprovalPermission ||
+                                post.approvalState === "unknown" ||
+                                approvingIds.has(post.id)
                               }
-                              className="ml-4 btn btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+                              className="ml-4 btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm"
                             >
                               <span>
                                 {approvingIds.has(post.id) ? "" : "承認"}
@@ -374,7 +381,7 @@ export default function PostApprovalPage() {
                               )}
                             />
                           )}
-                          <div className="text-gray-500">
+                          <div className="text-base-content">
                             {formatRelativeTime(post.createdAt)}
                           </div>
                         </div>
@@ -385,14 +392,14 @@ export default function PostApprovalPage() {
                   <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                     <div className="card-body">
                       <div className="py-8 ruby-text">
-                        <CheckBadgeIcon
+                        <BadgeCheck
                           aria-label="承認待ちなし"
                           className="h-12 w-12 text-gray-400"
                         />
                         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
                           承認待ちの投稿はありません
                         </h3>
-                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        <p className="mt-2 text-base text-base-content">
                           新しい投稿が投稿されると、ここに表示されます。
                         </p>
                       </div>
@@ -409,7 +416,7 @@ export default function PostApprovalPage() {
                     {approvedPosts.slice(0, 10).map((post) => (
                       <div
                         key={post.id}
-                        className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 opacity-75"
+                        className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700"
                       >
                         <div className="card-body p-4">
                           <div className="flex justify-between items-start mb-3">
@@ -444,7 +451,7 @@ export default function PostApprovalPage() {
                                     disabled={
                                       revokingIds.has(post.id) || !revokeAllowed
                                     }
-                                    className="btn btn-warning min-h-[44px] rounded-full dark:rounded-sm"
+                                    className="btn text-base btn-warning min-h-[44px] rounded-full dark:rounded-sm"
                                   >
                                     <span>
                                       {revokingIds.has(post.id)
@@ -478,7 +485,7 @@ export default function PostApprovalPage() {
                               ) : null
                             );
                           })()}
-                          <div className="text-gray-500">
+                          <div className="text-base-content">
                             承認:{" "}
                             {formatRelativeTime(
                               post.approvedAt || post.createdAt
@@ -488,7 +495,7 @@ export default function PostApprovalPage() {
                       </div>
                     ))}
                     {approvedPosts.length > 10 && (
-                      <p className="text-gray-500 text-sm">
+                      <p className="text-base-content text-base">
                         最新10件を表示中（全{approvedPosts.length}件）
                       </p>
                     )}
@@ -497,14 +504,14 @@ export default function PostApprovalPage() {
                   <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                     <div className="card-body">
                       <div className="py-8 ruby-text">
-                        <CheckBadgeIcon
+                        <BadgeCheck
                           aria-label="承認済みなし"
                           className="h-12 w-12 text-gray-400"
                         />
                         <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">
                           承認済みの投稿はありません
                         </h3>
-                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        <p className="mt-2 text-base text-base-content">
                           投稿が承認されると、ここに表示されます。
                         </p>
                       </div>

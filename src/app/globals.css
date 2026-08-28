@@ -1,9 +1,12 @@
 @import "tailwindcss";
+
 @plugin "daisyui" {
   themes: cupcake --default, dark;
 }
+
 /* daisyuiとnostrの競合のため */
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
 :root {
   --focus-color: #0056b3;
   --focus-color-light: rgba(0, 86, 179, 0.3);
@@ -19,12 +22,23 @@ body {
   background-color: var(--color-base-300);
 }
 
+p,
+body,
+a,
+li,
+dt,
+dd,
+th,
+td,
+code {
+  font-size: 16px;
+}
+
 /* アクセシビリティ対応のためのユーティリティクラス */
 .text-resizable {
   /* フォントサイズをrem単位で指定（ルート要素に相対的） */
   font-size: 1rem;
-  /* 最小サイズと最大サイズを設定（200%拡大対応） */
-  font-size: clamp(1rem, 2vw, 2rem);
+  font-size: 1rem;
 }
 
 /* コンテナの横スクロール防止 */
@@ -100,6 +114,7 @@ textarea:focus-visible {
     color: SelectedItemText;
   }
 }
+
 /* Safari用の暫定的な処置 */
 .menu span {
   white-space: nowrap;
@@ -116,8 +131,7 @@ textarea:focus-visible {
   background-color: var(--color-primary);
   color: var(--color-primary-content);
   box-shadow: none;
-  border: 2px solid
-    color-mix(in oklab, var(--color-primary), rgb(0, 0, 0) calc(5%));
+  border: 2px solid color-mix(in oklab, var(--color-primary), rgb(0, 0, 0) calc(5%));
   border-radius: var(--radius-md);
 }
 
@@ -125,24 +139,49 @@ textarea:focus-visible {
 #main-content {
   padding-bottom: max(5rem, calc(4rem + env(safe-area-inset-bottom)));
 }
+
+/* DaisyUI's muted inactive-tab rule must not override the contrast-safe token. */
+.tabs.tabs-box>.tab.text-base-content {
+  color: var(--color-base-content);
+}
+
+/* Ruby annotations use the ruby line box for cross-browser vertical spacing. */
+
+p,
+span:has(ruby) {
+  line-height: 1.5;
+}
+
+ruby {
+  line-height: 2.5;
+}
+
+ruby:has(.hidden) {
+  line-height: 1.5;
+}
+
 rt {
-  margin-bottom: 0.3rem;
-  margin-top: 0.3rem;
-  font-size: 70%;
-  color: var(--color-secondary-content);
+  font-size: 0.7em;
+  position: relative;
+  top: -0.3em;
 }
-.alert-error rt {
-  color: var(--color-error-content);
+
+.btn:has(ruby) {
+  padding-top: 0.5em;
 }
-.alert-success rt {
-  color: var(--color-success-content);
+
+.btn:has(.hidden) {
+  padding-top: 0;
 }
-.btn-primary rt {
-  color: var(--color-primary-content);
+
+.tab:has(ruby) {
+  padding-top: 0.2em;
 }
-.btn-warning rt {
-  color: var(--color-warning-content);
+
+.tab:has(.hidden) {
+  padding-top: 0;
 }
-.btn:is(:disabled, [disabled], .btn-disabled) rt {
-  color: color-mix(in oklch, var(--color-base-content) 20%, rgba(0, 0, 0, 0));
+
+.menu li a:has(ruby) {
+  padding-top: 1em;
 }

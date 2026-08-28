@@ -41,8 +41,8 @@ npm run build
 
 ## 手動確認
 
-1. relay hintだけを無応答にするfixtureを使う。
-2. 次候補relayだけから掲載投稿とkind 34550を返す。
+1. Providerが選択した初回relay群を無応答にするfixtureを使う。
+2. Providerが選択した次候補relayだけから掲載投稿とkind 34550を返す。
 3. `/discussions`を開く。
 4. 初回結果または部分取得状態を確認する。
 5. retry後に会話が表示され、EOSEなら警告が消えることを確認する。

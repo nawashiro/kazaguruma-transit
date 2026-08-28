@@ -127,6 +127,35 @@ describe("NostrService event retrieval", () => {
     jest.useRealTimers();
   });
 
+  it("waits for connection before starting a read subscription", async () => {
+    let resolveConnect: (() => void) | undefined;
+    mockConnect.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveConnect = resolve;
+        }),
+    );
+    const service = new NostrService(config);
+    const resultPromise = service.getEventsWithCompletion(
+      [{ kinds: [1] }],
+      { idleTimeoutMs: 1000, hardTimeoutMs: 2000 },
+    );
+
+    await flushMicrotasks();
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    expect(mockSubscribe).not.toHaveBeenCalled();
+
+    resolveConnect?.();
+    await flushMicrotasks();
+    expect(mockSubscribe).toHaveBeenCalledTimes(1);
+
+    const handlers = mockSubscribe.mock.calls[0]?.[1] as {
+      onEose?: () => void;
+    };
+    handlers.onEose?.();
+    await resultPromise;
+  });
+
   it("getEventsOnEose deduplicates and sorts events by created_at desc", async () => {
     const handlersList: Array<{
       onEvent?: (event: unknown) => void;
@@ -177,6 +206,45 @@ describe("NostrService event retrieval", () => {
     ]);
   });
 
+  it("getEventsWithCompletion keeps only the newest address version from subscribe", async () => {
+    let handlers: {
+      onEvent?: (event: unknown) => void;
+      onEose?: () => void;
+    } = {};
+    mockSubscribe.mockImplementation((_filter, options) => {
+      handlers = options;
+      return { stop: mockStop };
+    });
+
+    const olderEvent = {
+      id: "f".repeat(64),
+      created_at: 100,
+      kind: 34550,
+      pubkey: "a".repeat(64),
+      content: "older",
+      tags: [["d", "community"]],
+      sig: "sig",
+    };
+    const newerEvent = {
+      ...olderEvent,
+      id: "0".repeat(64),
+      created_at: 200,
+      content: "newer",
+    };
+    const service = new NostrService(config);
+
+    const resultPromise = service.getEventsWithCompletion([{ kinds: [34550] }]);
+    await flushMicrotasks();
+    handlers.onEvent?.(createNdkEvent(olderEvent, "wss://old"));
+    handlers.onEvent?.(createNdkEvent(newerEvent, "wss://new"));
+    handlers.onEose?.();
+
+    const result = await resultPromise;
+
+    expect(result.events).toEqual([newerEvent]);
+    expect(result.eventCount).toBe(1);
+  });
+
   it("getEventsWithCompletion returns idle-timeout when no events arrive", async () => {
     mockSubscribe.mockReturnValue({ stop: mockStop });
     const service = new NostrService(config);
@@ -211,7 +279,8 @@ describe("NostrService event retrieval", () => {
     await jest.advanceTimersByTimeAsync(101);
 
     expect(completionReason).toBe("idle-timeout");
-    expect(mockStop).toHaveBeenCalledTimes(1);
+    expect(mockSubscribe).not.toHaveBeenCalled();
+    expect(mockStop).not.toHaveBeenCalled();
   });
 
   it("limits a selected read with NDKRelaySet and preserves duplicate source relays", async () => {
@@ -286,7 +355,53 @@ describe("NostrService event retrieval", () => {
     expect(result.eventCount).toBe(3);
   });
 
-  it("streamEventsOnEvent emits on each arrival and stops on EOSE", () => {
+  it("waits for connection before starting streamEventsOnEvent subscriptions", async () => {
+    let resolveConnect: (() => void) | undefined;
+    mockConnect.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveConnect = resolve;
+        }),
+    );
+    const service = new NostrService(config);
+    mockSubscribe.mockReturnValue({ stop: mockStop });
+    const cleanup = service.streamEventsOnEvent(
+      [{ kinds: [1] }],
+      { onEvent: jest.fn() },
+    );
+
+    await flushMicrotasks();
+    expect(mockSubscribe).not.toHaveBeenCalled();
+    resolveConnect?.();
+    await flushMicrotasks();
+    expect(mockSubscribe).toHaveBeenCalledTimes(1);
+    cleanup();
+  });
+
+  it("waits for connection before starting subscribeToEvents subscriptions", async () => {
+    let resolveConnect: (() => void) | undefined;
+    mockConnect.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveConnect = resolve;
+        }),
+    );
+    const service = new NostrService(config);
+    mockSubscribe.mockReturnValue({ stop: mockStop });
+    const cleanupPromise = service.subscribeToEvents(
+      [{ kinds: [1] }],
+      jest.fn(),
+    );
+
+    await flushMicrotasks();
+    expect(mockSubscribe).not.toHaveBeenCalled();
+    resolveConnect?.();
+    const cleanup = await cleanupPromise;
+    expect(mockSubscribe).toHaveBeenCalledTimes(1);
+    cleanup();
+  });
+
+  it("streamEventsOnEvent emits on each arrival and stops on EOSE", async () => {
     let handlers: { onEvent?: (event: unknown) => void; onEose?: () => void } = {};
 
     mockSubscribe.mockImplementation((_filter, opts) => {
@@ -303,6 +418,7 @@ describe("NostrService event retrieval", () => {
       onEose,
       timeoutMs: 5000,
     });
+    await flushMicrotasks();
 
     const firstEvent = {
       id: "a",
@@ -335,7 +451,7 @@ describe("NostrService event retrieval", () => {
     expect(onEose).toHaveBeenCalledWith([secondEvent, firstEvent]);
   });
 
-  it("streamEventsOnEvent enforces timeout cleanup", () => {
+  it("streamEventsOnEvent enforces timeout cleanup", async () => {
     mockSubscribe.mockReturnValue({ stop: mockStop });
 
     const service = new NostrService(config);
@@ -346,6 +462,7 @@ describe("NostrService event retrieval", () => {
       onEose,
       timeoutMs: 100,
     });
+    await flushMicrotasks();
 
     jest.advanceTimersByTime(150);
 
@@ -353,7 +470,7 @@ describe("NostrService event retrieval", () => {
     expect(onEose).toHaveBeenCalledTimes(1);
   });
 
-  it("streamEventsOnEvent survives synchronous EOSE", () => {
+  it("streamEventsOnEvent survives synchronous EOSE", async () => {
     mockSubscribe.mockImplementation((_filter, opts) => {
       opts.onEose?.();
       return { stop: mockStop };
@@ -362,14 +479,14 @@ describe("NostrService event retrieval", () => {
     const service = new NostrService(config);
     const onEose = jest.fn();
 
-    expect(() =>
-      service.streamEventsOnEvent([{ kinds: [1] }], {
-        onEvent: jest.fn(),
-        onEose,
-      })
-    ).not.toThrow();
+    service.streamEventsOnEvent([{ kinds: [1] }], {
+      onEvent: jest.fn(),
+      onEose,
+    });
+    await flushMicrotasks();
 
     expect(onEose).toHaveBeenCalledWith([]);
+    expect(mockStop).toHaveBeenCalledTimes(1);
   });
 
   it("getApprovalsOnEose normalizes naddr before querying", async () => {

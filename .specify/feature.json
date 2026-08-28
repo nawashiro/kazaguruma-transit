@@ -1,1 +1,3 @@
-{"feature_directory":"specs/017-discussion-read-executor"}
+{
+  "feature_directory": "specs/022-nostr-discussion-read-coordinator"
+}

@@ -1,10 +1,13 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionEditPage from "../page";
 import type { Discussion } from "@/types/discussion";
+import type { NostrEventDTO } from "@/lib/nostr/discussion-ndk-gateway";
+import type { DiscussionDetailModel } from "@/components/discussion/DiscussionDetailProvider";
 
 const mockUseDiscussionMeta = jest.fn();
+const mockUseDiscussionDetail = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ naddr: "naddr-test" }),
@@ -12,6 +15,11 @@ jest.mock("next/navigation", () => ({
     push: jest.fn(),
   }),
 }));
+
+jest.mock(
+  "@/components/discussion/DiscussionDetailProvider",
+  () => ({ useDiscussionDetail: () => mockUseDiscussionDetail() }),
+);
 
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => ({
@@ -56,19 +64,6 @@ jest.mock("@/lib/nostr/nostr-service", () => {
 
 const { __mock: serviceMock } = jest.requireMock("@/lib/nostr/nostr-service");
 
-jest.mock("@/lib/nostr/discussion-ndk-gateway", () => ({
-  createDiscussionNdkGateway: () => ({ queryWithCompletion: jest.fn() }),
-}));
-
-jest.mock("@/lib/discussion/discussion-read-executor", () => {
-  const executeDiscussionRead = jest.fn();
-  return { executeDiscussionRead, __mock: { executeDiscussionRead } };
-});
-
-const { __mock: discussionReadExecutorMock } = jest.requireMock(
-  "@/lib/discussion/discussion-read-executor",
-);
-
 jest.mock("@/lib/nostr/nostr-utils", () => ({
   parseDiscussionEvent: jest.fn((event) => ({
     id: `34550:${event.pubkey}:${event.tags?.find((t: string[]) => t[0] === "d")?.[1] || ""}`,
@@ -83,12 +78,6 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   isValidNpub: () => true,
   npubToHex: (npub: string) => npub,
   getAdminPubkeyHex: () => "a".repeat(64),
-  formatRelativeTime: () => "now",
-}));
-
-jest.mock("@/components/discussion/LoginModal", () => ({
-  __esModule: true,
-  LoginModal: () => <div>Login Modal</div>,
 }));
 
 jest.mock("@/components/ui/Button", () => {
@@ -106,97 +95,149 @@ jest.mock("@/components/ui/Button", () => {
   };
 });
 
+const promotionRequestEvent: NostrEventDTO = {
+  id: "promotion-request-1",
+  kind: 1111,
+  pubkey: "applicant",
+  created_at: 124,
+  content: "昇格を希望します",
+  tags: [
+    ["a", "34550:author:demo"],
+    ["t", "moderator-request"],
+  ],
+  sig: "promotion-signature",
+};
+const detailDiscussion: Discussion = {
+  id: "34550:author:demo",
+  title: "Edit Me",
+  description: "Updated description",
+  authorPubkey: "author",
+  dTag: "demo",
+  moderators: [],
+  createdAt: 123,
+  event: {
+    id: "event-1",
+    pubkey: "author",
+    kind: 34550,
+    created_at: 123,
+    tags: [
+      ["d", "demo"],
+      ["name", "Edit Me"],
+      ["description", "desc"],
+    ],
+    content: "Updated description",
+    sig: "sig",
+  },
+};
+const detailSnapshotFixture = {
+  discussion: detailDiscussion,
+  posts: [],
+  approvals: [],
+  moderatorRequests: [
+    {
+      id: promotionRequestEvent.id,
+      applicantPubkey: promotionRequestEvent.pubkey,
+      createdAt: promotionRequestEvent.created_at,
+      reason: promotionRequestEvent.content,
+      event: promotionRequestEvent,
+    },
+  ],
+  evaluations: [],
+  userEvaluationIds: new Set<string>(),
+  relayProvenance: { successfulRelayUrlsByPhase: {} },
+};
+const createDetailModel = (
+  overrides: Partial<DiscussionDetailModel> = {},
+): DiscussionDetailModel => ({
+  state: "ready" as const,
+  snapshot: detailSnapshotFixture,
+  error: null,
+  completionReason: "eose",
+  relayProvenance: detailSnapshotFixture.relayProvenance,
+  isFallback: false,
+  reload: jest.fn(async () => undefined),
+  addPost: jest.fn(),
+  addApproval: jest.fn(),
+  removeApproval: jest.fn(),
+  ...overrides,
+});
+
 describe("DiscussionEditPage streaming", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
-      events: [],
-      completionReason: "eose",
-      attemptedRelayUrls: [],
-      successfulEventRelayUrls: [],
-      sourceRelayUrlsByEventId: {},
-      attempts: [],
-    });
-    const layoutDiscussion: Discussion = {
-      id: "34550:author:demo",
-      title: "Edit Me",
-      description: "Updated description",
-      authorPubkey: "author",
-      dTag: "demo",
-      moderators: [],
-      createdAt: 123,
-      event: {
-        id: "event-1",
-        pubkey: "author",
-        kind: 34550,
-        created_at: 123,
-        tags: [
-          ["d", "demo"],
-          ["name", "Edit Me"],
-          ["description", "desc"],
-        ],
-        content: "Updated description",
-        sig: "sig",
-      },
-    };
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: layoutDiscussion,
-      isLoading: false,
-      error: null,
-      completionReason: "eose",
-      reload: jest.fn(),
-    });
+    mockUseDiscussionDetail.mockReturnValue(createDetailModel());
+    // The edit route fixture is supplied only by the public detail model.
+    mockUseDiscussionMeta.mockReturnValue(undefined);
   });
 
-  it("loads promotion requests through a bounded completion-aware read", async () => {
+  it("does not render moderator-management controls from promotion requests", async () => {
+    mockUseDiscussionDetail.mockReturnValue(createDetailModel());
     render(<DiscussionEditPage />);
-
-    await waitFor(() =>
-      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalled()
-    );
-    expect(serviceMock.streamEventsOnEvent).not.toHaveBeenCalled();
-    expect(serviceMock.getDiscussions).not.toHaveBeenCalled();
 
     await waitFor(() =>
       expect(screen.getByLabelText("タイトル *")).toHaveValue("Edit Me")
     );
+    expect(screen.queryByRole("heading", { name: "モデレーター管理" })).not.toBeInTheDocument();
+    expect(screen.queryByText("現在のモデレーター（Mnemonic）")).not.toBeInTheDocument();
+    expect(screen.queryByText("昇格申請ユーザー一覧")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("申請理由（任意）")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "モデレーター昇格を申請" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "昇格申請を再取得" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "承認" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "却下" })).not.toBeInTheDocument();
+    expect(serviceMock.streamEventsOnEvent).not.toHaveBeenCalled();
+    expect(serviceMock.getDiscussions).not.toHaveBeenCalled();
   });
 
-  it("keeps a non-EOSE promotion-request read provisional and retries it locally", async () => {
-    discussionReadExecutorMock.executeDiscussionRead.mockResolvedValue({
-      events: [],
-      completionReason: "hard-timeout",
-      attemptedRelayUrls: [],
-      successfulEventRelayUrls: [],
-      sourceRelayUrlsByEventId: {},
-      attempts: [],
-    });
+  it("renders the basic information form for a partial detail snapshot", async () => {
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({ state: "partial" }),
+    );
 
     render(<DiscussionEditPage />);
 
-    expect(
-      await screen.findByRole("alert", { name: "昇格申請の取得は完了していません" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("申請はまだありません。")).not.toBeInTheDocument();
+    expect(await screen.findByLabelText("タイトル *")).toHaveValue("Edit Me");
+    expect(screen.getByRole("heading", { name: "危険な操作" })).toBeInTheDocument();
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: "昇格申請を再取得" }));
-
-    await waitFor(() =>
-      expect(discussionReadExecutorMock.executeDiscussionRead).toHaveBeenCalledTimes(2),
+  it("renders discussion timeout as a polite soft status with reload", async () => {
+    const reload = jest.fn();
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({
+        state: "partial",
+        snapshot: null,
+        completionReason: "hard-timeout",
+        reload,
+      }),
     );
+
+    render(<DiscussionEditPage />);
+
+    const warningText = await screen.findByText(/会話データの取得に時間がかかっています/);
+    const status = warningText.closest<HTMLElement>('[role="status"]');
+    expect(status).not.toBeNull();
+    if (!status) {
+      throw new Error('Expected the edit timeout to be rendered as a status');
+    }
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveClass(
+      "alert",
+      "alert-warning",
+      "alert-soft",
+      "text-base-content!",
+    );
+    expect(status).toHaveTextContent(/会話データの取得に時間がかかっています/);
+    expect(screen.getByRole("button", { name: "再読み込み" })).toBeInTheDocument();
   });
 
   it("does not show not-found while the layout is still loading", () => {
-    discussionReadExecutorMock.executeDiscussionRead.mockImplementationOnce(
-      () => new Promise(() => undefined),
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({
+        state: "loading",
+        snapshot: null,
+        completionReason: null,
+      }),
     );
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: null,
-      isLoading: true,
-      error: null,
-      completionReason: null,
-      reload: jest.fn(),
-    });
 
     render(<DiscussionEditPage />);
 
@@ -205,16 +246,35 @@ describe("DiscussionEditPage streaming", () => {
   });
 
   it("shows not-found only after retrieval has completed without data", async () => {
-    mockUseDiscussionMeta.mockReturnValue({
-      discussion: null,
-      isLoading: false,
-      error: null,
-      completionReason: "eose",
-      reload: jest.fn(),
-    });
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({
+        state: "ready",
+        snapshot: null,
+        completionReason: "eose",
+      }),
+    );
 
     render(<DiscussionEditPage />);
 
     expect(await screen.findByText("会話が見つかりません")).toBeInTheDocument();
+  });
+
+  it("renders detail errors with the public model and reload action", async () => {
+    const reload = jest.fn(async () => undefined);
+    mockUseDiscussionDetail.mockReturnValue(
+      createDetailModel({
+        state: "error",
+        snapshot: null,
+        error: "詳細データの取得に失敗しました。",
+        reload,
+      }),
+    );
+
+    render(<DiscussionEditPage />);
+
+    expect(
+      await screen.findByText("詳細データの取得に失敗しました。"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "再読み込み" })).toBeInTheDocument();
   });
 });

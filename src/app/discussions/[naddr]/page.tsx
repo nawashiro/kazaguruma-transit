@@ -3,30 +3,21 @@
 // Force dynamic rendering to avoid SSR issues with AuthProvider
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/layouts/PageHeader";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
-  getDiscussionReadStrategyConfig,
 } from "@/lib/config/discussion-config";
-import { LoginModal } from "@/components/discussion/LoginModal";
 import { PostPreview } from "@/components/discussion/PostPreview";
 import { EvaluationComponent } from "@/components/discussion/EvaluationComponent";
-import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
-import { useDiscussionContentData } from "@/components/discussion/DiscussionContentDataProvider";
+import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
+import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import {
-  createDiscussionNdkGateway,
-} from "@/lib/nostr/discussion-ndk-gateway";
-import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
-import { loadKnownDiscussionData } from "@/lib/discussion/discussion-known-data-cache";
-import type { Event } from "@/lib/nostr/nostr-service";
-import {
-  parseEvaluationEvent,
   combinePostsWithStats,
   validatePostForm,
   formatRelativeTime,
@@ -42,31 +33,27 @@ import type {
   PostFormData,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import { loadTestData, isTestMode } from "@/lib/test/test-data-loader";
+import { isTestMode } from "@/lib/test/test-data-loader";
+import { buildLoginRoute } from "@/lib/navigation/auth-route";
 
 const nostrServiceConfig = getNostrServiceConfig();
-const readStrategy = typeof getDiscussionReadStrategyConfig === "function" ? getDiscussionReadStrategyConfig() : { relayLimit: 3, idleTimeoutMs: nostrServiceConfig.defaultTimeout, hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3, dedupWindowMs: 250 };
 const nostrService = createNostrService(nostrServiceConfig);
-const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function DiscussionDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const naddrParam = params.naddr as string;
 
   const [consensusTab, setConsensusTab] = useState<string>("group-consensus");
-  const [evaluations, setEvaluations] = useState<PostEvaluation[]>([]);
-  const [userEvaluations, setUserEvaluations] = useState<Set<string>>(
-    new Set()
-  );
+  const [optimisticEvaluations, setOptimisticEvaluations] = useState<PostEvaluation[]>([]);
+  const [optimisticUserEvaluationIds, setOptimisticUserEvaluationIds] = useState<Set<string>>(new Set());
   const [analysisResult, setAnalysisResult] =
     useState<EvaluationAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isEvaluationsLoading, setIsEvaluationsLoading] = useState(true);
-  const [evaluationsLoadError, setEvaluationsLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const renderInlineLoading = (label: string) => (
     <div
-      className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 ruby-text"
+      className="flex items-center gap-2 text-base text-base-content ruby-text"
       role="status"
       aria-live="polite"
     >
@@ -75,8 +62,6 @@ export default function DiscussionDetailPage() {
     </div>
   );
 
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginReason, setLoginReason] = useState<string>("");
   const [showPreview, setShowPreview] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState("");
   const [postForm, setPostForm] = useState<PostFormData>({
@@ -87,111 +72,58 @@ export default function DiscussionDetailPage() {
   const [busStops, setBusStops] = useState<
     { route: string; stops: string[] }[]
   >([]);
-  const loadSequenceRef = useRef(0);
-  const analysisRunRef = useRef(false);
-
-  useEffect(() => {
-    logger.log("discussion", discussion);
-  });
 
   const { user, signEvent } = useAuth();
-  const discussionMeta = useDiscussionMeta();
-  const discussion = discussionMeta?.discussion ?? null;
-  const isDiscussionLoading = discussionMeta?.isLoading ?? false;
-  const discussionCompletionReason = discussionMeta?.completionReason ?? null;
-  const {
-    posts,
-    isLoading: isContentLoading,
-    error: contentLoadError,
-    addPost,
-  } = useDiscussionContentData();
-  const isPostsLoading = isContentLoading || isEvaluationsLoading;
-  const postsLoadError = contentLoadError ?? evaluationsLoadError;
+  const detail = useDiscussionDetail();
+  const discussion = detail.snapshot?.discussion ?? null;
+  const posts = useMemo(() => detail.snapshot?.posts ?? [], [detail.snapshot?.posts]);
+  const evaluations = useMemo(
+    () => [...(detail.snapshot?.evaluations ?? []), ...optimisticEvaluations],
+    [detail.snapshot?.evaluations, optimisticEvaluations],
+  );
+  const userEvaluations = useMemo(() => {
+    const viewerEvaluations = evaluations.filter(
+      (evaluation) => evaluation.evaluatorPubkey === user.pubkey,
+    );
+    return new Set([
+      ...(detail.snapshot?.userEvaluationIds ?? []),
+      ...viewerEvaluations.flatMap((evaluation) => [evaluation.id, evaluation.postId]),
+      ...optimisticUserEvaluationIds,
+    ]);
+  }, [
+    detail.snapshot?.userEvaluationIds,
+    evaluations,
+    optimisticUserEvaluationIds,
+    user.pubkey,
+  ]);
+  const isDiscussionLoading = detail.state === "loading";
+  const discussionCompletionReason =
+    detail.completionReason ??
+    (detail.state === "partial"
+      ? "idle-timeout"
+      : detail.state === "error"
+        ? "hard-timeout"
+        : detail.state === "ready"
+          ? "eose"
+          : null);
+  const isPostsLoading = detail.state === "loading";
+  const postsLoadError = detail.error;
+  const contentCompletionReason =
+    detail.completionReason ??
+    (detail.state === "partial"
+      ? "idle-timeout"
+      : detail.state === "error"
+        ? "hard-timeout"
+        : detail.state === "ready"
+          ? "eose"
+          : null);
+  const reloadContent = detail.reload;
+  const addPost = detail.addPost;
 
-  // Parse naddr and extract discussion info
   const discussionInfo = useMemo(() => {
     if (!naddrParam) return null;
     return extractDiscussionFromNaddr(naddrParam);
   }, [naddrParam]);
-
-  // 評価はメインタブだけで必要なため、共有投稿の確定後に遅延取得します。
-  const loadEvaluations = useCallback(
-    async (loadSequence: number) => {
-      if (!discussionInfo) return;
-      setIsEvaluationsLoading(true);
-      try {
-        setEvaluationsLoadError(null);
-        const postIds = posts.map((post) => post.id);
-        const relayUrls =
-          loadKnownDiscussionData<unknown, Event>(
-            discussionInfo.discussionId,
-          )?.attemptedRelayUrls ?? [];
-        const evaluationsResult =
-          postIds.length > 0
-            ? await discussionGateway.queryWithCompletion(
-                createDiscussionReadPlan("discussion-evaluations", readStrategy, { postIds, relayHints: discussionInfo.relays }).filters,
-                {
-                  idleTimeoutMs: readStrategy.idleTimeoutMs,
-                  hardTimeoutMs: readStrategy.hardTimeoutMs,
-                  ...(relayUrls.length > 0 ? { relayUrls } : {}),
-                }
-              )
-            : {
-                events: [],
-                completionReason: "eose" as const,
-                eventCount: 0,
-                elapsedMs: 0,
-                startedAt: Date.now(),
-                lastEventAt: Date.now(),
-                eoseReceived: true,
-              };
-        logger.info("discussion-detail evaluations fetch completed", {
-          discussionId: discussionInfo.discussionId,
-          completionReason: evaluationsResult.completionReason,
-          eventCount: evaluationsResult.eventCount,
-          elapsedMs: evaluationsResult.elapsedMs,
-        });
-        const evaluationsEvents = evaluationsResult.events;
-        if (loadSequenceRef.current !== loadSequence) return;
-
-        const parsedEvaluations = evaluationsEvents
-          .map(parseEvaluationEvent)
-          .filter((e): e is PostEvaluation => e !== null);
-
-        setEvaluations(parsedEvaluations);
-      } catch (error) {
-        logger.error("Failed to load discussion:", error);
-        setEvaluationsLoadError("投稿・評価データの取得に失敗しました。");
-      } finally {
-        if (loadSequenceRef.current === loadSequence) {
-          setIsEvaluationsLoading(false);
-        }
-      }
-    },
-    [discussionInfo, posts]
-  );
-
-
-  const loadUserEvaluations = useCallback(async () => {
-    if (!user.pubkey || !isDiscussionsEnabled() || !discussionInfo) return;
-
-    if (isTestMode(discussionInfo.dTag)) {
-      setUserEvaluations(new Set());
-      return;
-    }
-
-    try {
-      const userEvals = await nostrService.getEvaluations(user.pubkey);
-      const evalPostIds = new Set(
-        userEvals
-          .map((e) => e.tags.find((t) => t[0] === "e")?.[1])
-          .filter((id): id is string => Boolean(id))
-      );
-      setUserEvaluations(evalPostIds);
-    } catch (error) {
-      logger.error("Failed to load user evaluations:", error);
-    }
-  }, [user.pubkey, discussionInfo]);
 
   const loadBusStops = useCallback(async () => {
     try {
@@ -211,45 +143,18 @@ export default function DiscussionDetailPage() {
   }, []);
 
   useEffect(() => {
+    logger.log("discussion", discussion);
+  }, [discussion]);
+
+  useEffect(() => {
     if (!isDiscussionsEnabled() || !discussionInfo) return;
     void loadBusStops();
   }, [discussionInfo, loadBusStops]);
 
-  useEffect(() => {
-    if (!isDiscussionsEnabled() || !discussionInfo || isContentLoading) return;
-    const loadSequence = ++loadSequenceRef.current;
-    analysisRunRef.current = false;
-    setEvaluations([]);
-    setAnalysisResult(null);
-    setIsEvaluationsLoading(true);
-
-    if (isTestMode(discussionInfo.dTag)) {
-      loadTestData()
-        .then((testData) => {
-          if (loadSequenceRef.current !== loadSequence) return;
-          setEvaluations(testData.evaluations);
-        })
-        .catch((error) => {
-          logger.error("Failed to load discussion:", error);
-        })
-        .finally(() => {
-          if (loadSequenceRef.current === loadSequence) {
-            setIsEvaluationsLoading(false);
-          }
-        });
-      return;
-    }
-
-    void loadEvaluations(loadSequence);
-  }, [discussionInfo, isContentLoading, loadEvaluations]);
-
-  useEffect(() => {
-    if (user.pubkey && isDiscussionsEnabled()) {
-      loadUserEvaluations();
-    }
-  }, [user.pubkey, loadUserEvaluations]);
-
-  const approvedPosts = useMemo(() => posts.filter((p) => p.approved), [posts]);
+  const approvedPosts = useMemo(
+    () => posts.filter((post) => post.approved && post.approvalState !== "unknown"),
+    [posts],
+  );
 
   const runConsensusAnalysis = useCallback(async () => {
     if (evaluations.length < 5 || approvedPosts.length < 2) {
@@ -283,9 +188,8 @@ export default function DiscussionDetailPage() {
   }, [evaluations, approvedPosts]);
 
   useEffect(() => {
-    if (isPostsLoading || analysisRunRef.current) return;
-    analysisRunRef.current = true;
-    runConsensusAnalysis();
+    if (isPostsLoading) return;
+    void runConsensusAnalysis();
   }, [isPostsLoading, runConsensusAnalysis]);
 
   const postsWithStats = useMemo(
@@ -304,7 +208,7 @@ export default function DiscussionDetailPage() {
           />
           <Link
             href="/discussions"
-            className="btn btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -326,8 +230,14 @@ export default function DiscussionDetailPage() {
 
   const handlePostSubmit = async () => {
     if (!user.isLoggedIn || !discussion) {
-      setLoginReason("投稿するにはログインが必要です。");
-      setShowLoginModal(true);
+      if (!user.isLoggedIn) {
+        router.push(
+          buildLoginRoute(
+            `/discussions/${naddrParam}`,
+            "投稿するにはログインが必要です。",
+          ),
+        );
+      }
       return;
     }
 
@@ -387,8 +297,14 @@ export default function DiscussionDetailPage() {
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (!user.isLoggedIn || !discussion) {
-      setLoginReason("投稿を評価するにはログインが必要です。");
-      setShowLoginModal(true);
+      if (!user.isLoggedIn) {
+        router.push(
+          buildLoginRoute(
+            `/discussions/${naddrParam}`,
+            "投稿を評価するにはログインが必要です。",
+          ),
+        );
+      }
       return;
     }
 
@@ -410,9 +326,9 @@ export default function DiscussionDetailPage() {
         throw new Error("Failed to publish evaluation to relays");
       }
 
-      setUserEvaluations((prev) => new Set([...prev, postId]));
+      setOptimisticUserEvaluationIds((prev) => new Set([...prev, postId]));
 
-      const newEvaluation = {
+      const newEvaluation: PostEvaluation = {
         id: signedEvent.id,
         postId,
         evaluatorPubkey: user.pubkey || "",
@@ -422,7 +338,7 @@ export default function DiscussionDetailPage() {
         event: signedEvent,
       };
 
-      setEvaluations((prev) => [...prev, newEvaluation]);
+      setOptimisticEvaluations((prev) => [...prev, newEvaluation]);
     } catch (error) {
       logger.error("Failed to evaluate post:", error);
     }
@@ -436,16 +352,19 @@ export default function DiscussionDetailPage() {
   if (isDiscussionLoading) {
     return (
       <div className="py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-          <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="h-16 bg-gray-200 dark:bg-gray-700 rounded"
-              ></div>
-            ))}
+        <div role="status" aria-live="polite" className="space-y-4">
+          <span className="sr-only">会話データを読み込み中...</span>
+          <div className="animate-pulse space-y-4" aria-hidden="true">
+            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+            <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-16 bg-gray-200 dark:bg-gray-700 rounded"
+                ></div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -453,6 +372,26 @@ export default function DiscussionDetailPage() {
   }
 
   if (!discussion) {
+    if (detail.state === "error") {
+      return (
+        <div className="py-8">
+          <div
+            className="alert alert-error alert-soft text-base-content!"
+            role="status"
+            aria-live="polite"
+          >
+            <span>{detail.error ?? "会話データの取得に失敗しました。"}</span>
+            <button
+              type="button"
+              className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+              onClick={() => void detail.reload()}
+            >
+              <span className="ruby-text">再読み込み</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
     if (
       discussionCompletionReason === "idle-timeout" ||
       discussionCompletionReason === "hard-timeout" ||
@@ -460,7 +399,11 @@ export default function DiscussionDetailPage() {
     ) {
       return (
         <div className="py-8">
-          <div className="alert alert-warning mb-4" role="alert">
+          <div
+            className="alert alert-warning alert-soft text-base-content! mb-4"
+            role="status"
+            aria-live="polite"
+          >
             <span>
               会話データの取得に時間がかかっています（{discussionCompletionReason}）。
               受信待機中または relay 応答遅延の可能性があります。
@@ -468,7 +411,7 @@ export default function DiscussionDetailPage() {
           </div>
           <button
             type="button"
-            className="btn btn-outline rounded-full dark:rounded-sm"
+            className="btn text-base btn-outline rounded-full dark:rounded-sm"
             onClick={() => window.location.reload()}
           >
             再読み込み
@@ -483,7 +426,7 @@ export default function DiscussionDetailPage() {
           <PageHeader title="会話が見つかりません" />
           <Link
             href="/discussions"
-            className="btn btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -496,14 +439,32 @@ export default function DiscussionDetailPage() {
       <div className="py-8">
       {/* タブナビゲーションはlayout.tsxに移動 */}
 
+      <DiscussionReadStatus
+        isLoading={isPostsLoading}
+        completionReason={contentCompletionReason}
+        hasData={posts.length > 0}
+        onReload={() => void reloadContent()}
+      />
+
       <div className="space-y-8">
           <div className="space-y-6">
             <section aria-labelledby="evaluation-heading">
               {isPostsLoading
                 ? renderInlineLoading("評価データを読み込み中...")
                 : postsLoadError ? (
-                  <div className="alert alert-error" role="alert">
+                  <div
+                    className="alert alert-error alert-soft text-base-content!"
+                    role="status"
+                    aria-live="polite"
+                  >
                     <span>{postsLoadError}</span>
+                    <button
+                      type="button"
+                      className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                      onClick={() => void reloadContent()}
+                    >
+                      <span className="ruby-text">再読み込み</span>
+                    </button>
                   </div>
                 ) : (
                   <EvaluationComponent
@@ -523,14 +484,18 @@ export default function DiscussionDetailPage() {
                 意見グループ
               </h2>
 
-              <p className="text-gray-600 dark:text-gray-400 mb-4 ruby-text">
+              <p className="text-base-content mb-4 ruby-text">
                 投票を統計処理して、意見はグループ分けされます。どのグループでも共通した意見が評価されます。
               </p>
 
               {isPostsLoading ? (
                 renderInlineLoading("分析データを読み込み中...")
               ) : postsLoadError ? (
-                <div className="alert alert-error" role="alert">
+                <div
+                  className="alert alert-error alert-soft text-base-content!"
+                  role="status"
+                  aria-live="polite"
+                >
                   <span>{postsLoadError}</span>
                 </div>
               ) : (
@@ -538,7 +503,7 @@ export default function DiscussionDetailPage() {
                   {isAnalyzing && (
                     <div className="flex items-center justify-center p-4 mb-4">
                       <div className="loading loading-spinner loading-md mr-2"></div>
-                      <span className="text-sm text-gray-600">
+                      <span className="text-base text-base-content">
                         コンセンサス分析中...
                       </span>
                     </div>
@@ -552,7 +517,7 @@ export default function DiscussionDetailPage() {
                         aria-label="意見タブ"
                       >
                         <button
-                          className={`btn border px-3 py-1 h-auto min-h-0 rounded-md font-medium ruby-text ${
+                          className={`btn text-base border px-3 py-1 h-auto min-h-0 rounded-md font-medium ruby-text ${
                             consensusTab === "group-consensus"
                               ? "btn-primary border-primary text-primary-content"
                               : "btn-outline hover:border-primary/50 hover:bg-primary/5"
@@ -568,7 +533,7 @@ export default function DiscussionDetailPage() {
                           (group, index) => (
                             <button
                               key={group.groupId}
-                              className={`btn border px-3 py-1 h-auto min-h-0 rounded-md font-medium ${
+                              className={`btn text-base border px-3 py-1 h-auto min-h-0 rounded-md font-medium ${
                                 consensusTab ===
                                 `group-${String.fromCharCode(97 + index)}`
                                   ? "btn-primary border-primary text-primary-content"
@@ -608,13 +573,13 @@ export default function DiscussionDetailPage() {
                                 >
                                   <div className="card-body p-4">
                                     <div className="flex items-start justify-between mb-2">
-                                      <span className="badge badge-primary">
+                                      <span className="badge badge-primary badge-md">
                                         {item.overallAgreePercentage}%の人が賛成
                                       </span>
                                     </div>
                                     {item.post?.busStopTag && (
                                       <div className="mb-2">
-                                        <span className="badge badge-outline">
+                                        <span className="badge badge-outline badge-md">
                                           {item.post.busStopTag}
                                         </span>
                                       </div>
@@ -629,12 +594,12 @@ export default function DiscussionDetailPage() {
                                             </p>
                                           ))
                                       ) : (
-                                        <p className="text-gray-500">
+                                        <p className="text-base-content">
                                           コンテンツがありません
                                         </p>
                                       )}
                                     </div>
-                                    <div className="text-gray-500 mt-2">
+                                    <div className="text-base-content mt-2">
                                       {formatRelativeTime(
                                         item.post?.createdAt || 0
                                       )}
@@ -643,7 +608,7 @@ export default function DiscussionDetailPage() {
                                 </div>
                               ))
                           ) : (
-                            <p className="text-gray-600 dark:text-gray-400 ruby-text">
+                            <p className="text-base-content ruby-text">
                               コンセンサス意見がありません。
                             </p>
                           )}
@@ -667,14 +632,14 @@ export default function DiscussionDetailPage() {
                                     <div className="flex items-start justify-between mb-2">
                                       <div className="flex gap-2">
                                         {item.voteType == "agree" ? (
-                                          <span className="badge badge-primary">
+                                          <span className="badge badge-primary badge-md">
                                             {String.fromCharCode(65 + groupIndex)}
                                             のうち
                                             {Math.round(item.agreeRatio * 100)}
                                             %が賛成
                                           </span>
                                         ) : (
-                                          <span className="badge badge-warning">
+                                          <span className="badge badge-warning badge-md">
                                             {String.fromCharCode(65 + groupIndex)}
                                             のうち
                                             {Math.round(item.disagreeRatio * 100)}
@@ -685,7 +650,7 @@ export default function DiscussionDetailPage() {
                                     </div>
                                     {item.post?.busStopTag && (
                                       <div className="mb-2">
-                                        <span className="badge badge-outline">
+                                        <span className="badge badge-outline badge-md">
                                           {item.post.busStopTag}
                                         </span>
                                       </div>
@@ -700,12 +665,12 @@ export default function DiscussionDetailPage() {
                                             </p>
                                           ))
                                       ) : (
-                                        <p className="text-gray-500">
+                                        <p className="text-base-content">
                                           コンテンツがありません
                                         </p>
                                       )}
                                     </div>
-                                    <div className="text-gray-500 mt-2">
+                                    <div className="text-base-content mt-2">
                                       {formatRelativeTime(
                                         item.post?.createdAt || 0
                                       )}
@@ -714,7 +679,7 @@ export default function DiscussionDetailPage() {
                                 </div>
                               ))
                             ) : (
-                              <p className="text-gray-600 dark:text-gray-400 ruby-text">
+                              <p className="text-base-content ruby-text">
                                 このグループの代表的意見がありません。
                               </p>
                             );
@@ -723,7 +688,7 @@ export default function DiscussionDetailPage() {
                       )}
                     </>
                   ) : (
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-base-content">
                       分析された投稿がまだありません。
                     </p>
                   )}
@@ -767,7 +732,7 @@ export default function DiscussionDetailPage() {
                           maxLength={280}
                           autoComplete="off"
                         />
-                        <div className="text-gray-500 mt-1">
+                        <div className="text-base-content mt-1">
                           {postForm.content.length}/280文字
                         </div>
                       </div>
@@ -820,8 +785,12 @@ export default function DiscussionDetailPage() {
                       </div>
 
                       {errors.length > 0 && (
-                        <div className="alert alert-error">
-                          <ul className="text-sm">
+                        <div
+                          className="alert alert-error alert-soft text-base-content!"
+                          role="alert"
+                          aria-live="assertive"
+                        >
+                          <ul className="text-base">
                             {errors.map((error, index) => (
                               <li key={index}>{error}</li>
                             ))}
@@ -851,14 +820,6 @@ export default function DiscussionDetailPage() {
           </section>
         </div>
 
-      <LoginModal
-        isOpen={showLoginModal}
-        reason={loginReason}
-        onClose={() => {
-          setShowLoginModal(false);
-          setLoginReason("");
-        }}
-      />
     </div>
   );
 }

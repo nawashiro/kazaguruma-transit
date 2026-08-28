@@ -1,8 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { DiscussionManagementDataProvider } from "@/components/discussion/DiscussionManagementDataProvider";
-import { DiscussionTabLayout } from "@/components/discussion/DiscussionTabLayout";
+import { DiscussionManagementProvider } from "./DiscussionManagementProvider";
+import { DiscussionManagementTabLayout } from "./DiscussionManagementTabLayout";
 
 const MANAGEMENT_PATHS = new Set([
   "/discussions",
@@ -21,14 +21,10 @@ export function DiscussionManagementShell({
   if (!MANAGEMENT_PATHS.has(pathname)) return children;
 
   return (
-    <DiscussionTabLayout
-      baseHref="/discussions"
-      naddr={discussionListNaddr}
-      showNavigation={false}
-    >
-      <DiscussionManagementDataProvider>
+    <DiscussionManagementProvider discussionListNaddr={discussionListNaddr}>
+      <DiscussionManagementTabLayout renderLayout={pathname === "/discussions"}>
         {children}
-      </DiscussionManagementDataProvider>
-    </DiscussionTabLayout>
+      </DiscussionManagementTabLayout>
+    </DiscussionManagementProvider>
   );
 }

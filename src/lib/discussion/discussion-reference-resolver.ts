@@ -4,7 +4,6 @@ export interface DiscussionReference {
   discussionId: string;
   authorPubkey: string;
   dTag: string;
-  relayHints: string[];
 }
 
 export interface DiscussionReferenceResolution {
@@ -24,7 +23,6 @@ const parseDiscussionReference = (value: string): DiscussionReference | null => 
     discussionId: value,
     authorPubkey,
     dTag,
-    relayHints: [],
   };
 };
 

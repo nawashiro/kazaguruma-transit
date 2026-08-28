@@ -5,27 +5,21 @@ export const dynamic = "force-dynamic";
 import React, {
   useState,
   useEffect,
-  useCallback,
   useMemo,
-  useRef,
 } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/layouts/PageHeader";
 import { useParams, useRouter } from "next/navigation";
-import { CheckCircleIcon } from "@heroicons/react/24/solid";
-import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import { CircleCheck, Info } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
-import { useDiscussionMeta } from "@/components/discussion/DiscussionTabLayout";
+import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
 import {
   isDiscussionsEnabled,
   getNostrServiceConfig,
-  getDiscussionReadStrategyConfig,
 } from "@/lib/config/discussion-config";
 
-import { LoginModal } from "@/components/discussion/LoginModal";
 import {
   buildDisabledActionState,
-  DisabledReasonText,
   PermissionNotice,
 } from "@/components/discussion/PermissionGuards";
 import { createNostrService } from "@/lib/nostr/nostr-service";
@@ -33,7 +27,6 @@ import {
   isValidNpub,
   npubToHex,
   getAdminPubkeyHex,
-  formatRelativeTime,
 } from "@/lib/nostr/nostr-utils";
 import {
   extractDiscussionFromNaddr,
@@ -41,33 +34,16 @@ import {
 } from "@/lib/nostr/naddr-utils";
 import {
   createDiscussionListingRequest,
-  createModeratorPromotionRequestEvent,
 } from "@/lib/discussion/user-creation-flow";
-import { formatBip39JapaneseMnemonicPreviewFromPubkey } from "@/lib/nostr/mnemonic-utils";
 import { UserIdentity } from "@/components/ui/UserIdentity";
-import {
-  createDiscussionNdkGateway,
-  type ModeratorDecision,
-} from "@/lib/nostr/discussion-ndk-gateway";
-import { executeDiscussionRead } from "@/lib/discussion/discussion-read-executor";
 import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import type { Event } from "@/lib/nostr/nostr-service";
+import { buildLoginRoute } from "@/lib/navigation/auth-route";
 
 // const ADMIN_PUBKEY = getAdminPubkeyHex(); // eslint-disable-line @typescript-eslint/no-unused-vars
 const nostrServiceConfig = getNostrServiceConfig();
-const readStrategy =
-  typeof getDiscussionReadStrategyConfig === "function"
-    ? getDiscussionReadStrategyConfig()
-    : {
-      relayLimit: 3,
-      idleTimeoutMs: nostrServiceConfig.defaultTimeout,
-      hardTimeoutMs: nostrServiceConfig.defaultTimeout * 3,
-      dedupWindowMs: 250,
-    };
 const nostrService = createNostrService(nostrServiceConfig);
-const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 
 interface EditFormData {
@@ -76,22 +52,24 @@ interface EditFormData {
   moderators: string[];
 }
 
-interface ModeratorPromotionRequest {
-  id: string;
-  applicantPubkey: string;
-  createdAt: number;
-  event: Event;
-}
-
 export default function DiscussionEditPage() {
   const params = useParams();
   const router = useRouter();
   const naddrParam = params.naddr as string;
   const { user, signEvent } = useAuth();
-  const discussionMeta = useDiscussionMeta();
-  const layoutDiscussion = discussionMeta?.discussion ?? null;
-  const isDiscussionLoading = discussionMeta?.isLoading ?? false;
-  const discussionCompletionReason = discussionMeta?.completionReason ?? null;
+  const detail = useDiscussionDetail();
+  const layoutDiscussion = detail.snapshot?.discussion ?? null;
+  const isDiscussionLoading = detail.state === "loading";
+  const discussionCompletionReason =
+    detail.completionReason ??
+    (detail.state === "partial"
+      ? "idle-timeout"
+      : detail.state === "error"
+        ? "hard-timeout"
+        : detail.state === "ready"
+          ? "eose"
+          : null);
+  const reload = detail.reload;
 
   const [discussion, setDiscussion] = useState<Discussion | null>(null);
   const [formData, setFormData] = useState<EditFormData>({
@@ -100,28 +78,15 @@ export default function DiscussionEditPage() {
     moderators: [],
   });
   const [moderatorInput, setModeratorInput] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRequestingListing, setIsRequestingListing] = useState(false);
-  const [isRequestingPromotion, setIsRequestingPromotion] = useState(false);
-  const [decidingPromotionIds, setDecidingPromotionIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [promotionRequestMessage, setPromotionRequestMessage] = useState("");
-  const [promotionRequests, setPromotionRequests] = useState<
-    ModeratorPromotionRequest[]
-  >([]);
-  const [isPromotionRequestReadComplete, setIsPromotionRequestReadComplete] =
-    useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [successType, setSuccessType] = useState<
-    "save" | "listing" | "promotion" | null
+    "save" | "listing" | null
   >(null);
-  const readGenerationRef = useRef(0);
 
   const discussionInfo = useMemo(() => {
     if (!naddrParam) return null;
@@ -135,9 +100,7 @@ export default function DiscussionEditPage() {
   useEffect(() => {
     if (layoutDiscussion) {
       setDiscussion((prev) => {
-        if (prev?.id === layoutDiscussion.id) {
-          return prev;
-        }
+        if (prev?.id === layoutDiscussion.id) return prev;
         return layoutDiscussion;
       });
       setFormData({
@@ -145,73 +108,14 @@ export default function DiscussionEditPage() {
         description: layoutDiscussion.description,
         moderators: layoutDiscussion.moderators.map((m) => m.pubkey),
       });
-      return;
-    }
-
-    if (!isDiscussionLoading) {
+    } else if (!isDiscussionLoading) {
       setDiscussion(null);
     }
-  }, [layoutDiscussion, isDiscussionLoading]);
-
-  const loadPromotionRequests = useCallback(async () => {
-    const readGeneration = ++readGenerationRef.current;
-
-    if (!isDiscussionsEnabled() || !discussionInfo) {
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setIsPromotionRequestReadComplete(false);
-    try {
-      const result = await executeDiscussionRead(discussionGateway, {
-        plan: {
-          target: "discussion-edit",
-          filters: [{
-            kinds: [1111],
-            "#a": [discussionInfo.discussionId],
-            "#t": ["moderator-request"],
-            limit: 50,
-          }],
-          relayHints: discussionInfo.relays ?? [],
-          idleTimeoutMs: readStrategy.idleTimeoutMs,
-          hardTimeoutMs: readStrategy.hardTimeoutMs,
-        },
-        candidates: {
-          configured: (nostrServiceConfig.relays ?? [])
-            .filter((relay) => relay.read)
-            .map((relay) => relay.url),
-          defaults: [],
-        },
-      });
-      if (readGenerationRef.current !== readGeneration) return;
-      const requests = result.events
-        .filter((event) => event.tags.some((tag) => tag[0] === "t" && tag[1] === "moderator-request"))
-        .map((event) => ({ id: event.id, applicantPubkey: event.pubkey, createdAt: event.created_at, event }))
-        .sort((a, b) => b.createdAt - a.createdAt);
-      setPromotionRequests(requests);
-      setIsPromotionRequestReadComplete(result.completionReason === "eose");
-    } catch (error) {
-      if (readGenerationRef.current !== readGeneration) return;
-      logger.error("Failed to load moderator promotion requests:", error);
-      setPromotionRequests([]);
-      setIsPromotionRequestReadComplete(false);
-    } finally {
-      if (readGenerationRef.current === readGeneration) setIsLoading(false);
-    }
-  }, [discussionInfo]);
-
-  useEffect(() => {
-    void loadPromotionRequests();
-
-    return () => {
-      readGenerationRef.current += 1;
-    };
-  }, [loadPromotionRequests]);
+  }, [isDiscussionLoading, layoutDiscussion]);
 
   const handleSave = async () => {
     if (!user.isLoggedIn) {
-      setShowLoginModal(true);
+      router.push(buildLoginRoute(`/discussions/${naddrParam}/edit`));
       return;
     }
 
@@ -290,11 +194,6 @@ export default function DiscussionEditPage() {
 
       setSuccessMessage("会話が更新されました");
       setSuccessType("save");
-
-      // 数秒後に会話詳細画面に戻る
-      setTimeout(() => {
-        router.push(`/discussions/${naddrParam}`);
-      }, 2000);
     } catch (error) {
       logger.error("Failed to update discussion:", error);
       setErrors(["会話の更新に失敗しました"]);
@@ -305,7 +204,7 @@ export default function DiscussionEditPage() {
 
   const handleDelete = async () => {
     if (!user.isLoggedIn) {
-      setShowLoginModal(true);
+      router.push(buildLoginRoute(`/discussions/${naddrParam}/edit`));
       return;
     }
 
@@ -344,7 +243,9 @@ export default function DiscussionEditPage() {
 
   const handleRequestListing = async () => {
     if (!user.isLoggedIn || !discussion || !user.pubkey) {
-      setShowLoginModal(true);
+      if (!user.isLoggedIn) {
+        router.push(buildLoginRoute(`/discussions/${naddrParam}/edit`));
+      }
       return;
     }
 
@@ -383,52 +284,6 @@ export default function DiscussionEditPage() {
     }
   };
 
-  const handleRequestPromotion = async () => {
-    if (!user.isLoggedIn || !discussion || !user.pubkey) {
-      setShowLoginModal(true);
-      return;
-    }
-
-    setIsRequestingPromotion(true);
-    setErrors([]);
-    setSuccessMessage("");
-    setSuccessType(null);
-    try {
-      const eventTemplate = createModeratorPromotionRequestEvent(
-        discussion.id,
-        discussion.authorPubkey,
-        user.pubkey,
-        promotionRequestMessage,
-      );
-
-      const signedEvent = await signEvent(
-        eventTemplate as unknown as Record<string, unknown>,
-      );
-      const published = await nostrService.publishSignedEvent(signedEvent);
-      if (!published) {
-        throw new Error("Failed to publish moderator promotion request");
-      }
-
-      setPromotionRequests((prev) => [
-        {
-          id: signedEvent.id,
-          applicantPubkey: user.pubkey || "",
-          createdAt: signedEvent.created_at,
-          event: signedEvent,
-        },
-        ...prev.filter((request) => request.id !== signedEvent.id),
-      ]);
-      setPromotionRequestMessage("");
-      setSuccessMessage("モデレーター昇格申請を送信しました");
-      setSuccessType("promotion");
-    } catch (error) {
-      logger.error("Failed to request moderator promotion:", error);
-      setErrors(["モデレーター昇格申請の送信に失敗しました"]);
-    } finally {
-      setIsRequestingPromotion(false);
-    }
-  };
-
   const addModerator = () => {
     const trimmedInput = moderatorInput.trim();
     if (trimmedInput && !formData.moderators.includes(trimmedInput)) {
@@ -447,72 +302,6 @@ export default function DiscussionEditPage() {
     }));
   };
 
-  const handleModerationDecision = async (
-    request: ModeratorPromotionRequest,
-    decision: ModeratorDecision,
-  ) => {
-    if (!discussion || !user.isLoggedIn || !user.pubkey || !isAuthor) {
-      return;
-    }
-
-    setDecidingPromotionIds((prev) => new Set(prev).add(request.id));
-    try {
-      const eventTemplate = discussionGateway.createModeratorDecisionDraft({
-        discussionEvent: discussion.event,
-        applicantPubkey: request.applicantPubkey,
-        decision,
-        actorPubkey: user.pubkey,
-      });
-
-      const signedEvent = await signEvent(
-        eventTemplate as unknown as Record<string, unknown>,
-      );
-      const published = await nostrService.publishSignedEvent(signedEvent);
-      if (!published) {
-        throw new Error("Failed to publish moderator decision");
-      }
-
-      setDiscussion((prev) => {
-        if (!prev) return prev;
-        const hasApplicant = prev.moderators.some(
-          (moderator) => moderator.pubkey === request.applicantPubkey,
-        );
-        const nextModerators =
-          decision === "approved"
-            ? hasApplicant
-              ? prev.moderators
-              : [...prev.moderators, { pubkey: request.applicantPubkey }]
-            : prev.moderators.filter(
-              (moderator) => moderator.pubkey !== request.applicantPubkey,
-            );
-
-        return {
-          ...prev,
-          moderators: nextModerators,
-          event: {
-            ...signedEvent,
-          },
-        };
-      });
-
-      setSuccessMessage(
-        decision === "approved"
-          ? "モデレーター昇格を承認しました"
-          : "モデレーター昇格を却下しました",
-      );
-      setSuccessType("promotion");
-    } catch (error) {
-      logger.error("Failed to decide moderator promotion:", error);
-      setErrors(["モデレーター昇格審査に失敗しました"]);
-    } finally {
-      setDecidingPromotionIds((prev) => {
-        const next = new Set(prev);
-        next.delete(request.id);
-        return next;
-      });
-    }
-  };
-
   // 権限チェック
   if (!discussionInfo) {
     return (
@@ -524,7 +313,7 @@ export default function DiscussionEditPage() {
           />
           <Link
             href="/discussions"
-            className="btn btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -544,7 +333,7 @@ export default function DiscussionEditPage() {
     );
   }
 
-  if (isDiscussionLoading || isLoading) {
+  if (isDiscussionLoading) {
     return (
       <div
         className="py-8"
@@ -561,6 +350,27 @@ export default function DiscussionEditPage() {
   }
 
   if (!discussion) {
+    if (detail.state === "error") {
+      return (
+        <div className="py-8">
+          <div
+            className="alert alert-error alert-soft text-base-content!"
+            role="status"
+            aria-live="polite"
+          >
+            <span>{detail.error ?? "会話データの取得に失敗しました。"}</span>
+            <button
+              type="button"
+              className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+              onClick={() => void reload()}
+            >
+              <span className="ruby-text">再読み込み</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     if (
       discussionCompletionReason === "idle-timeout" ||
       discussionCompletionReason === "hard-timeout" ||
@@ -568,7 +378,11 @@ export default function DiscussionEditPage() {
     ) {
       return (
         <div className="py-8">
-          <div className="alert alert-warning mb-4" role="alert">
+          <div
+            className="alert alert-warning alert-soft text-base-content! mb-4"
+            role="status"
+            aria-live="polite"
+          >
             <span>
               会話データの取得に時間がかかっています（
               {discussionCompletionReason}）。 受信待機中または relay
@@ -577,8 +391,8 @@ export default function DiscussionEditPage() {
           </div>
           <button
             type="button"
-            className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-            onClick={() => void discussionMeta?.reload()}
+            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            onClick={() => void reload()}
           >
             <span className="ruby-text">再読み込み</span>
           </button>
@@ -592,7 +406,7 @@ export default function DiscussionEditPage() {
           <PageHeader title="会話が見つかりません" />
           <Link
             href="/discussions"
-            className="btn btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -605,25 +419,13 @@ export default function DiscussionEditPage() {
   const editPermissionReason = !user.isLoggedIn
     ? "編集操作にはログインが必要です。"
     : "会話作成者のみ編集できます。";
-  const isCurrentModerator = Boolean(
-    user.pubkey &&
-    discussion.moderators.some((moderator) => moderator.pubkey === user.pubkey),
-  );
-  const canRequestPromotion = Boolean(
-    user.isLoggedIn && !isAuthor && !isCurrentModerator,
-  );
-  const requestPromotionReason = !user.isLoggedIn
-    ? "昇格申請にはログインが必要です。"
-    : isAuthor
-      ? "会話作成者は昇格申請の対象ではありません。"
-      : "すでにモデレーターです。";
 
   if (!hasEditPermission) {
     return (
       <div className="py-8">
         <div className="card bg-base-100 shadow-sm border border-base-300">
           <div className="card-body py-8">
-            <InformationCircleIcon
+            <Info
               className="h-12 w-12 text-info"
               aria-hidden="true"
             />
@@ -631,6 +433,14 @@ export default function DiscussionEditPage() {
               title="基本情報を編集できません"
               description="会話の基本情報を編集できるのは会話作成者だけです。"
             />
+            {!user.isLoggedIn && (
+              <Link
+                href={buildLoginRoute(`/discussions/${naddrParam}/edit`)}
+                className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+              >
+                <span className="ruby-text">ログイン</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -645,18 +455,21 @@ export default function DiscussionEditPage() {
             <div className="card bg-base-100 shadow-lg border border-green-200 dark:border-green-700">
               <div className="card-body ">
                 <div className="mb-4">
-                  <CheckCircleIcon className="w-16 h-16 text-green-600 dark:text-green-400 " />
+                  <CircleCheck className="w-16 h-16 text-green-600 dark:text-green-400 " />
                 </div>
                 <h2 className="text-xl font-semibold mb-4 text-green-600 dark:text-green-400">
                   {successMessage}
                 </h2>
                 {successType === "save" && (
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    まもなく会話画面に戻ります...
-                  </p>
+                  <Link
+                    href={`/discussions/${naddrParam}`}
+                    className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+                  >
+                    <span className="ruby-text">会話画面に戻る</span>
+                  </Link>
                 )}
                 {successType === "listing" && (
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  <p className="text-base-content mb-4">
                     反映まで時間がかかる場合があります。
                   </p>
                 )}
@@ -686,7 +499,7 @@ export default function DiscussionEditPage() {
                       maxLength={100}
                       autoComplete="off"
                     />
-                    <div className="text-gray-500 mt-1">
+                    <div className="text-base-content mt-1">
                       {formData.title.length}/100文字
                     </div>
                   </div>
@@ -710,7 +523,7 @@ export default function DiscussionEditPage() {
                       maxLength={500}
                       autoComplete="off"
                     />
-                    <div className="text-gray-500 mt-1">
+                    <div className="text-base-content mt-1">
                       {formData.description.length}/500文字
                     </div>
                   </div>
@@ -721,7 +534,7 @@ export default function DiscussionEditPage() {
                       <span className="label-text">会話ID</span>
                     </label>
                     <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <span className="text-sm font-mono">
+                      <span className="text-base font-mono">
                         {discussion?.dTag || "loading..."}
                       </span>
                     </div>
@@ -743,7 +556,7 @@ export default function DiscussionEditPage() {
                             <button
                               type="button"
                               onClick={() => removeModerator(npub)}
-                              className="btn btn-ghost min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-0"
+                              className="btn text-base btn-ghost min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-0"
                               aria-label={`モデレーター ${npub} を削除`}
                               disabled={
                                 isSaving || isDeleting || !hasEditPermission
@@ -786,13 +599,19 @@ export default function DiscussionEditPage() {
                         editPermissionReason,
                       )}
                       requiresLogin={!user.isLoggedIn}
-                      onLogin={() => setShowLoginModal(true)}
+                      onLogin={() =>
+                        router.push(buildLoginRoute(`/discussions/${naddrParam}/edit`))
+                      }
                     />
                   </div>
 
                   {errors.length > 0 && (
-                    <div className="alert alert-error">
-                      <ul className="text-sm">
+                    <div
+                      className="alert alert-error alert-soft text-base-content!"
+                      role="alert"
+                      aria-live="assertive"
+                    >
+                      <ul className="text-base">
                         {errors.map((error, index) => (
                           <li key={index}>{error}</li>
                         ))}
@@ -812,7 +631,7 @@ export default function DiscussionEditPage() {
                     </h3>
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                       <button
-                        className="btn btn-primary rounded-full dark:rounded-sm"
+                        className="btn text-base btn-primary rounded-full dark:rounded-sm"
                         onClick={handleSave}
                         disabled={
                           isSaving ||
@@ -830,7 +649,7 @@ export default function DiscussionEditPage() {
                       </button>
 
                       <button
-                        className="btn btn-secondary rounded-full dark:rounded-sm"
+                        className="btn text-base btn-secondary rounded-full dark:rounded-sm"
                         onClick={handleRequestListing}
                         disabled={
                           isSaving ||
@@ -848,25 +667,6 @@ export default function DiscussionEditPage() {
                     </div>
                   </section>
 
-                  {!isPromotionRequestReadComplete && !isLoading && (
-                    <div
-                      className="alert alert-warning"
-                      role="alert"
-                      aria-label="昇格申請の取得は完了していません"
-                    >
-                      <span className="ruby-text">
-                        昇格申請の取得が完了していないため、申請がないとは断定できません。
-                      </span>
-                      <button
-                        type="button"
-                        className="btn btn-outline min-h-[44px] rounded-full dark:rounded-sm"
-                        onClick={() => void loadPromotionRequests()}
-                      >
-                        <span className="ruby-text">昇格申請を再取得</span>
-                      </button>
-                    </div>
-                  )}
-
                   <section
                     aria-labelledby="dangerous-actions-title"
                     className="space-y-3 border-t border-base-300 pt-5"
@@ -878,7 +678,7 @@ export default function DiscussionEditPage() {
                       危険な操作
                     </h3>
                     <button
-                      className="btn btn-outline btn-error rounded-full dark:rounded-sm min-h-[44px]"
+                      className="btn text-base btn-outline btn-error rounded-full dark:rounded-sm min-h-[44px]"
                       onClick={() => setShowDeleteConfirm(true)}
                       disabled={isSaving || isDeleting || !hasEditPermission}
                     >
@@ -888,164 +688,6 @@ export default function DiscussionEditPage() {
                     </button>
                   </section>
 
-                  {false && discussion && (
-                    <section aria-labelledby="moderator-section-title">
-                      <h3
-                        id="moderator-section-title"
-                        className="text-lg font-semibold ruby-text"
-                      >
-                        モデレーター管理
-                      </h3>
-                      <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
-                          現在のモデレーター（Mnemonic）
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {discussion!.moderators.length > 0 ? (
-                            discussion!.moderators.map((moderator) => (
-                              <span
-                                key={moderator.pubkey}
-                                className="badge badge-outline"
-                              >
-                                {formatBip39JapaneseMnemonicPreviewFromPubkey(
-                                  moderator.pubkey,
-                                )}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-sm text-gray-500 ruby-text">
-                              モデレーターは未設定です。
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
-                          モデレーター昇格申請
-                        </p>
-                        <textarea
-                          value={promotionRequestMessage}
-                          onChange={(e) =>
-                            setPromotionRequestMessage(e.target.value)
-                          }
-                          className="textarea w-full h-24 mb-2"
-                          placeholder="申請理由（任意）"
-                          disabled={isRequestingPromotion}
-                        />
-                        <button
-                          className="btn btn-outline rounded-full dark:rounded-sm"
-                          onClick={handleRequestPromotion}
-                          disabled={
-                            isRequestingPromotion || !canRequestPromotion
-                          }
-                        >
-                          <span className="ruby-text">
-                            {isRequestingPromotion
-                              ? "申請中..."
-                              : "モデレーター昇格を申請"}
-                          </span>
-                        </button>
-                        <PermissionNotice
-                          state={buildDisabledActionState(
-                            canRequestPromotion,
-                            requestPromotionReason,
-                          )}
-                          requiresLogin={false}
-                          onLogin={() => setShowLoginModal(true)}
-                        />
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 ruby-text">
-                          昇格申請ユーザー一覧
-                        </p>
-                        {promotionRequests.length === 0 ? (
-                          <p className="text-sm text-gray-500 ruby-text">
-                            申請はまだありません。
-                          </p>
-                        ) : (
-                          <div className="space-y-2">
-                            {promotionRequests.map((request) => (
-                              <div
-                                key={request.id}
-                                className="p-3 border border-base-300 rounded-lg"
-                              >
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="badge badge-outline">
-                                    {formatBip39JapaneseMnemonicPreviewFromPubkey(
-                                      request.applicantPubkey,
-                                    )}
-                                  </span>
-                                  <span className="text-sm text-gray-500">
-                                    {formatRelativeTime(request.createdAt)}
-                                  </span>
-                                  <span
-                                    className={`badge ${discussion!.moderators.some(
-                                      (moderator) =>
-                                        moderator.pubkey ===
-                                        request.applicantPubkey,
-                                    )
-                                        ? "badge-success"
-                                        : "badge-ghost"
-                                      }`}
-                                  >
-                                    {discussion!.moderators.some(
-                                      (moderator) =>
-                                        moderator.pubkey ===
-                                        request.applicantPubkey,
-                                    )
-                                      ? "approved"
-                                      : "unapproved"}
-                                  </span>
-                                </div>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  <button
-                                    type="button"
-                                    className="btn btn-primary rounded-full dark:rounded-sm"
-                                    onClick={() =>
-                                      handleModerationDecision(
-                                        request,
-                                        "approved",
-                                      )
-                                    }
-                                    disabled={
-                                      !isAuthor ||
-                                      decidingPromotionIds.has(request.id)
-                                    }
-                                  >
-                                    <span className="ruby-text">承認</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn btn-outline rounded-full dark:rounded-sm"
-                                    onClick={() =>
-                                      handleModerationDecision(
-                                        request,
-                                        "unapproved",
-                                      )
-                                    }
-                                    disabled={
-                                      !isAuthor ||
-                                      decidingPromotionIds.has(request.id)
-                                    }
-                                  >
-                                    <span className="ruby-text">却下</span>
-                                  </button>
-                                </div>
-                                <DisabledReasonText
-                                  state={buildDisabledActionState(
-                                    Boolean(isAuthor),
-                                    "昇格審査は会話作成者のみ操作できます。",
-                                  )}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </section>
-                  )}
                 </div>
               </div>
             </div>
@@ -1064,14 +706,14 @@ export default function DiscussionEditPage() {
             <div className="modal-action">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="btn btn-outline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline rounded-full dark:rounded-sm"
                 disabled={isDeleting}
               >
                 <span className="ruby-text">キャンセル</span>
               </button>
               <button
                 onClick={handleDelete}
-                className="btn btn-error rounded-full dark:rounded-sm"
+                className="btn text-base btn-error rounded-full dark:rounded-sm"
                 disabled={isDeleting}
               >
                 <span className="ruby-text">削除する</span>
@@ -1081,10 +723,6 @@ export default function DiscussionEditPage() {
         </dialog>
       )}
 
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-      />
     </div>
   );
 }

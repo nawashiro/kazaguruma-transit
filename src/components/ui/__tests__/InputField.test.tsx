@@ -1,6 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import "@testing-library/jest-dom";
 import InputField from "../InputField";
+
+type InputFieldPropsWithLabel = ComponentProps<typeof InputField> & {
+  label: string;
+};
 
 describe("InputField", () => {
   const mockOnChange = jest.fn();
@@ -9,17 +14,23 @@ describe("InputField", () => {
     jest.clearAllMocks();
   });
 
-  it("入力フィールドをラベルなしで表示する", () => {
-    render(
-      <InputField
-        value="テスト値"
-        onChange={mockOnChange}
-        testId="test-input"
-      />
-    );
+  it("明示的なラベルを入力欄に関連付ける", () => {
+    const props: InputFieldPropsWithLabel = {
+      value: "テスト値",
+      onChange: mockOnChange,
+      label: "テストラベル",
+      testId: "test-input",
+    };
 
-    expect(screen.getByTestId("test-input")).toHaveValue("テスト値");
-    expect(screen.queryByText("テストラベル")).not.toBeInTheDocument();
+    render(<InputField {...props} />);
+
+    const input = screen.getByTestId("test-input");
+    const label = screen.getByText("テストラベル", { selector: "label" });
+
+    expect(input).toHaveValue("テスト値");
+    expect(input.id).not.toBe("");
+    expect(label).toHaveAttribute("for", input.id);
+    expect(screen.getByLabelText("テストラベル")).toBe(input);
   });
 
   it("入力欄の外観をDaisyUIのinputスタイルに委任する", () => {
@@ -90,13 +101,15 @@ describe("InputField", () => {
     );
 
     const input = screen.getByTestId("test-input");
+    const alert = screen.getByRole("alert");
     expect(screen.getByText("エラーメッセージ")).toBeInTheDocument();
-    expect(screen.getByRole("alert").querySelector("svg")).toBeInTheDocument();
+    expect(alert).toHaveClass("text-base-content");
+    expect(alert.querySelector("svg")).toBeInTheDocument();
     expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("alert")).toHaveTextContent("エラーメッセージ");
+    expect(alert).toHaveTextContent("エラーメッセージ");
   });
 
-  it("説明テキストとエラーをaria-describedbyで参照する", () => {
+  it("説明文をp要素として出力し、エラーとともにaria-describedbyで参照する", () => {
     render(
       <InputField
         value=""
@@ -108,10 +121,19 @@ describe("InputField", () => {
     );
 
     const input = screen.getByTestId("test-input");
-    const describedByIds = input.getAttribute("aria-describedby")?.split(" ");
+    const description = screen.getByText("入力の説明テキスト");
+    const error = screen.getByRole("alert");
+    const describedByIds =
+      input.getAttribute("aria-describedby")?.split(/\s+/) ?? [];
+
+    expect(description.tagName).toBe("P");
     expect(describedByIds).toHaveLength(2);
-    expect(describedByIds).toContain(screen.getByText("入力の説明テキスト").id);
-    expect(describedByIds).toContain(screen.getByText(/エラーメッセージ/).id);
+    describedByIds.forEach((id) => {
+      expect(id).not.toBe("");
+      expect(document.getElementById(id)).not.toBeNull();
+    });
+    expect(describedByIds).toContain(description.id);
+    expect(describedByIds).toContain(error.id);
   });
 
   it("無効状態を表示する", () => {
@@ -126,7 +148,8 @@ describe("InputField", () => {
 
     const input = screen.getByTestId("test-input");
     expect(input).toBeDisabled();
-    expect(input).toHaveClass("opacity-70", "cursor-not-allowed");
+    expect(input).not.toHaveClass("opacity-70");
+    expect(input).toHaveClass("cursor-not-allowed");
   });
 
   it("タッチターゲットとテキストサイズ用のクラスを設定する", () => {
@@ -154,5 +177,34 @@ describe("InputField", () => {
     const input = screen.getByTestId("test-input");
     expect(input).toHaveAttribute("name", "test-name");
     expect(input).toHaveAttribute("maxLength", "50");
+  });
+
+  it("public field semantics keep native required input, label, and resolved descriptions together", () => {
+    render(
+      <InputField
+        value=""
+        onChange={mockOnChange}
+        label="公開ラベル"
+        description="公開説明"
+        error="公開エラー"
+        required
+        testId="test-input"
+      />,
+    );
+
+    const input = screen.getByTestId("test-input");
+    const label = screen.getByText("公開ラベル", { selector: "label" });
+    const describedByIds = input.getAttribute("aria-describedby")?.split(/\s+/) ?? [];
+
+    expect(input.tagName).toBe("INPUT");
+    expect(input).toBeRequired();
+    expect(label).toHaveAttribute("for", input.id);
+    expect(describedByIds).toHaveLength(2);
+    describedByIds.forEach((id) => {
+      expect(id.trim()).not.toBe("");
+      expect(document.getElementById(id)).not.toBeNull();
+    });
+    expect(describedByIds).toContain(screen.getByText("公開説明").id);
+    expect(describedByIds).toContain(screen.getByRole("alert").id);
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { ReactNode } from "react";
-import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 interface CarouselCardProps {
   id: string;
@@ -24,10 +24,19 @@ export default function CarouselCard({
   nextSlideId,
   className = "",
 }: CarouselCardProps) {
+  const safeClassName =
+    className === "rounded-lg"
+      ? "rounded-lg"
+      : className === "mb-6"
+        ? "mb-6"
+        : className === "shadow-md"
+          ? "shadow-md"
+          : "";
+
   return (
     <div id={id} className="carousel-item w-full">
       <div
-        className={`card bg-base-100 w-full shadow-sm overflow-hidden ${className}`}
+        className={`card bg-base-100 w-full shadow-sm overflow-hidden ${safeClassName}`}
       >
         <div className="card-body ruby-text">
           {title && <h2 className="card-title inline">{title}</h2>}
@@ -35,17 +44,17 @@ export default function CarouselCard({
           <div className="card-actions justify-between mt-4">
             <a
               href={`#${prevSlideId}`}
-              className="btn btn-primary btn-circle"
+              className="btn text-base btn-primary btn-circle"
+              aria-label="前のスライド"
             >
-              <ArrowLeftIcon height="1rem" width="1rem" />
-              <span className="sr-only">前のスライドに移動</span>
+              <ArrowLeft height="1rem" width="1rem" aria-hidden="true" />
             </a>
             <a
               href={`#${nextSlideId}`}
-              className="btn btn-primary btn-circle"
+              className="btn text-base btn-primary btn-circle"
+              aria-label="次のスライド"
             >
-              <ArrowRightIcon height="1rem" width="1rem" />
-              <span className="sr-only">次のスライドに移動</span>
+              <ArrowRight height="1rem" width="1rem" aria-hidden="true" />
             </a>
           </div>
         </div>

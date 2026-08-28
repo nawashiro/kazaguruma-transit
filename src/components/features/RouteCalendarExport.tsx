@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FiCalendar } from "react-icons/fi";
+import { Calendar } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { buildRouteCalendar } from "@/lib/calendar/route-calendar";
 import type { RouteCalendarInput } from "@/types/calendar";
@@ -63,7 +63,7 @@ export default function RouteCalendarExport(props: RouteCalendarExportProps) {
         </div>
       )}
       <Button onClick={handleDownload}>
-        <FiCalendar className="h-5 w-5" aria-hidden="true" />
+        <Calendar className="h-5 w-5" aria-hidden="true" />
         <span className="ruby-text">カレンダーに追加</span>
       </Button>
     </>

@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Card from "@/components/ui/Card";
 import IntegratedRouteDisplay from "./IntegratedRouteDisplay";
 import RoutePdfExport from "./RoutePdfExport";
 import RouteCalendarExport from "./RouteCalendarExport";
-import RateLimitModal from "./RateLimitModal";
 import { BusStopDiscussion, BusStopMemo, getBusStopMemoData } from "@/components/discussion";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import {
@@ -29,20 +29,30 @@ interface ApiResponse {
 }
 
 type ResultState =
-  | { status: "loading" }
-  | { status: "success"; routeInfo: RouteResultViewModel }
-  | { status: "error"; message: string };
+  | { status: "loading"; searchParams: string }
+  | { status: "success"; searchParams: string; routeInfo: RouteResultViewModel }
+  | { status: "error"; searchParams: string; message: string };
 
 interface RouteSearchResultsProps {
   searchParams: string;
 }
+
+type RateLimitRouter = {
+  push: (href: string) => void;
+};
+
+const fallbackRateLimitRouter: RateLimitRouter = {
+  push: () => undefined,
+};
+const publicRouterHook = useRouter as (() => RateLimitRouter) | undefined;
+const getRateLimitRouter = publicRouterHook ?? (() => fallbackRateLimitRouter);
 
 function ResetSearchConditionsLink() {
   return (
     <div className="flex justify-center">
       <Link
         href="/"
-        className="btn btn-secondary rounded-full dark:rounded-sm min-h-[44px] min-w-[44px] leading-relaxed font-medium inline-flex items-center justify-center ruby-text"
+        className="btn text-base btn-secondary rounded-full dark:rounded-sm min-h-[44px] min-w-[44px] leading-relaxed font-medium inline-flex items-center justify-center ruby-text"
       >
         <span>検索条件をリセット</span>
       </Link>
@@ -65,7 +75,7 @@ function getBusStops(routeInfo: RouteResultViewModel): string[] {
 function SearchError({ message }: { message: string }) {
   return (
     <Card>
-      <div role="alert" className="alert alert-error mb-4">
+      <div role="alert" className="alert alert-error alert-soft text-base-content! mb-4">
         {message}
       </div>
       <ResetSearchConditionsLink />
@@ -78,16 +88,17 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
     () => parseRouteSearchParams(new URLSearchParams(searchParams)),
     [searchParams],
   );
-  const [resultState, setResultState] = useState<ResultState>({ status: "loading" });
-  const [isRateLimitModalOpen, setIsRateLimitModalOpen] = useState(false);
+  const [resultState, setResultState] = useState<ResultState>({ status: "loading", searchParams });
+  const router = getRateLimitRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router;
   const [memoData, setMemoData] = useState<Map<string, PostWithStats>>(new Map());
 
   useEffect(() => {
     if (!parsed.isValid) return;
 
     const abortController = new AbortController();
-    setResultState({ status: "loading" });
-    setIsRateLimitModalOpen(false);
+    setResultState({ status: "loading", searchParams });
 
     const search = async () => {
       try {
@@ -99,13 +110,18 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
         const apiResponse = (await response.json()) as ApiResponse;
 
         if (response.status === 429 && apiResponse.limitExceeded) {
-          setIsRateLimitModalOpen(true);
-          setResultState({ status: "error", message: "利用制限に達しました" });
+          setResultState({
+            status: "error",
+            searchParams,
+            message: "利用制限に達しました",
+          });
+          routerRef.current.push("/rate-limit?source=routes");
           return;
         }
         if (!response.ok || !apiResponse.success) {
           setResultState({
             status: "error",
+            searchParams,
             message: apiResponse.error || "経路検索に失敗しました",
           });
           return;
@@ -113,6 +129,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
 
         setResultState({
           status: "success",
+          searchParams,
           routeInfo: createRouteResultViewModel(
             apiResponse.data,
             parsed.query.origin,
@@ -124,6 +141,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
         logger.error("経路検索リクエストエラー:", error);
         setResultState({
           status: "error",
+          searchParams,
           message: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
         });
       }
@@ -131,7 +149,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
 
     void search();
     return () => abortController.abort();
-  }, [parsed]);
+  }, [parsed, searchParams]);
 
   useEffect(() => {
     if (
@@ -147,7 +165,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
   }, [resultState]);
 
   if (!parsed.isValid) return <SearchError message={parsed.error} />;
-  if (resultState.status === "loading") {
+  if (resultState.status === "loading" || resultState.searchParams !== searchParams) {
     return (
       <Card bodyClassName="items-center">
         <div role="status" className="flex flex-col items-center gap-2">
@@ -158,15 +176,7 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
     );
   }
   if (resultState.status === "error") {
-    return (
-      <>
-        <SearchError message={resultState.message} />
-        <RateLimitModal
-          isOpen={isRateLimitModalOpen}
-          onClose={() => setIsRateLimitModalOpen(false)}
-        />
-      </>
-    );
+    return <SearchError message={resultState.message} />;
   }
 
   const { routeInfo } = resultState;

@@ -6,7 +6,7 @@
 
 ## Summary
 
-全Discussion画面のrelay候補選別、completion-aware通信、一度だけのretry、relay実績統合を`DiscussionReadExecutor`へ集約する。画面は`DiscussionReadPlan`と画面固有の表示判定だけを持つ。`DiscussionReferenceResolver`は`q` tag、naddr、既知IDを正規化する。`NostrService`はfilter配列を一つのNDK購読へ渡し、filterごとの個別購読を廃止する。
+全Discussion画面のProviderが決めたrelay URL、completion-aware通信、一度だけのretry、relay実績統合を`DiscussionReadExecutor`へ集約する。画面・Providerは`DiscussionReadPlan`、relay URL、画面固有の表示判定を持つ。`DiscussionReferenceResolver`は`q` tag、naddr、既知IDを正規化する。`NostrService`はfilter配列を一つのNDK購読へ渡し、filterごとの個別購読を廃止する。
 
 ## Technical Context
 
@@ -26,7 +26,7 @@
 
 **Constraints**:
 
-- relay候補は初回とretryで各1から3件に制限する。
+- Providerが渡すrelay URLは初回とretryで各最大3件へ分割する。
 - retryは非EOSE完了時だけ一度実行する。
 - EOSE結果に追加retryを行わない。
 - page分割、続き取得、filter数上限を導入しない。
@@ -42,7 +42,7 @@
 | Gate | Result | 根拠 |
 |---|---|---|
 | 明確な命名 | Pass | Resolver、Plan、Executor、Attempt、Resultを分離する。 |
-| 単純な論理 | Pass | 候補順位、attempt、合成を各関数へ分離する。 |
+| 単純なロジック | Pass | Providerのrelay URL選択、attempt、合成を各関数へ分離する。 |
 | 型安全 | Pass |入力、attempt、合成結果をTypeScript型で表す。 |
 | Test-first development | Pass | transport、executor、resolver、各画面のREDテストを先に追加する。 |
 | Accessibility & UX | Pass | 暫定、retry、partial、再読み込みを状態通知する。 |
@@ -56,7 +56,7 @@
 | Nostr正本 | Pass | 永続DBを追加しない。 |
 | relay実績の分離 | Pass | 掲載投稿と参照先会話で別のread targetとcache keyを使う。 |
 | timeoutの意味 | Pass | retry結果を合成し、最終EOSEだけを完了としてUIへ渡す。 |
-| 画面責務 | Pass | 画面はfilter、relay URL、`NDKRelaySet`を直接組み立てない。 |
+| 画面責務 | Pass | Providerまたは画面固有のread plan作成層がrelay URLを選択し、`NDKRelaySet`通信は共通層へ委譲する。 |
 | filter結合 | Pass | 一つのplanのfilter配列を一つの`ndk.subscribe()`へ渡す。 |
 | page分割不採用 | Pass | cursor、page state、filter上限を追加しない。 |
 
@@ -93,7 +93,6 @@ src/
 ├── lib/discussion/
 │   ├── discussion-read-plan.ts
 │   ├── discussion-moderation-snapshot.ts
-│   ├── relay-candidate-selector.ts
 │   ├── discussion-known-data-cache.ts
 │   ├── discussion-reference-resolver.ts       # 追加
 │   └── discussion-read-executor.ts            # 追加
@@ -129,16 +128,15 @@ src/
 ### 3.Executor
 
 1. `src/lib/discussion/discussion-read-executor.ts`を追加する。
-2. `DiscussionReadPlan`、候補入力、gatewayを受け取る。
-3. `rankRelayCandidates()`で全候補を作る。
-4. 先頭最大3件をfirst attemptへ渡す。
-5. `queryWithCompletion(plan.filters, { relayUrls, idleTimeoutMs, hardTimeoutMs })`を呼ぶ。
-6. attempt結果を`onAttemptComplete`で通知する。
-7. 非EOSEかつ未試行候補がある場合だけ、次の最大3件を一度retryする。
-8. events、source relay、attempted relayをevent IDとURLで重複排除して合成する。
-9. retryがEOSEなら最終reasonを`eose`にする。
-10. retryが非EOSEなら最終reasonをそのreasonにする。
-11. executorは`q` tag、naddr、ID文字列を解析しない。
+2. `DiscussionReadPlan`、Providerが選択したrelay URL、gatewayを受け取る。
+3. Providerが渡したURLの先頭最大3件をfirst attemptへ渡す。
+4. `queryWithCompletion(plan.filters, { relayUrls, idleTimeoutMs, hardTimeoutMs })`を呼ぶ。
+5. attempt結果を`onAttemptComplete`で通知する。
+6. 非EOSEかつ未試行relayがある場合だけ、次の最大3件を一度retryする。
+7. events、source relay、attempted relayをevent IDとURLで重複排除して合成する。
+8. retryがEOSEなら最終reasonを`eose`にする。
+9. retryが非EOSEなら最終reasonをそのreasonにする。
+10. executorは`q` tag、naddr、ID文字列を解析しない。
 
 ### 4.Read planとcache境界
 
@@ -191,7 +189,7 @@ src/
    - malformed pubkey、空dTag、kind違いを除外する。
    - 重複参照を一つのfilterにする。
 3. `src/lib/discussion/__tests__/discussion-read-executor.test.ts`を追加する。
-   - 候補順位と最大3relayを使う。
+   - Providerが決めたrelay URL順序と最大3relayのattempt分割を使う。
    - 非EOSE時だけsecond attemptを一度実行する。
    - EOSEでretryしない。
    - 初回eventsとretry eventsを結合する。
@@ -221,4 +219,4 @@ src/
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |---|---|---|
-| ExecutorとResolverの二つの新規モジュール | 通信、候補選別、入力検証を分離する。 | 一つの巨大なhelperでは画面固有の参照規則と通信規則が再結合する。 |
+| ExecutorとResolverの二つの新規モジュール | 通信、attempt処理、入力検証を分離する。relay URL選択はProviderに残す。 | 一つの巨大なhelperでは画面固有のrelay・参照規則と通信規則が再結合する。 |

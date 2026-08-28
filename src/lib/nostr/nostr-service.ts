@@ -9,6 +9,9 @@ import type { PWKBlob } from "nosskey-sdk";
 import { logger } from "@/utils/logger";
 import { normalizeDiscussionId } from "@/lib/nostr/naddr-utils";
 import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
+import {
+  dedupeAndSortEvents as dedupeAndSortEventsShared,
+} from "@/lib/nostr/event-deduplication";
 
 export type Event = NostrEvent & { id: string; sig: string; kind: number };
 export type Filter = NDKFilter<number>;
@@ -43,27 +46,19 @@ export interface ReadEventsOptions {
   relayUrls?: string[];
 }
 
-export const dedupeAndSortEvents = (events: Event[]): Event[] => {
-  const uniqueById = new Map<string, Event>();
-
-  events.forEach((event) => {
-    const existing = uniqueById.get(event.id);
-    if (!existing || event.created_at > existing.created_at) {
-      uniqueById.set(event.id, event);
-    }
-  });
-
-  return Array.from(uniqueById.values()).sort(
-    (a, b) => b.created_at - a.created_at || a.id.localeCompare(b.id)
-  );
-};
+export const dedupeAndSortEvents = (events: Event[]): Event[] =>
+  dedupeAndSortEventsShared(events);
 
 const mergeEvent = (current: Event[], incoming: Event): Event[] => {
-  if (current.some((event) => event.id === incoming.id)) {
+  const updated = dedupeAndSortEventsShared([...current, incoming]);
+  if (
+    updated.length === current.length &&
+    updated.every((event, index) => event === current[index])
+  ) {
     return current;
   }
 
-  return dedupeAndSortEvents([...current, incoming]);
+  return updated;
 };
 
 const normalizeDiscussionIdForRead = (discussionId: string): string | null => {
@@ -229,47 +224,53 @@ export class NostrService {
       timerRefs.hard = setTimeout(() => finalize("hard-timeout"), hardTimeoutMs);
       resetIdleTimer();
 
-      const subscription = this.ndk.subscribe(
-        filters,
-        {
-          closeOnEose: true,
-          ...(relaySet ? { relaySet } : {}),
-          onEvent: (event) => {
-            if (closed) return;
+      const startSubscription = () => {
+        if (closed) return;
 
-            lastEventAt = Date.now();
-            resetIdleTimer();
+        const subscription = this.ndk.subscribe(
+          filters,
+          {
+            closeOnEose: true,
+            ...(relaySet ? { relaySet } : {}),
+            onEvent: (event) => {
+              if (closed) return;
 
-            const rawEvent = this.toRawEvent(event);
-            const sourceRelayUrl = getSourceRelayUrl(event);
-            if (sourceRelayUrl) {
-              const sources = sourceRelayUrlsByEventId.get(rawEvent.id) ?? new Set<string>();
-              sources.add(sourceRelayUrl);
-              sourceRelayUrlsByEventId.set(rawEvent.id, sources);
-            }
-            const updated = mergeEvent(collected, rawEvent);
-            if (updated === collected) {
-              duplicateCount += 1;
-              return;
-            }
+              lastEventAt = Date.now();
+              resetIdleTimer();
 
-            collected.length = 0;
-            collected.push(...updated);
-          },
-          onEose: () => {
-            if (closed) return;
-            eoseReceived = true;
-            finalize("eose");
-          },
-        }
-      );
-      subscriptionRef.current = subscription;
-      if (closed) subscription.stop();
+              const rawEvent = this.toRawEvent(event);
+              const sourceRelayUrl = getSourceRelayUrl(event);
+              if (sourceRelayUrl) {
+                const sources = sourceRelayUrlsByEventId.get(rawEvent.id) ?? new Set<string>();
+                sources.add(sourceRelayUrl);
+                sourceRelayUrlsByEventId.set(rawEvent.id, sources);
+              }
+              const updated = mergeEvent(collected, rawEvent);
+              if (updated === collected) {
+                duplicateCount += 1;
+                return;
+              }
 
-      this.ensureConnected().catch((error) => {
-        logger.error("Failed to connect before reading events:", error);
-        finalize("hard-timeout");
-      });
+              collected.length = 0;
+              collected.push(...updated);
+            },
+            onEose: () => {
+              if (closed) return;
+              eoseReceived = true;
+              finalize("eose");
+            },
+          }
+        );
+        subscriptionRef.current = subscription;
+        if (closed) subscription.stop();
+      };
+
+      this.ensureConnected()
+        .then(startSubscription)
+        .catch((error) => {
+          logger.error("Failed to connect before reading events:", error);
+          finalize("hard-timeout");
+        });
     });
   }
 
@@ -361,43 +362,49 @@ export class NostrService {
       onEose?.(dedupeAndSortEvents(collected));
     };
 
-    for (const filter of filters) {
-      const subscription = this.ndk.subscribe(
-        filter,
-        {
-          closeOnEose: true,
-          onEvent: (event) => {
-            if (closed) return;
-
-            const rawEvent = this.toRawEvent(event);
-            const updated = mergeEvent(collected, rawEvent);
-            if (updated === collected) return;
-
-            collected.length = 0;
-            collected.push(...updated);
-            onEvent([...collected], rawEvent);
-          },
-          onEose: () => {
-            if (closed) return;
-            eoseCount += 1;
-            if (eoseCount >= filters.length) {
-              finalize();
-            }
-          },
-        },
-        relaySet ?? true
-      );
-      subscriptions.push(subscription);
-    }
-
-    this.ensureConnected().catch((error) => {
-      logger.error("Failed to connect before streaming:", error);
-      finalize();
-    });
-
     timeoutRef.id = setTimeout(() => {
       finalize();
     }, timeoutMs ?? this.config.defaultTimeout);
+
+    const startSubscriptions = () => {
+      if (closed) return;
+      for (const filter of filters) {
+        const subscription = this.ndk.subscribe(
+          filter,
+          {
+            closeOnEose: true,
+            onEvent: (event) => {
+              if (closed) return;
+
+              const rawEvent = this.toRawEvent(event);
+              const updated = mergeEvent(collected, rawEvent);
+              if (updated === collected) return;
+
+              collected.length = 0;
+              collected.push(...updated);
+              onEvent([...collected], rawEvent);
+            },
+            onEose: () => {
+              if (closed) return;
+              eoseCount += 1;
+              if (eoseCount >= filters.length) {
+                finalize();
+              }
+            },
+          },
+          relaySet ?? true
+        );
+        subscriptions.push(subscription);
+        if (closed) subscription.stop();
+      }
+    };
+
+    this.ensureConnected()
+      .then(startSubscriptions)
+      .catch((error) => {
+        logger.error("Failed to connect before streaming:", error);
+        finalize();
+      });
 
     return () => {
       finalize();
@@ -414,14 +421,25 @@ export class NostrService {
       return () => {};
     }
 
+    try {
+      await this.ensureConnected();
+    } catch (error) {
+      logger.error("Failed to connect before subscribeToEvents:", error);
+      onEose?.();
+      return () => {};
+    }
+
     let closed = false;
     let eoseCount = 0;
-    const subscriptions = filters.map((filter) =>
-      this.ndk.subscribe(
+    const subscriptions: Array<{ stop: () => void }> = [];
+    for (const filter of filters) {
+      const subscription = this.ndk.subscribe(
         filter,
         {
           closeOnEose: true,
-          onEvent: (event) => onEvent(this.toRawEvent(event)),
+          onEvent: (event) => {
+            if (!closed) onEvent(this.toRawEvent(event));
+          },
           onEose: () => {
             if (closed) return;
             eoseCount += 1;
@@ -431,13 +449,10 @@ export class NostrService {
           },
         },
         true
-      )
-    );
-
-    this.ensureConnected().catch((error) => {
-      logger.error("Failed to connect before subscribeToEvents:", error);
-      onEose?.();
-    });
+      );
+      subscriptions.push(subscription);
+      if (closed) subscription.stop();
+    }
 
     return () => {
       if (closed) return;
@@ -915,7 +930,7 @@ export class NostrService {
     adminPubkey: string,
     options: { limit?: number; until?: number } = {}
   ): Promise<Event[]> {
-    const filter: any = {
+    const filter: Filter = {
       kinds: [34550],
       authors: [adminPubkey],
     };

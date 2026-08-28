@@ -40,14 +40,13 @@ export function readBusStopModerationSnapshot(
     defaultTimeout: config.defaultTimeout ?? 5000,
   });
   const read = loadDiscussionModerationSnapshot(service, {
-    relayLimit: 3,
+
     idleTimeoutMs: config.defaultTimeout ?? 5000,
     hardTimeoutMs: (config.defaultTimeout ?? 5000) * 3,
     dedupWindowMs: 250,
   }, {
     discussionId: config.busStopDiscussionId,
-    configured: config.relays.filter((relay) => relay.read).map((relay) => relay.url),
-    defaults: [],
+    relayUrls: config.relays.filter((relay) => relay.read).map((relay) => relay.url),
     primaryTags: busStops,
   }).then((nextSnapshot) => {
     const events = [...nextSnapshot.primaryEvents, ...nextSnapshot.approvalEvents];
@@ -100,7 +99,7 @@ export function useBusStopModeration(busStops: string[]): UseBusStopModerationRe
         discussionId,
         primaryEvents: knownPrimary,
         approvalEvents: knownApprovals,
-        relayCandidates: [],
+        relayUrls: [],
         attemptedRelayUrls: [],
         completionReason: "idle-timeout",
       }));

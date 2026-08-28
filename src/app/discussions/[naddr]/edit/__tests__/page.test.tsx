@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DiscussionEditPage from "../page";
 import type { Discussion } from "@/types/discussion";
@@ -228,21 +228,40 @@ describe("DiscussionEditPage listing request", () => {
     ).toBeInTheDocument();
   });
 
-  it("publishes an updated discussion from the detail-backed form", async () => {
-    render(<DiscussionEditPage />);
+  it("keeps the save success screen and offers an explicit detail link", async () => {
+    jest.useFakeTimers();
 
-    fireEvent.change(await screen.findByRole("textbox", { name: "タイトル *" }), {
-      target: { value: "Updated title" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "変更を保存" }));
+    try {
+      render(<DiscussionEditPage />);
 
-    await waitFor(() => {
-      expect(signEventMock).toHaveBeenCalled();
-      expect(
-        jest.requireMock("@/lib/nostr/nostr-service").__mock.publishSignedEvent,
-      ).toHaveBeenCalled();
-    });
-    expect(await screen.findByText("会話が更新されました")).toBeInTheDocument();
+      fireEvent.change(await screen.findByRole("textbox", { name: "タイトル *" }), {
+        target: { value: "Updated title" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "変更を保存" }));
+
+      await waitFor(() => {
+        expect(signEventMock).toHaveBeenCalled();
+        expect(
+          jest.requireMock("@/lib/nostr/nostr-service").__mock.publishSignedEvent,
+        ).toHaveBeenCalled();
+      });
+      expect(await screen.findByText("会話が更新されました")).toBeInTheDocument();
+
+      const detailLink = screen.getByRole("link", { name: "会話画面に戻る" });
+      expect(detailLink).toHaveAttribute(
+        "href",
+        "/discussions/naddr1discussion",
+      );
+
+      await act(async () => {
+        jest.advanceTimersByTime(2001);
+      });
+      expect(routerPushMock).not.toHaveBeenCalled();
+      expect(screen.getByText("会話が更新されました")).toBeInTheDocument();
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 
   it("renders edit validation errors as an assertive soft alert list", async () => {

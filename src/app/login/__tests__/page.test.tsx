@@ -134,6 +134,25 @@ describe("/login public page", () => {
     expect(signupLink).toHaveAttribute("href", "/signup");
   });
 
+  it("preserves a safe returnTo on the login page's signup switch link", () => {
+    const returnTo = "/settings?tab=profile";
+    mockSearchParams = new URLSearchParams({ returnTo });
+    const Page = getLoginPage();
+    renderInHostMain(Page);
+
+    const signupLink = screen.getByRole("link", { name: "アカウント作成" });
+    const href = signupLink.getAttribute("href");
+    expect(href).not.toBeNull();
+    if (href === null) {
+      throw new Error("/login signup switch link did not expose href");
+    }
+
+    const target = new URL(href, "https://kazaguruma.invalid");
+    expect(target.pathname).toBe("/signup");
+    expect(target.searchParams.get("returnTo")).toBe(returnTo);
+    expect([...target.searchParams.keys()]).toEqual(["returnTo"]);
+  });
+
   it("calls the existing login operation once and keeps a rejected passkey attempt on the page with Japanese alert", async () => {
     mockLogin.mockRejectedValueOnce(new Error("NotAllowedError"));
     const Page = getLoginPage();

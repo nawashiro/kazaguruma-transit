@@ -29,7 +29,7 @@ export default async function LicensePage() {
                   </tr>
                   <tr>
                     <th scope="row" className="whitespace-normal">ライセンス</th>
-                    <td className="whitespace-normal"><span className="badge badge-primary h-auto max-w-full break-all py-1 text-center whitespace-normal">{payload.software.license}</span></td>
+                    <td className="whitespace-normal"><span className="badge badge-primary badge-md h-auto max-w-full break-all py-1 text-center whitespace-normal">{payload.software.license}</span></td>
                   </tr>
                   <tr>
                     <th scope="row" className="whitespace-normal">権利者</th>
@@ -79,7 +79,7 @@ export default async function LicensePage() {
                   {payload.openData.map((entry) => (
                     <tr key={entry.id}>
                       <th scope="row" className="break-words whitespace-normal"><a href={entry.sourceUrl} className="link">{entry.name}</a></th>
-                      <td className="whitespace-normal"><a href={entry.licenseUrl} className="badge badge-primary h-auto max-w-full break-words py-1 text-center whitespace-normal">{entry.licenseName}</a></td>
+                      <td className="whitespace-normal"><a href={entry.licenseUrl} className="badge badge-primary badge-md h-auto max-w-full break-words py-1 text-center whitespace-normal">{entry.licenseName}</a></td>
                     </tr>
                   ))}
                 </tbody>
@@ -110,7 +110,7 @@ export default async function LicensePage() {
                     <tr key={`${entry.packageName}@${entry.version}`}>
                       <th scope="row" className="break-all whitespace-normal">{entry.packageName}</th>
                       <td className="break-all whitespace-normal">{entry.version}</td>
-                      <td className="whitespace-normal"><span className="badge badge-primary h-auto max-w-full break-all py-1 text-center whitespace-normal">{entry.license || "UNKNOWN"}</span></td>
+                      <td className="whitespace-normal"><span className="badge badge-primary badge-md h-auto max-w-full break-all py-1 text-center whitespace-normal">{entry.license || "UNKNOWN"}</span></td>
                     </tr>
                   ))}
                   {payload.dependencies.length === 0 && (

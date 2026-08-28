@@ -9,6 +9,7 @@ import {
 } from "@/components/auth/AuthenticationForm";
 import PageHeader from "@/components/layouts/PageHeader";
 import { resolveSafeReturnTarget } from "@/lib/navigation/safe-return-target";
+import { buildLoginRoute, buildSignupRoute } from "@/lib/navigation/auth-route";
 
 interface AuthRoutePageProps {
   mode: AuthenticationMode;
@@ -59,7 +60,15 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
         <p className="text-base ruby-text">
           {isLogin ? "アカウントをお持ちでない方は" : "すでにアカウントをお持ちの方は"}{" "}
           <Link
-            href={isLogin ? "/signup" : "/login"}
+            href={
+              returnTo !== null
+                ? isLogin
+                  ? buildSignupRoute(returnTo)
+                  : buildLoginRoute(returnTo)
+                : isLogin
+                  ? "/signup"
+                  : "/login"
+            }
             className="link"
           >
             {isLogin ? "アカウント作成" : "ログイン"}

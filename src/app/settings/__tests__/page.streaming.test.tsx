@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import SettingsPage from "../page";
 
@@ -116,6 +116,20 @@ jest.mock("@/components/ui/Button", () => {
   };
 });
 
+function assertSettingsAuthLink(element: HTMLElement, expectedPathname: string) {
+  expect(element.tagName).toBe("A");
+  const href = element.getAttribute("href");
+  expect(href).not.toBeNull();
+  if (href === null) {
+    throw new Error("settings auth link did not expose a native href");
+  }
+
+  const target = new URL(href, "https://kazaguruma.invalid");
+  expect(target.pathname).toBe(expectedPathname);
+  expect(target.searchParams.get("returnTo")).toBe("/settings");
+  expect([...target.searchParams.keys()]).toEqual(["returnTo"]);
+}
+
 describe("SettingsPage streaming discussions", () => {
   const withCompletion = (events: any[], completionReason: "eose" | "idle-timeout" | "hard-timeout" = "eose") => ({
     events,
@@ -164,9 +178,11 @@ describe("SettingsPage streaming discussions", () => {
       "text-base-content!",
     );
     expect(alert).toHaveTextContent("認証に失敗しました。");
+    expect(screen.getByRole("link", { name: "ログイン" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "アカウント作成" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "ログイン / アカウント作成" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "ログイン / アカウント作成" }),
+    ).not.toBeInTheDocument();
   });
 
   it("loads user discussions through the bounded discussion read executor", async () => {
@@ -228,23 +244,51 @@ describe("SettingsPage streaming discussions", () => {
     );
   });
 
-  it("sends an unauthenticated user to the login page instead of opening LoginModal", () => {
+  it("renders separate native login and signup links without opening LoginModal", () => {
     mockSettingsUser.isLoggedIn = false;
     mockSettingsUser.pubkey = "";
 
     render(<SettingsPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: "ログイン / アカウント作成" }));
+    const loginLink = screen.getByRole("link", { name: "ログイン" });
+    const signupLink = screen.getByRole("link", { name: "アカウント作成" });
 
-    expect(mockRouterPush).toHaveBeenCalledTimes(1);
-    const target = mockRouterPush.mock.calls[0][0] as string;
-    const targetUrl = new URL(target, "https://kazaguruma.invalid");
-    expect(targetUrl.pathname).toBe("/login");
-    expect(targetUrl.searchParams.get("returnTo")).toBe("/settings");
-    expect(targetUrl.searchParams.has("action")).toBe(false);
-    expect(targetUrl.searchParams.has("payload")).toBe(false);
-    expect(targetUrl.searchParams.has("draft")).toBe(false);
+    expect(screen.getAllByRole("link")).toHaveLength(2);
+    expect(
+      screen.queryByRole("button", { name: "ログイン / アカウント作成" }),
+    ).not.toBeInTheDocument();
+    assertSettingsAuthLink(loginLink, "/login");
+    assertSettingsAuthLink(signupLink, "/signup");
+    expect(mockRouterPush).not.toHaveBeenCalled();
     expect(screen.queryByTestId("login-modal")).not.toBeInTheDocument();
     expect(discussionReadExecutorMock.executeNostrRead).not.toHaveBeenCalled();
+  });
+
+  it("keeps the page spacing while using the default size for the unauthenticated account message", () => {
+    mockSettingsUser.isLoggedIn = false;
+    mockSettingsUser.pubkey = "";
+
+    render(<SettingsPage />);
+
+    const heading = screen.getByRole("heading", { name: "ログインしていません" });
+    expect(heading).not.toHaveClass("text-lg");
+
+    const unauthenticatedContent = heading.parentElement?.parentElement;
+    expect(unauthenticatedContent).not.toBeNull();
+    if (!unauthenticatedContent) {
+      throw new Error("unauthenticated settings content wrapper was not found");
+    }
+    expect(unauthenticatedContent).not.toHaveClass("py-8");
+
+    const accountCard = heading.closest("div.card");
+    expect(accountCard).not.toBeNull();
+    if (!accountCard) throw new Error("settings account card was not found");
+
+    const settingsPage = accountCard.parentElement?.parentElement;
+    expect(settingsPage).not.toBeNull();
+    expect(settingsPage).toHaveClass("py-8");
+    expect(screen.getByRole("heading", { name: "アカウント情報" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ログイン" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "アカウント作成" })).toBeInTheDocument();
   });
 });

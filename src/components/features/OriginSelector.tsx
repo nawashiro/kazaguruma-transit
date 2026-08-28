@@ -8,8 +8,7 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { logger } from "@/utils/logger";
 import { useGeocodingSearch } from "./useGeocodingSearch";
-import { FiSearch } from "react-icons/fi";
-import { MdMyLocation } from "react-icons/md";
+import { LocateFixed, Search } from "lucide-react";
 
 interface OriginSelectorProps {
   onOriginSelected: (location: Location) => void;
@@ -111,7 +110,7 @@ export default function OriginSelector({
                 testId="search-button"
                 aria-label="住所や場所を検索"
               >
-                <FiSearch className="h-5 w-5" aria-hidden="true" />
+                <Search className="h-5 w-5" aria-hidden="true" />
               </Button>
             }
           />
@@ -131,7 +130,7 @@ export default function OriginSelector({
                 aria-label="現在地を使用して経路を検索"
               >
                 <span className="flex items-center justify-center gap-2 whitespace-nowrap">
-                  <MdMyLocation
+                  <LocateFixed
                     className="h-5 w-5 shrink-0"
                     aria-hidden="true"
                   />

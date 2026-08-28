@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircleIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
+import { CircleAlert, CircleCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   KeyLocationCategory,
@@ -293,20 +293,7 @@ export default function LocationsPage() {
       <div className="py-8">
         <PageHeader title="場所をさがす" />
         <div className="alert alert-error alert-soft text-base-content!" role="alert">
-          <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-          {/*
-            xmlns="http://www.w3.org/2000/svg"
-            className="stroke-current shrink-0 h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          */}
+          <CircleAlert className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
           <span>{error}</span>
         </div>
       </div>
@@ -324,20 +311,7 @@ export default function LocationsPage() {
         <Card title="近いところから表示">
           {searchError && (
             <div id="location-search-error" className="alert alert-error alert-soft text-base-content! ruby-text" role="alert">
-              <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-              {/*
-                xmlns="http://www.w3.org/2000/svg"
-                className="stroke-current shrink-0 h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              */}
+              <CircleAlert className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
               <span>{searchError}</span>
             </div>
           )}
@@ -399,20 +373,7 @@ export default function LocationsPage() {
               role="status"
               aria-live="polite"
             >
-              <CheckCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-              {/*
-                xmlns="http://www.w3.org/2000/svg"
-                className="stroke-current shrink-0 h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              */}
+              <CircleCheck className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
               <span>
                 位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます
               </span>

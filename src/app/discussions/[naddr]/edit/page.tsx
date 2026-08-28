@@ -10,8 +10,7 @@ import React, {
 import Link from "next/link";
 import PageHeader from "@/components/layouts/PageHeader";
 import { useParams, useRouter } from "next/navigation";
-import { CheckCircleIcon } from "@heroicons/react/24/solid";
-import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import { CircleCheck, Info } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
 import {
@@ -426,7 +425,7 @@ export default function DiscussionEditPage() {
       <div className="py-8">
         <div className="card bg-base-100 shadow-sm border border-base-300">
           <div className="card-body py-8">
-            <InformationCircleIcon
+            <Info
               className="h-12 w-12 text-info"
               aria-hidden="true"
             />
@@ -456,7 +455,7 @@ export default function DiscussionEditPage() {
             <div className="card bg-base-100 shadow-lg border border-green-200 dark:border-green-700">
               <div className="card-body ">
                 <div className="mb-4">
-                  <CheckCircleIcon className="w-16 h-16 text-green-600 dark:text-green-400 " />
+                  <CircleCheck className="w-16 h-16 text-green-600 dark:text-green-400 " />
                 </div>
                 <h2 className="text-xl font-semibold mb-4 text-green-600 dark:text-green-400">
                   {successMessage}

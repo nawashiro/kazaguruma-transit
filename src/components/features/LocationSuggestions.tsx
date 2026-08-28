@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useId, memo } from "react";
-import { ExclamationCircleIcon, MapPinIcon } from "@heroicons/react/24/outline";
+import { CircleAlert, MapPin } from "lucide-react";
 import { Location } from "@/types/core";
 import {
   AddressCategory,
@@ -78,21 +78,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
     return (
       <Card className="mb-6 overflow-hidden">
         <div className="alert alert-error alert-soft text-base-content!" role="alert" aria-live="assertive">
-          <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-          {/*
-            xmlns="http://www.w3.org/2000/svg"
-            className="stroke-current shrink-0 h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          */}
+          <CircleAlert className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
           <span>{error}</span>
         </div>
       </Card>
@@ -139,28 +125,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
                     onClick={() => handleLocationSelect(location)}
                   >
                     <div className="flex items-center w-full overflow-hidden">
-                      <MapPinIcon className="h-4 w-4 mr-2 flex-shrink-0" aria-hidden="true" />
-                      {/*
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 mr-2 flex-shrink-0"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      */}
+                      <MapPin className="h-4 w-4 mr-2 flex-shrink-0" aria-hidden="true" />
                       <span className="truncate">{location.name}</span>
                     </div>
                   </button>

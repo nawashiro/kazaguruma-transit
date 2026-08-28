@@ -113,11 +113,11 @@ VERDICT: PASS
 
 - [x] T012 `PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm run build` を最終ゲートとして実行し、Prisma/GTFS副作用とwarningを結果から分離して記録する。buildが変更と無関係な環境要因で失敗した場合は、代替成功を捏造せず明示する。実測: exit 0。`transit-config.json`不在のGTFS importエラー表示、既存warning、Next production build成功を分離記録。
 
-- [x] T013 `.hermes/issue-108/investigation.md` の結論・検証結果と `tasks.md` の実績を、親側の実測値だけで更新する。Issue、憲章、除外path、Node条件、RED/GREEN、full test、lint、typecheck、build、statusを同期する。文書の末尾空白と相対リンクを確認する。実測: 実装後検証、baseline比較、full Jest/build、未commit状態を両文書へ反映。
+- [x] T013 `.hermes/issue-108/investigation.md` の結論・検証結果と `tasks.md` の実績を、親側の実測値だけで更新する。Issue、憲章、除外path、Node条件、RED/GREEN、full test、lint、typecheck、build、statusを同期する。文書の末尾空白と相対リンクを確認する。実測: 実装後検証、baseline比較、full Jest/build、配送後のPR/CI状態を両文書へ反映。
 
-- [ ] T014 変更差分を親が再レビューし、conventional prefixの日本語commitを作成して`origin/chore/issue-108-lucide`へpushする。PRを作成する場合はbaseを`dev`に明示し、Issue #108をcloseする本文、変更理由、検証結果、未変更範囲、Node 22条件を日本語で記載する。PR作成後にtitle/body、head/base、changed filesを読み戻す。
+- [x] T014 変更差分を親が再レビューし、conventional prefixの日本語commitを作成して`origin/chore/issue-108-lucide`へpushする。PRを作成する場合はbaseを`dev`に明示し、Issue #108をcloseする本文、変更理由、検証結果、未変更範囲、Node 22条件を日本語で記載する。PR作成後にtitle/body、head/base、changed filesを読み戻す。実測: commit `14bb9b77bfb8101e8987a0f802ec548374573f67`、remote SHA一致、PR #115（base=`dev`）を確認。
 
-- [ ] T015 pushしたexact SHAに対してGitHub checksを確認する。CIが未triggerなら成功扱いにせず「未trigger」と報告し、failureならログを調査して変更起因・baseline・infrastructureを分類する。mergeはユーザーの明示承認なしに行わない。
+- [x] T015 pushしたexact SHAに対してGitHub checksを確認する。CIが未triggerなら成功扱いにせず「未trigger」と報告し、failureならログを調査して変更起因・baseline・infrastructureを分類する。mergeはユーザーの明示承認なしに行わない。実測: run `33182440600` はJestのcolor compliance 5件でfailure。ベースSHAでも同一結果を再現し、Issue #108起因ではない。PRはopen、mergeなし。
 
 ## 依存関係
 

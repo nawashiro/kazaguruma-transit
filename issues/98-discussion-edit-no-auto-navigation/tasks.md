@@ -49,8 +49,8 @@
 ## Phase 4: Delivery
 
 - [x] T012 in-scope docs、test、productionだけをstageし、日本語の短いprefix commitを作成する。無関係な変更を含めない。実施済み: 6ファイルのみをstageし、`fix: Issue #98の編集保存後自動遷移を廃止` を作成した。
-- [x] T013 feature branchをpushし、local SHAとremote branch SHAを一致確認する。実測: 初回実装commit `b01fa6a4e22dfbc2f7cac8c89fa2ee6e568b6dca` と記録更新commitをGitHub／Tangledへpushし、最終SHA `88abd97586788b1d8fa490603149004dd4697d90` を`git ls-remote`で一致確認した。
-- [x] T014 base=`dev`、head SHA、title/body、変更ファイルを読み返してIssue #98に紐づくPRを作成し、PRの状態・head SHA・checksをGitHubから確認する。CI未trigger・実行中・失敗を成功扱いしない。実測: PR #114（https://github.com/nawashiro/kazaguruma-transit/pull/114）、base=`dev`、head=`fix/issue-98-no-auto-navigation`、作成時head SHA `b01fa6a4e22dfbc2f7cac8c89fa2ee6e568b6dca`、最終head SHA `88abd97586788b1d8fa490603149004dd4697d90`、state OPEN、Quality Gateは実行中。
+- [x] T013 feature branchをpushし、local SHAとremote branch SHAを一致確認する。実測: 初回実装commit `b01fa6a4e22dfbc2f7cac8c89fa2ee6e568b6dca` と記録更新commitをGitHub／Tangledへpushし、push確認時SHA `88abd97586788b1d8fa490603149004dd4697d90` を`git ls-remote`で一致確認した。
+- [x] T014 base=`dev`、head SHA、title/body、変更ファイルを読み返してIssue #98に紐づくPRを作成し、PRの状態・head SHA・checksをGitHubから確認する。CI未trigger・実行中・失敗を成功扱いしない。実測: PR #114（https://github.com/nawashiro/kazaguruma-transit/pull/114）、base=`dev`、head=`fix/issue-98-no-auto-navigation`、作成時head SHA `b01fa6a4e22dfbc2f7cac8c89fa2ee6e568b6dca`、記録更新push前の確認head SHA `88abd97586788b1d8fa490603149004dd4697d90`、state OPEN、Quality Gateはその時点で実行中。
 
 ## 依存関係
 

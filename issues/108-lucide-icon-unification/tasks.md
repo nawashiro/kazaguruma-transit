@@ -127,9 +127,9 @@ VERDICT: PASS
 
 - [x] T018 [TEST] T017 PASS後、同じ`src/app/__tests__/color-compliance.test.ts`へ、runtime `lucide-react` named importのlocal bindingをTypeScript ASTで収集し、JSX tagの完全一致を装飾要素として扱うtest-only修正を実装した。type-only importは除外し、任意のcomponent名はglobal whitelistしない。実測: color audit 1 suite / 8 tests、strict TypeScript、Lint、diff check、full JestがPASS。
 
-- [ ] T019 T016〜T018の原因分析・検証結果・T018後のfull Jest（137 PASS / 2 skipped suites / FAIL 0）をこの文書と`investigation.md`へ反映し、追補commit/pushする。`src/app/apple-icon.png`は凍結し、変更pathを再確認する。
+- [x] T019 T016〜T018の原因分析・検証結果・T018後のfull Jest（137 PASS / 2 skipped suites / FAIL 0）をこの文書と`investigation.md`へ反映し、追補commit/pushする。`src/app/apple-icon.png`は凍結し、変更pathを再確認する。実測: 文書を`issues/108-lucide-icon-unification/`へ移動し、最終head `15f24a025945f4a0d8bdb552142b5b57b5fe48cc`をpush。
 
-- [ ] T020 T019後にpushしたexact SHAのPR #115 Quality Gateを確認する。Jest、ESLint、strict TypeScriptの終端結果を読み、成功を実測できない限り成功扱いにしない。mergeは行わない。
+- [x] T020 T019後にpushしたexact SHAのPR #115 Quality Gateを確認する。Jest、ESLint、strict TypeScriptの終端結果を読み、成功を実測できない限り成功扱いにしない。mergeは行わない。実測: head `15f24a025945f4a0d8bdb552142b5b57b5fe48cc`、run `33184762706`、Quality Gate PASS。PR #115はopen、mergeなし。
 
 ## 依存関係
 

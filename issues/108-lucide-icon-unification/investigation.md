@@ -134,8 +134,8 @@ T005〜T009で、旧アイコンをLucideへ置換し、既知の死んだSVGコ
 - T016〜T018後の full Jest: 139 suites中137 PASS、2 skipped。862 tests中849 PASS、13 skipped、FAIL 0。color auditにLucide runtime named importのprovenance認識を追加し、旧sourceの装飾アイコン色を通常テキストとして誤検出しない回帰を修正した。
 - 凍結対象: `src/app/icon.svg`は変更なし。`src/app/apple-icon.png`はworktree作成時から存在するGit LFS pointer差分を保持し、Issue作業では変更していない。
 
-実装commit `14bb9b77bfb8101e8987a0f802ec548374573f67` を作成し、`origin/chore/issue-108-lucide` へpushした。ローカルとremoteのSHAは一致し、PR #115（base=`dev`）を作成した。
+実装commit `14bb9b77bfb8101e8987a0f802ec548374573f67` を作成し、`origin/chore/issue-108-lucide` へpushした。その後、color auditの回帰修正、不要な`.hermes`追跡の除去、調査文書の`issues/108-lucide-icon-unification/`への移動を行い、最終headは`15f24a025945f4a0d8bdb552142b5b57b5fe48cc`となった。各push後にremote SHAを確認し、PR #115（base=`dev`）を更新した。
 
 PR #115のQuality Gate run `33182440600`（head `d398c5f43f8afde8e49fb1d78ee0d50e1cf7ca27`）は終了し、ESLintとstrict TypeScriptは成功したが、Jestがcolor auditの5件でexit 1となった。PR #114のQuality Gate run `33170956429`（head `1e207b803ebb0be6b0a96a9a02bdb4911d8d59ff`）はPASSしており、pre-#114 dev tip `9be674d`でもcolor testはPASSだった。したがって、初回CI failureは今回のLucide名への移行でcolor auditのアイコン識別境界が崩れたことが原因である。
 
-T016で実際のLucide import fixtureを追加し、T017のfresh read-only test reviewで`VERDICT: PASS`を取得した。T018で`lucide-react`のruntime named importをTypeScript ASTから収集し、local binding名とJSX tagの完全一致だけを装飾アイコンとして扱うtest-only修正を実施した。現行local full JestはFAIL 0であり、次の追補commit/push後に新しいexact SHAのQuality Gateを確認する。
+T016で実際のLucide import fixtureを追加し、T017のfresh read-only test reviewで`VERDICT: PASS`を取得した。T018で`lucide-react`のruntime named importをTypeScript ASTから収集し、local binding名とJSX tagの完全一致だけを装飾アイコンとして扱うtest-only修正を実施した。現行local full JestはFAIL 0であり、最終head `15f24a025945f4a0d8bdb552142b5b57b5fe48cc`のQuality Gate run `33184762706`もPASSした。PR #115はopenのままで、mergeはしていない。

@@ -49,8 +49,8 @@
 ## Phase 4: Delivery
 
 - [x] T012 in-scope docs、test、productionだけをstageし、日本語の短いprefix commitを作成する。無関係な変更を含めない。実施済み: 6ファイルのみをstageし、`fix: Issue #98の編集保存後自動遷移を廃止` を作成した。
-- [ ] T013 feature branchをpushし、local SHAとremote branch SHAを一致確認する。
-- [ ] T014 base=`dev`、head SHA、title/body、変更ファイルを読み返してIssue #98に紐づくPRを作成し、PRの状態・head SHA・checksをGitHubから確認する。CI未trigger・実行中・失敗を成功扱いしない。
+- [x] T013 feature branchをpushし、local SHAとremote branch SHAを一致確認する。実測: `b01fa6a4e22dfbc2f7cac8c89fa2ee6e568b6dca` をGitHub／Tangledへpushし、`git ls-remote`で同一SHAを確認した。
+- [x] T014 base=`dev`、head SHA、title/body、変更ファイルを読み返してIssue #98に紐づくPRを作成し、PRの状態・head SHA・checksをGitHubから確認する。CI未trigger・実行中・失敗を成功扱いしない。実測: PR #114（https://github.com/nawashiro/kazaguruma-transit/pull/114）、base=`dev`、head=`fix/issue-98-no-auto-navigation`、作成時head SHA `b01fa6a4e22dfbc2f7cac8c89fa2ee6e568b6dca`、state OPEN、checks 0件。
 
 ## 依存関係
 

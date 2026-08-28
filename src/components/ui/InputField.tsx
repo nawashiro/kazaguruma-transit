@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useId } from "react";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { TriangleAlert } from "lucide-react";
 
 interface InputFieldProps {
   value: string;
@@ -87,7 +87,7 @@ export default function InputField({
           className="text-base-content text-base font-medium leading-relaxed"
           role="alert"
         >
-          <ExclamationTriangleIcon className="w-4 h-4 inline mr-1" aria-hidden="true" />
+          <TriangleAlert className="w-4 h-4 inline mr-1" aria-hidden="true" />
           {error}
         </div>
       )}

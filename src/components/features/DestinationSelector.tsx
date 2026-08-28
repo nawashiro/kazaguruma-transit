@@ -7,7 +7,7 @@ import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { useGeocodingSearch } from "./useGeocodingSearch";
-import { FiSearch } from "react-icons/fi";
+import { Search } from "lucide-react";
 
 interface DestinationSelectorProps {
   onDestinationSelected: (location: Location) => void;
@@ -58,7 +58,7 @@ export default function DestinationSelector({
                 testId="search-button"
                 aria-label="目的地の住所や場所を検索"
               >
-                <FiSearch className="h-5 w-5" aria-hidden="true" />
+                <Search className="h-5 w-5" aria-hidden="true" />
               </Button>
             }
           />

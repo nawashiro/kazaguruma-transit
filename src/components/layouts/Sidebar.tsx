@@ -2,19 +2,19 @@
 
 import Link from "next/link";
 import {
-  HomeIcon,
-  QuestionMarkCircleIcon,
-  BookOpenIcon,
-  DocumentTextIcon,
-  ArrowPathIcon,
-  RocketLaunchIcon,
-  InformationCircleIcon,
-  MapPinIcon,
-  ChatBubbleLeftRightIcon,
-  Cog6ToothIcon,
-  TrophyIcon,
-} from "@heroicons/react/24/outline";
-import { HeartIcon } from "@heroicons/react/24/solid";
+  BookOpen,
+  CircleHelp,
+  FileText,
+  Heart,
+  House,
+  Info,
+  MapPin,
+  MessageCircle,
+  RefreshCw,
+  Rocket,
+  Settings,
+  Trophy,
+} from "lucide-react";
 import { buildKoFiPageUrl } from "@/lib/config/ko-fi-config";
 interface SidebarProps {
   toggleSidebar: () => void;
@@ -34,25 +34,25 @@ export default function Sidebar({
         <li>
           <details open>
             <summary className="group">
-              <RocketLaunchIcon className="h-6 w-6" />
+              <Rocket className="h-6 w-6" aria-hidden="true" />
               <span className="font-semibold ruby-text">使う</span>
             </summary>
             <ul className="menu w-full ">
               <li>
                 <Link href="/" onClick={toggleSidebar}>
-                  <HomeIcon className="h-6 w-6" />
+                  <House className="h-6 w-6" aria-hidden="true" />
                   <span className="ruby-text">ホーム</span>
                 </Link>
               </li>
               <li>
                 <Link href="/locations" onClick={toggleSidebar}>
-                  <MapPinIcon className="h-6 w-6" />
+                  <MapPin className="h-6 w-6" aria-hidden="true" />
                   <span className="ruby-text">場所をさがす</span>
                 </Link>
               </li>
               <li>
                 <Link href="/discussions" onClick={toggleSidebar}>
-                  <ChatBubbleLeftRightIcon className="h-6 w-6" />
+                  <MessageCircle className="h-6 w-6" aria-hidden="true" />
                   <span className="ruby-text">意見交換</span>
                 </Link>
               </li>
@@ -62,7 +62,7 @@ export default function Sidebar({
         <li>
           <details open>
             <summary className="group">
-              <InformationCircleIcon className="h-6 w-6" />
+              <Info className="h-6 w-6" aria-hidden="true" />
               <span className="font-semibold whitespace-nowrap ruby-text">
                 使い方やサイト情報
               </span>
@@ -73,7 +73,7 @@ export default function Sidebar({
                   href="/beginners-guide"
                   onClick={toggleSidebar}
                 >
-                  <QuestionMarkCircleIcon className="h-6 w-6" />
+                  <CircleHelp className="h-6 w-6" aria-hidden="true" />
                   <span className="ruby-text">
                     はじめての
                     <ruby>
@@ -85,19 +85,19 @@ export default function Sidebar({
               </li>
               <li>
                 <Link href="/usage" onClick={toggleSidebar}>
-                  <BookOpenIcon className="h-6 w-6" />
+                  <BookOpen className="h-6 w-6" aria-hidden="true" />
                   <span className="ruby-text">使い方</span>
                 </Link>
               </li>
               <li>
                 <Link href="/award" onClick={toggleSidebar}>
-                  <TrophyIcon className="h-6 w-6" />
+                  <Trophy className="h-6 w-6" aria-hidden="true" />
                   <span className="ruby-text">受賞について</span>
                 </Link>
               </li>
               <li>
                 <Link href="/license" onClick={toggleSidebar}>
-                  <DocumentTextIcon className="h-6 w-6" />
+                  <FileText className="h-6 w-6" aria-hidden="true" />
                   <span className="ruby-text">ライセンス</span>
                 </Link>
               </li>
@@ -108,7 +108,7 @@ export default function Sidebar({
                   rel="noopener noreferrer"
                 >
                   <span className="inline">
-                    <ArrowPathIcon className="h-6 w-6" />
+                    <RefreshCw className="h-6 w-6" aria-hidden="true" />
                   </span>
                   <span className="ruby-text">更新情報</span>
                 </a>
@@ -120,7 +120,7 @@ export default function Sidebar({
           <ul className="menu w-full ">
             <li>
               <Link href="/settings" onClick={toggleSidebar}>
-                <Cog6ToothIcon className="h-6 w-6" />
+                <Settings className="h-6 w-6" aria-hidden="true" />
                 <span className="ruby-text">設定</span>
               </Link>
             </li>
@@ -132,7 +132,7 @@ export default function Sidebar({
                   rel="noopener noreferrer"
                   onClick={toggleSidebar}
                 >
-                  <HeartIcon className="h-6 w-6 text-error" />
+                  <Heart className="h-6 w-6 text-error" aria-hidden="true" />
                   <span className="ruby-text">開発者を支援する</span>
                 </a>
               </li>

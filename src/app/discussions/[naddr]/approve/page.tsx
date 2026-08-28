@@ -32,10 +32,7 @@ import type {
   PostApproval,
 } from "@/types/discussion";
 import { logger } from "@/utils/logger";
-import {
-  CheckBadgeIcon,
-  InformationCircleIcon,
-} from "@heroicons/react/24/outline";
+import { BadgeCheck, Info } from "lucide-react";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrServiceConfig = getNostrServiceConfig();
@@ -235,7 +232,7 @@ export default function PostApprovalPage() {
         <div className="card bg-base-100 shadow-sm mb-6" role="status">
           <div className="card-body">
             <div className="flex flex-nowrap gap-2 items-center">
-              <InformationCircleIcon
+              <Info
                 className="h-6 w-6 shrink-0 text-info"
                 aria-hidden="true"
               />
@@ -395,7 +392,7 @@ export default function PostApprovalPage() {
                   <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                     <div className="card-body">
                       <div className="py-8 ruby-text">
-                        <CheckBadgeIcon
+                        <BadgeCheck
                           aria-label="承認待ちなし"
                           className="h-12 w-12 text-gray-400"
                         />
@@ -507,7 +504,7 @@ export default function PostApprovalPage() {
                   <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                     <div className="card-body">
                       <div className="py-8 ruby-text">
-                        <CheckBadgeIcon
+                        <BadgeCheck
                           aria-label="承認済みなし"
                           className="h-12 w-12 text-gray-400"
                         />

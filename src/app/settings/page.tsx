@@ -4,11 +4,7 @@
 export const dynamic = "force-dynamic";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import {
-  ArrowRightOnRectangleIcon,
-  DocumentTextIcon,
-  ExclamationCircleIcon,
-} from "@heroicons/react/24/outline";
+import { CircleAlert, FileText, LogOut } from "lucide-react";
 import Link from "next/link";
 import PageHeader from "@/components/layouts/PageHeader";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -186,7 +182,7 @@ export default function SettingsPage() {
                       ""
                     ) : (
                       <>
-                        <ArrowRightOnRectangleIcon className="w-4 h-4" aria-hidden="true" />
+                        <LogOut className="w-4 h-4" aria-hidden="true" />
                         <span className="ruby-text">ログアウト</span>
                       </>
                     )}
@@ -203,7 +199,7 @@ export default function SettingsPage() {
 
                 {error && (
                   <div className="alert alert-error alert-soft text-base-content! mb-4" role="alert">
-                    <ExclamationCircleIcon className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
+                    <CircleAlert className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
                     <span className="text-base">{error}</span>
                   </div>
                 )}
@@ -297,7 +293,7 @@ export default function SettingsPage() {
                   </div>
                 ) : (
                   <div className="py-8">
-                    <DocumentTextIcon className="h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
+                    <FileText className="h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
                     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2 ruby-text">
                       まだ会話を作成していません
                     </h3>

@@ -9,7 +9,7 @@ import { DiscussionMetaReadState } from "@/components/discussion/DiscussionMetaR
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
 import type { CompletionReason } from "@/lib/nostr/nostr-service";
-import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import { Info } from "lucide-react";
 import type { Discussion } from "@/types/discussion";
 
 interface DiscussionTabLayoutProps {
@@ -187,7 +187,7 @@ function DiscussionTabLayoutContent({
 
           {isDiscussionRoleReady && (
             <div className="alert alert-soft text-base-content! mb-8" role="status">
-              <InformationCircleIcon className="h-6 w-6 text-info" aria-hidden="true" />
+              <Info className="h-6 w-6 text-info" aria-hidden="true" />
               <div>
                 {isCreator ? (
                   <>

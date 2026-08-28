@@ -1,7 +1,7 @@
 "use client";
 
 import React, { ReactNode } from "react";
-import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 interface CarouselCardProps {
   id: string;
@@ -47,14 +47,14 @@ export default function CarouselCard({
               className="btn text-base btn-primary btn-circle"
               aria-label="前のスライド"
             >
-              <ArrowLeftIcon height="1rem" width="1rem" />
+              <ArrowLeft height="1rem" width="1rem" aria-hidden="true" />
             </a>
             <a
               href={`#${nextSlideId}`}
               className="btn text-base btn-primary btn-circle"
               aria-label="次のスライド"
             >
-              <ArrowRightIcon height="1rem" width="1rem" />
+              <ArrowRight height="1rem" width="1rem" aria-hidden="true" />
             </a>
           </div>
         </div>

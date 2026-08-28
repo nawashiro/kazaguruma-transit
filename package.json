@@ -37,7 +37,6 @@
   },
   "dependencies": {
     "@googlemaps/google-maps-services-js": "^3.4.1",
-    "@heroicons/react": "^2.2.0",
     "@nostr-dev-kit/ndk": "latest",
     "@prisma/client": "^6.19.3",
     "@react-pdf/renderer": "^4.3.0",
@@ -47,6 +46,7 @@
     "gtfs": "^4.17.0",
     "iron-session": "^8.0.4",
     "isomorphic-fetch": "^3.0.0",
+    "lucide-react": "^1.35.0",
     "luxon": "^3.6.0",
     "ml-kmeans": "^6.0.0",
     "ml-matrix": "^6.12.1",
@@ -58,7 +58,6 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-ga4": "^2.1.0",
-    "react-icons": "^5.7.0",
     "react-to-print": "^3.0.5",
     "transit-departures-widget": "^2.5.4",
     "tsx": "^4.19.3",

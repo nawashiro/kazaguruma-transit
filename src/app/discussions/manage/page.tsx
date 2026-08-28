@@ -5,10 +5,7 @@ export const dynamic = "force-dynamic";
 
 import React, { useState } from "react";
 import Link from "next/link";
-import {
-  CheckBadgeIcon,
-  InformationCircleIcon,
-} from "@heroicons/react/24/outline";
+import { BadgeCheck, Info } from "lucide-react";
 import PageHeader from "@/components/layouts/PageHeader";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
@@ -333,7 +330,7 @@ export default function DiscussionManagePage() {
         <div className="card bg-base-100 shadow-sm mb-6" role="status">
           <div className="card-body">
             <div className="flex flex-nowrap gap-2 items-center">
-              <InformationCircleIcon
+              <Info
                 className="h-6 w-6 shrink-0 text-info"
                 aria-hidden="true"
               />
@@ -407,7 +404,7 @@ export default function DiscussionManagePage() {
               <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="card-body">
                   <div className="py-8">
-                    <CheckBadgeIcon
+                    <BadgeCheck
                       aria-label="承認待ちなし"
                       className="h-12 w-12 text-base-content"
                     />
@@ -476,7 +473,7 @@ export default function DiscussionManagePage() {
               <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="card-body">
                   <div className="py-8">
-                    <CheckBadgeIcon
+                    <BadgeCheck
                       aria-label="承認済みなし"
                       className="h-12 w-12 text-base-content"
                     />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline";
+import { Check, Clipboard } from "lucide-react";
 import { hexToNpub } from "@/lib/nostr/nostr-utils";
 import { logger } from "@/utils/logger";
 
@@ -36,9 +36,9 @@ export function NpubDisplay({ pubkey }: Props) {
         aria-label={isCopied ? "ユーザーIDをコピーしました" : "ユーザーIDをコピー"}
       >
         {isCopied ? (
-          <CheckIcon className="h-5 w-5 text-success" aria-hidden="true" />
+          <Check className="h-5 w-5 text-success" aria-hidden="true" />
         ) : (
-          <ClipboardDocumentIcon className="h-5 w-5 text-base-content/60" aria-hidden="true" />
+          <Clipboard className="h-5 w-5 text-base-content/60" aria-hidden="true" />
         )}
       </button>
     </div>

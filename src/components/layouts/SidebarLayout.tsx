@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bars3Icon } from "@heroicons/react/24/outline";
+import { Menu } from "lucide-react";
 import Sidebar from "./Sidebar";
 import ThemeToggle from "../ui/ThemeToggle";
 import SkipToContent from "../ui/SkipToContent";
@@ -92,7 +92,7 @@ export default function SidebarLayout({
               aria-controls="drawer"
               onClick={() => setIsDrawerOpen(true)}
             >
-              <Bars3Icon className="inline-block w-6 h-6 stroke-current" aria-hidden="true" />
+              <Menu className="inline-block w-6 h-6 stroke-current" aria-hidden="true" />
               <span className="ruby-text">メニュー</span>
             </button>
           </span>

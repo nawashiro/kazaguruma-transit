@@ -26,10 +26,10 @@ import { NpubDisplay } from "@/components/ui/NpubDisplay";
 const config = getNostrServiceConfig();
 const service = createNostrService(config);
 const gateway = createDiscussionNdkGateway(config);
+const PUBLIC_MODERATOR_ROUTE = "/discussions/moderator";
 
 export default function DiscussionManagementModeratorPage() {
   const router = useRouter();
-  const naddrParam = "moderator";
   const { user, signEvent } = useAuth();
   const management = useDiscussionManagement();
   const managementDiscussion = management.snapshot?.listDiscussion;
@@ -103,10 +103,7 @@ export default function DiscussionManagementModeratorPage() {
   const request = async () => {
     if (!user.isLoggedIn) {
       router.push(
-        buildLoginRoute(
-          `/discussions/${naddrParam}/moderators`,
-          "モデレーター申請にはログインが必要です。",
-        ),
+        buildLoginRoute(PUBLIC_MODERATOR_ROUTE),
       );
       return;
     }
@@ -380,10 +377,7 @@ export default function DiscussionManagementModeratorPage() {
               className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start sm:ml-0"
               onClick={() =>
                 router.push(
-                  buildLoginRoute(
-                    `/discussions/${naddrParam}/moderators`,
-                    "モデレーター申請にはログインが必要です。",
-                  ),
+                  buildLoginRoute(PUBLIC_MODERATOR_ROUTE),
                 )
               }
             >

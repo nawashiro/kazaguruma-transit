@@ -1,6 +1,12 @@
 import { resolveSafeReturnTarget } from "@/lib/navigation/safe-return-target";
 
-export function buildLoginRoute(returnTo: unknown, reason?: unknown): string {
+type AuthenticationRouteMode = "login" | "signup";
+
+function buildAuthRoute(
+  mode: AuthenticationRouteMode,
+  returnTo: unknown,
+  reason?: unknown,
+): string {
   const params = new URLSearchParams({
     returnTo: resolveSafeReturnTarget(returnTo),
   });
@@ -9,5 +15,13 @@ export function buildLoginRoute(returnTo: unknown, reason?: unknown): string {
     params.set("reason", reason);
   }
 
-  return `/login?${params.toString()}`;
+  return `/${mode}?${params.toString()}`;
+}
+
+export function buildLoginRoute(returnTo: unknown, reason?: unknown): string {
+  return buildAuthRoute("login", returnTo, reason);
+}
+
+export function buildSignupRoute(returnTo: unknown, reason?: unknown): string {
+  return buildAuthRoute("signup", returnTo, reason);
 }

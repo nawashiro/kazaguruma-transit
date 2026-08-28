@@ -19,7 +19,7 @@ interface ApprovalStatusTabsProps {
 export function ApprovalStatusTabs({
   activeTab,
   approvedCount,
-  badgeClassName = "",
+  badgeClassName = "badge-md",
   idPrefix,
   onTabChange,
   pendingCount,

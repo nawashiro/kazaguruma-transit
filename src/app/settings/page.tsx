@@ -4,7 +4,6 @@
 export const dynamic = "force-dynamic";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
 import {
   ArrowRightOnRectangleIcon,
   DocumentTextIcon,
@@ -26,8 +25,7 @@ import {
   type NostrEventDTO,
 } from "@/lib/nostr/discussion-ndk-gateway";
 import { UserIdentity } from "@/components/ui/UserIdentity";
-import Button from "@/components/ui/Button";
-import { buildLoginRoute } from "@/lib/navigation/auth-route";
+import { buildLoginRoute, buildSignupRoute } from "@/lib/navigation/auth-route";
 import type { Discussion } from "@/types/discussion";
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import { executeNostrRead } from "@/lib/nostr/nostr-read-executor";
@@ -38,7 +36,6 @@ const discussionReadStrategy = getDiscussionReadStrategyConfig();
 const discussionGateway = createDiscussionNdkGateway(nostrServiceConfig);
 
 export default function SettingsPage() {
-  const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [myDiscussions, setMyDiscussions] = useState<Discussion[]>([]);
   const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(false);
@@ -197,9 +194,9 @@ export default function SettingsPage() {
                 </div>
               </div>
             ) : (
-              <div className="py-8">
+              <div>
                 <div className="mb-6">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2 ruby-text">
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2 ruby-text">
                     ログインしていません
                   </h3>
                 </div>
@@ -212,13 +209,22 @@ export default function SettingsPage() {
                 )}
 
                 <div className="flex flex-col gap-3">
-                  <Button
-                    onClick={() => router.push(buildLoginRoute("/settings"))}
-                    disabled={isLoading}
-                    className="whitespace-nowrap text-base"
+                  <Link
+                    href={buildLoginRoute("/settings")}
+                    className="btn btn-primary min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm leading-relaxed font-medium inline-flex items-center justify-center whitespace-nowrap text-base"
                   >
-                    <span className="ruby-text">ログイン / アカウント作成</span>
-                  </Button>
+                    <span className="ruby-text inline-flex w-full items-center justify-center gap-2">
+                      ログイン
+                    </span>
+                  </Link>
+                  <Link
+                    href={buildSignupRoute("/settings")}
+                    className="btn btn-primary min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm leading-relaxed font-medium inline-flex items-center justify-center whitespace-nowrap text-base"
+                  >
+                    <span className="ruby-text inline-flex w-full items-center justify-center gap-2">
+                      アカウント作成
+                    </span>
+                  </Link>
                 </div>
               </div>
             )}

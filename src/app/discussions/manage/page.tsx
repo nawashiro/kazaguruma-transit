@@ -118,7 +118,7 @@ export default function DiscussionManagePage() {
                       {formatRelativeTime(referencedDiscussion.createdAt)}
                     </time>
                   </div>
-                  <span className="badge badge-outline">
+                  <span className="badge badge-outline badge-md">
                     {referencedDiscussion.moderators.length + 1} モデレーター
                   </span>
                 </div>

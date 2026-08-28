@@ -109,7 +109,7 @@ export function EvaluationComponent({
         </div>
         {currentPost.busStopTag && (
           <div className="mb-3">
-            <span className="badge badge-primary">
+            <span className="badge badge-primary badge-md">
               {currentPost.busStopTag}
             </span>
           </div>

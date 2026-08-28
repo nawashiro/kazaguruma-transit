@@ -131,7 +131,7 @@ export default function DiscussionsPage() {
                                   discussion.moderators.some(
                                     (m) => m.pubkey === user.pubkey
                                   )) && (
-                                  <p className="badge badge-primary">
+                                  <p className="badge badge-primary badge-md">
                                     <span>参加中</span>
                                   </p>
                                 )}

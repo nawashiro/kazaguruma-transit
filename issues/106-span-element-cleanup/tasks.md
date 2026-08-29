@@ -122,9 +122,9 @@ VERDICT: PASS
 
 - [x] T011 `research.md`、`plan.md`、`tasks.md`へ実測した変更path、span件数、focused/full test、strict TypeScript、lint、build、凍結path、statusを反映する。文書変更後に`git diff --check`と相対リンクを確認する。実測結果をresearch/tasksへ追記し、Issue文書の相対リンクとdiff checkを確認した。
 
-- [ ] T012 最終差分を親が再レビューし、conventional prefixの日本語commitを作成して`origin/fix/issue-106-span-gap`へpushする。PRを作成する場合はbaseを`dev`に明示し、Issue #106をcloseする本文、変更理由、検証結果、未変更範囲、Node条件を日本語で記載する。PR作成後にtitle/body、head/base、changed filesを読み戻す。
+- [x] T012 最終差分を親が再レビューし、conventional prefixの日本語commitを作成して`origin/fix/issue-106-span-gap`へpushする。PRを作成する場合はbaseを`dev`に明示し、Issue #106をcloseする本文、変更理由、検証結果、未変更範囲、Node条件を日本語で記載する。PR作成後にtitle/body、head/base、changed filesを読み戻す。実測: commit `cbeb9ae4536460075d1b4dce0e1ae5c675c27586`を作成してpushし、PR #117（base=`dev`、head=`fix/issue-106-span-gap`）を作成した。PR title/body、head SHA、変更ファイルを読み戻した。
 
-- [ ] T013 pushしたexact SHAのGitHub checksを確認する。CIが未triggerなら成功扱いにせず「未trigger」と記録する。failureは変更起因・baseline・infrastructureに分類する。mergeはユーザーの明示承認なしに行わない。
+- [x] T013 pushしたexact SHAのGitHub checksを確認する。CIが未triggerなら成功扱いにせず「未trigger」と記録する。failureは変更起因・baseline・infrastructureに分類する。mergeはユーザーの明示承認なしに行わない。実測: `cbeb9ae4536460075d1b4dce0e1ae5c675c27586`のQuality Gate run `33244041314` / job `99078265090`は`pass`。PR #117はopenで、mergeしていない。
 
 ## 依存関係
 

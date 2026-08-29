@@ -11,7 +11,7 @@ interface DiscussionReadStatusProps {
 }
 
 export function DiscussionReadStatus({ isLoading, completionReason, hasData, onReload, approvalState }: DiscussionReadStatusProps) {
-  if (isLoading) return <div role="status" aria-live="polite" className="flex items-center gap-2 text-base"><span className="loading loading-spinner loading-sm" aria-hidden="true" />会話データを読み込み中...</div>;
+  if (isLoading) return <div role="status" aria-live="polite" className="flex items-center gap-2 text-base"><span className="loading loading-spinner loading-sm" aria-hidden="true" /><p className="ruby-text">会話データを読み込み中...</p></div>;
   if (approvalState === "unknown") {
     return (
       <div

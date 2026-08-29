@@ -294,7 +294,7 @@ export default function LocationsPage() {
         <PageHeader title="場所をさがす" />
         <div className="alert alert-error alert-soft text-base-content!" role="alert">
           <CircleAlert className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-          {error}
+          <p>{error}</p>
         </div>
       </div>
     );
@@ -310,9 +310,9 @@ export default function LocationsPage() {
       <div className="space-y-4">
         <Card title="近いところから表示">
           {searchError && (
-            <div id="location-search-error" className="alert alert-error alert-soft text-base-content! ruby-text" role="alert">
+            <div id="location-search-error" className="alert alert-error alert-soft text-base-content!" role="alert">
               <CircleAlert className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-              {searchError}
+              <p className="ruby-text">{searchError}</p>
             </div>
           )}
 
@@ -369,12 +369,12 @@ export default function LocationsPage() {
 
           {currentPosition && (
             <div
-              className="alert alert-success alert-soft text-base-content! ruby-text"
+              className="alert alert-success alert-soft text-base-content!"
               role="status"
               aria-live="polite"
             >
               <CircleCheck className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-              位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます
+              <p className="ruby-text">位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます</p>
             </div>
           )}
         </Card>

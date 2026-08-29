@@ -161,4 +161,58 @@ T001 → T002 → T003 → T004 → T005 → T006a → T006b → T006c → T007 
 - Lint: `npm run lint` exit 0。`next lint` deprecation、既存の`any`、`<img>`、Hook依存、今回の変更pathに含まれる既存warningを記録した。
 - 全Jest: 初回は`getNostrServiceConfig is not a function`のsetup failureが1件あったが、単独・ペア・再実行と変更前SHAのclean worktreeで再現しなかった。再実行は138 suites PASS / 2 skipped、853 tests PASS / 13 skipped。
 - Build: `npm run build` exit 0。Prisma生成・DB push・Next production build成功。`transit-config.json`不在によるGTFS importエラー表示とPrisma update noticeは既存環境上のwarningとして分離した。
-- `git diff --check`: PASS。`src/app/apple-icon.png`のLFS由来差分はIssue変更に含めず、未stageのまま保持している。
+- ブラウザ上のcomputed layoutが必要な場合は、既存の開発サーバーを再利用せず、readiness確認済みの隔離ポートで補助確認する。静的契約テストをブラウザ検証の代替にはしない。
+
+## Phase 6: DaisyUI grid境界の追加調査と修正
+
+- [x] F001 [INVESTIGATION] PR #117の現行production TSX 81ファイルをAST走査し、alert 43件（直接テキスト13件）、status 48件（直接テキスト15件）、menu項目12件、label/legend 29件（直接テキスト6件）を分類した。SidebarのRubyful後grid分割と、`div.alert`/非`p` statusの匿名grid item問題を、現行版・変更前版のcomputed style・スクリーンショット・制御probeで確認した。変更対象と安全な保持対象を確定し、提案2のflex化を除外した。
+
+- [x] F002 [DOC] F001の結果を`research.md`、`plan.md`、`tasks.md`へ追記した。方針1（Sidebarの単一ラベルwrapper復元）と方針3（alert/statusの直接テキストを意味要素へ移行）を実装境界として確定した。実装writerは方針2のDaisyUI表示方式変更を行わない。
+
+- [x] F003 [TEST] 次のテストpathだけを変更し、Sidebarの単一label wrapper、`div.alert`/非`p` statusの直接テキスト不在、既存statusメッセージの意味要素境界を契約する。実装前にcollection/setupではない意味のあるREDを確認する。実測: 4 suites / 19 tests中14 PASS、5 RED。REDはalert/status直接テキスト26件、Sidebar wrapper不足12件、2つのloading statusの`p.ruby-text`不足で、collection/setup failureはなかった。
+  - `src/app/__tests__/layout-boundary-contract.test.ts`
+  - `src/components/layouts/__tests__/Sidebar.test.tsx`
+  - `src/components/discussion/__tests__/DiscussionReadStatus.test.tsx`
+  - `src/components/discussion/__tests__/DiscussionMetaReadState.test.tsx`
+  - 実行: `PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm test -- --runInBand --runTestsByPath src/app/__tests__/layout-boundary-contract.test.ts src/components/layouts/__tests__/Sidebar.test.tsx src/components/discussion/__tests__/DiscussionReadStatus.test.tsx src/components/discussion/__tests__/DiscussionMetaReadState.test.tsx --silent`
+
+- [x] F004 [REVIEW] F003でsettleしたテストpathを別fresh read-only subagentへレビュー委任する。DaisyUIのmenu/alert gridを直接上書きせず、既存label/ARIA/callback契約を弱めず、AST境界が実productionを網羅し、vacuous assertionでないことを確認する。`SUBAGENT_STATUS: COMPLETE`、`VERDICT: PASS`、`modified: false`、開始終了SHA一致が揃うまで実装を開始しない。前回reviewはSidebarの`gap-0`個別禁止とmenu限定summary selectorのfalse negative指摘により無効。修正後のfresh reviewを要する。実測: reviewer `sa-0-5cdcab3d` が`SUBAGENT_STATUS: COMPLETE` / `VERDICT: PASS`を返した。4 suites / 19 tests PASS、collection/setup failureなし、strict TypeScript・full lint・diff check PASS、開始終了SHA一致、変更なし。
+
+- [x] F005a [IMPL-1] F004 PASS後、Sidebarのmenu itemだけを変更する。`src/components/layouts/Sidebar.tsx`の12項目について、親の`ruby-text gap-0`を外し、アイコン以外を1つの直接子`span.ruby-text`へ戻す。DaisyUIのmenu grid、summaryの矢印、リンク先、クリック動作を変更しない。実測: Sidebar focused 1 suite / 9 tests PASS、production wrapper 12件、parent ruby-text/gap-0 0件、diff check PASS。
+
+- [x] F005b [IMPL-2] F005a完了後、alertコンテナの直接テキストだけを指定path内で意味要素へ移す。`div.alert`の直接テキストを`p.ruby-text`等へ変更し、role/aria-live/message/button callbackを維持する。`p.alert`、label/legend、badge/loading/sr-only等は変更しない。実測: 実在する8 suites / 43 tests PASS、対象8 pathの`div.alert`直接テキスト0件、strict TypeScript・対象Lint・diff check PASS。初回指定には存在しないtest pathがあったため、実在pathへ補正して実行した。
+  - `src/app/discussions/page.tsx`
+  - `src/app/locations/page.tsx`
+  - `src/app/settings/page.tsx`
+  - `src/components/auth/AuthenticationForm.tsx`
+  - `src/components/features/LocationSuggestions.tsx`
+  - `src/components/features/RouteCalendarExport.tsx`
+  - `src/components/features/RoutePdfExport.tsx`
+  - `src/components/features/RouteSearchResults.tsx`
+  - 実行: 対象alert focused tests、strict TypeScript、対象Lint、`git diff --check`
+
+- [x] F005c [IMPL-3] F005b完了後、非alert statusの直接テキストだけを指定path内で意味要素へ移す。spinnerと文言の表示、role/aria-live、loading/error状態を維持する。実測: 親側の実在7 suites / 54 tests PASS、strict TypeScript exit 0、full lint exit 0、diff check PASS。`RouteSearchResults.tsx:171`のflex+spinner statusは安全分類どおり再編集していない。
+  - `src/app/login/page.tsx`
+  - `src/app/signup/page.tsx`
+  - `src/app/discussions/[naddr]/page.tsx`
+  - `src/app/discussions/[naddr]/moderators/page.tsx`
+  - `src/components/discussion/DiscussionManagementModeratorPage.tsx`
+  - `src/components/discussion/DiscussionReadStatus.tsx`
+  - `src/components/discussion/DiscussionMetaReadState.tsx`
+  - 実行: 対象status focused tests、strict TypeScript、対象Lint、`git diff --check`
+
+- `src/components/features/RouteSearchResults.tsx`のloading statusは`flex`コンテナでspinnerと文言を横並びにする既存構造であり、DaisyUI gridの直接テキスト崩れには該当しない。F005bで同じファイルのalertを変更済みのため、F005cでは再編集しない。
+
+- [x] F006 親が現行bytesを再走査し、`div.alert`/非`p` statusの直接テキスト0件（flex loading statusとして明示除外した`RouteSearchResults.tsx:171`を除く）、Sidebarのmenu label wrapper 12件、label/legendの保持、DaisyUI表示方式の非変更を確認する。390px/desktopの隔離ブラウザprobeでSidebarと代表的alertを再計測する。実測: 独立production reviewer `sa-0-4d810b3d` が`SUBAGENT_STATUS: COMPLETE` / `VERDICT: PASS`を返した。16 production pathをレビューし、81 TSXのsource probeで対象direct text 0件、Sidebar wrapper 12件、親ruby/gap-0 0件、CSS/display override 0件を確認。contract 4 suites / 19 tests、strict TypeScript、lint、diff check PASS。開始終了SHA・status一致、staged pathなし、変更なし。
+
+- [x] F007 Node 22.23.2で追加focused tests、strict TypeScript、lint、全Jest、buildを実行し、初回失敗・baseline・warning・終了コードを分類する。ブラウザprobeと`git diff --check`を含めてtasks/researchへ記録する。実測: focusedはcontract 4 suites / 19 tests、alert 8 suites / 43 tests、status 7 suites / 54 tests、全Jestは139 suites PASS / 2 skipped、856 tests PASS / 13 skipped。strict TypeScript、lint、build、diff checkはexit 0。ブラウザは390px幅でSidebarのDaisyUI grid列とalert制御probeを確認し、横溢れなし。GTFS importの`transit-config.json`不在表示と既存Lint warningsは失敗と分離して記録した。
+
+- [ ] F008 最終差分を親が確認し、PR #117へ日本語の修正commitをpushする。push後にPR head/base/filesを読み戻し、exact SHAのQuality Gateを終端まで確認する。mergeは行わない。
+
+### Phase 6 依存関係
+
+```text
+F001 → F002 → F003 → F004 → F005a → F005b → F005c → F006 → F007 → F008
+```
+
+F003のテストレビュー直後にF005a以降のproduction writerを開始する。同一pathを複数writerが変更せず、F005a〜F005cの中間状態はGREENとは呼ばない。

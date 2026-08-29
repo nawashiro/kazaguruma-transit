@@ -54,4 +54,31 @@ Issue #106の「意味を持たないspanを駆逐する」という要求に対
 - テスト実装直後、別fresh read-only subagentへレビューを委任する。レビュー中は対象ファイルを変更しない。
 - 実装後は、各sliceのfocused tests、strict TypeScript、対象Lint、`git diff --check`を実行する。
 - 最終的にNode 22.23.2をPATH先頭へ置き、全Jest、lint、strict TypeScript、buildを実行する。buildのPrisma/GTFS副作用とwarningは終了コードと分離して記録する。
-- ブラウザ上のcomputed layoutが必要な場合は、既存の開発サーバーを再利用せず、readiness確認済みの隔離ポートで補助確認する。静的契約テストをブラウザ検証の代替にはしない。
+## 追加計画: DaisyUI grid境界の復旧
+
+PR #117で親要素へ移した`ruby-text`が、DaisyUIの`.menu` gridと`.alert` gridの子要素計算を変えたため、次の追加修正を行う。
+
+### Sidebar
+
+- `Sidebar.tsx`の12 menu項目は、DaisyUIの`display:grid`とsummaryの開閉矢印を維持する。
+- アイコン以外の文言とRubyfulが生成する`ruby`を、1つの直接子`span.ruby-text`へ戻す。
+- menu item自身の`ruby-text gap-0`は外し、DaisyUI本来のmenu gapと`.menu span { white-space: nowrap; }`を再び有効にする。
+- flex化やDaisyUIの共通CSS上書きは行わない。
+
+### alert/status
+
+- `div.alert`の直接テキストは`p.ruby-text`等へ移し、buttonと同居するalertのgrid childを明示する。
+- `p.alert`は意味要素自身なので追加ラッパーを作らない。
+- `.alert`を伴わない`role="status"`のloading/statusも、spinnerと文言を別の意味要素へ分ける。role、aria-live、メッセージ、callbackを維持する。
+- label/legendは意味要素として保持する。
+
+## 追加受入条件
+
+1. Sidebarを開いた390px幅で、各menu項目のlabelが1つの列に収まり、Rubyful後もアイコン・label・summary矢印が分散しない。
+2. production TSXの`div.alert`と`p`以外の`role="status"`に、意味のある直接テキストが残らない。
+3. `label`/`legend`の6件の直接テキストは保持し、フォームのaccessible nameを変えない。
+4. alert/statusのrole、aria-live、メッセージ内容、reload callback、loading表示を維持する。
+5. DaisyUIのmenu表示方式・alert表示方式自体は変更せず、提案2は実施しない。
+6. 追加契約テストが実装前にRED、実装後にGREENとなり、既存focused/full tests、strict TypeScript、lint、build、ブラウザ再計測を通過する。
+
+追加の実装対象は、`Sidebar.tsx`、12件の`div.alert`、非alert statusのloading/statusを持つ既存production pathに限定する。Nostr、認証、router、データ取得、`btn`/`card-title`の既存gap契約、凍結PNGは変更しない。

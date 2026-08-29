@@ -4,7 +4,12 @@ import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStat
 describe("DiscussionReadStatus", () => {
   it("announces loading without showing a not-found message", () => {
     render(<DiscussionReadStatus isLoading completionReason={null} hasData={false} />);
-    expect(screen.getByRole("status")).toHaveTextContent("会話データを読み込み中");
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("会話データを読み込み中");
+    const message = status.querySelector<HTMLElement>(":scope > p.ruby-text");
+    expect(message).not.toBeNull();
+    if (!message) throw new Error("loading message paragraph was not rendered");
+    expect(message).toHaveTextContent("会話データを読み込み中");
     expect(screen.queryByText("会話が見つかりません")).not.toBeInTheDocument();
   });
 

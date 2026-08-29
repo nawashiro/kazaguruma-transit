@@ -74,7 +74,7 @@ export default function DiscussionsPage() {
                 </div>
               ) : loadError ? (
                 <div className="alert alert-error alert-soft text-base-content!" role="status" aria-live="polite">
-                  {loadError}
+                  <p>{loadError}</p>
                   <button
                     type="button"
                     className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
@@ -87,7 +87,7 @@ export default function DiscussionsPage() {
                 <>
                   {isPartialRead && (
                     <div className="alert alert-warning alert-soft text-base-content! mb-4" role="status" aria-live="polite">
-                      会話一覧を完全に取得できませんでした。再読み込みしてください。
+                      <p>会話一覧を完全に取得できませんでした。再読み込みしてください。</p>
                       <button
                         type="button"
                         className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
@@ -148,7 +148,7 @@ export default function DiscussionsPage() {
                 </>
               ) : isPartialRead ? (
                 <div className="alert alert-warning alert-soft text-base-content!" role="status" aria-live="polite">
-                  会話一覧を完全に取得できませんでした。再読み込みしてください。
+                  <p>会話一覧を完全に取得できませんでした。再読み込みしてください。</p>
                   <button
                     type="button"
                     className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"

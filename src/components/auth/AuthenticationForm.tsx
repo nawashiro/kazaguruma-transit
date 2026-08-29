@@ -227,11 +227,11 @@ export function AuthenticationForm({
       {attemptError && (
         <div
           id={errorId}
-          className="alert alert-error alert-soft text-base-content! text-base ruby-text"
+          className="alert alert-error alert-soft text-base-content! text-base"
           role="alert"
           aria-live="polite"
         >
-          {attemptError}
+          <p className="ruby-text">{attemptError}</p>
         </div>
       )}
 

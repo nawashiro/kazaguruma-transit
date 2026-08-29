@@ -31,7 +31,7 @@ export function DiscussionMetaReadState({
       )}
       {isLoading && (
         <div role="status" aria-live="polite" className="mb-8">
-          会話情報を読み込み中...
+          <p className="ruby-text">会話情報を読み込み中...</p>
         </div>
       )}
       {error && (

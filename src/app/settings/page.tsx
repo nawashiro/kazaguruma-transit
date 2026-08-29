@@ -269,8 +269,10 @@ export default function SettingsPage() {
                 ) : discussionsCompletionReason === "idle-timeout" ||
                   discussionsCompletionReason === "hard-timeout" ||
                   discussionsCompletionReason === "cancelled" ? (
-                  <div className="alert alert-warning alert-soft text-base-content! ruby-text" role="status" aria-live="polite">
-                    会話データの取得に時間がかかっています（{discussionsCompletionReason}）。
+                  <div className="alert alert-warning alert-soft text-base-content!" role="status" aria-live="polite">
+                    <p className="ruby-text">
+                      会話データの取得に時間がかかっています（{discussionsCompletionReason}）。
+                    </p>
                     <button
                       type="button"
                       className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"

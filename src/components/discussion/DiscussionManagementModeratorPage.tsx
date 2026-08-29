@@ -258,7 +258,9 @@ export default function DiscussionManagementModeratorPage() {
           </p>
         </div>
       ) : (
-        <div role="status" className="ruby-text">モデレーター申請を読み込み中...</div>
+        <div role="status">
+          <p className="ruby-text">モデレーター申請を読み込み中...</p>
+        </div>
       )}
       {error && (
         <p role="alert" className="text-base-content ruby-text">

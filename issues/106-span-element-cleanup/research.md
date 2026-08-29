@@ -127,3 +127,96 @@ T004〜T006cの実装と親検証を完了した。変更内容は、不要な�
 - 全Jest: 初回は`getNostrServiceConfig is not a function`のsetup failureが1件あったが、単独・ペア・再実行と変更前SHAのclean worktreeで再現しなかった。再実行は138 suites PASS / 2 skipped、853 tests PASS / 13 skipped。
 - Build: `npm run build` exit 0。Prisma生成・DB push・Next production build成功。`transit-config.json`不在によるGTFS importエラー表示とPrisma update noticeは既存環境上のwarningとして分離した。
 - `git diff --check`: PASS。`src/app/apple-icon.png`のLFS由来差分はIssue変更に含めず、未stageのまま保持している。
+
+## 9. 追加調査: PR #117後のalert/status/menuレイアウト崩れ
+
+### 9.1 網羅的な棚卸し
+
+PR #117の現行production TSX 81ファイルをTypeScript ASTで走査し、`.alert`、`role="status"`、menu内のリンク・`summary`、`label`/`legend`の直接テキストを分類した。
+
+| 対象 | 総数 | 直接テキストあり | 判断 |
+|---|---:|---:|---|
+| `.alert`要素 | 43 | 13 | `div.alert`の12件はgrid境界として修正対象。`p.alert`は意味要素自身のため許容 |
+| `role="status"`要素 | 48 | 15 | `.alert`併用は28件。非`p`のloading/statusは意味要素へ移す |
+| Sidebarのmenu項目 | 12 | 12 | すべてRubyful後にgrid列分割が起きる修正対象 |
+| `label`/`legend` | 29 | 6 | すべてフォーム・読み上げ用の意味要素であり、今回のgrid崩れ対象外 |
+
+`.alert`の直接テキスト13件のうち、修正対象の`div.alert`は次の12件である。
+
+- `src/app/discussions/page.tsx`: 76、89、150行付近
+- `src/app/locations/page.tsx`: 295、313、371行付近
+- `src/app/settings/page.tsx`: 272行付近
+- `src/components/auth/AuthenticationForm.tsx`: 228行付近
+- `src/components/features/LocationSuggestions.tsx`: 80行付近
+- `src/components/features/RouteCalendarExport.tsx`: 58行付近
+- `src/components/features/RoutePdfExport.tsx`: 140行付近
+- `src/components/features/RouteSearchResults.tsx`: 78行付近
+
+`AuthRoutePage.tsx`の`p.alert`は、alert自身がメッセージの意味要素であり、button等の兄弟要素もないため直接テキストを許容する。`label`/`legend`の6件（`住所`、`パスキー名`、同意事項、時間タイプ、検索オプション等）はラベル自身が意味要素であり、span化・置換しない。
+
+### 9.2 DaisyUIとRubyfulの相互作用
+
+DaisyUI 5のmenu項目は次のgridスタイルを持つ。
+
+```css
+grid-auto-columns: minmax(auto, max-content) auto max-content;
+grid-auto-flow: column;
+gap: .5rem;
+display: grid;
+```
+
+変更前のmenu項目は`svg + span.ruby-text`の2つのgrid itemだった。PR #117では`ruby-text`をmenu項目自身へ移したため、Rubyfulが生成する複数の`ruby`がgrid itemとして扱われる。
+
+Puppeteerで390px幅の実DOMを計測した結果、変更前の「意見交換」は`24px 215px`の2列だったのに対し、現行版は`24px 177.188px 45.8125px`の3列となった。「使い方やサイト情報」のsummaryは、変更前の`24px 217px 6px`から現行版の`24px 46.9375px 16.375px 22.9062px 89.5312px 57.25px 6px`へ分割された。スクリーンショットでもラベルと開閉矢印の分散を確認した。
+
+したがって、menuのgridをflexへ置換する提案2は採用しない。DaisyUIのsummary矢印を含む既存構造を維持し、ラベル全体を1つの子要素へ戻す。
+
+### 9.3 alert/statusの相互作用
+
+DaisyUIの`.alert`は`display: grid`、`grid-auto-flow: column`、`gap: 1rem`を持ち、`:has(:nth-child(2))`で子要素数に応じた列を選択する。直接テキストは匿名grid itemとなり、`span`や`p`のようなelement childとは列計算が異なる。
+
+340px幅の制御probeでは、同じalertに対して次の差が出た。
+
+| 構造 | grid列 | メッセージ領域 | button領域 |
+|---|---:|---:|---:|
+| `span` + button | `213.609px 58.391px` | 高さ20px | 幅58.39px |
+| 直接テキスト + button | `165.344px 106.656px` | 幅156.6px・高さ36px | 幅106.66px |
+| `p.ruby-text` + button | `221.672px 50.328px` | 高さ48px | 幅50.33px |
+
+alert/statusの直接テキストは、buttonと同居する場合だけでなく、iconやRubyfulの有無によって列計算が変わるため、`p.ruby-text`等の意味要素へ統一する。非alertのloading statusも、spinnerと文言の責務を別要素にして直接テキストをなくす。ただし`p.alert`自身の本文は、すでに意味要素自身であるため追加ラッパーを作らない。
+
+### 9.4 修正方針
+
+1. Sidebarの`Link`/`summary`/外部`a`は、親の`ruby-text gap-0`を外し、文字列と`ruby`を1つの直接子`span.ruby-text`へ戻す。menuのDaisyUI gridとgapは変更しない。
+2. `div.alert`および`p`以外の`role="status"`で、直接テキストを`p.ruby-text`等へ移す。`role`、`aria-live`、メッセージ内容、button callback、既存のloading表示を維持する。
+3. label/legendはフォームの意味要素として保持する。DaisyUI自体のgrid/flex実装方式は変更しない。
+
+## 11. 実装後の検証結果
+
+### 11.1 source inventory
+
+F005a〜F005cの実装後、TypeScript AST probeを再実行した。production TSX 81ファイルについて、`.alert`は43件で、直接テキストとして残ったのは意味要素自身である`AuthRoutePage.tsx:49`の`p.alert`だけだった。`role="status"`は48件で、直接テキストとして検出されたのは`location-detail/[id]/loading.tsx:8`の`p`、`AuthRoutePage.tsx:49`の`p.alert`、および安全分類済みの`RouteSearchResults.tsx:171`の`flex + spinner` statusだけだった。したがって、修正対象である`div.alert`と非`p` statusの直接テキストは0件である。
+
+Sidebarはmenu項目12件、単一の直接子`span.ruby-text` 12件、親menu itemの`ruby-text` 0件・`gap-0` 0件となった。`label`/`legend`は29件中6件の直接本文を保持し、フォーム用の意味要素を変更していない。
+
+### 11.2 automated gates
+
+- F004 final fresh test review: reviewer `sa-0-5cdcab3d` が`SUBAGENT_STATUS: COMPLETE` / `VERDICT: PASS`。変更なし、開始終了SHA一致。
+- layout contract + Sidebar/status focused: 4 suites / 19 tests PASS。
+- alert focused: 8 suites / 43 tests PASS。
+- status focused: 7 suites / 54 tests PASS。
+- 全Jest: 139 suites PASS、2 suites skipped、856 tests PASS、13 tests skipped。
+- strict TypeScript: `npx tsc --noEmit --incremental false --pretty false` exit 0。
+- lint: `npm run lint` exit 0。`next lint` deprecation noticeと既存warningのみ。
+- build: `npm run build` exit 0。Prisma生成、schema同期、Next production build成功。`transit-config.json`不在によるGTFS importエラー表示は既存環境のwarningとして分離した。
+- `git diff --check`: exit 0。
+
+### 11.3 browser evidence
+
+Node 22.23.2の隔離dev serverをport 3108で起動し、Puppeteerで390×844の実ページを確認した。`/`でSidebarを開いた状態は、summaryが`24px 217px 6px`、通常menu itemが`24px 215px`のgrid列となり、Rubyful後もラベルが単一列に収まった。body/documentのscroll widthは390pxでviewportと一致した。
+
+`/discussions`、`/locations`、`/settings`の通常状態ではalert/statusは発火せず、3ページともbody/documentのscroll widthは390pxで横溢れなしだった。さらに現行アプリCSS上で、productionと同じサイズ付きicon + `p.ruby-text` + buttonのalert構造を一時挿入する制御probeを実行した。結果は`display:grid`、`gridTemplateColumns: 24px 181.25px 116.75px`、直接テキスト0件、body/documentのscroll width390pxであった。これは現行CSSのgrid子要素境界を検証する補助証拠であり、挿入DOM自体はリポジトリへ保存していない。
+
+### 11.4 変更範囲
+
+production変更はSidebar 1件、alert 8 path、status 7 pathに限定した。DaisyUIの共通CSS、`.menu`/`.alert`のdisplay方式、Nostr、認証、router、データ取得、凍結PNGは変更していない。テスト・文書の変更と`src/app/apple-icon.png`の既存LFS差分は別扱いで保持している。

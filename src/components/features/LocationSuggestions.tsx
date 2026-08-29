@@ -79,7 +79,7 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
       <Card className="mb-6 overflow-hidden">
         <div className="alert alert-error alert-soft text-base-content!" role="alert" aria-live="assertive">
           <CircleAlert className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-          {error}
+          <p>{error}</p>
         </div>
       </Card>
     );

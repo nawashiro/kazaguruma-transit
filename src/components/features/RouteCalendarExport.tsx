@@ -57,9 +57,9 @@ export default function RouteCalendarExport(props: RouteCalendarExportProps) {
       {calendarError && (
         <div
           role="alert"
-          className="alert alert-error alert-soft text-base-content! ruby-text"
+          className="alert alert-error alert-soft text-base-content!"
         >
-          カレンダー生成エラー: {calendarError}
+          <p className="ruby-text">カレンダー生成エラー: {calendarError}</p>
         </div>
       )}
       <Button onClick={handleDownload}>

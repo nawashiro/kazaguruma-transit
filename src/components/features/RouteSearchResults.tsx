@@ -76,7 +76,7 @@ function SearchError({ message }: { message: string }) {
   return (
     <Card>
       <div role="alert" className="alert alert-error alert-soft text-base-content! mb-4">
-        {message}
+        <p>{message}</p>
       </div>
       <ResetSearchConditionsLink />
     </Card>

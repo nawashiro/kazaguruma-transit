@@ -53,12 +53,12 @@ export default function DiscussionDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const renderInlineLoading = (label: string) => (
     <div
-      className="flex items-center gap-2 text-base text-base-content ruby-text"
+      className="flex items-center gap-2 text-base text-base-content"
       role="status"
       aria-live="polite"
     >
       <div className="loading loading-spinner loading-sm" aria-hidden="true"></div>
-      {label}
+      <p className="ruby-text">{label}</p>
     </div>
   );
 

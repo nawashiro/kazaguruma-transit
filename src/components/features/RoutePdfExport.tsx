@@ -139,9 +139,9 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
       {pdfError && (
         <div
           role="alert"
-          className="alert alert-error alert-soft mt-4 text-base-content! ruby-text"
+          className="alert alert-error alert-soft mt-4 text-base-content!"
         >
-          PDF生成エラー: {pdfError}
+          <p className="ruby-text">PDF生成エラー: {pdfError}</p>
         </div>
       )}
       <Button

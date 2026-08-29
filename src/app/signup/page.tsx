@@ -10,8 +10,8 @@ export default function SignupPage() {
   return (
     <Suspense
       fallback={
-        <div role="status" aria-live="polite" className="py-8 ruby-text">
-          アカウント作成ページを読み込み中...
+        <div role="status" aria-live="polite" className="py-8">
+          <p className="ruby-text">アカウント作成ページを読み込み中...</p>
         </div>
       }
     >

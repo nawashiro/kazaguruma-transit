@@ -207,7 +207,7 @@ T001 → T002 → T003 → T004 → T005 → T006a → T006b → T006c → T007 
 
 - [x] F007 Node 22.23.2で追加focused tests、strict TypeScript、lint、全Jest、buildを実行し、初回失敗・baseline・warning・終了コードを分類する。ブラウザprobeと`git diff --check`を含めてtasks/researchへ記録する。実測: focusedはcontract 4 suites / 19 tests、alert 8 suites / 43 tests、status 7 suites / 54 tests、全Jestは139 suites PASS / 2 skipped、856 tests PASS / 13 skipped。strict TypeScript、lint、build、diff checkはexit 0。ブラウザは390px幅でSidebarのDaisyUI grid列とalert制御probeを確認し、横溢れなし。GTFS importの`transit-config.json`不在表示と既存Lint warningsは失敗と分離して記録した。
 
-- [ ] F008 最終差分を親が確認し、PR #117へ日本語の修正commitをpushする。push後にPR head/base/filesを読み戻し、exact SHAのQuality Gateを終端まで確認する。mergeは行わない。
+- [x] F008 最終差分を親が確認し、PR #117へ日本語の修正commitをpushする。push後にPR head/base/filesを読み戻し、exact SHAのQuality Gateを終端まで確認する。mergeは行わない。実測: `3894f9cb8a718c48d840db0cc9ba47322c709f40`をfeature branchへpushし、PR #117（base `dev`）のQuality Gate run `33252318759` / job `99100014851`を`pass`で確認した。mergeはしていない。`src/app/apple-icon.png`は既存差分のためcommit対象外で保持した。
 
 ### Phase 6 依存関係
 

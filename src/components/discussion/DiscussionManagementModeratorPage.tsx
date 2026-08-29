@@ -198,7 +198,7 @@ export default function DiscussionManagementModeratorPage() {
   if (!discussion && applicationReadState === "loading")
     return (
       <div role="status">
-        <span className="ruby-text">会話情報を読み込み中...</span>
+        <p className="ruby-text">会話情報を読み込み中...</p>
       </div>
     );
   if (!discussion) {
@@ -218,17 +218,17 @@ export default function DiscussionManagementModeratorPage() {
         role="status"
         aria-live="polite"
       >
-        <span className="ruby-text">
+        <p className="ruby-text">
           {isPartial
             ? `会話データの取得に時間がかかっています（${completionReason ?? "unknown"}）。受信待機中または relay 応答遅延の可能性があります。`
             : management.error ?? "会話情報が見つかりませんでした。"}
-        </span>
+        </p>
         <button
           type="button"
-          className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+          className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
           onClick={() => void reload()}
         >
-          <span className="ruby-text">再読み込み</span>
+          再読み込み
         </button>
       </div>
     );
@@ -253,9 +253,9 @@ export default function DiscussionManagementModeratorPage() {
           aria-live="polite"
           aria-label="モデレーター申請の取得は完了していません"
         >
-          <span className="ruby-text">
+          <p className="ruby-text">
             モデレーター申請の取得が完了していないため、申請がないとは断定できません。
-          </span>
+          </p>
         </div>
       ) : (
         <div role="status" className="ruby-text">モデレーター申請を読み込み中...</div>
@@ -269,8 +269,8 @@ export default function DiscussionManagementModeratorPage() {
         <>
           <section className="card bg-base-100 shadow-sm border border-base-300">
             <div className="card-body space-y-4">
-              <h2 className="card-title ruby-text">
-                <span>モデレーターを追加</span>
+              <h2 className="card-title ruby-text gap-0">
+                モデレーターを追加
               </h2>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                 <div className="flex-1">
@@ -294,11 +294,11 @@ export default function DiscussionManagementModeratorPage() {
                       aria-describedby="direct-moderator-error"
                     />
                     <button
-                      className="btn text-base btn-primary join-item h-11 min-h-[44px]"
+                      className="btn text-base btn-primary ruby-text gap-0 join-item h-11 min-h-[44px]"
                       onClick={addDirectModerator}
                       disabled={busy || !direct.trim()}
                     >
-                      <span className="ruby-text">追加</span>
+                      追加
                     </button>
                   </div>
                 </div>
@@ -333,11 +333,11 @@ export default function DiscussionManagementModeratorPage() {
                         </div>
                         <button
                           type="button"
-                          className="btn text-base btn-ghost min-h-[44px] shrink-0 rounded-full dark:rounded-sm"
+                          className="btn text-base btn-ghost ruby-text gap-0 min-h-[44px] shrink-0 rounded-full dark:rounded-sm"
                           onClick={() => removeDirectModerator(pubkey)}
                           disabled={busy}
                         >
-                          <span className="ruby-text">取り消す</span>
+                          取り消す
                         </button>
                       </li>
                     ))}
@@ -348,18 +348,18 @@ export default function DiscussionManagementModeratorPage() {
           </section>
           <section className="card bg-base-100 shadow-sm border border-base-300">
             <div className="card-body space-y-4">
-              <h2 className="card-title ruby-text">
-                <span>モデレーターの変更を確定</span>
+              <h2 className="card-title ruby-text gap-0">
+                モデレーターの変更を確定
               </h2>
               <button
-                className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start"
+                className="btn text-base btn-primary ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm self-start"
                 onClick={confirm}
                 disabled={
                   busy ||
                   (!approved.size && !removed.size && !directModerators.length)
                 }
               >
-                <span className="ruby-text">変更を確定</span>
+                変更を確定
               </button>
             </div>
           </section>
@@ -374,14 +374,14 @@ export default function DiscussionManagementModeratorPage() {
               モデレーターに申請するにはログインが必要です。
             </p>
             <button
-              className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start sm:ml-0"
+              className="btn text-base btn-primary ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm self-start sm:ml-0"
               onClick={() =>
                 router.push(
                   buildLoginRoute(PUBLIC_MODERATOR_ROUTE),
                 )
               }
             >
-              <span className="ruby-text">ログイン</span>
+              ログイン
             </button>
           </div>
         </section>
@@ -395,7 +395,7 @@ export default function DiscussionManagementModeratorPage() {
           className="card border border-base-300 bg-base-100"
         >
           <div className="card-body space-y-3">
-            <h2 className="card-title ruby-text">
+            <h2 className="card-title ruby-text gap-0">
               <span className="label-text">モデレーターになる</span>
             </h2>
             <p className="text-base ruby-text">投稿の承認を行う場合、会話作成者にモデレーターになりたい旨を申請してください。</p>
@@ -408,11 +408,11 @@ export default function DiscussionManagementModeratorPage() {
               disabled={busy}
             />
             <button
-              className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm self-start"
+              className="btn text-base btn-primary ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm self-start"
               onClick={request}
               disabled={busy}
             >
-              <span className="ruby-text">申請する</span>
+              申請する
             </button>
           </div>
         </section>

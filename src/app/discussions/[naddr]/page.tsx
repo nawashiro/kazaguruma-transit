@@ -58,7 +58,7 @@ export default function DiscussionDetailPage() {
       aria-live="polite"
     >
       <div className="loading loading-spinner loading-sm" aria-hidden="true"></div>
-      <span>{label}</span>
+      {label}
     </div>
   );
 
@@ -208,7 +208,7 @@ export default function DiscussionDetailPage() {
           />
           <Link
             href="/discussions"
-            className="btn text-base btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary ruby-text gap-0 rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -380,13 +380,13 @@ export default function DiscussionDetailPage() {
             role="status"
             aria-live="polite"
           >
-            <span>{detail.error ?? "会話データの取得に失敗しました。"}</span>
+            <p className="ruby-text">{detail.error ?? "会話データの取得に失敗しました。"}</p>
             <button
               type="button"
-              className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+              className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
               onClick={() => void detail.reload()}
             >
-              <span className="ruby-text">再読み込み</span>
+              再読み込み
             </button>
           </div>
         </div>
@@ -404,14 +404,14 @@ export default function DiscussionDetailPage() {
             role="status"
             aria-live="polite"
           >
-            <span>
+            <p className="ruby-text">
               会話データの取得に時間がかかっています（{discussionCompletionReason}）。
               受信待機中または relay 応答遅延の可能性があります。
-            </span>
+            </p>
           </div>
           <button
             type="button"
-            className="btn text-base btn-outline rounded-full dark:rounded-sm"
+            className="btn text-base btn-outline ruby-text gap-0 rounded-full dark:rounded-sm"
             onClick={() => window.location.reload()}
           >
             再読み込み
@@ -426,7 +426,7 @@ export default function DiscussionDetailPage() {
           <PageHeader title="会話が見つかりません" />
           <Link
             href="/discussions"
-            className="btn text-base btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary ruby-text gap-0 rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -457,13 +457,13 @@ export default function DiscussionDetailPage() {
                     role="status"
                     aria-live="polite"
                   >
-                    <span>{postsLoadError}</span>
+                    <p className="ruby-text">{postsLoadError}</p>
                     <button
                       type="button"
-                      className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                      className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
                       onClick={() => void reloadContent()}
                     >
-                      <span className="ruby-text">再読み込み</span>
+                      再読み込み
                     </button>
                   </div>
                 ) : (
@@ -496,16 +496,16 @@ export default function DiscussionDetailPage() {
                   role="status"
                   aria-live="polite"
                 >
-                  <span>{postsLoadError}</span>
+                  <p className="ruby-text">{postsLoadError}</p>
                 </div>
               ) : (
                 <>
                   {isAnalyzing && (
                     <div className="flex items-center justify-center p-4 mb-4">
                       <div className="loading loading-spinner loading-md mr-2"></div>
-                      <span className="text-base text-base-content">
+                      <p className="text-base text-base-content ruby-text">
                         コンセンサス分析中...
-                      </span>
+                      </p>
                     </div>
                   )}
 
@@ -517,7 +517,7 @@ export default function DiscussionDetailPage() {
                         aria-label="意見タブ"
                       >
                         <button
-                          className={`btn text-base border px-3 py-1 h-auto min-h-0 rounded-md font-medium ruby-text ${
+                          className={`btn text-base border px-3 py-1 h-auto min-h-0 rounded-md font-medium ruby-text gap-0 ${
                             consensusTab === "group-consensus"
                               ? "btn-primary border-primary text-primary-content"
                               : "btn-outline hover:border-primary/50 hover:bg-primary/5"
@@ -527,13 +527,13 @@ export default function DiscussionDetailPage() {
                           aria-selected={consensusTab === "group-consensus"}
                           aria-label="共通の意見タブ"
                         >
-                          <span>共通の意見</span>
+                          共通の意見
                         </button>
                         {analysisResult.groupRepresentativeComments.map(
                           (group, index) => (
                             <button
                               key={group.groupId}
-                              className={`btn text-base border px-3 py-1 h-auto min-h-0 rounded-md font-medium ${
+                              className={`btn text-base border px-3 py-1 h-auto min-h-0 rounded-md font-medium ruby-text gap-0 ${
                                 consensusTab ===
                                 `group-${String.fromCharCode(97 + index)}`
                                   ? "btn-primary border-primary text-primary-content"
@@ -553,9 +553,7 @@ export default function DiscussionDetailPage() {
                                 65 + index
                               )}タブ`}
                             >
-                              <span>
-                                グループ {String.fromCharCode(65 + index)}
-                              </span>
+                              グループ {String.fromCharCode(65 + index)}
                             </button>
                           )
                         )}
@@ -803,7 +801,7 @@ export default function DiscussionDetailPage() {
                         fullWidth
                         disabled={!postForm.content.trim()}
                       >
-                        <span>プレビュー</span>
+                        プレビュー
                       </Button>
                     </div>
                   ) : (

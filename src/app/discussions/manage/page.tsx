@@ -209,15 +209,15 @@ export default function DiscussionManagePage() {
           role="status"
           aria-live="polite"
         >
-          <span className="ruby-text">
+          <p className="ruby-text">
             {loadError ?? "掲載一覧の会話情報が見つかりませんでした。"}
-          </span>
+          </p>
           <button
             type="button"
-            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
             onClick={() => void reloadManagement()}
           >
-            <span className="ruby-text">再読み込み</span>
+            再読み込み
           </button>
         </div>
       </div>
@@ -242,11 +242,11 @@ export default function DiscussionManagePage() {
           className="tabs tabs-box mb-6 w-full overflow-x-auto"
           aria-hidden="true"
         >
-          <span className="tab tab-active min-h-[44px] px-4">
-            <span className="ruby-text">承認待ち</span>
+          <span className="tab tab-active min-h-[44px] px-4 ruby-text">
+            承認待ち
           </span>
-          <span className="tab min-h-[44px] px-4">
-            <span className="ruby-text">承認済み</span>
+          <span className="tab min-h-[44px] px-4 ruby-text">
+            承認済み
           </span>
         </div>
         <div className="animate-pulse space-y-4" aria-hidden="true">
@@ -266,13 +266,13 @@ export default function DiscussionManagePage() {
           role="status"
           aria-live="polite"
         >
-          <span className="ruby-text">掲載一覧の会話情報が見つかりませんでした。</span>
+          <p className="ruby-text">掲載一覧の会話情報が見つかりませんでした。</p>
           <button
             type="button"
-            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
             onClick={() => void reloadManagement()}
           >
-            <span className="ruby-text">再読み込み</span>
+            再読み込み
           </button>
         </div>
       </div>
@@ -287,15 +287,15 @@ export default function DiscussionManagePage() {
           role="status"
           aria-live="polite"
         >
-          <span className="ruby-text">
+          <p className="ruby-text">
             掲載依頼一覧を完全に取得できませんでした。再読み込みしてください。
-          </span>
+          </p>
           <button
             type="button"
-            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
             onClick={() => void reloadManagement()}
           >
-            <span className="ruby-text">再読み込み</span>
+            再読み込み
           </button>
         </div>
       </div>
@@ -389,11 +389,9 @@ export default function DiscussionManagePage() {
                             post.approvalState === "unknown" ||
                             approvingIds.has(post.id)
                           }
-                          className="ml-4 btn text-base btn-primary rounded-full dark:rounded-sm"
+                          className="ml-4 btn text-base btn-primary ruby-text gap-0 rounded-full dark:rounded-sm"
                         >
-                          <span className="ruby-text">
-                            {approvingIds.has(post.id) ? "" : "承認"}
-                          </span>
+                          {approvingIds.has(post.id) ? "" : "承認"}
                         </button>
                       </div>
                     </div>
@@ -451,11 +449,9 @@ export default function DiscussionManagePage() {
                                 !post.approvedBy?.includes(user.pubkey || "") ||
                                 revokingIds.has(post.id)
                               }
-                              className="btn text-base btn-warning min-h-[44px] rounded-full dark:rounded-sm"
+                              className="btn text-base btn-warning ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
                             >
-                              <span className="ruby-text">
-                                {revokingIds.has(post.id) ? "" : "承認を撤回"}
-                              </span>
+                              {revokingIds.has(post.id) ? "" : "承認を撤回"}
                             </button>
                           )}
                         </div>

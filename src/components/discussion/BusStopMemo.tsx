@@ -77,7 +77,9 @@ export function BusStopMemo({ busStops }: BusStopMemoProps) {
 
   if (isLoading || error || isApprovalCheckPending) {
     return error ? (
-      <div role="alert" className="alert alert-error alert-soft text-base-content!"><span>{error}</span></div>
+      <div role="alert" className="alert alert-error alert-soft text-base-content!">
+        <p className="ruby-text">{error}</p>
+      </div>
     ) : (
       <DiscussionReadStatus
         isLoading={isLoading}

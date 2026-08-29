@@ -33,27 +33,27 @@ export default function Sidebar({
       <ul className="menu p-4 space-y-4 w-full bg-base-200">
         <li>
           <details open>
-            <summary className="group">
+            <summary className="group font-semibold ruby-text gap-0">
               <Rocket className="h-6 w-6" aria-hidden="true" />
-              <span className="font-semibold ruby-text">使う</span>
+              使う
             </summary>
             <ul className="menu w-full ">
               <li>
-                <Link href="/" onClick={toggleSidebar}>
+                <Link href="/" onClick={toggleSidebar} className="ruby-text gap-0">
                   <House className="h-6 w-6" aria-hidden="true" />
-                  <span className="ruby-text">ホーム</span>
+                  ホーム
                 </Link>
               </li>
               <li>
-                <Link href="/locations" onClick={toggleSidebar}>
+                <Link href="/locations" onClick={toggleSidebar} className="ruby-text gap-0">
                   <MapPin className="h-6 w-6" aria-hidden="true" />
-                  <span className="ruby-text">場所をさがす</span>
+                  場所をさがす
                 </Link>
               </li>
               <li>
-                <Link href="/discussions" onClick={toggleSidebar}>
+                <Link href="/discussions" onClick={toggleSidebar} className="ruby-text gap-0">
                   <MessageCircle className="h-6 w-6" aria-hidden="true" />
-                  <span className="ruby-text">意見交換</span>
+                  意見交換
                 </Link>
               </li>
             </ul>
@@ -61,44 +61,41 @@ export default function Sidebar({
         </li>
         <li>
           <details open>
-            <summary className="group">
+            <summary className="group font-semibold whitespace-nowrap ruby-text gap-0">
               <Info className="h-6 w-6" aria-hidden="true" />
-              <span className="font-semibold whitespace-nowrap ruby-text">
-                使い方やサイト情報
-              </span>
+              使い方やサイト情報
             </summary>
             <ul className="menu w-full ">
               <li>
                 <Link
                   href="/beginners-guide"
                   onClick={toggleSidebar}
+                  className="ruby-text gap-0"
                 >
                   <CircleHelp className="h-6 w-6" aria-hidden="true" />
-                  <span className="ruby-text">
-                    はじめての
-                    <ruby>
-                      方<rt>かた</rt>
-                    </ruby>
-                    へ
-                  </span>
+                  はじめての
+                  <ruby>
+                    方<rt>かた</rt>
+                  </ruby>
+                  へ
                 </Link>
               </li>
               <li>
-                <Link href="/usage" onClick={toggleSidebar}>
+                <Link href="/usage" onClick={toggleSidebar} className="ruby-text gap-0">
                   <BookOpen className="h-6 w-6" aria-hidden="true" />
-                  <span className="ruby-text">使い方</span>
+                  使い方
                 </Link>
               </li>
               <li>
-                <Link href="/award" onClick={toggleSidebar}>
+                <Link href="/award" onClick={toggleSidebar} className="ruby-text gap-0">
                   <Trophy className="h-6 w-6" aria-hidden="true" />
-                  <span className="ruby-text">受賞について</span>
+                  受賞について
                 </Link>
               </li>
               <li>
-                <Link href="/license" onClick={toggleSidebar}>
+                <Link href="/license" onClick={toggleSidebar} className="ruby-text gap-0">
                   <FileText className="h-6 w-6" aria-hidden="true" />
-                  <span className="ruby-text">ライセンス</span>
+                  ライセンス
                 </Link>
               </li>
               <li>
@@ -106,11 +103,10 @@ export default function Sidebar({
                   href="https://github.com/nawashiro/kazaguruma-transit/releases"
                   target="_blank"
                   rel="noopener noreferrer"
+                  className="ruby-text gap-0"
                 >
-                  <span className="inline">
-                    <RefreshCw className="h-6 w-6" aria-hidden="true" />
-                  </span>
-                  <span className="ruby-text">更新情報</span>
+                  <RefreshCw className="h-6 w-6" aria-hidden="true" />
+                  更新情報
                 </a>
               </li>
             </ul>
@@ -119,9 +115,9 @@ export default function Sidebar({
         <li>
           <ul className="menu w-full ">
             <li>
-              <Link href="/settings" onClick={toggleSidebar}>
+              <Link href="/settings" onClick={toggleSidebar} className="ruby-text gap-0">
                 <Settings className="h-6 w-6" aria-hidden="true" />
-                <span className="ruby-text">設定</span>
+                設定
               </Link>
             </li>
             {koFiUsername && (
@@ -131,9 +127,10 @@ export default function Sidebar({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={toggleSidebar}
+                  className="ruby-text gap-0"
                 >
                   <Heart className="h-6 w-6 text-error" aria-hidden="true" />
-                  <span className="ruby-text">開発者を支援する</span>
+                  開発者を支援する
                 </a>
               </li>
             )}

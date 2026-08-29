@@ -165,9 +165,9 @@ function DiscussionTabLayoutContent({
         <div className="mb-4">
           <Link
             href="/discussions"
-            className="btn text-base btn-ghost rounded-full dark:rounded-sm"
+            className="btn text-base btn-ghost gap-0 ruby-text rounded-full dark:rounded-sm"
           >
-            <span className="ruby-text">← 会話一覧に戻る</span>
+            ← 会話一覧に戻る
           </Link>
         </div>
 
@@ -231,7 +231,7 @@ function DiscussionTabLayoutContent({
               ref={(el) => {
                 tabRefs.current[index] = el;
               }}
-              className={`tab font-bold px-4 min-h-[44px] min-w-[44px] shrink-0 whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${tab.isActive ? "tab-active" : ""}`}
+              className={`tab font-bold px-4 min-h-[44px] min-w-[44px] shrink-0 whitespace-nowrap ruby-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${tab.isActive ? "tab-active" : ""}`}
               role="tab"
               id={`discussion-content-${index}-tab`}
               aria-controls="discussion-content-panel"
@@ -240,7 +240,7 @@ function DiscussionTabLayoutContent({
               tabIndex={tab.isActive ? 0 : -1}
               onKeyDown={(e) => handleKeyDown(e, index)}
             >
-              <span className="ruby-text">{tab.label}</span>
+              {tab.label}
             </Link>
           ))}
         </nav>

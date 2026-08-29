@@ -139,9 +139,9 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
       {pdfError && (
         <div
           role="alert"
-          className="alert alert-error alert-soft mt-4 text-base-content!"
+          className="alert alert-error alert-soft mt-4 text-base-content! ruby-text"
         >
-          <span>PDF生成エラー: {pdfError}</span>
+          PDF生成エラー: {pdfError}
         </div>
       )}
       <Button
@@ -150,10 +150,10 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
         loading={isGenerating}
       >
         <Download
-          className={`h-5 w-5 ${isGenerating ? "hidden" : ""}`}
+          className={`mr-2 h-5 w-5 ${isGenerating ? "hidden" : ""}`}
           aria-hidden="true"
         />
-        <span>印刷する</span>
+        印刷する
       </Button>
     </>
   );

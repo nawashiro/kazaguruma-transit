@@ -68,9 +68,9 @@ function DestinationLink({ location }: { location: KeyLocation }) {
   return (
     <Link
       href={`/?destination=${encodeURIComponent(JSON.stringify(locationObject))}`}
-      className="btn btn-primary text-base inline-flex rounded-full dark:rounded-sm min-h-[44px] h-fit dark:text-white"
+      className="btn btn-primary text-base inline-flex ruby-text gap-0 rounded-full dark:rounded-sm min-h-[44px] h-fit dark:text-white"
     >
-      <span className="ruby-text">ここへ行く</span>
+      ここへ行く
     </Link>
   );
 }

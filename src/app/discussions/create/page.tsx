@@ -192,9 +192,9 @@ export default function DiscussionCreatePage() {
         <div className="mb-8">
           <Link
             href="/discussions"
-            className="btn text-base btn-ghost min-h-[44px] rounded-full dark:rounded-sm mb-4"
+            className="btn text-base btn-ghost ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm mb-4"
           >
-            <span>← 会話一覧に戻る</span>
+            ← 会話一覧に戻る
           </Link>
 
           <PageHeader title="会話を作成" />
@@ -310,11 +310,11 @@ export default function DiscussionCreatePage() {
                           <button
                             type="button"
                             onClick={() => removeModerator(npub)}
-                            className="btn text-base btn-ghost min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-0"
+                            className="btn text-base btn-ghost ruby-text gap-0 min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-0"
                             aria-label={`モデレーター ${npub} を削除`}
                             disabled={isSubmitting}
                           >
-                            <span className="ruby-text">×</span>
+                            ×
                           </button>
                         </div>
                       ))}
@@ -367,11 +367,7 @@ export default function DiscussionCreatePage() {
                   }
                   loading={isSubmitting}
                 >
-                  {isSubmitting ? (
-                    <span>作成中...</span>
-                  ) : (
-                    <span>会話を作成する</span>
-                  )}
+                  {isSubmitting ? "作成中..." : "会話を作成する"}
                 </Button>
               </div>
             </div>

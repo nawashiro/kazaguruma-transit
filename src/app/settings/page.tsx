@@ -149,9 +149,7 @@ export default function SettingsPage() {
       <div>
         <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="card-body">
-            <h2 className="card-title mb-4 ruby-text">
-              <span>アカウント情報</span>
-            </h2>
+            <h2 className="card-title mb-4 ruby-text gap-0">アカウント情報</h2>
 
             {user.isLoggedIn ? (
               <div className="space-y-6">
@@ -175,7 +173,7 @@ export default function SettingsPage() {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={handleLogout}
-                    className="btn text-base btn-warning min-h-[44px] rounded-full dark:rounded-sm"
+                    className="btn text-base btn-warning ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
                     disabled={isLoggingOut}
                   >
                     {isLoggingOut ? (
@@ -183,7 +181,7 @@ export default function SettingsPage() {
                     ) : (
                       <>
                         <LogOut className="w-4 h-4" aria-hidden="true" />
-                        <span className="ruby-text">ログアウト</span>
+                        ログアウト
                       </>
                     )}
                   </button>
@@ -207,19 +205,15 @@ export default function SettingsPage() {
                 <div className="flex flex-col gap-3">
                   <Link
                     href={buildLoginRoute("/settings")}
-                    className="btn btn-primary min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm leading-relaxed font-medium inline-flex items-center justify-center whitespace-nowrap text-base"
+                    className="btn btn-primary ruby-text gap-0 min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm leading-relaxed font-medium inline-flex items-center justify-center whitespace-nowrap text-base"
                   >
-                    <span className="ruby-text inline-flex w-full items-center justify-center gap-2">
-                      ログイン
-                    </span>
+                    ログイン
                   </Link>
                   <Link
                     href={buildSignupRoute("/settings")}
-                    className="btn btn-primary min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm leading-relaxed font-medium inline-flex items-center justify-center whitespace-nowrap text-base"
+                    className="btn btn-primary ruby-text gap-0 min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm leading-relaxed font-medium inline-flex items-center justify-center whitespace-nowrap text-base"
                   >
-                    <span className="ruby-text inline-flex w-full items-center justify-center gap-2">
-                      アカウント作成
-                    </span>
+                    アカウント作成
                   </Link>
                 </div>
               </div>
@@ -232,9 +226,7 @@ export default function SettingsPage() {
           <div className="mt-8">
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
-                <h2 className="card-title mb-4 ruby-text">
-                  <span>あなたが作った会話の一覧</span>
-                </h2>
+                <h2 className="card-title mb-4 ruby-text gap-0">あなたが作った会話の一覧</h2>
 
                 {isLoadingDiscussions ? (
                   <div className="animate-pulse space-y-4">
@@ -277,13 +269,11 @@ export default function SettingsPage() {
                 ) : discussionsCompletionReason === "idle-timeout" ||
                   discussionsCompletionReason === "hard-timeout" ||
                   discussionsCompletionReason === "cancelled" ? (
-                  <div className="alert alert-warning alert-soft text-base-content!" role="status" aria-live="polite">
-                    <span className="ruby-text">
-                      会話データの取得に時間がかかっています（{discussionsCompletionReason}）。
-                    </span>
+                  <div className="alert alert-warning alert-soft text-base-content! ruby-text" role="status" aria-live="polite">
+                    会話データの取得に時間がかかっています（{discussionsCompletionReason}）。
                     <button
                       type="button"
-                      className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                      className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
                       onClick={() => {
                         void loadDiscussions();
                       }}
@@ -302,9 +292,9 @@ export default function SettingsPage() {
                     </p>
                     <Link
                       href="/discussions/create"
-                      className="btn text-base btn-primary rounded-full dark:rounded-sm"
+                      className="btn text-base btn-primary ruby-text gap-0 rounded-full dark:rounded-sm"
                     >
-                      <span className="ruby-text">会話を作成する</span>
+                      会話を作成する
                     </Link>
                   </div>
                 )}
@@ -316,7 +306,7 @@ export default function SettingsPage() {
         <div className="mt-8">
           <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="card-body">
-              <h2 className="card-title mb-2 ruby-text">プライバシー</h2>
+              <h2 className="card-title mb-2 ruby-text gap-0">プライバシー</h2>
                 <ul className="space-y-1 list-disc list-inside ruby-text">
                     <li>
                       あなたの投稿と評価はNostrプロトコルを通じて分散保存されます

@@ -96,8 +96,9 @@ describe("RoutesPage", () => {
       "rounded-full",
       "dark:rounded-sm",
       "ruby-text",
+      "gap-0",
     );
-    expect(changeSearchLink.querySelector("span")).not.toHaveAttribute("class");
+    expect(changeSearchLink.querySelector("span")).toBeNull();
     expect(global.fetch).not.toHaveBeenCalled();
   });
 

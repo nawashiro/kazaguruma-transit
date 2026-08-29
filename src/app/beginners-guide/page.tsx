@@ -22,32 +22,32 @@ export default function BeginnersGuide() {
           <ul className="list">
             <li className="list-row">
               <a href="#what-is">
-                <span><ruby>風<rt>かざ</rt></ruby>ぐるまってなに？</span>
+                <ruby>風<rt>かざ</rt></ruby>ぐるまってなに？
               </a>
             </li>
             <li className="list-row">
               <a href="#how-to-ride">
-                <span>乗りかた</span>
+                乗りかた
               </a>
             </li>
             <li className="list-row">
               <a href="#how-to-ride-with-wheelchair">
-                <span>車いすやベビーカーのかたへ</span>
+                車いすやベビーカーのかたへ
               </a>
             </li>
             <li className="list-row">
               <a href="#about-site">
-                <span>このサイトはなに？</span>
+                このサイトはなに？
               </a>
             </li>
             <li className="list-row">
               <a href="#about-me">
-                <span>あなたは誰？</span>
+                あなたは誰？
               </a>
             </li>
             <li className="list-row">
               <a href="#payment">
-                <span>お金をとるの？</span>
+                お金をとるの？
               </a>
             </li>
           </ul>

@@ -179,7 +179,7 @@ export default function PostApprovalPage() {
           />
           <Link
             href="/discussions"
-            className="btn text-base btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary ruby-text gap-0 rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -202,7 +202,7 @@ export default function PostApprovalPage() {
   if (detail.state === "loading") {
     return (
       <div role="status">
-        <span className="ruby-text">会話情報を読み込み中...</span>
+        <p className="ruby-text">会話情報を読み込み中...</p>
       </div>
     );
   }
@@ -279,13 +279,13 @@ export default function PostApprovalPage() {
               role="status"
               aria-live="polite"
             >
-              <span>{detail.error ?? "会話データの取得に失敗しました。"}</span>
+              <p className="ruby-text">{detail.error ?? "会話データの取得に失敗しました。"}</p>
               <button
                 type="button"
-                className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
                 onClick={() => void reload()}
               >
-                <span className="ruby-text">再読み込み</span>
+                再読み込み
               </button>
             </div>
         ) : !discussion ? (
@@ -295,16 +295,16 @@ export default function PostApprovalPage() {
               role="status"
               aria-live="polite"
             >
-              <span>
+              <p className="ruby-text">
                 会話データの取得に時間がかかっています（{discussionCompletionReason}）。
                 受信待機中または relay 応答遅延の可能性があります。
-              </span>
+              </p>
               <button
                 type="button"
-                className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
                 onClick={() => void reload()}
               >
-                <span className="ruby-text">再読み込み</span>
+                再読み込み
               </button>
             </div>
           ) : (
@@ -313,13 +313,13 @@ export default function PostApprovalPage() {
               role="status"
               aria-live="polite"
             >
-              <span>会話が見つかりません。</span>
+              <p className="ruby-text">会話が見つかりません。</p>
               <button
                 type="button"
-                className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
                 onClick={() => void reload()}
               >
-                <span className="ruby-text">再読み込み</span>
+                再読み込み
               </button>
             </div>
           )
@@ -366,11 +366,9 @@ export default function PostApprovalPage() {
                                 post.approvalState === "unknown" ||
                                 approvingIds.has(post.id)
                               }
-                              className="ml-4 btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+                              className="ml-4 btn text-base btn-primary ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
                             >
-                              <span>
-                                {approvingIds.has(post.id) ? "" : "承認"}
-                              </span>
+                              {approvingIds.has(post.id) ? "" : "承認"}
                             </button>
                           </div>
                           {user.isLoggedIn && (
@@ -451,13 +449,11 @@ export default function PostApprovalPage() {
                                     disabled={
                                       revokingIds.has(post.id) || !revokeAllowed
                                     }
-                                    className="btn text-base btn-warning min-h-[44px] rounded-full dark:rounded-sm"
+                                    className="btn text-base btn-warning ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
                                   >
-                                    <span>
-                                      {revokingIds.has(post.id)
-                                        ? ""
-                                        : "承認を撤回"}
-                                    </span>
+                                    {revokingIds.has(post.id)
+                                      ? ""
+                                      : "承認を撤回"}
                                   </button>
                                 );
                               })()}

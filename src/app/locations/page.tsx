@@ -294,7 +294,7 @@ export default function LocationsPage() {
         <PageHeader title="場所をさがす" />
         <div className="alert alert-error alert-soft text-base-content!" role="alert">
           <CircleAlert className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-          <span>{error}</span>
+          <p>{error}</p>
         </div>
       </div>
     );
@@ -310,9 +310,9 @@ export default function LocationsPage() {
       <div className="space-y-4">
         <Card title="近いところから表示">
           {searchError && (
-            <div id="location-search-error" className="alert alert-error alert-soft text-base-content! ruby-text" role="alert">
+            <div id="location-search-error" className="alert alert-error alert-soft text-base-content!" role="alert">
               <CircleAlert className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-              <span>{searchError}</span>
+              <p className="ruby-text">{searchError}</p>
             </div>
           )}
 
@@ -369,14 +369,12 @@ export default function LocationsPage() {
 
           {currentPosition && (
             <div
-              className="alert alert-success alert-soft text-base-content! ruby-text"
+              className="alert alert-success alert-soft text-base-content!"
               role="status"
               aria-live="polite"
             >
               <CircleCheck className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-              <span>
-                位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます
-              </span>
+              <p className="ruby-text">位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます</p>
             </div>
           )}
         </Card>
@@ -471,9 +469,9 @@ export default function LocationsPage() {
                 href="https://compass.graffer.jp/handbook/landing"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn text-base btn-outline w-fit h-fit rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline gap-0 w-fit h-fit rounded-full dark:rounded-sm"
               >
-                <span>お悩みハンドブックウェブサイトへ</span>
+                お悩みハンドブックウェブサイトへ
               </a>
             </CarouselCard>
 
@@ -495,7 +493,7 @@ export default function LocationsPage() {
                 href="https://sekaibivouac.jp/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn text-base btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline gap-0 w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>せかいビバークウェブサイトへ</p>
               </a>
@@ -515,7 +513,7 @@ export default function LocationsPage() {
                 href="https://chiyolab.jp/comunity_event"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn text-base btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline gap-0 w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>ちよだコミュニティラボ</p>
               </a>
@@ -523,7 +521,7 @@ export default function LocationsPage() {
                 href="https://visit-chiyoda.tokyo/app/event"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn text-base btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline gap-0 w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>千代田区観光協会</p>
               </a>
@@ -531,7 +529,7 @@ export default function LocationsPage() {
                 href="https://www.city.chiyoda.lg.jp/cgi-bin/event_cal_multi/calendar.cgi"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn text-base btn-outline w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline gap-0 w-fit h-fit py-2 inline rounded-full dark:rounded-sm"
               >
                 <p>千代田区ウェブサイト</p>
               </a>

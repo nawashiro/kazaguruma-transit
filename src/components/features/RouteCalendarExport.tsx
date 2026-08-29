@@ -59,12 +59,12 @@ export default function RouteCalendarExport(props: RouteCalendarExportProps) {
           role="alert"
           className="alert alert-error alert-soft text-base-content!"
         >
-          <span>カレンダー生成エラー: {calendarError}</span>
+          <p className="ruby-text">カレンダー生成エラー: {calendarError}</p>
         </div>
       )}
       <Button onClick={handleDownload}>
-        <Calendar className="h-5 w-5" aria-hidden="true" />
-        <span className="ruby-text">カレンダーに追加</span>
+        <Calendar className="mr-2 h-5 w-5" aria-hidden="true" />
+        カレンダーに追加
       </Button>
     </>
   );

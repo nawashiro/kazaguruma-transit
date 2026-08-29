@@ -137,7 +137,7 @@ export function EvaluationComponent({
           <button
             onClick={() => handleEvaluate(currentPost.id, "+")}
             disabled={evaluatingPost !== null}
-            className={`btn text-base btn-primary min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
+            className={`btn text-base btn-primary gap-0 ruby-text min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
               }`}
             type="button"
           >
@@ -145,15 +145,15 @@ export function EvaluationComponent({
               ""
             ) : (
               <>
-                <ThumbsUp className="w-6 h-6" aria-hidden="true" />
-                <span className="ruby-text">はい</span>
+                <ThumbsUp className="w-6 h-6 mr-2" aria-hidden="true" />
+                はい
               </>
             )}
           </button>
           <button
             onClick={() => handleEvaluate(currentPost.id, "-")}
             disabled={evaluatingPost !== null}
-            className={`btn text-base btn-warning min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
+            className={`btn text-base btn-warning gap-0 ruby-text min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
               }`}
             type="button"
           >
@@ -161,8 +161,8 @@ export function EvaluationComponent({
               ""
             ) : (
               <>
-                <ThumbsDown className="w-6 h-6" aria-hidden="true" />
-                <span className="ruby-text">いいえ</span>
+                <ThumbsDown className="w-6 h-6 mr-2" aria-hidden="true" />
+                いいえ
               </>
             )}
           </button>

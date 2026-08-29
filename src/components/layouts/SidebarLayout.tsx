@@ -84,18 +84,16 @@ export default function SidebarLayout({
       </div>
       <div className="drawer-content flex flex-col min-h-screen">
         <div className="flex items-center justify-between p-2">
-          <span>
-            <button
-              type="button"
-              className="btn text-base btn-ghost drawer-button lg:hidden rounded-full dark:rounded-sm"
-              aria-expanded={isDrawerOpen}
-              aria-controls="drawer"
-              onClick={() => setIsDrawerOpen(true)}
-            >
-              <Menu className="inline-block w-6 h-6 stroke-current" aria-hidden="true" />
-              <span className="ruby-text">メニュー</span>
-            </button>
-          </span>
+          <button
+            type="button"
+            className="btn gap-0 text-base btn-ghost drawer-button lg:hidden rounded-full dark:rounded-sm ruby-text"
+            aria-expanded={isDrawerOpen}
+            aria-controls="drawer"
+            onClick={() => setIsDrawerOpen(true)}
+          >
+            <Menu className="inline-block w-6 h-6 stroke-current" aria-hidden="true" />
+            メニュー
+          </button>
           <ThemeToggle />
         </div>
         <main id="main-content" className="flex-grow" tabIndex={-1}>

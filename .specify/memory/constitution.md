@@ -1,27 +1,23 @@
 <!--
 Sync Impact Report:
-- Version Change: 2.0.0 -> 3.0.0
-- Reason: Issue #107 に基づき、既存の許可範囲を狭めるアクセシビリティ、Nostr 実装方針、
-  開発委任フロー、プロジェクトの範囲を明文化。既存方針と後方互換でない変更のため、
-  Governance の版付け規則に従い MAJOR を上げる。
+- Version Change: 3.0.0 -> 4.0.0
+- Reason: Issue #106 に基づき、廃止した「日本語ボタン文字列を子spanの
+  `ruby-text`へ置く」規定を憲章から削除する。DOM構造を意味・ARIA・レイアウト上の
+  責務で判断し、不要なspanを削除できるようにするため、Governanceの版付け規則に
+  従いMAJORを上げる。
 - Modified Principles:
-  * アクセシビリティ方針: 最低フォントサイズを 14px から 16px へ変更し、
-    アイコン実装を Lucide に限定
-  * Nostr実装方針: `specs/017-discussion-read-executor` から
-    `specs/022-nostr-discussion-read-coordinator` へ更新
-  * 開発ワークフロー: TDD、実装委任、テスト実装直後のレビュー委任、親エージェントの
-    受入条件・書込境界・検証結果の管理を明文化
+  * アクセシビリティ方針: ボタン文字列の固定的な子span構造を要求しない方針へ整理
 - Added Sections:
-  * プロジェクトの範囲
-  * Governance
-- Removed Sections:
   * なし
+- Removed Sections:
+  * 日本語ボタン文字列を子spanの`ruby-text`へ置く規定
 - Follow-up TODOs:
-  * 既存の Heroicons/react-icons 利用箇所を Lucide に移行する実装は別作業で行う
-  * 既存の 16px 未満のユーザー向け表示と PDF 生成 HTML を 16px 方針へ移行する実装は別作業で行う
+  * Issue #106でproduction sourceの不要spanとDaisyUIの暗黙gapを整理する
+- Previous report: 2.0.0 -> 3.0.0（Issue #107によるアクセシビリティ、Nostr、委任、
+  プロジェクト範囲、Governanceの明文化）
 - Template Status:
   ✅ `.specify/scripts/bash/resolve-template.sh constitution-template --json` は成功
-  ✅ 解決済みテンプレートの Core Principles、追加制約、開発ワークフロー、Governance
+  ✅ 解決済みテンプレートのCore Principles、追加制約、開発ワークフロー、Governance
      に対応する既存章を保持・拡張
 -->
 
@@ -236,4 +232,4 @@ Nostr readは`specs/022-nostr-discussion-read-coordinator`を正本とする。�
 - 実務上のコーディング規約と検証コマンドは `AGENTS.md` を正本とする。この憲章と `AGENTS.md` が衝突する場合は `AGENTS.md` を優先し、憲章側の更新を別途行う。
 - 本憲章が要求する方針を既存コードへ遡及適用する場合は、別の feature または issue として範囲、移行手順、検証条件を定義する。既存の非準拠を理由に本 issue の文書変更を取り消してはならない。
 
-**Version**: 3.0.0 | **Ratified**: 2026-01-13 | **Last Amended**: 2026-08-25
+**Version**: 4.0.0 | **Ratified**: 2026-01-13 | **Last Amended**: 2026-08-29

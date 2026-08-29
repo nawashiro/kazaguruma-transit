@@ -11,7 +11,7 @@ export default async function LicensePage() {
       <div className="space-y-4">
         <section className="card bg-base-100 shadow-md">
           <div className="card-body p-4 sm:p-6">
-            <h2 className="card-title"><span>本ソフトウェア</span></h2>
+            <h2 className="card-title gap-0">本ソフトウェア</h2>
             <div>
               <table className="table w-full table-fixed text-base" aria-label="本ソフトウェア">
                 <colgroup>
@@ -62,7 +62,7 @@ export default async function LicensePage() {
 
         <section className="card bg-base-100 shadow-md">
           <div className="card-body p-4 sm:p-6">
-            <h2 className="card-title"><span>使用オープンデータ</span></h2>
+            <h2 className="card-title gap-0">使用オープンデータ</h2>
             <div>
               <table className="table w-full table-fixed text-base" aria-label="使用オープンデータ">
                 <colgroup>
@@ -90,7 +90,7 @@ export default async function LicensePage() {
 
         <section className="card bg-base-100 shadow-md">
           <div className="card-body p-4 sm:p-6">
-            <h2 className="card-title"><span>導入パッケージ</span></h2>
+            <h2 className="card-title gap-0">導入パッケージ</h2>
             <div>
               <table className="table w-full table-fixed text-base" aria-label="導入パッケージ">
                 <colgroup>

@@ -53,7 +53,7 @@ export default function Card({
       id={id}
     >
       <div className={`card-body ${safeBodyClassName}`}>
-        {title && <h2 className="card-title inline ruby-text">{title}</h2>}
+        {title && <h2 className="card-title inline ruby-text gap-0">{title}</h2>}
         {children}
       </div>
     </section>

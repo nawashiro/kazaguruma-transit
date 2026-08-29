@@ -43,6 +43,10 @@ describe("DiscussionMetaReadState", () => {
     ).not.toBeInTheDocument();
     const status = screen.getByRole("status");
     expect(status).toHaveTextContent("読み込み中");
+    const message = status.querySelector<HTMLElement>(":scope > p.ruby-text");
+    expect(message).not.toBeNull();
+    if (!message) throw new Error("loading message paragraph was not rendered");
+    expect(message).toHaveTextContent("会話情報を読み込み中");
     expect(status).toHaveAttribute("aria-live", "polite");
   });
 

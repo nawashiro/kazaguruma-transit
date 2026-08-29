@@ -40,8 +40,8 @@ export default function Button({
   children,
 }: ButtonProps) {
   const baseClasses = secondary
-    ? `btn btn-secondary ${joined ? "" : "rounded-full dark:rounded-sm"}`
-    : `btn btn-primary ${joined ? "" : "rounded-full dark:rounded-sm"}`;
+    ? `btn btn-secondary ruby-text gap-0 ${joined ? "" : "rounded-full dark:rounded-sm"}`
+    : `btn btn-primary ruby-text gap-0 ${joined ? "" : "rounded-full dark:rounded-sm"}`;
   const widthClass = fullWidth ? "w-full" : "";
   const iconOnlyClass = iconOnly ? "aspect-square p-0" : "";
   const disabledClass = disabled || loading ? "cursor-not-allowed" : "";
@@ -96,9 +96,7 @@ export default function Button({
       aria-describedby={ariaDescribedby}
       aria-busy={loading ? "true" : undefined}
     >
-      <span className="ruby-text inline-flex w-full items-center justify-center gap-2">
-        {children}
-      </span>
+      {children}
     </button>
   );
 }

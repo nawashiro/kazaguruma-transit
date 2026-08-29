@@ -45,8 +45,8 @@ export default function AwardPage() {
 
         <div className="card-body gap-4">
           <div>
-            <h2 className="card-title text-xl">
-              <span className="ruby-text">{AWARD_PRIZE}</span>
+            <h2 className="card-title text-xl ruby-text gap-0">
+              {AWARD_PRIZE}
             </h2>
           </div>
 
@@ -69,9 +69,7 @@ export default function AwardPage() {
 
       <section className="card card-border bg-base-100 shadow-sm">
         <div className="card-body gap-4">
-          <h2 className="card-title">
-            <span className="ruby-text">評価された取組</span>
-          </h2>
+          <h2 className="card-title ruby-text gap-0">評価された取組</h2>
           <p>
             複雑な時刻表をわかりやすくする経路検索、オープンデータを活用した
             千代田区の施設案内、利用者の経験を共有する意見交換機能を、一つの
@@ -87,17 +85,17 @@ export default function AwardPage() {
               href={AWARD_PROJECT_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn text-base btn-neutral rounded-full dark:rounded-sm"
+              className="btn text-base btn-neutral ruby-text gap-0 rounded-full dark:rounded-sm"
             >
-              <span className="ruby-text">東京都の作品紹介を見る</span>
+              東京都の作品紹介を見る
             </a>
             <a
               href={AWARD_BADGE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn text-base btn-outline rounded-full dark:rounded-sm"
+              className="btn text-base btn-outline ruby-text gap-0 rounded-full dark:rounded-sm"
             >
-              <span className="ruby-text">オープンバッジを確認する</span>
+              オープンバッジを確認する
             </a>
           </div>
         </div>

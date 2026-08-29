@@ -80,7 +80,7 @@ export function ModeratorManagementSection({
         <div className="card-body">
           <h2
             id="active-moderators-title"
-            className="card-title mb-4 ruby-text"
+            className="card-title mb-4 ruby-text gap-0"
           >
             モデレーターをしているユーザー
           </h2>
@@ -124,9 +124,9 @@ export function ModeratorManagementSection({
         <div className="card-body">
           <h2
             id="pending-moderators-title"
-            className="card-title mb-4 ruby-text"
+            className="card-title mb-4 ruby-text gap-0"
           >
-            <span>申請中のユーザー</span>
+            申請中のユーザー
           </h2>
           {applications.length === 0 ? (
             <p className="text-base-content ruby-text">

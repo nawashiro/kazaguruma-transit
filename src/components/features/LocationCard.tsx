@@ -61,7 +61,7 @@ export default function LocationCard({ location, areaName }: LocationCardProps) 
       )}
 
       <div className="card-body text-left">
-        <h2 className="card-title">{location.name}</h2>
+        <h2 className="card-title gap-0">{location.name}</h2>
 
         {displayedAreaName && <p className="text-base">{displayedAreaName}</p>}
 

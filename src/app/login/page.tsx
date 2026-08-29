@@ -10,8 +10,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div role="status" aria-live="polite" className="py-8 ruby-text">
-          ログインページを読み込み中...
+        <div role="status" aria-live="polite" className="py-8">
+          <p className="ruby-text">ログインページを読み込み中...</p>
         </div>
       }
     >

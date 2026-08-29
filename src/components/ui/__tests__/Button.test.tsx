@@ -123,27 +123,31 @@ describe("Button", () => {
     expect(button).toHaveClass("min-w-[44px]");
   });
 
-  it("複合コンテンツをボタン内で中央揃えにすること", () => {
+  it("ボタン自身をルビとgap-0の境界にし、構造用spanを追加しないこと", () => {
     render(
       <Button testId="test-button">
-        <span data-testid="button-content">内容</span>
+        内容
       </Button>
     );
 
     const button = screen.getByTestId("test-button");
-    expect(button).toHaveClass("inline-flex", "items-center", "justify-center");
-    expect(button.querySelector(".ruby-text")).toHaveClass(
+    expect(button).toHaveClass(
+      "inline-flex",
       "items-center",
-      "justify-center"
+      "justify-center",
+      "ruby-text",
+      "gap-0",
     );
+    expect(button.querySelector("span")).not.toBeInTheDocument();
   });
 
-  it("日本語の表示文字列をruby-text内に配置すること", () => {
+  it("日本語の表示文字列をボタン自身のruby-text境界に配置すること", () => {
     render(<Button testId="test-button">確認</Button>);
 
-    expect(screen.getByTestId("test-button").querySelector(".ruby-text")).toHaveTextContent(
-      "確認"
-    );
+    const button = screen.getByTestId("test-button");
+    expect(button).toHaveClass("ruby-text");
+    expect(button).toHaveTextContent("確認");
+    expect(button.querySelector(".ruby-text")).toBeNull();
   });
 
   it("不要な自動IDを生成しないこと", () => {

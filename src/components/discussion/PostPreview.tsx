@@ -65,7 +65,7 @@ export function PostPreview({
           secondary
           disabled={isLoading}
         >
-          <span>編集に戻る</span>
+          編集に戻る
         </Button>
         <Button
           onClick={onConfirm}
@@ -73,7 +73,7 @@ export function PostPreview({
           disabled={isLoading}
           loading={isLoading}
         >
-          <span>{isLoading ? "投稿中..." : "投稿する"}</span>
+          {isLoading ? "投稿中..." : "投稿する"}
         </Button>
       </div>
     </div>

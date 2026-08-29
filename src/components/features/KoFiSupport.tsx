@@ -18,8 +18,8 @@ export default function KoFiSupport({
       aria-labelledby={headingId}
     >
       <div className="card-body gap-4 p-4 sm:p-6">
-        <h2 id={headingId} className="card-title">
-          <span className="ruby-text">{content.heading}</span>
+        <h2 id={headingId} className="card-title gap-0 ruby-text">
+          {content.heading}
         </h2>
         <p className="ruby-text leading-relaxed">{content.message}</p>
         <iframe

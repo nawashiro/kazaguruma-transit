@@ -52,9 +52,9 @@ function ResetSearchConditionsLink() {
     <div className="flex justify-center">
       <Link
         href="/"
-        className="btn text-base btn-secondary rounded-full dark:rounded-sm min-h-[44px] min-w-[44px] leading-relaxed font-medium inline-flex items-center justify-center ruby-text"
+        className="btn gap-0 text-base btn-secondary rounded-full dark:rounded-sm min-h-[44px] min-w-[44px] leading-relaxed font-medium inline-flex items-center justify-center ruby-text"
       >
-        <span>検索条件をリセット</span>
+        検索条件をリセット
       </Link>
     </div>
   );
@@ -76,7 +76,7 @@ function SearchError({ message }: { message: string }) {
   return (
     <Card>
       <div role="alert" className="alert alert-error alert-soft text-base-content! mb-4">
-        {message}
+        <p>{message}</p>
       </div>
       <ResetSearchConditionsLink />
     </Card>
@@ -168,9 +168,9 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
   if (resultState.status === "loading" || resultState.searchParams !== searchParams) {
     return (
       <Card bodyClassName="items-center">
-        <div role="status" className="flex flex-col items-center gap-2">
+        <div role="status" className="flex flex-col items-center gap-2 ruby-text">
           <span className="loading loading-spinner loading-lg" aria-hidden="true" />
-          <span className="ruby-text">経路を検索中...</span>
+          経路を検索中...
         </div>
       </Card>
     );

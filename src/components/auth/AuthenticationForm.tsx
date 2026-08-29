@@ -227,23 +227,21 @@ export function AuthenticationForm({
       {attemptError && (
         <div
           id={errorId}
-          className="alert alert-error alert-soft text-base-content!"
+          className="alert alert-error alert-soft text-base-content! text-base"
           role="alert"
           aria-live="polite"
         >
-          <span className="text-base ruby-text">{attemptError}</span>
+          <p className="ruby-text">{attemptError}</p>
         </div>
       )}
 
       <button
         type="submit"
-        className="btn text-base btn-primary min-h-[44px] w-full rounded-full dark:rounded-sm"
+        className="btn text-base btn-primary ruby-text gap-0 min-h-[44px] w-full rounded-full dark:rounded-sm"
         disabled={isSubmitting}
         aria-busy={isSubmitting}
       >
-        <span className="ruby-text">
-          {mode === "login" ? "ログイン" : "アカウント作成"}
-        </span>
+        {mode === "login" ? "ログイン" : "アカウント作成"}
       </button>
     </form>
   );

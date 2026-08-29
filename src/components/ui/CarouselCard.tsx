@@ -39,19 +39,19 @@ export default function CarouselCard({
         className={`card bg-base-100 w-full shadow-sm overflow-hidden ${safeClassName}`}
       >
         <div className="card-body ruby-text">
-          {title && <h2 className="card-title inline">{title}</h2>}
+          {title && <h2 className="card-title inline gap-0">{title}</h2>}
           {children}
           <div className="card-actions justify-between mt-4">
             <a
               href={`#${prevSlideId}`}
-              className="btn text-base btn-primary btn-circle"
+              className="btn gap-0 text-base btn-primary btn-circle"
               aria-label="前のスライド"
             >
               <ArrowLeft height="1rem" width="1rem" aria-hidden="true" />
             </a>
             <a
               href={`#${nextSlideId}`}
-              className="btn text-base btn-primary btn-circle"
+              className="btn gap-0 text-base btn-primary btn-circle"
               aria-label="次のスライド"
             >
               <ArrowRight height="1rem" width="1rem" aria-hidden="true" />

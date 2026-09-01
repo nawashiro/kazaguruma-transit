@@ -89,7 +89,6 @@ These principles are the operational source of truth for agents working in this 
 - Use 2-space indentation to match existing files; avoid implicit `any` (ESLint warns). Follow Next.js `core-web-vitals` rules; run `npm run lint`.
 - Favor explicit types for API shapes and Prisma results; keep transit/discussion services encapsulated under `src/lib`.
 - Do not repeat a page's active tab as a main heading. In selectable user cards, put a checkbox after the identity/content and give its visible purpose (for example, `許可` or `削除`) next to it; its accessible name must include the target user.
-- DaisyUI action buttons use `rounded-full dark:rounded-sm`; put Japanese button text inside a child `<span className="ruby-text">` rather than applying `ruby-text` to the button itself, so Tailwind spacing does not interfere with ruby rendering.
 
 ## Testing Guidelines
 

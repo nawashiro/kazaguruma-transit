@@ -99,7 +99,7 @@ export function PermissionNotice({
       {requiresLogin && (
         <button
           type="button"
-          className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+          className="btn text-base btn-primary gap-0 ruby-text min-h-[44px] rounded-full dark:rounded-sm"
           onClick={onLogin}
         >
           ログイン

@@ -104,15 +104,15 @@ function DiscussionManagementTabLayoutContent({
           role="status"
           aria-live="polite"
         >
-          <span className="ruby-text">
+          <p className="ruby-text">
             {management.error ?? "掲載一覧の会話情報を取得できませんでした。"}
-          </span>
+          </p>
           <button
             type="button"
-            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            className="btn text-base btn-outline gap-0 ruby-text min-h-[44px] rounded-full dark:rounded-sm"
             onClick={() => void management.reload()}
           >
-            <span className="ruby-text">再読み込み</span>
+            再読み込み
           </button>
         </div>
       ) : (
@@ -136,7 +136,7 @@ function DiscussionManagementTabLayoutContent({
               key={tab.href}
               href={tab.href}
               ref={(element) => { tabRefs.current[index] = element; }}
-              className={`tab min-h-[44px] min-w-[44px] shrink-0 whitespace-nowrap px-4 font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${isActive ? "tab-active" : ""}`}
+              className={`tab min-h-[44px] min-w-[44px] shrink-0 whitespace-nowrap px-4 font-bold ruby-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${isActive ? "tab-active" : ""}`}
               role="tab"
               id={`discussion-management-${index}-tab`}
               aria-controls="discussion-management-panel"
@@ -145,7 +145,7 @@ function DiscussionManagementTabLayoutContent({
               tabIndex={isActive ? 0 : -1}
               onKeyDown={(event) => handleKeyDown(event, index)}
             >
-              <span className="ruby-text">{tab.label}</span>
+              {tab.label}
             </Link>
           );
         })}

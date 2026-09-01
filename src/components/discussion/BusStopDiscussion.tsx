@@ -213,7 +213,7 @@ export function BusStopDiscussion({
         <h3 className="text-lg font-medium mb-4 ruby-text">バス停メモを投稿</h3>
         {streamError && (
           <div className="alert alert-error alert-soft text-base-content! mb-3" role="alert">
-            <span>{streamError}</span>
+            <p className="ruby-text">{streamError}</p>
           </div>
         )}
         {errors.length > 0 && (
@@ -285,7 +285,7 @@ export function BusStopDiscussion({
             <div className="flex gap-2">
               <Button
                 onClick={() => setShowPreview(true)}
-                className="btn text-base btn-primary flex-1 rounded-full dark:rounded-sm"
+                className="flex-1"
                 disabled={!postForm.content.trim() || isSubmitting}
               >
                 プレビュー

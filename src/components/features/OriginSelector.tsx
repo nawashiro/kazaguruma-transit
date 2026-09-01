@@ -129,13 +129,11 @@ export default function OriginSelector({
                 testId="gps-button"
                 aria-label="現在地を使用して経路を検索"
               >
-                <span className="flex items-center justify-center gap-2 whitespace-nowrap">
-                  <LocateFixed
-                    className="h-5 w-5 shrink-0"
-                    aria-hidden="true"
-                  />
-                  <span>現在地を使用</span>
-                </span>
+                <LocateFixed
+                  className="mr-2 h-5 w-5 shrink-0"
+                  aria-hidden="true"
+                />
+                現在地を使用
               </Button>
             </div>
           </fieldset>

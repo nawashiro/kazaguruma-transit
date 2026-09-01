@@ -63,16 +63,13 @@ describe("OriginSelector", () => {
     render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
 
     const gpsButton = screen.getByTestId("gps-button");
-    const gpsContent = gpsButton.querySelector(".ruby-text > .flex");
+    const icon = gpsButton.querySelector("svg");
 
-    expect(gpsButton.querySelector("svg")).toBeInTheDocument();
-    expect(gpsContent).toHaveClass(
-      "flex",
-      "items-center",
-      "justify-center",
-      "gap-2",
-      "whitespace-nowrap"
-    );
+    expect(gpsButton).toHaveClass("ruby-text", "gap-0");
+    expect(gpsButton).toHaveAccessibleName("現在地を使用して経路を検索");
+    expect(icon).toBeInTheDocument();
+    expect(icon).toHaveClass("mr-2");
+    expect(gpsButton.querySelector("span")).toBeNull();
   });
 
   it("住所入力欄の右側にラベル付きアイコン検索ボタンを表示する", () => {
@@ -108,16 +105,13 @@ describe("OriginSelector", () => {
     render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
 
     const button = screen.getByTestId("gps-button");
-    const content = button.querySelector(".ruby-text > .flex");
+    const icon = button.querySelector("svg");
 
-    expect(button.querySelector("svg")).toBeInTheDocument();
-    expect(content).toHaveClass(
-      "flex",
-      "items-center",
-      "justify-center",
-      "gap-2",
-      "whitespace-nowrap"
-    );
+    expect(button).toHaveClass("ruby-text", "gap-0");
+    expect(button).toHaveAccessibleName("現在地を使用して経路を検索");
+    expect(icon).toBeInTheDocument();
+    expect(icon).toHaveClass("mr-2");
+    expect(button.querySelector("span")).toBeNull();
   });
 
   it("住所が未入力の場合はコールバックが呼ばれず検索を実行しない", async () => {

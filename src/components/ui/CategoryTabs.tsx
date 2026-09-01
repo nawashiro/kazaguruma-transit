@@ -64,7 +64,7 @@ export default function CategoryTabs({
             }}
             id={getCategoryId(idPrefix, category)}
             type="button"
-            className={`tab text-base px-4 text-base-content ${isActive ? "tab-active" : ""}`}
+            className={`tab text-base px-4 text-base-content ruby-text gap-0 ${isActive ? "tab-active" : ""}`}
             role="tab"
             aria-selected={isActive}
             aria-controls={activePanelId}
@@ -72,7 +72,7 @@ export default function CategoryTabs({
             onClick={() => onCategoryChange(category)}
             onKeyDown={(event) => handleKeyDown(event, index)}
           >
-            <span className="ruby-text">{category}</span>
+            {category}
           </button>
         );
       })}

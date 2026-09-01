@@ -45,27 +45,27 @@ export default function Usage() {
           <ul className="list">
             <li className="list-row">
               <a href="#basic-usage">
-                <span>基本的な使いかた</span>
+                基本的な使いかた
               </a>
             </li>
             <li className="list-row">
               <a href="#origin-selection">
-                <span>出発地・目的地の選び方</span>
+                出発地・目的地の選び方
               </a>
             </li>
             <li className="list-row">
               <a href="#destination-selection">
-                <span><ruby>風<rt>かざ</rt></ruby>ぐるまで行ける場所の探し方</span>
+                <ruby>風<rt>かざ</rt></ruby>ぐるまで行ける場所の探し方
               </a>
             </li>
             <li className="list-row">
               <a href="#install-app">
-                <span>インストールしていつでも使えるようにする</span>
+                インストールしていつでも使えるようにする
               </a>
             </li>
             <li className="list-row">
               <a href="#rubyful-button">
-                <span>ふりがなをつける / 消す</span>
+                ふりがなをつける / 消す
               </a>
             </li>
           </ul>

@@ -74,26 +74,26 @@ export default function DiscussionsPage() {
                 </div>
               ) : loadError ? (
                 <div className="alert alert-error alert-soft text-base-content!" role="status" aria-live="polite">
-                  <span>{loadError}</span>
+                  <p>{loadError}</p>
                   <button
                     type="button"
-                    className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                    className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
                     onClick={() => void reload()}
                   >
-                    <span className="ruby-text">再読み込み</span>
+                    再読み込み
                   </button>
                 </div>
               ) : discussions.length > 0 ? (
                 <>
                   {isPartialRead && (
                     <div className="alert alert-warning alert-soft text-base-content! mb-4" role="status" aria-live="polite">
-                      <span>会話一覧を完全に取得できませんでした。再読み込みしてください。</span>
+                      <p>会話一覧を完全に取得できませんでした。再読み込みしてください。</p>
                       <button
                         type="button"
-                        className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                        className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
                         onClick={() => void reload()}
                       >
-                        <span className="ruby-text">再読み込み</span>
+                        再読み込み
                       </button>
                     </div>
                   )}
@@ -108,8 +108,8 @@ export default function DiscussionsPage() {
                       >
                         <div className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
                           <div className="card-body p-4">
-                            <h3 className="card-title text-lg ruby-text">
-                              <span>{discussion.title}</span>
+                            <h3 className="card-title text-lg ruby-text gap-0">
+                              {discussion.title}
                             </h3>
                             <p className="text-base text-base-content ruby-text">
                               {discussion.description.length > 70
@@ -131,9 +131,7 @@ export default function DiscussionsPage() {
                                   discussion.moderators.some(
                                     (m) => m.pubkey === user.pubkey
                                   )) && (
-                                  <p className="badge badge-primary badge-md">
-                                    <span>参加中</span>
-                                  </p>
+                                  <p className="badge badge-primary badge-md">参加中</p>
                                 )}
                                 <p className="text-base">
                                   {discussion.moderators.length + 1}
@@ -150,13 +148,13 @@ export default function DiscussionsPage() {
                 </>
               ) : isPartialRead ? (
                 <div className="alert alert-warning alert-soft text-base-content!" role="status" aria-live="polite">
-                  <span>会話一覧を完全に取得できませんでした。再読み込みしてください。</span>
+                  <p>会話一覧を完全に取得できませんでした。再読み込みしてください。</p>
                   <button
                     type="button"
-                    className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+                    className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
                     onClick={() => void reload()}
                   >
-                    <span className="ruby-text">再読み込み</span>
+                    再読み込み
                   </button>
                 </div>
               ) : (
@@ -184,9 +182,9 @@ export default function DiscussionsPage() {
                   </p>
                   <Link
                     href="/discussions/create"
-                    className="btn text-base btn-primary w-full rounded-full dark:rounded-sm"
+                    className="btn text-base btn-primary ruby-text gap-0 w-full rounded-full dark:rounded-sm"
                   >
-                    <span className="ruby-text">新しい会話を作成</span>
+                    新しい会話を作成
                   </Link>
                 </div>
               </div>

@@ -313,7 +313,7 @@ export default function DiscussionEditPage() {
           />
           <Link
             href="/discussions"
-            className="btn text-base btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary ruby-text gap-0 rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -358,13 +358,13 @@ export default function DiscussionEditPage() {
             role="status"
             aria-live="polite"
           >
-            <span>{detail.error ?? "会話データの取得に失敗しました。"}</span>
+            <p className="ruby-text">{detail.error ?? "会話データの取得に失敗しました。"}</p>
             <button
               type="button"
-              className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+              className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
               onClick={() => void reload()}
             >
-              <span className="ruby-text">再読み込み</span>
+              再読み込み
             </button>
           </div>
         </div>
@@ -383,18 +383,18 @@ export default function DiscussionEditPage() {
             role="status"
             aria-live="polite"
           >
-            <span>
+            <p className="ruby-text">
               会話データの取得に時間がかかっています（
               {discussionCompletionReason}）。 受信待機中または relay
               応答遅延の可能性があります。
-            </span>
+            </p>
           </div>
           <button
             type="button"
-            className="btn text-base btn-outline min-h-[44px] rounded-full dark:rounded-sm"
+            className="btn text-base btn-outline ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
             onClick={() => void reload()}
           >
-            <span className="ruby-text">再読み込み</span>
+            再読み込み
           </button>
         </div>
       );
@@ -406,7 +406,7 @@ export default function DiscussionEditPage() {
           <PageHeader title="会話が見つかりません" />
           <Link
             href="/discussions"
-            className="btn text-base btn-primary rounded-full dark:rounded-sm"
+            className="btn text-base btn-primary ruby-text gap-0 rounded-full dark:rounded-sm"
           >
             会話一覧に戻る
           </Link>
@@ -436,9 +436,9 @@ export default function DiscussionEditPage() {
             {!user.isLoggedIn && (
               <Link
                 href={buildLoginRoute(`/discussions/${naddrParam}/edit`)}
-                className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+                className="btn text-base btn-primary ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
               >
-                <span className="ruby-text">ログイン</span>
+                ログイン
               </Link>
             )}
           </div>
@@ -463,9 +463,9 @@ export default function DiscussionEditPage() {
                 {successType === "save" && (
                   <Link
                     href={`/discussions/${naddrParam}`}
-                    className="btn text-base btn-primary min-h-[44px] rounded-full dark:rounded-sm"
+                    className="btn text-base btn-primary ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm"
                   >
-                    <span className="ruby-text">会話画面に戻る</span>
+                    会話画面に戻る
                   </Link>
                 )}
                 {successType === "listing" && (
@@ -556,13 +556,13 @@ export default function DiscussionEditPage() {
                             <button
                               type="button"
                               onClick={() => removeModerator(npub)}
-                              className="btn text-base btn-ghost min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-0"
+                              className="btn text-base btn-ghost ruby-text gap-0 min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-0"
                               aria-label={`モデレーター ${npub} を削除`}
                               disabled={
                                 isSaving || isDeleting || !hasEditPermission
                               }
                             >
-                              <span className="ruby-text">×</span>
+                              ×
                             </button>
                           </div>
                         ))}
@@ -631,7 +631,7 @@ export default function DiscussionEditPage() {
                     </h3>
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                       <button
-                        className="btn text-base btn-primary rounded-full dark:rounded-sm"
+                        className="btn text-base btn-primary ruby-text gap-0 rounded-full dark:rounded-sm"
                         onClick={handleSave}
                         disabled={
                           isSaving ||
@@ -641,15 +641,11 @@ export default function DiscussionEditPage() {
                           !formData.description.trim()
                         }
                       >
-                        {isSaving ? (
-                          <span className="ruby-text">保存中...</span>
-                        ) : (
-                          <span className="ruby-text">変更を保存</span>
-                        )}
+                        {isSaving ? "保存中..." : "変更を保存"}
                       </button>
 
                       <button
-                        className="btn text-base btn-secondary rounded-full dark:rounded-sm"
+                        className="btn text-base btn-secondary ruby-text gap-0 rounded-full dark:rounded-sm"
                         onClick={handleRequestListing}
                         disabled={
                           isSaving ||
@@ -658,11 +654,9 @@ export default function DiscussionEditPage() {
                           !hasEditPermission
                         }
                       >
-                        {isRequestingListing ? (
-                          <span className="ruby-text">申請中...</span>
-                        ) : (
-                          <span className="ruby-text">会話一覧へ掲載申請</span>
-                        )}
+                        {isRequestingListing
+                          ? "申請中..."
+                          : "会話一覧へ掲載申請"}
                       </button>
                     </div>
                   </section>
@@ -678,13 +672,11 @@ export default function DiscussionEditPage() {
                       危険な操作
                     </h3>
                     <button
-                      className="btn text-base btn-outline btn-error rounded-full dark:rounded-sm min-h-[44px]"
+                      className="btn text-base btn-outline btn-error ruby-text gap-0 rounded-full dark:rounded-sm min-h-[44px]"
                       onClick={() => setShowDeleteConfirm(true)}
                       disabled={isSaving || isDeleting || !hasEditPermission}
                     >
-                      <span className="ruby-text">
-                        {isDeleting ? "削除中..." : "会話を削除"}
-                      </span>
+                      {isDeleting ? "削除中..." : "会話を削除"}
                     </button>
                   </section>
 
@@ -706,17 +698,17 @@ export default function DiscussionEditPage() {
             <div className="modal-action">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="btn text-base btn-outline rounded-full dark:rounded-sm"
+                className="btn text-base btn-outline ruby-text gap-0 rounded-full dark:rounded-sm"
                 disabled={isDeleting}
               >
-                <span className="ruby-text">キャンセル</span>
+                キャンセル
               </button>
               <button
                 onClick={handleDelete}
-                className="btn text-base btn-error rounded-full dark:rounded-sm"
+                className="btn text-base btn-error ruby-text gap-0 rounded-full dark:rounded-sm"
                 disabled={isDeleting}
               >
-                <span className="ruby-text">削除する</span>
+                削除する
               </button>
             </div>
           </div>

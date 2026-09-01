@@ -16,23 +16,29 @@ describe("AwardPage", () => {
       screen.getByText("東京都デジタルサービス局（都知事杯オープンデータ・ハッカソン運営事務局）"),
     ).toBeInTheDocument();
 
-    expect(screen.getByRole("link", { name: /東京都の作品紹介を見る/ })).toHaveAttribute(
+    const projectLink = screen.getByRole("link", { name: /東京都の作品紹介を見る/ });
+    expect(projectLink).toHaveClass("ruby-text", "gap-0");
+    expect(projectLink.querySelector("span")).toBeNull();
+    expect(projectLink).toHaveAttribute(
       "href",
       "https://odhackathon.metro.tokyo.lg.jp/collection/54/?year=2025",
     );
-    expect(
-      screen.getByRole("link", { name: "オープンバッジを確認する" }),
-    ).toHaveAttribute(
+
+    const badgeLink = screen.getByRole("link", { name: "オープンバッジを確認する" });
+    expect(badgeLink).toHaveClass("ruby-text", "gap-0");
+    expect(badgeLink.querySelector("span")).toBeNull();
+    expect(badgeLink).toHaveAttribute(
       "href",
       "https://www.openbadge-global.com/ns/portal/openbadge/public/assertions/detail/RWRseGxrR0NmM0Q5QnAwdTdjeHFHdz09",
     );
   });
 
-  it("見出しのルビ表示をspanに分離し、低コントラストなテーマ色を使わない", () => {
+  it("見出しを直接ルビ対象にし、低コントラストなテーマ色を使わない", () => {
     const { container } = render(<AwardPage />);
 
     for (const heading of screen.getAllByRole("heading", { level: 2 })) {
-      expect(heading.querySelector(":scope > span.ruby-text")).not.toBeNull();
+      expect(heading).toHaveClass("ruby-text", "gap-0");
+      expect(heading.querySelector(":scope > span")).toBeNull();
     }
 
     expect(container.querySelector(".text-primary")).not.toBeInTheDocument();

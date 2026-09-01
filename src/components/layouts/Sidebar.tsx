@@ -33,9 +33,9 @@ export default function Sidebar({
       <ul className="menu p-4 space-y-4 w-full bg-base-200">
         <li>
           <details open>
-            <summary className="group">
+            <summary className="group font-semibold">
               <Rocket className="h-6 w-6" aria-hidden="true" />
-              <span className="font-semibold ruby-text">使う</span>
+              <span className="ruby-text">使う</span>
             </summary>
             <ul className="menu w-full ">
               <li>
@@ -61,11 +61,9 @@ export default function Sidebar({
         </li>
         <li>
           <details open>
-            <summary className="group">
+            <summary className="group font-semibold whitespace-nowrap">
               <Info className="h-6 w-6" aria-hidden="true" />
-              <span className="font-semibold whitespace-nowrap ruby-text">
-                使い方やサイト情報
-              </span>
+              <span className="ruby-text">使い方やサイト情報</span>
             </summary>
             <ul className="menu w-full ">
               <li>
@@ -107,9 +105,7 @@ export default function Sidebar({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <span className="inline">
-                    <RefreshCw className="h-6 w-6" aria-hidden="true" />
-                  </span>
+                  <RefreshCw className="h-6 w-6" aria-hidden="true" />
                   <span className="ruby-text">更新情報</span>
                 </a>
               </li>

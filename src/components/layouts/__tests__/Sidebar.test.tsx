@@ -91,4 +91,51 @@ describe("Sidebar", () => {
       }),
     ).not.toBeInTheDocument();
   });
+
+  it("DaisyUI menu gridの各項目を単一のlabel wrapperで構成すること", () => {
+    render(<Sidebar toggleSidebar={jest.fn()} koFiUsername="nawashiro" />);
+
+    const items = getSidebarNavigation().querySelectorAll(
+      ".menu li > a, .menu li > details > summary",
+    );
+    expect(items).toHaveLength(12);
+
+    const expectedLabels = [
+      "使う",
+      "ホーム",
+      "場所をさがす",
+      "意見交換",
+      "使い方やサイト情報",
+      "はじめての方かたへ",
+      "使い方",
+      "受賞について",
+      "ライセンス",
+      "更新情報",
+      "設定",
+      "開発者を支援する",
+    ];
+    const normalizedItemLabels = Array.from(items).map((item) =>
+      (item.textContent ?? "").replace(/\s+/g, "").trim(),
+    );
+    expect(normalizedItemLabels).toEqual(expectedLabels);
+
+    items.forEach((item, index) => {
+      const wrappers = item.querySelectorAll(":scope > span.ruby-text");
+      expect(wrappers).toHaveLength(1);
+      const wrapper = wrappers[0];
+      if (!wrapper) throw new Error(`missing label wrapper at index ${index}`);
+      expect(wrapper).toHaveTextContent(expectedLabels[index]);
+      expect(wrapper.querySelector("svg")).toBeNull();
+      expect(item).not.toHaveClass("ruby-text");
+      expect(item).not.toHaveClass("gap-0");
+    });
+
+    const summaries = getSidebarNavigation().querySelectorAll(
+      ".menu li > details > summary",
+    );
+    expect(summaries).toHaveLength(2);
+    summaries.forEach((summary) => {
+      expect(summary.parentElement?.tagName).toBe("DETAILS");
+    });
+  });
 });

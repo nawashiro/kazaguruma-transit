@@ -64,9 +64,9 @@ VERDICT: PASS
 
 - [x] T008 `investigation.md` と `tasks.md`へ、実装内容、RED/GREEN、focused/full test、strict TypeScript、Lint、build、diff/statusを親の実測値だけで追記する。文書更新後に`git diff --check`を再実行する。実測結果と既存warning・GTFS設定不足を両文書へ記録した。
 
-- [ ] T009 最終差分を親が再レビューし、既存の短いprefix規約に従う日本語commitを作成してfeature branchへpushする。PRを作成する場合はbaseを`dev`に明示し、Issue #120をcloseする本文、変更理由、検証結果、未変更範囲を日本語で記載する。PRのtitle/body、head/base、changed filesを読み戻す。
+- [x] T009 最終差分を親が再レビューし、既存の短いprefix規約に従う日本語commitを作成してfeature branchへpushする。PRを作成する場合はbaseを`dev`に明示し、Issue #120をcloseする本文、変更理由、検証結果、未変更範囲を日本語で記載する。PRのtitle/body、head/base、changed filesを読み戻す。実測: commit `b28338bcd81f4b26f724592ac235ecf961eab136`を作成・pushし、PR #125（base=`dev`、head=`fix/issue-120-description-copy`、state=`OPEN`）を確認した。PR URL: https://github.com/nawashiro/kazaguruma-transit/pull/125
 
-- [ ] T010 pushしたexact SHAのGitHub checksを確認する。未triggerは成功扱いにせず記録し、failureは変更起因・baseline・infrastructureに分類する。mergeは行わない。
+- [x] T010 pushしたexact SHAのGitHub checksを確認する。未triggerは成功扱いにせず記録し、failureは変更起因・baseline・infrastructureに分類する。mergeは行わない。実測: head `b28338bcd81f4b26f724592ac235ecf961eab136`のQuality Gate run `33509278255` / job `99860746494`は`pass`。PR #125はopenで、mergeしていない。
 
 ## 依存関係
 

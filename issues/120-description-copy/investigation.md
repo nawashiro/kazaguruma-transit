@@ -88,3 +88,10 @@ Issue専用文書は `issues/120-description-copy/` に置く。Nostr read、sna
 - 全Jest: `npm test -- --runInBand` は終了コード0、139 suites passed / 2 skipped、857 tests passed / 13 skipped。
 - build: `npm run build` は終了コード0。`transit-config.json`不在により既存GTFS importが設定読み込みエラーを表示したが、既存scriptは継続し、Prisma生成・DB同期・Next production buildは完了した。build内のLint/type checkも既存warningのみ。
 - build後のtracked変更は実装4ファイルだけで、`git diff --check`は終了コード0。Issue文書2ファイルは意図した未追跡ファイルとして保持している。
+
+## 8. 配送後確認
+
+- commit: `b28338bcd81f4b26f724592ac235ecf961eab136`
+- remote branch: `origin/fix/issue-120-description-copy`へpushし、remote SHAがcommitと一致した。
+- Pull Request: [#125](https://github.com/nawashiro/kazaguruma-transit/pull/125)、base=`dev`、head=`fix/issue-120-description-copy`、head SHAは上記commit、state=`OPEN`。mergeは行っていない。
+- Quality Gate: run `33509278255` / job `99860746494`、上記headに対して`pass`を確認した。

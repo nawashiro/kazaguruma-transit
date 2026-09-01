@@ -148,7 +148,7 @@ export default function Home() {
             <ruby>風<rt>かざ</rt></ruby>ぐるま乗換案内
           </>
         }
-        description="千代田区福祉交通の乗換案内サービス"
+        description="千代田区地域福祉交通「風ぐるま」の自動案内サイト"
       />
       <div className="mb-6"><AwardRecognition /></div>
       <div className="space-y-4">

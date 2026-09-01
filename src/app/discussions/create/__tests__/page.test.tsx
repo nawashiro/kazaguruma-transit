@@ -102,6 +102,12 @@ describe("DiscussionCreatePage", () => {
     );
 
     expect(await screen.findByText("会話作成完了")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "会話を開始する" }),
+    ).toHaveClass("gap-0");
+    expect(
+      screen.getByRole("button", { name: "会話一覧に戻る" }),
+    ).toHaveClass("gap-0");
     fireEvent.click(screen.getByRole("button", { name: "会話を開始する" }));
     expect(pushMock).toHaveBeenCalledWith("/discussions/naddr1created");
   });

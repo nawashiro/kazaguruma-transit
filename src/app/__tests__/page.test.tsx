@@ -50,6 +50,14 @@ describe("Home", () => {
     global.fetch = jest.fn();
   });
 
+  it("PageHeaderに風ぐるまの自動案内サイトの説明を表示する", () => {
+    render(<Home />);
+
+    expect(screen.getByRole("banner")).toHaveTextContent(
+      "千代田区地域福祉交通「風ぐるま」の自動案内サイト",
+    );
+  });
+
   it("目的地、出発地、日時を順に入力する", () => {
     render(<Home />);
     fireEvent.click(screen.getByTestId("mock-destination-selector"));

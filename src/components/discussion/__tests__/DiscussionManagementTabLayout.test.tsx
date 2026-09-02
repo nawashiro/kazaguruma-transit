@@ -91,7 +91,7 @@ describe("DiscussionManagementTabLayout", () => {
     mockUseDiscussionManagement.mockReturnValue(createManagementModel());
   });
 
-  it("renders title and role from the management snapshot when legacy metadata is undefined", () => {
+  it("keeps the management title and static description despite relay metadata", () => {
     mockUserPubkey = "moderator-pubkey";
 
     render(
@@ -103,7 +103,12 @@ describe("DiscussionManagementTabLayout", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "管理モデルの掲載一覧" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("管理モデルから取得した説明")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "意見交換を行うために自由に利用していい場所です。誰でも新しい会話を作成できます。",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("管理モデルから取得した説明")).not.toBeInTheDocument();
     expect(screen.getByText("あなたはモデレーターです。")).toBeInTheDocument();
     expect(screen.getByRole("tablist")).toHaveClass("tabs", "tabs-box");
     expect(screen.getByRole("tab", { name: "会話一覧" })).toHaveAttribute(

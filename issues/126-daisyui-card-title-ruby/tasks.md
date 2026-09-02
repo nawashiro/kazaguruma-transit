@@ -60,8 +60,8 @@ VERDICT: PASS
 - [x] T008 `npm run build` を実行する。Prisma/GTFS import/Next buildの終了コードを分け、`transit-config.json`不足など既存環境要因を失敗と混同しない。実測: build exit 0。Prisma生成・DB同期・Next production build成功。`transit-config.json`不在による既存GTFS importエラー表示とPrisma update noticeは成功と分離した。
 - [x] T009 DaisyUI stylesheetと実装後bytesを使ったChromium probeを再実行する。`card-title`の実装前`display=flex`が実装後にflexでなくなり、`gap=0px`を維持することを確認する。Ruby要素と前後文字列のレイアウト境界を確認する。実測: `card-title inline text-lg ruby-text gap-0`、`display=block`、`flexContainer=false`、`gap=0px`、`rubyDisplay=ruby`。
 - [x] T010 `investigation.md`、`plan.md`、`tasks.md`へ実測したRED/GREEN、focused/full test、strict TypeScript、lint、build、browser、status/diffを追記し、文書更新後に`git diff --check`と相対リンクを確認する。実測: `investigation.md`と`tasks.md`へ結果を追記し、Issue docs 3件の存在と`git diff --check` exit 0を確認した。planは実装前の計画として保持した。
-- [ ] T011 最終差分をfreshに再レビューし、短いprefixの日本語commitを作成して`origin/fix/issue-126-card-title-ruby`へpushする。PRを作成する場合はbaseを`dev`に明示し、title/body/head/base/filesを読み戻す。mergeは行わない。
-- [ ] T012 pushしたexact SHAのGitHub checksを終端まで確認する。未triggerは成功扱いにせず、failureは変更起因・baseline・infrastructureに分類する。
+- [x] T011 最終差分をfreshに再レビューし、短いprefixの日本語commitを作成して`origin/fix/issue-126-card-title-ruby`へpushする。PRを作成する場合はbaseを`dev`に明示し、title/body/head/base/filesを読み戻す。mergeは行わない。実測: commit `a1403a9ea6c8cf1d459ee012267fa024b3028f01`を作成・pushし、PR #127（base=`dev`、head=`fix/issue-126-card-title-ruby`、state=`OPEN`）を作成して本文・変更5ファイルを読み戻した。mergeは行っていない。
+- [x] T012 pushしたexact SHAのGitHub checksを終端まで確認する。未triggerは成功扱いにせず、failureは変更起因・baseline・infrastructureに分類する。実測: exact SHA `a1403a9ea6c8cf1d459ee012267fa024b3028f01`のQuality Gate run `33596996309`はexit 0 / success。ESLint、strict TypeScript、Jestを含むjobが完了し、Node.js 20 deprecation annotationのみだった。
 
 ## 依存関係
 

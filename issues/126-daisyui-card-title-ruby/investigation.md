@@ -104,3 +104,10 @@ DaisyUI公式の Card ドキュメント（<https://daisyui.com/components/card/
 - Build: `PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm run build` は終了コード0。Prisma生成・DB同期・Next production buildは成功した。`transit-config.json`不在による既存GTFS importエラー表示、Prisma update notice、既存lint warningはbuild成功と分離した。
 - Browser probe: 現行`page.tsx`から取得したclassとDaisyUI stylesheetをChromiumで検証し、`card-title inline text-lg ruby-text gap-0`、`display=block`、`flexContainer=false`、`gap=0px`、`rubyDisplay=ruby`を確認した。`display:block`は`card-body`のflex子要素としてのblockifyであり、見出し自身がflex containerでないことを示す。
 - Build後status: 変更は指定したtest、production、Issue docs 3件だけ。`git diff --check`は終了コード0、HEADは基準SHAのまま、staged pathなし。
+
+## 9. 配送後確認
+
+- commit: `a1403a9ea6c8cf1d459ee012267fa024b3028f01`
+- remote branch: `origin/fix/issue-126-card-title-ruby`へpushし、`git ls-remote`でremote SHAがcommit SHAと一致した。
+- Pull Request: [#127](https://github.com/nawashiro/kazaguruma-transit/pull/127)、base=`dev`、head=`fix/issue-126-card-title-ruby`、state=`OPEN`。本文、head/base、変更5ファイルをGitHubから読み戻した。mergeは行っていない。
+- Quality Gate: run `33596996309` / job `100142347007` はexact SHA `a1403a9ea6c8cf1d459ee012267fa024b3028f01`に対してsuccess。ESLint、strict TypeScript、Jestを含む全job stepが成功し、Node.js 20 deprecation annotationのみが付いた。

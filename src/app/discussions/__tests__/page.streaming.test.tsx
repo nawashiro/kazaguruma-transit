@@ -206,6 +206,27 @@ describe("DiscussionsPage shared data", () => {
     expect(screen.getByRole("link", { name: /新モデルで承認済みの会話/ })).toHaveAttribute("href", "/discussions/naddr1test");
   });
 
+  it("keeps Rubyful discussion titles inline inside card-title headings", () => {
+    mockUseDiscussionManagement.mockReturnValue(
+      createManagementModel({
+        snapshot: {
+          listDiscussion: null,
+          listingPosts: [modelApprovedPost],
+          listingApprovals: [],
+          referencedDiscussions: [modelApprovedDiscussion],
+        },
+      }),
+    );
+
+    render(<DiscussionsPage />);
+
+    const title = screen.getByRole("heading", {
+      level: 3,
+      name: "新モデルで承認済みの会話",
+    });
+    expect(title).toHaveClass("card-title", "text-lg", "ruby-text", "gap-0", "inline");
+  });
+
   it("does not render an empty-state conclusion after a partial referenced-definition read", () => {
     mockManagementData.referencedDiscussions = [];
     mockManagementData.referencedDiscussionCompletionReason = "idle-timeout";

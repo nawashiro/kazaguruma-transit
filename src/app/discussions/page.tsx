@@ -108,7 +108,7 @@ export default function DiscussionsPage() {
                       >
                         <div className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700">
                           <div className="card-body p-4">
-                            <h3 className="card-title text-lg ruby-text gap-0">
+                            <h3 className="card-title inline text-lg ruby-text gap-0">
                               {discussion.title}
                             </h3>
                             <p className="text-base text-base-content ruby-text">

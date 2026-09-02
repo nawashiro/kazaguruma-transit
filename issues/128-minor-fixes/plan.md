@@ -10,6 +10,10 @@
 
 Issue #128 の13項目を、既存のNext.js／React／DaisyUI／Nostr構成を維持したまま修正する。対象は利用者が見る評価・投稿・検索結果・認証・設定UIと、認証遷移で失われる入力の同一タブ内下書き保持である。新規のサーバー永続化、Prisma/SQLite変更、relay契約変更は行わない。
 
+## 追補: PRレビュー指摘への対応
+
+PR #129のレビューで、会話編集ページの説明だけが500文字に固定され、会話作成で使う`DISCUSSION_DESCRIPTION_MAX_LENGTH`（1000文字）と不一致であることが判明した。既存の会話タイトル100文字、モデレーター管理、NIP-72のdTag、Nostrイベント生成は維持し、編集ページのvalidation、`maxLength`、カウンターを同じ共有定数へ接続する。
+
 ## 方針
 
 - **KISS:** 既存のクラス・画面境界・`sessionStorage`だけを使い、汎用フォーム基盤、DBテーブル、認証アクション再実行機構を追加しない。
@@ -85,7 +89,7 @@ Issue #128 の13項目を、既存のNext.js／React／DaisyUI／Nostr構成を�
 1. `src/lib/discussion/limits.ts`へ`DISCUSSION_DESCRIPTION_MAX_LENGTH = 1000`と`POST_CONTENT_MAX_LENGTH = 1000`を置く。
 2. 会話作成ページと`validateDiscussionCreationForm`の説明上限を共通定数へ置き換える。タイトル100文字は維持する。
 3. `validatePostForm`と会話詳細／バス停投稿textareaの`maxLength`・カウンターを共通の投稿本文上限へ置き換える。
-4. 会話編集ページの既存500文字仕様はIssueの明示対象外として変更しない。
+4. 会話編集ページの説明も`DISCUSSION_DESCRIPTION_MAX_LENGTH`を参照し、validation、`maxLength`、カウンターを会話作成と同じ1000文字へ統一する。
 5. `src/lib/discussion/display.ts`へ70文字＋`...`の`truncateDiscussionDescription`を置き、`/discussions`と`/settings`で同じ処理を使う。
 
 ### D. DaisyUI／レイアウト契約
@@ -138,6 +142,7 @@ Issue #128 の13項目を、既存のNext.js／React／DaisyUI／Nostr構成を�
 - `src/app/routes/page.tsx`
 - `src/app/discussions/create/page.tsx`
 - `src/app/discussions/[naddr]/page.tsx`
+- `src/app/discussions/[naddr]/edit/page.tsx`
 - `src/app/settings/page.tsx`
 - `src/app/discussions/page.tsx`
 - `src/lib/discussion/user-creation-flow.ts`
@@ -159,7 +164,11 @@ Issue #128 の13項目を、既存のNext.js／React／DaisyUI／Nostr構成を�
 - `src/app/__tests__/layout-boundary-contract.test.ts`
 - `src/components/layouts/__tests__/SidebarLayout.test.tsx`
 - `src/lib/discussion/__tests__/user-creation-flow.test.ts`
-- `src/app/discussions/[naddr]/edit`配下は、Issueの非対象仕様を固定する既存テストを維持する
+- `src/app/discussions/[naddr]/edit/__tests__/page.test.tsx`
+
+### 仕様更新
+
+- `specs/011-discussion-edit-ux/data-model.md`
 
 ## 検証計画
 
@@ -199,8 +208,8 @@ buildで既存の`transit-config.json`不足・GTFS取得・Prisma noticeが出�
 - **経路検索queryの欠落:** `getCurrentRoute`はpathnameだけでなくsearchも返し、focused testで具体的なqueryを確認する。
 - **DaisyUI／Rubyful回帰:** `ruby-text`をsemantic textの最小要素だけへ置き、spinnerの公式構造を変更しない。既存layout boundary contractとsource／browser確認を併用する。
 - **カード見出しの過剰変更:** `card-title`に既存`inline`を追加するだけにし、共通CSSやカード構造を変更しない。
-- **文字数上限の不整合:** validation、`maxLength`、counterを同じ定数から生成し、1000文字ちょうどを受け入れ、1001文字を拒否するテストを置く。
-- **既存仕様の混入:** 会話タイトル100、会話編集500、モデレーター申請の`reason`は変更しない。認証URLの`reason`だけを削除する。
+- **文字数上限の不整合:** validation、`maxLength`、counterを同じ定数から生成し、会話作成・会話編集・投稿フォームで1000文字ちょうどを受け入れ、1001文字を拒否するテストを置く。
+- **既存仕様の混入:** 会話タイトル100、モデレーター申請の`reason`は変更しない。認証URLの`reason`だけを削除する。
 
 ## 実装完了の条件
 

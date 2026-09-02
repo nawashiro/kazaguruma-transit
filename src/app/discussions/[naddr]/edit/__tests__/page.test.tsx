@@ -271,7 +271,7 @@ describe("DiscussionEditPage listing request", () => {
       target: { value: "a".repeat(101) },
     });
     fireEvent.change(screen.getByRole("textbox", { name: "説明 *" }), {
-      target: { value: "b".repeat(501) },
+      target: { value: "b".repeat(1001) },
     });
     fireEvent.click(await screen.findByRole("button", { name: "変更を保存" }));
 
@@ -285,7 +285,21 @@ describe("DiscussionEditPage listing request", () => {
     );
     expect(alert.querySelector("ul")).not.toBeNull();
     expect(alert).toHaveTextContent("タイトルは100文字以内で入力してください");
-    expect(alert).toHaveTextContent("説明は500文字以内で入力してください");
+    expect(alert).toHaveTextContent("説明は1000文字以内で入力してください");
+  });
+
+  it("accepts exactly 1000 description characters and exposes the shared limit", async () => {
+    render(<DiscussionEditPage />);
+
+    const description = await screen.findByRole("textbox", { name: "説明 *" });
+    expect(description).toHaveAttribute("maxLength", "1000");
+
+    fireEvent.change(description, { target: { value: "b".repeat(1000) } });
+    expect(screen.getByText("1000/1000文字")).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "変更を保存" }));
+
+    await waitFor(() => expect(signEventMock).toHaveBeenCalled());
+    expect(await screen.findByText("会話が更新されました")).toBeInTheDocument();
   });
 
   it("does not expose basic information controls to non-authors", async () => {

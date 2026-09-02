@@ -40,6 +40,7 @@ import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
 import { buildLoginRoute } from "@/lib/navigation/auth-route";
+import { DISCUSSION_DESCRIPTION_MAX_LENGTH } from "@/lib/discussion/limits";
 
 // const ADMIN_PUBKEY = getAdminPubkeyHex(); // eslint-disable-line @typescript-eslint/no-unused-vars
 const nostrServiceConfig = getNostrServiceConfig();
@@ -130,8 +131,10 @@ export default function DiscussionEditPage() {
 
     if (!formData.description.trim()) {
       errors.push("説明は必須です");
-    } else if (formData.description.length > 500) {
-      errors.push("説明は500文字以内で入力してください");
+    } else if (formData.description.length > DISCUSSION_DESCRIPTION_MAX_LENGTH) {
+      errors.push(
+        `説明は${DISCUSSION_DESCRIPTION_MAX_LENGTH}文字以内で入力してください`,
+      );
     }
 
     const moderators = moderatorInput
@@ -520,11 +523,11 @@ export default function DiscussionEditPage() {
                       className="textarea w-full h-32"
                       required
                       disabled={isSaving || isDeleting || !hasEditPermission}
-                      maxLength={500}
+                      maxLength={DISCUSSION_DESCRIPTION_MAX_LENGTH}
                       autoComplete="off"
                     />
                     <div className="text-base-content mt-1">
-                      {formData.description.length}/500文字
+                      {formData.description.length}/{DISCUSSION_DESCRIPTION_MAX_LENGTH}文字
                     </div>
                   </div>
 

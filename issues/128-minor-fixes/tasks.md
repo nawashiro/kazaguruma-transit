@@ -47,7 +47,7 @@
 - [x] T005RR [TEST-CORRECTION] 3フォームの失敗時保持テストへ、タイトル／説明／本文／バス停タグの元payload assertionを追加した。productionは変更していない。
 - [x] T006RR [REVIEW-PASS] T005〜T005RRの8 test pathをfresh read-only reviewした。`SUBAGENT_STATUS: COMPLETE`、`VERDICT: PASS`、`modified: false`、開始・終了SHA/status一致、focused REDのcollection/setup/runtime/act/open-handle failureなしを確認した。
 
-- [x] T007 [TEST-RED] 制限値・ドメイン表示契約を追加した。Node 22で6 suite / 77 testsを収集し、33 failed / 44 passed。旧500／280、未実装display helper、既存T005 REDによる意味ある失敗で、collection/setup/runtime/act/open-handle failureなし。`src/lib/nostr/__tests__/nostr-utils.test.ts`で投稿本文1000文字境界を、`src/lib/discussion/__tests__/user-creation-flow.test.ts`で会話説明1000文字境界を固定する。`src/lib/discussion/__tests__/display.test.ts`を追加し、会話説明70文字＋`...`の短縮を固定する。関連create/detail/bus-stop/settings testで`maxLength`、counter、長文表示、会話編集500文字非対象を確認する。production pathは変更しない。
+- [x] T007 [TEST-RED] 制限値・ドメイン表示契約を追加した。Node 22で6 suite / 77 testsを収集し、33 failed / 44 passed。旧500／280、未実装display helper、既存T005 REDによる意味ある失敗で、collection/setup/runtime/act/open-handle failureなし。`src/lib/nostr/__tests__/nostr-utils.test.ts`で投稿本文1000文字境界を、`src/lib/discussion/__tests__/user-creation-flow.test.ts`で会話説明1000文字境界を固定する。`src/lib/discussion/__tests__/display.test.ts`を追加し、会話説明70文字＋`...`の短縮を固定する。関連create/detail/bus-stop/settings testで`maxLength`、counter、長文表示を確認し、会話編集の1000文字境界は後続のT022で追補した。production pathは変更しない。
   - 実行: limits、display、user-creation-flow、nostr-utils、および関連UI suiteをNode 22 `--runInBand`で実行する。
   - 期待: 500／280の旧上限に対する意味のあるRED。1000文字ちょうどは受け入れ、1001文字は拒否する契約にする。
 - [x] T008 [REVIEW-PASS] T007のtest pathをfresh read-only reviewした。`SUBAGENT_STATUS: COMPLETE`、`VERDICT: PASS`、`modified: false`、開始・終了SHA/status一致、production差分なし、`git diff --check` exit 0。blockerなし。validation・DOM属性・counterが同じ仕様を見ており、会話タイトル／編集仕様を誤って変更する契約になっていないこと、短縮処理が`/discussions`の現行挙動と一致することを確認する。必須結果は`SUBAGENT_STATUS: COMPLETE`、`VERDICT: PASS`、`modified: false`、開始・終了SHA一致。親がREDを再実行する。
@@ -78,12 +78,14 @@
 - [x] T020 [DOCS-VERIFIED] `issues/128-minor-fixes/investigation.md`へ実装後の根因確認・RED/GREEN・変更path・検証結果を追記し、`plan.md`は実装方針の記録として保持し、`tasks.md`の各完了taskへ実測証拠を追記する。文書更新後に相対リンク、status、diff checkを確認する。
 - [x] T021 [DELIVERY/親-VERIFIED] 実装commit `910426ab6b7c43a68a8f3c63792aab5c9d2042c7`を作成して`origin/fix/issue-128-minor-fixes`へpushした。PR [#129](https://github.com/nawashiro/kazaguruma-transit/pull/129)をbase=`dev`で作成し、GitHubからtitle/body/head/base/filesを読み戻した。`git ls-remote`のremote SHA一致、Quality Gate run `33635483405`のexact SHA success、merge未実施を確認した。
 
-## 依存関係
+## Phase 5: PRレビュー追補
+
+- [ ] T022 [PR-FOLLOWUP] `discussions/[naddr]/edit`の説明上限を会話作成と同じ`DISCUSSION_DESCRIPTION_MAX_LENGTH`へ統一する。`src/app/discussions/[naddr]/edit/__tests__/page.test.tsx`で1000文字ちょうどの受入れ、1001文字のvalidation拒否、textarea `maxLength`、カウンターをtest-firstで固定し、旧500文字実装に対するREDを確認した。実装後のfocused/full検証、関連仕様・調査・タスク文書更新、commit、push、PR CI確認まで完了してからチェックを付ける。
 
 ```text
 T001 → T002 → T003 → T004 → T003R → T004R → T005 → T006 → T005R → T006R → T005RR → T006RR → T007 → T008
   → T009 → T010 → T010R → T010RR → T011 → T012 → T013 → T014 → T015 → T016 → T017
-  → T018 → T019 → T020 → T021
+  → T018 → T019 → T020 → T021 → T022
 ```
 
 - T003/T003R/T004R、T005/T006、T007/T008は、それぞれtest writer→必要なcorrection→fresh reviewerの順で実行する。
@@ -99,12 +101,12 @@ T001 → T002 → T003 → T004 → T003R → T004R → T005 → T006 → T005R 
 | バス停メモ用語、投稿例、詳細投稿説明 | T003/T004、T014、T018 |
 | 認証reason除去と正しいquery付きreturnTo | T005/T006、T010、T012〜T014、T018 |
 | 3フォームのsessionStorage下書き保存・復元・成功後削除 | T005/T006、T009、T012〜T014、T018/T019 |
-| 会話説明／投稿本文1000文字のvalidation・属性・counter | T007/T008、T009、T012〜T014、T019 |
+| 会話説明／投稿本文1000文字のvalidation・属性・counter | T007/T008、T009、T012〜T014、T019、T022 |
 | 検索結果loading、PC/mobileテーマ右上 | T003/T004、T015、T019 |
 | settings説明の70文字短縮 | T003/T004/T007/T008、T016 |
 | 全production 21 `.card-title`の`inline` | T003/T004、T017/T018 |
 | 既存機能・strict TypeScript・lint・Jest・build | T018/T019 |
-| Issue文書・remote branch・exact SHA・CI | T020/T021 |
+| Issue文書・remote branch・exact SHA・CI | T020/T021/T022 |
 
 ## 実装戦略
 

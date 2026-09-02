@@ -35,7 +35,7 @@ Issue番号と症状の重複作業を確認した。
 | 7 | 投票ボタンを投稿カードの外・下、プログレスバーの上へ移動 | `src/components/discussion/EvaluationComponent.tsx:103-178` | 現在は`role=article`の投稿カード内に評価ボタンがある。投稿本文カードを閉じた直後に評価ボタン群を置き、その後に`progress`を置く。 |
 | 8 | プログレスバーのARIAラベルからコロンを除去 | `src/components/discussion/EvaluationComponent.tsx:177` | 現在は `評価進捗: 0%完了`。`評価進捗 0%完了`へ変更する。 |
 | 9 | テーマ切り替えをPC・スマホとも右上へ配置 | `src/components/layouts/SidebarLayout.tsx:85-98` | ヘッダーは`justify-between`で、PCでは左側のメニューボタンが`lg:hidden`により消えるため、残ったテーマ切り替えが左寄せになる。`lg:justify-end`を追加してPCでも右寄せにする。スマホの既存の左右配置は維持する。 |
-| 10 | 会話説明と投稿本文の上限を各1000文字へ拡張 | `src/app/discussions/create/page.tsx`、`src/lib/discussion/user-creation-flow.ts`、`src/lib/nostr/nostr-utils.ts`、投稿2画面 | 会話作成の説明は500文字、投稿本文は280文字。会話タイトルの100文字上限と会話編集画面の既存仕様はIssueの明示対象外として維持する。投稿本文は会話詳細と経路検索の両方を1000文字へ統一する。 |
+| 10 | 会話説明と投稿本文の上限を各1000文字へ拡張 | `src/app/discussions/create/page.tsx`、`src/app/discussions/[naddr]/edit/page.tsx`、`src/lib/discussion/user-creation-flow.ts`、`src/lib/nostr/nostr-utils.ts`、投稿2画面 | 会話作成・会話編集の説明は500文字、投稿本文は280文字だった。会話タイトルの100文字上限は維持する。レビュー指摘を受け、会話作成・編集の説明上限を共有定数で1000文字へ統一し、投稿本文も1000文字へ統一する。 |
 | 11 | 評価文言・新規投稿の説明・例を改善 | `src/components/discussion/EvaluationComponent.tsx`、`src/app/discussions/[naddr]/page.tsx` | 評価タイトル既定値は `この論点は参考になりますか？`、補足文は過剰な説明文。タイトルを `この論点は妥当だと思いますか？` にし、補足文を削除する。`新しい投稿`直下へ `不足している論点や、課題へのアイデアを投稿してください。` を追加し、プレースホルダーへIssue本文の投稿例を入れる。`/beginners-guide`は既に風ぐるま自体の説明とサイト説明を別段落で表示しているため、同ページの追加改修は行わない。 |
 | 12 | 設定画面の作成済み会話説明を一覧相当へ短縮 | `src/app/settings/page.tsx:257-259`、`src/app/discussions/page.tsx:114-118` | `/discussions`は70文字を超える説明を`...`付きで切り詰めるが、`/settings`は全量表示している。同じ70文字の表示ヘルパーへ統一する。 |
 | 13 | 全 `.card-title` のRubyful/DaisyUI崩れを修正 | `src`配下のproduction `.tsx` | production上の`card-title`は21箇所。`Card`、`CarouselCard`、会話一覧は既に`inline`済みで、18箇所が未対応（モデレーター、設定、ライセンス、表彰、場所、Ko-fi等）。全21箇所へ既存の`inline`ユーティリティを適用する。新規CSSやDaisyUI全体の上書きは行わない。 |
@@ -75,7 +75,7 @@ Issue番号と症状の重複作業を確認した。
 
 ### 変更しないproduction
 
-- Nostr relayのread/write契約、Prisma/SQLite、GTFS import、認証情報そのもの、会話タイトル100文字上限、会話編集500文字仕様、Rubyful外部スクリプト、DaisyUIの共通CSS。
+- Nostr relayのread/write契約、Prisma/SQLite、GTFS import、認証情報そのもの、会話タイトル100文字上限、Rubyful外部スクリプト、DaisyUIの共通CSS。
 - `/beginners-guide`の段落構造（既に要求どおり分離済み）。
 - `reason`というドメイン用語を持つモデレーター申請データや権限理由。今回削除するのは認証URLの`reason`だけである。
 
@@ -130,7 +130,7 @@ DaisyUI `node_modules/daisyui/components/card.css`の実定義は `.card-title` 
 - Lint: `PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm run lint` は終了コード0。`next lint`廃止予定通知、既存の`any`、`<img>`、Hook依存、今回のテスト追加に伴う既存warningのみでerrorなし。
 - 全Jest: `PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm test -- --runInBand` は終了コード0、144 suites passed / 2 skipped、899 tests passed / 13 skipped、snapshot 0。`act`、open handle、Jest終了警告による失敗なし。
 - Build: `PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm run build` は終了コード0。Prisma Client生成、SQLite schema同期、Next.js production build、27ページ生成が成功した。`transit-config.json`不在による既存GTFS import設定エラー表示はbuildの終了コード・Next build成功と分離した。
-- Source audit: productionの`card-title`は21件、`inline`欠落0件。認証productionには`reason` queryの読み取り／生成がなく、旧`text-balance`・旧評価文言・旧バス停文言・旧投稿280文字・会話作成500文字は対象productionに残っていない。会話編集ページの500文字はIssue非対象として維持した。
+- Source audit: productionの`card-title`は21件、`inline`欠落0件。認証productionには`reason` queryの読み取り／生成がなく、旧`text-balance`・旧評価文言・旧バス停文言・旧投稿280文字・旧会話作成／編集500文字は対象productionに残っていない。会話タイトル100文字上限は維持した。
 - `git diff --check`は終了コード0。作業ツリーはfeature branch上で、Issue docs、test、helper、productionの計画済み変更だけが未commitで存在し、stage／commit／pushはこの時点で未実行だった。
 
 ### ブラウザ相当確認の制約
@@ -140,8 +140,23 @@ DaisyUI `node_modules/daisyui/components/card.css`の実定義は `.card-title` 
 - 代替Puppeteer probeは、外部Rubyful scriptの通信継続による`networkidle0` timeout、Puppeteer headless launchのWS endpoint timeoutを経た。`/usr/bin/chromium`単体は後からDevTools endpointを出したが、診断時はD-stateで応答せず、loading／computed style／viewport位置の実測値は取得できなかった。
 - したがって、ブラウザprobeを成功扱いにはしない。loadingのRuby境界、DaisyUI spinner、card-titleの`inline`、PC／mobile theme配置は、実ブラウザ未実測であることを明記したうえで、RTL／TypeScript AST契約、installed CSS確認、production buildの結果で検証した。
 
-## 8. 配送後確認
+## 9. PRレビュー指摘への追補
+
+PR #129のレビューで、`src/app/discussions/[naddr]/edit/page.tsx`だけが説明の検証・`maxLength`・カウンターを500文字に固定し、会話作成と投稿フォームで導入済みの共有定数を参照していないことが指摘された。これはIssue #128の「会話説明を1000文字へ拡張」という受入条件と、計画のDRY方針に反するため、編集画面も同じ`DISCUSSION_DESCRIPTION_MAX_LENGTH`へ接続する。
+
+追補では、既存の会話タイトル100文字、モデレーター管理、NIP-72のdTag、Nostrイベント生成を変更しない。`src/app/discussions/[naddr]/edit/__tests__/page.test.tsx`へ1000文字ちょうどの受入れ、1001文字の拒否、`maxLength`・カウンターの回帰テストを先に追加し、旧500文字実装に対するREDを確認してからproductionを変更する。
+
+## 10. 配送後確認
 
 - 実装commit: `910426ab6b7c43a68a8f3c63792aab5c9d2042c7`（`fix: Issue #128の細かい修正を反映`）。`origin/fix/issue-128-minor-fixes`のremote SHAと一致し、作業ツリーはcleanだった。
 - Pull Request: [#129](https://github.com/nawashiro/kazaguruma-transit/pull/129)。GitHubから読み戻したbase=`dev`、head=`fix/issue-128-minor-fixes`、head SHA=`910426ab6b7c43a68a8f3c63792aab5c9d2042c7`、state=`OPEN`、変更45ファイルを確認した。mergeは行っていない。
 - Quality Gate: run `33635483405` / job `100265180658` は上記exact SHAに対して`success`。ESLint、strict TypeScript、Jestの全stepがsuccessだった。
+
+## 11. PRレビュー追補の検証
+
+- 編集画面の追補テストを先に実行し、旧実装では`説明は500文字以内で入力してください`および`maxLength="500"`となる意味あるREDを確認した。その後、`DISCUSSION_DESCRIPTION_MAX_LENGTH`接続後に9 tests全てがGREENとなった。
+- 追補後のfocused JestはNode `v22.23.2`で2 suite / 35 tests PASS。編集画面の1000文字境界・`maxLength`・カウンターと、既存の会話作成validationを確認した。
+- 追補後の全Jestは`PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm test -- --runInBand`で終了コード0、144 suites passed / 2 skipped、900 tests passed / 13 skippedだった。strict TypeScript（`npx tsc --noEmit --incremental false`）と`npm run lint`も終了コード0だった。
+- 追補後の`npm run build`は終了コード0で、Next.js production buildと27ページ生成が成功した。`transit-config.json`不在による既存GTFS import設定エラー表示は前回と同様にbuild成功とは分離した。`git diff --check`も終了コード0だった。
+- `DISCUSSION_DESCRIPTION_MAX_LENGTH`は会話作成、会話編集、会話作成flowで共通参照され、対象productionに説明の500文字リテラル・`maxLength={500}`・`/500文字`は残っていない。会話タイトル100文字と投稿本文用`POST_CONTENT_MAX_LENGTH`は別の契約として維持した。
+- 修正commit、PRのremote SHA、PR CIのexact head確認は配送後に追記する。

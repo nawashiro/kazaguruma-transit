@@ -19,7 +19,6 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
-  const reason = searchParams.get("reason");
   const isLogin = mode === "login";
 
   const handleSuccess = useCallback(() => {
@@ -44,16 +43,6 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
               : "新しいパスキーでアカウントを作成します。"
           }
         />
-
-        {reason && (
-          <p
-            className="alert alert-info alert-soft text-base-content! ruby-text"
-            role="status"
-            aria-live="polite"
-          >
-            {reason}
-          </p>
-        )}
 
         <AuthenticationForm mode={mode} onSuccess={handleSuccess} />
 

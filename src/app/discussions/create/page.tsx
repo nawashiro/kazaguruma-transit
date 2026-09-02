@@ -22,20 +22,59 @@ import PageHeader from "@/components/layouts/PageHeader";
 import { UserIdentity } from "@/components/ui/UserIdentity";
 import { logger } from "@/utils/logger";
 import { buildLoginRoute } from "@/lib/navigation/auth-route";
+import { getCurrentRoute } from "@/lib/navigation/current-route";
+import { useSessionDraft } from "@/lib/forms/use-session-draft";
+import { DISCUSSION_DESCRIPTION_MAX_LENGTH } from "@/lib/discussion/limits";
 
 const ADMIN_PUBKEY = getAdminPubkeyHex();
 const nostrService = createNostrService(getNostrServiceConfig());
+const DISCUSSION_CREATE_DRAFT_KEY = "kazaguruma:draft:discussion-create";
+
+interface DiscussionCreateDraft {
+  title: string;
+  description: string;
+  moderators: string[];
+  moderatorInput: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isDiscussionCreateDraft(value: unknown): value is DiscussionCreateDraft {
+  return (
+    isRecord(value) &&
+    typeof value.title === "string" &&
+    typeof value.description === "string" &&
+    Array.isArray(value.moderators) &&
+    value.moderators.every(
+      (moderator): moderator is string => typeof moderator === "string",
+    ) &&
+    typeof value.moderatorInput === "string"
+  );
+}
+
+const EMPTY_DISCUSSION_CREATE_DRAFT: DiscussionCreateDraft = {
+  title: "",
+  description: "",
+  moderators: [],
+  moderatorInput: "",
+};
 
 export default function DiscussionCreatePage() {
   const router = useRouter();
   const { user, signEvent } = useAuth();
 
-  const [formData, setFormData] = useState<DiscussionCreationForm>({
-    title: "",
-    description: "",
-    moderators: [],
-  });
-  const [moderatorInput, setModeratorInput] = useState("");
+  const { draft, setDraft, clearDraft } = useSessionDraft(
+    DISCUSSION_CREATE_DRAFT_KEY,
+    EMPTY_DISCUSSION_CREATE_DRAFT,
+    isDiscussionCreateDraft,
+  );
+  const formData: DiscussionCreationForm = {
+    title: draft.title,
+    description: draft.description,
+    moderators: draft.moderators,
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string>("");
@@ -57,7 +96,7 @@ export default function DiscussionCreatePage() {
 
   const handleSubmit = async () => {
     if (!user.isLoggedIn) {
-      router.push(buildLoginRoute("/discussions/create"));
+      router.push(buildLoginRoute(getCurrentRoute()));
       return;
     }
 
@@ -72,11 +111,13 @@ export default function DiscussionCreatePage() {
 
     if (!formData.description.trim()) {
       errors.push("説明は必須です");
-    } else if (formData.description.length > 500) {
-      errors.push("説明は500文字以内で入力してください");
+    } else if (
+      formData.description.length > DISCUSSION_DESCRIPTION_MAX_LENGTH
+    ) {
+      errors.push("説明は1000文字以内で入力してください");
     }
 
-    const moderators = moderatorInput
+    const moderators = draft.moderatorInput
       .split("\n")
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
@@ -118,9 +159,7 @@ export default function DiscussionCreatePage() {
         setCreatedNaddr(result.discussionNaddr);
         setSuccessMessage(result.successMessage || "");
 
-        // フォームをクリア
-        setFormData({ title: "", description: "", moderators: [] });
-        setModeratorInput("");
+        clearDraft();
       } else {
         setErrors(result.errors);
       }
@@ -139,18 +178,18 @@ export default function DiscussionCreatePage() {
   };
 
   const addModerator = () => {
-    const trimmedInput = moderatorInput.trim();
+    const trimmedInput = draft.moderatorInput.trim();
     if (trimmedInput && !formData.moderators.includes(trimmedInput)) {
-      setFormData((prev) => ({
+      setDraft((prev) => ({
         ...prev,
         moderators: [...prev.moderators, trimmedInput],
+        moderatorInput: "",
       }));
-      setModeratorInput("");
     }
   };
 
   const removeModerator = (npub: string) => {
-    setFormData((prev) => ({
+    setDraft((prev) => ({
       ...prev,
       moderators: prev.moderators.filter((m) => m !== npub),
     }));
@@ -252,7 +291,7 @@ export default function DiscussionCreatePage() {
                     type="text"
                     value={formData.title}
                     onChange={(e) =>
-                      setFormData((prev) => ({
+                      setDraft((prev) => ({
                         ...prev,
                         title: e.target.value,
                       }))
@@ -277,7 +316,7 @@ export default function DiscussionCreatePage() {
                     id="description"
                     value={formData.description}
                     onChange={(e) =>
-                      setFormData((prev) => ({
+                      setDraft((prev) => ({
                         ...prev,
                         description: e.target.value,
                       }))
@@ -286,11 +325,12 @@ export default function DiscussionCreatePage() {
                     placeholder="どのような会話にしたいか説明してください"
                     required
                     disabled={isSubmitting}
-                    maxLength={500}
+                    maxLength={DISCUSSION_DESCRIPTION_MAX_LENGTH}
                     autoComplete="off"
                   />
                   <div className="text-base-content mt-1">
-                    {formData.description.length}/500文字
+                    {formData.description.length}/
+                    {DISCUSSION_DESCRIPTION_MAX_LENGTH}文字
                   </div>
                 </div>
 
@@ -329,8 +369,13 @@ export default function DiscussionCreatePage() {
                     <input
                       id="moderators"
                       type="text"
-                      value={moderatorInput}
-                      onChange={(e) => setModeratorInput(e.target.value)}
+                      value={draft.moderatorInput}
+                      onChange={(e) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          moderatorInput: e.target.value,
+                        }))
+                      }
                       className="input join-item h-11 min-h-[44px] flex-1"
                       placeholder="npub1..."
                       disabled={isSubmitting}
@@ -339,7 +384,7 @@ export default function DiscussionCreatePage() {
                     <Button
                       joined
                       onClick={addModerator}
-                      disabled={!moderatorInput.trim() || isSubmitting}
+                      disabled={!draft.moderatorInput.trim() || isSubmitting}
                       className="join-item h-11 rounded-r-full dark:rounded-r-sm"
                     >
                       追加

@@ -194,21 +194,16 @@ describe("/signup public page", () => {
     expect(privacy).toBeChecked();
   });
 
-  it("renders the signup reason as a soft informational status message", () => {
+  it("ignores a signup reason query without rendering a status or alert", () => {
     const reason = "アカウント作成が必要です。";
     mockSearchParams = new URLSearchParams({ reason });
     const Page = getSignupPage();
     renderInHostMain(Page);
 
-    const reasonNotice = screen.getByRole("status");
-    expect(reasonNotice).toHaveTextContent(reason);
-    expect(reasonNotice).toHaveAttribute("aria-live", "polite");
-    expect(reasonNotice).toHaveClass(
-      "alert",
-      "alert-info",
-      "alert-soft",
-      "text-base-content!",
-    );
+    expect(screen.queryByText(reason)).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByText("新しいパスキーでアカウントを作成します。")).toBeInTheDocument();
   });
 
   it.each([

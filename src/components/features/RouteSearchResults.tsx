@@ -168,9 +168,9 @@ export default function RouteSearchResults({ searchParams }: RouteSearchResultsP
   if (resultState.status === "loading" || resultState.searchParams !== searchParams) {
     return (
       <Card bodyClassName="items-center">
-        <div role="status" className="flex flex-col items-center gap-2 ruby-text">
+        <div role="status" className="flex flex-col items-center gap-2">
           <span className="loading loading-spinner loading-lg" aria-hidden="true" />
-          経路を検索中...
+          <p className="ruby-text">経路を検索中...</p>
         </div>
       </Card>
     );

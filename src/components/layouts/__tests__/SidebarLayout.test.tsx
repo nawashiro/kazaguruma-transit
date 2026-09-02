@@ -93,6 +93,30 @@ describe("SidebarLayout", () => {
     expect((menuButton as HTMLButtonElement).tabIndex).toBeGreaterThanOrEqual(0);
   });
 
+  it("ヘッダーはスマホの左右配置を維持しつつPC幅でテーマ切替を右寄せにする", () => {
+    render(
+      <SidebarLayout
+        koFiUsername={null}
+        koFiContent={{
+          heading: "開発者を支援する",
+          message: "支援をお願いします。",
+        }}
+      >
+        <div>ページ本文</div>
+      </SidebarLayout>,
+    );
+
+    const themeToggle = screen.getByRole("button", { name: "テーマ" });
+    const menuButton = screen.getByRole("button", { name: "メニュー" });
+    const header = themeToggle.parentElement;
+    expect(header).not.toBeNull();
+    expect(menuButton).toHaveClass("lg:hidden");
+    expect(menuButton.compareDocumentPosition(themeToggle)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(header).toHaveClass("justify-between", "lg:justify-end");
+  });
+
   it("共通のメインコンテンツ枠内でページ本文後にKo-fi支援欄を表示する", () => {
     render(
       <SidebarLayout

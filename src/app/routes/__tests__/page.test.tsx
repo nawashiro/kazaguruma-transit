@@ -172,4 +172,15 @@ describe("RoutesPage", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("経路を検索中");
   });
+
+  it("検索結果ページの説明に自動作成されたスケジュールを表示する", async () => {
+    render(<RoutesPage />);
+
+    expect(await screen.findByTestId("mock-route-display")).toBeInTheDocument();
+    const heading = screen.getByRole("heading", { name: "経路検索結果" });
+    const pageHeader = heading.closest("header");
+    expect(pageHeader).not.toBeNull();
+    expect(pageHeader).toHaveTextContent("自動作成されたスケジュール");
+    expect(pageHeader).not.toHaveTextContent("指定した条件の乗換経路");
+  });
 });

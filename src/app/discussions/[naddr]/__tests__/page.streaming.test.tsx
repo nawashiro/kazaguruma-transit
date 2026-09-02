@@ -16,10 +16,23 @@ const mockUseDiscussionMeta = jest.fn();
 const mockUseDiscussionDetail = jest.fn();
 const mockRouterPush = jest.fn();
 const mockSignEvent = jest.fn();
+const DETAIL_DRAFT_KEY_PREFIX = "kazaguruma:draft:discussion-post:";
+const detailDraftKey = (naddr: string) => `${DETAIL_DRAFT_KEY_PREFIX}${naddr}`;
+const DETAIL_DRAFT_KEY = detailDraftKey("naddr-test");
+const mockNaddrParam = { naddr: "naddr-test" };
 const mockAuthUser: { pubkey: string | null; isLoggedIn: boolean } = {
   pubkey: "viewer",
   isLoggedIn: true,
 };
+
+function readDetailDraft(key: string = DETAIL_DRAFT_KEY): Record<string, unknown> {
+  const stored = window.sessionStorage.getItem(key);
+  expect(stored).not.toBeNull();
+  if (stored === null) {
+    throw new Error("discussion-post draft was not saved");
+  }
+  return JSON.parse(stored) as Record<string, unknown>;
+}
 const mockValidatePostForm = jest.fn<string[], [unknown]>(() => []);
 const mockAnalyzeConsensus = jest.fn().mockResolvedValue({
   groupAwareConsensus: [],
@@ -27,7 +40,7 @@ const mockAnalyzeConsensus = jest.fn().mockResolvedValue({
 });
 
 jest.mock("next/navigation", () => ({
-  useParams: () => ({ naddr: "naddr-test" }),
+  useParams: () => mockNaddrParam,
   usePathname: () => "/discussions/naddr-test",
   useRouter: () => ({ push: mockRouterPush }),
 }));
@@ -297,7 +310,9 @@ jest.mock("@/components/discussion/PostPreview", () => ({
 
 jest.mock("@/components/ui/Button", () => {
   return function MockButton({ children, ...props }: any) {
-    return <button {...props}>{children}</button>;
+    const buttonProps = { ...props };
+    delete buttonProps.fullWidth;
+    return <button {...buttonProps}>{children}</button>;
   };
 });
 
@@ -433,6 +448,9 @@ describe("DiscussionDetailPage streaming", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNaddrParam.naddr = "naddr-test";
+    window.sessionStorage.clear();
+    window.history.replaceState({}, "", "/discussions/naddr-test");
     mockUseDiscussionDetail.mockReturnValue(createDetailModel());
     discussionReadExecutorMock.executeNostrRead.mockResolvedValue(
       withNostrReadResult([]),
@@ -441,12 +459,18 @@ describe("DiscussionDetailPage streaming", () => {
     mockUseDiscussionMeta.mockReturnValue(undefined);
   });
 
+  afterEach(() => {
+    window.sessionStorage.clear();
+    window.history.replaceState({}, "", "/");
+  });
+
   it("shows loading state until the detail snapshot completes", async () => {
     mockUseDiscussionDetail.mockReturnValue(
       createDetailModel({ state: "loading" }),
     );
     gatewayMock.queryWithCompletion.mockResolvedValue(withCompletion([]));
     serviceMock.getEvaluations.mockResolvedValue([]);
+    global.fetch = jest.fn().mockImplementation(() => new Promise(() => {}));
 
     const { rerender } = render(<DiscussionDetailPage />);
 
@@ -511,6 +535,22 @@ describe("DiscussionDetailPage streaming", () => {
     const status = screen.getByRole("status");
     expect(status).toHaveAttribute("aria-live", "polite");
     expect(status).toHaveTextContent(/読み込み中/);
+  });
+
+  it("sets the new post textarea maxLength to 1000 characters", async () => {
+    render(<DiscussionDetailPage />);
+
+    const textarea = await screen.findByRole("textbox", { name: /投稿内容/ });
+    expect(textarea).toHaveAttribute("maxLength", "1000");
+  });
+
+  it("shows the new post counter against the 1000-character limit", async () => {
+    render(<DiscussionDetailPage />);
+
+    const textarea = await screen.findByRole("textbox", { name: /投稿内容/ });
+    fireEvent.change(textarea, { target: { value: "a".repeat(1000) } });
+
+    expect(screen.getByText("1000/1000文字")).toBeInTheDocument();
   });
 
   it("shows a reload action while preserving posts from a partial content read", async () => {
@@ -615,6 +655,9 @@ describe("DiscussionDetailPage streaming", () => {
 describe("DiscussionDetailPage unauthenticated public actions", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNaddrParam.naddr = "naddr-test";
+    window.sessionStorage.clear();
+    window.history.replaceState({}, "", "/discussions/naddr-test?tab=posts");
     mockAuthUser.pubkey = null;
     mockAuthUser.isLoggedIn = false;
     mockUseDiscussionDetail.mockReturnValue(createDetailModel());
@@ -625,6 +668,128 @@ describe("DiscussionDetailPage unauthenticated public actions", () => {
   afterEach(() => {
     mockAuthUser.pubkey = "viewer";
     mockAuthUser.isLoggedIn = true;
+    window.sessionStorage.clear();
+    window.history.replaceState({}, "", "/");
+  });
+
+  it("restores post content, bus-stop tag, and selected route from the naddr-scoped draft", async () => {
+    window.sessionStorage.setItem(
+      DETAIL_DRAFT_KEY,
+      JSON.stringify({
+        content: "復元された本文",
+        busStopTag: "A",
+        selectedRoute: "Route A",
+      }),
+    );
+    global.fetch = jest.fn().mockResolvedValue({
+      json: jest.fn().mockResolvedValue({
+        success: true,
+        data: [{ route: "Route A", stops: ["A", "B"] }],
+      }),
+    });
+
+    render(<DiscussionDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: /投稿内容/ })).toHaveValue("復元された本文");
+      const comboboxes = screen.getAllByRole("combobox");
+      expect(comboboxes).toHaveLength(2);
+      expect(comboboxes[0]).toHaveValue("Route A");
+      expect(comboboxes[1]).toHaveValue("A");
+    });
+  });
+
+  it("restores only the draft belonging to the current naddr", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      json: jest.fn().mockResolvedValue({
+        success: true,
+        data: [
+          { route: "Route A", stops: ["A"] },
+          { route: "Route B", stops: ["B"] },
+        ],
+      }),
+    });
+    window.sessionStorage.setItem(
+      detailDraftKey("naddr-test"),
+      JSON.stringify({
+        content: "naddr-testの本文",
+        busStopTag: "A",
+        selectedRoute: "Route A",
+      }),
+    );
+    window.sessionStorage.setItem(
+      detailDraftKey("naddr-other"),
+      JSON.stringify({
+        content: "naddr-otherの本文",
+        busStopTag: "B",
+        selectedRoute: "Route B",
+      }),
+    );
+
+    const firstView = render(<DiscussionDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: /投稿内容/ })).toHaveValue(
+        "naddr-testの本文",
+      );
+      const comboboxes = screen.getAllByRole("combobox");
+      expect(comboboxes).toHaveLength(2);
+      expect(comboboxes[0]).toHaveValue("Route A");
+      expect(comboboxes[1]).toHaveValue("A");
+    });
+    expect(screen.queryByDisplayValue("naddr-otherの本文")).not.toBeInTheDocument();
+    firstView.unmount();
+
+    mockNaddrParam.naddr = "naddr-other";
+    window.history.replaceState({}, "", "/discussions/naddr-other?tab=posts");
+    const secondView = render(<DiscussionDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: /投稿内容/ })).toHaveValue(
+        "naddr-otherの本文",
+      );
+      const comboboxes = screen.getAllByRole("combobox");
+      expect(comboboxes).toHaveLength(2);
+      expect(comboboxes[0]).toHaveValue("Route B");
+      expect(comboboxes[1]).toHaveValue("B");
+    });
+    expect(screen.queryByDisplayValue("naddr-testの本文")).not.toBeInTheDocument();
+    secondView.unmount();
+  });
+
+  it("saves post content, bus-stop tag, and selected route in the naddr-scoped sessionStorage draft", async () => {
+    mockAuthUser.pubkey = "authenticated-user";
+    mockAuthUser.isLoggedIn = true;
+    global.fetch = jest.fn().mockResolvedValue({
+      json: jest.fn().mockResolvedValue({
+        success: true,
+        data: [{ route: "Route A", stops: ["A", "B"] }],
+      }),
+    });
+
+    render(<DiscussionDetailPage />);
+
+    fireEvent.change(await screen.findByRole("textbox", { name: /投稿内容/ }), {
+      target: { value: "保存する本文" },
+    });
+    await waitFor(() => expect(screen.getAllByRole("combobox")).toHaveLength(1));
+    fireEvent.change(screen.getAllByRole("combobox")[0], {
+      target: { value: "Route A" },
+    });
+    await waitFor(() => expect(screen.getAllByRole("combobox")).toHaveLength(2));
+    fireEvent.change(screen.getAllByRole("combobox")[1], {
+      target: { value: "B" },
+    });
+
+    await waitFor(() => {
+      expect(readDetailDraft()).toEqual(
+        expect.objectContaining({
+          content: "保存する本文",
+          busStopTag: "B",
+          selectedRoute: "Route A",
+        }),
+      );
+    });
   });
 
   it("renders post validation errors as an assertive soft alert list", async () => {
@@ -670,13 +835,20 @@ describe("DiscussionDetailPage unauthenticated public actions", () => {
       "https://kazaguruma.invalid",
     );
     expect(target.pathname).toBe("/login");
-    expect(target.searchParams.get("returnTo")).toBe("/discussions/naddr-test");
-    expect(target.searchParams.get("reason")).toBe(
-      "投稿するにはログインが必要です。",
+    expect(target.searchParams.get("returnTo")).toBe(
+      "/discussions/naddr-test?tab=posts",
     );
+    expect(target.searchParams.get("reason")).toBeNull();
+    expect([...target.searchParams.keys()]).toEqual(["returnTo"]);
     expect(target.searchParams.has("action")).toBe(false);
     expect(target.searchParams.has("payload")).toBe(false);
     expect(target.searchParams.has("draft")).toBe(false);
+    await waitFor(() => {
+      expect(readDetailDraft()).toEqual(
+        expect.objectContaining({ content: "投稿本文" }),
+      );
+    });
+    expect(window.sessionStorage.getItem(DETAIL_DRAFT_KEY)).not.toBeNull();
     expect(screen.queryByTestId("login-modal")).not.toBeInTheDocument();
     expect(mockSignEvent).not.toHaveBeenCalled();
     expect(serviceMock.publishSignedEvent).not.toHaveBeenCalled();
@@ -693,6 +865,78 @@ describe("DiscussionDetailPage unauthenticated public actions", () => {
     });
   });
 
+  it("clears the naddr-scoped draft only after a post is published successfully", async () => {
+    mockAuthUser.pubkey = "authenticated-user";
+    mockAuthUser.isLoggedIn = true;
+    serviceMock.createPostEvent.mockReturnValue({ kind: 1111 });
+    mockSignEvent.mockResolvedValue({
+      id: "signed-post-id",
+      kind: 1111,
+      pubkey: "authenticated-user",
+      created_at: 2,
+      tags: [],
+      content: "投稿本文",
+      sig: "signature",
+    });
+    serviceMock.publishSignedEvent.mockResolvedValue(true);
+
+    render(<DiscussionDetailPage />);
+    fireEvent.change(await screen.findByRole("textbox", { name: /投稿内容/ }), {
+      target: { value: "投稿本文" },
+    });
+    await waitFor(() => {
+      expect(readDetailDraft()).toEqual(
+        expect.objectContaining({ content: "投稿本文" }),
+      );
+    });
+    fireEvent.click(screen.getByRole("button", { name: "プレビュー" }));
+    fireEvent.click(await screen.findByRole("button", { name: "投稿を確定" }));
+
+    await waitFor(() =>
+      expect(serviceMock.publishSignedEvent).toHaveBeenCalledTimes(1),
+    );
+    await waitFor(() => {
+      expect(window.sessionStorage.getItem(DETAIL_DRAFT_KEY)).toBeNull();
+    });
+  });
+
+  it("keeps the naddr-scoped draft when publishing the post fails", async () => {
+    mockAuthUser.pubkey = "authenticated-user";
+    mockAuthUser.isLoggedIn = true;
+    serviceMock.createPostEvent.mockReturnValue({ kind: 1111 });
+    mockSignEvent.mockResolvedValue({
+      id: "failed-post-id",
+      kind: 1111,
+      pubkey: "authenticated-user",
+      created_at: 2,
+      tags: [],
+      content: "投稿本文",
+      sig: "signature",
+    });
+    serviceMock.publishSignedEvent.mockResolvedValue(false);
+
+    render(<DiscussionDetailPage />);
+    fireEvent.change(await screen.findByRole("textbox", { name: /投稿内容/ }), {
+      target: { value: "投稿本文" },
+    });
+    await waitFor(() => {
+      expect(readDetailDraft()).toEqual(
+        expect.objectContaining({ content: "投稿本文" }),
+      );
+    });
+    fireEvent.click(screen.getByRole("button", { name: "プレビュー" }));
+    fireEvent.click(await screen.findByRole("button", { name: "投稿を確定" }));
+
+    await waitFor(() =>
+      expect(serviceMock.publishSignedEvent).toHaveBeenCalledTimes(1),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("投稿の送信に失敗しました");
+    expect(window.sessionStorage.getItem(DETAIL_DRAFT_KEY)).not.toBeNull();
+    expect(readDetailDraft()).toEqual(
+      expect.objectContaining({ content: "投稿本文" }),
+    );
+  });
+
   it("routes an unauthenticated evaluation action to login without evaluation side effects", async () => {
     const view = render(<DiscussionDetailPage />);
 
@@ -706,10 +950,11 @@ describe("DiscussionDetailPage unauthenticated public actions", () => {
       "https://kazaguruma.invalid",
     );
     expect(target.pathname).toBe("/login");
-    expect(target.searchParams.get("returnTo")).toBe("/discussions/naddr-test");
-    expect(target.searchParams.get("reason")).toBe(
-      "投稿を評価するにはログインが必要です。",
+    expect(target.searchParams.get("returnTo")).toBe(
+      "/discussions/naddr-test?tab=posts",
     );
+    expect(target.searchParams.get("reason")).toBeNull();
+    expect([...target.searchParams.keys()]).toEqual(["returnTo"]);
     expect(target.searchParams.has("action")).toBe(false);
     expect(target.searchParams.has("payload")).toBe(false);
     expect(target.searchParams.has("draft")).toBe(false);

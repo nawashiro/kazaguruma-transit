@@ -4,6 +4,7 @@ import {
   parsePostEvent,
   parseApprovalEvent,
   parseEvaluationEvent,
+  validatePostForm,
 } from "../nostr-utils";
 
 jest.mock("@/utils/logger", () => ({
@@ -108,5 +109,17 @@ describe("nostr-utils discussion id normalization", () => {
     const parsed = parseEvaluationEvent(event as any);
 
     expect(parsed).toBeNull();
+  });
+});
+
+describe("validatePostForm content length boundary", () => {
+  it("accepts post content at exactly 1000 characters", () => {
+    expect(validatePostForm({ content: "a".repeat(1000) })).toEqual([]);
+  });
+
+  it("rejects post content over 1000 characters with the 1000-character error", () => {
+    expect(validatePostForm({ content: "a".repeat(1001) })).toContain(
+      "投稿内容は1000文字以内で入力してください",
+    );
   });
 });

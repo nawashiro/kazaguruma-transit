@@ -76,7 +76,7 @@
 - [x] T018 [VERIFY/親-VERIFIED] 各production task後に指定focused suiteを親が再実行し、全production／test／docs pathを再読込する。`git diff --check`、card-title 21箇所、reason残存箇所、500／280残存箇所、storage key境界、query付きreturnToを機械検索・source確認する。production post-review subagentは置かず、親が変更と検証を管理する。
 - [x] T019 [VERIFY/親-VERIFIED] Node `v22.23.2`を優先してfocused関連suite、`npx tsc --noEmit --incremental false`、`npm run lint`、全Jestを実行する。collection/setup、fixture、assertion、今回の差分、既存warningを分類する。`npm run build`を一度実行し、Prisma／GTFS／Next buildの終了コードと既存環境表示を分離して記録する。ブラウザ相当probeを試行し、環境制約を記録する。loading、card-title、テーマ、下書き復元はRTL／AST／build結果と実ブラウザ未実測の制約を分離して扱う。
 - [x] T020 [DOCS-VERIFIED] `issues/128-minor-fixes/investigation.md`へ実装後の根因確認・RED/GREEN・変更path・検証結果を追記し、`plan.md`は実装方針の記録として保持し、`tasks.md`の各完了taskへ実測証拠を追記する。文書更新後に相対リンク、status、diff checkを確認する。
-- [ ] T021 [DELIVERY/親] 最終差分をfreshに確認し、日本語短prefixのcommitを作成して`origin/fix/issue-128-minor-fixes`へpushする。必要ならbase=`dev`のPRを作成し、GitHubからtitle/body/head/base/filesを読み戻す。`git ls-remote`でremote SHAを確認する。pushしたexact SHAのchecksを終端まで確認し、未triggerを成功扱いにしない。mergeは行わない。
+- [x] T021 [DELIVERY/親-VERIFIED] 実装commit `910426ab6b7c43a68a8f3c63792aab5c9d2042c7`を作成して`origin/fix/issue-128-minor-fixes`へpushした。PR [#129](https://github.com/nawashiro/kazaguruma-transit/pull/129)をbase=`dev`で作成し、GitHubからtitle/body/head/base/filesを読み戻した。`git ls-remote`のremote SHA一致、Quality Gate run `33635483405`のexact SHA success、merge未実施を確認した。
 
 ## 依存関係
 

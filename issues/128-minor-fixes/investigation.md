@@ -139,3 +139,9 @@ DaisyUI `node_modules/daisyui/components/card.css`の実定義は `.card-title` 
 - Hermesの`browser_exec`は専用自動化Chromeが`BU_CDP_URL=http://127.0.0.1:9222`で到達不能となり、利用できなかった。
 - 代替Puppeteer probeは、外部Rubyful scriptの通信継続による`networkidle0` timeout、Puppeteer headless launchのWS endpoint timeoutを経た。`/usr/bin/chromium`単体は後からDevTools endpointを出したが、診断時はD-stateで応答せず、loading／computed style／viewport位置の実測値は取得できなかった。
 - したがって、ブラウザprobeを成功扱いにはしない。loadingのRuby境界、DaisyUI spinner、card-titleの`inline`、PC／mobile theme配置は、実ブラウザ未実測であることを明記したうえで、RTL／TypeScript AST契約、installed CSS確認、production buildの結果で検証した。
+
+## 8. 配送後確認
+
+- 実装commit: `910426ab6b7c43a68a8f3c63792aab5c9d2042c7`（`fix: Issue #128の細かい修正を反映`）。`origin/fix/issue-128-minor-fixes`のremote SHAと一致し、作業ツリーはcleanだった。
+- Pull Request: [#129](https://github.com/nawashiro/kazaguruma-transit/pull/129)。GitHubから読み戻したbase=`dev`、head=`fix/issue-128-minor-fixes`、head SHA=`910426ab6b7c43a68a8f3c63792aab5c9d2042c7`、state=`OPEN`、変更45ファイルを確認した。mergeは行っていない。
+- Quality Gate: run `33635483405` / job `100265180658` は上記exact SHAに対して`success`。ESLint、strict TypeScript、Jestの全stepがsuccessだった。

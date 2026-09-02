@@ -159,4 +159,6 @@ PR #129のレビューで、`src/app/discussions/[naddr]/edit/page.tsx`だけが
 - 追補後の全Jestは`PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm test -- --runInBand`で終了コード0、144 suites passed / 2 skipped、900 tests passed / 13 skippedだった。strict TypeScript（`npx tsc --noEmit --incremental false`）と`npm run lint`も終了コード0だった。
 - 追補後の`npm run build`は終了コード0で、Next.js production buildと27ページ生成が成功した。`transit-config.json`不在による既存GTFS import設定エラー表示は前回と同様にbuild成功とは分離した。`git diff --check`も終了コード0だった。
 - `DISCUSSION_DESCRIPTION_MAX_LENGTH`は会話作成、会話編集、会話作成flowで共通参照され、対象productionに説明の500文字リテラル・`maxLength={500}`・`/500文字`は残っていない。会話タイトル100文字と投稿本文用`POST_CONTENT_MAX_LENGTH`は別の契約として維持した。
-- 修正commit、PRのremote SHA、PR CIのexact head確認は配送後に追記する。
+- 修正commit: `91deacf79fe12b91cd0d0e66ef48392f77a33b5e`（`fix: 会話編集の説明上限を1000文字へ統一`）。`origin/fix/issue-128-minor-fixes`のremote SHAと一致し、編集画面の追補コード・テスト・仕様書・Issue文書を含む6ファイルを配送した。
+- PR #129の追補headをGitHubから読み戻し、base=`dev`、head=`fix/issue-128-minor-fixes`、head SHA=`91deacf79fe12b91cd0d0e66ef48392f77a33b5e`、state=`OPEN`、merge state=`CLEAN`を確認した。mergeは行っていない。
+- Quality Gate: run `33696574312` / job `100466608402` は上記exact SHAに対して`success`。ESLint、strict TypeScript、Jestの全stepがsuccessだった。

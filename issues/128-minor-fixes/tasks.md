@@ -80,7 +80,7 @@
 
 ## Phase 5: PRレビュー追補
 
-- [ ] T022 [PR-FOLLOWUP] `discussions/[naddr]/edit`の説明上限を会話作成と同じ`DISCUSSION_DESCRIPTION_MAX_LENGTH`へ統一する。`src/app/discussions/[naddr]/edit/__tests__/page.test.tsx`で1000文字ちょうどの受入れ、1001文字のvalidation拒否、textarea `maxLength`、カウンターをtest-firstで固定し、旧500文字実装に対するREDを確認した。実装後のfocused/full検証、関連仕様・調査・タスク文書更新、commit、push、PR CI確認まで完了してからチェックを付ける。
+- [x] T022 [PR-FOLLOWUP-VERIFIED] `discussions/[naddr]/edit`の説明上限を会話作成と同じ`DISCUSSION_DESCRIPTION_MAX_LENGTH`へ統一した。`src/app/discussions/[naddr]/edit/__tests__/page.test.tsx`で1000文字ちょうどの受入れ、1001文字のvalidation拒否、textarea `maxLength`、カウンターをtest-firstで固定し、旧500文字実装に対するREDと実装後9 tests GREENを確認した。`specs/011-discussion-edit-ux/data-model.md`、Issue調査・計画・タスク文書も更新した。追補後のfocusedは2 suite / 35 tests、全Jestは144 suites passed / 2 skipped・900 tests passed / 13 skipped、strict TypeScript・lint・build・diff checkは成功した。修正commit `91deacf79fe12b91cd0d0e66ef48392f77a33b5e`をpushし、PR #129のexact headに対するQuality Gate run `33696574312`をsuccess確認した。
 
 ```text
 T001 → T002 → T003 → T004 → T003R → T004R → T005 → T006 → T005R → T006R → T005RR → T006RR → T007 → T008

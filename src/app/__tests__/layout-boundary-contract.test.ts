@@ -6,8 +6,6 @@ jest.unmock("fs");
 const ts: typeof import("typescript") = jest.requireActual("typescript");
 
 const PRODUCTION_ROOTS = ["src/app", "src/components"];
-// flex + spinnerで構成し、DaisyUI alert gridを使わない既存status。
-const SAFE_FLEX_STATUS_PATH = "src/components/features/RouteSearchResults.tsx:171";
 
 type SourceRecord = {
   path: string;
@@ -123,11 +121,7 @@ describe("Issue #106 layout boundary contract", () => {
           const isAlert = className.split(/\s+/).includes("alert");
           const isStatus = role === "status";
           const isSemanticMessage = tagName === "p";
-          if (
-            (isAlert || isStatus) &&
-            !isSemanticMessage &&
-            `${sourcePath}:${lineNumber(sourceFile, node)}` !== SAFE_FLEX_STATUS_PATH
-          ) {
+          if ((isAlert || isStatus) && !isSemanticMessage) {
             for (const text of getDirectTextChildren(node, sourceFile)) {
               violations.push(`${sourcePath}:${lineNumber(sourceFile, node)} ${text}`);
             }

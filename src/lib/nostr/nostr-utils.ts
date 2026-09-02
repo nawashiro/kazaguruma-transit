@@ -13,6 +13,7 @@ import type {
 import { logger } from "@/utils/logger";
 import { normalizeDiscussionId } from "@/lib/nostr/naddr-utils";
 import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
+import { POST_CONTENT_MAX_LENGTH } from "@/lib/discussion/limits";
 
 export { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 
@@ -313,8 +314,8 @@ export function validatePostForm(data: {
     errors.push("投稿内容は必須です");
   }
 
-  if (data.content && data.content.length > 280) {
-    errors.push("投稿内容は280文字以内で入力してください");
+  if (data.content && data.content.length > POST_CONTENT_MAX_LENGTH) {
+    errors.push(`投稿内容は${POST_CONTENT_MAX_LENGTH}文字以内で入力してください`);
   }
 
   return errors;

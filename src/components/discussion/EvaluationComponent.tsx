@@ -20,7 +20,7 @@ export function EvaluationComponent({
   onEvaluate,
   userEvaluations,
   isRandomOrder = false,
-  title = "この論点は参考になりますか？",
+  title = "この論点は妥当だと思いますか？",
 }: EvaluationComponentProps) {
   const [evaluatingPost, setEvaluatingPost] = useState<string | null>(null);
 
@@ -98,15 +98,14 @@ export function EvaluationComponent({
           {title}
         </h2>
       </div>
-      <p>論点が妥当だと思う、賛成できるなどの投稿は「はい」を押してください。</p>
+      <div id="current-post-label" className="sr-only">
+        現在評価中の投稿
+      </div>
       <div
         className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
         role="article"
         aria-labelledby="current-post-label"
       >
-        <div id="current-post-label" className="sr-only">
-          現在評価中の投稿
-        </div>
         {currentPost.busStopTag && (
           <div className="mb-3">
             <span className="badge badge-primary badge-md">
@@ -122,51 +121,52 @@ export function EvaluationComponent({
           {(currentPost.content || "").split("\n").map((line, index) => (
             <p
               key={index}
-              className="mb-2 last:mb-0 ruby-text text-balance break-all"
+              className="mb-2 last:mb-0 ruby-text break-all"
             >
               {line || "\u00A0"}
             </p>
           ))}
         </div>
 
-        <div
-          className="flex gap-4 justify-center"
-          role="group"
-          aria-label="投稿の評価"
+      </div>
+
+      <div
+        className="flex gap-4 justify-center"
+        role="group"
+        aria-label="投稿の評価"
+      >
+        <button
+          onClick={() => handleEvaluate(currentPost.id, "+")}
+          disabled={evaluatingPost !== null}
+          className={`btn text-base btn-primary gap-0 ruby-text min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
+            }`}
+          type="button"
         >
-          <button
-            onClick={() => handleEvaluate(currentPost.id, "+")}
-            disabled={evaluatingPost !== null}
-            className={`btn text-base btn-primary gap-0 ruby-text min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
-              }`}
-            type="button"
-          >
-            {evaluatingPost === currentPost.id ? (
-              ""
-            ) : (
-              <>
-                <ThumbsUp className="w-6 h-6 mr-2" aria-hidden="true" />
-                はい
-              </>
-            )}
-          </button>
-          <button
-            onClick={() => handleEvaluate(currentPost.id, "-")}
-            disabled={evaluatingPost !== null}
-            className={`btn text-base btn-warning gap-0 ruby-text min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
-              }`}
-            type="button"
-          >
-            {evaluatingPost === currentPost.id ? (
-              ""
-            ) : (
-              <>
-                <ThumbsDown className="w-6 h-6 mr-2" aria-hidden="true" />
-                いいえ
-              </>
-            )}
-          </button>
-        </div>
+          {evaluatingPost === currentPost.id ? (
+            ""
+          ) : (
+            <>
+              <ThumbsUp className="w-6 h-6 mr-2" aria-hidden="true" />
+              はい
+            </>
+          )}
+        </button>
+        <button
+          onClick={() => handleEvaluate(currentPost.id, "-")}
+          disabled={evaluatingPost !== null}
+          className={`btn text-base btn-warning gap-0 ruby-text min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
+            }`}
+          type="button"
+        >
+          {evaluatingPost === currentPost.id ? (
+            ""
+          ) : (
+            <>
+              <ThumbsDown className="w-6 h-6 mr-2" aria-hidden="true" />
+              いいえ
+            </>
+          )}
+        </button>
       </div>
 
       {totalCount > 0 && (
@@ -174,7 +174,7 @@ export function EvaluationComponent({
           className="progress progress-primary w-full"
           value={progressPercentage}
           max="100"
-          aria-label={`評価進捗: ${Math.round(progressPercentage)}%完了`}
+          aria-label={`評価進捗 ${Math.round(progressPercentage)}%完了`}
         ></progress>
       )}
     </div>

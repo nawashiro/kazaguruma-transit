@@ -5,6 +5,7 @@ import type {
 import { isValidNpub, npubToHex } from "@/lib/nostr/nostr-utils";
 import { naddrEncode, naddrDecode } from "@/lib/nostr/naddr-utils";
 import { logger } from "@/utils/logger";
+import { DISCUSSION_DESCRIPTION_MAX_LENGTH } from "@/lib/discussion/limits";
 
 export interface DiscussionCreationForm {
   title: string;
@@ -78,8 +79,8 @@ export function validateDiscussionCreationForm(
 
   if (!form.description?.trim()) {
     errors.push("説明は必須です");
-  } else if (form.description.length > 500) {
-    errors.push("説明は500文字以内で入力してください");
+  } else if (form.description.length > DISCUSSION_DESCRIPTION_MAX_LENGTH) {
+    errors.push("説明は1000文字以内で入力してください");
   }
 
   if (form.moderators && form.moderators.length > 0) {

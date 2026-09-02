@@ -86,13 +86,25 @@ describe('User Discussion Creation Flow', () => {
     test('should reject description that is too long', () => {
       const invalidForm = {
         ...validCreationForm,
-        description: 'a'.repeat(501), // 500文字制限を超過
+        description: 'a'.repeat(1001), // 1000文字制限を超過
       };
       
       const result = validateDiscussionCreationForm(invalidForm);
       
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('説明は500文字以内で入力してください');
+      expect(result.errors).toContain('説明は1000文字以内で入力してください');
+    });
+
+    test('should accept description at exactly 1000 characters', () => {
+      const validForm = {
+        ...validCreationForm,
+        description: 'a'.repeat(1000),
+      };
+
+      const result = validateDiscussionCreationForm(validForm);
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toEqual([]);
     });
 
     test('should reject invalid moderator pubkeys', () => {
@@ -418,7 +430,7 @@ describe('User Discussion Creation Flow', () => {
         { title: '', description: 'valid', expectedError: 'タイトルは必須です' },
         { title: 'valid', description: '', expectedError: '説明は必須です' },
         { title: 'a'.repeat(101), description: 'valid', expectedError: 'タイトルは100文字以内' },
-        { title: 'valid', description: 'a'.repeat(501), expectedError: '説明は500文字以内' },
+        { title: 'valid', description: 'a'.repeat(1001), expectedError: '説明は1000文字以内' },
       ];
 
       commonMistakes.forEach(({ title, description, expectedError }) => {

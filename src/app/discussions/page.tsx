@@ -10,6 +10,7 @@ import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
 import PageHeader from "@/components/layouts/PageHeader";
 import { formatRelativeTime } from "@/lib/nostr/nostr-utils";
 import { buildNaddrFromDiscussion } from "@/lib/nostr/naddr-utils";
+import { truncateDiscussionDescription } from "@/lib/discussion/display";
 import { resolveDiscussionReferences } from "@/lib/discussion/discussion-reference-resolver";
 import { useDiscussionManagement } from "@/components/discussion/DiscussionManagementProvider";
 
@@ -112,9 +113,7 @@ export default function DiscussionsPage() {
                               {discussion.title}
                             </h3>
                             <p className="text-base text-base-content ruby-text">
-                              {discussion.description.length > 70
-                                ? `${discussion.description.slice(0, 70)}...`
-                                : discussion.description}
+                              {truncateDiscussionDescription(discussion.description)}
                             </p>
                             <div className="flex justify-between items-center mt-2">
                               <div className="text-base-content space-y-1">

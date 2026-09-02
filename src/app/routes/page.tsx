@@ -14,7 +14,7 @@ function RouteSearchResultsFromUrl() {
 export default function RoutesPage() {
   return (
     <div>
-      <PageHeader title="経路検索結果" description="指定した条件の乗換経路" />
+      <PageHeader title="経路検索結果" description="自動作成されたスケジュール" />
       <Suspense fallback={<Card>経路を検索中...</Card>}>
         <RouteSearchResultsFromUrl />
       </Suspense>

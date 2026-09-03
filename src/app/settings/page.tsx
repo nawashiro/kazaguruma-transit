@@ -22,6 +22,7 @@ import {
 } from "@/lib/nostr/discussion-ndk-gateway";
 import { UserIdentity } from "@/components/ui/UserIdentity";
 import { buildLoginRoute, buildSignupRoute } from "@/lib/navigation/auth-route";
+import { truncateDiscussionDescription } from "@/lib/discussion/display";
 import type { Discussion } from "@/types/discussion";
 import { createDiscussionReadPlan } from "@/lib/discussion/discussion-read-plan";
 import { executeNostrRead } from "@/lib/nostr/nostr-read-executor";
@@ -149,7 +150,7 @@ export default function SettingsPage() {
       <div>
         <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="card-body">
-            <h2 className="card-title mb-4 ruby-text gap-0">アカウント情報</h2>
+            <h2 className="card-title inline mb-4 ruby-text gap-0">アカウント情報</h2>
 
             {user.isLoggedIn ? (
               <div className="space-y-6">
@@ -226,7 +227,7 @@ export default function SettingsPage() {
           <div className="mt-8">
             <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="card-body">
-                <h2 className="card-title mb-4 ruby-text gap-0">あなたが作った会話の一覧</h2>
+                <h2 className="card-title inline mb-4 ruby-text gap-0">あなたが作った会話の一覧</h2>
 
                 {isLoadingDiscussions ? (
                   <div className="animate-pulse space-y-4">
@@ -255,7 +256,7 @@ export default function SettingsPage() {
                                 {discussion.title}
                               </Link>
                               <p className="text-base text-base-content mt-1 ruby-text">
-                                {discussion.description}
+                                {truncateDiscussionDescription(discussion.description)}
                               </p>
                               <p className="text-base-content mt-2">
                                 {formatRelativeTime(discussion.createdAt)}
@@ -308,7 +309,7 @@ export default function SettingsPage() {
         <div className="mt-8">
           <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="card-body">
-              <h2 className="card-title mb-2 ruby-text gap-0">プライバシー</h2>
+              <h2 className="card-title inline mb-2 ruby-text gap-0">プライバシー</h2>
                 <ul className="space-y-1 list-disc list-inside ruby-text">
                     <li>
                       あなたの投稿と評価はNostrプロトコルを通じて分散保存されます

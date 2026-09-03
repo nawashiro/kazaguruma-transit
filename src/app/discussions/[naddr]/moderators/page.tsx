@@ -109,12 +109,7 @@ export default function ModeratorsPage() {
   };
   const request = async () => {
     if (!user.isLoggedIn) {
-      router.push(
-        buildLoginRoute(
-          `/discussions/${naddrParam}/moderators`,
-          "モデレーター申請にはログインが必要です。",
-        ),
-      );
+      router.push(buildLoginRoute(`/discussions/${naddrParam}/moderators`));
       return;
     }
     if (!discussion || !user.pubkey) {
@@ -296,7 +291,7 @@ export default function ModeratorsPage() {
         <>
           <section className="card bg-base-100 shadow-sm border border-base-300">
             <div className="card-body space-y-4">
-              <h2 className="card-title ruby-text gap-0">
+              <h2 className="card-title inline ruby-text gap-0">
                 モデレーターを追加
               </h2>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -375,7 +370,7 @@ export default function ModeratorsPage() {
           </section>
           <section className="card bg-base-100 shadow-sm border border-base-300">
             <div className="card-body space-y-4">
-              <h2 className="card-title ruby-text gap-0">
+              <h2 className="card-title inline ruby-text gap-0">
                 モデレーターの変更を確定
               </h2>
               <button
@@ -403,12 +398,7 @@ export default function ModeratorsPage() {
             <button
               className="btn text-base btn-primary ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm self-start sm:ml-0"
               onClick={() =>
-                router.push(
-                  buildLoginRoute(
-                    `/discussions/${naddrParam}/moderators`,
-                    "モデレーター申請にはログインが必要です。",
-                  ),
-                )
+                router.push(buildLoginRoute(`/discussions/${naddrParam}/moderators`))
               }
             >
               ログイン
@@ -425,7 +415,7 @@ export default function ModeratorsPage() {
           className="card border border-base-300 bg-base-100"
         >
           <div className="card-body space-y-3">
-            <h2 className="card-title ruby-text gap-0">
+            <h2 className="card-title inline ruby-text gap-0">
               <span className="label-text">モデレーターになる</span>
             </h2>
             <p className="text-base ruby-text">投稿の承認を行う場合、会話作成者にモデレーターになりたい旨を申請してください。</p>

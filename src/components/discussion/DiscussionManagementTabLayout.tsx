@@ -58,7 +58,7 @@ function DiscussionManagementTabLayoutContent({
           ? "eose"
           : null);
   const title = discussion?.title ?? DEFAULT_TITLE;
-  const description = discussion?.description ?? DEFAULT_DESCRIPTION;
+  const description = DEFAULT_DESCRIPTION;
   const isAdminUser = arePubkeysEqual(user.pubkey, getAdminPubkeyHex());
   const role: DiscussionRole | null = roleOverride
     ? roleOverride

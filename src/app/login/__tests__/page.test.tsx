@@ -165,21 +165,16 @@ describe("/login public page", () => {
     expect(screen.getByRole("heading", { level: 1, name: /ログイン/i })).toBeInTheDocument();
   });
 
-  it("renders the login reason as a soft informational status message", () => {
+  it("ignores a login reason query without rendering a status or alert", () => {
     const reason = "投稿するにはログインが必要です。";
     mockSearchParams = new URLSearchParams({ reason });
     const Page = getLoginPage();
     renderInHostMain(Page);
 
-    const reasonNotice = screen.getByRole("status");
-    expect(reasonNotice).toHaveTextContent(reason);
-    expect(reasonNotice).toHaveAttribute("aria-live", "polite");
-    expect(reasonNotice).toHaveClass(
-      "alert",
-      "alert-info",
-      "alert-soft",
-      "text-base-content!",
-    );
+    expect(screen.queryByText(reason)).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByText("保存されているパスキーでログインします。")).toBeInTheDocument();
   });
 
   it.each([

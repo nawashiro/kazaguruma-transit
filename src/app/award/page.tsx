@@ -45,7 +45,7 @@ export default function AwardPage() {
 
         <div className="card-body gap-4">
           <div>
-            <h2 className="card-title text-xl ruby-text gap-0">
+            <h2 className="card-title inline text-xl ruby-text gap-0">
               {AWARD_PRIZE}
             </h2>
           </div>
@@ -69,7 +69,7 @@ export default function AwardPage() {
 
       <section className="card card-border bg-base-100 shadow-sm">
         <div className="card-body gap-4">
-          <h2 className="card-title ruby-text gap-0">評価された取組</h2>
+          <h2 className="card-title inline ruby-text gap-0">評価された取組</h2>
           <p>
             複雑な時刻表をわかりやすくする経路検索、オープンデータを活用した
             千代田区の施設案内、利用者の経験を共有する意見交換機能を、一つの

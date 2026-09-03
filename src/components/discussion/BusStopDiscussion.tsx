@@ -22,10 +22,27 @@ import type {
 import { projectBusStopSnapshot } from "@/lib/discussion/bus-stop-projection";
 import { logger } from "@/utils/logger";
 import { buildLoginRoute } from "@/lib/navigation/auth-route";
+import { getCurrentRoute } from "@/lib/navigation/current-route";
+import { useSessionDraft } from "@/lib/forms/use-session-draft";
+import { POST_CONTENT_MAX_LENGTH } from "@/lib/discussion/limits";
 
 interface BusStopDiscussionProps {
   busStops: string[];
   className?: string;
+}
+
+type BusStopPostDraft = Required<PostFormData>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isBusStopPostDraft(value: unknown): value is BusStopPostDraft {
+  return (
+    isRecord(value) &&
+    typeof value.content === "string" &&
+    typeof value.busStopTag === "string"
+  );
 }
 
 export function BusStopDiscussion({
@@ -40,10 +57,21 @@ export function BusStopDiscussion({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const [showPreview, setShowPreview] = useState(false);
-  const [postForm, setPostForm] = useState<PostFormData>({
-    content: "",
-    busStopTag: busStops[0] || "",
-  });
+  const busStopPostDraftKey =
+    `kazaguruma:draft:bus-stop-post:${busStops.join(",")}`;
+  const initialBusStopTag = busStops[0] || "";
+  const initialBusStopPostDraft = useMemo<BusStopPostDraft>(
+    () => ({
+      content: "",
+      busStopTag: initialBusStopTag,
+    }),
+    [initialBusStopTag],
+  );
+  const { draft: postForm, setDraft, clearDraft } = useSessionDraft(
+    busStopPostDraftKey,
+    initialBusStopPostDraft,
+    isBusStopPostDraft,
+  );
   const [errors, setErrors] = useState<string[]>([]);
 
   const { user, signEvent } = useAuth();
@@ -104,9 +132,7 @@ export function BusStopDiscussion({
 
   const handlePostSubmit = async () => {
     if (!user.isLoggedIn) {
-      router.push(
-        buildLoginRoute("/", "投稿するにはログインが必要です。"),
-      );
+      router.push(buildLoginRoute(getCurrentRoute()));
       return;
     }
 
@@ -133,7 +159,7 @@ export function BusStopDiscussion({
         throw new Error("Failed to publish post to relays");
       }
 
-      setPostForm({ content: "", busStopTag: busStops[0] || "" });
+      clearDraft();
       setShowPreview(false);
       reload();
     } catch (error) {
@@ -146,9 +172,7 @@ export function BusStopDiscussion({
 
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (!user.isLoggedIn) {
-      router.push(
-        buildLoginRoute("/", "投稿を評価するにはログインが必要です。"),
-      );
+      router.push(buildLoginRoute(getCurrentRoute()));
       return;
     }
 
@@ -203,14 +227,14 @@ export function BusStopDiscussion({
             onEvaluate={handleEvaluate}
             userEvaluations={userEvaluations}
             isRandomOrder={true}
-            title="このバス停メモは役に立ちますか？"
+            title="このアドバイスは役に立ちますか？"
           />
         </div>
       )}
 
       {/* Post form */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <h3 className="text-lg font-medium mb-4 ruby-text">バス停メモを投稿</h3>
+        <h3 className="text-lg font-medium mb-4 ruby-text">利用者へのアドバイスを投稿</h3>
         {streamError && (
           <div className="alert alert-error alert-soft text-base-content! mb-3" role="alert">
             <p className="ruby-text">{streamError}</p>
@@ -241,7 +265,7 @@ export function BusStopDiscussion({
                 id="post-content"
                 value={postForm.content}
                 onChange={(e) =>
-                  setPostForm((prev) => ({
+                  setDraft((prev) => ({
                     ...prev,
                     content: e.target.value,
                   }))
@@ -250,10 +274,10 @@ export function BusStopDiscussion({
                 placeholder="このバス停での体験など、メモを投稿してください"
                 required
                 disabled={isSubmitting}
-                maxLength={280}
+                maxLength={POST_CONTENT_MAX_LENGTH}
               />
               <div className="text-base-content mt-1 ruby-text">
-                {postForm.content.length}/280文字
+                {postForm.content.length}/{POST_CONTENT_MAX_LENGTH}文字
               </div>
             </div>
 
@@ -265,7 +289,7 @@ export function BusStopDiscussion({
                 id="bus-stop-tag"
                 value={postForm.busStopTag}
                 onChange={(e) =>
-                  setPostForm((prev) => ({
+                  setDraft((prev) => ({
                     ...prev,
                     busStopTag: e.target.value,
                   }))

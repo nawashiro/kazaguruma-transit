@@ -35,14 +35,49 @@ import type {
 import { logger } from "@/utils/logger";
 import { isTestMode } from "@/lib/test/test-data-loader";
 import { buildLoginRoute } from "@/lib/navigation/auth-route";
+import { getCurrentRoute } from "@/lib/navigation/current-route";
+import { useSessionDraft } from "@/lib/forms/use-session-draft";
+import { POST_CONTENT_MAX_LENGTH } from "@/lib/discussion/limits";
 
 const nostrServiceConfig = getNostrServiceConfig();
 const nostrService = createNostrService(nostrServiceConfig);
+
+interface DiscussionPostDraft {
+  content: string;
+  busStopTag: string;
+  selectedRoute: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isDiscussionPostDraft(value: unknown): value is DiscussionPostDraft {
+  return (
+    isRecord(value) &&
+    typeof value.content === "string" &&
+    typeof value.busStopTag === "string" &&
+    typeof value.selectedRoute === "string"
+  );
+}
+
+const EMPTY_DISCUSSION_POST_DRAFT: DiscussionPostDraft = {
+  content: "",
+  busStopTag: "",
+  selectedRoute: "",
+};
 
 export default function DiscussionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const naddrParam = params.naddr as string;
+  const discussionPostDraftKey =
+    `kazaguruma:draft:discussion-post:${naddrParam}`;
+  const { draft, setDraft, clearDraft } = useSessionDraft(
+    discussionPostDraftKey,
+    EMPTY_DISCUSSION_POST_DRAFT,
+    isDiscussionPostDraft,
+  );
 
   const [consensusTab, setConsensusTab] = useState<string>("group-consensus");
   const [optimisticEvaluations, setOptimisticEvaluations] = useState<PostEvaluation[]>([]);
@@ -63,11 +98,11 @@ export default function DiscussionDetailPage() {
   );
 
   const [showPreview, setShowPreview] = useState(false);
-  const [selectedRoute, setSelectedRoute] = useState("");
-  const [postForm, setPostForm] = useState<PostFormData>({
-    content: "",
-    busStopTag: "",
-  });
+  const postForm: PostFormData = {
+    content: draft.content,
+    busStopTag: draft.busStopTag,
+  };
+  const selectedRoute = draft.selectedRoute;
   const [errors, setErrors] = useState<string[]>([]);
   const [busStops, setBusStops] = useState<
     { route: string; stops: string[] }[]
@@ -231,12 +266,7 @@ export default function DiscussionDetailPage() {
   const handlePostSubmit = async () => {
     if (!user.isLoggedIn || !discussion) {
       if (!user.isLoggedIn) {
-        router.push(
-          buildLoginRoute(
-            `/discussions/${naddrParam}`,
-            "投稿するにはログインが必要です。",
-          ),
-        );
+        router.push(buildLoginRoute(getCurrentRoute()));
       }
       return;
     }
@@ -269,10 +299,6 @@ export default function DiscussionDetailPage() {
         throw new Error("Failed to publish post to relays");
       }
 
-      setPostForm({ content: "", busStopTag: "" });
-      setSelectedRoute("");
-      setShowPreview(false);
-
       const newPost = {
         id: signedEvent.id,
         content: postForm.content.trim(),
@@ -287,9 +313,12 @@ export default function DiscussionDetailPage() {
       };
 
       addPost(newPost);
+      clearDraft();
+      setShowPreview(false);
     } catch (error) {
       logger.error("Failed to submit post:", error);
       setErrors(["投稿の送信に失敗しました"]);
+      setShowPreview(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -298,12 +327,7 @@ export default function DiscussionDetailPage() {
   const handleEvaluate = async (postId: string, rating: "+" | "-") => {
     if (!user.isLoggedIn || !discussion) {
       if (!user.isLoggedIn) {
-        router.push(
-          buildLoginRoute(
-            `/discussions/${naddrParam}`,
-            "投稿を評価するにはログインが必要です。",
-          ),
-        );
+        router.push(buildLoginRoute(getCurrentRoute()));
       }
       return;
     }
@@ -345,8 +369,11 @@ export default function DiscussionDetailPage() {
   };
 
   const handleRouteSelect = (routeName: string) => {
-    setSelectedRoute(routeName);
-    setPostForm((prev) => ({ ...prev, busStopTag: "" }));
+    setDraft((prev) => ({
+      ...prev,
+      selectedRoute: routeName,
+      busStopTag: "",
+    }));
   };
 
   if (isDiscussionLoading) {
@@ -702,6 +729,9 @@ export default function DiscussionDetailPage() {
               >
                 新しい投稿
               </h2>
+              <p className="text-base text-base-content mb-4 ruby-text">
+                不足している論点や、課題へのアイデアを投稿してください。
+              </p>
 
               <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="card-body">
@@ -718,20 +748,20 @@ export default function DiscussionDetailPage() {
                           id="post-content"
                           value={postForm.content}
                           onChange={(e) =>
-                            setPostForm((prev) => ({
+                            setDraft((prev) => ({
                               ...prev,
                               content: e.target.value,
                             }))
                           }
                           className="textarea w-full h-32"
-                          placeholder="あなたの体験や意見を投稿してください"
+                          placeholder="例「はじめての方へ」の説明が読みにくいです。段落を風ぐるま自体の説明と、サイトの説明で分けるのはどうでしょう。"
                           required
                           disabled={isSubmitting}
-                          maxLength={280}
+                          maxLength={POST_CONTENT_MAX_LENGTH}
                           autoComplete="off"
                         />
                         <div className="text-base-content mt-1">
-                          {postForm.content.length}/280文字
+                          {postForm.content.length}/{POST_CONTENT_MAX_LENGTH}文字
                         </div>
                       </div>
 
@@ -760,7 +790,7 @@ export default function DiscussionDetailPage() {
                             <select
                               value={postForm.busStopTag}
                               onChange={(e) =>
-                                setPostForm((prev) => ({
+                                setDraft((prev) => ({
                                   ...prev,
                                   busStopTag: e.target.value,
                                 }))

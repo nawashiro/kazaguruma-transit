@@ -226,6 +226,32 @@ describe("SettingsPage streaming discussions", () => {
     expect(nostrServiceMock.publishSignedEvent).not.toHaveBeenCalled();
   });
 
+  it("長い会話説明を一覧と同じ70文字と省略記号へ短縮する", async () => {
+    const longDescription = "長".repeat(71);
+    const mockEvent = {
+      id: "event-long-description",
+      pubkey: "user-pubkey",
+      kind: 34550,
+      created_at: 123,
+      tags: [
+        ["d", "long-description"],
+        ["name", "長い説明の会話"],
+      ],
+      content: longDescription,
+      sig: "sig",
+    };
+
+    discussionReadExecutorMock.executeNostrRead.mockResolvedValue(
+      withCompletion([mockEvent]),
+    );
+
+    render(<SettingsPage />);
+
+    const expectedDescription = `${longDescription.slice(0, 70)}...`;
+    expect(await screen.findByText(expectedDescription)).toBeInTheDocument();
+    expect(screen.queryByText(longDescription)).not.toBeInTheDocument();
+  });
+
   it("shows timeout warning when completion-aware read has no events", async () => {
     discussionReadExecutorMock.executeNostrRead.mockResolvedValue(
       withCompletion([], "hard-timeout"),

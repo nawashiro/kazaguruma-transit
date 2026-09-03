@@ -83,7 +83,7 @@ export default function SidebarLayout({
         />
       </div>
       <div className="drawer-content flex flex-col min-h-screen">
-        <div className="flex items-center justify-between p-2">
+        <div className="flex items-center justify-between lg:justify-end p-2">
           <button
             type="button"
             className="btn gap-0 text-base btn-ghost drawer-button lg:hidden rounded-full dark:rounded-sm ruby-text"

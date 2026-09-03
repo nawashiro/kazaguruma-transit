@@ -53,16 +53,16 @@ function assertRouteTarget(
   route: string,
   expectedPathname: "/login" | "/signup",
   expectedReturnTo: string,
-  expectedReason?: string,
 ) {
   const target = new URL(route, "https://kazaguruma.invalid");
 
   expect(target.pathname).toBe(expectedPathname);
   expect(target.searchParams.get("returnTo")).toBe(expectedReturnTo);
-  expect(target.searchParams.get("reason")).toBe(expectedReason ?? null);
+  expect(target.searchParams.get("reason")).toBeNull();
   expect(target.searchParams.has("action")).toBe(false);
   expect(target.searchParams.has("payload")).toBe(false);
   expect(target.searchParams.has("draft")).toBe(false);
+  expect([...target.searchParams.keys()]).toEqual(["returnTo"]);
 }
 
 const moduleState = loadModule("../auth-route");
@@ -84,7 +84,7 @@ const unsafeReturnTargets: unknown[] = [
 
 describe("authentication route builders", () => {
   it.each(authRoutes)(
-    "%s builder creates a safe route and preserves an explicit reason",
+    "%s builder ignores a legacy reason argument and emits only a safe returnTo",
     (_mode, publicName, expectedPathname) => {
       const buildRoute = getRouteBuilder(moduleState, publicName);
       const route = buildRoute("/settings?tab=profile", "認証が必要です。");
@@ -93,13 +93,12 @@ describe("authentication route builders", () => {
         route,
         expectedPathname,
         "/settings?tab=profile",
-        "認証が必要です。",
       );
     },
   );
 
   it.each(authRoutes)(
-    "%s builder omits optional reason and action-like state for a safe return",
+    "%s builder emits no reason or action-like state for a safe return",
     (_mode, publicName, expectedPathname) => {
       const buildRoute = getRouteBuilder(moduleState, publicName);
       const route = buildRoute("/settings");

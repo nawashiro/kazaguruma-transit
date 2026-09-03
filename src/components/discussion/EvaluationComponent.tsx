@@ -121,7 +121,7 @@ export function EvaluationComponent({
           {(currentPost.content || "").split("\n").map((line, index) => (
             <p
               key={index}
-              className="mb-2 last:mb-0 ruby-text break-all"
+              className="mb-2 last:mb-0 break-all"
             >
               {line || "\u00A0"}
             </p>
@@ -138,34 +138,36 @@ export function EvaluationComponent({
         <button
           onClick={() => handleEvaluate(currentPost.id, "+")}
           disabled={evaluatingPost !== null}
-          className={`btn text-base btn-primary gap-0 ruby-text min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
+          className={`btn text-base btn-primary gap-0 min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
             }`}
           type="button"
         >
-          {evaluatingPost === currentPost.id ? (
-            ""
-          ) : (
-            <>
-              <ThumbsUp className="w-6 h-6 mr-2" aria-hidden="true" />
-              はい
-            </>
-          )}
+          <ThumbsUp
+            className={`w-6 h-6 mr-2 ${evaluatingPost === currentPost.id ? "sr-only" : ""}`}
+            aria-hidden="true"
+          />
+          <span
+            className={`ruby-text ${evaluatingPost === currentPost.id ? "sr-only" : ""}`}
+          >
+            はい
+          </span>
         </button>
         <button
           onClick={() => handleEvaluate(currentPost.id, "-")}
           disabled={evaluatingPost !== null}
-          className={`btn text-base btn-warning gap-0 ruby-text min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
+          className={`btn text-base btn-warning gap-0 min-h-[44px] min-w-[44px] flex-1 max-w-xs rounded-full dark:rounded-sm ${evaluatingPost === currentPost.id ? "loading" : ""
             }`}
           type="button"
         >
-          {evaluatingPost === currentPost.id ? (
-            ""
-          ) : (
-            <>
-              <ThumbsDown className="w-6 h-6 mr-2" aria-hidden="true" />
-              いいえ
-            </>
-          )}
+          <ThumbsDown
+            className={`w-6 h-6 mr-2 ${evaluatingPost === currentPost.id ? "sr-only" : ""}`}
+            aria-hidden="true"
+          />
+          <span
+            className={`ruby-text ${evaluatingPost === currentPost.id ? "sr-only" : ""}`}
+          >
+            いいえ
+          </span>
         </button>
       </div>
 

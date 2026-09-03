@@ -29,6 +29,48 @@ const buildPost = (overrides: Partial<PostWithStats>): PostWithStats => ({
   ...overrides,
 });
 
+interface EvaluationHarnessProps {
+  posts: PostWithStats[];
+  onEvaluate: (postId: string, rating: "+" | "-") => Promise<void>;
+}
+
+function EvaluationHarness({ posts, onEvaluate }: EvaluationHarnessProps) {
+  const [evaluatedPostIds, setEvaluatedPostIds] = React.useState<Set<string>>(
+    () => new Set(),
+  );
+
+  const handleEvaluate = async (postId: string, rating: "+" | "-") => {
+    await onEvaluate(postId, rating);
+    setEvaluatedPostIds((previous) => {
+      const next = new Set(previous);
+      next.add(postId);
+      return next;
+    });
+  };
+
+  return (
+    <EvaluationComponent
+      posts={posts}
+      onEvaluate={handleEvaluate}
+      userEvaluations={evaluatedPostIds}
+    />
+  );
+}
+
+/** Reproduce Rubyful v2's textContent -> innerHTML DOM ownership transfer. */
+function replaceRubyfulText(container: HTMLElement) {
+  container.querySelectorAll<HTMLElement>(".ruby-text").forEach((element) => {
+    const text = element.textContent || "";
+    element.innerHTML = `<ruby>${text}</ruby>`;
+  });
+}
+
+function getDirectRubyTextLabels(button: HTMLElement) {
+  return Array.from(button.children).filter(
+    (child) => child.tagName === "SPAN" && child.classList.contains("ruby-text"),
+  );
+}
+
 describe("EvaluationComponent", () => {
   it("shows only approved posts for evaluation", () => {
     const approved = buildPost({ id: "approved", content: "approved text" });
@@ -161,5 +203,72 @@ describe("EvaluationComponent", () => {
       "aria-label",
       "評価進捗 0%完了",
     );
+  });
+
+  it("Rubyfulの外部innerHTML置換後も評価成功時に次の投稿へ切り替わる", async () => {
+    const firstPost = buildPost({ id: "first", content: "最初の投稿" });
+    const secondPost = buildPost({ id: "second", content: "次の投稿" });
+    let resolveEvaluation!: () => void;
+    const evaluationFinished = new Promise<void>((resolve) => {
+      resolveEvaluation = resolve;
+    });
+    const onEvaluate = jest.fn(async () => evaluationFinished);
+
+    const view = render(
+      <EvaluationHarness
+        posts={[firstPost, secondPost]}
+        onEvaluate={onEvaluate}
+      />,
+    );
+
+    replaceRubyfulText(view.container);
+
+    const yesButton = screen.getByRole("button", { name: "はい" });
+    const noButton = screen.getByRole("button", { name: "いいえ" });
+
+    let clickError: unknown;
+    try {
+      fireEvent.click(yesButton);
+    } catch (error) {
+      clickError = error;
+    }
+    const clickErrors =
+      clickError instanceof AggregateError
+        ? clickError.errors
+        : clickError
+          ? [clickError]
+          : [];
+    expect(clickErrors).toEqual([]);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(onEvaluate).toHaveBeenCalledWith("first", "+");
+    expect(yesButton).toBeDisabled();
+    expect(noButton).toBeDisabled();
+    expect(yesButton).toHaveClass("loading");
+    expect(noButton).toHaveClass("loading");
+    expect(yesButton).not.toHaveClass("ruby-text");
+    expect(noButton).not.toHaveClass("ruby-text");
+    expect(getDirectRubyTextLabels(yesButton)).toHaveLength(1);
+    expect(getDirectRubyTextLabels(noButton)).toHaveLength(1);
+
+    await act(async () => {
+      resolveEvaluation();
+      await evaluationFinished;
+    });
+
+    expect(screen.getByText("次の投稿")).toBeInTheDocument();
+    expect(screen.queryByText("最初の投稿")).not.toBeInTheDocument();
+
+    const currentArticle = screen.getByRole("article");
+    const currentParagraph = currentArticle.querySelector("p");
+    expect(currentParagraph).not.toBeNull();
+    expect(currentParagraph).not.toHaveClass("ruby-text");
+
+    screen.getAllByRole("button").forEach((button) => {
+      expect(button).not.toHaveClass("ruby-text");
+      expect(getDirectRubyTextLabels(button)).toHaveLength(1);
+    });
   });
 });

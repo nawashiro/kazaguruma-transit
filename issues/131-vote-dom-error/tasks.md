@@ -94,7 +94,7 @@
 
 - [x] **T009 [DOCS-VERIFIED]** `issues/131-vote-dom-error/investigation.md`へ実装後の根因確認、T005 RED、T006 review、T007 GREEN、T008全検証、実ブラウザ確認可否を追記した。`plan.md`へ検証結果を追記し、`tasks.md`へ実測結果とTDD／review証跡を反映した。日本語、相対リンク、`git diff --check`を確認した。
 
-- [ ] **T010 [DELIVERY-PARENT]** 親が変更pathを再確認し、日本語の既存prefix styleでcommitする。`origin/fix/issue-131-vote-dom-error`へpushし、GitHubでbase=`dev`のPRを作成する場合は、問題・根因・方針・テスト・リスク・非対象を日本語で記載する。GitHubからPRのtitle/body/head/base/filesを読み戻し、`git ls-remote`でremote SHAを確認する。CIのexact head SHAに対するcheckを`gh pr checks`／`gh run view`で確認し、mergeは行わない。CI未実行・失敗・環境障害は成功と扱わず、実際の状態を記録する。
+- [x] **T010 [DELIVERY-VERIFIED]** 実装commit `69b8b3ac03ea821b720f3656d74d4e10ac9a5973`を作成し、`origin/fix/issue-131-vote-dom-error`へpushした。PR [#132](https://github.com/nawashiro/kazaguruma-transit/pull/132)をbase=`dev`で作成し、GitHubからtitle、body、head、base、filesを読み戻した。remote branch SHAは実装commitと一致し、Quality Gate run `33704123449`（job `100489479730`）が同SHAでpassした。mergeは行っていない。docs追補commit後のheadについても、code／test差分を変更せずCI状態を再確認する。
 
 ## 依存関係
 

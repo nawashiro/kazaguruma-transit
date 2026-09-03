@@ -130,7 +130,7 @@
 ## Phase 8: Delivery
 
 - [x] T026 配送: 親が許可manifest、diff、全検証、`git status --short --branch`を最終確認し、日本語prefixのcoherent commitを作成して
-  `origin/fix/issue-87-app-config`へpushした。PR [#134](https://github.com/nawashiro/kazaguruma-transit/pull/134)をbase=`dev`で作成し、GitHubからtitle、body、head、base、filesを読み戻した。head SHAは`6167fdf51f34f7bfa6b10b3124f6c1301ede3ece`で、Quality GateはGitHub Actionsでpassした。mergeは行わない。
+  `origin/fix/issue-87-app-config`へpushした。PR [#134](https://github.com/nawashiro/kazaguruma-transit/pull/134)をbase=`dev`で作成し、GitHubからtitle、body、head、base、filesを読み戻した。head SHAはremote branchと一致し、Quality GateはGitHub Actionsでpassした。mergeは行わない。
 
 ## 依存関係
 

@@ -130,7 +130,7 @@
 ## Phase 8: Delivery
 
 - [x] T026 配送: 親が許可manifest、diff、全検証、`git status --short --branch`を最終確認し、日本語prefixのcoherent commitを作成して
-  `origin/fix/issue-87-app-config`へpushした。PR [#134](https://github.com/nawashiro/kazaguruma-transit/pull/134)をbase=`dev`で作成し、GitHubからtitle、body、head、base、filesを読み戻した。head SHAは`d4110922370677c1d5c54ad3b10d02339f942cee`で、CI Quality Gateは確認時点でpendingである。mergeは行わない。
+  `origin/fix/issue-87-app-config`へpushした。PR [#134](https://github.com/nawashiro/kazaguruma-transit/pull/134)をbase=`dev`で作成し、GitHubからtitle、body、head、base、filesを読み戻した。head SHAは`6167fdf51f34f7bfa6b10b3124f6c1301ede3ece`で、Quality GateはGitHub Actionsでpassした。mergeは行わない。
 
 ## 依存関係
 
@@ -188,5 +188,5 @@ T016 + T020 → T021 → T022 → T023 → T024 → T025 → T026
 - [x] `dev` / `origin/dev`の基準SHAは`16f6a19ed67d954b436363590451aa2ad2611904`
 - [x] package/lockfile、Prisma schema、GTFS import logic、FUNDING.yml metadataは変更していない
 - [x] `transit-config.json`、API key、Cloudflare token、Puppeteer設定は公開JSONに含めていない
-- [x] commit/push、remote SHA、PR #134の読み戻し済み。Quality Gateは確認時点でpendingで、最終CI判定を待つ。
+- [x] commit/push、remote SHA、PR #134の読み戻し済み。Quality GateはGitHub Actionsでpassした。
 

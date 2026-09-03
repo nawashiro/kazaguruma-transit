@@ -9,6 +9,7 @@ import {
   TravelMode,
   Language,
 } from "@googlemaps/google-maps-services-js";
+import { appConfig } from "@/lib/config/app-config";
 
 // NextRouteを拡張するための型定義
 interface NextRouteInfo {
@@ -311,7 +312,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
   };
 
   // ベースURLの設定 - PDFレンダリング時に使用される公開URL
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl = appConfig.appUrl || "http://localhost:3000";
   const qrCodeUrl = `${baseUrl}/images/chiyoda_line_qr.png`;
   const mapPlaceholderUrl = `${baseUrl}/images/map_placeholder.png`;
 

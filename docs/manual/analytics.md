@@ -4,16 +4,18 @@
 
 ## セットアップ方法
 
-1. Google Analytics アカウントにアクセスして、GA4 のプロパティを作成します
-2. データストリームの設定で「Web」を選択し、サイト情報を入力します
-3. 測定 ID（例: G-XXXXXXXXXX）を取得します
-4. プロジェクトのルートに `.env.local` ファイルを作成して、以下の内容を追加します:
+1. Google Analytics アカウントにアクセスして、GA4 のプロパティを作成します。
+2. データストリームの設定で「Web」を選択し、サイト情報を入力します。
+3. 測定 ID（例: G-XXXXXXXXXX）を取得します。
+4. リポジトリルートの `app-config.json` を開き、`gaMeasurementId`へ測定IDを設定します。
 
-```
-NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+```json
+{
+  "gaMeasurementId": "G-XXXXXXXXXX"
+}
 ```
 
-※ 「G-XXXXXXXXXX」の部分を実際の測定 ID に置き換えてください
+公開設定はJSONを変更してからbuildします。
 
 ## 使用方法
 
@@ -26,18 +28,18 @@ NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 特定のユーザーアクションを追跡するには、以下のようにカスタムイベントを送信できます:
 
 ```typescript
-import { sendEvent } from "@/lib/analytics/ga4";
+import { sendEvent } from "@/lib/analytics/useGA";
 
-// イベントを送信
 sendEvent(
-  "category", // カテゴリ（例: 'UI Action'）
-  "action", // アクション（例: 'Button Click'）
-  "label", // ラベル（例: 'Search Button'）
-  value // 値（数値、オプション）
+  "category",
+  "action",
+  "label",
+  value
 );
 ```
 
 ## 注意事項
 
-- GA4 の追跡はプロダクション環境でのみ有効になります
-- 開発環境では、イベントは送信されず、コンソールにログが表示されます
+- GA4 の追跡はプロダクション環境でのみ有効になります。
+- 開発環境では、イベントは送信されず、コンソールにログが表示されます。
+- 測定IDは公開情報であり、`app-config.json`へ置かれます。

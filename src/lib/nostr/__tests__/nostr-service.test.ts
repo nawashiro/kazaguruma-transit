@@ -4,6 +4,7 @@ import {
   createNostrService,
 } from "../nostr-service";
 import { naddrEncode } from "../naddr-utils";
+import { appConfig } from "@/lib/config/app-config";
 import { createDiscussionListingRequest } from "@/lib/discussion/user-creation-flow";
 import fs from "fs";
 import path from "path";
@@ -592,7 +593,9 @@ describe("US2 listing request contract", () => {
   it("creates listing request event as kind:1111 with a/q tags", () => {
     const adminPubkey = "a".repeat(64);
     const userPubkey = "b".repeat(64);
-    process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR = naddrEncode({
+    const originalDiscussionListNaddr =
+      appConfig.discussion.discussionListNaddr;
+    appConfig.discussion.discussionListNaddr = naddrEncode({
       kind: 34550,
       pubkey: adminPubkey,
       identifier: "discussion-list",
@@ -603,17 +606,22 @@ describe("US2 listing request contract", () => {
       identifier: "created-discussion",
     });
 
-    const event = createDiscussionListingRequest(
-      {
-        title: "title",
-        description: "description",
-        moderators: [],
-        dTag: "created-discussion",
-      },
-      discussionNaddr,
-      adminPubkey,
-      userPubkey
-    );
+    let event;
+    try {
+      event = createDiscussionListingRequest(
+        {
+          title: "title",
+          description: "description",
+          moderators: [],
+          dTag: "created-discussion",
+        },
+        discussionNaddr,
+        adminPubkey,
+        userPubkey,
+      );
+    } finally {
+      appConfig.discussion.discussionListNaddr = originalDiscussionListNaddr;
+    }
 
     expect(event.kind).toBe(1111);
     expect(event.tags).toEqual(

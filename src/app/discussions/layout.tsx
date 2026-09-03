@@ -1,5 +1,6 @@
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
+import { appConfig } from "@/lib/config/app-config";
 import PageHeader from "@/components/layouts/PageHeader";
 import { DiscussionManagementShell } from "@/components/discussion/DiscussionManagementShell";
 
@@ -13,6 +14,8 @@ export default function DiscussionsLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const discussionListNaddr = appConfig.discussion.discussionListNaddr || undefined;
+
   if (!isDiscussionsEnabled()) {
     return (
       <div className="py-8">
@@ -26,7 +29,7 @@ export default function DiscussionsLayout({
 
   return (
     <DiscussionManagementShell
-      discussionListNaddr={process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR}
+      discussionListNaddr={discussionListNaddr ?? undefined}
     >
       {children}
     </DiscussionManagementShell>

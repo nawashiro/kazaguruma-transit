@@ -10,6 +10,7 @@ import {
   loadKoFiContent,
   loadKoFiUsername,
 } from "@/lib/config/ko-fi-funding";
+import { appConfig } from "@/lib/config/app-config";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
     title: "風ぐるま乗換案内【非公式】",
     description:
       "千代田区の地域福祉交通「風ぐるま」の乗換案内サービス。出発地・目的地を指定するだけで最適なルートを案内します。",
-    url: process.env.NEXT_PUBLIC_APP_URL,
+    url: appConfig.appUrl || undefined,
     locale: "ja_JP",
     type: "website",
   },
@@ -43,7 +44,7 @@ export const metadata: Metadata = {
       "千代田区福祉交通「風ぐるま」の乗換案内。出発地・目的地を指定するだけで最適なルートを案内します。",
   },
   alternates: {
-    canonical: process.env.NEXT_PUBLIC_APP_URL,
+    canonical: appConfig.appUrl || undefined,
   },
 };
 

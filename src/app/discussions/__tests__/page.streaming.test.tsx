@@ -125,7 +125,15 @@ const modelPendingPost = {
 jest.mock("@/lib/auth/auth-context", () => ({
   useAuth: () => ({ user: { pubkey: "viewer", isLoggedIn: true } }),
 }));
-jest.mock("@/lib/config/discussion-config", () => ({ isDiscussionsEnabled: () => true }));
+jest.mock("@/lib/config/discussion-config", () => ({
+  isDiscussionsEnabled: () => true,
+  getNostrServiceConfig: () => ({ relays: [], defaultTimeout: 5000 }),
+  getDiscussionReadStrategyConfig: () => ({
+    idleTimeoutMs: 5000,
+    hardTimeoutMs: 15000,
+    dedupWindowMs: 250,
+  }),
+}));
 jest.mock("@/components/discussion/DiscussionListTabLayout", () => ({
   DiscussionListTabLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));

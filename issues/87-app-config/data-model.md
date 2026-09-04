@@ -2,8 +2,9 @@
 
 ## 1. AppConfig
 
-`app-config.json`の公開設定を`src/lib/config/app-config.ts`が検証して返す。JSONはclient bundleに
-含まれ得るため、秘密情報をこの型に追加しない。
+`app-config.json.example`は追跡する公開設定テンプレートであり、`app-config.json`は配布先ごとの
+Git管理しないoverrideである。アプリケーションは後者を読み取り、npm lifecycle、CI、Dockerの準備処理が
+後者の不在時だけ前者から生成する。JSONはclient bundleに含まれ得るため、秘密情報をこの型に追加しない。
 
 | フィールド | 型 | 制約 | 利用先 |
 |---|---|---|---|

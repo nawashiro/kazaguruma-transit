@@ -32,7 +32,8 @@ Jest、React Testing Library、Node.js 22.23.2
 **Primary Dependencies:** Next.js 15、React 19、`@nostr-dev-kit/ndk`、DaisyUI 5、Tailwind CSS 4、
 Jest、React Testing Library、Prisma、GTFS
 
-**Storage:** 公開設定はtracked JSON。GTFSは既存の`transit-config.json`とSQLite/Prisma。新規永続化なし。
+**Storage:** `app-config.json.example` is the tracked public template; each deployment may create an ignored
+`app-config.json` override. GTFSは既存の`transit-config.json`とSQLite/Prisma。新規永続化なし。
 
 **Testing:** Jest focused/full、React Testing Library、strict TypeScript、ESLint、Next.js production build。
 
@@ -131,7 +132,7 @@ Jest、React Testing Library、Prisma、GTFS
 
 ### 変更許可
 
-- `app-config.json`
+- `app-config.json.example`
 - `src/lib/config/app-config.ts`
 - `src/lib/config/__tests__/app-config.test.ts`
 - `src/lib/config/discussion-config.ts`
@@ -164,29 +165,33 @@ Jest、React Testing Library、Prisma、GTFS
 - `.env.local.example`
 - `README.md`
 - `docs/manual/analytics.md`
+- `scripts/ensure-app-config.mjs`
+- `.github/workflows/quality-gate.yml`
+- `package.json`
+- `docs/manual/docker_setup.md`
 - `issues/87-app-config/` 配下の関連文書
 - `ko-fi-content.json.example`（削除）
-
 ### 変更禁止
 
 - `transit-config.json`の内容、`.dockerignore`のsecret除外、Docker secret mount契約
 - `GOOGLE_MAPS_API_KEY`、`PUPPETEER_EXECUTABLE_PATH`、`CLOUDFLARE_TUNNEL_TOKEN`
 - Nostr relay実装、認証、Prisma schema、GTFS import logic、UIレイアウト・文言の無関係な整理
-- `FUNDING.yml`、`package.json`、`src/app/license`のmetadata表示ロジック
+- `FUNDING.yml`、`src/app/license`のmetadata表示ロジック
 - 過去の`specs/`、既存worktree、他Issue文書
 
 ## 実装方針
 
 ### Phase 1: app configのRED → review → GREEN
 
-1. `app-config.test.ts`で実ファイルの必須キー、型、不正入力の拒否を先に固定する。
+1. `app-config.test.ts`でtracked templateの必須キー、型、不正入力の拒否を先に固定する。配布先固有の`app-config.json`の存在は要求しない。
 2. `app-config-contract.test.ts`でactive source、Dockerfile、Compose、`.env.local.example`に
-   `NEXT_PUBLIC_*`直接参照・公開ARGが残っていないことを先に要求する。
+   `NEXT_PUBLIC_*`直接参照・公開ARGが残っていないこと、実設定をignoreすることを先に要求する。
 3. discussion consumer migrationでは、既存の環境変数fixtureを使う全テスト（discussion config、listing request、
    management provider、management page、Nostr service）もapp config fixtureへ揃える。
 4. 各test writerの直後にfresh read-only reviewerを置き、meaningful RED、非vacuous assertion、
    既存契約の保持を確認する。PASS前にproduction codeを変更しない。
-5. `app-config.json`と`app-config.ts`を実装し、設定型と検証境界を成立させる。app config単体テストをGREENにし、全consumerを対象にした公開参照contractはconsumer移行完了までREDのまま保持する。
+5. `app-config.ts`を実行時設定`app-config.json`の検証境界として実装し、無い場合は準備処理がtracked
+   `app-config.json.example`から生成する。app config単体テストをGREENにし、全consumerを対象にした公開参照contractはconsumer移行完了までREDのまま保持する。
 
 ### Phase 2: consumer migration
 
@@ -204,7 +209,8 @@ locationsを切り替え、旧env参照が0件になることを確認する。
 ### Phase 4: Docker・文書・最終検証
 
 Dockerfileのpublic ARGと`.env`生成、Composeのpublic build args、env exampleの公開項目を削除する。
-READMEとanalytics manualをJSON編集手順へ更新する。最後にDocker secret契約を含む全ゲートを実行する。
+追跡済み`app-config.json.example`からignored `app-config.json`を必要時だけ生成する準備処理をnpm lifecycle、CI、
+Docker buildへ接続する。README、Docker setup、analytics manualをtemplate/override手順へ更新する。最後にDocker secret契約を含む全ゲートを実行する。
 
 ## TDD・委任ゲート
 
@@ -254,12 +260,13 @@ git status --short --branch
 - **discussionの挙動退行:** 既存のnaddr正規化、relay mapping、timeout clamp、管理者公開鍵のテストを維持する。
 - **Ko-fiの表示退行:** loaderの既存exportとSidebar/SidebarLayoutの既存component testを保ち、表示可否だけを
   JSONへ移す。
-- **Docker以外の実行差:** `npm run build`を公開envなしで実行し、JSON static importが成立することを確認する。
+- **Docker以外の実行差:** `npm run build`を公開envなしで実行し、準備処理がtracked exampleからignored configを生成してから、JSON static importが成立することを確認する。
 - **過去文書との混同:** `specs/`は履歴として変更せず、Issue #87のactive docsだけを更新する。
 
 ## 実装後の検証結果
 
-- `app-config.json`、`app-config.ts`、discussion/URL/GA/locations/Ko-fi consumer、Docker/Compose、active docsを実装した。
+- `app-config.json.example`をtracked templateとして維持し、`app-config.json`は配布先固有のignored overrideとして準備処理で生成する。
+- ユーザー指摘への追補として、`scripts/ensure-app-config.mjs`をnpm lifecycle、CI、Docker buildへ追加し、clean checkout相当でexample生成→typecheck→focused testを確認した。既存overrideの非上書きも確認した。
 - focused config/consumer/Ko-fi/Docker suiteは`10 suites / 87 tests passed`。
 - 全Jestは`146 suites passed / 2 skipped`、`904 tests passed / 13 skipped`。
 - `npx tsc --noEmit --incremental false` exit 0。

@@ -137,11 +137,12 @@ Issue #87は単一のruntime例外ではなく、公開設定の所有権がDock
 
 ## 5. 実装境界の提案
 
-公開情報をルートの `app-config.json` に集約し、`src/lib/config/app-config.ts` を唯一の
-型・検証・読み取り境界にする。JSONはNext.js/TypeScriptの静的importでクライアントと
-サーバーの双方から利用し、Docker build argsや生成 `.env` を不要にする。
+公開情報を、Git管理する `app-config.json.example` と配布先ごとのgitignored
+`app-config.json`へ集約し、`src/lib/config/app-config.ts`を唯一の型・検証・読み取り境界にする。
+JSONはNext.js/TypeScriptの静的importでクライアントとサーバーの双方から利用する。準備処理が
+overrideの不在時だけexampleから`app-config.json`を生成し、Docker build argsや生成`.env`を不要にする。
 
-`app-config.json` に持つのは次の公開設定である。
+`app-config.json.example`と生成される`app-config.json`に持つのは次の公開設定である。
 
 - `appUrl`
 - `gaMeasurementId`
@@ -159,7 +160,7 @@ server/deployment設定として残す。Docker secret mountは維持し、公�
 
 ### 実装対象の主なファイル
 
-- 追加: `app-config.json`、`src/lib/config/app-config.ts` とそのテスト
+- 追加: `app-config.json.example`、`src/lib/config/app-config.ts`、`scripts/ensure-app-config.mjs` とそのテスト
 - 更新: `src/lib/config/discussion-config.ts`、`src/lib/config/ko-fi-funding.ts`、
   `src/lib/nostr/nostr-utils.ts`、`src/utils/addressLoader.ts`、`src/utils/maps.ts`、
   `src/lib/analytics/useGA.ts`、`src/app/layout.tsx`、`src/app/sitemap.ts`、
@@ -205,7 +206,8 @@ IssueのKISS要求と既存のsecret-handling保証を同時に満たす最小�
 
 ## 8. 実装後の確認
 
-- `app-config.json`と`src/lib/config/app-config.ts`を追加し、公開URL、GA、locations version、discussion、supportを型付き・実行時検証付きで提供した。
+- `app-config.json.example`をtracked templateとして追加し、`app-config.json`はgitignored overrideとして準備処理で生成する。`src/lib/config/app-config.ts`は公開URL、GA、locations version、discussion、supportを型付き・実行時検証付きで提供した。
+- ユーザー指摘後、T005/contract testをexample基準へ修正し、`scripts/ensure-app-config.mjs`を追加した。既存override保持と不在時生成をclean checkout相当で検証した。
 - active production sourceの`NEXT_PUBLIC_*`参照は0件になった。Dockerfile、Compose、`.env.local.example`、README、analytics manualにも残していない。
 - `FUNDING.yml`はGitHub metadataとして残し、Ko-fi表示は`appConfig.support`だけを読むようにした。`ko-fi-content.json.example`と`parseKoFiUsername()`は削除した。
 - `transit-config.json`、Google Maps API key、Cloudflare token、Puppeteer設定は公開JSONへ含めず、既存のDocker secret/server環境変数境界を維持した。
@@ -220,8 +222,17 @@ IssueのKISS要求と既存のsecret-handling保証を同時に満たす最小�
 - strict TypeScript: `npx tsc --noEmit --incremental false` exit 0。
 - lint: `npm run lint` exit 0。表示された`any`、`<img>`、hook依存、`next lint` deprecated等は既存warningで、今回の差分由来のerrorはない。
 - production build: `NODE_OPTIONS=--max-old-space-size=1536 NEXT_TELEMETRY_DISABLED=1 npm run build` exit 0。Next.js 15.5.20で27ページを生成した。`transit-config.json`不在によるGTFS import設定エラー表示は既存環境要因として分離した。
-- `git diff --check`: exit 0。active source・設定例の`NEXT_PUBLIC_`検索は0件。`app-config.json`はJSONとしてparseでき、禁止したsecret fieldは0件だった。
+- `git diff --check`: exit 0。active source・設定例の`NEXT_PUBLIC_`検索は0件。`app-config.json.example`はJSONとしてparseでき、禁止したsecret fieldは0件だった。`app-config.json`はgitignoreされている。
 
 TDDのtest writer・production writerは複数回委任したが、サブエージェント側の最終応答待ちで中断され、許可pathへの部分変更はなかった。親が同じhard write boundaryでテストRED、production実装、focused/full検証を再実施した。fresh reviewerの完全な`VERDICT: PASS`自己申告は取得できていないため、それを成功根拠としては扱わず、親の現行bytes・実測コマンド・diff checkを証拠とする。
 
 外部Nostr relayへのpublish、実GA送信、Google Maps API呼び出し、Ko-fi iframe操作は行っていない。
+
+## 10. 配布先設定に関する修正
+
+初期のT005テストと実装計画は、配布先固有の`app-config.json`をtrackedファイルとして扱っていた。この前提は、
+配布先ごとの任意設定をリポジトリへ記録すべきではないため誤りである。後続commitで`app-config.json`をgitignoreし、
+`app-config.json.example`を追加したため、T005/contract testをtracked template基準へ修正した。
+
+あわせて、`app-config.ts`がgitignoredファイルを静的importするCI欠落を根因として確認した。`scripts/ensure-app-config.mjs`
+をnpm lifecycle、CI、Docker buildへ接続し、既存overrideを保持しつつ不在時だけtemplateをコピーする。

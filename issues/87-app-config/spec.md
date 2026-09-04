@@ -40,13 +40,13 @@ GTFS設定やAPI keyが含まれていないことを確認する。
 
 ## Functional Requirements
 
-- **FR-001:** 公開URL、GA測定ID、場所データversion、会話設定、支援表示設定を、リポジトリルートの
-  `app-config.json`で定義できなければならない。
+- **FR-001:** 公開URL、GA測定ID、場所データversion、会話設定、支援表示設定を、配布先ごとのGit管理しない
+  `app-config.json`で定義できなければならない。Git管理する`app-config.json.example`を標準テンプレートとする。
 - **FR-002:** アプリケーションの公開設定読み取りは、`NEXT_PUBLIC_*`環境変数を参照してはならない。
 - **FR-003:** DockerfileとComposeは、公開設定をbuild argsまたは生成`.env`で注入してはならない。
 - **FR-004:** `app-config.json`はTypeScriptの型と実行時検証を持ち、必須値の欠落や型不正をbuild/testで
-  判別できなければならない。
-- **FR-005:** `npm run build`はDocker固有の公開設定注入なしに、`app-config.json`の値を使用して完了
+  判別できなければならない。実設定が無いCI・初回環境ではexampleから生成する。
+- **FR-005:** `npm run build`はDocker固有の公開設定注入なしに、準備処理で用意された`app-config.json`の値を使用して完了
   できなければならない。GTFS用の既存secretはこの要件の対象外とする。
 - **FR-006:** Ko-fiのユーザー名、支援欄の見出し、説明文、表示可否は`app-config.json`から読み取り、
   `FUNDING.yml`および`ko-fi-content.json`を実行時入力にしてはならない。
@@ -56,7 +56,8 @@ GTFS設定やAPI keyが含まれていないことを確認する。
   `CLOUDFLARE_TUNNEL_TOKEN`は公開JSONへ移さず、既存のサーバー・secret境界を維持しなければならない。
 - **FR-009:** 旧`NEXT_PUBLIC_*`名を読む後方互換fallbackは追加してはならない。
 - **FR-010:** 設定移行に伴うエラーは、開発者が原因を特定できる日本語メッセージを返さなければならない。
-
+- **TEMPLATE:** `app-config.json.example`はtracked template、`app-config.json`はgitignored deployment overrideとする。
+  `scripts/ensure-app-config.mjs`がoverrideの不在時だけtemplateをコピーし、npm lifecycle、CI、Docker buildで利用する。
 ## Non-Goals
 
 - GTFS設定のsecret mount方式、GTFSデータ形式、Prisma/SQLiteを変更すること。
@@ -67,7 +68,8 @@ GTFS設定やAPI keyが含まれていないことを確認する。
 
 ## Assumptions
 
-- `app-config.json`は公開情報だけを含むtrackedファイルとし、配布先ごとに編集してbuildする。
+- `app-config.json.example`は公開情報だけを含むtracked templateとし、配布先ごとの`app-config.json`はgitignoreする。
+  `app-config.json`が無いCI・初回環境では準備処理がexampleから生成し、既存の配布先設定は上書きしない。
 - 初期値は現在の`FUNDING.yml`と`ko-fi-content.json.example`の表示内容、既存のdiscussion既定relay、
   場所データversion `1.0.0`、ローカルURLを移行する。
 - `transit-config.json`がない環境でGTFS importが既存どおり警告を出して継続する挙動は、今回の変更で
@@ -75,10 +77,10 @@ GTFS設定やAPI keyが含まれていないことを確認する。
 
 ## Success Criteria
 
-- **SC-001:** 公開設定の変更箇所が`app-config.json`と型検証モジュールに集約され、現行の公開設定に
-  対するsource・Docker・Composeの`NEXT_PUBLIC_*`直接参照が0件になる。
-- **SC-002:** Dockerを使わず、公開設定用環境変数を指定しない`npm run build`が終了コード0になり、
-  Next.jsのproduction buildまで完了する（GTFS設定不足など既存ログは別分類する）。
+- **SC-001:** 公開設定の変更箇所が`app-config.json.example`（既定template）と配布先の`app-config.json`（ignored override）、
+  型検証モジュールに集約され、現行の公開設定に対するsource・Docker・Composeの`NEXT_PUBLIC_*`直接参照が0件になる。
+- **SC-002:** Dockerを使わず、公開設定用環境変数を指定しない`npm run build`が、準備処理でexampleからignored configを
+  生成したうえで終了コード0になり、Next.jsのproduction buildまで完了する（GTFS設定不足など既存ログは別分類する）。
 - **SC-003:** 支援設定を変更または無効化したとき、サイドバーと本文の表示が同じJSON設定に従い、
   `FUNDING.yml`の変更なしに結果を再現できる。
 - **SC-004:** 公開JSON、client bundle、実行時の公開設定にGTFS設定・Google Maps API key・Cloudflare tokenが

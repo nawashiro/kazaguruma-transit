@@ -6,7 +6,9 @@
 
 ## 使用方法
 
-`transit-config.json` はサーバー側の秘密設定です。Compose のビルドでは
+`transit-config.json` はサーバー側の秘密設定です。公開設定は
+`app-config.json.example`を`app-config.json`へコピーして用意します。`app-config.json`は配布先ごとの
+設定でありGit管理しません。Composeのビルドでは
 BuildKit secret、実行時は SELinux 対応の read-only bind mount として渡します。
 SELinux が有効な Linux では、Compose が `container_file_t` ラベルへ relabel
 するため、別途 `chcon` を実行する必要はありません。
@@ -14,6 +16,8 @@ SELinux が有効な Linux では、Compose が `container_file_t` ラベルへ 
 起動前に設定ファイルを用意し、秘密情報を含むため所有者だけが読める権限にします。
 
 ```bash
+cp app-config.json.example app-config.json
+# 必要な公開URL、GA、Discussion、Ko-fiの値を編集
 cp transit-config.json.example transit-config.json
 chmod 600 transit-config.json
 ```

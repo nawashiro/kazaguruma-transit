@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const projectRoot = path.resolve(__dirname, "../../../../");
-const appConfigPath = path.join(projectRoot, "app-config.json");
+const appConfigExamplePath = path.join(projectRoot, "app-config.json.example");
 
 type AppConfigModule = {
   parseAppConfig?: (value: unknown) => unknown;
@@ -20,11 +20,13 @@ function requireAppConfigModule(): AppConfigModule {
   }
 }
 
-function readAppConfigFile(): unknown {
-  if (!existsSync(appConfigPath)) {
-    throw new Error(`app-config.json is not implemented: ${appConfigPath}`);
+function readAppConfigExample(): unknown {
+  if (!existsSync(appConfigExamplePath)) {
+    throw new Error(
+      `app-config.json.example is not implemented: ${appConfigExamplePath}`,
+    );
   }
-  return JSON.parse(readFileSync(appConfigPath, "utf8")) as unknown;
+  return JSON.parse(readFileSync(appConfigExamplePath, "utf8")) as unknown;
 }
 
 const validConfig = {
@@ -53,8 +55,8 @@ const validConfig = {
 };
 
 describe("app-config public module", () => {
-  it("provides the tracked public JSON with the required sections", () => {
-    const config = readAppConfigFile();
+  it("provides the tracked public template with the required sections", () => {
+    const config = readAppConfigExample();
 
     expect(config).toEqual(
       expect.objectContaining({

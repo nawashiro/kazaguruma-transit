@@ -62,6 +62,9 @@ COPY . .
 # 一時的なデータベースファイルを削除
 RUN rm -rf prisma/.temp
 
+# 配布先固有の設定がなければ、追跡済みの公開設定例から生成
+RUN node scripts/ensure-app-config.mjs
+
 # ビルド実行
 RUN --mount=type=secret,id=transit_config,target=/app/transit-config.json,required=true npm run build
 

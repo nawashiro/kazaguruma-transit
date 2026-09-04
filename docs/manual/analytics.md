@@ -7,7 +7,8 @@
 1. Google Analytics アカウントにアクセスして、GA4 のプロパティを作成します。
 2. データストリームの設定で「Web」を選択し、サイト情報を入力します。
 3. 測定 ID（例: G-XXXXXXXXXX）を取得します。
-4. リポジトリルートの `app-config.json` を開き、`gaMeasurementId`へ測定IDを設定します。
+4. `app-config.json.example`を`app-config.json`へコピーし、`gaMeasurementId`へ測定IDを設定します。
+   `app-config.json`は配布先ごとの設定であり、Gitでは管理しません。
 
 ```json
 {
@@ -15,7 +16,8 @@
 }
 ```
 
-公開設定はJSONを変更してからbuildします。
+公開設定はJSONを変更してからbuildします。`app-config.json`が無い場合は、`npm run dev`、`npm test`、
+`npm run build`、`npm start`がexampleから自動生成します。
 
 ## 使用方法
 
@@ -42,4 +44,4 @@ sendEvent(
 
 - GA4 の追跡はプロダクション環境でのみ有効になります。
 - 開発環境では、イベントは送信されず、コンソールにログが表示されます。
-- 測定IDは公開情報であり、`app-config.json`へ置かれます。
+- 測定IDは公開情報であり、配布先固有のgitignored `app-config.json`へ置かれます。

@@ -108,17 +108,21 @@ npm start                # 本番環境サーバーの起動
 
 ## 開発環境のセットアップ
 
-1. 公開設定はプロジェクトルートの`app-config.json`を編集する。公開URL、GA測定ID、場所データversion、
+1. 初回だけ`cp app-config.json.example app-config.json`を実行する。`app-config.json`は配布先ごとの公開設定であり、Gitでは管理しない。
+2. 生成された`app-config.json`を編集する。公開URL、GA測定ID、場所データversion、
    会話設定、Ko-fi支援表示をこのファイルで設定する。
-2. GTFSを使う場合は`transit-config.json.example`を参考に`transit-config.json`を作成する。このファイルは
+3. GTFSを使う場合は`transit-config.json.example`を参考に`transit-config.json`を作成する。このファイルは
    URL queryに秘密情報を含む可能性があるため、Git管理・公開JSON・client bundleへ入れない。
-3. `.env.local`にserver/deployment専用の環境変数を設定する。
+4. `.env.local`にserver/deployment専用の環境変数を設定する。
    - `GOOGLE_MAPS_API_KEY`
    - `CLOUDFLARE_TUNNEL_TOKEN`（必要な場合）
    - `PUPPETEER_EXECUTABLE_PATH`（必要な場合）
-4. Ko-fiの見出し・説明文・ユーザー名・表示可否は`app-config.json`の`support`を編集する。
+5. Ko-fiの見出し・説明文・ユーザー名・表示可否は`app-config.json`の`support`を編集する。
    `FUNDING.yml`はGitHubの開発・配布用metadataとして残し、アプリ表示の入力には使わない。
-5. ビルド時に Prisma クライアントが自動生成され、GTFS データがインポートされます。
+6. ビルド時に Prisma クライアントが自動生成され、GTFS データがインポートされます。
+
+`npm run dev`、`npm test`、`npm run build`、`npm start`は、`app-config.json`が無い場合だけ
+`app-config.json.example`から生成し、既存の配布先設定は上書きしません。
 
 公開設定を変更した後は、Dockerのbuild argsや追加の`.env`生成を行わず、通常の`npm run build`を実行する。
 

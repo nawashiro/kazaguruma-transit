@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const projectRoot = path.resolve(__dirname, "..");
@@ -12,6 +12,9 @@ const publicBoundaryFiles = [
   ".env.local.example",
   "README.md",
   "docs/manual/analytics.md",
+  "app-config.json.example",
+  ".github/workflows/quality-gate.yml",
+  "scripts/ensure-app-config.mjs",
 ];
 
 function collectSourceFiles(directory: string): string[] {
@@ -62,8 +65,8 @@ describe("Issue #87 public configuration boundary", () => {
     expect(violations).toEqual([]);
   });
 
-  it("keeps server-only secrets out of the tracked public JSON", () => {
-    const rawConfig = JSON.stringify(readProjectFile("app-config.json")).toLowerCase();
+  it("keeps server-only secrets out of the public configuration template", () => {
+    const rawConfig = readProjectFile("app-config.json.example").toLowerCase();
     const forbiddenKeys = [
       "transit",
       "google_maps_api_key",
@@ -73,5 +76,10 @@ describe("Issue #87 public configuration boundary", () => {
     ];
 
     expect(forbiddenKeys.filter((key) => rawConfig.includes(key))).toEqual([]);
+  });
+
+  it("tracks the public template and ignores deployment-specific overrides", () => {
+    expect(existsSync(path.join(projectRoot, "app-config.json.example"))).toBe(true);
+    expect(readProjectFile(".gitignore")).toMatch(/^app-config\.json$/mu);
   });
 });

@@ -1,3 +1,7 @@
+/**
+ * app-config.json is a deployment-specific, ignored file. The npm/CI/Docker
+ * preparation step creates it from the tracked example when it is absent.
+ */
 import rawAppConfig from "../../../app-config.json";
 
 export interface DiscussionReadStrategyAppConfig {

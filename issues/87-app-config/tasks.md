@@ -40,18 +40,18 @@
 ## Phase 2: 公開設定契約（US1）
 
 - [x] T005 [US1] Test RED: `src/lib/config/__tests__/app-config.test.ts`と`__tests__/app-config-contract.test.ts`だけを変更し、
-  `app-config.json`の必須schema、runtime validation、不正値の拒否、active source/Dockerfile/Compose/`.env.local.example`からの
-  `NEXT_PUBLIC_*`直接参照・public build args除去をテストで固定する。`app-config.json`未実装を理由とする意味あるREDを確認し、
+  tracked template `app-config.json.example`の必須schema、runtime validation、不正値の拒否、active source/Dockerfile/Compose/`.env.local.example`からの
+  `NEXT_PUBLIC_*`直接参照・public build args除去、deployment override `app-config.json`のgitignoreをテストで固定する。実設定の存在を要求せず、
   source/production/config/Issue文書を変更しない。focusedコマンドを実行して、collection/setup typoではない失敗を記録する。
 - [x] T006 [US1] Test review: T005のtest pathだけをfresh read-only subagentへ渡し、Issueの公開JSON要件、secret field非混入、
   non-vacuousな不正schema assertion、旧状態でのRED、既存Docker secret契約との非衝突を確認する。開始/終了SHA一致、
   `modified: false`、`SUBAGENT_STATUS: COMPLETE`、`VERDICT: PASS`を取得する。FAILならT005直後へcorrection taskを追加する。
-- [x] T007 [US1] App config実装: `app-config.json`と`src/lib/config/app-config.ts`だけを変更し、public app URL、GA measurement ID、
+- [x] T007 [US1] App config実装: `app-config.json.example`と`src/lib/config/app-config.ts`だけを変更し、public app URL、GA measurement ID、
   locations version、discussion設定、support設定を型付きJSONと`unknown`からのruntime validationで提供する。GTFS/API key/token等の
   server-only fieldを含めず、日本語の不正設定Errorを実装する。T006 PASS後にのみ開始し、親がJSON実物、schema、focused GREEN、
   `git diff --check`、write boundaryを確認する。
 - [x] T008 [US1] App config親検証: T007後に`src/lib/config/__tests__/app-config.test.ts`を現行bytesで再実行し、app config単体のREDがGREENへ
-  変わったこと、設定JSONに`transit`/API key/tokenがないこと、変更pathが許可manifest内であることを親が確認する。全consumerを対象にする
+  変わったこと、設定templateに`transit`/API key/tokenがないこと、変更pathが許可manifest内であることを親が確認する。全consumerを対象にする
   `__tests__/app-config-contract.test.ts`は、後続のconsumer/Docker移行が完了するまでREDのまま保持する。未検証のproduction変更を残さない。
 
 **Checkpoint:** JSONと検証境界が存在し、app config単体testがGREEN。全consumerを対象にする公開参照contractはconsumer移行完了までREDである。
@@ -108,8 +108,8 @@
 ## Phase 6: Docker公開注入・開発文書移行（US1/US3）
 
 - [x] T021 [US3] Docker/文書実装: `.gitignore`、`AGENTS.md`、`Dockerfile.dev`、`Dockerfile.prod`、`compose.yml`、`compose.prod.yml`、`.env.local.example`、
-  `README.md`、`docs/manual/analytics.md`だけを変更し、public build args、public `.env`生成、env exampleの`NEXT_PUBLIC_*`列挙を除去する。
-  `app-config.json`編集手順を文書化し、`GOOGLE_MAPS_API_KEY`、Cloudflare token、Puppeteer設定、`transit-config.json` secret mountを維持する。
+  `README.md`、`docs/manual/analytics.md`、`docs/manual/docker_setup.md`、`package.json`、CI workflow、生成scriptを変更し、public build args、public `.env`生成、env exampleの`NEXT_PUBLIC_*`列挙を除去する。
+  `app-config.json.example`からignored `app-config.json`を必要時だけ生成する手順を文書化し、`GOOGLE_MAPS_API_KEY`、Cloudflare token、Puppeteer設定、`transit-config.json` secret mountを維持する。
   `.dockerignore`のtransit secret除外、build secret mount、`FUNDING.yml`、package/license metadataは変更しない。
 - [x] T022 [US3] Docker/文書親検証: `__tests__/app-config-contract.test.ts`、`__tests__/docker-secret-handling.test.ts`を再実行し、
   Dockerfile/Composeにpublic ARG/.env echoがないこととtransit secret契約が通ることを確認する。READMEとanalytics manualの手順がJSONを指し、
@@ -189,4 +189,12 @@ T016 + T020 → T021 → T022 → T023 → T024 → T025 → T026
 - [x] package/lockfile、Prisma schema、GTFS import logic、FUNDING.yml metadataは変更していない
 - [x] `transit-config.json`、API key、Cloudflare token、Puppeteer設定は公開JSONに含めていない
 - [x] commit/push、remote SHA、PR #134の読み戻し済み。Quality GateはGitHub Actionsでpassした。
+
+## Phase 9: 配布先固有設定の追補
+
+- [x] T027 [US1/US3] ユーザー指摘対応: `app-config.json`をgitignoreしたまま、tracked `app-config.json.example`をテンプレートとして
+  使うようapp-config test/contract test、runtime import準備、CI、Docker、npm lifecycle、READMEとIssue文書を更新する。既存の
+  `app-config.json`を上書きせず、不在時だけexampleから生成する。
+- [ ] T028 [US1/US3] 追補検証: `app-config.json`を追跡しないclean checkout相当で準備処理を実行し、typecheck・focused Jest・lint・全Jest・build・
+  `git diff --check`を実行する。GitHub PR #134へpushし、最新headのQuality Gateと`app-config.json`の404解消を読み戻す。
 

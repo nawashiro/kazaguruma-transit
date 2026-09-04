@@ -13,9 +13,13 @@ services:
       - NODE_ENV=production
     restart: unless-stopped
     command: ["npm", "run", "start"]
-    secrets:
-      - source: transit_config
+    volumes:
+      - type: bind
+        source: ./transit-config.json
         target: /app/transit-config.json
+        read_only: true
+        bind:
+          selinux: Z
     networks:
       - app-network
 

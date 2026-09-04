@@ -6,6 +6,18 @@
 
 ## 使用方法
 
+`transit-config.json` はサーバー側の秘密設定です。Compose のビルドでは
+BuildKit secret、実行時は SELinux 対応の read-only bind mount として渡します。
+SELinux が有効な Linux では、Compose が `container_file_t` ラベルへ relabel
+するため、別途 `chcon` を実行する必要はありません。
+
+起動前に設定ファイルを用意し、秘密情報を含むため所有者だけが読める権限にします。
+
+```bash
+cp transit-config.json.example transit-config.json
+chmod 600 transit-config.json
+```
+
 ### 開発環境の起動
 
 ```powershell

@@ -62,3 +62,6 @@ dist/
 Thumbs.db
 .vscode/
 .idea/
+
+# config
+app-config.json

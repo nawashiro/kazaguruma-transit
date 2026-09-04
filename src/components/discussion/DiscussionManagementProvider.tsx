@@ -13,6 +13,7 @@ import {
   getDiscussionReadStrategyConfig,
   getNostrServiceConfig,
 } from "@/lib/config/discussion-config";
+import { appConfig } from "@/lib/config/app-config";
 import type {
   DiscussionManagementReadResult,
   DiscussionManagementRelayProvenance,
@@ -71,7 +72,7 @@ export function DiscussionManagementProvider({
   discussionListNaddr,
 }: DiscussionManagementProviderProps) {
   const targetNaddr =
-    discussionListNaddr ?? process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
+    discussionListNaddr ?? appConfig.discussion.discussionListNaddr;
   const discussionInfo = useMemo(
     () => (targetNaddr ? extractDiscussionFromNaddr(targetNaddr) : null),
     [targetNaddr],

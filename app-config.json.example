@@ -1,0 +1,34 @@
+{
+  "appUrl": "http://localhost:3000",
+  "gaMeasurementId": "G-RD0ELFR3RW",
+  "locationsDataVersion": "2.1.1",
+  "discussion": {
+    "enabled": true,
+    "adminPubkey": "npub1expp2ptfvemx6w40ks68rnrj6kdfmlfgsk4dy73nmgckshmulmuqssjd3w",
+    "busStopDiscussionId": "naddr1qvzqqqyx7cpzpjvzz5zkjenkd5a2ldp5w8x894v6nh7j3pd26far8k33dp0helhcqqrj6wfc8yer2vq94g3w9",
+    "discussionListNaddr": "naddr1qvzqqqyx7cpzpjvzz5zkjenkd5a2ldp5w8x894v6nh7j3pd26far8k33dp0helhcqq8hgetnwskkg6tnvd6hxumfdahq9reds2",
+    "nostrRelays": [
+      "wss://relay.damus.io",
+      "wss://relay.nostr.band",
+      "wss://nos.lol",
+      "wss://nostr.mom",
+      "wss://offchain.pub"
+    ],
+    "nostrTimeoutMs": 5000,
+    "readStrategy": {
+      "idleTimeoutMs": 5000,
+      "hardTimeoutMs": 15000,
+      "dedupWindowMs": 250
+    }
+  },
+  "support": {
+    "enabled": true,
+    "koFiUsername": "nawashiro",
+    "heading": "運営者を支援する",
+    "message": "運営のNawashiroは労働災害で負った障害により、通常の仕事に就くことができません。継続的な支援があれば、活動を続けることができるかもしれません。支援をお願いします。"
+  },
+  "announcement": {
+    "information": "ベビーカー利用ガイド修正案の投稿・投票を実施中です。",
+    "url": "/discussions/naddr1qvzqqqyx7cpzqjye4f6pjzcp8t6mugkqly96eph7xxtvaf5u24vjp4xe5c24dfunqqhkg6tnvd6hxumfdahz6dryxpjxzdecxvkkvvmrvckngdt9xvknsvp5xsknqce4x4jrydpsxqukvdgz70fx4"
+  }
+}

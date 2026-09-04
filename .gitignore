@@ -49,7 +49,6 @@ prisma/.temp/
 
 # transit
 transit-config.json
-ko-fi-content.json
 
 .gtfs/
 .codex/
@@ -63,3 +62,6 @@ dist/
 Thumbs.db
 .vscode/
 .idea/
+
+# config
+app-config.json

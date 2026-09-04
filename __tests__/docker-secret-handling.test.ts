@@ -29,7 +29,7 @@ describe("Docker secret handling", () => {
   );
 
   it.each(["compose.yml", "compose.prod.yml"])(
-    "grants the transit configuration secret at build and runtime in %s",
+    "uses a SELinux-aware read-only runtime mount in %s",
     (composeFile) => {
       const composeContents = readProjectFile(composeFile);
 
@@ -37,7 +37,10 @@ describe("Docker secret handling", () => {
         /build:[\s\S]*?secrets:\s*\n\s+- transit_config/mu,
       );
       expect(composeContents).toMatch(
-        /secrets:\s*\n\s+- source: transit_config\s*\n\s+target: \/app\/transit-config\.json/mu,
+        /volumes:\s*\n\s+- type: bind\s*\n\s+source: \.\/transit-config\.json\s*\n\s+target: \/app\/transit-config\.json\s*\n\s+read_only: true\s*\n\s+bind:\s*\n\s+selinux: Z/mu,
+      );
+      expect(composeContents).not.toMatch(
+        /\n\s+secrets:\s*\n\s+- source: transit_config\s*\n\s+target: \/app\/transit-config\.json/mu,
       );
       expect(composeContents).toMatch(
         /secrets:\s*\n\s+transit_config:\s*\n\s+file: \.\/transit-config\.json/mu,

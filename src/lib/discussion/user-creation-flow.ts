@@ -6,6 +6,7 @@ import { isValidNpub, npubToHex } from "@/lib/nostr/nostr-utils";
 import { naddrEncode, naddrDecode } from "@/lib/nostr/naddr-utils";
 import { logger } from "@/utils/logger";
 import { DISCUSSION_DESCRIPTION_MAX_LENGTH } from "@/lib/discussion/limits";
+import { appConfig } from "@/lib/config/app-config";
 
 export interface DiscussionCreationForm {
   title: string;
@@ -145,9 +146,9 @@ export function createDiscussionListingRequest(
   adminPubkey: string,
   userPubkey: string
 ): NostrEventDraft {
-  const discussionListNaddr = process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR;
+  const discussionListNaddr = appConfig.discussion.discussionListNaddr;
   if (!discussionListNaddr) {
-    throw new Error("NEXT_PUBLIC_DISCUSSION_LIST_NADDR is required");
+    throw new Error("discussionListNaddr is required");
   }
 
   // Convert discussion list naddr to hex format required by NIP-72

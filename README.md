@@ -108,17 +108,23 @@ npm start                # 本番環境サーバーの起動
 
 ## 開発環境のセットアップ
 
-1. プロジェクトルートに`transit-config.json`を作成（`transit-config.json.example`を参照）
-2. `ko-fi-content.json.example`を`ko-fi-content.json`へコピーし、支援欄の見出しと説明文を必要に応じて変更
-3. 支援を受け付ける場合は、`FUNDING.yml`の`ko_fi`にKo-fiユーザー名を設定。受付を停止する場合は`ko_fi`を削除または空にする
-4. `.env.local`に環境変数を設定：
+1. 初回だけ`cp app-config.json.example app-config.json`を実行する。`app-config.json`は配布先ごとの公開設定であり、Gitでは管理しない。
+2. 生成された`app-config.json`を編集する。公開URL、GA測定ID、場所データversion、
+   会話設定、Ko-fi支援表示をこのファイルで設定する。
+3. GTFSを使う場合は`transit-config.json.example`を参考に`transit-config.json`を作成する。このファイルは
+   URL queryに秘密情報を含む可能性があるため、Git管理・公開JSON・client bundleへ入れない。
+4. `.env.local`にserver/deployment専用の環境変数を設定する。
    - `GOOGLE_MAPS_API_KEY`
-   - `NEXT_PUBLIC_APP_URL`
-   - `NEXT_PUBLIC_GA_MEASUREMENT_ID`
-   - `NEXT_PUBLIC_DISCUSSIONS_ENABLED`（オプション、ディスカッション機能用）
-   - `NEXT_PUBLIC_ADMIN_PUBKEY`（オプション、ディスカッション管理用）
-   - `NEXT_PUBLIC_NOSTR_RELAYS`（オプション、Nostr リレー用）
-5. ビルド時に Prisma クライアントが自動生成され、GTFS データがインポートされます
+   - `CLOUDFLARE_TUNNEL_TOKEN`（必要な場合）
+   - `PUPPETEER_EXECUTABLE_PATH`（必要な場合）
+5. Ko-fiの見出し・説明文・ユーザー名・表示可否は`app-config.json`の`support`を編集する。
+   `FUNDING.yml`はGitHubの開発・配布用metadataとして残し、アプリ表示の入力には使わない。
+6. ビルド時に Prisma クライアントが自動生成され、GTFS データがインポートされます。
+
+`npm run dev`、`npm test`、`npm run build`、`npm start`は、`app-config.json`が無い場合だけ
+`app-config.json.example`から生成し、既存の配布先設定は上書きしません。
+
+公開設定を変更した後は、Dockerのbuild argsや追加の`.env`生成を行わず、通常の`npm run build`を実行する。
 
 ## テスト
 

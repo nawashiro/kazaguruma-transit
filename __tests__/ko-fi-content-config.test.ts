@@ -1,35 +1,29 @@
-import fs from "node:fs";
-import path from "node:path";
+import { appConfig } from "@/lib/config/app-config";
+import { loadKoFiContent, loadKoFiUsername } from "@/lib/config/ko-fi-funding";
 
-const projectRoot = path.resolve(__dirname, "..");
+describe("Ko-fi支援表示設定", () => {
+  const originalSupport = { ...appConfig.support };
 
-describe("Ko-fi支援文言設定", () => {
-  it("ローカル設定をGit管理対象から除外する", () => {
-    const gitignoreEntries = fs
-      .readFileSync(path.join(projectRoot, ".gitignore"), "utf8")
-      .split(/\r?\n/)
-      .map((entry) => entry.trim());
-
-    expect(gitignoreEntries).toContain("ko-fi-content.json");
+  afterEach(() => {
+    appConfig.support = { ...originalSupport };
   });
 
-  it("コピーして編集できる有効なexample設定を提供する", () => {
-    const exampleContent: unknown = JSON.parse(
-      fs.readFileSync(
-        path.join(projectRoot, "ko-fi-content.json.example"),
-        "utf8",
-      ),
+  it("app-config.jsonのKo-fiユーザー名を読み取る", () => {
+    expect(loadKoFiUsername()).toBe(
+      appConfig.support.enabled ? appConfig.support.koFiUsername : null,
     );
+  });
 
-    expect(exampleContent).toEqual({
-      heading: expect.any(String),
-      message: expect.any(String),
+  it("app-config.jsonの見出しと説明文を読み取る", () => {
+    expect(loadKoFiContent()).toEqual({
+      heading: appConfig.support.heading,
+      message: appConfig.support.message,
     });
-    expect(
-      (exampleContent as { heading: string }).heading.trim().length,
-    ).toBeGreaterThan(0);
-    expect(
-      (exampleContent as { message: string }).message.trim().length,
-    ).toBeGreaterThan(0);
+  });
+
+  it("支援表示を無効にするとユーザー名を返さない", () => {
+    appConfig.support.enabled = false;
+
+    expect(loadKoFiUsername()).toBeNull();
   });
 });

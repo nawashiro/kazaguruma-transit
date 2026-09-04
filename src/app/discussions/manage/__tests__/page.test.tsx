@@ -260,8 +260,6 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
 
 describe("DiscussionManagePage", () => {
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR =
-      "naddr1discussionlistplaceholder";
     jest.clearAllMocks();
     mockUseDiscussionManagement.mockReset();
     mockManagementReload.mockReset();

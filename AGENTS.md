@@ -80,7 +80,7 @@ These principles are the operational source of truth for agents working in this 
 - `npm start`: production start after running the build chain.
 - `npm run import-gtfs`: pull GTFS data using `scripts/import-gtfs.ts` (runs inside build/start).
 - `npm run prisma:generate | prisma:migrate | prisma:studio`: manage the SQLite schema and inspect data.
-- Create `transit-config.json` from `transit-config.json.example`, and add `.env.local` with at least `GOOGLE_MAPS_API_KEY`, `NEXT_PUBLIC_APP_URL`, and GA/discussion settings from the README.
+- Create or edit `app-config.json` for deployment-specific public application settings; generate it from the tracked `app-config.json.example` when absent. Keep `transit-config.json` as the server-side GTFS secret, and add `.env.local` with at least `GOOGLE_MAPS_API_KEY` plus any other server/deployment-only settings from the README.
 
 ## Coding Style & Naming
 

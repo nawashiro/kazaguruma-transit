@@ -14,6 +14,7 @@ import { logger } from "@/utils/logger";
 import { normalizeDiscussionId } from "@/lib/nostr/naddr-utils";
 import { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 import { POST_CONTENT_MAX_LENGTH } from "@/lib/discussion/limits";
+import { appConfig } from "@/lib/config/app-config";
 
 export { isModeratorRequestEvent } from "@/lib/discussion/moderator-request";
 
@@ -429,26 +430,12 @@ export function parseDiscussionApprovalEvent(event: Event): {
   };
 }
 
-// Environment variable utilities - assumes env vars are stored as npub
+// Public app configuration is the source for the administrator identity.
 export function getAdminPubkeyHex(): string {
-  const npubFromEnv = process.env.NEXT_PUBLIC_ADMIN_PUBKEY || "";
-  if (!npubFromEnv) {
-    logger.warn("NEXT_PUBLIC_ADMIN_PUBKEY is not set");
+  const configuredPubkey = appConfig.discussion.adminPubkey;
+  if (!configuredPubkey) {
+    logger.warn("管理者公開鍵が設定されていません");
     return "";
   }
-  return npubToHex(npubFromEnv);
-}
-
-export function getModeratorPubkeysHex(): string[] {
-  const npubsFromEnv = process.env.NEXT_PUBLIC_MODERATORS || "";
-  if (!npubsFromEnv) {
-    return [];
-  }
-
-  // Comma-separated npub values
-  return npubsFromEnv
-    .split(",")
-    .map((npub) => npub.trim())
-    .filter((npub) => npub.length > 0)
-    .map((npub) => npubToHex(npub));
+  return npubToHex(configuredPubkey);
 }

@@ -52,6 +52,10 @@ const validConfig = {
     heading: "開発者を支援する",
     message: "支援メッセージ",
   },
+  announcement: {
+    information: "お知らせ本文",
+    url: "/announcement",
+  },
 };
 
 describe("app-config public module", () => {
@@ -82,6 +86,10 @@ describe("app-config public module", () => {
           heading: expect.any(String),
           message: expect.any(String),
         }),
+        announcement: expect.objectContaining({
+          information: expect.any(String),
+          url: expect.any(String),
+        }),
       }),
     );
   });
@@ -96,6 +104,15 @@ describe("app-config public module", () => {
     ["missing appUrl", { ...validConfig, appUrl: undefined }],
     ["missing discussion", { ...validConfig, discussion: undefined }],
     ["missing support", { ...validConfig, support: undefined }],
+    ["missing announcement", { ...validConfig, announcement: undefined }],
+    ["empty announcement information", {
+      ...validConfig,
+      announcement: { ...validConfig.announcement, information: "" },
+    }],
+    ["empty announcement url", {
+      ...validConfig,
+      announcement: { ...validConfig.announcement, url: "" },
+    }],
     ["invalid relay list", {
       ...validConfig,
       discussion: { ...validConfig.discussion, nostrRelays: ["wss://ok", 1] },

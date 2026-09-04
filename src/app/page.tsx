@@ -9,7 +9,7 @@ import Button from "@/components/ui/Button";
 import ResetButton from "@/components/ui/ResetButton";
 import PageHeader from "@/components/layouts/PageHeader";
 import Card from "@/components/ui/Card";
-import AwardRecognition from "@/components/features/AwardRecognition";
+import Announcement from "@/components/features/Announcement";
 import type { Location, TransitFormData } from "@/types/core";
 import { buildRouteResultsUrl } from "@/lib/transit/route-search-query";
 import { logger } from "@/utils/logger";
@@ -150,7 +150,7 @@ export default function Home() {
         }
         description="千代田区地域福祉交通「風ぐるま」の自動案内サイト"
       />
-      <div className="mb-6"><AwardRecognition /></div>
+      <div className="mb-6"><Announcement /></div>
       <div className="space-y-4">
         <div aria-live="polite" className="space-y-4">{renderInput()}</div>
         <Card bodyClassName="ruby-text">

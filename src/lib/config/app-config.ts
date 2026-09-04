@@ -27,12 +27,18 @@ export interface SupportAppConfig {
   message: string;
 }
 
+export interface AnnouncementAppConfig {
+  information: string;
+  url: string;
+}
+
 export interface AppConfig {
   appUrl: string;
   gaMeasurementId: string;
   locationsDataVersion: string;
   discussion: DiscussionAppConfig;
   support: SupportAppConfig;
+  announcement: AnnouncementAppConfig;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -62,7 +68,12 @@ export function parseAppConfig(value: unknown): AppConfig {
 
   const discussion = value.discussion;
   const support = value.support;
-  if (!isRecord(discussion) || !isRecord(support)) {
+  const announcement = value.announcement;
+  if (
+    !isRecord(discussion) ||
+    !isRecord(support) ||
+    !isRecord(announcement)
+  ) {
     return invalidAppConfig();
   }
 
@@ -87,7 +98,9 @@ export function parseAppConfig(value: unknown): AppConfig {
     typeof support.enabled !== "boolean" ||
     typeof support.koFiUsername !== "string" ||
     !isNonEmptyString(support.heading) ||
-    !isNonEmptyString(support.message)
+    !isNonEmptyString(support.message) ||
+    !isNonEmptyString(announcement.information) ||
+    !isNonEmptyString(announcement.url)
   ) {
     return invalidAppConfig();
   }
@@ -114,6 +127,10 @@ export function parseAppConfig(value: unknown): AppConfig {
       koFiUsername: support.koFiUsername,
       heading: support.heading,
       message: support.message,
+    },
+    announcement: {
+      information: announcement.information,
+      url: announcement.url,
     },
   };
 }

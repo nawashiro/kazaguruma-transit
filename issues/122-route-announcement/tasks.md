@@ -154,12 +154,12 @@
 
 ## Phase 5: 配送
 
-- [ ] **T014 [DELIVERY-VERIFIED]** 親が変更を確認してcommitし、feature branchをpushする。
-  - commitは既存prefixに合わせ、日本語で例: `fix: Issue #122のルート告知をお知らせ設定へ移行`とする。
-  - `git push -u origin fix/issue-122-route-announcement`を実行する。
-  - base=`dev`のPRを作成する場合、Issue、変更理由、設定契約、テスト／品質ゲート、非対象、未実測を日本語で記載する。mergeは行わない。
-  - push後にremote branch SHA、PRのhead／base／filesをGitHubから読み戻す。
-  - exact head SHAに対する`gh pr checks`またはActions APIを確認し、未trigger・pendingを成功扱いにしない。
+- [x] **T014 [DELIVERY-VERIFIED]** 親が変更を確認してcommitし、feature branchをpushした。
+  - commit `b7233e2599fd856e0c048485806c0fa2effecda2`: `fix: Issue #122のルート告知をお知らせ設定へ移行`。
+  - `fix/issue-122-route-announcement`をGitHubとTangledへpushし、remote branch SHAがcommitと一致することを確認した。
+  - GitHub PR [#135](https://github.com/nawashiro/kazaguruma-transit/pull/135)をbase=`dev`で作成した。GitHubからtitle、body、head、base、head SHA、変更13ファイルを読み戻した。
+  - Quality Gate run `33861246469` / job `100985951169`はhead SHAに対して`success`だった。Node.js 20 action deprecated annotationは既存workflowの警告として記録した。
+  - PRはOPENのまま維持し、merge、Issueのclose、外部サービスへの追加送信は行っていない。
 
 ## 依存関係
 

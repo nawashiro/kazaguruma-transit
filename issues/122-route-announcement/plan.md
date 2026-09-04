@@ -193,4 +193,10 @@ git status --short --branch
 
 ## 完了条件の判定
 
-AC-01〜AC-09は実装とfocused/full/静的検証で確認済みである。未完了はremoteへのcommit、push、PR、exact SHAのCI確認だけであり、次の配送タスクで実施する。mergeは行わない。
+AC-01〜AC-09は実装とfocused/full/静的検証で確認済みである。実装commit `b7233e2599fd856e0c048485806c0fa2effecda2`をfeature branchへpushし、PR [#135](https://github.com/nawashiro/kazaguruma-transit/pull/135)をbase=`dev`で作成した。作成時head SHAに対するQuality Gate run `33861246469` / job `100985951169`は`success`である。PRはOPENのまま維持し、mergeは行わない。
+
+## 配送後確認
+
+- PR本文をGitHubから読み戻し、title、body、base、head、head SHA、変更13ファイルが意図どおりであることを確認した。
+- `gh pr checks 135 --repo nawashiro/kazaguruma-transit`でQuality Gateの成功を確認した。Node.js 20 action deprecated annotationは既存workflowの警告として残る。
+- 記録追補後の新しいhead SHAでは、追補commitのpush後にCI状態を再確認する。

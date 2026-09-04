@@ -170,3 +170,11 @@ Issue #122の根因は、ルートページの告知が受賞専用componentと�
 ## 10. 実装結論
 
 Issue #122の要求は、既存の公開設定境界へ小さなannouncement契約を追加し、ルートページだけを汎用告知カードへ置換することで満たした。受賞詳細ページは維持し、旧受賞カードの画像・固定文言・専用リンクはルートから除去した。新規の動的取得、永続化、外部送信は行っていない。
+
+## 11. 配送結果
+
+- 実装commit `b7233e2599fd856e0c048485806c0fa2effecda2`（`fix: Issue #122のルート告知をお知らせ設定へ移行`）を作成し、`fix/issue-122-route-announcement`としてGitHubとTangledへpushした。
+- GitHub PR [#135](https://github.com/nawashiro/kazaguruma-transit/pull/135)を作成した。作成時のbaseは`dev`、headは`fix/issue-122-route-announcement`、head SHAは上記commit、stateは`OPEN`である。mergeは行っていない。
+- GitHubからPR本文と変更13ファイルを読み戻し、Issue #122のリンク、設定契約、検証結果、非対象を確認した。
+- Quality Gate run `33861246469` / job `100985951169`は上記head SHAに対して`success`だった。checkout、Node setup、設定準備、依存インストール、ESLint、strict TypeScript、Jestが成功した。Node.js 20 action deprecated annotationは既存workflowの警告である。
+- 配送後のPRはOPENのまま維持し、Issueのmerge・close、外部サービスへの追加送信は行っていない。

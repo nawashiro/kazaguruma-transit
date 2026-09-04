@@ -84,7 +84,7 @@ export interface AnnouncementAppConfig {
 - `section.card.card-border.w-full.bg-base-100.shadow-sm`
 - `aria-labelledby="announcement-heading"`
 - `div.card-body.gap-4.p-4.sm:p-6`
-- `h2#announcement-heading.card-title.inline.gap-0`
+- `h2#announcement-heading.card-title.flex.gap-0`
 - `Info` iconは`lucide-react`からimportし、`aria-hidden="true"`を付ける
 - 見出し文字列とリンクだけを`ruby-text`境界へ置く
 - `appConfig.announcement.information`を`a.link`の表示テキストにし、`appConfig.announcement.url`を`href`にする
@@ -203,10 +203,9 @@ AC-01〜AC-09は実装とfocused/full/静的検証で確認済みである。実
 
 ## スタイル追補計画・実測
 
-ユーザー画像で確認された崩れは、`h2`内のInfo SVGがTailwind preflightによりblock boxとなり、直後の見出しspanを次行へ送るレイアウト欠落である。Rubyfulのh2全体処理は関与していない。新しいテストsuiteやcomputed styleのmockは追加せず、既存Infoテストへclass assertionを1件だけ追加し、Info iconへ`inline-block`を1つ付ける。
+ユーザー画像で確認された崩れは、`h2`直下のInfo SVGと見出しspanがDaisyUI/Tailwindの通常表示規則で意図した構造になっていなかったことである。ユーザーの指摘に従い、styleを細かくテストで固定する方針は採用しない。最終構造は`h2.card-title.flex.gap-0`と内部`span.ruby-text.gap-0`とし、意味論・設定・link・旧表示撤去のテストだけを残す。
 
-- T015 RED: 既存Home testに1 assertion追加後、1 suite / 12 passed・1 failed。
-- T016 fresh read-only review: `VERDICT: PASS`、`modified: false`、開始／終了SHA一致。
-- T017 GREEN: production変更は`Announcement.tsx`のInfo icon class 1件のみ。focused Homeは13/13 passed。
-- Puppeteer/Chromium（1100x800）で、Infoのcomputed displayが`block`から`inline-block`へ、h2高さが70pxから46pxへ変わり、アイコンと見出しspanが同一行になることを確認した。修正後スクリーンショットも目視確認済み。
-- style追補後の全Jestは2 skipped / 145 passed suites、13 skipped / 915 passed tests、strict TypeScript・lint・buildはexit 0。既存warningとGTFS設定不足表示は差分由来ではない。
+- 初回の`inline-block` assertionとカード位置／装飾classテストは、styleの過剰固定として削除した。
+- 既存の`card-title`契約は、`inline`だけを絶対条件にせず、明示的な`flex`も許容するよう最小限に一般化した。新しいstyle専用suiteは作成していない。
+- 最終focused関連テストは3 suites / 17 tests passed、全Jestは2 skipped / 145 passed suites・13 skipped / 914 passed tests。
+- strict TypeScript・lint・buildはexit 0。既存warningと`transit-config.json`不足表示は差分由来ではない。

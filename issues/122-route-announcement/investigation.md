@@ -183,7 +183,14 @@ Issue #122の要求は、既存の公開設定境界へ小さなannouncement契�
 
 ## 12. スタイル追補の根因確認
 
-- ユーザー提供画像の崩れを受け、Puppeteer/Chromiumで現行ページをviewport 1100x800にて読み込んだ。修正前の`h2.card-title.inline.gap-0`は`display:block`、Info SVGは`display:block`、見出しspanは別Y座標で、h2高さは70pxだった。
-- h2全体は`ruby-text`ではなく、Rubyfulは見出し全体を処理していなかった。したがって根因はRuby処理ではなく、Tailwind preflightの`svg { display:block }`がh2内の通常フローへ適用され、兄弟spanを次行へ送ったことと確定した。
-- Info SVGへ`inline-block`を追加する候補をブラウザ上で比較した結果、アイコンと見出しspanが同じ行になり、h2高さは46pxへ縮小した。ほかのDOM構造・ルビ境界・link・カードは変更していない。
-- ユーザー指摘に従い、新しいtest suiteやcomputed styleのmockは追加せず、既存Infoテストへstyle class assertionを1件だけ追加した。
+- ユーザー提供画像の崩れを受け、Puppeteer/Chromiumで現行ページをviewport 1100x800にて読み込んだ。初回実装の`h2.card-title.inline.gap-0`は`display:block`で、Info SVGも`display:block`となり、直下の見出しspanが次行へ送られていた。
+- h2全体は`ruby-text`ではなく、Rubyfulは見出し全体を処理していなかった。根因は、h2内でInfo SVGと見出しspanを兄弟要素として置いたまま、通常のSVG表示規則と`card-title`のレイアウトに委ねていたことと確定した。
+- `inline-block`をInfoへ付ける候補でも同一行になることは確認したが、ユーザーの指摘を優先し、styleを個別class assertionで固定する方針は破棄した。
+- 最終構造は`h2.card-title.flex.gap-0`、Infoアイコン、`span.ruby-text.gap-0`とした。h2の文書構造を明示し、既存のgap契約も維持した。
+- 初回style追補で追加した`inline-block` assertionとカード位置／装飾classテストは削除した。意味論・設定・link・旧表示撤去・既存操作のテストだけを残した。
+
+## 13. ユーザー指摘後の検証
+
+- 関連focused Jestは3 suites / 17 tests passed。全Jestは2 skipped / 145 passed suites、13 skipped / 914 passed testsだった。
+- strict TypeScript、lint、buildはexit 0。lintの既存warning、`next lint`非推奨表示、`transit-config.json`不足表示は差分由来ではない。
+- 最終production差分は`Announcement.tsx`のh2／Info／内部span classの構造変更、最終test差分は過剰なstyle assertionとカード配置テストの削除、既存card-title契約の`flex`許容への一般化だけである。

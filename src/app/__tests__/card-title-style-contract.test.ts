@@ -182,8 +182,8 @@ function collectCardTitleUses(sources: SourceRecord[]): CardTitleUse[] {
   });
 }
 
-describe("Issue #128 card-title inline contract", () => {
-  it("tests・fixture・docsを除くproduction全22箇所のcard-titleへinlineを付ける", () => {
+describe("Issue #128 card-title inline or flex contract", () => {
+  it("tests・fixture・docsを除くproduction全22箇所のcard-titleへinlineまたはflexを付ける", () => {
     const productionSources = readProductionSources();
     const allCardTitleLiterals = collectCardTitleLiterals(productionSources);
     const directCardTitleUses = collectCardTitleUses(productionSources);
@@ -209,7 +209,10 @@ describe("Issue #128 card-title inline contract", () => {
     const violations = cardTitleUses
       .filter(
         ({ className }) =>
-          className === null || !className.split(/\s+/).includes("inline"),
+          className === null ||
+          !className
+            .split(/\s+/)
+            .some((classToken) => classToken === "inline" || classToken === "flex"),
       )
       .map(({ path: sourcePath, line, className }) =>
         `${sourcePath}:${line} ${className ?? "<unresolved className>"}`,

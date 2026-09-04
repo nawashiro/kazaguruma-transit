@@ -106,37 +106,6 @@ describe("Home", () => {
 
     expect(icon).not.toBeNull();
     expect(icon?.getAttribute("aria-hidden")).toBe("true");
-    expect(icon).toHaveClass("inline-block");
-  });
-
-  it("お知らせカードをPageHeader直後の既存カード構造として表示する", () => {
-    render(<Home />);
-
-    const banner = screen.getByRole("banner");
-    const heading = screen.getByRole("heading", {
-      level: 2,
-      name: "運営からのお知らせ",
-    });
-    const section = heading.closest("section");
-
-    expect(section).not.toBeNull();
-    if (!section) {
-      throw new Error("お知らせ見出しを含むsectionがありません");
-    }
-
-    expect(section).toHaveClass(
-      "card",
-      "card-border",
-      "w-full",
-      "bg-base-100",
-      "shadow-sm",
-    );
-
-    // Homeの既存mb-6ラッパーを維持し、ラッパー直下に告知sectionを置く。
-    const announcementSlot = section.parentElement;
-    expect(announcementSlot).not.toBeNull();
-    expect(banner.nextElementSibling).toBe(announcementSlot);
-    expect(announcementSlot?.firstElementChild).toBe(section);
   });
 
   it("設定されたお知らせ文言をリンクの表示テキストとhrefにする", () => {

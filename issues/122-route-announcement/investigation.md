@@ -178,3 +178,5 @@ Issue #122の要求は、既存の公開設定境界へ小さなannouncement契�
 - GitHubからPR本文と変更13ファイルを読み戻し、Issue #122のリンク、設定契約、検証結果、非対象を確認した。
 - Quality Gate run `33861246469` / job `100985951169`は上記head SHAに対して`success`だった。checkout、Node setup、設定準備、依存インストール、ESLint、strict TypeScript、Jestが成功した。Node.js 20 action deprecated annotationは既存workflowの警告である。
 - 配送後のPRはOPENのまま維持し、Issueのmerge・close、外部サービスへの追加送信は行っていない。
+- 配送記録追補commit `e3598fdb7bc619b97b61ecb683b4b4a927e13dac`もGitHubとTangledへpushした。追補後のPR headはこのSHAである。
+- 追補commitに対するQuality Gate run `33862080856` / job `100988583033`も`success`だった。

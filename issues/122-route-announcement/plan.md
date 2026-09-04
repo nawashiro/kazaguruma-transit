@@ -199,4 +199,4 @@ AC-01〜AC-09は実装とfocused/full/静的検証で確認済みである。実
 
 - PR本文をGitHubから読み戻し、title、body、base、head、head SHA、変更13ファイルが意図どおりであることを確認した。
 - `gh pr checks 135 --repo nawashiro/kazaguruma-transit`でQuality Gateの成功を確認した。Node.js 20 action deprecated annotationは既存workflowの警告として残る。
-- 記録追補後の新しいhead SHAでは、追補commitのpush後にCI状態を再確認する。
+- 記録追補commit `e3598fdb7bc619b97b61ecb683b4b4a927e13dac`をpushし、追補後のheadに対するQuality Gate run `33862080856` / job `100988583033`も`success`であることを確認した。

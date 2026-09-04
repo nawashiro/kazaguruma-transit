@@ -1,5 +1,6 @@
 import { Location } from "@/types/core";
 import type { LocationDataLoadResult } from "@/types/access-route-pages";
+import { appConfig } from "@/lib/config/app-config";
 import { logger } from "./logger";
 
 export interface AddressLocation {
@@ -38,7 +39,7 @@ export interface KeyLocationCategory {
 
 export async function loadAddressData(): Promise<AddressCategory[]> {
   try {
-    const version = process.env.NEXT_PUBLIC_LOCATIONS_DATA_VERSION || "1.0.0";
+    const version = appConfig.locationsDataVersion;
     const response = await fetch(
       `https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@${version}/kazaguruma_json_min/main_facilities.json`
     );
@@ -58,7 +59,7 @@ export async function loadAddressData(): Promise<AddressCategory[]> {
 // key_locations.jsonからデータを読み込む関数
 export async function loadKeyLocationsData(): Promise<KeyLocationCategory[]> {
   try {
-    const version = process.env.NEXT_PUBLIC_LOCATIONS_DATA_VERSION || "1.0.0";
+    const version = appConfig.locationsDataVersion;
     const response = await fetch(
       `https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@${version}/kazaguruma_json_min/key_locations.json`
     );
@@ -143,7 +144,7 @@ function isKeyLocationCategoryArray(value: unknown): value is KeyLocationCategor
 /** Loads key locations while preserving transport and decoding failures. */
 export async function loadKeyLocationsDataResult(): Promise<KeyLocationsDataResult> {
   try {
-    const version = process.env.NEXT_PUBLIC_LOCATIONS_DATA_VERSION || "1.0.0";
+    const version = appConfig.locationsDataVersion;
     const response = await fetch(
       `https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@${version}/kazaguruma_json_min/key_locations.json`
     );

@@ -19,10 +19,14 @@
     "node": "22.x"
   },
   "scripts": {
+    "predev": "node scripts/ensure-app-config.mjs",
     "dev": "prisma generate && next dev --turbopack",
+    "prebuild": "node scripts/ensure-app-config.mjs",
     "build": "prisma generate && prisma db push --accept-data-loss && npm run import-gtfs && next build",
+    "prestart": "node scripts/ensure-app-config.mjs",
     "start": "prisma generate && prisma db push --accept-data-loss && npm run import-gtfs && next start",
     "lint": "next lint",
+    "pretest": "node scripts/ensure-app-config.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "a11y": "npm run accessibility",

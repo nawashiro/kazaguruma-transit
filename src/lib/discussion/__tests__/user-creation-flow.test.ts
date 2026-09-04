@@ -10,6 +10,7 @@ import {
   processDiscussionCreationFlow,
 } from '../user-creation-flow';
 import { naddrEncode } from '@/lib/nostr/naddr-utils';
+import { appConfig } from '@/lib/config/app-config';
 
 jest.mock('@/utils/logger', () => ({
   logger: {
@@ -38,6 +39,20 @@ describe('User Discussion Creation Flow', () => {
 
   const validUserPubkey = 'f723816e33f9e4ed5e3b4c3b2c99e8b8a8c8d9e7f123456789abcdef01234567';
   const adminPubkey = 'a123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+  const originalDiscussionListNaddr = appConfig.discussion.discussionListNaddr;
+  const configuredDiscussionListNaddr = naddrEncode({
+    identifier: 'discussion_list_test',
+    pubkey: adminPubkey,
+    kind: 34550,
+  });
+
+  beforeEach(() => {
+    appConfig.discussion.discussionListNaddr = configuredDiscussionListNaddr;
+  });
+
+  afterEach(() => {
+    appConfig.discussion.discussionListNaddr = originalDiscussionListNaddr;
+  });
 
   describe('validateDiscussionCreationForm', () => {
     test('should validate valid form data', () => {
@@ -181,16 +196,6 @@ describe('User Discussion Creation Flow', () => {
       identifier: 'bus-stop-experience-001',
       pubkey: validUserPubkey,
       kind: 34550,
-    });
-    const mockDiscussionListNaddr = naddrEncode({
-      identifier: 'discussion_list_test',
-      pubkey: adminPubkey,
-      kind: 34550,
-    });
-
-    // Mock process.env for testing
-    beforeEach(() => {
-      process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR = mockDiscussionListNaddr;
     });
 
     test('should create NIP-72 compliant listing request', () => {

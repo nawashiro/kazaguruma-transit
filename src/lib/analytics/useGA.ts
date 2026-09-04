@@ -4,8 +4,9 @@ import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import ReactGA from "react-ga4";
 import { logger } from "@/utils/logger";
+import { appConfig } from "@/lib/config/app-config";
 
-const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "";
+const GA_MEASUREMENT_ID = appConfig.gaMeasurementId;
 const isDevelopment = process.env.NODE_ENV === "development";
 
 /**

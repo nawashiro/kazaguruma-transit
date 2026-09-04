@@ -261,7 +261,6 @@ describe("DiscussionManagementProvider", () => {
     mockManagementProviderBoundary.mockReset();
     mockUseDiscussionDetail.mockReset();
     mockExecuteNostrRead.mockReset();
-    process.env.NEXT_PUBLIC_DISCUSSION_LIST_NADDR = "naddr-list";
     mockExecuteNostrRead.mockImplementation(async () => {
       const callNumber = mockExecuteNostrRead.mock.calls.length;
       if (callNumber === 1) return readResult([listMetadataEvent]);

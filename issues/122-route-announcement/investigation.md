@@ -180,3 +180,10 @@ Issue #122の要求は、既存の公開設定境界へ小さなannouncement契�
 - 配送後のPRはOPENのまま維持し、Issueのmerge・close、外部サービスへの追加送信は行っていない。
 - 配送記録追補commit `e3598fdb7bc619b97b61ecb683b4b4a927e13dac`もGitHubとTangledへpushした。追補後のPR headはこのSHAである。
 - 追補commitに対するQuality Gate run `33862080856` / job `100988583033`も`success`だった。
+
+## 12. スタイル追補の根因確認
+
+- ユーザー提供画像の崩れを受け、Puppeteer/Chromiumで現行ページをviewport 1100x800にて読み込んだ。修正前の`h2.card-title.inline.gap-0`は`display:block`、Info SVGは`display:block`、見出しspanは別Y座標で、h2高さは70pxだった。
+- h2全体は`ruby-text`ではなく、Rubyfulは見出し全体を処理していなかった。したがって根因はRuby処理ではなく、Tailwind preflightの`svg { display:block }`がh2内の通常フローへ適用され、兄弟spanを次行へ送ったことと確定した。
+- Info SVGへ`inline-block`を追加する候補をブラウザ上で比較した結果、アイコンと見出しspanが同じ行になり、h2高さは46pxへ縮小した。ほかのDOM構造・ルビ境界・link・カードは変更していない。
+- ユーザー指摘に従い、新しいtest suiteやcomputed styleのmockは追加せず、既存Infoテストへstyle class assertionを1件だけ追加した。

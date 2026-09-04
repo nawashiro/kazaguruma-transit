@@ -106,6 +106,7 @@ describe("Home", () => {
 
     expect(icon).not.toBeNull();
     expect(icon?.getAttribute("aria-hidden")).toBe("true");
+    expect(icon).toHaveClass("inline-block");
   });
 
   it("お知らせカードをPageHeader直後の既存カード構造として表示する", () => {

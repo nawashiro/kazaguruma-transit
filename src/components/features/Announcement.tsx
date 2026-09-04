@@ -12,7 +12,7 @@ export default function Announcement() {
       <div className="card-body gap-4 p-4 sm:p-6">
         <h2 id={headingId} className="card-title inline gap-0">
           <Info
-            className="mr-1 h-6 w-6 shrink-0 text-info"
+            className="mr-1 h-6 w-6 shrink-0 text-info inline-block"
             aria-hidden="true"
           />
           <span className="ruby-text">運営からのお知らせ</span>

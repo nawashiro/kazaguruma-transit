@@ -162,10 +162,20 @@
   - PRはOPENのまま維持し、merge、Issueのclose、外部サービスへの追加送信は行っていない。
   - 配送記録追補commit `e3598fdb7bc619b97b61ecb683b4b4a927e13dac`をpushし、追補後headに対するQuality Gate run `33862080856` / job `100988583033`も`success`であることを確認した。
 
+## スタイル追補の実測結果
+
+- ユーザー画像を受け、現行DOMをPuppeteer/Chromium（viewport 1100x800）で確認した。修正前は`h2.card-title.inline.gap-0`が`display:block`、Info SVGが`display:block`、見出しspanが別行で、h2高さは70pxだった。Rubyfulはh2全体を処理していなかった。
+- T015は既存`page.test.tsx`への`inline-block` class assertion 1件だけを追加した。focused Home testは修正前13/13 passed、追加後1 suite / 12 passed・1 failedの意味あるREDだった。
+- T016のfresh read-only reviewは`VERDICT: PASS`、`modified: false`、開始／終了SHA一致。過剰なDOM・computed style・Rubyfulテストを追加していないことを確認した。
+- T017は`Announcement.tsx`のInfo icon classへ`inline-block`を1つ追加しただけである。親のfocused Home testは1 suite / 13 tests passed。
+- 修正後のPuppeteer実測はInfo SVGが`display:inline-block`、見出しspanと同一Y座標、h2高さ46px。修正後スクリーンショットでもアイコンと「運営からのお知らせ」の横並びを目視確認した。
+- style追補後の全Jestは2 skipped / 145 passed suites、13 skipped / 915 passed tests。strict TypeScriptとlintはexit 0、buildはexit 0でNext.js 27ページを生成した。既存warning、`next lint`非推奨表示、`transit-config.json`不足表示は差分由来ではない。
+- style追補のtracked変更は`src/app/__tests__/page.test.tsx`の1 assertionと`src/components/features/Announcement.tsx`の1 classに限定され、他の既存契約は変更していない。
+
 ## 依存関係
 
 ```text
-T001 → T002 → T003 → T004 → T005 → T006 → T007 → T008 → T009 → T008R → T009R → T010 → T010C → T010CR → T011 → T012 → T013 → T014
+T001 → T002 → T003 → T004 → T005 → T006 → T007 → T008 → T009 → T008R → T009R → T010 → T010C → T010CR → T011 → T012 → T013 → T014 → T015 → T016 → T017 → T018
 ```
 
 - T005のtest writer直後は必ずT006のfresh reviewである。
@@ -202,3 +212,15 @@ T001 → T002 → T003 → T004 → T005 → T006 → T007 → T008 → T009 →
 - T011: source/path/静的設定監査はPASS。旧UIへ一時復元した感度確認は13 tests中8 failed・5 passed、修正状態のハッシュ復元と`git diff --check`はPASS。
 - T012: strict TypeScript exit 0、lint exit 0、全Jest再実行は2 skipped / 145 passed suites・13 skipped / 915 passed tests、build exit 0（Next.js 27ページ生成）。初回全Jestの一時失敗はcard-title件数契約とDiscussion suiteの非再現失敗として再実行・単独実行で切り分けた。既存warningと`transit-config.json`不足表示は差分由来ではない。
 - 配送前の変更は計画済みsource、test、設定例、Issue文書だけで、ignored `app-config.json`は既存配布値を保持してannouncementだけを追加している。
+
+## Phase 6: スタイル回帰の最小追補
+
+ユーザーの実機画像とPuppeteer実測で、`Announcement`のInfo SVGがTailwind preflightにより`display: block`となり、同じ`h2`内の見出しspanを次行へ送っていることを確認した。Rubyfulの見出し全体処理は根因ではない。
+
+- [x] **T015 [TEST-RED-STYLE-VERIFIED]** 既存の`src/app/__tests__/page.test.tsx`のInfoアイコンテストへ、`svg.lucide-info`が`inline-block`を持つclass契約を1 assertionだけ追加する。新規suite、別component、computed styleのmock、他のDOM契約は追加しない。Node.js v22.23.2でfocused Home testを実行し、現行productionのclass不足による1件の意味あるREDを確認する。production、Issue docs、他testは変更しない。
+
+- [x] **T016 [TEST-REVIEW-STYLE-PASS-VERIFIED]** T015直後にfresh read-only reviewerへtest pathだけを渡し、class assertionが画像で確認されたレイアウト欠落だけを表し、既存の見出し・ARIA・link・検索契約を過剰に拡張していないことを確認する。`VERDICT: PASS`、`modified: false`、開始／終了SHA一致を必須とする。
+
+- [x] **T017 [IMPLEMENT-STYLE-VERIFIED]** T016のPASS後、`src/components/features/Announcement.tsx`のInfo iconへ`inline-block`を追加する。h2のDOM構造、見出し文言、`ruby-text`、link、カードclass、他のproductionは変更しない。focused Home testをGREENにする。
+
+- [x] **T018 [VERIFY-STYLE-VERIFIED]** 親がPuppeteerでInfoと見出しspanが同一行になることを再測定し、focused/full Jest、strict TypeScript、lint、build、`git diff --check`、PR/CIを実行・確認する。既存の警告は差分由来のerrorと分離する。

@@ -200,3 +200,13 @@ AC-01〜AC-09は実装とfocused/full/静的検証で確認済みである。実
 - PR本文をGitHubから読み戻し、title、body、base、head、head SHA、変更13ファイルが意図どおりであることを確認した。
 - `gh pr checks 135 --repo nawashiro/kazaguruma-transit`でQuality Gateの成功を確認した。Node.js 20 action deprecated annotationは既存workflowの警告として残る。
 - 記録追補commit `e3598fdb7bc619b97b61ecb683b4b4a927e13dac`をpushし、追補後のheadに対するQuality Gate run `33862080856` / job `100988583033`も`success`であることを確認した。
+
+## スタイル追補計画・実測
+
+ユーザー画像で確認された崩れは、`h2`内のInfo SVGがTailwind preflightによりblock boxとなり、直後の見出しspanを次行へ送るレイアウト欠落である。Rubyfulのh2全体処理は関与していない。新しいテストsuiteやcomputed styleのmockは追加せず、既存Infoテストへclass assertionを1件だけ追加し、Info iconへ`inline-block`を1つ付ける。
+
+- T015 RED: 既存Home testに1 assertion追加後、1 suite / 12 passed・1 failed。
+- T016 fresh read-only review: `VERDICT: PASS`、`modified: false`、開始／終了SHA一致。
+- T017 GREEN: production変更は`Announcement.tsx`のInfo icon class 1件のみ。focused Homeは13/13 passed。
+- Puppeteer/Chromium（1100x800）で、Infoのcomputed displayが`block`から`inline-block`へ、h2高さが70pxから46pxへ変わり、アイコンと見出しspanが同一行になることを確認した。修正後スクリーンショットも目視確認済み。
+- style追補後の全Jestは2 skipped / 145 passed suites、13 skipped / 915 passed tests、strict TypeScript・lint・buildはexit 0。既存warningとGTFS設定不足表示は差分由来ではない。

@@ -267,8 +267,9 @@ git status --short --branch
 
 - `app-config.json.example`をtracked templateとして維持し、`app-config.json`は配布先固有のignored overrideとして準備処理で生成する。
 - ユーザー指摘への追補として、`scripts/ensure-app-config.mjs`をnpm lifecycle、CI、Docker buildへ追加し、clean checkout相当でexample生成→typecheck→focused testを確認した。既存overrideの非上書きも確認した。
-- focused config/consumer/Ko-fi/Docker suiteは`10 suites / 87 tests passed`。
-- 全Jestは`146 suites passed / 2 skipped`、`904 tests passed / 13 skipped`。
+- GitHub Contents APIで`app-config.json`が404、`app-config.json.example`が存在することを確認し、PR #134の最新Quality Gate（run `33839469214`）がpassした。
+- focused config/consumer/Ko-Fi/Docker suiteは`6 suites / 24 tests passed`。
+- 全Jestは`146 suites passed / 2 skipped`、`905 tests passed / 13 skipped`。
 - `npx tsc --noEmit --incremental false` exit 0。
 - `npm run lint` exit 0。既存warningと`next lint` deprecated表示のみ。
 - `NODE_OPTIONS=--max-old-space-size=1536 NEXT_TELEMETRY_DISABLED=1 npm run build` exit 0。Next.js 15.5.20で27ページ生成。GTFSの`transit-config.json`不在表示は既存環境要因として分離した。

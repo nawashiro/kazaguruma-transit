@@ -195,6 +195,7 @@ T016 + T020 → T021 → T022 → T023 → T024 → T025 → T026
 - [x] T027 [US1/US3] ユーザー指摘対応: `app-config.json`をgitignoreしたまま、tracked `app-config.json.example`をテンプレートとして
   使うようapp-config test/contract test、runtime import準備、CI、Docker、npm lifecycle、READMEとIssue文書を更新する。既存の
   `app-config.json`を上書きせず、不在時だけexampleから生成する。
-- [ ] T028 [US1/US3] 追補検証: `app-config.json`を追跡しないclean checkout相当で準備処理を実行し、typecheck・focused Jest・lint・全Jest・build・
-  `git diff --check`を実行する。GitHub PR #134へpushし、最新headのQuality Gateと`app-config.json`の404解消を読み戻す。
+- [x] T028 [US1/US3] 追補検証: `app-config.json`を追跡しないclean checkout相当で準備処理を実行し、typecheck・focused Jest・lint・全Jest・build・
+  `git diff --check`を実行した。GitHub PR #134へpushし、最新headのQuality Gateと`app-config.json`の404（gitignore対象）、
+  `app-config.json.example`の存在を読み戻した。
 

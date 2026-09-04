@@ -228,7 +228,14 @@ TDDのtest writer・production writerは複数回委任したが、サブエー�
 
 外部Nostr relayへのpublish、実GA送信、Google Maps API呼び出し、Ko-fi iframe操作は行っていない。
 
-## 10. 配布先設定に関する修正
+## 10. ユーザー指摘後の最終確認
+
+- `app-config.json`はGitHub Contents APIで404となり、`.gitignore`対象として追跡されていない。`app-config.json.example`はGitHub上に存在し、templateとして追跡されている。
+- `app-config.json`が無いclean checkout相当で`ensure-app-config.mjs`を実行し、exampleから生成後にstrict TypeScriptとapp-config focused testがpassした。既存overrideを保持するケースもpassした。
+- 修正commit `3adfa8a6373a30b70497e8454741f54c5a5cb60a`をPR #134へpushし、最新Quality Gate run `33839469214`がpassした。
+- これにより、CIは追跡されない任意設定を要求せず、templateから一時的なignored configを準備して検証できる。
+
+## 11. 配布先設定に関する修正
 
 初期のT005テストと実装計画は、配布先固有の`app-config.json`をtrackedファイルとして扱っていた。この前提は、
 配布先ごとの任意設定をリポジトリへ記録すべきではないため誤りである。後続commitで`app-config.json`をgitignoreし、

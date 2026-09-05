@@ -124,3 +124,9 @@ git status --short --untracked-files=all
 - T005/T006で`page.tsx`へ静的値を戻し、`award-data.ts`を削除した。親のfocused Jestは1 suite / 5 tests passed。production sourceの旧module参照は0件で、PageHeader・metadata・ホーム告知は不変である。
 - T007の旧production復元確認は2 failed / 3 passed、修正版復元後は5 passed。page hashは復元前後で一致し、旧data moduleは残っていない。
 - T008はstrict TypeScript exit 0、lint exit 0、全Jestは2 skipped / 145 passed suites・13 skipped / 916 passed tests、build exit 0、`git diff --check` exit 0だった。既存warning、`next lint` deprecated、`transit-config.json`不在のGTFS表示は差分由来のfailureではない。
+
+## 配送後の検証
+
+- 実装commit `0f8b4f2e4f1d94d15147f1632c7dc6c4f06a85bd`をfeature branchへpushし、GitHub/Tangledのremote SHA一致を確認した。
+- PR [#137](https://github.com/nawashiro/kazaguruma-transit/pull/137)をbase=`dev`、head=`fix/issue-121-award-data-kiss`で作成した。PRはOPENのまま維持し、merge・Issue closeは行わない。
+- 初回head SHAに対するQuality Gate run `33965181559` / job `101303928699`は`success`で、checkout、ESLint、strict TypeScript、Jestを含む全stepが成功した。

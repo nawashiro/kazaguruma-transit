@@ -114,21 +114,23 @@ git status --short --untracked-files=all
 
 ## Phase 5: 配送
 
-- [ ] **T010 [DELIVERY]** 親が最終diffを再レビューし、日本語の短いprefix commitを作成してfeature branchをpushする。
+- [x] **T010 [DELIVERY-VERIFIED]** 親が最終diffを再レビューし、commit `0f8b4f2e4f1d94d15147f1632c7dc6c4f06a85bd`（`fix: 受賞ページの不要なデータ抽象化を削除`）を作成してfeature branchをGitHub/Tangledへpushした。remote SHA一致、PR #137のbase=`dev`、head、files、本文、state=`OPEN`を読み戻した。
   - commit message例: `fix: 受賞ページの不要なデータ抽象化を削除`
   - `origin/fix/issue-121-award-data-kiss`のremote SHAとlocal `HEAD`を一致させる。
   - PRを作成する場合はbase=`dev`、Issue #121を本文で明示し、title、body、head、base、head SHA、changed filesをGitHubから読み戻す。
   - merge、Issue closeは行わない。
 
-- [ ] **T011 [CI]** PRを作成した場合、push後のexact head SHAに対するGitHub Actionsを終端まで確認する。
+- [x] **T011 [CI-VERIFIED]** 初回pushのexact head SHA `0f8b4f2e4f1d94d15147f1632c7dc6c4f06a85bd`に対するQuality Gate run `33965181559` / job `101303928699`を終端まで確認し、全step success、job conclusion=`success`となった。
   - pendingをsuccess扱いしない。
   - failureは今回のdiff、baseline、infrastructureへ分類する。
   - PRとCIの実測状態を本ファイルと`investigation.md`へ追記する。
 
+- [ ] **T012 [DELIVERY-DOC-FOLLOWUP]** 初回配送後の証跡を`investigation.md`、`plan.md`、`tasks.md`へ追記してcommit/pushする。追補後のremote SHA、PR head、exact-SHA CIを再確認し、未実施を成功扱いしない。
+
 ## 依存関係
 
 ```text
-T001 → T002 → T003 → T004 → T005 → T006 → T007 → T008 → T009 → T010 → T011
+T001 → T002 → T003 → T004 → T005 → T006 → T007 → T008 → T009 → T010 → T011 → T012
 ```
 
 T004のfresh review PASS前にT005を開始しない。test bytesが変わった場合、前のreviewは無効である。T006〜T011は親が実測して完了扱いにする。
@@ -144,4 +146,4 @@ T004のfresh review PASS前にT005を開始しない。test bytesが変わった
 | TDDとfresh test reviewを満たす | T003、T004、T006 |
 | 旧実装で回帰testが失敗する | T003、T007 |
 | 品質ゲートを通過する | T008 |
-| docs、remote SHA、PR、exact-SHA CIを確認する | T009〜T011 |
+| docs、remote SHA、PR、exact-SHA CIを確認する | T009〜T012 |

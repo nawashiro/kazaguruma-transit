@@ -55,15 +55,14 @@
     "ml-kmeans": "^6.0.0",
     "ml-matrix": "^6.12.1",
     "ml-pca": "^4.1.1",
-    "next": "^15.5.20",
+    "next": "^15.5.25",
     "nosskey-sdk": "^0.0.2",
     "pdf-lib": "^1.17.1",
-    "puppeteer": "^24.6.1",
+    "puppeteer": "^25.10.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-ga4": "^2.1.0",
     "react-to-print": "^3.0.5",
-    "transit-departures-widget": "^2.5.4",
     "tsx": "^4.19.3",
     "webpack-license-plugin": "^4.5.1"
   },
@@ -76,7 +75,6 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^22.20.1",
     "@types/nodemailer": "^6.4.17",
-    "@types/puppeteer": "^7.0.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
@@ -86,7 +84,7 @@
     "jest-fetch-mock": "^3.0.3",
     "jest-localstorage-mock": "^2.4.26",
     "lighthouse": "^13.4.1",
-    "postcss": "^8.5.19",
+    "postcss": "^8.5.28",
     "prisma": "^6.19.3",
     "start-server-and-test": "^3.0.12",
     "tailwindcss": "^4",
@@ -94,7 +92,8 @@
   },
   "overrides": {
     "next": {
-      "postcss": "^8.5.10"
+      "postcss": "^8.5.28",
+      "sharp": "^0.35.4"
     }
   }
 }

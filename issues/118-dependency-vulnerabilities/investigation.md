@@ -137,3 +137,11 @@ Puppeteer 24.15.0の依存は `@puppeteer/browsers@2.10.6`、`puppeteer-core@24.
 - `npm test -- --runInBand`は最終実行で145 suites pass / 2 skipped、918 tests pass / 13 skipped。途中の全体実行で既存`page.streaming.test.tsx`のtest-order failureが一度出たが、該当suite単独11/11 pass後の全体再実行で解消した。
 - `npm run build`はexit 0。`transit-config.json`不在による既存GTFS importエラー表示は継続したが、scriptは終了し、Next production buildまで完了した。
 - 修正後auditは全体11件（high 8 / moderate 3）、`--omit=dev` 8件（high 6 / moderate 2）。対象のNext.js/Puppeteer/Sharp/PostCSS/NanoID関連キーは両結果に残っていない。残存highは調査で定義したPrisma、GTFS/build、開発専用範囲として保留する。
+
+## 8. 配送確認
+
+- commit: `06b162b0ac3216703c60f6032a450f1ec01cd71b`
+- `origin/fix/issue-118-dependency-vulnerabilities`のremote SHAはcommitと一致した。
+- Pull Request: [#138](https://github.com/nawashiro/kazaguruma-transit/pull/138)、base=`dev`、head=`fix/issue-118-dependency-vulnerabilities`、head SHAは上記commit、state=`OPEN`。
+- PR本文はIssue #118を`Closes #118`で参照し、対象外auditを明記した。
+- Quality Gate run `33972056169` / job `101322188053`はcommit `06b162b0ac3216703c60f6032a450f1ec01cd71b`に対して`success`。watcher timeoutではなくterminal stateを確認した。

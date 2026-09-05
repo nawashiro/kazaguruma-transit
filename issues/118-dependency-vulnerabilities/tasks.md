@@ -104,14 +104,14 @@
 
 ## Phase 5: 配送
 
-- [ ] T012 [DELIVERY] 最終manifestだけをcommitし、feature branchへpushする。PRはbase `dev`、Issue #118をcloseする本文、変更理由、対象外、実測テスト、残存auditを日本語で記載する。
+- [x] T012 [DELIVERY] 最終manifestをcommitし、feature branchへpushしてPRを作成した。PRはbase `dev`、Issue #118をcloseする本文、変更理由、対象外、実測テスト、残存auditを含む。
   - writable: Git metadata、許可済みIssue文書
   - frozen: 未レビューの全path
-  - verify: commit SHA、remote branch SHA、PR head/base/title/body/filesを読み戻す。mergeはしない。
+  - evidence: commit `06b162b0ac3216703c60f6032a450f1ec01cd71b`、remote branch SHA一致、PR [#138](https://github.com/nawashiro/kazaguruma-transit/pull/138)、base=`dev`、head=`fix/issue-118-dependency-vulnerabilities`、head SHA一致、state=`OPEN`。
 
-- [ ] T013 [CI] pushしたexact SHAのGitHub checksを確認し、terminal stateだけを報告する。watcher timeoutや未triggerを成功扱いしない。
+- [x] T013 [CI] pushしたexact SHAのGitHub checksを確認し、terminal stateだけを報告した。watcher timeoutや未triggerを成功扱いしていない。
   - writable: `issues/118-dependency-vulnerabilities/tasks.md`, `issues/118-dependency-vulnerabilities/investigation.md`
-  - verify: `gh pr checks` / `gh run view`でhead SHA一致を確認。
+  - evidence: PR #138のQuality Gate run `33972056169` / job `101322188053`はhead `06b162b0ac3216703c60f6032a450f1ec01cd71b`に対して`success`。
 
 ## 依存関係
 

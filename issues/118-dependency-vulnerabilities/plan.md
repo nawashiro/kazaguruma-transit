@@ -109,3 +109,10 @@ PATH=/opt/data/toolchains/node-v22.23.2-linux-x64/bin:$PATH \
 - 全体auditは11件（high 8 / moderate 3）、`--omit=dev`は8件（high 6 / moderate 2）。対象のNext.js、Puppeteer、Sharp、PostCSS、NanoID系列にhighは残っていない。残存分はIssue本文に従って保留した。
 - build時の`transit-config.json`不在メッセージは既存GTFS importの環境警告であり、buildはNext production buildまでexit 0で完了した。
 - Puppeteer 25の型互換のため、PDF routeのnetwork idle待機だけを同値のAPIへ適応した。その他のPDF処理・API契約は変更していない。
+
+## 7. 配送結果
+
+- commit `06b162b0ac3216703c60f6032a450f1ec01cd71b`をfeature branchへpushし、remote SHAと一致させた。
+- PR [#138](https://github.com/nawashiro/kazaguruma-transit/pull/138)をbase `dev`で作成した。PRはopenで、mergeしていない。
+- PR #138のQuality Gate run `33972056169` / job `101322188053`は上記headに対して`success`。
+- PR本文にはIssue #118の`Closes #118`、変更理由、検証、対象外auditを記載した。

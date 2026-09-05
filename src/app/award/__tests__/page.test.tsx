@@ -1,8 +1,27 @@
+import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import AwardPage from "../page";
 
 describe("AwardPage", () => {
+  it("受賞ページは専用award-dataをimportしない", () => {
+    const awardPageSource = readFileSync(
+      resolve(__dirname, "../page.tsx"),
+      "utf8",
+    );
+
+    expect(awardPageSource).not.toMatch(
+      /from\s+["']@\/lib\/award\/award-data["']/,
+    );
+  });
+
+  it("受賞ページ専用のaward-dataモジュールを持たない", () => {
+    expect(
+      existsSync(resolve(__dirname, "../../../lib/award/award-data.ts")),
+    ).toBe(false);
+  });
+
   it("受賞内容と公式な確認先を表示する", () => {
     render(<AwardPage />);
 

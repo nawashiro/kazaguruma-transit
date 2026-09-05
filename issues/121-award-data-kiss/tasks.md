@@ -125,7 +125,7 @@ git status --short --untracked-files=all
   - failureは今回のdiff、baseline、infrastructureへ分類する。
   - PRとCIの実測状態を本ファイルと`investigation.md`へ追記する。
 
-- [ ] **T012 [DELIVERY-DOC-FOLLOWUP]** 初回配送後の証跡を`investigation.md`、`plan.md`、`tasks.md`へ追記してcommit/pushする。追補後のremote SHA、PR head、exact-SHA CIを再確認し、未実施を成功扱いしない。
+- [x] **T012 [DELIVERY-DOC-FOLLOWUP-VERIFIED]** 初回配送後の証跡を`investigation.md`、`plan.md`、`tasks.md`へ追記した追補commit `e550a4e0bdd4dd4a2d60f4ba1dfb20c71b006b57`をGitHub/Tangledへpushし、remote SHA一致を確認した。PR #137 headとexact-SHA Quality Gate run `33965338089` / job `101304350487`はsuccessだった。
 
 ## 依存関係
 

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ComponentType, Ref } from "react";
 import type { ComponentProps } from "react";
 import "@testing-library/jest-dom";
 import InputField from "../InputField";
@@ -206,5 +207,30 @@ describe("InputField", () => {
     });
     expect(describedByIds).toContain(screen.getByText("公開説明").id);
     expect(describedByIds).toContain(screen.getByRole("alert").id);
+  });
+
+  it("編集時に親のrefへnative inputを渡してフォーカス可能にする", () => {
+    const inputRef = { current: null } as Ref<HTMLInputElement> & {
+      current: HTMLInputElement | null;
+    };
+    type InputFieldWithRefProps = ComponentProps<typeof InputField> & {
+      ref?: Ref<HTMLInputElement>;
+    };
+    const RefCapableInputField = InputField as unknown as ComponentType<InputFieldWithRefProps>;
+
+    render(
+      <RefCapableInputField
+        value=""
+        onChange={mockOnChange}
+        label="編集対象"
+        ref={inputRef}
+        testId="test-input"
+      />,
+    );
+
+    const input = screen.getByTestId("test-input");
+    expect(inputRef.current).toBe(input);
+    inputRef.current?.focus();
+    expect(document.activeElement).toBe(input);
   });
 });

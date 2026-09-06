@@ -1,48 +1,33 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { KeyLocation } from "@/utils/addressLoader";
-import { findLocationAreaName } from "@/lib/location/location-list-state";
+import type { LocationPageLocation } from "@/types/location-pages";
 
 export interface LocationCardProps {
-  location: KeyLocation;
+  location: KeyLocation | LocationPageLocation;
   areaName?: string | null;
 }
 
-/** A reusable summary card that navigates to the location detail route. */
+function getPrecomputedAreaName(
+  location: KeyLocation | LocationPageLocation,
+): string | null {
+  if (
+    "areaName" in location &&
+    typeof location.areaName === "string" &&
+    location.areaName.length > 0
+  ) {
+    return location.areaName;
+  }
+
+  return null;
+}
+
+/** 事前計算済みの地域名を表示する、状態を持たない施設カード。 */
 export default function LocationCard({ location, areaName }: LocationCardProps) {
-  const initialAreaName =
-    areaName ?? (typeof location.area === "string" ? location.area : null);
-  const [resolvedAreaName, setResolvedAreaName] = useState<string | null>(
-    initialAreaName,
-  );
-
-  useEffect(() => {
-    if (areaName !== undefined || initialAreaName !== null) {
-      return;
-    }
-
-    let isCurrent = true;
-    void findLocationAreaName({ lat: location.lat, lng: location.lng })
-      .then((name) => {
-        if (isCurrent) {
-          setResolvedAreaName(name);
-        }
-      })
-      .catch(() => {
-        if (isCurrent) {
-          setResolvedAreaName("不明");
-        }
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [areaName, initialAreaName, location.lat, location.lng, location]);
-
-  const displayedAreaName = areaName ?? resolvedAreaName;
-  const detailHref = `/location-detail/${encodeURIComponent(location.id)}`;
+  const displayedAreaName =
+    (typeof areaName === "string" && areaName.length > 0
+      ? areaName
+      : getPrecomputedAreaName(location)) ?? "地域不明";
+  const detailHref = `/locations/location-detail/${encodeURIComponent(location.id)}`;
 
   return (
     <Link
@@ -62,8 +47,7 @@ export default function LocationCard({ location, areaName }: LocationCardProps) 
 
       <div className="card-body text-left">
         <h2 className="card-title inline gap-0">{location.name}</h2>
-
-        {displayedAreaName && <p className="text-base">{displayedAreaName}</p>}
+        <p className="text-base">{displayedAreaName}</p>
 
         {location.description && (
           <p className="text-base mt-1 inline ruby-text">{location.description}</p>

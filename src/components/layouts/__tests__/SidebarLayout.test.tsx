@@ -1,49 +1,36 @@
 import type { ReactNode } from "react";
 import { render, screen, within } from "@testing-library/react";
-import type { KeyLocation } from "@/utils/addressLoader";
+import generatedLocationData from "@/generated/location-data.json";
+import type { LocationDataSnapshot } from "@/types/location-pages";
 import SidebarLayout from "../SidebarLayout";
 
-const mockLoadKeyLocationsDataResult = jest.fn();
+const locationData = generatedLocationData as unknown as LocationDataSnapshot;
+const locationCategory = locationData.categories.find(
+  (category) => category.id === "city_office_and_branch_offices",
+);
+const locationDetailFixture = locationCategory?.locations.find(
+  (location) => location.id === "5e3b1528-8af6-436a-83af-24ca45b58e12",
+);
 
-const locationDetailFixture: KeyLocation = {
-  id: "location-detail-host-fixture",
-  name: "神田図書館",
-  lat: 35.694,
-  lng: 139.768,
-  area: "神田",
-  description: "地域の図書館です",
-  descriptionCopyright: "千代田区オープンデータ",
-  imageUri: "https://example.test/kanda-library.jpg",
-  imageCopyright: "市民写真家",
-  uri: "https://example.test/kanda-library",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
-};
-
-jest.mock("@/utils/addressLoader", () => {
-  const actual = jest.requireActual("@/utils/addressLoader");
-  return {
-    ...actual,
-    loadKeyLocationsDataResult: mockLoadKeyLocationsDataResult,
-  };
-});
+if (!locationDetailFixture) {
+  throw new Error("generated detail location fixture is missing");
+}
 
 type LocationDetailPage = (props: {
   params: Promise<{ id: string }>;
 }) => ReactNode | Promise<ReactNode>;
 
 function getLocationDetailPage(): LocationDetailPage {
-  // Load after the loader spy is initialized so the real route observes it.
+  // Load at the assertion boundary so the route module is exercised directly.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const loaded: unknown = require("@/app/location-detail/[id]/page");
+  const loaded: unknown = require("@/app/locations/location-detail/[id]/page");
   if (typeof loaded !== "object" || loaded === null) {
-    throw new Error("location detail page module did not export an object");
+    throw new Error("generated location detail page module did not export an object");
   }
 
   const page = (loaded as { default?: unknown }).default;
   if (typeof page !== "function") {
-    throw new Error("location detail page module did not export a default page");
+    throw new Error("generated location detail page module did not export a default page");
   }
   return page as LocationDetailPage;
 }
@@ -150,17 +137,6 @@ describe("SidebarLayout", () => {
   });
 
   it("renders the location detail page through the shared main host and keeps Ko-fi after page content", async () => {
-    mockLoadKeyLocationsDataResult.mockResolvedValue({
-      status: "success",
-      categories: [
-        {
-          category: "公共施設",
-          "category:en": "public-facilities",
-          locations: [locationDetailFixture],
-        },
-      ],
-    });
-
     const page = await getLocationDetailPage()({
       params: Promise.resolve({ id: locationDetailFixture.id }),
     });

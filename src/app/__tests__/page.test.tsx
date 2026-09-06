@@ -1,9 +1,10 @@
 /* eslint-disable react/display-name */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Home from "../page";
+import { buildRouteResultsUrl } from "@/lib/transit/route-search-query";
 
 const mockRouterPush = jest.fn();
 const ANNOUNCEMENT_INFORMATION =
@@ -23,35 +24,10 @@ jest.mock("@/lib/config/app-config", () => ({
   },
 }));
 
-jest.mock("@/components/features/DateTimeSelector", () =>
-  ({ onDateTimeSelected }: any) => (
-    <button
-      data-testid="mock-date-time-selector"
-      onClick={() =>
-        onDateTimeSelected({ dateTime: "2026-07-18T09:30", isDeparture: true })
-      }
-    />
-  ),
-);
-
-jest.mock("@/components/features/OriginSelector", () =>
-  ({ onOriginSelected }: any) => (
-    <button
-      data-testid="mock-origin-selector"
-      onClick={() => onOriginSelected({ lat: 35.68, lng: 139.76, address: "テスト住所" })}
-    />
-  ),
-);
-
-jest.mock("@/components/features/DestinationSelector", () =>
-  ({ onDestinationSelected }: any) => (
-    <button
-      data-testid="mock-destination-selector"
-      onClick={() =>
-        onDestinationSelected({ lat: 35.7, lng: 139.78, address: "テスト目的地" })
-      }
-    />
-  ),
+jest.mock("@/components/features/LocationSuggestions", () =>
+  function MockLocationSuggestions() {
+    return null;
+  },
 );
 
 describe("Home", () => {
@@ -157,48 +133,97 @@ describe("Home", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("目的地、出発地、日時を順に入力する", () => {
+  it("トップページは単一のネイティブformで4セクションを最初から表示する", () => {
     render(<Home />);
-    fireEvent.click(screen.getByTestId("mock-destination-selector"));
-    expect(screen.getByTestId("mock-origin-selector")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId("mock-origin-selector"));
-    expect(screen.getByTestId("mock-date-time-selector")).toBeInTheDocument();
-    expect(screen.getByText("テスト目的地")).toBeInTheDocument();
-    expect(screen.getByText("テスト住所")).toBeInTheDocument();
+    const forms = document.querySelectorAll("form");
+    expect(forms).toHaveLength(1);
+    if (forms.length !== 1) return;
+
+    const form = forms[0];
+    expect(form.tagName).toBe("FORM");
+    expect(form.querySelector("form")).toBeNull();
+
+    const sectionNames = [
+      "目的地を選ぶ",
+      "出発地を選ぶ",
+      "日時",
+      "スピードを選ぶ",
+    ];
+    sectionNames.forEach((name) => {
+      expect(screen.queryByRole("heading", { name: new RegExp(`^${name}$`) })).not.toBeNull();
+    });
   });
 
-  it("検索条件をGET結果ページURLへ渡し、入力ページではfetchしない", () => {
+  it("場所操作を先に検索へ送信せず、経路検索だけをsubmitにする", () => {
     render(<Home />);
-    fireEvent.click(screen.getByTestId("mock-destination-selector"));
-    fireEvent.click(screen.getByTestId("mock-origin-selector"));
-    fireEvent.click(screen.getByTestId("mock-date-time-selector"));
-    fireEvent.click(screen.getByTestId("search-route"));
 
-    expect(mockRouterPush).toHaveBeenCalledWith(
-      "/routes?origin=35.68%2C139.76&destination=35.7%2C139.78&time=2026-07-18T09%3A30&isDeparture=true&prioritizeSpeed=false",
+    const form = document.querySelector("form");
+    const searchButton = screen.queryByRole("button", { name: /^検索$/ });
+    expect(form).not.toBeNull();
+    expect(searchButton).not.toBeNull();
+    if (!form || !searchButton) return;
+
+    expect(searchButton).toHaveAttribute("type", "submit");
+    Array.from(form.querySelectorAll("button"))
+      .filter((button) => button !== searchButton)
+      .forEach((button) => expect(button).toHaveAttribute("type", "button"));
+  });
+
+  it("有効なURL条件を表示し、読み込み時にURLを削除しない", () => {
+    const search =
+      "?origin=35.68%2C139.76&destination=35.7%2C139.78&time=2026-07-18T09%3A30&isDeparture=true&prioritizeSpeed=false";
+    window.history.replaceState({}, "", `/${search}`);
+
+    render(<Home />);
+
+    expect(window.location.search).toBe(search);
+    expect(screen.queryByText(/35\.68/)).not.toBeNull();
+    expect(screen.queryByText(/35\.7/)).not.toBeNull();
+  });
+
+  it("不正なURL項目は日本語の項目別エラーを表示し、有効な項目を保持する", () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/?origin=91%2C139.76&destination=35.7%2C139.78&time=2026-07-18T09%3A30&isDeparture=true&prioritizeSpeed=false",
     );
+
+    render(<Home />);
+
+    expect(screen.queryByText("出発地の座標が正しくありません。"))
+      .not.toBeNull();
+    expect(screen.queryByText(/35\.7/)).not.toBeNull();
+    expect(mockRouterPush).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it("はやさ優先をURLへ明示して端末設定に依存させない", () => {
-    render(<Home />);
-    fireEvent.click(screen.getByTestId("mock-destination-selector"));
-    fireEvent.click(screen.getByTestId("mock-origin-selector"));
-    fireEvent.click(screen.getByTestId("mock-date-time-selector"));
-    fireEvent.click(screen.getByRole("checkbox", { name: "はやさ優先" }));
-    fireEvent.click(screen.getByTestId("search-route"));
-
-    expect(mockRouterPush).toHaveBeenCalledWith(
-      expect.stringContaining("prioritizeSpeed=true"),
+  it("有効な全条件の送信だけでbuildRouteResultsUrlへ一度遷移する", async () => {
+    const query = {
+      origin: { lat: 35.68, lng: 139.76 },
+      destination: { lat: 35.7, lng: 139.78 },
+      time: "2026-07-18T09:30",
+      isDeparture: true,
+      prioritizeSpeed: false,
+    };
+    window.history.replaceState(
+      {},
+      "",
+      `/?${new URL(buildRouteResultsUrl(query), window.location.origin).searchParams.toString()}`,
     );
-  });
 
-  it("リセットで目的地入力へ戻る", () => {
     render(<Home />);
-    fireEvent.click(screen.getByTestId("mock-destination-selector"));
-    fireEvent.click(screen.getByRole("button", { name: "検索条件をリセット" }));
+    const form = document.querySelector("form");
+    expect(form).not.toBeNull();
+    if (!form) return;
 
-    expect(screen.getByTestId("mock-destination-selector")).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.submit(form);
+      await Promise.resolve();
+    });
+
+    expect(mockRouterPush).toHaveBeenCalledTimes(1);
+    expect(mockRouterPush).toHaveBeenCalledWith(buildRouteResultsUrl(query));
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

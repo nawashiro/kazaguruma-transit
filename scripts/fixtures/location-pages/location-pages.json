@@ -1,0 +1,400 @@
+{
+  "snapshot": {
+    "locationsDataVersion": "2.1.1",
+    "counts": {
+      "categoryCount": 16,
+      "detailCount": 169,
+      "suggestionCategoryCount": 9,
+      "suggestionCount": 62
+    },
+    "categories": [
+      {
+        "id": "city_office_and_branch_offices",
+        "name": "区役所・出張所",
+        "locationIds": [
+          "5e3b1528-8af6-436a-83af-24ca45b58e12",
+          "dbdcc341-7e14-4b03-a23f-3408c071af86",
+          "7aa1ad8e-eea5-4f16-9877-a3bbab93e2a6",
+          "a91e0bbf-eb46-4f28-9136-e9fceeccb4f2",
+          "4d8c5cdb-251e-4657-be8d-878c04214454",
+          "7abfec8b-5d0f-47d4-8151-4e8272fe5a49"
+        ]
+      },
+      {
+        "id": "disability_welfare_center",
+        "name": "障害者福祉センター",
+        "locationIds": [
+          "b457878a-0e99-4ba9-b794-62eb910e39f3",
+          "615b5a39-82eb-4633-81f6-49c0c9e5f774"
+        ]
+      },
+      {
+        "id": "library",
+        "name": "図書館",
+        "locationIds": [
+          "824e1068-d7e5-456c-9934-3e582e6838b7",
+          "6ed4686b-4b9d-4ed7-932d-ba05dbf2d7ce",
+          "954ea722-7a4e-41b9-b54a-663871371a99",
+          "d6b33760-228f-41ba-81f9-68b8185604e5",
+          "288fe733-8883-4afe-9190-01eb11f5b608",
+          "25e30e15-f50c-45a2-8a90-c7bb0a904e2d",
+          "3f0d36f0-d343-4a77-aa52-55078802173a",
+          "32b11e4f-e834-492e-9c3e-95f5f654274d",
+          "6ff7e4b6-accd-4eed-8dd2-7eddfdb82f82",
+          "f5d92ee0-1f75-4282-8de4-f6036f007e7e",
+          "ebb57317-8fa9-4939-9c48-6c91707f0e0b"
+        ]
+      },
+      {
+        "id": "social_facility",
+        "name": "社会福祉施設",
+        "locationIds": [
+          "6b11530f-409a-44da-bd17-fe78d7157772",
+          "2605dda1-bf15-43bd-bb71-2b65ea558834",
+          "2b93b3bc-4467-4590-8c0f-b6b789883386",
+          "1f1d9034-895f-41a5-9d05-f924e8c0c662",
+          "883f4f2f-7f8c-4acf-83f9-a7dca3a2254f",
+          "3e3acde1-9175-45cd-aa2a-b46d80db4d7a",
+          "5cd49c86-3c33-4647-b705-9eaa73a5d744",
+          "08fd22ce-4b3f-4f08-bec8-de63d3a84be7",
+          "487e52a8-1b17-4214-8e65-5c96d58d9b0b",
+          "e4fb032d-2ef3-4a12-972b-512a0e433477",
+          "1e0a0faf-ee64-4ddd-ab3b-ee938d6c31fd"
+        ]
+      },
+      {
+        "id": "natural environment park",
+        "name": "自然環境公園",
+        "locationIds": [
+          "f3e4bd61-d904-43db-b425-edd933f2d230",
+          "a750f6d0-5c2f-45a3-8fa9-c4c71857bb91",
+          "5b0d13f8-10ff-4dfb-bf62-871c327c3260",
+          "f5c4ccc5-ff66-443d-9ef5-6ea09ffc3d45",
+          "38aae7aa-681a-4e99-8887-4adf40283a00",
+          "2ae0e85b-e664-44bc-a996-9863586f56d1",
+          "42823748-4d33-4abe-b89f-ef97da24cee4",
+          "1c50f575-c48b-4689-aee0-1d64ac051b60",
+          "88970c7b-f06d-481a-8304-fb1f4839ed82"
+        ]
+      },
+      {
+        "id": "nursery",
+        "name": "保育所",
+        "locationIds": [
+          "02429aab-1203-48a8-9407-c9cb7ced7a4b",
+          "7cef5a44-8ac3-44ed-bae0-92aa5eeb86a2",
+          "660e3583-f793-4997-8f3c-bfde6e06be97",
+          "434c3e48-25a5-469a-bdb9-4eab6c5853b1",
+          "e4a05311-b5b7-4639-ae97-b37fe402962e",
+          "f42b56cc-de6c-4d72-ba5e-ab414cc252b0",
+          "8e3b2847-9c83-4cec-a64e-b65b89dc973d",
+          "314362f9-8422-445a-8a4d-bb614f7ecb00",
+          "f37a3027-71f4-4231-b5e0-348d32cc387e",
+          "98ed7a28-ee4c-4db4-8a8e-6bd0cbbc7789",
+          "1e21f514-d9a4-4fd8-b45a-c0cb7ab7d76e",
+          "d50953a4-fc64-4181-aa77-8a360ea0e507",
+          "972b4879-4f76-4976-9305-9bf79ea0ca7e",
+          "d5c00c92-a435-4b7b-a8d8-cdede399bc26",
+          "eae5dfe7-4a5c-4ce9-81cb-41a10bc9916b",
+          "ca3a609b-04c0-4cf3-85b1-b2d580dadcdd",
+          "ebe7c2b7-de63-4886-a277-f936626441d0",
+          "b4d1875b-ec8a-4fbe-a1f0-5dd21238032a",
+          "198041a6-1bb6-4849-9ac9-85a3acca0e9c",
+          "d1753a3e-8d48-4371-8b2a-ccf47633af5a",
+          "aab44487-67c7-4f2c-a1d1-7e559a14c14e",
+          "167ffab8-4305-4e97-9b8d-5c8dbcd1deb0",
+          "b4a51dd5-b911-474c-885f-b2c7f6d6dc24",
+          "f6af1057-0fd0-4cbb-84d3-aee82a4ae2e1"
+        ]
+      },
+      {
+        "id": "kindergarten",
+        "name": "幼稚園",
+        "locationIds": [
+          "b787c2a6-27bd-48d2-b41b-33ffa083586d",
+          "0702d12a-1dfb-4326-a929-edf5ea3ee44c",
+          "4d21105c-678a-4a7a-9967-adee70442701",
+          "c76299f6-f1fc-46de-acf7-e11a81f4b040",
+          "269cec5f-6726-4a4e-8e24-2ae03326dcac",
+          "fd769841-930a-4a00-be7d-6072837f5ddb",
+          "8778cd62-92b5-4bdb-b930-be29cf5b6d2a",
+          "388b1663-8695-43f3-ad4a-a6a3dbce1df4"
+        ]
+      },
+      {
+        "id": "school",
+        "name": "学校",
+        "locationIds": [
+          "cddc54c1-0e9a-466c-80a4-fdad3d94123c",
+          "db2fa053-4647-4289-8822-7c95881d2a26",
+          "7cab3194-29b2-4271-8977-2c620b768e0d",
+          "d2b7e411-2361-424c-88cf-4726e9af3b64",
+          "d1e1299a-df78-4cb5-a808-86191a74723e",
+          "eaf7a382-95ae-48df-ba7d-02d1e7a45bdf",
+          "d9f48cc4-1418-4ed9-bab2-91532b2be044",
+          "763a1959-e46b-42be-a233-b075df76c2cf",
+          "6a7183bf-a4cb-43a4-817d-3813a64a78a2",
+          "3d914fd6-5eb5-4d0d-a937-54fc0f95b699",
+          "ce2bcd22-72c4-435c-a146-2620b994cabe",
+          "00593651-06b6-4dbe-a4dd-8ac8ef452e83",
+          "13246ebb-463c-4664-b501-e29376a99875",
+          "932c6acf-c5f3-48fa-8c9b-01acb98ccabb",
+          "9f0167e9-b82b-467b-b85c-c5d8821c63d4",
+          "9ceb4026-a9da-4da3-8d35-44c9d92133cc",
+          "9c655146-7c95-4932-b3d7-8cb63973f08a",
+          "ee28879a-2282-4d07-8237-2d2f62918323",
+          "06ec79a4-0417-4732-89d9-6a8ee4fd5e15",
+          "d4c3302e-8695-4980-8fb9-826b1b0d21d6",
+          "cb2df6d9-486e-460f-8188-e9178fc18c05",
+          "c269c152-c848-465e-ab5e-f855fcfdf321",
+          "498f0c0f-92f5-4024-8a09-150f349702cf",
+          "47700e87-8668-4459-adb8-7e3731898cb6",
+          "47746e27-7f4b-4b3b-a0e0-37e038b55e15",
+          "7cd99b0a-402d-4fd2-bcab-410cfdc93d71",
+          "3e16e781-a4bc-436b-86cb-9b12e51a7695",
+          "c2064918-030c-4b71-b1be-a8e3e1317c20",
+          "1fef855b-5acc-4da3-a5e2-a42e0b7916a4"
+        ]
+      },
+      {
+        "id": "hospital",
+        "name": "病院",
+        "locationIds": [
+          "3e328a42-3ff1-4018-be72-746aa6e14e17",
+          "f848838b-550c-4bff-86ab-b1a944bb4b03",
+          "6a497ac4-5e9e-4e13-b06a-16c6eeed4175",
+          "8cfcd67b-8542-4af8-a71f-b8bf48bccb61",
+          "f9621b3f-c107-49f5-920e-2aa5cdbb6162",
+          "5336030e-14ef-43ba-a906-7ac4f7c88f16",
+          "242e795c-c970-4a3c-8fea-d88863eec9a6",
+          "b4c7df3e-0a9b-4244-8f9c-c593cd11ea65",
+          "ae74b2f0-a7ed-4c20-b690-1bd6b7587a06",
+          "29498070-e189-441c-8432-3ee8506b8fe7",
+          "6c7db10e-0e15-4b5d-a36e-23b8b0534240",
+          "9be9dc11-8af4-49f2-9700-e360c4e920ad",
+          "23cec446-14bd-4077-86ab-49d05b0ce66f",
+          "b1c03187-bbbb-4411-ba02-85cedaffbec6",
+          "7befcf0d-0c4c-4e70-b451-fb61f51f9366",
+          "6b0dedad-d87f-4a17-887f-df1ab41cc1e4",
+          "894cc5c7-950e-4784-8512-3b0e8e044c46",
+          "d41e398c-35c7-4693-9e30-25148a5ba68c"
+        ]
+      },
+      {
+        "id": "buddhist",
+        "name": "仏教",
+        "locationIds": [
+          "57c34ce7-fbd9-4336-b565-d3c0a1efcd83",
+          "75719a8b-1e0c-422d-8a7e-80bc5e4af36d",
+          "63655725-2cd5-4c7e-b760-72d4c945cd93"
+        ]
+      },
+      {
+        "id": "christian",
+        "name": "キリスト教",
+        "locationIds": [
+          "d1a1124e-2cc6-45cb-93c0-20e746cfe5e5",
+          "886b3f1c-d125-4b53-94f6-da883ed87838",
+          "289e283e-860d-4147-a6f1-bef9e3a1945a",
+          "80857fe1-61ff-47d9-a4de-903b45182f4c",
+          "aa4da496-51bb-449d-9a00-bfea7de5787f",
+          "4fabe927-9af0-43a1-a757-24a9931515f1",
+          "266de71a-c72d-4fa8-ba7f-f5d696dfc23b",
+          "7533934b-0a9f-459d-9159-8fdfa785c6fc",
+          "98f80f3f-e9da-41a5-8c9a-25a9408551a1",
+          "86bd422b-2958-4177-8008-4b5ad314a1f2"
+        ]
+      },
+      {
+        "id": "cinema",
+        "name": "映画館",
+        "locationIds": [
+          "41757069-1873-4e3c-ac0d-cc7c0547ba1f"
+        ]
+      },
+      {
+        "id": "public_bath",
+        "name": "公衆浴場",
+        "locationIds": [
+          "66f5a103-4482-434d-9189-226a0f7ffa61",
+          "973b6855-9b64-492f-85f6-61adda9232f5",
+          "c963b122-6d8e-41a8-9e3f-e082b29dff39",
+          "4d450453-5c89-4930-b0bd-deea0bce3e56",
+          "b0bce673-394d-4a1c-952d-526064570df0",
+          "72048382-609d-4588-9305-1148dee22ee4"
+        ]
+      },
+      {
+        "id": "theatre",
+        "name": "劇場",
+        "locationIds": [
+          "dccb191f-357a-4ad4-9669-2d1096001ee8",
+          "9751a893-2605-4b1f-b98e-ccb8b1d91797",
+          "9e02fca0-fbe9-4150-b8dd-3dd20b58b7b4",
+          "d7a7d968-2fa5-4401-9a5c-64fa770d148d",
+          "34a6aad2-cef8-4eb7-82fb-dcdbf5ba2279",
+          "afed7412-9c8c-4e43-b8d0-2e0185b563cd",
+          "2bce3949-6b9a-4b04-9a3e-8d7f82ea8783",
+          "d37b0791-8947-43f1-b0d5-080d73a19f9c",
+          "78e94e77-fac9-4439-a596-ec8022f7b821",
+          "e4d4da1c-f72d-42fc-9306-0db14e308906",
+          "2123ef93-a139-4378-9f22-5c7607dc6b38",
+          "ea819faf-e8d4-46f6-827d-478adf25d6b5",
+          "dda7a93d-2d5a-4379-86bc-aa70998dea75",
+          "c5282879-6387-4975-a9b6-5a36ebcb0636"
+        ]
+      },
+      {
+        "id": "gallery",
+        "name": "美術館",
+        "locationIds": [
+          "e67c8a9f-db31-42c2-b43c-bc2468d8df1c",
+          "c7e24047-f6e6-4472-9fc2-08194f913f13",
+          "c4f41087-5ce6-4b94-b78e-a28c6770c467",
+          "03a4b060-376f-4890-90da-269b80d00552",
+          "547d3130-64b6-4a2f-8488-03b527daade2",
+          "ad56e010-5e88-4325-b175-5fc7fbe2530b",
+          "6c36180a-35db-4255-af28-e80fa62bbae9"
+        ]
+      },
+      {
+        "id": "museum",
+        "name": "博物館",
+        "locationIds": [
+          "cef85600-16f8-41ff-96aa-27e57835f6bb",
+          "9022195a-d5ed-46e9-b991-99696ce0ed17",
+          "b0ad03fe-a152-451e-aa49-c45ac04c7377",
+          "621d2079-3a55-4b55-be79-a2cd391e4fb5",
+          "e1547f04-8ad6-41b7-868b-77196ec3d2be",
+          "788d6781-9a5a-493d-b96d-d0a79f1362ae",
+          "72a1b323-c5b1-4c0d-9410-8152622a3a78",
+          "86b04356-17cd-4674-9295-4d9a94de56ac",
+          "b2a89db0-924d-4b6b-9cdf-54d512b983b0",
+          "efa385b8-4ddc-4b97-8c26-05cabcb2983e"
+        ]
+      }
+    ],
+    "suggestionCategories": [
+      {
+        "categoryName": "主要な病院",
+        "locationNames": [
+          "九段坂病院",
+          "三楽病院",
+          "杏雲堂病院",
+          "日本大学病院",
+          "三井記念病院",
+          "東京逓信病院"
+        ]
+      },
+      {
+        "categoryName": "区役所・出張所",
+        "locationNames": [
+          "千代田区役所",
+          "麹町出張所・麹町区民館",
+          "富士見出張所・区民館",
+          "神保町出張所・区民館",
+          "神田公園出張所・区民館",
+          "和泉橋出張所"
+        ]
+      },
+      {
+        "categoryName": "会館",
+        "locationNames": [
+          "麹町出張所・麹町区民館",
+          "麹町集会室",
+          "一番町集会室",
+          "富士見出張所・区民館",
+          "九段上集会室",
+          "神保町出張所・区民館",
+          "神田公園出張所・区民館",
+          "内神田集会室",
+          "万世橋区民館",
+          "和泉橋区民館",
+          "ふれあい会館",
+          "千代田万世会館（千代田区立葬祭施設）"
+        ]
+      },
+      {
+        "categoryName": "区立の学校",
+        "locationNames": [
+          "麹町小学校",
+          "九段小学校",
+          "番町小学校",
+          "富士見小学校",
+          "お茶の水小学校",
+          "千代田小学校",
+          "昌平小学校",
+          "和泉小学校",
+          "麹町中学校",
+          "神田一橋中学校",
+          "九段中等教育学校"
+        ]
+      },
+      {
+        "categoryName": "高齢者福祉施設",
+        "locationNames": [
+          "THE BANCHO",
+          "かがやきプラザ",
+          "いきいきプラザ一番町",
+          "岩本町ほほえみプラザ",
+          "かんだ連雀",
+          "ジロール神田佐久間町",
+          "ジロール麹町",
+          "淡路にこにこフォーユープラザ"
+        ]
+      },
+      {
+        "categoryName": "障害者福祉施設",
+        "locationNames": [
+          "障害者就労支援センター",
+          "えみふる（障害者福祉センター）",
+          "障害者よろず相談Light",
+          "さくらベーカリー",
+          "ジョブ・サポート・プラザ ちよだ（千代田区立障害者就労支援施設）"
+        ]
+      },
+      {
+        "categoryName": "児童館",
+        "locationNames": [
+          "ちよだパークサイドプラザ",
+          "昌平童夢館",
+          "西神田コスモス館",
+          "四番町児童館",
+          "一番町児童館",
+          "富士見みらい館",
+          "子育てひろば「あい・ぽーと」麹町"
+        ]
+      },
+      {
+        "categoryName": "図書館",
+        "locationNames": [
+          "千代田図書館",
+          "昌平まちかど図書館",
+          "神田まちかど図書館",
+          "ちよだパークサイドプラザ区民図書室",
+          "四番町図書館"
+        ]
+      },
+      {
+        "categoryName": "リサイクル",
+        "locationNames": [
+          "千代田清掃事務所",
+          "リサイクルセンター鎌倉橋"
+        ]
+      }
+    ]
+  },
+  "routes": {
+    "representativeCategoryId": "city_office_and_branch_offices",
+    "spaceCategoryId": "natural environment park",
+    "representativeDetailId": "5e3b1528-8af6-436a-83af-24ca45b58e12",
+    "spaceCategoryLocationId": "f3e4bd61-d904-43db-b425-edd933f2d230",
+    "representativeSuggestionName": "三楽病院",
+    "unknownCategoryId": "__missing_location_category__",
+    "unknownDetailId": "__missing_location_detail__"
+  },
+  "facilityCdnSubstrings": [
+    "cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities",
+    "cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_town_geojson"
+  ]
+}

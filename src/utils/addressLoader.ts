@@ -1,5 +1,6 @@
 import { Location } from "@/types/core";
 import type { LocationDataLoadResult } from "@/types/access-route-pages";
+import generatedLocationData from "@/generated/location-data.json";
 import { appConfig } from "@/lib/config/app-config";
 import { logger } from "./logger";
 
@@ -38,40 +39,19 @@ export interface KeyLocationCategory {
 }
 
 export async function loadAddressData(): Promise<AddressCategory[]> {
-  try {
-    const version = appConfig.locationsDataVersion;
-    const response = await fetch(
-      `https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@${version}/kazaguruma_json_min/main_facilities.json`
-    );
-    if (response.ok) {
-      logger.log("住所データを読み込みました");
-    } else {
-      throw new Error("住所データの取得に失敗しました");
-    }
-    const data = await response.json();
-    return data as AddressCategory[];
-  } catch (error) {
-    logger.error("住所データ読み込みエラー:", error);
-    return [];
-  }
+  return generatedLocationData.suggestionCategories.map(({ categoryName, locations }) => ({
+    category: categoryName,
+    locations: locations.map(({ name, lat, lng }) => ({ name, lat, lng })),
+  }));
 }
 
-// key_locations.jsonからデータを読み込む関数
+// 生成済みスナップショットから主要施設データを読み込む関数
 export async function loadKeyLocationsData(): Promise<KeyLocationCategory[]> {
-  try {
-    const version = appConfig.locationsDataVersion;
-    const response = await fetch(
-      `https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@${version}/kazaguruma_json_min/key_locations.json`
-    );
-    if (!response.ok) {
-      throw new Error("主要施設データの取得に失敗しました");
-    }
-    const data = await response.json();
-    return data as KeyLocationCategory[];
-  } catch (error) {
-    logger.error("主要施設データ読み込みエラー:", error);
-    return [];
-  }
+  return generatedLocationData.categories.map(({ id, name, locations }) => ({
+    category: name,
+    "category:en": id,
+    locations: locations.map((location) => ({ ...location })),
+  }));
 }
 
 export type KeyLocationsDataResult = LocationDataLoadResult<KeyLocationCategory>;

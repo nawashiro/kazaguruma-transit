@@ -4,23 +4,16 @@ import "@testing-library/jest-dom";
 import LoginPage, { metadata as loginMetadata } from "@/app/login/page";
 import SignupPage, { metadata as signupMetadata } from "@/app/signup/page";
 import RateLimitPage, { metadata as rateLimitMetadata } from "@/app/rate-limit/page";
-import LocationDetailPage, {
-  generateMetadata as locationDetailGenerateMetadata,
-} from "@/app/location-detail/[id]/page";
-import LocationDetailLoading from "@/app/location-detail/[id]/loading";
+import NotFoundPage from "@/app/not-found";
+import generatedLocationData from "@/generated/location-data.json";
 import type {
-  KeyLocation,
-  KeyLocationCategory,
-  KeyLocationsDataResult,
-} from "@/utils/addressLoader";
+  LocationDataSnapshot,
+  LocationPageLocation,
+} from "@/types/location-pages";
 
 const mockUseAuth = jest.fn();
 const mockRouterPush = jest.fn();
 const mockRouterReplace = jest.fn();
-const mockLoadKeyLocationsDataResult = jest.fn<
-  Promise<KeyLocationsDataResult>,
-  []
->();
 let mockSearchParams = new URLSearchParams();
 
 jest.mock("@/lib/auth/auth-context", () => ({
@@ -35,35 +28,66 @@ jest.mock("next/navigation", () => ({
   useSearchParams: () => mockSearchParams,
 }));
 
-jest.mock("@/utils/addressLoader", () => {
-  const actual = jest.requireActual("@/utils/addressLoader");
-  return {
-    ...actual,
-    loadKeyLocationsDataResult: () => mockLoadKeyLocationsDataResult(),
-  };
-});
+type LocationDetailPage = (props: {
+  params: Promise<{ id: string }>;
+}) => React.ReactNode | Promise<React.ReactNode>;
 
-const primaryLocation: KeyLocation = {
-  id: "kanda-library-日本",
-  name: "神田図書館",
-  lat: 35.694,
-  lng: 139.768,
-  area: "神田",
-  description: "地域の図書館です",
-  imageUri: "https://example.test/kanda-library.jpg",
-  uri: "https://example.test/kanda-library",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+type LocationDetailGenerateMetadata = (props: {
+  params: Promise<{ id: string }>;
+}) => unknown | Promise<unknown>;
+
+type LocationDetailModule = Record<string, unknown>;
+
+type LocationDetailModuleState = {
+  exports: LocationDetailModule | null;
+  error: unknown | null;
 };
 
-const locationCategories: KeyLocationCategory[] = [
-  {
-    category: "公共施設",
-    "category:en": "public-facilities",
-    locations: [primaryLocation],
-  },
-];
+const locationData = generatedLocationData as unknown as LocationDataSnapshot;
+const locationCategory = locationData.categories.find(
+  (category) => category.id === "city_office_and_branch_offices",
+);
+const primaryLocation: LocationPageLocation | undefined = locationCategory?.locations.find(
+  (location) => location.id === "5e3b1528-8af6-436a-83af-24ca45b58e12",
+);
+
+if (!locationCategory || !primaryLocation) {
+  throw new Error("generated detail location fixture is missing");
+}
+
+function loadLocationDetailModule(): LocationDetailModuleState {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- guarded metadata RED boundary
+    const loaded: unknown = require("@/app/locations/location-detail/[id]/page");
+    if (typeof loaded !== "object" || loaded === null) {
+      return {
+        exports: null,
+        error: new Error("location detail page module did not export an object"),
+      };
+    }
+
+    return { exports: loaded as LocationDetailModule, error: null };
+  } catch (error) {
+    return { exports: null, error };
+  }
+}
+
+function getLocationDetailPage(): LocationDetailPage {
+  const state = loadLocationDetailModule();
+  if (state.error) {
+    const detail = state.error instanceof Error ? state.error.message : String(state.error);
+    throw new Error(`/locations/location-detail/[id] could not be loaded: ${detail}`);
+  }
+  if (!state.exports) {
+    throw new Error("/locations/location-detail/[id] did not export a public module");
+  }
+
+  const page = state.exports.default;
+  if (typeof page !== "function") {
+    throw new Error("/locations/location-detail/[id] did not export a default page");
+  }
+  return page as LocationDetailPage;
+}
 
 function titleText(metadata: unknown): string {
   if (typeof metadata !== "object" || metadata === null) return "";
@@ -110,12 +134,14 @@ function assertExplicitLabelAssociation(input: HTMLElement) {
 }
 
 async function renderLocationDetail(id: string) {
-  const element = await LocationDetailPage({
+  const element = await getLocationDetailPage()({
     params: Promise.resolve({ id }),
   });
 
   if (!React.isValidElement(element)) {
-    throw new Error("/location-detail/[id] did not render a public React element");
+    throw new Error(
+      "/locations/location-detail/[id] did not render a public React element",
+    );
   }
 
   return renderInHostMain(element);
@@ -132,20 +158,34 @@ describe("専用ページの共通 semantic/a11y 契約", () => {
       login: jest.fn().mockResolvedValue(undefined),
       createAccount: jest.fn().mockResolvedValue(undefined),
     });
-    mockLoadKeyLocationsDataResult.mockReset();
-    mockLoadKeyLocationsDataResult.mockResolvedValue({
-      status: "success",
-      categories: locationCategories,
-    });
   });
 
   it("exports non-empty purpose-bearing metadata for every public page module", async () => {
-    const locationDetailMetadata = await locationDetailGenerateMetadata({
+    const locationDetailModule = loadLocationDetailModule();
+    expect(locationDetailModule.error).toBeNull();
+    expect(locationDetailModule.exports).not.toBeNull();
+
+    if (locationDetailModule.error || !locationDetailModule.exports) {
+      return;
+    }
+
+    const locationDetailGenerateMetadata =
+      locationDetailModule.exports.generateMetadata;
+    expect(typeof locationDetailGenerateMetadata).toBe("function");
+
+    if (typeof locationDetailGenerateMetadata !== "function") {
+      return;
+    }
+
+    const locationDetailMetadata = await (
+      locationDetailGenerateMetadata as LocationDetailGenerateMetadata
+    )({
       params: Promise.resolve({ id: primaryLocation.id }),
     });
 
     expect(titleText(loginMetadata)).toMatch(/ログイン/i);
     expect(titleText(signupMetadata)).toMatch(/アカウント|作成|signup/i);
+    expect(titleText(locationDetailMetadata)).toContain(primaryLocation.name);
     expect(titleText(locationDetailMetadata)).toMatch(/場所|詳細/i);
     expect(titleText(rateLimitMetadata)).toMatch(/リクエスト|制限/i);
 
@@ -207,55 +247,19 @@ describe("専用ページの共通 semantic/a11y 契約", () => {
     assertNativeLinks(view.container);
   });
 
-  it("renders an invalid location detail as one main/h1 with a Japanese error heading, body, and return link", async () => {
-    mockLoadKeyLocationsDataResult.mockResolvedValue({
-      status: "success",
-      categories: [],
-    });
-
-    const view = await renderLocationDetail("unknown-location");
+  it("renders the unified global not-found page as one main/h1 with an exact Japanese body", () => {
+    const view = renderInHostMain(<NotFoundPage />);
 
     assertSingleProductionMainAndHeading(view.container);
-    const stateHeading = screen.getByRole("heading", {
-      level: 1,
-      name: "場所が見つかりません",
-    });
-    expect(stateHeading).toBeVisible();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-
-    const errorHeading = screen.getByRole("heading", {
-      level: 2,
-      name: "エラー",
-    });
-    expect(errorHeading).toBeVisible();
-
-    const message = "指定された場所は見つかりませんでした。場所一覧から選び直してください。";
-    const body = screen.getByText(message, { exact: true });
-    expect(body).toBeVisible();
-    const errorPanel = body.closest(".alert");
-    if (!(errorPanel instanceof HTMLElement)) {
-      throw new Error("expected the location error body to be inside an alert panel");
-    }
-    expect(errorPanel).toHaveClass(
-      "alert-error",
-      "alert-soft",
-      "text-base-content!"
-    );
-
-    const returnLink = screen.getByRole("link", { name: "場所一覧に戻る" });
-    expect(returnLink).toHaveAttribute("href", "/locations");
-    expect(returnLink.compareDocumentPosition(stateHeading)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING
-    );
-    assertNativeLinks(view.container);
-  });
-
-  it("renders the public loading state with one h1 and a Japanese status", () => {
-    const view = renderInHostMain(<LocationDetailLoading />);
-
-    assertSingleProductionMainAndHeading(view.container);
-    expect(screen.getByRole("status")).toHaveTextContent(/読み込み中/);
-    expect(screen.getByRole("status").tagName).toBe("P");
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: "ページが見つかりません",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("お探しのページは見つかりませんでした。", { exact: true }),
+    ).toBeInTheDocument();
   });
 
   it("renders Rate Limit through the public Promise searchParams boundary with native return navigation", async () => {

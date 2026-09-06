@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useId } from "react";
+import React, { forwardRef, useId } from "react";
 import { TriangleAlert } from "lucide-react";
 
-interface InputFieldProps {
+export interface InputFieldProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   type?: string;
   placeholder?: string;
   disabled?: boolean;
@@ -19,28 +20,31 @@ interface InputFieldProps {
   label?: string;
 }
 
-export default function InputField({
-  value,
-  onChange,
-  type = "text",
-  placeholder = "",
-  disabled = false,
-  required = false,
-  error = "",
-  testId,
-  description,
-  name,
-  maxLength,
-  endAdornment,
-  label,
-}: InputFieldProps) {
+const InputField = forwardRef<HTMLInputElement, InputFieldProps>(function InputField(
+  {
+    value,
+    onChange,
+    onKeyDown,
+    type = "text",
+    placeholder = "",
+    disabled = false,
+    required = false,
+    error = "",
+    testId,
+    description,
+    name,
+    maxLength,
+    endAdornment,
+    label,
+  },
+  ref,
+) {
   const uniqueId = useId();
   const inputId = `input-${uniqueId}`;
   const descriptionId = description ? `description-${uniqueId}` : undefined;
   const errorId = error ? `error-${uniqueId}` : undefined;
   const hasError = !!error;
 
-  // アクセシビリティのために必要なaria-describedby属性の値を構築
   const ariaDescribedby =
     [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
 
@@ -61,18 +65,18 @@ export default function InputField({
       )}
       <div className={endAdornment ? "join w-full" : ""}>
         <input
+          ref={ref}
           id={inputId}
           type={type}
           value={value}
           onChange={onChange}
+          onKeyDown={onKeyDown}
           placeholder={placeholder}
           disabled={disabled}
           required={required}
           name={name}
           maxLength={maxLength}
-          className={`input min-h-[44px] leading-relaxed ${hasError ? "input-error" : ""
-            } ${endAdornment ? "join-item flex-1" : "w-full"} ${disabled ? "cursor-not-allowed" : ""
-            }`}
+          className={`input min-h-[44px] leading-relaxed ${hasError ? "input-error" : ""} ${endAdornment ? "join-item flex-1" : "w-full"} ${disabled ? "cursor-not-allowed" : ""}`}
           aria-invalid={hasError ? "true" : undefined}
           aria-required={required ? "true" : undefined}
           aria-describedby={ariaDescribedby}
@@ -93,4 +97,8 @@ export default function InputField({
       )}
     </div>
   );
-}
+});
+
+InputField.displayName = "InputField";
+
+export default InputField;

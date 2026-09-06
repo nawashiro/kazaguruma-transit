@@ -19,7 +19,7 @@ describe("DateTimeSelector", () => {
     // 出発日時入力フィールドが存在することを確認
     const departureDateTimeInput = screen.getByTestId("departure-input");
     expect(departureDateTimeInput).toBeInTheDocument();
-    expect(screen.getByTestId("departure-label")).toHaveTextContent("出発日時");
+    expect(screen.getByTestId("departure-label")).toHaveTextContent(/^日時$/);
 
     // 値を設定
     fireEvent.change(departureDateTimeInput, {
@@ -45,7 +45,7 @@ describe("DateTimeSelector", () => {
     );
 
     // デフォルトでは出発日時が表示されていることを確認
-    expect(screen.getByTestId("departure-label")).toHaveTextContent("出発日時");
+    expect(screen.getByTestId("departure-label")).toHaveTextContent(/^日時$/);
 
     // モックがコンポーネント初期化時に呼ばれたことをリセット
     mockOnDateTimeSelected.mockClear();
@@ -56,7 +56,7 @@ describe("DateTimeSelector", () => {
 
     // 到着日時入力フィールドが表示されていることを確認
     await waitFor(() => {
-      expect(screen.getByTestId("arrival-label")).toHaveTextContent("到着日時");
+      expect(screen.getByTestId("arrival-label")).toHaveTextContent(/^日時$/);
       expect(screen.getByTestId("arrival-input")).toBeInTheDocument();
     });
 
@@ -101,7 +101,7 @@ describe("DateTimeSelector", () => {
 
     const labelId = fieldsetRadiogroup.getAttribute("aria-labelledby");
     const label = document.getElementById(labelId || "");
-    expect(label).toHaveTextContent("時間タイプを選択");
+    expect(label).toHaveTextContent(/^日時$/);
 
     // roleを付けた別要素ではなく、実DOMのネイティブラジオを要求する
     const radioInputs = Array.from(
@@ -116,13 +116,11 @@ describe("DateTimeSelector", () => {
       expect(radioInput).toHaveAttribute("id");
       expect(radioInput.getAttribute("id")).not.toBe("");
     });
-    expect(radioInputs[0].getAttribute("name")).toBe(
-      radioInputs[1].getAttribute("name")
-    );
+    expect(new Set(radioInputs.map((radioInput) => radioInput.getAttribute("name"))).size).toBe(1);
 
     // labelの公開経路で同じinputを取得し、htmlForの関連付けを検証する
-    const departureRadio = screen.getByLabelText("出発");
-    const arrivalRadio = screen.getByLabelText("到着");
+    const departureRadio = screen.getByLabelText("出発時刻");
+    const arrivalRadio = screen.getByLabelText("到着時刻");
     expect(departureRadio).toBeInstanceOf(HTMLInputElement);
     expect(arrivalRadio).toBeInstanceOf(HTMLInputElement);
     expect(departureRadio).toHaveAttribute("type", "radio");
@@ -154,7 +152,7 @@ describe("DateTimeSelector", () => {
     await waitFor(() => {
       expect(arrivalRadio).toBeChecked();
       expect(departureRadio).not.toBeChecked();
-      expect(screen.getByTestId("arrival-label")).toHaveTextContent("到着日時");
+      expect(screen.getByTestId("arrival-label")).toHaveTextContent(/^日時$/);
       expect(screen.getByTestId("arrival-input")).toBeInTheDocument();
       expect(mockOnDateTimeSelected).toHaveBeenCalledWith(
         expect.objectContaining({

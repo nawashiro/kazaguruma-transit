@@ -83,6 +83,18 @@ describe("DestinationSelector", () => {
     expect(screen.queryByText("検索")).not.toBeInTheDocument();
   });
 
+  it("名前検索は子formを作らず、経路検索ではないbutton操作として公開する", () => {
+    render(
+      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
+    );
+
+    const searchButton = screen.getByRole("button", {
+      name: "目的地の住所や場所を検索",
+    });
+    expect(document.querySelector("form")).toBeNull();
+    expect(searchButton).toHaveAttribute("type", "button");
+  });
+
   it("入力が空の場合はコールバックが呼ばれない", async () => {
     render(
       <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
@@ -206,5 +218,6 @@ describe("DestinationSelector", () => {
       lng: 139.7534462933312,
       address: "千代田区役所",
     });
+    expect(mockRouterPush).not.toHaveBeenCalled();
   });
 });

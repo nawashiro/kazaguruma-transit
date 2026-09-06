@@ -109,6 +109,84 @@ export function parseRouteSearchParams(
   };
 }
 
+type ParsedRouteInputSearchParams = {
+  status: "valid" | "invalid";
+  values: Partial<RouteSearchQuery>;
+  errors: Partial<Record<keyof RouteSearchQuery, string>>;
+};
+
+export function parseRouteInputSearchParams(
+  searchParams: URLSearchParams,
+): ParsedRouteInputSearchParams {
+  const values: Partial<RouteSearchQuery> = {};
+  const errors: Partial<Record<keyof RouteSearchQuery, string>> = {};
+
+  if (searchParams.has("origin")) {
+    const origin = findParsedValue(searchParams, "origin", parseLocation);
+    if (origin !== null) {
+      values.origin = origin;
+    } else {
+      errors.origin = "出発地の座標が正しくありません。";
+    }
+  }
+
+  if (searchParams.has("destination")) {
+    const destination = findParsedValue(
+      searchParams,
+      "destination",
+      parseLocation,
+    );
+    if (destination !== null) {
+      values.destination = destination;
+    } else {
+      errors.destination = "目的地の座標が正しくありません。";
+    }
+  }
+
+  if (searchParams.has("time")) {
+    const time = findParsedValue(searchParams, "time", (value) =>
+      isValidLocalDateTime(value) ? value : null,
+    );
+    if (time !== null) {
+      values.time = time;
+    } else {
+      errors.time = "日時が正しくありません。";
+    }
+  }
+
+  if (searchParams.has("isDeparture")) {
+    const isDeparture = findParsedValue(
+      searchParams,
+      "isDeparture",
+      parseBoolean,
+    );
+    if (isDeparture !== null) {
+      values.isDeparture = isDeparture;
+    } else {
+      errors.isDeparture = "出発・到着の指定が正しくありません。";
+    }
+  }
+
+  if (searchParams.has("prioritizeSpeed")) {
+    const prioritizeSpeed = findParsedValue(
+      searchParams,
+      "prioritizeSpeed",
+      parseBoolean,
+    );
+    if (prioritizeSpeed !== null) {
+      values.prioritizeSpeed = prioritizeSpeed;
+    } else {
+      errors.prioritizeSpeed = "優先条件が正しくありません。";
+    }
+  }
+
+  return {
+    status: Object.keys(errors).length === 0 ? "valid" : "invalid",
+    values,
+    errors,
+  };
+}
+
 export function buildRouteResultsUrl(query: RouteSearchQuery): string {
   return `/routes?${createSearchParams(query).toString()}`;
 }

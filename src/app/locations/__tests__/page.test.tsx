@@ -1,35 +1,10 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import generatedLocationData from "@/generated/location-data.json";
 import LocationsPage from "../page";
-import type { KeyLocation, KeyLocationCategory } from "../../../utils/addressLoader";
-
-const locationFixture: KeyLocation = {
-  id: "kanda-library-日本",
-  name: "神田図書館",
-  lat: 35.694,
-  lng: 139.768,
-  area: "千代田",
-  description: "地域の図書館です",
-  imageUri: "https://example.test/kanda-library.jpg",
-  uri: "https://example.test/kanda-library",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
-};
-
-const categoryFixture: KeyLocationCategory = {
-  category: "公共施設",
-  "category:en": "public-facilities",
-  locations: [locationFixture],
-};
-
-const mockRouterPush = jest.fn();
-
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: (url: string) => mockRouterPush(url),
-  }),
-}));
+import type { KeyLocationCategory } from "../../../utils/addressLoader";
 
 jest.mock("../../../lib/location/location-list-state", () => ({
   ...jest.requireActual("../../../lib/location/location-list-state"),
@@ -38,7 +13,7 @@ jest.mock("../../../lib/location/location-list-state", () => ({
 }));
 
 const locationListStateMock = jest.requireMock(
-  "../../../lib/location/location-list-state"
+  "../../../lib/location/location-list-state",
 ) as {
   loadLocationCategories: jest.Mock;
   groupCategoryLocationsByArea: jest.Mock;
@@ -47,173 +22,108 @@ const mockLoadLocationCategories = locationListStateMock.loadLocationCategories;
 const mockGroupCategoryLocationsByArea =
   locationListStateMock.groupCategoryLocationsByArea;
 const mockFetch = global.fetch as jest.Mock;
-let originalGeolocationDescriptor: PropertyDescriptor | undefined;
 
 describe("LocationsPage", () => {
   beforeEach(() => {
-    originalGeolocationDescriptor = Object.getOwnPropertyDescriptor(
-      navigator,
-      "geolocation"
-    );
-    mockRouterPush.mockReset();
     mockFetch.mockReset();
     mockLoadLocationCategories.mockReset();
-    mockLoadLocationCategories.mockResolvedValue([categoryFixture]);
     mockGroupCategoryLocationsByArea.mockReset();
-    mockGroupCategoryLocationsByArea.mockImplementation((locations: KeyLocation[]) => ({
-      千代田: locations,
-    }));
   });
 
-  afterEach(() => {
-    if (originalGeolocationDescriptor) {
-      Object.defineProperty(
-        navigator,
-        "geolocation",
-        originalGeolocationDescriptor
-      );
-    } else {
-      Reflect.deleteProperty(navigator, "geolocation");
-    }
-  });
-
-  it("カテゴリデータの読み込み後に最初のタブを選択する", async () => {
+  it("生成済みスナップショットを静的に表示し、旧来の検索・タブ操作を持たない", () => {
     render(<LocationsPage />);
 
+    expect(screen.getByRole("heading", { level: 1, name: "場所をさがす" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "カテゴリを選択" })).toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(mockLoadLocationCategories).not.toHaveBeenCalled();
+    expect(mockGroupCategoryLocationsByArea).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("既存の案内とデータ提供元を表示する", () => {
+    render(<LocationsPage />);
+
+    expect(screen.getByText(/お悩みハンドブックウェブサイトへ/)).toBeInTheDocument();
+    expect(screen.getByText(/せかいビバークウェブサイトへ/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "データ提供元" })).toBeInTheDocument();
+    expect(screen.getByText(/千代田区主要施設座標データ/)).toBeInTheDocument();
+  });
+
+  it("公開済みの詳細カテゴリをすべて通常のURLリンクとして公開する", async () => {
+    const allCategoryFixtures: KeyLocationCategory[] = generatedLocationData.categories.map(
+      (category) => ({
+        category: category.name,
+        "category:en": category.id,
+        locations: category.locations.map((location) => ({ ...location })),
+      }),
+    );
+    mockLoadLocationCategories.mockResolvedValueOnce(allCategoryFixtures);
+
+    render(<LocationsPage />);
+
+    const expectedHrefs = generatedLocationData.categories.map(
+      (category) => `/locations/${encodeURIComponent(category.id)}`,
+    );
     await waitFor(() => {
-      expect(screen.getByRole("tab", { name: "公共施設" })).toHaveClass(
-        "tab-active"
+      const categoryLinks = screen.queryAllByRole("link").filter((link) => {
+        const href = link.getAttribute("href") ?? "";
+        return href.startsWith("/locations/") && !href.startsWith("/locations/location-detail/");
+      });
+      expect(categoryLinks).toHaveLength(expectedHrefs.length);
+    });
+
+    const categoryLinks = screen.queryAllByRole("link").filter((link) => {
+      const href = link.getAttribute("href") ?? "";
+      return href.startsWith("/locations/") && !href.startsWith("/locations/location-detail/");
+    });
+    expect(categoryLinks.every((link) => link.tagName === "A")).toBe(true);
+    expect(new Set(categoryLinks.map((link) => link.getAttribute("href")))).toEqual(
+      new Set(expectedHrefs),
+    );
+    for (const category of generatedLocationData.categories) {
+      const categoryLink = categoryLinks.find(
+        (link) =>
+          link.getAttribute("href") ===
+          `/locations/${encodeURIComponent(category.id)}`,
       );
-    });
-
-    expect(screen.getByRole("tabpanel")).toHaveAttribute(
-      "aria-labelledby",
-      "locations-category-公共施設"
-    );
-  });
-
-  it("住所検索のjoinが左右の角丸とボタンの結合状態を持つ", async () => {
-    render(<LocationsPage />);
-
-    const input = await screen.findByLabelText("住所");
-    const submit = screen.getByRole("button", { name: "検索" });
-
-    expect(input).toHaveClass("!rounded-l-full");
-    expect(submit).toHaveClass("!rounded-r-full");
-    expect(submit).not.toHaveClass("rounded-full");
-  });
-
-  it("場所カードを一意なIDを含むnative詳細リンクとして公開し、要約を保持する", async () => {
-    render(<LocationsPage />);
-
-    const locationLink = await screen.findByRole("link", {
-      name: new RegExp(locationFixture.name),
-    });
-
-    expect(locationLink.tagName).toBe("A");
-    expect(locationLink).toHaveAttribute(
-      "href",
-      `/location-detail/${encodeURIComponent(locationFixture.id)}`
-    );
-    expect(locationLink).toHaveTextContent("千代田");
-    expect(locationLink).toHaveTextContent(locationFixture.description ?? "");
-    expect(locationLink).not.toHaveAttribute("tabindex", "-1");
-
-    locationLink.focus();
-    expect(document.activeElement).toBe(locationLink);
-  });
-
-  it("初期施設データ取得失敗をエラーアイコン付きalertとして通知する", async () => {
-    mockLoadLocationCategories.mockRejectedValueOnce(
-      new Error("主要施設データの取得に失敗しました")
-    );
-
-    render(<LocationsPage />);
-
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(/^施設データの読み込みに失敗しました$/);
-    expect(alert).toHaveClass("alert-soft", "text-base-content!");
-    expect(alert.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
-  });
-
-  it("住所検索失敗を入力欄に関連付いたエラーalertとして通知する", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => ({ error: "住所検索に失敗しました" }),
-    });
-
-    render(<LocationsPage />);
-
-    const addressInput = await screen.findByLabelText("住所");
-    fireEvent.change(addressInput, { target: { value: "神田駅" } });
-    fireEvent.click(screen.getByRole("button", { name: "検索" }));
-
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(/^住所検索に失敗しました$/);
-    expect(alert).toHaveClass("alert-soft", "text-base-content!");
-    expect(alert).toHaveAttribute("id", "location-search-error");
-    expect(alert.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
-    expect(addressInput).toHaveAttribute(
-      "aria-describedby",
-      "location-search-error"
-    );
-  });
-
-  it("現在地取得成功をチェックアイコン付きstatusとして通知する", async () => {
-    const mockGetCurrentPosition = jest.fn(
-      (onSuccess: (position: GeolocationPosition) => void) => {
-        onSuccess({
-          coords: {
-            latitude: 35.694,
-            longitude: 139.768,
-          },
-        } as GeolocationPosition);
+      expect(categoryLink).toBeDefined();
+      if (categoryLink) {
+        expect(categoryLink).toHaveTextContent(category.name);
       }
-    );
-    Object.defineProperty(navigator, "geolocation", {
-      configurable: true,
-      value: { getCurrentPosition: mockGetCurrentPosition },
-    });
+    }
 
-    render(<LocationsPage />);
-
-    fireEvent.click(
-      await screen.findByRole("button", { name: "現在地を取得" })
+    const categoryNames = new Set(
+      generatedLocationData.categories.map((category) => category.name),
     );
-
-    const status = await screen.findByRole("status");
-    expect(status).toHaveTextContent(
-      /^位置情報を取得しました！カテゴリを選択すると最寄りの施設が表示されます$/
+    const categoryTabs = screen.queryAllByRole("tab").filter((tab) =>
+      categoryNames.has(tab.textContent?.trim() ?? ""),
     );
-    expect(status).toHaveClass("alert-success");
-    expect(status).toHaveAttribute("aria-live", "polite");
-    expect(status.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(categoryTabs).toHaveLength(0);
   });
 
-  it("429 + limitExceededではlocations発のrate-limitへ一度だけ遷移し、旧モーダルを表示しない", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 429,
-      json: async () => ({ limitExceeded: true }),
-    });
+  it("does not retain the retired root detail URL in location production links", () => {
+    const productionPaths = [
+      path.resolve(__dirname, "../page.tsx"),
+      path.resolve(__dirname, "../[category-id]/page.tsx"),
+      path.resolve(__dirname, "../location-detail/[id]/page.tsx"),
+      path.resolve(__dirname, "../../location-detail/[id]/page.tsx"),
+      path.resolve(__dirname, "../../../components/features/LocationCard.tsx"),
+    ].filter((sourcePath) => existsSync(sourcePath));
+    const retiredRootDetailHrefPrefixes = [
+      String.fromCharCode(34) + "/location-detail/",
+      String.fromCharCode(39) + "/location-detail/",
+      String.fromCharCode(96) + "/location-detail/",
+    ];
 
-    const view = render(<LocationsPage />);
-    const addressInput = await screen.findByLabelText("住所");
-    const searchButton = screen.getByRole("button", { name: "検索" });
-
-    fireEvent.change(addressInput, { target: { value: "神田駅" } });
-    fireEvent.click(searchButton);
-
-    await waitFor(() => expect(addressInput).not.toBeDisabled());
-    expect(searchButton).not.toBeDisabled();
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockRouterPush).toHaveBeenCalledTimes(1);
-    expect(mockRouterPush).toHaveBeenCalledWith("/rate-limit?source=locations");
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-
-    view.rerender(<LocationsPage />);
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
-    expect(mockRouterPush).toHaveBeenCalledTimes(1);
+    expect(productionPaths.length).toBeGreaterThan(0);
+    for (const sourcePath of productionPaths) {
+      const source = readFileSync(sourcePath, "utf8");
+      expect(
+        retiredRootDetailHrefPrefixes.some((prefix) => source.includes(prefix)),
+      ).toBe(false);
+    }
   });
 });

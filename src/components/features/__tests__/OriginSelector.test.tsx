@@ -66,7 +66,8 @@ describe("OriginSelector", () => {
     const icon = gpsButton.querySelector("svg");
 
     expect(gpsButton).toHaveClass("ruby-text", "gap-0");
-    expect(gpsButton).toHaveAccessibleName("現在地を使用して経路を検索");
+    expect(gpsButton).toHaveAccessibleName("端末のGPSを許可する");
+    expect(gpsButton).toHaveTextContent("端末のGPSを許可する");
     expect(icon).toBeInTheDocument();
     expect(icon).toHaveClass("mr-2");
     expect(gpsButton.querySelector("span")).toBeNull();
@@ -89,16 +90,17 @@ describe("OriginSelector", () => {
     expect(screen.queryByText("この住所で検索")).not.toBeInTheDocument();
   });
 
-  it("検索ボタンは住所入力欄と同じフォームを送信する", () => {
+  it("検索とGPSは子formを作らず、経路検索ではないbutton操作として公開する", () => {
     render(<OriginSelector onOriginSelected={mockOnOriginSelected} />);
 
     const searchButton = screen.getByRole("button", {
       name: "住所や場所を検索",
     });
-    const form = searchButton.closest("form");
+    const gpsButton = screen.getByTestId("gps-button");
 
-    expect(form).toBeInTheDocument();
-    expect(searchButton).toHaveAttribute("type", "submit");
+    expect(document.querySelector("form")).toBeNull();
+    expect(searchButton).toHaveAttribute("type", "button");
+    expect(gpsButton).toHaveAttribute("type", "button");
   });
 
   it("現在地ボタンはアイコンと文言を維持する", () => {
@@ -108,7 +110,8 @@ describe("OriginSelector", () => {
     const icon = button.querySelector("svg");
 
     expect(button).toHaveClass("ruby-text", "gap-0");
-    expect(button).toHaveAccessibleName("現在地を使用して経路を検索");
+    expect(button).toHaveAccessibleName("端末のGPSを許可する");
+    expect(button).toHaveTextContent("端末のGPSを許可する");
     expect(icon).toBeInTheDocument();
     expect(icon).toHaveClass("mr-2");
     expect(button.querySelector("span")).toBeNull();
@@ -119,7 +122,7 @@ describe("OriginSelector", () => {
 
     // 空入力の状態でフォームを送信
     const searchButton = screen.getByTestId("search-button");
-    fireEvent.submit(searchButton.closest("form") as HTMLFormElement);
+    fireEvent.click(searchButton);
 
     expect(await screen.findByText("住所を入力してください")).toBeInTheDocument();
     // コールバックが呼ばれていないことを確認
@@ -332,7 +335,7 @@ describe("OriginSelector", () => {
     });
     expect(searchButton).toBeInTheDocument();
 
-    const gpsButton = screen.getByText("現在地を使用");
-    expect(gpsButton).toBeInTheDocument();
+    const gpsButton = screen.queryByRole("button", { name: "端末のGPSを許可する" });
+    expect(gpsButton).not.toBeNull();
   });
 });

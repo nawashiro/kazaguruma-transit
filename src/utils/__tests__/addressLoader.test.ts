@@ -1,4 +1,6 @@
+import generatedLocationData from "@/generated/location-data.json";
 import type { KeyLocation, KeyLocationCategory } from "../addressLoader";
+import { loadAddressData, loadKeyLocationsData } from "../addressLoader";
 
 export {};
 
@@ -123,6 +125,82 @@ function mockJsonResponse(body: unknown) {
     json: async () => body,
   };
 }
+
+const expectedAddressCategories = generatedLocationData.suggestionCategories.map(
+  ({ categoryName, locations }) => ({
+    category: categoryName,
+    locations,
+  }),
+);
+
+const expectedKeyLocationCategories = generatedLocationData.categories.map(
+  ({ id, name, locations }) => ({
+    category: name,
+    "category:en": id,
+    locations,
+  }),
+);
+
+describe("generated location snapshot loaders", () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("loads main facility candidates from the tracked snapshot without CDN fetch or empty fallback", async () => {
+    const fetchMock = jest.fn().mockRejectedValue(new Error("CDN unavailable"));
+    global.fetch = fetchMock;
+
+    const result = await loadAddressData();
+
+    expect(result).toHaveLength(expectedAddressCategories.length);
+    expectedAddressCategories.forEach((expectedCategory) => {
+      const actualCategory = result.find(
+        ({ category }) => category === expectedCategory.category,
+      );
+      expect(actualCategory).toEqual(expectedCategory);
+    });
+    expect(result).not.toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("loads detailed locations and area metadata from the tracked snapshot without CDN fetch or empty fallback", async () => {
+    const fetchMock = jest.fn().mockRejectedValue(new Error("CDN unavailable"));
+    global.fetch = fetchMock;
+
+    const result = await loadKeyLocationsData();
+
+    expect(result).toHaveLength(expectedKeyLocationCategories.length);
+    expectedKeyLocationCategories.forEach((expectedCategory) => {
+      const actualCategory = result.find(
+        (category) =>
+          category["category:en"] === expectedCategory["category:en"],
+      );
+      expect(actualCategory).toEqual(expectedCategory);
+    });
+    expect(result).not.toEqual([]);
+
+    const cityOfficeCategory = result.find(
+      (category) => category["category:en"] === "city_office_and_branch_offices",
+    );
+    expect(cityOfficeCategory).toMatchObject({
+      category: "区役所・出張所",
+      "category:en": "city_office_and_branch_offices",
+    });
+    const cityOfficeLocation = cityOfficeCategory?.locations.find(
+      ({ id }) => id === "5e3b1528-8af6-436a-83af-24ca45b58e12",
+    );
+    expect(cityOfficeLocation).toMatchObject({
+      id: "5e3b1528-8af6-436a-83af-24ca45b58e12",
+      name: "千代田区役所",
+      nodeCopyright: "© OpenStreetMap contributors",
+      licence: "Open Database License (ODbL) 1.0",
+      areaName: "九段南",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
 
 describe("loadKeyLocationsDataResult", () => {
   const moduleState = loadModule("../addressLoader");

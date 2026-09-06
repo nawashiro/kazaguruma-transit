@@ -1,14 +1,30 @@
 "use client";
 
-import React, { useState, useEffect, useId } from "react";
+import React, { useEffect, useId, useState } from "react";
 import { TransitFormData } from "@/types/core";
-import { logger } from "@/utils/logger";
 
 interface DateTimeSelectorProps {
   initialStopId?: string;
   onSubmit?: (formData: TransitFormData) => void;
   onDateTimeSelected?: (formData: TransitFormData) => void;
   disabled?: boolean;
+  value?: string;
+  isDeparture?: boolean;
+  onValueChange?: (value: string) => void;
+  onDepartureChange?: (isDeparture: boolean) => void;
+  error?: string;
+  timeError?: string;
+  departureError?: string;
+}
+
+function getCurrentLocalDateTime(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
@@ -16,135 +32,161 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
   onSubmit,
   onDateTimeSelected,
   disabled = false,
+  value,
+  isDeparture,
+  onValueChange,
+  onDepartureChange,
+  error,
+  timeError,
+  departureError,
 }) => {
-  const [dateTime, setDateTime] = useState<string>("");
-  const [isDeparture, setIsDeparture] = useState<boolean>(true);
+  const [internalDateTime, setInternalDateTime] = useState("");
+  const [internalIsDeparture, setInternalIsDeparture] = useState(true);
   const uniqueId = useId();
   const inputId = `time-input-${uniqueId}`;
-  const labelText = isDeparture ? "出発日時" : "到着日時";
-  const timeDescription = isDeparture
-    ? "いつ出発するか指定してください"
-    : "いつ到着するか指定してください";
+  const legendId = `time-legend-${uniqueId}`;
+  const descriptionId = `time-description-${uniqueId}`;
+  const resolvedTimeError = timeError ?? error;
+  const timeErrorId = resolvedTimeError
+    ? `time-error-${uniqueId}`
+    : undefined;
+  const departureErrorId = departureError
+    ? `departure-error-${uniqueId}`
+    : undefined;
+  const isDateTimeControlled = value !== undefined;
+  const isDepartureControlled = isDeparture !== undefined;
+  const dateTime = isDateTimeControlled ? value : internalDateTime;
+  const departure = isDepartureControlled ? isDeparture : internalIsDeparture;
+  const inputTestId = departure ? "departure-input" : "arrival-input";
+  const labelTestId = departure ? "departure-label" : "arrival-label";
+  const dateTimeDescribedBy =
+    [descriptionId, timeErrorId].filter(Boolean).join(" ") || undefined;
 
-  const notifyParent = (formData: TransitFormData) => {
+  const notifyLegacyParent = (nextDateTime: string, nextDeparture: boolean) => {
+    const formData: TransitFormData = {
+      stopId: initialStopId,
+      dateTime: nextDateTime,
+      isDeparture: nextDeparture,
+    };
     onSubmit?.(formData);
     onDateTimeSelected?.(formData);
   };
 
-  // 初期値設定
   useEffect(() => {
-    if (!dateTime) {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, "0");
-      const day = String(now.getDate()).padStart(2, "0");
-      const hours = String(now.getHours()).padStart(2, "0");
-      const minutes = String(now.getMinutes()).padStart(2, "0");
-      const initialDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
-      
-      setDateTime(initialDateTime);
-      notifyParent({
-        stopId: initialStopId,
-        dateTime: initialDateTime,
-        isDeparture,
-      });
-    }
-  }, [initialStopId, isDeparture, dateTime, notifyParent]);
+    if (isDateTimeControlled || internalDateTime) return;
 
-  const handleChange = (newDateTime: string, newIsDeparture: boolean) => {
-    setDateTime(newDateTime);
-    setIsDeparture(newIsDeparture);
-    notifyParent({
-      stopId: initialStopId,
-      dateTime: newDateTime,
-      isDeparture: newIsDeparture,
-    });
+    const initialDateTime = getCurrentLocalDateTime();
+    setInternalDateTime(initialDateTime);
+    notifyLegacyParent(initialDateTime, departure);
+    // The legacy callback is intentionally called once while initializing the
+    // uncontrolled component. Controlled parents receive explicit callbacks.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDateTimeControlled, internalDateTime, initialStopId, departure]);
+
+  const handleDateTimeChange = (nextDateTime: string) => {
+    if (!isDateTimeControlled) setInternalDateTime(nextDateTime);
+    onValueChange?.(nextDateTime);
+    notifyLegacyParent(nextDateTime, departure);
   };
 
-  const handleTimeTypeChange = (newValue: boolean) => {
-    setIsDeparture(newValue);
-    logger.log(`時間タイプを切り替え: ${newValue ? "出発" : "到着"}`);
-    notifyParent({
-      stopId: initialStopId,
-      dateTime,
-      isDeparture: newValue,
-    });
+  const handleDepartureChange = (nextDeparture: boolean) => {
+    if (!isDepartureControlled) setInternalIsDeparture(nextDeparture);
+    onDepartureChange?.(nextDeparture);
+    notifyLegacyParent(dateTime, nextDeparture);
   };
 
   return (
     <div>
-      <div className="space-y-4">
-        {/* 出発/到着のラジオボタングループ */}
-        <fieldset role="radiogroup" aria-labelledby={`legend-${uniqueId}`}>
-          <legend id={`legend-${uniqueId}`} className="sr-only">
-            時間タイプを選択
-          </legend>
-          <div className="space-y-2">
-            <label
-              htmlFor={`departure-radio-${uniqueId}`}
-              className="flex cursor-pointer items-center gap-2"
-            >
-              <input
-                id={`departure-radio-${uniqueId}`}
-                name={`time-type-${uniqueId}`}
-                type="radio"
-                className="radio"
-                checked={isDeparture}
-                onChange={() => handleTimeTypeChange(true)}
-                data-testid="departure-radio"
-                disabled={disabled}
-              />
-              <span className="ruby-text">出発</span>
-            </label>
-            <label
-              htmlFor={`arrival-radio-${uniqueId}`}
-              className="flex cursor-pointer items-center gap-2"
-            >
-              <input
-                id={`arrival-radio-${uniqueId}`}
-                name={`time-type-${uniqueId}`}
-                type="radio"
-                className="radio"
-                checked={!isDeparture}
-                onChange={() => handleTimeTypeChange(false)}
-                data-testid="arrival-radio"
-                disabled={disabled}
-              />
-              <span className="ruby-text">到着</span>
-            </label>
-          </div>
-        </fieldset>
-
-        <div className="form-control">
-          <label htmlFor={inputId} className="label">
-            <span
-              className="label-text font-medium mr-2 ruby-text"
-              data-testid={isDeparture ? "departure-label" : "arrival-label"}
-            >
-              {labelText}
-            </span>
-          </label>
-          <input
-            id={inputId}
-            name={inputId}
-            type="datetime-local"
-            value={dateTime}
-            onChange={(e) => handleChange(e.target.value, isDeparture)}
-            required
-            className="input min-h-[44px]"
-            data-testid={isDeparture ? "departure-input" : "arrival-input"}
-            disabled={disabled}
-            aria-required="true"
-            aria-label={timeDescription}
-            aria-describedby={`${inputId}-description`}
-          />
-          <div
-            id={`${inputId}-description`}
-            className="text-base mt-1 sr-only"
+      <fieldset
+        role="radiogroup"
+        aria-labelledby={legendId}
+        aria-describedby={departureErrorId}
+      >
+        <legend id={legendId} className="sr-only">
+          日時
+        </legend>
+        <div className="space-y-2">
+          <label
+            htmlFor={`departure-radio-${uniqueId}`}
+            className="flex min-h-[44px] cursor-pointer items-center gap-2"
           >
-            {timeDescription}
-          </div>
+            <input
+              id={`departure-radio-${uniqueId}`}
+              name={`time-type-${uniqueId}`}
+              type="radio"
+              className="radio"
+              checked={departure}
+              onChange={() => handleDepartureChange(true)}
+              data-testid="departure-radio"
+              disabled={disabled}
+            />
+            <span className="ruby-text">出発時刻</span>
+          </label>
+          <label
+            htmlFor={`arrival-radio-${uniqueId}`}
+            className="flex min-h-[44px] cursor-pointer items-center gap-2"
+          >
+            <input
+              id={`arrival-radio-${uniqueId}`}
+              name={`time-type-${uniqueId}`}
+              type="radio"
+              className="radio"
+              checked={!departure}
+              onChange={() => handleDepartureChange(false)}
+              data-testid="arrival-radio"
+              disabled={disabled}
+            />
+            <span className="ruby-text">到着時刻</span>
+          </label>
         </div>
+        {departureError && (
+          <div
+            id={departureErrorId}
+            className="text-base-content text-base font-medium leading-relaxed"
+            role="alert"
+          >
+            {departureError}
+          </div>
+        )}
+      </fieldset>
+
+      <div className="form-control mt-4">
+        <label htmlFor={inputId} className="label">
+          <span
+            className="label-text font-medium mr-2 ruby-text"
+            data-testid={labelTestId}
+          >
+            日時
+          </span>
+        </label>
+        <input
+          id={inputId}
+          name="time"
+          type="datetime-local"
+          value={dateTime}
+          onChange={(event) => handleDateTimeChange(event.target.value)}
+          required
+          className="input min-h-[44px]"
+          data-testid={inputTestId}
+          disabled={disabled}
+          aria-required="true"
+          aria-invalid={resolvedTimeError ? "true" : undefined}
+          aria-describedby={dateTimeDescribedBy}
+        />
+        <div id={descriptionId} className="text-base mt-1 sr-only">
+          {departure
+            ? "出発する日時を指定してください"
+            : "到着する日時を指定してください"}
+        </div>
+        {resolvedTimeError && (
+          <div
+            id={timeErrorId}
+            className="text-base-content text-base font-medium leading-relaxed"
+            role="alert"
+          >
+            {resolvedTimeError}
+          </div>
+        )}
       </div>
     </div>
   );

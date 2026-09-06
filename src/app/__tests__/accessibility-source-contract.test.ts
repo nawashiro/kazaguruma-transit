@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const sourceFiles = [
+  "src/app/page.tsx",
   "src/app/discussions/create/page.tsx",
   "src/app/locations/page.tsx",
   "src/app/settings/page.tsx",
@@ -15,7 +16,7 @@ const sourceFiles = [
 const dedicatedPageFiles = [
   "src/app/login/page.tsx",
   "src/app/signup/page.tsx",
-  "src/app/location-detail/[id]/page.tsx",
+  "src/app/locations/location-detail/[id]/page.tsx",
   "src/app/rate-limit/page.tsx",
 ];
 
@@ -98,18 +99,19 @@ describe("アクセシビリティ実装契約", () => {
         /encodeURIComponent\(location\.id\)/,
       ],
       "src/components/features/OriginSelector.tsx": [
-        /<form\b/,
         /<InputField\b/,
         /<fieldset\b/,
         /<legend\b/,
       ],
-      "src/components/features/DestinationSelector.tsx": [/<form\b/, /<InputField\b/],
+      "src/components/features/DestinationSelector.tsx": [
+        /<InputField\b/,
+      ],
       "src/components/features/RouteSearchResults.tsx": [
         /<Link\b/,
         /role=\"alert\"/,
         /source=routes/,
       ],
-      "src/app/location-detail/[id]/page.tsx": [
+      "src/app/locations/location-detail/[id]/page.tsx": [
         /PageHeader/,
         /<Link\b/,
         /params: Promise/,

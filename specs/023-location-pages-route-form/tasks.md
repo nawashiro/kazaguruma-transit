@@ -108,8 +108,8 @@
 - [x] T070 T069/T071を別サブエージェントが読み取り専用でレビューする。共通404のリンク有無を過剰固定せず、JS無効とJS有効pageを分離し、Rubyful後もフォーム見出しと全受入検査を保持していることを確認する。変更禁止。レビューPASS、fresh runtime 9/9、static 3/3を親が確認した。
 - [x] T072 全テストで検出した`src/components/features/LocationCategoryList.tsx`の`disabled:opacity-60` 3箇所を削除し、既存の色・不透明度契約を満たす。disabled cursor・44px操作領域・その他のstyleは維持する。親のcolor-compliance 8/8と残存0件を確認した。
 - [x] T028 親担当がfocused Jest、source-only TypeScript（stale`.next`を一時退避）、`npm run lint -- --no-cache`、`npm test -- --runInBand --no-cache --watch=false --coverage=false`、`git diff --check`、隔離`next build`、fresh static/runtime verifierを実行した。全テストは152 suites PASS/2 skipped、994 tests PASS/13 skipped、型検査PASS、lint PASS（既存warningのみ）、direct build exit 0、static 3/3、runtime 9/9だった。Node v26.5.1で実行し、package要求Node 22.xとの差異を記録する。
-- [ ] T029 親担当が最終差分を確認し、`add: Issue #79の施設ページと検索フォームをURL整理`でcommitする。feature branchをpushし、`git ls-remote`でHEADと一致するSHAを確認する。
-- [ ] T030 親担当がIssue #79を参照する日本語PRを作成し、head/base/SHA/本文/変更ファイルを読み戻す。最終head SHAのCIを確認する。Issueのclose・PRのmergeは行わない。
+- [x] T029 親担当が最終差分を確認し、`add: Issue #79の施設ページと検索フォームをURL整理`でcommitした。feature branchをGitHub・Tangledへpushし、両remoteの`git ls-remote` SHAが`f1e978879ed4e238c8a8df3968f3e222c259cb4c`と一致することを確認した。
+- [x] T030 親担当がIssue #79を参照する日本語PR #139（`https://github.com/nawashiro/kazaguruma-transit/pull/139`）を作成し、base=`dev`、head=`spec/issue-79-uri-pages`、head SHA=`f1e978879ed4e238c8a8df3968f3e222c259cb4c`、変更62ファイル、title/bodyを読み戻した。Quality Gate run `34027074381`の最終結論PASSを確認した。Issueのclose・PRのmergeは行わない。
 
 ## Dependencies & Execution Order
 

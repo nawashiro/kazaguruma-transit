@@ -6,7 +6,7 @@ interface GeoJSONFeature {
   type: 'Feature';
   properties: {
     name: string;
-    uri: string;
+    uri?: string;
   };
   geometry: {
     type: 'Polygon' | 'MultiPolygon';
@@ -21,6 +21,114 @@ interface GeoJSON {
 
 let cachedGeoJSON: GeoJSON | null = null;
 
+const GEOJSON_CDN_URL =
+  "https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_town_geojson@latest/chiyoda_city.json";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isCoordinate(value: unknown): value is number[] {
+  return (
+    Array.isArray(value) &&
+    value.length >= 2 &&
+    value.every(
+      (coordinate) =>
+        typeof coordinate === "number" && Number.isFinite(coordinate),
+    )
+  );
+}
+
+function isPolygonCoordinates(value: unknown): value is number[][][] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every(
+      (ring) =>
+        Array.isArray(ring) &&
+        ring.length > 0 &&
+        ring.every(isCoordinate),
+    )
+  );
+}
+
+function isMultiPolygonCoordinates(value: unknown): value is number[][][][] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every(isPolygonCoordinates)
+  );
+}
+
+function isGeoJSONFeature(value: unknown): value is GeoJSONFeature {
+  if (!isRecord(value) || value.type !== "Feature") {
+    return false;
+  }
+
+  const properties = value.properties;
+  const geometry = value.geometry;
+  if (!isRecord(properties) || !isRecord(geometry)) {
+    return false;
+  }
+
+  if (
+    typeof properties.name !== "string" ||
+    properties.name.trim().length === 0 ||
+    (properties.uri !== undefined && typeof properties.uri !== "string")
+  ) {
+    return false;
+  }
+
+  if (geometry.type === "Polygon") {
+    return isPolygonCoordinates(geometry.coordinates);
+  }
+
+  if (geometry.type === "MultiPolygon") {
+    return isMultiPolygonCoordinates(geometry.coordinates);
+  }
+
+  return false;
+}
+
+function isGeoJSON(value: unknown): value is GeoJSON {
+  return (
+    isRecord(value) &&
+    value.type === "FeatureCollection" &&
+    Array.isArray(value.features) &&
+    value.features.length > 0 &&
+    value.features.every(isGeoJSONFeature)
+  );
+}
+
+function validateGeoJSON(value: unknown): GeoJSON {
+  if (!isGeoJSON(value)) {
+    throw new Error("Invalid GeoJSON FeatureCollection shape");
+  }
+
+  return value;
+}
+
+function isFileNotFoundError(error: unknown): boolean {
+  return isRecord(error) && error.code === "ENOENT";
+}
+
+function cacheGeoJSON(value: unknown): GeoJSON {
+  const validated = validateGeoJSON(value);
+  cachedGeoJSON = validated;
+  return validated;
+}
+
+function loadGeoJSONFromCDN(): Promise<GeoJSON> {
+  return fetch(GEOJSON_CDN_URL).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(`GeoJSON CDN request failed with HTTP ${response.status}`);
+    }
+
+    const remoteData: unknown = await response.json();
+    return cacheGeoJSON(remoteData);
+  });
+}
+
 // GeoJSONデータを読み込む関数
 export async function loadGeoJSON(): Promise<GeoJSON> {
   if (cachedGeoJSON) {
@@ -31,11 +139,19 @@ export async function loadGeoJSON(): Promise<GeoJSON> {
     process.cwd(),
     "public",
     "geojson",
-    "chiyoda_city.geojson"
+    "chiyoda_city.geojson",
   );
-  const data = fs.readFileSync(filePath, "utf8");
-  cachedGeoJSON = JSON.parse(data) as GeoJSON;
-  return cachedGeoJSON;
+
+  try {
+    const localData = fs.readFileSync(filePath, "utf8");
+    return cacheGeoJSON(JSON.parse(localData) as unknown);
+  } catch (error) {
+    if (!isFileNotFoundError(error)) {
+      throw error;
+    }
+  }
+
+  return loadGeoJSONFromCDN();
 }
 
 // 緯度経度が指定されたポリゴン内に含まれるかチェックする関数

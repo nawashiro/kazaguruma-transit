@@ -4,11 +4,40 @@ import React from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Home from "../page";
+import type {
+  AddressCategory,
+  AddressDataResult,
+  AddressLocation,
+} from "@/utils/addressLoader";
 
 const mockRouterPush = jest.fn();
+const mockLoadAddressDataResult = jest.fn();
+const mockDestinationSelectorProps = jest.fn();
 const ANNOUNCEMENT_INFORMATION =
   "運行情報の更新";
 const ANNOUNCEMENT_URL = "/service-update";
+
+const popularFacility: AddressLocation = {
+  name: "千代田区役所",
+  lat: 35.694,
+  lng: 139.753,
+  copyright: "千代田区",
+  licence: "CC BY 4.0",
+  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+};
+
+const popularCategories: AddressCategory[] = [
+  {
+    category: "公共施設",
+    "category:en": "public-facilities",
+    locations: [popularFacility],
+  },
+];
+
+const successfulPopularData: AddressDataResult = {
+  status: "success",
+  categories: popularCategories,
+};
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockRouterPush }),
@@ -21,6 +50,15 @@ jest.mock("@/lib/config/app-config", () => ({
       url: "/service-update",
     },
   },
+}));
+
+jest.mock("@/utils/addressLoader", () => ({
+  loadAddressDataResult: (...args: unknown[]) => mockLoadAddressDataResult(...args),
+  convertToLocation: jest.fn((location: AddressLocation) => ({
+    lat: location.lat,
+    lng: location.lng,
+    address: location.name,
+  })),
 }));
 
 jest.mock("@/components/features/DateTimeSelector", () =>
@@ -44,34 +82,115 @@ jest.mock("@/components/features/OriginSelector", () =>
 );
 
 jest.mock("@/components/features/DestinationSelector", () =>
-  ({ onDestinationSelected }: any) => (
-    <button
-      data-testid="mock-destination-selector"
-      onClick={() =>
-        onDestinationSelected({ lat: 35.7, lng: 139.78, address: "テスト目的地" })
-      }
-    />
-  ),
+  ({ onDestinationSelected, categories }: any) => {
+    mockDestinationSelectorProps({ categories });
+
+    return (
+      <>
+        <button
+          data-testid="mock-destination-selector"
+          onClick={() =>
+            onDestinationSelected({ lat: 35.7, lng: 139.78, address: "テスト目的地" })
+          }
+        />
+        {categories?.flatMap((category: AddressCategory) =>
+          category.locations.map((location: AddressLocation) => (
+            <button
+              key={location.name}
+              type="button"
+              data-testid={`popular-facility-${location.name}`}
+              onClick={() =>
+                onDestinationSelected({
+                  lat: location.lat,
+                  lng: location.lng,
+                  address: location.name,
+                })
+              }
+            >
+              {location.name}
+            </button>
+          )),
+        )}
+      </>
+    );
+  },
 );
 
+type PublicHomePage = () => React.ReactNode | Promise<React.ReactNode>;
+
+function isLegacyClientInvocation(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    /Invalid hook call|reading ['"]use[A-Z][A-Za-z]+['"]/.test(error.message)
+  );
+}
+
+async function renderPublicHome() {
+  const page = Home as unknown as PublicHomePage;
+  const consoleError = jest
+    .spyOn(console, "error")
+    .mockImplementation(() => undefined);
+  let element: React.ReactNode;
+
+  try {
+    element = await page();
+  } catch (error) {
+    if (!isLegacyClientInvocation(error)) {
+      throw error;
+    }
+
+    // The current page is a client component. Keep the RED suite runnable
+    // until the public default export becomes the async server boundary.
+    element = React.createElement(Home as React.ComponentType);
+  } finally {
+    consoleError.mockRestore();
+  }
+
+  if (!React.isValidElement(element)) {
+    throw new Error("Home public page did not return a React element");
+  }
+
+  return render(<main id="main-content">{element}</main>);
+}
+
+function expectJapaneseHomeDataError() {
+  const alert = screen.queryByRole("alert");
+  expect(alert).toBeInTheDocument();
+  if (!alert) {
+    return;
+  }
+
+  expect(alert).toHaveTextContent(/[ぁ-んァ-ン一-龯]/);
+  expect(alert).toHaveTextContent(/施設|場所/);
+  expect(alert).toHaveTextContent(/取得|読み込み|不正|失敗/);
+}
+
 describe("Home", () => {
+  let browserFetchSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
     window.history.replaceState({}, "", "/");
-    global.fetch = jest.fn();
+    browserFetchSpy = jest.spyOn(global, "fetch");
+    mockLoadAddressDataResult.mockReset();
+    mockLoadAddressDataResult.mockResolvedValue(successfulPopularData);
   });
 
-  it("PageHeaderに風ぐるまの自動案内サイトの説明を表示する", () => {
-    render(<Home />);
+  afterEach(() => {
+    browserFetchSpy.mockRestore();
+  });
+
+  it("PageHeaderに風ぐるまの自動案内サイトの説明を表示する", async () => {
+    await renderPublicHome();
 
     expect(screen.getByRole("banner")).toHaveTextContent(
       "千代田区地域福祉交通「風ぐるま」の自動案内サイト",
     );
   });
 
-  it("運営からのお知らせをh2見出しとして表示する", () => {
-    render(<Home />);
+  it("運営からのお知らせをh2見出しとして表示する", async () => {
+    await renderPublicHome();
 
     expect(
       screen.queryByRole("heading", {
@@ -81,8 +200,8 @@ describe("Home", () => {
     ).toBeInTheDocument();
   });
 
-  it("お知らせ見出しを含むsectionが見出しIDを参照する", () => {
-    render(<Home />);
+  it("お知らせ見出しを含むsectionが見出しIDを参照する", async () => {
+    await renderPublicHome();
 
     const heading = screen.queryByRole("heading", {
       level: 2,
@@ -95,8 +214,8 @@ describe("Home", () => {
     expect(section?.getAttribute("aria-labelledby")).toBe(heading?.id);
   });
 
-  it("お知らせ見出し内のInfoアイコンを装飾用として扱う", () => {
-    render(<Home />);
+  it("お知らせ見出し内のInfoアイコンを装飾用として扱う", async () => {
+    await renderPublicHome();
 
     const heading = screen.queryByRole("heading", {
       level: 2,
@@ -108,8 +227,8 @@ describe("Home", () => {
     expect(icon?.getAttribute("aria-hidden")).toBe("true");
   });
 
-  it("設定されたお知らせ文言をリンクの表示テキストとhrefにする", () => {
-    render(<Home />);
+  it("設定されたお知らせ文言をリンクの表示テキストとhrefにする", async () => {
+    await renderPublicHome();
 
     const heading = screen.getByRole("heading", {
       level: 2,
@@ -130,8 +249,8 @@ describe("Home", () => {
     expect(link.getAttribute("href")).toBe(ANNOUNCEMENT_URL);
   });
 
-  it("Homeに旧受賞名と賞名を表示しない", () => {
-    render(<Home />);
+  it("Homeに旧受賞名と賞名を表示しない", async () => {
+    await renderPublicHome();
 
     expect(
       screen.queryByText("都知事杯オープンデータ・ハッカソン2025"),
@@ -141,24 +260,24 @@ describe("Home", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("Homeに旧受賞バッジ画像を表示しない", () => {
-    render(<Home />);
+  it("Homeに旧受賞バッジ画像を表示しない", async () => {
+    await renderPublicHome();
 
     expect(
       screen.queryByRole("img", { name: "行政課題解決賞のオープンバッジ" }),
     ).not.toBeInTheDocument();
   });
 
-  it("Homeに旧受賞詳細リンクを表示しない", () => {
-    render(<Home />);
+  it("Homeに旧受賞詳細リンクを表示しない", async () => {
+    await renderPublicHome();
 
     expect(
       screen.queryByRole("link", { name: "受賞について詳しく見る" }),
     ).not.toBeInTheDocument();
   });
 
-  it("目的地、出発地、日時を順に入力する", () => {
-    render(<Home />);
+  it("目的地、出発地、日時を順に入力する", async () => {
+    await renderPublicHome();
     fireEvent.click(screen.getByTestId("mock-destination-selector"));
     expect(screen.getByTestId("mock-origin-selector")).toBeInTheDocument();
 
@@ -168,8 +287,8 @@ describe("Home", () => {
     expect(screen.getByText("テスト住所")).toBeInTheDocument();
   });
 
-  it("検索条件をGET結果ページURLへ渡し、入力ページではfetchしない", () => {
-    render(<Home />);
+  it("検索条件をGET結果ページURLへ渡し、入力ページではfetchしない", async () => {
+    await renderPublicHome();
     fireEvent.click(screen.getByTestId("mock-destination-selector"));
     fireEvent.click(screen.getByTestId("mock-origin-selector"));
     fireEvent.click(screen.getByTestId("mock-date-time-selector"));
@@ -178,11 +297,11 @@ describe("Home", () => {
     expect(mockRouterPush).toHaveBeenCalledWith(
       "/routes?origin=35.68%2C139.76&destination=35.7%2C139.78&time=2026-07-18T09%3A30&isDeparture=true&prioritizeSpeed=false",
     );
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(browserFetchSpy).not.toHaveBeenCalled();
   });
 
-  it("はやさ優先をURLへ明示して端末設定に依存させない", () => {
-    render(<Home />);
+  it("はやさ優先をURLへ明示して端末設定に依存させない", async () => {
+    await renderPublicHome();
     fireEvent.click(screen.getByTestId("mock-destination-selector"));
     fireEvent.click(screen.getByTestId("mock-origin-selector"));
     fireEvent.click(screen.getByTestId("mock-date-time-selector"));
@@ -194,11 +313,77 @@ describe("Home", () => {
     );
   });
 
-  it("リセットで目的地入力へ戻る", () => {
-    render(<Home />);
+  it("リセットで目的地入力へ戻る", async () => {
+    await renderPublicHome();
     fireEvent.click(screen.getByTestId("mock-destination-selector"));
     fireEvent.click(screen.getByRole("button", { name: "検索条件をリセット" }));
 
     expect(screen.getByTestId("mock-destination-selector")).toBeInTheDocument();
+  });
+
+  it("server data boundaryからpopular施設を受け取り、ブラウザCDN fetchを開始しない", async () => {
+    await renderPublicHome();
+
+    expect(mockLoadAddressDataResult).toHaveBeenCalledTimes(1);
+    expect(browserFetchSpy).not.toHaveBeenCalled();
+    expect(mockDestinationSelectorProps).toHaveBeenCalledWith({
+      categories: popularCategories,
+    });
+
+    const popularFacilityButton = screen.queryByTestId(
+      "popular-facility-千代田区役所",
+    );
+    expect(popularFacilityButton).toBeInTheDocument();
+  });
+
+  it("注入されたpopular施設の選択を既存の目的地入力へ引き継ぐ", async () => {
+    await renderPublicHome();
+
+    const popularFacilityButton = screen.queryByTestId(
+      "popular-facility-千代田区役所",
+    );
+    expect(popularFacilityButton).toBeInTheDocument();
+    if (!popularFacilityButton) {
+      return;
+    }
+
+    fireEvent.click(popularFacilityButton);
+
+    const selectedDestination = screen.queryByTestId("selected-destination");
+    expect(selectedDestination).toBeInTheDocument();
+    if (!selectedDestination) {
+      return;
+    }
+
+    expect(selectedDestination).toHaveTextContent("千代田区役所");
+    expect(browserFetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("popular施設loaderの失敗を空の成功状態ではなく日本語errorとして表示する", async () => {
+    mockLoadAddressDataResult.mockResolvedValueOnce({
+      status: "error",
+      error: new Error("HTTP 503"),
+    } satisfies AddressDataResult);
+
+    await renderPublicHome();
+
+    expect(mockLoadAddressDataResult).toHaveBeenCalledTimes(1);
+    expectJapaneseHomeDataError();
+    expect(screen.queryByTestId("popular-facility-千代田区役所")).not.toBeInTheDocument();
+    expect(browserFetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("popular施設が空の場合も空の成功状態ではなく日本語errorとして表示する", async () => {
+    mockLoadAddressDataResult.mockResolvedValueOnce({
+      status: "success",
+      categories: [],
+    } satisfies AddressDataResult);
+
+    await renderPublicHome();
+
+    expect(mockLoadAddressDataResult).toHaveBeenCalledTimes(1);
+    expectJapaneseHomeDataError();
+    expect(screen.queryByTestId("popular-facility-千代田区役所")).not.toBeInTheDocument();
+    expect(browserFetchSpy).not.toHaveBeenCalled();
   });
 });

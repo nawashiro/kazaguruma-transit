@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import type { KeyLocation } from "@/utils/addressLoader";
 import SidebarLayout from "../SidebarLayout";
 
-const mockLoadKeyLocationsDataResult = jest.fn();
+const mockLoadLocationPageData = jest.fn();
 
 const locationDetailFixture: KeyLocation = {
   id: "location-detail-host-fixture",
@@ -21,13 +21,9 @@ const locationDetailFixture: KeyLocation = {
   licenceUri: "https://creativecommons.org/licenses/by/4.0/",
 };
 
-jest.mock("@/utils/addressLoader", () => {
-  const actual = jest.requireActual("@/utils/addressLoader");
-  return {
-    ...actual,
-    loadKeyLocationsDataResult: mockLoadKeyLocationsDataResult,
-  };
-});
+jest.mock("@/lib/location/location-page-data", () => ({
+  loadLocationPageData: mockLoadLocationPageData,
+}));
 
 type LocationDetailPage = (props: {
   params: Promise<{ id: string }>;
@@ -36,7 +32,7 @@ type LocationDetailPage = (props: {
 function getLocationDetailPage(): LocationDetailPage {
   // Load after the loader spy is initialized so the real route observes it.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const loaded: unknown = require("@/app/location-detail/[id]/page");
+  const loaded: unknown = require("@/app/locations/location-detail/[id]/page");
   if (typeof loaded !== "object" || loaded === null) {
     throw new Error("location detail page module did not export an object");
   }
@@ -150,7 +146,7 @@ describe("SidebarLayout", () => {
   });
 
   it("renders the location detail page through the shared main host and keeps Ko-fi after page content", async () => {
-    mockLoadKeyLocationsDataResult.mockResolvedValue({
+    mockLoadLocationPageData.mockResolvedValue({
       status: "success",
       categories: [
         {

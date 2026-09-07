@@ -1,3 +1,4 @@
+import { appConfig } from "@/lib/config/app-config";
 import type { KeyLocation, KeyLocationCategory } from "../addressLoader";
 
 export {};
@@ -26,8 +27,7 @@ function loadModule(modulePath: string): ModuleState {
   }
 }
 
-function getLoader(state: ModuleState): PublicFunction {
-  const publicName = "loadKeyLocationsDataResult";
+function getPublicFunction(state: ModuleState, publicName: string): PublicFunction {
   const modulePath = "../addressLoader";
 
   if (state.error) {
@@ -47,6 +47,10 @@ function getLoader(state: ModuleState): PublicFunction {
     );
   }
   return loader as PublicFunction;
+}
+
+function getLoader(state: ModuleState): PublicFunction {
+  return getPublicFunction(state, "loadKeyLocationsDataResult");
 }
 
 // The wire fixture intentionally omits optional display metadata while keeping primary fields explicit.
@@ -109,6 +113,39 @@ const malformedCategories = [
   },
 ];
 
+const successfulPopularCategories = [
+  {
+    category: "主要な病院",
+    "category:en": "main hospitals",
+    locations: [
+      {
+        name: "九段坂病院",
+        lat: 35.6938447,
+        lng: 139.7522986,
+        copyright: "© OpenStreetMap contributors",
+        licence: "Open Database License (ODbL) 1.0",
+        licenceUri: "https://opendatacommons.org/licenses/odbl/",
+      },
+      {
+        name: "三楽病院",
+        lat: 35.6996718,
+        lng: 139.7613644,
+        copyright: "© OpenStreetMap contributors",
+        licence: "Open Database License (ODbL) 1.0",
+        licenceUri: "https://opendatacommons.org/licenses/odbl/",
+      },
+    ],
+  },
+];
+
+const malformedPopularCategories = [
+  {
+    category: "主要な病院",
+    "category:en": "main hospitals",
+    locations: [{ name: "九段坂病院", lat: 35.6938447 }],
+  },
+];
+
 function successfulResponse(categories: KeyLocationCategoryFixture[]) {
   return {
     status: "success",
@@ -124,6 +161,21 @@ function mockJsonResponse(body: unknown) {
   };
 }
 
+function expectVersionedCdnEndpoint(
+  fetchMock: jest.Mock,
+  datasetFile: "key_locations.json" | "main_facilities.json",
+) {
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  const [requestUrl] = fetchMock.mock.calls[0] as [string];
+
+  expect(requestUrl).toEqual(
+    expect.stringContaining(`@${appConfig.locationsDataVersion}/`),
+  );
+  expect(requestUrl).toEqual(
+    expect.stringContaining(`/kazaguruma_json_min/${datasetFile}`),
+  );
+}
+
 describe("loadKeyLocationsDataResult", () => {
   const moduleState = loadModule("../addressLoader");
   const originalFetch = global.fetch;
@@ -135,7 +187,8 @@ describe("loadKeyLocationsDataResult", () => {
   it("returns success data and preserves primary fields when optional fields are absent", async () => {
     const load = getLoader(moduleState);
 
-    global.fetch = jest.fn().mockResolvedValue(mockJsonResponse(successfulCategories));
+    const fetchMock = jest.fn().mockResolvedValue(mockJsonResponse(successfulCategories));
+    global.fetch = fetchMock;
 
     const result = await load();
 
@@ -145,14 +198,21 @@ describe("loadKeyLocationsDataResult", () => {
     expect(result).toHaveProperty("categories[0].locations[1].name", "小川町ホール");
     expect(result).toHaveProperty("categories[0].locations[1].lat", 35.695);
     expect(result).toHaveProperty("categories[0].locations[1].lng", 139.765);
+    expectVersionedCdnEndpoint(fetchMock, "key_locations.json");
   });
 
-  it("treats an empty but successfully decoded dataset as success data", async () => {
+  it("rejects an empty but successfully decoded dataset instead of returning success data", async () => {
     const load = getLoader(moduleState);
 
     global.fetch = jest.fn().mockResolvedValue(mockJsonResponse([]));
 
-    await expect(load()).resolves.toEqual(successfulResponse([]));
+    const result = await load();
+
+    expect(result).toEqual(expect.objectContaining({
+      status: "error",
+      error: expect.any(Error),
+    }));
+    expect(result).not.toHaveProperty("categories");
   });
 
   it.each([
@@ -177,7 +237,10 @@ describe("loadKeyLocationsDataResult", () => {
 
       const result = await load();
 
-      expect(result).toMatchObject({ status: "error" });
+      expect(result).toMatchObject({
+        status: "error",
+        error: expect.any(Error),
+      });
       expect(result).not.toHaveProperty("categories");
     },
   );
@@ -189,7 +252,10 @@ describe("loadKeyLocationsDataResult", () => {
 
     const result = await load();
 
-    expect(result).toMatchObject({ status: "error" });
+    expect(result).toMatchObject({
+      status: "error",
+      error: expect.any(Error),
+    });
     expect(result).not.toHaveProperty("categories");
   });
 
@@ -213,7 +279,10 @@ describe("loadKeyLocationsDataResult", () => {
 
     const result = await load();
 
-    expect(result).toMatchObject({ status: "error" });
+    expect(result).toMatchObject({
+      status: "error",
+      error: expect.any(Error),
+    });
     expect(result).not.toHaveProperty("categories");
   });
 
@@ -228,7 +297,10 @@ describe("loadKeyLocationsDataResult", () => {
 
     const result = await load();
 
-    expect(result).toMatchObject({ status: "error" });
+    expect(result).toMatchObject({
+      status: "error",
+      error: expect.any(Error),
+    });
     expect(result).not.toHaveProperty("categories");
   });
 
@@ -245,7 +317,10 @@ describe("loadKeyLocationsDataResult", () => {
 
     const result = await load();
 
-    expect(result).toMatchObject({ status: "error" });
+    expect(result).toMatchObject({
+      status: "error",
+      error: expect.any(Error),
+    });
     expect(result).not.toHaveProperty("categories");
   });
 
@@ -256,7 +331,112 @@ describe("loadKeyLocationsDataResult", () => {
 
     const result = await load();
 
-    expect(result).toMatchObject({ status: "error" });
+    expect(result).toMatchObject({
+      status: "error",
+      error: expect.any(Error),
+    });
+    expect(result).not.toHaveProperty("categories");
+  });
+});
+
+describe("loadAddressDataResult", () => {
+  const moduleState = loadModule("../addressLoader");
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("returns status-preserving popular-location categories with their primary fields", async () => {
+    const load = getPublicFunction(moduleState, "loadAddressDataResult");
+
+    const fetchMock = jest.fn().mockResolvedValue(mockJsonResponse(successfulPopularCategories));
+    global.fetch = fetchMock;
+
+    await expect(load()).resolves.toEqual({
+      status: "success",
+      categories: successfulPopularCategories,
+    });
+    expectVersionedCdnEndpoint(fetchMock, "main_facilities.json");
+  });
+
+  it("rejects an empty popular-location dataset instead of exposing an empty success", async () => {
+    const load = getPublicFunction(moduleState, "loadAddressDataResult");
+
+    global.fetch = jest.fn().mockResolvedValue(mockJsonResponse([]));
+
+    const result = await load();
+
+    expect(result).toEqual(expect.objectContaining({
+      status: "error",
+      error: expect.any(Error),
+    }));
+    expect(result).not.toHaveProperty("categories");
+  });
+
+  it("returns an error when a popular-location required field is malformed", async () => {
+    const load = getPublicFunction(moduleState, "loadAddressDataResult");
+
+    global.fetch = jest.fn().mockResolvedValue(mockJsonResponse(malformedPopularCategories));
+
+    const result = await load();
+
+    expect(result).toEqual(expect.objectContaining({
+      status: "error",
+      error: expect.any(Error),
+    }));
+    expect(result).not.toHaveProperty("categories");
+  });
+
+  it("preserves an HTTP failure as a popular-location data-load error", async () => {
+    const load = getPublicFunction(moduleState, "loadAddressDataResult");
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({ message: "service unavailable" }),
+    });
+
+    const result = await load();
+
+    expect(result).toEqual(expect.objectContaining({
+      status: "error",
+      error: expect.any(Error),
+    }));
+    expect(result).not.toHaveProperty("categories");
+  });
+
+  it("preserves a popular-location JSON decoding failure as a data-load error", async () => {
+    const load = getPublicFunction(moduleState, "loadAddressDataResult");
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError("invalid JSON");
+      },
+    });
+
+    const result = await load();
+
+    expect(result).toEqual(expect.objectContaining({
+      status: "error",
+      error: expect.any(Error),
+    }));
+    expect(result).not.toHaveProperty("categories");
+  });
+
+  it("preserves a popular-location fetch failure as a data-load error", async () => {
+    const load = getPublicFunction(moduleState, "loadAddressDataResult");
+
+    global.fetch = jest.fn().mockRejectedValue(new Error("network unavailable"));
+
+    const result = await load();
+
+    expect(result).toEqual(expect.objectContaining({
+      status: "error",
+      error: expect.any(Error),
+    }));
     expect(result).not.toHaveProperty("categories");
   });
 });

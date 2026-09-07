@@ -1,4 +1,11 @@
+import type { ReactNode } from "react";
 import type { Metadata } from "next";
+import LocationCategoryNavigation from "@/components/features/LocationCategoryNavigation";
+import LocationSortControls from "@/components/features/LocationSortControls";
+import { loadLocationPageData } from "@/lib/location/location-page-data";
+import type { KeyLocationsDataResult } from "@/utils/addressLoader";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "千代田区内の施設・スポット検索 風ぐるまでいける場所",
@@ -13,10 +20,52 @@ export const metadata: Metadata = {
   },
 };
 
-export default function LocationsLayout({
+function LocationDataError() {
+  return (
+    <div
+      data-error="location-data"
+      role="alert"
+      aria-live="polite"
+      className="alert alert-error alert-soft mb-6 text-base-content!"
+    >
+      <p className="ruby-text">
+        場所データを読み込めませんでした。時間をおいて再試行してください。
+      </p>
+    </div>
+  );
+}
+
+export default async function LocationsLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
-  return <>{children}</>;
+  let result: KeyLocationsDataResult;
+  try {
+    result = await loadLocationPageData();
+  } catch {
+    result = {
+      status: "error",
+      error: new Error("場所データの読み込みに失敗しました"),
+    };
+  }
+
+  const categories =
+    result.status === "success" && Array.isArray(result.categories)
+      ? result.categories
+      : null;
+
+  return (
+    <>
+      {categories !== null && categories.length > 0 ? (
+        <>
+          <LocationCategoryNavigation categories={categories} />
+          <LocationSortControls />
+        </>
+      ) : (
+        <LocationDataError />
+      )}
+      {children}
+    </>
+  );
 }

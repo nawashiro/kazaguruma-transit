@@ -950,4 +950,4 @@ LOCATION_PAGES_404_BASE_URL=http://127.0.0.1:3310 LOCATION_PAGES_ORIGIN_BASE_URL
 - `git push -u origin HEAD`はGitHub `github.com:nawashiro/kazaguruma-transit.git`とTangled `git@tangled.org:did:plc:owrqgxh62utntouxk2disqix`の両push先で受理された。
 - `git ls-remote`による両remoteの`refs/heads/spec/issue-79-location-data-pages`は、実装commitと同じ`3b795d81ae111b6c4fb07a24cdb56b884226ec25`を返した。
 - `gh auth status`は`nawashiro`で成功した。`gh run list --branch spec/issue-79-location-data-pages`は空配列で、当該branch/commitにGitHub Actions runは存在しなかった。したがってCI成功とは主張しない。local full Jest、build、browser acceptanceの結果を上記検証証拠として扱う。
-- push後のworking treeはclean、branchは`spec/issue-79-location-data-pages`である。このdocs-only追記は別follow-up commitとしてこれからpushするため、最終remote SHAはそのcommit後に再確認する。
+- Delivery verification節のdocs-only追記commit `72d447124436da2d246f78c3a83b1b2307278b49`はGitHub/Tangledへpush済みであり、push後の両remote SHAも同一である。

@@ -918,7 +918,7 @@ LOCATION_PAGES_404_BASE_URL=http://127.0.0.1:3310 LOCATION_PAGES_ORIGIN_BASE_URL
 
 - 確認日時: 2026-09-07 11:18:36 UTC。
 - 対象ブランチ: `spec/issue-79-location-data-pages`。
-- HEAD: `b2d6eeb060507f4640a19f517500917b3fa47178`。今回のSpec023作業でcommit/pushは行っていない。
+- 検証時HEAD: `b2d6eeb060507f4640a19f517500917b3fa47178`。この節はcommit/push前の親側照合記録であり、実装commitとremote検証は後続のDelivery verificationへ記録する。
 - 憲章、`AGENTS.md`、`spec.md`、`plan.md`、`research.md`、`data-model.md`、`contracts/location-pages.md`、`quickstart.md`、`tasks.md`を親側で照合した。作業言語、日本語、TDD、委任境界、SSR中心の動的`origin`、標準404とdata-errorの分離、route-form保護、ブラウザCDN fetch禁止、アクセシビリティ方針に矛盾はない。
 - `checklists/requirements.md`は全項目checkedであり、`.specify/extensions.yml`は存在しなかった。`check-prerequisites.sh --json --require-tasks --include-tasks`は`FEATURE_DIR=/opt/data/kazaguruma-transit/specs/023-location-data-pages`と必要文書を返した。
 
@@ -942,3 +942,12 @@ LOCATION_PAGES_404_BASE_URL=http://127.0.0.1:3310 LOCATION_PAGES_ORIGIN_BASE_URL
 
 - `git status --short --untracked-files=all`の45行は、Spec023のproduction/test/deletion-ledger/tasks変更と、旧route削除・新nested route・server data/origin/GPS/navigation、T053A test、T053D contract correctionの宣言済み境界に一致する。未宣言の一時スクリプト、build harness、runtime結果ファイルは残っていない。
 - `git diff --check`、branch/HEAD、status path、tasksのcheckbox状態を再確認した。tasksは全85件が完了済みであり、未完了taskは0件である。
+
+## Delivery verification
+
+- 確認日時: 2026-09-07 11:25:00 UTC。
+- 実装commit: `3b795d81ae111b6c4fb07a24cdb56b884226ec25`。
+- `git push -u origin HEAD`はGitHub `github.com:nawashiro/kazaguruma-transit.git`とTangled `git@tangled.org:did:plc:owrqgxh62utntouxk2disqix`の両push先で受理された。
+- `git ls-remote`による両remoteの`refs/heads/spec/issue-79-location-data-pages`は、実装commitと同じ`3b795d81ae111b6c4fb07a24cdb56b884226ec25`を返した。
+- `gh auth status`は`nawashiro`で成功した。`gh run list --branch spec/issue-79-location-data-pages`は空配列で、当該branch/commitにGitHub Actions runは存在しなかった。したがってCI成功とは主張しない。local full Jest、build、browser acceptanceの結果を上記検証証拠として扱う。
+- push後のworking treeはclean、branchは`spec/issue-79-location-data-pages`である。このdocs-only追記は別follow-up commitとしてこれからpushするため、最終remote SHAはそのcommit後に再確認する。

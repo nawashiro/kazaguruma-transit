@@ -38,6 +38,8 @@ const mockLoadLocationPageData = jest.fn<
   Promise<KeyLocationsDataResult>,
   []
 >();
+const mockLoadLocationCategories = jest.fn();
+const mockLoadKeyLocationsData = jest.fn();
 
 jest.mock("next/navigation", () => ({
   notFound: mockNotFound,
@@ -48,6 +50,24 @@ jest.mock("@/lib/location/location-page-data", () => {
   return {
     ...actual,
     loadLocationPageData: mockLoadLocationPageData,
+  };
+});
+
+jest.mock("@/lib/location/location-list-state", () => {
+  const actual = jest.requireActual("@/lib/location/location-list-state");
+  return {
+    ...actual,
+    loadLocationCategories: (...args: unknown[]) =>
+      mockLoadLocationCategories(...args),
+  };
+});
+
+jest.mock("@/utils/addressLoader", () => {
+  const actual = jest.requireActual("@/utils/addressLoader");
+  return {
+    ...actual,
+    loadKeyLocationsData: (...args: unknown[]) =>
+      mockLoadKeyLocationsData(...args),
   };
 });
 
@@ -234,10 +254,19 @@ function expectAreaHeadingOrder(firstName: string, secondName: string): void {
   ).toBeTruthy();
 }
 
+function expectNoLegacyLocationLoaderCalls(): void {
+  expect(mockLoadLocationCategories).not.toHaveBeenCalled();
+  expect(mockLoadKeyLocationsData).not.toHaveBeenCalled();
+}
+
 beforeEach(() => {
   mockNotFound.mockClear();
   mockLoadLocationPageData.mockReset();
   mockLoadLocationPageData.mockResolvedValue(successData());
+  mockLoadLocationCategories.mockReset();
+  mockLoadLocationCategories.mockResolvedValue(locationCategories);
+  mockLoadKeyLocationsData.mockReset();
+  mockLoadKeyLocationsData.mockResolvedValue(locationCategories);
 });
 
 describe("server category page", () => {
@@ -250,7 +279,7 @@ describe("server category page", () => {
       return;
     }
 
-    expect(screen.getByRole("heading", { level: 1, name: "自然環境公園" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "場所をさがす" })).toBeInTheDocument();
     expect(screen.getByText(farLocation.name)).toBeInTheDocument();
     expect(screen.getByText(nearLocation.name)).toBeInTheDocument();
     expect(screen.queryByText(unrelatedLocation.name)).not.toBeInTheDocument();
@@ -263,6 +292,20 @@ describe("server category page", () => {
       `/locations/location-detail/${encodeURIComponent(farLocation.id)}`,
       `/locations/location-detail/${encodeURIComponent(nearLocation.id)}`,
     ]);
+  });
+
+  it("uses the public location-page data boundary without invoking legacy location loaders", async () => {
+    const page = getCategoryPage();
+
+    const invocation = await invokePage(
+      page,
+      encodeURIComponent("natural environment park"),
+    );
+
+    expect(invocation.error).toBeNull();
+    expect(React.isValidElement(invocation.element)).toBe(true);
+    expect(mockLoadLocationPageData).toHaveBeenCalledTimes(1);
+    expectNoLegacyLocationLoaderCalls();
   });
 
   it("renders the server-provided areas in a deterministic order with their matching locations", async () => {

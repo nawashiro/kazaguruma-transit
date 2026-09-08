@@ -72,7 +72,7 @@ describe("runtime standard 404 boundary for location pages", () => {
 });
 
 describe("runtime server-rendered location page boundary (T045 RED)", () => {
-  it("renders native navigation and both sort controls before page content without hydration", async () => {
+  it("renders the page header before native navigation and both sort controls, followed by page content without hydration", async () => {
     const response = await requestHtml(KNOWN_CATEGORY_PATH);
 
     expect(response.statusCode).toBe(200);
@@ -116,7 +116,11 @@ describe("runtime server-rendered location page boundary (T045 RED)", () => {
       distanceTextStart,
     );
 
-    const childHeadingStart = mainHtml.indexOf("<h1", distanceTextStart);
-    expect(childHeadingStart).toBeGreaterThan(distanceTextStart);
+    const pageHeadingStart = mainHtml.indexOf("<h1");
+    expect(pageHeadingStart).toBeGreaterThanOrEqual(0);
+    expect(pageHeadingStart).toBeLessThan(navStart);
+
+    const contentHeadingStart = mainHtml.indexOf("<h2", distanceTextStart);
+    expect(contentHeadingStart).toBeGreaterThan(distanceTextStart);
   });
 });

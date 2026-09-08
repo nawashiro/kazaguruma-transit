@@ -18,6 +18,9 @@
 /.next/
 /out/
 
+# generated location artifact
+/public/generated/
+
 # production
 /build
 

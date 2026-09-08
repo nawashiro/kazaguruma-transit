@@ -156,8 +156,8 @@
 - **server data**: `src/lib/location/location-page-data.ts:41-77`が`loadKeyLocationsDataResult()`を呼ぶ。transport、JSON、必須項目、空カテゴリ、重複IDを成功状態へ隠さない。
 - **wire validation**: `src/utils/addressLoader.ts:113-153,226-245`が`KeyLocation`、カテゴリ、version付きCDNの結果を検証する。結果は`success`または`error`で保持する。
 - **detail resolver**: `src/lib/location/location-detail-resolver.ts:122-175`がrequest ID、loaded data、invalid-data、duplicate-id、not-found、data-load-errorを分類する。pageはこの分類を表示状態へ投影する。
-- **server area**: `src/utils/geoUtils.ts:24-39,79-145`がserver-safeなGeoJSON読込と純粋な町字判定を持つ。カテゴリpageは`area`が全件にあれば埋込値でグループ化し、欠落時だけserver GeoJSONへ進む。detail pageは`location.area`を優先し、欠落時だけserver GeoJSONを使う。
-- **card area**: `src/components/features/LocationCard.tsx:10-14,31-38`はserverから渡された`areaName`または`location.area`だけを表示する。client GeoJSON lookupを行わない。
+- **server area**: `src/utils/geoUtils.ts:24-39,79-145`がserver-safeなGeoJSON読込と純粋な町字判定を持つ。`key_locations.json`の正規スキーマに`area`はないため、カテゴリpageの`allHaveArea`/`groupLocationsByProvidedArea`分岐とdetail pageの`location.area`優先分岐は、現在コードに残る非正規キー依存として削除対象にする。正規経路は座標からserver GeoJSONで町字を導出することとする。
+- **card area**: 現行productionには`LocationCard.tsx`は存在せず、カテゴリpageの`LocationSummary`がtown modeでグループから渡された地域名を表示する。表示する地域名はserver GeoJSON由来の表示用地域名に統一し、client GeoJSON lookupや`location.area`の直接表示を復活させない。
 - **detail link**: `LocationCard`とカテゴリpageは`/locations/location-detail/${encodeURIComponent(id)}`へ通常linkを作る。
 - **back/destination**: detail pageのback linkはカテゴリpathまたは`/locations`だけを使う。destination linkは既存の座標・名称queryだけを使う。どちらも`origin`を追加しない。
 - **category navigation**: `src/components/features/LocationCategoryNavigation.tsx:48-69,105-126`は有効な`origin`だけをカテゴリ間linkへ保持する。detail、entry、other linkへは転送しない。この責務はT023の旧detail削除完了判定に含めない。
@@ -170,13 +170,13 @@
 | `website` | `completeLocation.uri` | `locationWithoutOptionalFields`に未指定 | ありは外部linkを`target="_blank"`、`rel="noopener noreferrer"`で表示する。なしはlinkを表示しない。 |
 | `imageCopyright` | `completeLocation.imageCopyright` | 未指定 | ありは`画像提供`の`dt`/`dd`を表示する。なしは空ラベルを表示しない。 |
 | `descriptionCopyright` | `completeLocation.descriptionCopyright`と説明文 | 未指定。説明文も未指定 | ありは`説明文提供`を表示する。なしは空ラベルを表示しない。 |
-| `area` | `completeLocation.area="神田"` | `locationWithoutOptionalFields`に未指定 | ありは`地域`の`dt`/`dd`を表示する。なしはserver GeoJSON fallbackを試す。fallback名はこのfixture testで固定していない。 |
+| `region` | `key_locations.json`に地域名フィールドはなく、座標からserver GeoJSONで導出 | GeoJSONで座標を包含するfeatureがない場合 | 導出成功時は表示用地域名を`地域`として表示する。導出不能時は既存の`null`/`その他`扱いを維持する。 |
 | 主要情報 | 両fixtureに`id`、`name`、`lat`、`lng`、`nodeCopyright`、`licence`、`licenceUri`を保持 | 同左 | optional欠落fixtureでもh1、提供情報、ライセンスを維持する。 |
 | 目的地 | 両fixtureで`ここへ行く`を表示 | 同左 | 座標・名称から生成したdestination hrefを維持し、`origin`を含めない。 |
 | back | 両fixtureでカテゴリdataから戻り先を解決 | 同左 | `/locations/public%20facilities`を維持し、`origin`を含めない。直接アクセス時は`/locations`へfallbackする。 |
 
 - optional欠落の主要検証は`src/app/locations/location-detail/[id]/__tests__/page.test.tsx:490-549`にある。
-- area未指定時のserver fallback実装は`src/app/locations/location-detail/[id]/page.tsx:76-88`にある。現在のtestはfallbackの具体名ではなく、主要情報、目的地、backの維持を固定する。
+- 地域名は`key_locations.json`の`area`ではなく、座標に対応するserver GeoJSONから導出する。現在の`location.area`優先分岐と、それを前提にしたfixtureは、表示用地域名の仕様に合わせて見直す対象である。
 
 ### 旧route cleanup evidence
 
@@ -919,7 +919,7 @@ LOCATION_PAGES_404_BASE_URL=http://127.0.0.1:3310 LOCATION_PAGES_ORIGIN_BASE_URL
 - 確認日時: 2026-09-07 11:18:36 UTC。
 - 対象ブランチ: `spec/issue-79-location-data-pages`。
 - 検証時HEAD: `b2d6eeb060507f4640a19f517500917b3fa47178`。この節はcommit/push前の親側照合記録であり、実装commitとremote検証は後続のDelivery verificationへ記録する。
-- 憲章、`AGENTS.md`、`spec.md`、`plan.md`、`research.md`、`data-model.md`、`contracts/location-pages.md`、`quickstart.md`、`tasks.md`を親側で照合した。作業言語、日本語、TDD、委任境界、SSR中心の動的`origin`、標準404とdata-errorの分離、route-form保護、ブラウザCDN fetch禁止、アクセシビリティ方針に矛盾はない。
+- Q21確定前の照合記録として、憲章、`AGENTS.md`、`spec.md`、`plan.md`、`research.md`、`data-model.md`、`contracts/location-pages.md`、`quickstart.md`、`tasks.md`を親側で照合した。当時はSSR中心の動的`origin`、標準404とdata-errorの分離、route-form保護、ブラウザCDN fetch禁止、アクセシビリティ方針に矛盾はないと記録したが、これは実行時サーバーの外部データ取得を許していた旧方針の記録であり、Q21のビルド生成物限定契約を満たす証拠ではない。
 - `checklists/requirements.md`は全項目checkedであり、`.specify/extensions.yml`は存在しなかった。`check-prerequisites.sh --json --require-tasks --include-tasks`は`FEATURE_DIR=/opt/data/kazaguruma-transit/specs/023-location-data-pages`と必要文書を返した。
 
 ### 最終production-only negative census
@@ -941,7 +941,7 @@ LOCATION_PAGES_404_BASE_URL=http://127.0.0.1:3310 LOCATION_PAGES_ORIGIN_BASE_URL
 ### 最終変更パス照合
 
 - `git status --short --untracked-files=all`の45行は、Spec023のproduction/test/deletion-ledger/tasks変更と、旧route削除・新nested route・server data/origin/GPS/navigation、T053A test、T053D contract correctionの宣言済み境界に一致する。未宣言の一時スクリプト、build harness、runtime結果ファイルは残っていない。
-- `git diff --check`、branch/HEAD、status path、tasksのcheckbox状態を再確認した。tasksは全85件が完了済みであり、未完了taskは0件である。
+- Q21追加前の照合では、既存tasksの完了状態と変更パスを確認した。Q21追加後はT060〜T068が未完了であり、旧tasksの完了記録だけではビルド時生成物・ビルド失敗・実行時外部取得0件を証明しない。
 
 ## Delivery verification
 
@@ -951,3 +951,61 @@ LOCATION_PAGES_404_BASE_URL=http://127.0.0.1:3310 LOCATION_PAGES_ORIGIN_BASE_URL
 - `git ls-remote`による両remoteの`refs/heads/spec/issue-79-location-data-pages`は、実装commitと同じ`3b795d81ae111b6c4fb07a24cdb56b884226ec25`を返した。
 - `gh auth status`は`nawashiro`で成功した。`gh run list --branch spec/issue-79-location-data-pages`は空配列で、当該branch/commitにGitHub Actions runは存在しなかった。したがってCI成功とは主張しない。local full Jest、build、browser acceptanceの結果を上記検証証拠として扱う。
 - Delivery verification節のdocs-only追記commit `72d447124436da2d246f78c3a83b1b2307278b49`はGitHub/Tangledへpush済みであり、push後の両remote SHAも同一である。
+
+## Q21 clarification update
+
+- 確認日時: 2026-09-07 UTC。
+- ユーザー決定: ホームのよく利用される施設、`key_locations.json`、町字GeoJSONをビルド時に取得・検証し、いずれかが取得・検証できなければ公開用ビルドを失敗させる。ビルド成功後は、場所ページがビルド生成物だけを利用し、CDN・データ提供元へ実行時に再取得しない。`origin`による距離計算・表示切替は生成物を入力として実行時に行ってよい。
+- 影響範囲: `spec.md`のQ2/Q21、FR-001/FR-002/FR-016/FR-040、SC-001/SC-004/SC-021、`research.md`、`plan.md`、`data-model.md`、`contracts/location-pages.md`、`quickstart.md`、`tasks.md`を更新した。
+- `T060`〜`T068`を、ビルド時取得・検証、生成物作成、実行時artifact-only読込、外部ネットワーク0件、ビルド失敗注入、最終検証の未完了タスクとして追加した。これらが完了するまで、旧T058等のビルド成功記録や旧server data boundaryの検証記録をQ21の受入証拠として扱わない。
+
+## T052H: US5 visual GREEN・6幅ブラウザ受入と削除境界evidence
+
+### 実施境界・開始状態
+
+- 実施日時: **2026-09-08 13:28:30 UTC**。
+- branch / HEAD: `spec/issue-79-location-data-pages` / `72e1734278b400db2863639a4db89092bcd1761a`。
+- 指定視覚参照は生のSHA `7cbf0a5a57c66b0e8e114e28cc3871ab1f46fd15`を直接参照した。`origin/dev@<sha>`は有効なGit refとして解決できなかった。
+- T052Hの書き込み可能範囲は`specs/023-location-data-pages/quickstart.md`と本`deletion-ledger.md`だけ。production source/test/fixture、spec/tasks/plan/research、commit、push、外部API更新は行っていない。
+- 検証開始時`git status --short --untracked-files=all`は24行、SHA-256は`fe70318bd1a2cd3de20c8b43dd83f5b174b292d9062b1336f559d4d97af35254`。既存のparent dirty pathsを変更せず、T052Hでは2つの証跡docsだけを追記する境界とした。
+
+### 必須検証結果
+
+- visual-contract 4 suites: `npm test -- --runInBand --runTestsByPath`で**4 suites / 35 tests passed、exit 0**。
+- 関連location/category/detail/navigation/sort/origin/404 8 suites: 404 runtime envを`127.0.0.1:3331`へ明示し、未知category/detailを先warm-upしてから実行。**8 suites / 77 tests passed、exit 0**。
+- `npx tsc --noEmit --incremental false`: **exit 0**。
+- `npm run lint`: **exit 0、error 0**。既存warningと`next lint` deprecationのみ。
+- `git diff --check`: **exit 0**。
+- 複数角括弧route path指定時のJest `Invalid testPattern` informational warningは記録した。最終summaryはvisual 4 suite、related 8 suiteの指定結果で、warningをGREENの代替にはしていない。
+
+### visual/browser acceptance evidence
+
+- owned dev server: `npm run dev -- --hostname 127.0.0.1 --port 3331`。category/detail代表ページはHTTP 200、unknown category/detailはbrowser HTTP 404。
+- ChromeはPuppeteer cacheの138.0.7204.168を使用。カテゴリ6幅の`clientWidth/scrollWidth/bodyScrollWidth`は`320:305/305/305`、`375:360/360/360`、`390:375/375/375`、`768:753/753/753`、`1024:1009/1009/1009`、`1440:1425/1425/1425`で、zero overflow。navは全幅16 links、`display:flex`、`flex-wrap:wrap`、320pxでも`(x=40,y=275,w=225,h=404)`、1440pxでも`(x=464.5,y=251,w=816,h=96)`、ラベル省略・切断なし。
+- カテゴリページの削除境界: `[role="tablist"]`、場所pageの`[role="tab"]`、auxiliary carouselは0件。旧`CategoryTabs`/active-category stateを場所ページへ戻さず、semantic category nav、normal Link、`aria-current`を保持した。
+- 必須visual領域: `h1=場所をさがす`、説明文、`カテゴリを選択`、`近いところから表示`、地域単位の一覧、`データ提供元`を確認。1440px provider cardは`864x235`。カテゴリ/sort操作は16px・min-height 44px。
+- 有効origin `35.6905,139.7578`を使用し、6幅すべてoverflow 0、16/16 category linksがorigin保持、18/18 detail linksがorigin除去、reset hrefがquery-free、distance buttonが`aria-pressed=true`。距離帯は`0/1/2キロ離れています`昇順。out-of-area `51.5074,-0.1278`もエラーなしで距離表示した。
+- detail代表`/locations/location-detail/3e328a42-3ff1-4018-be72-746aa6e14e17`は6幅すべて`category nav=0`、`role=tablist/tab=0`、zero overflow（320は305/305、1440は1425/1425）。戻り`/locations/hospital`、destination JSONのみ、website external link `https://www.tky.ndu.ac.jp/hospital/`（`_blank`/`noopener noreferrer`）を維持した。これはdetail nav omissionとorigin除去の削除境界evidenceである。
+- 390pxの実CDP Tabでは16/16 category hrefと両sort操作へ到達し、全対象で`:focus-visible` true。origin付きcategory rendered hrefを同一hrefでbrowser navigationしorigin保持を、detail rendered hrefをbrowser navigationしoriginなし・category navなしを確認した。coordinate clickはemulated viewportで発火しなかったため、click成功とは記録していない。
+- unknown category/detail browser responseはHTTP 404、H1 `404`、standard not-found body、category nav 0、390px `375/375`。data-load/duplicate/malformed build errorとは混同していない。
+
+### origin/dev reference comparison
+
+- reference `src/app/locations/page.tsx`は586行/21116 bytesで、旧monolithic `PageHeader`/`Card`/`CategoryTabs`/`LocationCard`とtab roleを含む。currentはcategory/detail route、`LocationCategoryNavigation`、`LocationSortControls`へ責務分割済み。参照の視覚語彙は保持しながら、現行契約（通常Link、semantic nav、aria-current、originはcategory間だけ、detailはoriginなし、detail category navなし）を優先した。
+- reference/currentで`PageHeader.tsx` 26/632、`Card.tsx` 61/1465、`CategoryTabs.tsx` 81/2409、`Button.tsx` 102/3846、`SidebarLayout.tsx` 142/4916は同一。旧`LocationCard.tsx`はcurrentに存在せず、canonical detail routeへ統一。`CategoryTabs`はroute-form consumerが残るためretain/out-of-scopeであり、場所ページへ再導入していない。
+- したがって差分は意図した削除・分割境界であり、PageHeader/Card/provider、responsive wrapping、44px操作領域、keyboard focusを壊す未解決差分は検出されなかった。
+
+### 既知の環境artifactと終了境界
+
+- 404 browser retry中にChrome CDPが切断し、cached Chromeを再起動して受入を再実行した。原因調査用にrootのuntracked `core`（389,578,752 bytes）が生成されたが、受入後に親エージェントが生成物であることを確認して削除した。`file` utilityも環境に存在しなかったため、バイナリ内容は読まずstatだけを記録した。現在の作業ツリーに`core`は残っていない。
+- `next start`とbuildはT060–T068/Q21生成物ゲート外のため本T052Hでは実行していない。routesManifest errorは観測していない。
+- T052Hの検証・視覚・削除境界はGREENだが、Q21のT060–T068未完了を理由にfeature全体のrelease/build完了とは主張しない。T052H中の変更は本台帳と`quickstart.md`への証跡追記だけである。
+
+## Q21 final verification: T067/T068
+
+- `quickstart.md`のT067専用節に、null policy correction後の再実測結果を記録した。標準`npm run build`はexit 0、検証済みartifactはmain 9カテゴリ/62場所、key 16カテゴリ/169場所、GeoJSON 59 features、`derivedRegions` 169 entriesを保持した。live wire dataのoptional `null` 671件もartifactへ保持し、required fieldのnullは0件だった。
+- generator/reader focused suiteは2 suites / 402 tests PASS。public lifecycleは181 passed、failure matrix 175件を全件非0終了・stderr分類・artifact未更新・temporary file 0・fallback 0で確認した。direct generatorの非有限値coverageは7 assertions PASSだった。
+- build後のartifact-only `next start` probeはHome、先頭category、先頭detail、valid `origin`付きcategoryの4/4 HTTP 200、主要HTML marker成立、CDN・GeoJSON provider・legacy source・fallbackの禁止通信0件だった。probe後のserverとport 3100は終了済みである。
+- T068親側最終検証は、`check-prerequisites.sh --json --require-tasks --include-tasks`成功、requirements checklist全項目checked、Q21のspec/plan/research/data-model/contracts/quickstart/tasks/deletion-ledger照合、full Jest（server起動下）159 passed / 2 skipped suites、1412 passed / 13 skipped tests、strict TypeScript exit 0、`npm run lint` exit 0、`npm run build` exit 0、`git diff --check` exit 0で完了した。
+- `npm run import-gtfs`は`transit-config.json`不在のENOENTを出力したがscript自体はexit 0で継続した。これはQ21場所artifactの取得・検証・runtime no-network境界とは別の既存GTFS設定未配置として未解決事項に残す。
+- それ以前のT059/Q21 clarification節にある「T060〜T068未完了」は、その節の作成時点の履歴である。現行完了状態は本節、`tasks.md`のT067/T068 `[X]`、および`quickstart.md`のT067最終再実測を正とする。

@@ -1,9 +1,10 @@
 import PageHeader from "@/components/layouts/PageHeader";
 import HomeRouteForm from "@/components/features/HomeRouteForm";
 import {
-  loadAddressDataResult,
-  type AddressCategory,
-} from "@/utils/addressLoader";
+  readLocationArtifact,
+  type LocationArtifactReadResult,
+} from "@/lib/location/location-artifact";
+import type { AddressCategory } from "@/utils/addressLoader";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -89,12 +90,22 @@ function isPopularCategories(value: unknown): value is AddressCategory[] {
   });
 }
 
-function getPopularCategories(result: unknown): AddressCategory[] | null {
-  if (!isRecord(result) || result.status !== "success") {
+function getPopularCategories(
+  result: LocationArtifactReadResult,
+): AddressCategory[] | null {
+  if (result.status !== "success") {
     return null;
   }
 
-  return isPopularCategories(result.categories) ? result.categories : null;
+  const artifact: unknown = result.artifact;
+  if (!isRecord(artifact) || !isRecord(artifact.sources)) {
+    return null;
+  }
+
+  const popularCategories: unknown = artifact.sources.mainFacilities;
+  return isPopularCategories(popularCategories)
+    ? popularCategories
+    : null;
 }
 
 function HomeDataError() {
@@ -118,11 +129,11 @@ function HomeDataError() {
   );
 }
 
-export default async function Home() {
-  let result: unknown;
+export default function Home() {
+  let result: LocationArtifactReadResult;
 
   try {
-    result = await loadAddressDataResult();
+    result = readLocationArtifact();
   } catch {
     return <HomeDataError />;
   }

@@ -55,11 +55,30 @@ function categoryHref(
     : `${path}?origin=${encodeURIComponent(originQuery)}`;
 }
 
+function useOptionalPathname(): ReturnType<typeof usePathname> | null {
+  if (typeof usePathname !== "function") {
+    return null;
+  }
+
+  // Isolated page tests may mock only the server navigation helpers.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return usePathname();
+}
+
+function useOptionalSearchParams(): ReturnType<typeof useSearchParams> | null {
+  if (typeof useSearchParams !== "function") {
+    return null;
+  }
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useSearchParams();
+}
+
 export default function LocationCategoryNavigation({
   categories,
 }: LocationCategoryNavigationProps) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const pathname = useOptionalPathname();
+  const searchParams = useOptionalSearchParams();
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const isCategoryPage = categories.some(({ "category:en": categoryId }) =>
     isCategoryPath(pathname, categoryId),
@@ -105,9 +124,9 @@ export default function LocationCategoryNavigation({
   return (
     <nav
       aria-label="場所カテゴリ"
-      className="tabs tabs-box mb-6 w-full overflow-x-auto"
+      className="tabs tabs-box mb-6 w-full"
     >
-      <ul className="flex min-w-max">
+      <ul className="flex w-full flex-wrap">
         {categories.map(({ category, "category:en": categoryId }, index) => {
           const isCurrent = isCategoryPath(pathname, categoryId);
           return (
@@ -117,7 +136,7 @@ export default function LocationCategoryNavigation({
                 ref={(element) => {
                   linkRefs.current[index] = element;
                 }}
-                className={`tab min-h-[44px] min-w-[44px] whitespace-nowrap px-4 font-bold ruby-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary${isCurrent ? " tab-active" : ""}`}
+                className={`tab min-h-[44px] min-w-[44px] whitespace-nowrap px-4 text-base font-bold ruby-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary${isCurrent ? " tab-active" : ""}`}
                 aria-current={isCurrent ? "page" : undefined}
                 onKeyDown={(event) => handleKeyDown(event, index)}
               >

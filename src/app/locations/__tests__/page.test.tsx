@@ -16,6 +16,8 @@ const ts: typeof import("typescript") = jest.requireActual("typescript");
 const mockRedirect = jest.fn();
 const mockNotFound = jest.fn();
 const mockLoadLocationPageData = jest.fn();
+const mockLoadLocationCategories = jest.fn();
+const mockLoadKeyLocationsData = jest.fn();
 
 jest.mock("next/navigation", () => ({
   redirect: (url: string) => mockRedirect(url),
@@ -27,6 +29,24 @@ jest.mock("@/lib/location/location-page-data", () => ({
   loadLocationPageData: (...args: unknown[]) =>
     mockLoadLocationPageData(...args),
 }));
+
+jest.mock("@/lib/location/location-list-state", () => {
+  const actual = jest.requireActual("@/lib/location/location-list-state");
+  return {
+    ...actual,
+    loadLocationCategories: (...args: unknown[]) =>
+      mockLoadLocationCategories(...args),
+  };
+});
+
+jest.mock("@/utils/addressLoader", () => {
+  const actual = jest.requireActual("@/utils/addressLoader");
+  return {
+    ...actual,
+    loadKeyLocationsData: (...args: unknown[]) =>
+      mockLoadKeyLocationsData(...args),
+  };
+});
 
 const LOCATION_PRODUCTION_ROOT = "src/app/locations";
 const LOCATION_PAGE_SUPPORT_PRODUCTION_FILES = [
@@ -265,11 +285,13 @@ const secondCategoryFixture: KeyLocationCategory = {
   locations: [{ ...locationFixture, id: "public-library-日本" }],
 };
 
+const locationCategoriesFixture: KeyLocationCategory[] = [
+  firstCategoryFixture,
+  secondCategoryFixture,
+];
+
 function successData(
-  categories: KeyLocationCategory[] = [
-    firstCategoryFixture,
-    secondCategoryFixture,
-  ],
+  categories: KeyLocationCategory[] = locationCategoriesFixture,
 ): KeyLocationsDataResult {
   return { status: "success", categories };
 }
@@ -357,11 +379,20 @@ function expectLocationDataErrorBoundary() {
   expectNoLocationNotFoundGuidance();
 }
 
+function expectNoLegacyLocationLoaderCalls(): void {
+  expect(mockLoadLocationCategories).not.toHaveBeenCalled();
+  expect(mockLoadKeyLocationsData).not.toHaveBeenCalled();
+}
+
 describe("/locations server entry", () => {
   beforeEach(() => {
     mockRedirect.mockReset();
     mockNotFound.mockReset();
     mockLoadLocationPageData.mockReset();
+    mockLoadLocationCategories.mockReset();
+    mockLoadLocationCategories.mockResolvedValue(locationCategoriesFixture);
+    mockLoadKeyLocationsData.mockReset();
+    mockLoadKeyLocationsData.mockResolvedValue(locationCategoriesFixture);
   });
 
   it("成功データの決定的な先頭category:enをエンコードしたカテゴリURLへ解決する", async () => {
@@ -375,6 +406,15 @@ describe("/locations server entry", () => {
       `/locations/${encodeURIComponent(firstCategoryFixture["category:en"])}`,
     );
     expect(mockNotFound).not.toHaveBeenCalled();
+  });
+
+  it("uses the public location-page data boundary without invoking legacy location loaders", async () => {
+    mockLoadLocationPageData.mockResolvedValue(successData());
+
+    await invokePublicPage();
+
+    expect(mockLoadLocationPageData).toHaveBeenCalledTimes(1);
+    expectNoLegacyLocationLoaderCalls();
   });
 
   it("カテゴリ0件を空成功やカテゴリredirectにせずdata-error境界で扱う", async () => {

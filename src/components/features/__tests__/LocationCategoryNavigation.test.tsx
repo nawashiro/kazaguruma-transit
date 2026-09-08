@@ -22,11 +22,31 @@ type ModuleState = {
 
 const usePathname = jest.fn(() => "/locations/city_office_and_branch_offices");
 const useSearchParams = jest.fn(() => new URLSearchParams());
+const mockLoadLocationCategories = jest.fn();
+const mockLoadKeyLocationsData = jest.fn();
 
 jest.mock("next/navigation", () => ({
   usePathname: () => usePathname(),
   useSearchParams: () => useSearchParams(),
 }));
+
+jest.mock("@/lib/location/location-list-state", () => {
+  const actual = jest.requireActual("@/lib/location/location-list-state");
+  return {
+    ...actual,
+    loadLocationCategories: (...args: unknown[]) =>
+      mockLoadLocationCategories(...args),
+  };
+});
+
+jest.mock("@/utils/addressLoader", () => {
+  const actual = jest.requireActual("@/utils/addressLoader");
+  return {
+    ...actual,
+    loadKeyLocationsData: (...args: unknown[]) =>
+      mockLoadKeyLocationsData(...args),
+  };
+});
 
 jest.mock("next/link", () => {
   const MockLink = React.forwardRef<
@@ -102,6 +122,10 @@ const categories: readonly LocationCategory[] = [
     category: "図書館",
     "category:en": "libraries",
   },
+  {
+    category: "区内の公園・緑地・自然環境に関する長いカテゴリ名",
+    "category:en": "long-natural-environment-category",
+  },
 ];
 
 const BASE_URL = "https://kazaguruma.invalid";
@@ -123,12 +147,21 @@ function getCategoryLinks(): HTMLElement[] {
   return links;
 }
 
+function expectNoLegacyLocationLoaderCalls(): void {
+  expect(mockLoadLocationCategories).not.toHaveBeenCalled();
+  expect(mockLoadKeyLocationsData).not.toHaveBeenCalled();
+}
+
 describe("LocationCategoryNavigation", () => {
   beforeEach(() => {
     usePathname.mockReset();
     usePathname.mockReturnValue("/locations/city_office_and_branch_offices");
     useSearchParams.mockReset();
     useSearchParams.mockReturnValue(new URLSearchParams());
+    mockLoadLocationCategories.mockReset();
+    mockLoadLocationCategories.mockResolvedValue(categories);
+    mockLoadKeyLocationsData.mockReset();
+    mockLoadKeyLocationsData.mockResolvedValue(categories);
   });
 
   it("renders a semantic nav with every category as a native link", () => {
@@ -151,6 +184,12 @@ describe("LocationCategoryNavigation", () => {
         `/locations/${encodeURIComponent(categoryId)}`,
       );
     });
+  });
+
+  it("uses injected categories without invoking legacy location loaders", () => {
+    renderNavigation();
+
+    expectNoLegacyLocationLoaderCalls();
   });
 
   it("derives the current category from pathname and exposes aria-current page", () => {
@@ -247,5 +286,69 @@ describe("LocationCategoryNavigation", () => {
     fireEvent.keyDown(links[links.length - 1], { key: "Home" });
     expect(document.activeElement).toBe(links[0]);
     expect(document.activeElement?.tagName).toBe("A");
+  });
+
+  it("keeps every category label complete, single-line, and untruncated", () => {
+    renderNavigation();
+
+    getCategoryLinks().forEach((link, index) => {
+      expect(link.textContent).toBe(categories[index]?.category);
+      expect(link).toHaveClass("whitespace-nowrap");
+      expect(link.querySelector("br")).toBeNull();
+      expect(link).not.toHaveClass(
+        "truncate",
+        "text-ellipsis",
+        "line-clamp-1",
+        "overflow-hidden",
+      );
+    });
+  });
+
+  it("keeps the CategoryTabs visual vocabulary and exposes visible focus styles", () => {
+    renderNavigation();
+
+    const navigation = screen.getByRole("navigation");
+    expect(navigation).toHaveClass("tabs", "tabs-box");
+
+    getCategoryLinks().forEach((link) => {
+      expect(link).toHaveClass("tab", "text-base", "px-4", "ruby-text");
+      expect(link).toHaveClass(
+        "focus-visible:outline",
+        "focus-visible:outline-2",
+        "focus-visible:outline-offset-2",
+      );
+
+      link.focus();
+      expect(document.activeElement).toBe(link);
+    });
+  });
+
+  it("uses implicit navigation semantics instead of tablist or tab roles", () => {
+    renderNavigation();
+
+    const navigation = screen.getByRole("navigation");
+    expect(navigation.tagName).toBe("NAV");
+    expect(navigation).not.toHaveAttribute("role", "tablist");
+    expect(navigation.querySelector('[role="tablist"]')).toBeNull();
+    expect(navigation.querySelector('[role="tab"]')).toBeNull();
+
+    getCategoryLinks().forEach((link) => {
+      expect(link).not.toHaveAttribute("role", "tab");
+    });
+  });
+
+  it("wraps link rows without page-wide horizontal overflow utility classes", () => {
+    renderNavigation();
+
+    const navigation = screen.getByRole("navigation");
+    const linkList = navigation.querySelector("ul");
+    expect(linkList).not.toBeNull();
+    expect(linkList).toHaveClass("flex", "flex-wrap");
+    expect(navigation).not.toHaveClass("overflow-x-auto", "min-w-max");
+    expect(linkList).not.toHaveClass("overflow-x-auto", "min-w-max");
+    expect(
+      navigation.querySelector('[class~="overflow-x-auto"]'),
+    ).toBeNull();
+    expect(navigation.querySelector('[class~="min-w-max"]')).toBeNull();
   });
 });

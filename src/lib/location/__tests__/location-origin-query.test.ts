@@ -1,3 +1,7 @@
+import React from "react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom";
+
 export {};
 
 type Coordinates = {
@@ -61,10 +65,105 @@ function getPublicFunction(
 
 const moduleState = loadModule("../location-origin-query");
 const BASE_URL = "https://kazaguruma.invalid";
+const CATEGORY_PATH = "/locations/public-facilities";
+
+type MockLinkProps = React.PropsWithChildren<
+  React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }
+>;
+
+const mockUsePathname = jest.fn<string | null, []>();
+const mockUseSearchParams = jest.fn<URLSearchParams, []>();
+const mockRouterReplace = jest.fn<void, [string]>();
+
+jest.mock("next/navigation", () => ({
+  usePathname: () => mockUsePathname(),
+  useSearchParams: () => mockUseSearchParams(),
+  useRouter: () => ({ replace: (href: string) => mockRouterReplace(href) }),
+}));
+
+jest.mock("next/link", () => {
+  const MockLink = React.forwardRef<HTMLAnchorElement, MockLinkProps>(
+    ({ children, href, onClick, ...props }, ref) => {
+      const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+        onClick?.(event);
+        if (event.defaultPrevented) {
+          return;
+        }
+
+        const destination = new URL(href, BASE_URL);
+        window.history.pushState(
+          {},
+          "",
+          `${destination.pathname}${destination.search}${destination.hash}`,
+        );
+      };
+
+      return React.createElement(
+        "a",
+        { ...props, ref, href, onClick: handleClick },
+        children,
+      );
+    },
+  );
+  MockLink.displayName = "MockLink";
+
+  return {
+    __esModule: true,
+    default: MockLink,
+  };
+});
 
 function parseOrigin(value: string | null | undefined): ParsedOrigin {
   const parseLocationOrigin = getPublicFunction(moduleState, "parseLocationOrigin");
   return parseLocationOrigin(value) as ParsedOrigin;
+}
+
+function isPublicModule(value: unknown): value is PublicModule {
+  return typeof value === "object" && value !== null;
+}
+
+function loadLocationSortControls(): React.ComponentType {
+  const modulePath = "../../../components/features/LocationSortControls";
+  let loaded: unknown = null;
+  let loadError: unknown = null;
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- guarded public-boundary loader
+    loaded = require(modulePath);
+  } catch (error) {
+    loadError = error;
+  }
+
+  expect(loadError).toBeNull();
+  expect(isPublicModule(loaded)).toBe(true);
+  if (!isPublicModule(loaded)) {
+    throw new Error(`Expected ${modulePath} to export a public module`);
+  }
+
+  const component = loaded.default;
+  expect(typeof component).toBe("function");
+  return component as React.ComponentType;
+}
+
+function renderOriginControls(rawOrigin: string): void {
+  window.history.replaceState(
+    {},
+    "",
+    `${CATEGORY_PATH}?origin=${encodeURIComponent(rawOrigin)}`,
+  );
+  mockUsePathname.mockReturnValue(CATEGORY_PATH);
+  mockUseSearchParams.mockReturnValue(
+    new URLSearchParams({ origin: rawOrigin }),
+  );
+
+  const LocationSortControls = loadLocationSortControls();
+  render(React.createElement(LocationSortControls));
+}
+
+function getTownResetLink(): HTMLAnchorElement {
+  const link = screen.queryByRole("link", { name: "町字で並べる" });
+  expect(link).toBeInTheDocument();
+  return link as HTMLAnchorElement;
 }
 
 describe("location origin query", () => {
@@ -133,4 +232,92 @@ describe("location origin query", () => {
     },
   );
 
+});
+
+describe("location origin reset negative contract", () => {
+  let originalBrowserUrl = "/";
+
+  beforeEach(() => {
+    originalBrowserUrl =
+      window.location.pathname + window.location.search + window.location.hash;
+    window.history.replaceState({}, "", "/");
+    mockUsePathname.mockReset();
+    mockUsePathname.mockReturnValue(CATEGORY_PATH);
+    mockUseSearchParams.mockReset();
+    mockUseSearchParams.mockReturnValue(new URLSearchParams());
+    mockRouterReplace.mockReset();
+  });
+
+  afterEach(() => {
+    window.history.replaceState({}, "", originalBrowserUrl);
+  });
+
+  it("validなoriginはreset選択前に保持し、町字で並べる選択後だけ除去する", () => {
+    const serializeLocationOrigin = getPublicFunction(
+      moduleState,
+      "serializeLocationOrigin",
+    );
+    const origin = { lat: 35.681236, lng: 139.767125 };
+    const serializedOrigin = serializeLocationOrigin(origin) as string;
+
+    renderOriginControls(serializedOrigin);
+
+    const beforeReset = new URL(window.location.href);
+    expect(beforeReset.pathname).toBe(CATEGORY_PATH);
+    expect(beforeReset.searchParams.get("origin")).toBe(serializedOrigin);
+    expect(parseOrigin(beforeReset.searchParams.get("origin"))).toMatchObject({
+      originState: "valid",
+      origin,
+    });
+
+    const resetLink = getTownResetLink();
+    const resetHref = new URL(resetLink.getAttribute("href") ?? "", BASE_URL);
+    expect(resetHref.pathname).toBe(CATEGORY_PATH);
+    expect(resetHref.search).toBe("");
+    expect(new URL(window.location.href).searchParams.get("origin")).toBe(
+      serializedOrigin,
+    );
+
+    fireEvent.click(resetLink);
+
+    const afterReset = new URL(window.location.href);
+    expect(afterReset.pathname).toBe(CATEGORY_PATH);
+    expect(afterReset.search).toBe("");
+    expect(parseOrigin(afterReset.searchParams.get("origin"))).toMatchObject({
+      originState: "absent",
+    });
+  });
+
+  it("invalidなoriginもreset選択前に保持し、町字で並べる選択後だけ除去する", () => {
+    const rawOrigin = "NaN,139.767125";
+
+    renderOriginControls(rawOrigin);
+
+    const beforeReset = new URL(window.location.href);
+    expect(beforeReset.pathname).toBe(CATEGORY_PATH);
+    expect(beforeReset.searchParams.get("origin")).toBe(rawOrigin);
+    expect(parseOrigin(beforeReset.searchParams.get("origin"))).toMatchObject({
+      originState: "invalid",
+    });
+    expect(parseOrigin(beforeReset.searchParams.get("origin"))).not.toHaveProperty(
+      "origin",
+    );
+
+    const resetLink = getTownResetLink();
+    const resetHref = new URL(resetLink.getAttribute("href") ?? "", BASE_URL);
+    expect(resetHref.pathname).toBe(CATEGORY_PATH);
+    expect(resetHref.search).toBe("");
+    expect(new URL(window.location.href).searchParams.get("origin")).toBe(
+      rawOrigin,
+    );
+
+    fireEvent.click(resetLink);
+
+    const afterReset = new URL(window.location.href);
+    expect(afterReset.pathname).toBe(CATEGORY_PATH);
+    expect(afterReset.search).toBe("");
+    expect(parseOrigin(afterReset.searchParams.get("origin"))).toMatchObject({
+      originState: "absent",
+    });
+  });
 });

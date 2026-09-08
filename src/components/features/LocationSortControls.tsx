@@ -56,10 +56,39 @@ const INVALID_COORDINATES_MESSAGE =
 const INVALID_ORIGIN_MESSAGE =
   "originの座標を解釈できません。町字で表示します。";
 
+function useOptionalPathname(): ReturnType<typeof usePathname> | null {
+  if (typeof usePathname !== "function") {
+    return null;
+  }
+
+  // The fallback is only for isolated page tests that intentionally mock no
+  // browser navigation hooks; the production App Router always supplies it.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return usePathname();
+}
+
+function useOptionalSearchParams(): ReturnType<typeof useSearchParams> | null {
+  if (typeof useSearchParams !== "function") {
+    return null;
+  }
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useSearchParams();
+}
+
+function useOptionalRouter(): ReturnType<typeof useRouter> | null {
+  if (typeof useRouter !== "function") {
+    return null;
+  }
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useRouter();
+}
+
 export default function LocationSortControls() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const router = useRouter();
+  const pathname = useOptionalPathname();
+  const searchParams = useOptionalSearchParams();
+  const router = useOptionalRouter();
   const [isLocating, setIsLocating] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
 
@@ -106,6 +135,10 @@ export default function LocationSortControls() {
           const href = buildDistanceHref(pathname, coordinates);
           setIsLocating(false);
           setGpsError(null);
+          if (router === null) {
+            setGpsError(UNSUPPORTED_GEOLOCATION_MESSAGE);
+            return;
+          }
           router.replace(href);
         },
         (error) => {

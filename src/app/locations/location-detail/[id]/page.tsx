@@ -7,10 +7,6 @@ import {
   resolveLocationDetail,
 } from "@/lib/location/location-detail-resolver";
 import { loadLocationPageData } from "@/lib/location/location-page-data";
-import {
-  getAreaNameFromCoordinates,
-  loadGeoJSON,
-} from "@/utils/geoUtils";
 import type {
   KeyLocation,
   KeyLocationCategory,
@@ -26,6 +22,7 @@ const INVALID_DATA_ERROR_MESSAGE =
   "場所データの形式が不正です。時間をおいて再試行してください。";
 const DUPLICATE_ID_ERROR_MESSAGE =
   "場所識別子が重複しています。時間をおいて再試行してください。";
+const CHIYODA_AREA_PREFIX = "東京都千代田区";
 
 export const dynamicParams = false;
 export const dynamic = "force-static";
@@ -87,18 +84,19 @@ function isHttpUrl(value: string): boolean {
   }
 }
 
-async function resolveAreaName(location: KeyLocation): Promise<string | null> {
+function normalizeAreaName(name: string): string {
+  return name.startsWith(CHIYODA_AREA_PREFIX)
+    ? name.slice(CHIYODA_AREA_PREFIX.length) || name
+    : name;
+}
+
+function resolveAreaName(location: KeyLocation): string | null {
   const providedArea = location.area;
   if (hasNonEmptyText(providedArea)) {
-    return providedArea;
+    return normalizeAreaName(providedArea);
   }
 
-  try {
-    const geoJSON = await loadGeoJSON();
-    return getAreaNameFromCoordinates(location.lat, location.lng, geoJSON);
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 function findLocationCategory(
@@ -360,7 +358,7 @@ export default async function LocationDetailPage({
   }
 
   const category = findLocationCategory(data, result.location);
-  const areaName = await resolveAreaName(result.location);
+  const areaName = resolveAreaName(result.location);
 
   return (
     <div className="py-8">

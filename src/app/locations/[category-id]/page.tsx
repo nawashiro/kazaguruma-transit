@@ -1,12 +1,14 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import PageHeader from "@/components/layouts/PageHeader";
+import LocationCategoryNavigation from "@/components/features/LocationCategoryNavigation";
+import LocationSortControls from "@/components/features/LocationSortControls";
+import Card from "@/components/ui/Card";
 import {
   calculateDistance,
   sortLocationsByDistance,
 } from "@/lib/location/location-list-state";
 import {
-  groupLocationsByArea,
-  loadGeoJSON,
   loadLocationPageData,
 } from "@/lib/location/location-page-data";
 import {
@@ -25,13 +27,22 @@ type CategoryPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-type DistanceLocation = KeyLocation & {
-  distance?: number;
+type LocationWithDisplayArea = KeyLocation & {
+  displayAreaName?: string;
+};
+
+type DistanceLocation = LocationWithDisplayArea & {
+  distance: number;
 };
 
 type LocationAreaGroup = {
   name: string;
-  locations: KeyLocation[];
+  locations: LocationWithDisplayArea[];
+};
+
+type DistanceBand = {
+  distanceKm: number;
+  locations: DistanceLocation[];
 };
 
 type SuccessfulLocationData = {
@@ -40,6 +51,9 @@ type SuccessfulLocationData = {
 };
 
 const INVALID_ORIGIN_QUERY = "__invalid-origin-query__";
+const LOCATION_PAGE_TITLE = "場所をさがす";
+const LOCATION_PAGE_DESCRIPTION = "位置とカテゴリから千代田区のスポットをさがす";
+const CHIYODA_AREA_PREFIX = "東京都千代田区";
 
 export const dynamicParams = false;
 export const dynamic = "force-dynamic";
@@ -138,6 +152,12 @@ async function getOriginQueryValue(
       : INVALID_ORIGIN_QUERY;
 }
 
+function normalizeAreaName(name: string): string {
+  return name.startsWith(CHIYODA_AREA_PREFIX)
+    ? name.slice(CHIYODA_AREA_PREFIX.length) || name
+    : name;
+}
+
 function groupLocationsByProvidedArea(
   locations: KeyLocation[],
 ): LocationAreaGroup[] {
@@ -145,7 +165,7 @@ function groupLocationsByProvidedArea(
 
   for (const location of locations) {
     const areaName = typeof location.area === "string" ? location.area.trim() : "";
-    const groupName = areaName || "その他";
+    const groupName = normalizeAreaName(areaName || "その他");
     const group = groups.get(groupName);
 
     if (group) {
@@ -161,24 +181,44 @@ function groupLocationsByProvidedArea(
   }));
 }
 
-async function groupCategoryLocations(
-  locations: KeyLocation[],
-): Promise<LocationAreaGroup[]> {
-  const allHaveArea = locations.every(
-    (location) =>
-      typeof location.area === "string" && location.area.trim().length > 0,
-  );
+function groupCategoryLocations(locations: KeyLocation[]): LocationAreaGroup[] {
+  return groupLocationsByProvidedArea(locations);
+}
 
-  if (allHaveArea) {
-    return groupLocationsByProvidedArea(locations);
+function createAreaNameByLocationId(
+  groups: readonly LocationAreaGroup[],
+): Map<string, string> {
+  const areaNameByLocationId = new Map<string, string>();
+
+  for (const group of groups) {
+    for (const location of group.locations) {
+      areaNameByLocationId.set(location.id, group.name);
+    }
   }
 
-  const geoJSON = await loadGeoJSON();
-  const groupedLocations = groupLocationsByArea(locations, geoJSON);
-  return Object.entries(groupedLocations).map(([name, grouped]) => ({
-    name,
-    locations: grouped as KeyLocation[],
-  }));
+  return areaNameByLocationId;
+}
+
+function groupLocationsByDistance(
+  locations: readonly DistanceLocation[],
+): DistanceBand[] {
+  const bands = new Map<number, DistanceLocation[]>();
+
+  for (const location of locations) {
+    const distanceKm = Math.round(location.distance);
+    const band = bands.get(distanceKm);
+
+    if (band) {
+      band.push(location);
+    } else {
+      bands.set(distanceKm, [location]);
+    }
+  }
+
+  return Array.from(bands, ([distanceKm, groupedLocations]) => ({
+    distanceKm,
+    locations: groupedLocations,
+  })).sort((first, second) => first.distanceKm - second.distanceKm);
 }
 
 function DataErrorState() {
@@ -202,56 +242,60 @@ function LocationSummary({
   location,
   areaName,
 }: {
-  location: KeyLocation;
+  location: LocationWithDisplayArea;
   areaName?: string;
 }) {
   return (
-    <div className="card w-full bg-base-100 shadow-sm">
-      <a
-        href={`/locations/location-detail/${encodeURIComponent(location.id)}`}
-        className="block p-4 transition-shadow hover:shadow-md"
-      >
-        {location.imageUri && (
+    <Link
+      href={`/locations/location-detail/${encodeURIComponent(location.id)}`}
+      className="card w-full min-w-0 cursor-pointer bg-base-100 shadow-sm transition-all hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    >
+      {location.imageUri && (
+        <figure className="relative w-full overflow-hidden">
           <img
             src={location.imageUri}
-            alt=""
-            className="mb-3 h-48 w-full rounded-xl object-cover"
+            alt={location.name}
+            className="h-48 w-full max-w-full object-cover"
           />
-        )}
-        <h3 className="text-xl font-bold">{location.name}</h3>
-        {areaName && <p className="mt-1 text-base">{areaName}</p>}
+        </figure>
+      )}
+      <div className="card-body min-w-0 text-left">
+        <h3 className="card-title inline gap-0 break-words text-xl">
+          {location.name}
+        </h3>
+        {areaName && <p className="break-words text-base">{areaName}</p>}
         {location.description && (
-          <p className="mt-1 text-base ruby-text">{location.description}</p>
+          <p className="mt-1 break-words text-base ruby-text">
+            {location.description}
+          </p>
         )}
-      </a>
-    </div>
+      </div>
+    </Link>
   );
 }
 
-function LocationList({
-  groups,
-  mode,
+function LocationGrid({
+  locations,
+  areaName,
 }: {
-  groups: LocationAreaGroup[];
-  mode: "town" | "distance";
+  locations: readonly LocationWithDisplayArea[];
+  areaName?: string;
 }) {
-  if (mode === "distance") {
-    return (
-      <section aria-labelledby="distance-results-heading" className="mt-6">
-        <h2 id="distance-results-heading" className="text-xl font-bold">
-          距離の近い順
-        </h2>
-        <ul className="mt-4 grid gap-4">
-          {groups[0]?.locations.map((location) => (
-            <li key={location.id}>
-              <LocationSummary location={location} />
-            </li>
-          ))}
-        </ul>
-      </section>
-    );
-  }
+  return (
+    <ul className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {locations.map((location) => (
+        <li key={location.id} className="min-w-0">
+          <LocationSummary
+            location={location}
+            areaName={areaName ?? location.displayAreaName}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
 
+function TownLocationList({ groups }: { groups: readonly LocationAreaGroup[] }) {
   return (
     <div className="mt-6 space-y-8">
       {groups.map((group) => (
@@ -259,16 +303,63 @@ function LocationList({
           <h2 id={`area-${group.name}`} className="text-xl font-bold">
             {group.name}
           </h2>
-          <ul className="mt-4 grid gap-4">
-            {group.locations.map((location) => (
-              <li key={location.id}>
-                <LocationSummary location={location} areaName={group.name} />
-              </li>
-            ))}
-          </ul>
+          <LocationGrid locations={group.locations} areaName={group.name} />
         </section>
       ))}
     </div>
+  );
+}
+
+function DistanceLocationList({ bands }: { bands: readonly DistanceBand[] }) {
+  return (
+    <div className="mt-6 space-y-8">
+      {bands.map((band) => (
+        <section
+          key={band.distanceKm}
+          aria-labelledby={`distance-band-${band.distanceKm}`}
+        >
+          <h2
+            id={`distance-band-${band.distanceKm}`}
+            className="text-xl font-bold"
+          >
+            {band.distanceKm}キロ離れています
+          </h2>
+          <LocationGrid locations={band.locations} />
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function DataProviderCard() {
+  return (
+    <Card title="データ提供元" className="ruby-text">
+      <p>
+        この場所データは、ボランティアがつくった
+        <a
+          href="https://github.com/nawashiro/chiyoda_city_main_facilities"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="link"
+        >
+          千代田区主要施設座標データ
+        </a>
+        による「<ruby>風<rt>かざ</rt></ruby>ぐるまの停留所から徒歩圏内（600m以内）であることがわかっている場所」を使用しています。
+      </p>
+      <p>
+        誤りが含まれていたり、古いデータが残っていたり、新たに加えてほしい場所があるときは、直接プルリクエストを送るか、
+        <a
+          href="https://docs.google.com/forms/d/e/1FAIpQLSeZ1eufe_2aZkRWQwr-RuCceUYUMJ7WmSfUr1ZsX5QTDRqFKQ/viewform?usp=header"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="link"
+        >
+          こちらのフォーム
+        </a>
+        からお知らせください。
+      </p>
+      <p>写真のご提供も歓迎しています。</p>
+    </Card>
   );
 }
 
@@ -301,10 +392,21 @@ export default async function CategoryPage({
   const parsedOrigin: LocationOrigin = parseLocationOrigin(originValue);
   const isDistanceMode = parsedOrigin.originState === "valid";
 
+  let areaGroups: LocationAreaGroup[];
+  try {
+    areaGroups = groupCategoryLocations(category.locations);
+  } catch {
+    return <DataErrorState />;
+  }
+
+  const areaNameByLocationId = createAreaNameByLocationId(areaGroups);
+  let locationList: React.ReactNode;
   if (isDistanceMode) {
     const locationsWithDistance: DistanceLocation[] = category.locations.map(
       (location) => ({
         ...location,
+        displayAreaName:
+          areaNameByLocationId.get(location.id) ?? "その他",
         distance: calculateDistance(
           parsedOrigin.origin.lat,
           parsedOrigin.origin.lng,
@@ -314,36 +416,47 @@ export default async function CategoryPage({
       }),
     );
     const sortedLocations = sortLocationsByDistance(locationsWithDistance);
+    const distanceBands = groupLocationsByDistance(sortedLocations);
 
-    return (
-      <div className="py-8">
-        <PageHeader title={category.category} />
+    locationList = (
+      <>
         <p className="mt-4" role="status" aria-live="polite">
           距離の近い順で表示しています。
         </p>
-        <LocationList
-          mode="distance"
-          groups={[{ name: "距離の近い順", locations: sortedLocations }]}
-        />
-      </div>
+        <DistanceLocationList bands={distanceBands} />
+      </>
     );
-  }
-
-  let areaGroups: LocationAreaGroup[];
-  try {
-    areaGroups = await groupCategoryLocations(category.locations);
-  } catch {
-    return <DataErrorState />;
+  } else {
+    locationList = (
+      <>
+        {parsedOrigin.originState === "invalid" && <OriginErrorState />}
+        <p className="mt-4" role="status" aria-live="polite">
+          町字ごとに表示しています。
+        </p>
+        <TownLocationList groups={areaGroups} />
+      </>
+    );
   }
 
   return (
     <div className="py-8">
-      <PageHeader title={category.category} />
-      {parsedOrigin.originState === "invalid" && <OriginErrorState />}
-      <p className="mt-4" role="status" aria-live="polite">
-        町字ごとに表示しています。
-      </p>
-      <LocationList mode="town" groups={areaGroups} />
+      <PageHeader
+        title={LOCATION_PAGE_TITLE}
+        description={LOCATION_PAGE_DESCRIPTION}
+      />
+
+      <div className="space-y-4">
+        <Card title="カテゴリを選択">
+          <LocationCategoryNavigation categories={data.categories} />
+        </Card>
+
+        <Card title="近いところから表示">
+          <LocationSortControls />
+        </Card>
+
+        {locationList}
+        <DataProviderCard />
+      </div>
     </div>
   );
 }

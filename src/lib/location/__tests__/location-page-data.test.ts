@@ -1,8 +1,7 @@
 import type {
-  KeyLocation,
-  KeyLocationCategory,
-  KeyLocationsDataResult,
-} from "@/utils/addressLoader";
+  LocationArtifact,
+  LocationArtifactReadResult,
+} from "@/lib/location/location-artifact";
 
 export {};
 
@@ -14,14 +13,19 @@ type ModuleState = {
   error: unknown | null;
 };
 
-const mockLoadKeyLocationsDataResult = jest.fn();
+type ArtifactKeyLocation =
+  LocationArtifact["sources"]["keyLocations"][number]["locations"][number];
+type ArtifactKeyLocationCategory =
+  LocationArtifact["sources"]["keyLocations"][number];
 
-jest.mock("@/utils/addressLoader", () => {
-  const actual = jest.requireActual("@/utils/addressLoader");
+const mockReadLocationArtifact = jest.fn();
+
+jest.mock("@/lib/location/location-artifact", () => {
+  const actual = jest.requireActual("@/lib/location/location-artifact");
   return {
     ...actual,
-    loadKeyLocationsDataResult: (...args: unknown[]) =>
-      mockLoadKeyLocationsDataResult(...args),
+    readLocationArtifact: (...args: unknown[]) =>
+      mockReadLocationArtifact(...args),
   };
 });
 
@@ -64,7 +68,7 @@ function getPublicFunction(state: ModuleState, publicName: string): PublicFuncti
   return implementation as PublicFunction;
 }
 
-const primaryLocation: KeyLocation = {
+const primaryLocation: ArtifactKeyLocation = {
   id: "kanda-library",
   name: "神田図書館",
   lat: 35.694,
@@ -74,7 +78,7 @@ const primaryLocation: KeyLocation = {
   licenceUri: "https://creativecommons.org/licenses/by/4.0/",
 };
 
-const unmatchedLocation: KeyLocation = {
+const unmatchedLocation: ArtifactKeyLocation = {
   id: "outside-location",
   name: "区域外施設",
   lat: 35.8,
@@ -84,17 +88,13 @@ const unmatchedLocation: KeyLocation = {
   licenceUri: "https://creativecommons.org/licenses/by/4.0/",
 };
 
-const successCategories: KeyLocationCategory[] = [
+const successCategories: ArtifactKeyLocationCategory[] = [
   {
     category: "公共施設",
     "category:en": "public-facilities",
     locations: [primaryLocation],
   },
 ];
-
-function successData(categories: KeyLocationCategory[] = successCategories): KeyLocationsDataResult {
-  return { status: "success", categories };
-}
 
 const serverGeoJson = {
   type: "FeatureCollection",
@@ -118,23 +118,101 @@ const serverGeoJson = {
   ],
 };
 
+const validArtifact: LocationArtifact = {
+  status: "validated",
+  sourceUris: {
+    mainFacilitiesUri: "https://fixtures.example.test/v2/main_facilities.json",
+    keyLocationsUri: "https://fixtures.example.test/v2/key_locations.json",
+    townGeoJsonUri: "https://fixtures.example.test/v2/chiyoda-towns.geojson",
+  },
+  sources: {
+    mainFacilities: [
+      {
+        category: "公共施設",
+        "category:en": "public-facilities",
+        locations: [
+          {
+            name: "千代田区役所",
+            lat: 35.694,
+            lng: 139.753,
+            copyright: "千代田区",
+            licence: "CC BY 4.0",
+            licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+          },
+        ],
+      },
+    ],
+    keyLocations: successCategories,
+    townGeoJson: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {
+            name: "東京都千代田区神田",
+            uri: "https://example.test/areas/kanda",
+          },
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [139.7, 35.6],
+                [139.8, 35.6],
+                [139.8, 35.7],
+                [139.7, 35.7],
+                [139.7, 35.6],
+              ],
+            ],
+          },
+        },
+      ],
+    },
+  },
+  derivedRegions: {
+    "kanda-library": "神田",
+  },
+};
+
+function artifactResult(
+  categories: ArtifactKeyLocationCategory[] = successCategories,
+): LocationArtifactReadResult {
+  return {
+    status: "success",
+    artifact: {
+      ...validArtifact,
+      sources: {
+        ...validArtifact.sources,
+        keyLocations: categories,
+      },
+    },
+  };
+}
+
 describe("location-page-data server boundary", () => {
   const moduleState = loadModule();
   const originalFetch = global.fetch;
 
   beforeEach(() => {
-    mockLoadKeyLocationsDataResult.mockReset();
-    mockLoadKeyLocationsDataResult.mockResolvedValue(successData());
+    mockReadLocationArtifact.mockReset();
+    mockReadLocationArtifact.mockReturnValue(artifactResult());
   });
 
   afterEach(() => {
     global.fetch = originalFetch;
   });
 
-  it("preserves non-empty key-location success categories and primary fields", async () => {
+  it("preserves non-empty key-location success categories and projects derived regions without mutating sources", async () => {
     const load = getPublicFunction(moduleState, "loadLocationPageData");
-    const expected = successData();
-    mockLoadKeyLocationsDataResult.mockResolvedValue(expected);
+    const expected = {
+      status: "success",
+      categories: [
+        {
+          category: "公共施設",
+          "category:en": "public-facilities",
+          locations: [{ ...primaryLocation, area: "神田" }],
+        },
+      ],
+    };
 
     const result = await load();
 
@@ -154,30 +232,37 @@ describe("location-page-data server boundary", () => {
               nodeCopyright: "千代田区",
               licence: "CC BY 4.0",
               licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+              area: "神田",
             }),
           ],
         },
       ],
     });
+    expect(validArtifact.sources.keyLocations[0]?.locations[0]).not.toHaveProperty(
+      "area",
+    );
+    expect(mockReadLocationArtifact).toHaveBeenCalledTimes(1);
+    expect(mockReadLocationArtifact).toHaveBeenCalledWith();
   });
 
-  it("preserves an upstream key-location transport error instead of exposing empty page data", async () => {
+  it("preserves an artifact-reader transport error instead of exposing empty page data", async () => {
     const load = getPublicFunction(moduleState, "loadLocationPageData");
     const upstreamError = new Error("network unavailable");
-    mockLoadKeyLocationsDataResult.mockResolvedValue({
+    mockReadLocationArtifact.mockReturnValue({
       status: "error",
       error: upstreamError,
-    });
+    } satisfies LocationArtifactReadResult);
 
     const result = await load();
 
     expect(result).toEqual({ status: "error", error: upstreamError });
     expect(result).not.toHaveProperty("categories");
+    expect(mockReadLocationArtifact).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects a successful empty category set at the server page boundary", async () => {
+  it("rejects a successful empty artifact key-location set at the server page boundary", async () => {
     const load = getPublicFunction(moduleState, "loadLocationPageData");
-    mockLoadKeyLocationsDataResult.mockResolvedValue(successData([]));
+    mockReadLocationArtifact.mockReturnValue(artifactResult([]));
 
     const result = await load();
 
@@ -188,9 +273,9 @@ describe("location-page-data server boundary", () => {
     expect(result).not.toHaveProperty("categories");
   });
 
-  it("rejects duplicate location IDs across the complete dataset instead of selecting one", async () => {
+  it("rejects duplicate location IDs across the complete artifact dataset instead of selecting one", async () => {
     const load = getPublicFunction(moduleState, "loadLocationPageData");
-    const duplicateCategories: KeyLocationCategory[] = [
+    const duplicateCategories: ArtifactKeyLocationCategory[] = [
       successCategories[0],
       {
         category: "別カテゴリ",
@@ -198,7 +283,7 @@ describe("location-page-data server boundary", () => {
         locations: [{ ...primaryLocation, name: "同じIDの別施設" }],
       },
     ];
-    mockLoadKeyLocationsDataResult.mockResolvedValue(successData(duplicateCategories));
+    mockReadLocationArtifact.mockReturnValue(artifactResult(duplicateCategories));
 
     const result = await load();
 

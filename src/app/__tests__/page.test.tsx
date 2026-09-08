@@ -5,13 +5,16 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Home from "../page";
 import type {
+  LocationArtifact,
+  LocationArtifactReadResult,
+} from "@/lib/location/location-artifact";
+import type {
   AddressCategory,
-  AddressDataResult,
   AddressLocation,
 } from "@/utils/addressLoader";
 
 const mockRouterPush = jest.fn();
-const mockLoadAddressDataResult = jest.fn();
+const mockReadLocationArtifact = jest.fn();
 const mockDestinationSelectorProps = jest.fn();
 const ANNOUNCEMENT_INFORMATION =
   "運行情報の更新";
@@ -26,17 +29,76 @@ const popularFacility: AddressLocation = {
   licenceUri: "https://creativecommons.org/licenses/by/4.0/",
 };
 
-const popularCategories: AddressCategory[] = [
-  {
-    category: "公共施設",
-    "category:en": "public-facilities",
-    locations: [popularFacility],
+const successfulArtifact: LocationArtifact = {
+  status: "validated",
+  sourceUris: {
+    mainFacilitiesUri: "https://fixtures.example.test/v2/main_facilities.json",
+    keyLocationsUri: "https://fixtures.example.test/v2/key_locations.json",
+    townGeoJsonUri: "https://fixtures.example.test/v2/chiyoda-towns.geojson",
   },
-];
+  sources: {
+    mainFacilities: [
+      {
+        category: "公共施設",
+        "category:en": "public-facilities",
+        locations: [popularFacility],
+      },
+    ],
+    keyLocations: [
+      {
+        category: "公共施設",
+        "category:en": "public-facilities",
+        locations: [
+          {
+            id: "kanda-library",
+            name: "神田図書館",
+            lat: 35.694,
+            lng: 139.768,
+            nodeCopyright: "千代田区",
+            licence: "CC BY 4.0",
+            licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+          },
+        ],
+      },
+    ],
+    townGeoJson: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: { name: "神田" },
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [139.7, 35.6],
+                [139.8, 35.6],
+                [139.8, 35.7],
+                [139.7, 35.7],
+                [139.7, 35.6],
+              ],
+            ],
+          },
+        },
+      ],
+    },
+  },
+  derivedRegions: {
+    "kanda-library": "神田",
+  },
+};
 
-const successfulPopularData: AddressDataResult = {
+const successfulArtifactResult: LocationArtifactReadResult = {
   status: "success",
-  categories: popularCategories,
+  artifact: successfulArtifact,
+};
+
+const emptyPopularArtifact: LocationArtifact = {
+  ...successfulArtifact,
+  sources: {
+    ...successfulArtifact.sources,
+    mainFacilities: [],
+  },
 };
 
 jest.mock("next/navigation", () => ({
@@ -52,13 +114,8 @@ jest.mock("@/lib/config/app-config", () => ({
   },
 }));
 
-jest.mock("@/utils/addressLoader", () => ({
-  loadAddressDataResult: (...args: unknown[]) => mockLoadAddressDataResult(...args),
-  convertToLocation: jest.fn((location: AddressLocation) => ({
-    lat: location.lat,
-    lng: location.lng,
-    address: location.name,
-  })),
+jest.mock("@/lib/location/location-artifact", () => ({
+  readLocationArtifact: (...args: unknown[]) => mockReadLocationArtifact(...args),
 }));
 
 jest.mock("@/components/features/DateTimeSelector", () =>
@@ -173,8 +230,8 @@ describe("Home", () => {
     localStorage.clear();
     window.history.replaceState({}, "", "/");
     browserFetchSpy = jest.spyOn(global, "fetch");
-    mockLoadAddressDataResult.mockReset();
-    mockLoadAddressDataResult.mockResolvedValue(successfulPopularData);
+    mockReadLocationArtifact.mockReset();
+    mockReadLocationArtifact.mockReturnValue(successfulArtifactResult);
   });
 
   afterEach(() => {
@@ -324,10 +381,11 @@ describe("Home", () => {
   it("server data boundaryからpopular施設を受け取り、ブラウザCDN fetchを開始しない", async () => {
     await renderPublicHome();
 
-    expect(mockLoadAddressDataResult).toHaveBeenCalledTimes(1);
+    expect(mockReadLocationArtifact).toHaveBeenCalledTimes(1);
+    expect(mockReadLocationArtifact).toHaveBeenCalledWith();
     expect(browserFetchSpy).not.toHaveBeenCalled();
     expect(mockDestinationSelectorProps).toHaveBeenCalledWith({
-      categories: popularCategories,
+      categories: successfulArtifact.sources.mainFacilities,
     });
 
     const popularFacilityButton = screen.queryByTestId(
@@ -359,29 +417,29 @@ describe("Home", () => {
     expect(browserFetchSpy).not.toHaveBeenCalled();
   });
 
-  it("popular施設loaderの失敗を空の成功状態ではなく日本語errorとして表示する", async () => {
-    mockLoadAddressDataResult.mockResolvedValueOnce({
+  it("artifact readerの失敗を空の成功状態ではなく日本語errorとして表示する", async () => {
+    mockReadLocationArtifact.mockReturnValueOnce({
       status: "error",
       error: new Error("HTTP 503"),
-    } satisfies AddressDataResult);
+    } satisfies LocationArtifactReadResult);
 
     await renderPublicHome();
 
-    expect(mockLoadAddressDataResult).toHaveBeenCalledTimes(1);
+    expect(mockReadLocationArtifact).toHaveBeenCalledTimes(1);
     expectJapaneseHomeDataError();
     expect(screen.queryByTestId("popular-facility-千代田区役所")).not.toBeInTheDocument();
     expect(browserFetchSpy).not.toHaveBeenCalled();
   });
 
   it("popular施設が空の場合も空の成功状態ではなく日本語errorとして表示する", async () => {
-    mockLoadAddressDataResult.mockResolvedValueOnce({
+    mockReadLocationArtifact.mockReturnValueOnce({
       status: "success",
-      categories: [],
-    } satisfies AddressDataResult);
+      artifact: emptyPopularArtifact,
+    } satisfies LocationArtifactReadResult);
 
     await renderPublicHome();
 
-    expect(mockLoadAddressDataResult).toHaveBeenCalledTimes(1);
+    expect(mockReadLocationArtifact).toHaveBeenCalledTimes(1);
     expectJapaneseHomeDataError();
     expect(screen.queryByTestId("popular-facility-千代田区役所")).not.toBeInTheDocument();
     expect(browserFetchSpy).not.toHaveBeenCalled();

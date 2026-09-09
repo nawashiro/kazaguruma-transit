@@ -1,34 +1,52 @@
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Home from "../page";
-import type { AddressDataResult } from "@/utils/addressLoader";
+import type { LocationArtifactReadResult } from "@/lib/location/location-artifact";
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn() }),
 }));
 
-const mockAddressDataResult: AddressDataResult = {
+const mockReadLocationArtifact = jest.fn();
+
+const mockArtifactResult: LocationArtifactReadResult = {
   status: "success",
-  categories: [
-    {
-      category: "公共施設",
-      "category:en": "public-facilities",
-      locations: [
+  artifact: {
+    status: "validated",
+    sourceUris: {
+      mainFacilitiesUri: "https://fixtures.example.test/v2/main_facilities.json",
+      keyLocationsUri: "https://fixtures.example.test/v2/key_locations.json",
+      townGeoJsonUri: "https://fixtures.example.test/v2/chiyoda-towns.geojson",
+    },
+    sources: {
+      mainFacilities: [
         {
-          name: "テスト施設",
-          lat: 35.69,
-          lng: 139.75,
-          copyright: "テスト著作権",
-          licence: "CC BY 4.0",
-          licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+          category: "公共施設",
+          "category:en": "public-facilities",
+          locations: [
+            {
+              name: "テスト施設",
+              lat: 35.69,
+              lng: 139.75,
+              copyright: "テスト著作権",
+              licence: "CC BY 4.0",
+              licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+            },
+          ],
         },
       ],
+      keyLocations: [],
+      townGeoJson: {
+        type: "FeatureCollection",
+        features: [],
+      },
     },
-  ],
+    derivedRegions: {},
+  },
 };
 
-jest.mock("@/utils/addressLoader", () => ({
-  loadAddressDataResult: jest.fn(async () => mockAddressDataResult),
+jest.mock("@/lib/location/location-artifact", () => ({
+  readLocationArtifact: (...args: unknown[]) => mockReadLocationArtifact(...args),
 }));
 
 jest.mock("@/components/features/DateTimeSelector", () => function MockDateTimeSelector() {
@@ -65,6 +83,7 @@ describe("Home navigation contract", () => {
       "",
       "/?destination=" + encodeURIComponent(JSON.stringify({ lat: 35.7, lng: 139.78, address: "テスト目的地" })),
     );
+    mockReadLocationArtifact.mockReturnValue(mockArtifactResult);
 
     await renderPublicHome();
 

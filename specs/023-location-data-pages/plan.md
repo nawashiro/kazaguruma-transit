@@ -192,11 +192,11 @@ Phase 0の成果は[research.md](./research.md)に記録した。
 
 ### 3. Category navigation and origin
 
-1. `LocationCategoryNavigation`は`/locations/[category-id]/layout.tsx`からカテゴリ名、encoded href、current stateを受け取り、`nav`と通常`Link`を描画する。`/locations/layout.tsx`や詳細ページからは描画しない。
-2. `usePathname`/`useSearchParams`を使うclient境界はnavリンクのactive/origin処理だけに限定する。場所データfetch・sortは行わない。必要な境界は`Suspense`で包む。
-3. current URLのoriginがvalidならカテゴリ間リンクへ保持する。invalidなら保持せず、現在ページだけがエラー＋town listとなる。
+1. `LocationCategoryNavigation`は`/locations/[category-id]/layout.tsx`からカテゴリ名、encoded href、current stateを受け取り、`nav[role="tablist"]`とURLを持つ`Link[role="tab"]`を描画する。各tabは`aria-selected`、`aria-current`、`aria-controls`、active時の`tabIndex=0`を持ち、非active時は`tabIndex=-1`とする。`/locations/layout.tsx`や詳細ページからは描画しない。
+2. `usePathname`/`useSearchParams`を使うclient境界はtabのactive/origin処理とArrowRight/Left/Home/Endのroving focusだけに限定する。場所データfetch・sortは行わない。必要な境界は`Suspense`で包む。
+3. 矢印キーは現在URLを変更せずタブ間のfocusだけを移動し、Enter/クリックはLinkの通常遷移でURLと選択状態を確定する。current URLのoriginがvalidならカテゴリ間リンクへ保持する。invalidなら保持せず、現在ページだけがエラー＋town listとなる。
 4. `/locations`入口、detail/other links、町字リセットはqueryなしhrefを生成する。
-5. visual tabs stylingを使っても、普通のsite navigationとして`aria-current="page"`を主契約にし、role tablistの独自roving focusを場所ページへ新規導入しない。`/discussions`はactive state/keyboard確認の参照とする。
+5. visual tabs stylingと`/discussions`のURL-backed tablistを基準に、`nav[role="tablist"]`、URLを持つ`Link[role="tab"]`、`aria-selected`、`aria-current`、`aria-controls`、Arrow/Home/Endのroving focusを導入する。選択状態は現在URLを正本とし、DaisyUIの直接子セレクターに依存しないactive背景を明示する。
 
 ### 4. Sort controls and GPS
 
@@ -230,7 +230,7 @@ UIの視覚基準は、実装開始時点の`origin/dev`を参照する。今回
 | `src/app/locations/page.tsx` | `PageHeader`、説明文、`Card`による操作領域、場所一覧の地域・距離セクション、データ提供元カードの内容・リンク | クライアント取得、住所検索、カルーセル、ローカルカテゴリ状態を持ち込まない。カテゴリナビゲーションとGPS操作は仕様の順序・通常リンク契約へ置き換える。 |
 | `src/components/layouts/PageHeader.tsx` | `ruby-text`、左揃え、唯一の`h1`、`text-3xl`のページ見出し、`text-lg`の説明文 | カテゴリ名を追加の`h1`へしない。カテゴリページのH1は「場所をさがす」、説明は「位置とカテゴリから千代田区のスポットをさがす」とする。 |
 | `src/components/ui/Card.tsx` | `section.card`、`card-body`、`card-title`、`bg-base-100`、`shadow-sm`の階層 | 「カテゴリを選択」「並べ替え」「データ提供元」のカードに再利用する。カード内部へデータ取得責務を置かない。 |
-| `src/components/ui/CategoryTabs.tsx` | `tabs tabs-box`、`tab`、`text-base`、`px-4`、`ruby-text`、現在項目の視覚表現 | 視覚クラスだけを参照する。`button`、`role="tablist"`、`role="tab"`、`aria-selected`、ローカルactive stateは採用せず、`nav`内の通常`Link`と`aria-current="page"`へ置き換える。 |
+| `src/components/ui/CategoryTabs.tsx` | `tabs tabs-box`、`tab`、`text-base`、`px-4`、`ruby-text`、現在項目の視覚表現 | 視覚クラスとtab意味論の参照にする。`button`とローカルactive stateは再利用せず、`/discussions`に合わせて`nav[role="tablist"]`内のURLを持つ`Link[role="tab"]`、`aria-selected`、`aria-controls`、roving focusへ置き換える。 |
 | `src/components/features/LocationCard.tsx` | `origin/dev`におけるカード、画像の`object-cover`、カード本文、場所名・地域・説明の余白、ホバー時の影 | 視覚参照だけに使い、023では削除済みの未使用コンポーネントを復活させない。カテゴリページのserver-rendered summary markupが正規詳細URLとserver側の地域表示値を持つ。クライアントGeoJSON取得、`findLocationArea`、旧詳細URLは使用しない。 |
 | `src/components/ui/Button.tsx` | DaisyUIの`btn`、`text-base`、44px以上の操作領域、フォーカス表示 | GPS操作に再利用する。距離モードは明示クリックだけで開始し、状態を`aria-pressed`、処理中を`aria-busy`またはstatusで通知する。 |
 | `src/components/ui/CarouselCard.tsx` | 参照対象外 | `dev`の補助案内カルーセルとスライドリンクは本featureへ追加しない。 |
@@ -333,3 +333,19 @@ No constitution violation requiring justification. The build-time data-generatio
 | Test-First Development | PASS (conditional gates) | 各指摘を公開RED→fresh review→実装の独立した作業単位にする。 |
 | Accessibility & UX | PASS | `alert-soft`、視認可能な「エラー」タイトル、通常リンク、44px操作領域、可視フォーカスを検証する。 |
 | Documentation & Comments | PASS | spec/plan/tasks/contracts/quickstartと運用ドキュメントの自動生成説明を同じ方針へ更新する。 |
+
+## Screenshot re-validation (2026-09-10)
+
+実ブラウザのスクリーンショットを`origin/dev@7cbf0a5`と現行023へ同じ表示幅で取得し、DOM計測と目視を併用した。現行023では次の差分を確認した。
+
+- `LocationCategoryNavigation`は`nav.tabs-box > ul > a.tab`の構造により、DaisyUIの直接子向け`tab-active`背景が現在リンクへ適用されず、選択状態が背景で認識できない。
+- 「町字で並べる」は素の`btn`リンク、「近い順に並べる」は共通`Button`の`btn-primary`で、`ruby-text`、角丸、フォーカス、内部配置の公開クラスが揃っていない。
+- GPS拒否時のalertは操作ボタンと同じ`sm:flex-row`へ入り、1440pxで各操作が約69pxまで縮み、ルビ文字が縦に崩れる。alertは操作行の外へ出し、全幅で表示する。
+- 無効な`origin`ではカテゴリページのサーバーalertと`LocationSortControls`のクライアントalertが重複する。無効`origin`の表示責務をページ側に限定し、GPS取得失敗だけをclient islandが表示する。
+
+### Screenshot-driven correction design
+
+- 現在カテゴリのLinkへ`bg-base-100`を明示し、`tab-active`・`aria-current="page"`・通常Link・flex-wrapを維持する。
+- 2つの並べ替え操作へ共通のDaisyUI Button視覚語彙（`btn btn-primary`、`ruby-text`、44px以上、角丸、可視フォーカス）を適用する。URL、GPS、`aria-current`、`aria-pressed`の契約は変更しない。
+- 操作行と状態表示を分離し、GPS拒否・タイムアウト・未対応のalertを操作行の下に`w-full`で配置する。invalid `origin`のclient側alertは削除し、ページ側のalertを一つだけ残す。
+- REDテスト、fresh read-only reviewの`VERDICT: PASS`、本番修正、focused GREEN、同じ表示幅の修正後スクリーンショット確認の順で実施する。

@@ -1009,3 +1009,54 @@ LOCATION_PAGES_404_BASE_URL=http://127.0.0.1:3310 LOCATION_PAGES_ORIGIN_BASE_URL
 - T068親側最終検証は、`check-prerequisites.sh --json --require-tasks --include-tasks`成功、requirements checklist全項目checked、Q21のspec/plan/research/data-model/contracts/quickstart/tasks/deletion-ledger照合、full Jest（server起動下）159 passed / 2 skipped suites、1412 passed / 13 skipped tests、strict TypeScript exit 0、`npm run lint` exit 0、`npm run build` exit 0、`git diff --check` exit 0で完了した。
 - `npm run import-gtfs`は`transit-config.json`不在のENOENTを出力したがscript自体はexit 0で継続した。これはQ21場所artifactの取得・検証・runtime no-network境界とは別の既存GTFS設定未配置として未解決事項に残す。
 - それ以前のT059/Q21 clarification節にある「T060〜T068未完了」は、その節の作成時点の履歴である。現行完了状態は本節、`tasks.md`のT067/T068 `[X]`、および`quickstart.md`のT067最終再実測を正とする。
+
+## T103: screenshot-driven UI correction evidence
+
+### 記録境界
+
+- T103E（US5）は、スクリーンショット駆動UI修正の受入証跡を本台帳へ追記した。T103Eの書き込み対象は本台帳だけであり、既存のpre-T100履歴、production source、test、その他のspec/plan/research/contracts、`quickstart.md`、`tasks.md`、commit、pushは変更していない。
+- 既存履歴にある通常navやtab roleなしの記述は、当時の観測結果として保持した。現行契約は本T103節に記録し、過去節を書き換えていない。
+
+### スクリーンショットと視覚比較
+
+- fresh production capture JSONで確認した画像を次に保存した。
+  - 1440px通常表示: `/opt/data/tmp/kazaguruma-fixed-1440.png`
+  - 390px通常表示: `/opt/data/tmp/kazaguruma-fixed-390.png`
+  - 1440px不正origin: `/opt/data/tmp/kazaguruma-fixed-invalid-origin-1440.png`
+  - 1440pxGPS拒否: `/opt/data/tmp/kazaguruma-fixed-gps-denied-1440.png`
+- 比較基準画像は次の2件である。
+  - `/opt/data/tmp/kazaguruma-dev-1440.png`
+  - `/opt/data/tmp/kazaguruma-dev-390.png`
+- current画像は`PageHeader`、`Card`、grid、spacingの視覚語彙を保持した。要求されたactive backgroundとURL-backed semanticsを追加し、意図しない横方向overflowは確認しなかった。
+- GPS alertはcontrolsの下で全幅に配置され、controlsは約69pxへ圧縮されない。比較結果は視覚語彙と配置契約の維持を示すが、pixel-identicalとは主張しない。
+
+### 実ブラウザ、DOM、keyboard、GPS拒否
+
+- fresh production serverは`npx next start -p 3100`で起動し、HTTP 200を返した。Puppeteer Chrome 138でpermission stateは`denied`、`secureContext=true`だった。
+- 実入力clickは`isTrusted=true`だった。geolocation拒否はerror code `1`、message `User denied Geolocation`になり、Reactの`role="alert"`は1件表示された。初回の再現失敗はdev/buildで`.next`を共有した混在artifactによるhydration不整合であり、`.next`削除後のfresh buildで解消した。
+- 表示文言は`エラー位置情報の利用が許可されませんでした。GPSの権限を確認してください。`である。alert classは`alert alert-error alert-soft text-base-content! w-full self-stretch`であり、alertは操作行とは別の親`mt-6 flex flex-col gap-3`に配置された。
+- 1440pxのbounding boxは次の通りである。
+
+| 要素 | x | y | width | height |
+|---|---:|---:|---:|---:|
+| 町字link | 472 | 631 | 402 | 44 |
+| 近い順button | 886 | 631 | 402 | 44 |
+| GPS alert | 472 | 687 | 816 | 52 |
+
+- `document.innerWidth=1440`、`scrollWidth=1440`、`bodyScrollWidth=1440`であり、実ブラウザで意図しない横方向overflowはなかった。
+- fresh production serverで320/375/390/768/1024/1440pxを計測し、全幅で`scrollWidth=innerWidth`、tab 16件、全tabがviewport内、ラベル`whitespace-nowrap`、alert 0件（通常表示）だった。sort操作は320/375/390pxで各`52px`高、768/1024/1440pxで各`44px`高だった。
+- normal、GPS denied、invalid originのtablistは`NAV`で、`aria-label="場所カテゴリ"`、tab 16件を持つ。active tabは`aria-selected="true"`、`aria-current="page"`、`aria-controls="location-category-panel"`、`tabIndex=0`、class `tab tab-active bg-base-100`を持ち、非active tabは`tabIndex=-1`だった。
+- invalid originはURLの`origin=not-a-coordinate`を保持し、alert 1件と町字fallbackを表示した。`ArrowRight`でURLを変更せず、次のtabへfocusを移動した。
+
+### build混在の解消とローカル検証
+
+- 初回のproduction GPS再現は、dev serverとbuild/startが同じ混在した`.next`を共有したためBLOCKになった。fresh`.next`を削除してbuildを再実行した後にhydrationは解消し、これはsource regressionではなく、解決済みの環境問題として記録する。
+- fresh`.next`削除後の`npm run build`はexit 0で、Next static pagesは211/211だった。GTFSの`transit-config.json` missingは既存の非致命warningであり、buildは継続成功した。
+- focused Jestとfull Jestはexit 0だった。full Jestは167 suites passed / 2 skipped、1427 tests passed / 13 skippedだった。
+- strict TypeScriptはexit 0、`npm run lint`はexit 0、`git diff --check`はexit 0だった。
+- artifact readerは`status=success`、`artifactStatus=validated`を返した。
+- GitHub Actions CIのsuccessとは混同しない。未commit差分はCIに乗っていないため、本T103EはCI successを主張せず、上記の実ブラウザ、build、local verificationを受入証跡とする。
+
+### T103E終了確認
+
+- T103Eは本台帳への本節追記だけを行った。production source変更はなく、test、spec、plan、research、contracts、`quickstart.md`、`tasks.md`の変更、commit、pushも行っていない。

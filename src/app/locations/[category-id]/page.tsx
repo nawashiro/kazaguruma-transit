@@ -454,7 +454,7 @@ export default async function CategoryPage({
         description={LOCATION_PAGE_DESCRIPTION}
       />
 
-      <div className="space-y-4">
+      <div id="location-category-panel" className="space-y-4">
         <Card title="カテゴリを選択">
           <LocationCategoryNavigation categories={data.categories} />
         </Card>

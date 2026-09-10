@@ -24,7 +24,7 @@ UIの基準は`origin/dev`の`7cbf0a5a57c66b0e8e114e28cc3871ab1f46fd15`に固定
 - `src/components/ui/Button.tsx`
 - `src/components/layouts/SidebarLayout.tsx`
 
-`src/components/ui/CarouselCard.tsx`と`dev`の補助案内カルーセルは対象外とする。`CategoryTabs`の見た目は参照するが、場所ページでは通常`Link`、`nav`、`aria-current="page"`を使う。`role="tablist"`、`role="tab"`、横スクロール、最小幅固定は採用しない。
+`src/components/ui/CarouselCard.tsx`と`dev`の補助案内カルーセルは対象外とする。`CategoryTabs`の見た目は参照するが、場所ページのカテゴリナビは`/discussions`を基準にしたURL-backed tablistとして実装する。カテゴリナビは`nav[role="tablist"]`とし、各項目は直接のnative `Link[role="tab"]`とする。各項目は`aria-selected`と`aria-controls="location-category-panel"`を持ち、active項目はさらに`aria-current="page"`を持つ。`ArrowRight`、`ArrowLeft`、`Home`、`End`でフォーカスを移動し、active項目は`tab-active bg-base-100`、ナビは`flex-wrap`を使う。横スクロールと最小幅固定は採用しない。
 
 ```bash
 git show origin/dev:src/app/locations/page.tsx
@@ -43,7 +43,7 @@ git show origin/dev:src/components/features/LocationCard.tsx
 - カテゴリナビゲーションがルートの「よく利用される施設から選択」と同じ`tabs tabs-box` / `tab text-base px-4 text-base-content ruby-text gap-0`の視覚クラスを使い、リンク項目の行だけを折り返すことを確認する。
 - 町字表示は地域セクション、距離表示は`Nキロ離れています`の距離帯セクションを表示する。
 - 場所詳細ページにカテゴリナビゲーションがなく、戻りリンク・目的地設定・外部リンクを確認する。
-- `[role="tablist"]`、場所ページの`[role="tab"]`、補助案内カルーセルが存在しない。
+- カテゴリナビゲーションに`nav[role="tablist"]`と直接のnative `Link[role="tab"]`が存在し、各項目が`aria-controls="location-category-panel"`を持つ。active項目は`aria-selected="true"`と`aria-current="page"`を持つ。`ArrowRight`、`ArrowLeft`、`Home`、`End`でフォーカスを移動でき、active項目は`tab-active bg-base-100`、ナビは`flex-wrap`を使う。補助案内カルーセルは存在しない。
 - 通常文字が16px以上、操作要素が44px以上、フォーカス表示が視認できる。
 
 ## Static checks
@@ -365,3 +365,51 @@ serverは`Ready in 1735ms`を出した。artifact内の先頭categoryは`city_of
 ### 未解決事項
 
 - `npm run import-gtfs`はexit **0**だが、`transit-config.json`が存在しないため`ENOENT`を記録して処理を終了した。GTFS更新を必要とする運用では、設定ファイルを用意して再実行する。
+
+## T103: スクリーンショット駆動UI再比較
+
+### スクリーンショット証跡
+
+T103で取得済みの実装側スクリーンショットは次のとおりである。
+
+- 通常・1440px: `/opt/data/tmp/kazaguruma-fixed-1440.png`
+- 通常・390px: `/opt/data/tmp/kazaguruma-fixed-390.png`
+- invalid origin・1440px: `/opt/data/tmp/kazaguruma-fixed-invalid-origin-1440.png`
+- GPS拒否・1440px: `/opt/data/tmp/kazaguruma-fixed-gps-denied-1440.png`
+
+比較基準画像は次のとおりである。
+
+- 1440px: `/opt/data/tmp/kazaguruma-dev-1440.png`
+- 390px: `/opt/data/tmp/kazaguruma-dev-390.png`
+
+混在した`.next`を削除して再buildした後、fresh production `next start`で通常、invalid origin、GPS拒否の各シナリオを取得し、画像を生成した。通常画像とinvalid origin画像では横overflowなしを目視確認した。invalid origin画像ではpage-level alertが1件表示され、町字fallbackとorigin URL保持を目視確認した。GPS拒否画像ではalertが操作行下に全幅で配置され、2操作が潰れていないことを目視確認した。
+
+fresh production `next start`での実クリックによるGPS拒否alertも再現済みである。permission stateは`denied`、geolocation error codeは`1`、Reactの`role="alert"`は1件で、混在`.next`によるhydration不整合は解消した。
+
+### DOM・キーボード証跡
+
+- DOMで`nav[role="tablist"]`、直接のnative `Link[role="tab"]`、active tabの`tab-active bg-base-100`を確認した。
+- `ArrowRight`でフォーカスを移動してもURLが不変であり、active項目へフォーカスできることを確認した。
+
+### 6幅レスポンシブ実測
+
+fresh production serverで次の追加画像も取得した。6幅すべてで`scrollWidth=innerWidth`、tab 16件、全tabがviewport内、ラベルは`whitespace-nowrap`、通常表示のalertは0件だった。
+
+| viewport | screenshot | sort操作のサイズ |
+|---:|---|---|
+| 320px | `/opt/data/tmp/kazaguruma-fixed-responsive-320.png` | 各240×52px |
+| 375px | `/opt/data/tmp/kazaguruma-fixed-responsive-375.png` | 各295×52px |
+| 390px | `/opt/data/tmp/kazaguruma-fixed-responsive-390.png` | 各310×52px |
+| 768px | `/opt/data/tmp/kazaguruma-fixed-responsive-768.png` | 各338×44px |
+| 1024px | `/opt/data/tmp/kazaguruma-fixed-responsive-1024.png` | 各306×44px |
+| 1440px | `/opt/data/tmp/kazaguruma-fixed-responsive-1440.png` | 各402×44px |
+
+### 取得済みローカル検証
+
+次はT103時点で取得済みのローカル検証である。GitHub Actions CIの成功を示す記録ではない。
+
+- `npm test -- --runInBand`: full Jest **167 suites / 1427 tests pass、2 suites skipped / 13 tests skipped**。
+- `npx tsc --noEmit --incremental false`: **exit 0**。
+- `npm run lint`: **exit 0**。
+- `git diff --check`: **exit 0**。
+- `npm run build`: **exit 0**。

@@ -1,5 +1,5 @@
 import React from "react";
-import { render, within } from "@testing-library/react";
+import { fireEvent, render, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import LocationCategoryNavigation from "@/components/features/LocationCategoryNavigation";
 
@@ -28,6 +28,8 @@ const categories: readonly LocationCategory[] = [
     "category:en": "long-natural-environment-category",
   },
 ];
+
+const LOCATION_CATEGORY_PANEL_ID = "location-category-panel";
 
 const REQUIRED_VIEWPORT_WIDTHS = [320, 375, 390, 768, 1024, 1440] as const;
 const FORBIDDEN_HORIZONTAL_CLASSES = ["overflow-x-auto", "min-w-max"] as const;
@@ -213,41 +215,67 @@ describe("Location page responsive navigation contract (T052D correction)", () =
 
       assertNoHorizontalOverflowWhenLayoutIsExposed(page);
 
-      const navigation = within(page).getByRole("navigation");
+      const navigation = within(page).getByRole("tablist", {
+        name: "場所カテゴリ",
+      });
       expect(navigation.tagName).toBe("NAV");
+      expect(navigation).toHaveAttribute("role", "tablist");
+      expect(navigation).toHaveClass("tabs", "tabs-box");
       assertNoHorizontalOverflowWhenLayoutIsExposed(navigation);
       expect(getForbiddenHorizontalClassElements(page)).toHaveLength(0);
 
-      const linkList = navigation.querySelector("ul");
-      expect(linkList).not.toBeNull();
-      if (!linkList) return;
-      assertNoHorizontalOverflowWhenLayoutIsExposed(linkList);
-      expect(linkList).toHaveClass("flex", "flex-wrap");
-      expect(linkList).not.toHaveClass(...FORBIDDEN_HORIZONTAL_CLASSES);
+      const tabRow = navigation.querySelector<HTMLElement>("ul") ?? navigation;
+      assertNoHorizontalOverflowWhenLayoutIsExposed(tabRow);
+      expect(tabRow).toHaveClass("flex", "flex-wrap");
+      expect(tabRow).not.toHaveClass(...FORBIDDEN_HORIZONTAL_CLASSES);
 
-      const links = within(navigation).getAllByRole("link");
-      expect(links).toHaveLength(categories.length);
-      expect(links.map((link) => link.textContent)).toEqual(
+      const tabs = within(navigation).getAllByRole("tab");
+      expect(tabs).toHaveLength(categories.length);
+      expect(tabs.map((tab) => tab.textContent)).toEqual(
         categories.map(({ category }) => category),
       );
-
-      links.forEach((link, index) => {
-        expect(link.tagName).toBe("A");
-        expect(link.getAttribute("href")?.trim()).toBeTruthy();
-        expect(link.textContent).toBe(categories[index]?.category);
-        expect(link).toHaveClass("whitespace-nowrap");
-        expect(link.querySelector("br")).toBeNull();
-        expect(link).not.toHaveClass(
+      expect(navigation.querySelectorAll('a[role="tab"]')).toHaveLength(
+        categories.length,
+      );
+      tabs.forEach((tab, index) => {
+        const category = categories[index];
+        const isCurrent = index === 0;
+        expect(navigation.contains(tab)).toBe(true);
+        expect(tab.tagName).toBe("A");
+        expect(tab).toHaveAttribute("role", "tab");
+        expect(tab).toHaveAttribute(
+          "href",
+          `/locations/${encodeURIComponent(category?.["category:en"] ?? "")}`,
+        );
+        expect(tab).toHaveAttribute(
+          "aria-selected",
+          isCurrent ? "true" : "false",
+        );
+        expect(tab).toHaveAttribute(
+          "aria-controls",
+          LOCATION_CATEGORY_PANEL_ID,
+        );
+        expect(tab).toHaveAttribute("tabindex", isCurrent ? "0" : "-1");
+        expect(tab).toHaveClass("whitespace-nowrap");
+        expect(tab.querySelector("br")).toBeNull();
+        expect(tab).not.toHaveClass(
           "truncate",
           "text-ellipsis",
           "line-clamp-1",
           "overflow-hidden",
         );
+        if (isCurrent) {
+          expect(tab).toHaveAttribute("aria-current", "page");
+          expect(tab).toHaveClass("tab-active", "bg-base-100");
+        } else {
+          expect(tab).not.toHaveAttribute("aria-current");
+          expect(tab).not.toHaveClass("tab-active", "bg-base-100");
+        }
       });
     },
   );
 
-  it("keeps the responsive navigation keyboard-visible and out of tab semantics", () => {
+  it("keeps responsive navigation keyboard-visible with URL-backed tab semantics", () => {
     setViewportWidth(320);
     const view = renderLocationPage();
     const page = view.container.querySelector<HTMLElement>(
@@ -256,23 +284,65 @@ describe("Location page responsive navigation contract (T052D correction)", () =
     expect(page).not.toBeNull();
     if (!page) return;
 
-    const navigation = within(page).getByRole("navigation");
-    const links = within(navigation).getAllByRole("link");
-    expect(links[0]).toHaveAttribute("aria-current", "page");
+    const navigation = within(page).getByRole("tablist", {
+      name: "場所カテゴリ",
+    });
+    const tabs = within(navigation).getAllByRole("tab");
+    const initialUrl = window.location.href;
+    const initialHrefs = tabs.map((tab) => tab.getAttribute("href"));
+    expect(tabs[0]).toHaveAttribute("aria-current", "page");
 
-    links.forEach((link) => {
-      expect(link).not.toHaveAttribute("role", "tab");
-      expect(link).toHaveClass(
+    tabs.forEach((tab, index) => {
+      const isCurrent = index === 0;
+      expect(navigation.contains(tab)).toBe(true);
+      expect(tab.tagName).toBe("A");
+      expect(tab).toHaveAttribute("role", "tab");
+      expect(tab).toHaveAttribute("aria-selected", isCurrent ? "true" : "false");
+      expect(tab).toHaveAttribute("tabindex", isCurrent ? "0" : "-1");
+      expect(tab).toHaveAttribute(
+        "aria-controls",
+        LOCATION_CATEGORY_PANEL_ID,
+      );
+      expect(tab).toHaveClass(
         "focus-visible:outline",
         "focus-visible:outline-2",
         "focus-visible:outline-offset-2",
       );
-      link.focus();
-      expect(document.activeElement).toBe(link);
+      if (isCurrent) {
+        expect(tab).toHaveClass("tab-active", "bg-base-100");
+      } else {
+        expect(tab).not.toHaveAttribute("aria-current");
+        expect(tab).not.toHaveClass("tab-active", "bg-base-100");
+      }
+      tab.focus();
+      expect(document.activeElement).toBe(tab);
     });
 
-    expect(navigation).not.toHaveAttribute("role", "tablist");
-    expect(navigation.querySelector('[role="tablist"]')).toBeNull();
-    expect(navigation.querySelector('[role="tab"]')).toBeNull();
+    tabs[0]?.focus();
+    fireEvent.keyDown(tabs[0] as HTMLElement, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(tabs[1]);
+
+    fireEvent.keyDown(tabs[1] as HTMLElement, { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(tabs[0]);
+
+    fireEvent.keyDown(tabs[0] as HTMLElement, { key: "End" });
+    expect(document.activeElement).toBe(tabs[tabs.length - 1]);
+
+    fireEvent.keyDown(tabs[tabs.length - 1] as HTMLElement, { key: "Home" });
+    expect(document.activeElement).toBe(tabs[0]);
+
+    fireEvent.keyDown(tabs[0] as HTMLElement, { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(tabs[tabs.length - 1]);
+    fireEvent.keyDown(tabs[tabs.length - 1] as HTMLElement, {
+      key: "ArrowRight",
+    });
+    expect(document.activeElement).toBe(tabs[0]);
+
+    expect(window.location.href).toBe(initialUrl);
+    expect(tabs.map((tab) => tab.getAttribute("href"))).toEqual(initialHrefs);
+    expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+    expect(
+      tabs.slice(1).every((tab) => tab.getAttribute("aria-selected") === "false"),
+    ).toBe(true);
   });
 });

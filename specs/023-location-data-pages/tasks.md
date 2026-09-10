@@ -204,14 +204,14 @@ description: "Task list for location data pages and JavaScript reduction"
 ### RED tests for User Story 5
 
 - [X] T052A [P] [US5] [RED] Add RED DOM-contract tests for the unique `PageHeader` H1, the exact description, the `Card` ordering and labels, the category-selection/nearby/data-provider regions, and the absence of the auxiliary carousel in `src/app/locations/[category-id]/__tests__/page.visual-contract.test.tsx`; use `git show origin/dev:src/app/locations/page.tsx`, `git show origin/dev:src/components/layouts/PageHeader.tsx`, and `git show origin/dev:src/components/ui/Card.tsx` as the visual reference
-- [X] T052B [P] [US5] [RED] Add RED navigation visual/accessibility contract tests for every untruncated category label, native links, `aria-current="page"`, visible focus, absence of `role="tablist"`/`role="tab"`, and absence of page-wide `overflow-x-auto`/`min-w-max` in `src/components/features/__tests__/LocationCategoryNavigation.test.tsx` and `src/app/__tests__/location-pages-responsive-contract.test.tsx`; compare visual classes with `git show origin/dev:src/components/ui/CategoryTabs.tsx` without importing its tab-state behavior
+- [X] T052B [P] [US5] [RED・初期契約] Add RED navigation visual/accessibility contract tests for every untruncated category label, native URL links, `aria-current="page"`, visible focus, and absence of page-wide `overflow-x-auto`/`min-w-max` in `src/components/features/__tests__/LocationCategoryNavigation.test.tsx` and `src/app/__tests__/location-pages-responsive-contract.test.tsx`; the earlier no-tab-role assertion is superseded by T094 after the user-required `/discussions` tablist correction. Compare visual classes with `git show origin/dev:src/components/ui/CategoryTabs.tsx` and semantics with `src/components/discussion/DiscussionTabLayout.tsx` without importing its tab-state behavior
 - [X] T052C [P] [US5] [RED] Add RED tests for responsive location-card grids, image/long-name containment, rounded distance-band headings and grouping, town-area sections, data-provider content, and the absence of category navigation on detail pages in `src/app/locations/[category-id]/__tests__/page.visual-contract.test.tsx` and `src/app/locations/location-detail/[id]/__tests__/page.visual-contract.test.tsx`; use `git show origin/dev:src/components/features/LocationCard.tsx` and `git show origin/dev:src/components/layouts/SidebarLayout.tsx` as visual references
 - [X] T052D Perform the fresh read-only test-code review for the complete `origin/dev` visual-contract RED suite in `src/app/locations/[category-id]/__tests__/page.visual-contract.test.tsx`, `src/app/locations/location-detail/[id]/__tests__/page.visual-contract.test.tsx`, `src/components/features/__tests__/LocationCategoryNavigation.test.tsx`, and `src/app/__tests__/location-pages-responsive-contract.test.tsx`; report `SUBAGENT_STATUS: COMPLETE` and explicit `VERDICT: PASS` before UI implementation
 
 ### Implementation for User Story 5
 
 - [X] T052E [US5] Implement the category-page composition from the `origin/dev` reference—`PageHeader` with the single `場所をさがす` H1 and description, `Card` sections in the required order, native category navigation, sort controls, grouped location content, and data-provider card—in `src/app/locations/[category-id]/page.tsx`, `src/app/locations/[category-id]/layout.tsx`, `src/app/locations/layout.tsx` only where the common shell is required, and the named feature components; preserve the URL/GPS/data-boundary contracts and do not add the carousel, address search, or client tab state
-- [X] T052F [US5] Replace the category navigation's fixed single-row behavior with a responsive `flex-wrap` presentation that keeps labels `whitespace-nowrap`, removes page-wide `overflow-x-auto`/`min-w-max`, preserves the `CategoryTabs` visual vocabulary only, and retains native-link/`aria-current`/keyboard behavior in `src/components/features/LocationCategoryNavigation.tsx` and `src/app/locations/[category-id]/layout.tsx`; do not expose the navigation through the detail route
+- [X] T052F [US5] Replace the category navigation's fixed single-row behavior with a responsive `flex-wrap` presentation that keeps labels `whitespace-nowrap`, removes page-wide `overflow-x-auto`/`min-w-max`, preserves the `CategoryTabs` visual vocabulary, and exposes `/discussions`-style URL-backed `nav[role="tablist"]`/`Link[role="tab"]` semantics with `aria-selected`, `aria-current`, `aria-controls`, and keyboard focus behavior in `src/components/features/LocationCategoryNavigation.tsx` and `src/app/locations/[category-id]/layout.tsx`; do not expose the navigation through the detail route
 - [X] T052G [US5] Align location summaries with the `origin/dev` card/grid contract—`grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4`, responsive images, 16px-or-larger body text, area labels, and hover/focus treatment—and render distance results as ascending rounded-kilometre sections headed `Nキロ離れています` in `src/app/locations/[category-id]/page.tsx` without recreating the deleted unconsumed `LocationCard` module
 - [X] T052G-A [correction] Apply the Q20 display-only `東京都千代田区` prefix removal to the detail page's GeoJSON-derived `地域` value, while preserving full addresses, source data, unknown-region behavior, and existing detail links in `src/app/locations/location-detail/[id]/page.tsx`
 - [X] T052H [US5] Run the visual-contract GREEN suite, strict TypeScript, scoped lint, `git diff --check`, keyboard checks, and browser acceptance at 320px/375px/390px/768px/1024px/1440px; record the `origin/dev` comparison, zero unintended horizontal overflow, and detail-page navigation omission in `specs/023-location-data-pages/quickstart.md` and `specs/023-location-data-pages/deletion-ledger.md`
@@ -301,6 +301,36 @@ description: "Task list for location data pages and JavaScript reduction"
 
 ---
 
+## Phase 11: スクリーンショット再比較 — active状態・操作行・GPS拒否
+
+**Purpose**: `origin/dev`と現行023の同幅スクリーンショットで判明した公開UI差分を、追加REDとfresh review後に補正する。
+
+**Evidence boundary**: 1440pxと390pxの実ブラウザ画像、DOMのcomputed style・bounding box、GPS拒否の再現結果を受入証跡とする。画面上のalertは操作行を縮めず、無効`origin`はページ側に一つだけ表示する。
+
+### RED tests and fresh reviews
+
+- [X] T094 [P] [US5] [RED] ユーザー指定の`/discussions`基準へカテゴリナビゲーションの意味論を補正し、現在カテゴリのURL-backed `Link[role="tab"]`へ`tab-active`・`bg-base-100`・`aria-selected="true"`を公開し、非現在tabへ誤適用しないことを、`src/components/features/__tests__/LocationCategoryNavigation.visual-state.test.tsx`、既存の`src/components/features/__tests__/LocationCategoryNavigation.test.tsx`、`src/app/__tests__/location-pages-responsive-contract.test.tsx`で検証する。`nav[role="tablist"]`、`aria-current="page"`、`aria-controls`、activeのみtabIndex 0、Arrow/Home/Endのfocus移動、URL href、flex-wrapを要求し、旧「tab role不使用」assertionを削除する。productionファイルは変更しない
+- [X] T095 [US5] [correction-review] T094の3テストファイルだけをread-onlyでfresh reviewし、`/discussions`の`DiscussionTabLayout`に照らして`nav[role="tablist"]`、URLを持つnative `Link[role="tab"]`、`aria-selected`、`aria-current`、`aria-controls`、active-only roving focus、Arrow/Home/End操作、active背景、現在状態の負の境界、flex-wrapを過不足なく検出することを確認し、`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を報告する。書込先は持たない
+- [X] T096 [P] [US3] [RED] 「町字で並べる」と「近い順に並べる」のButton視覚語彙を揃え、GPS拒否後のalertが操作行の外に全幅で表示されることを`src/components/features/__tests__/LocationSortControls.ui-contract.test.tsx`へ追加する。GPS失敗、URL、selected state、非fetch契約は変更しない
+- [X] T097 [US3] [correction-review] T096だけをread-onlyでレビューし、共通`btn`/`btn-primary`、`ruby-text`、44px操作領域、可視フォーカス、alert配置の公開境界とGPS拒否fixtureを確認して`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を報告する。書込先は持たない
+- [X] T098 [P] [US3] [RED] 無効`origin`のカテゴリページでalertが一つだけページ側に表示され、操作行内のclient alertが重複しないことを`src/app/locations/[category-id]/__tests__/page.error-layout-contract.test.tsx`へ追加する。`origin`をブラウザURLに保持し、町字fallback・標準404分離を維持する
+- [X] T099 [US3] [correction-review] T098だけをread-onlyでレビューし、ページ公開境界でのalert一意性、具体的な日本語エラー、URL保持、router非呼出し、町字fallbackを確認して`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を報告する。書込先は持たない
+
+### Production implementation after review gates
+
+- [X] T100 [US5] T095、T097、T099の`VERDICT: PASS`後、カテゴリを`/discussions`基準のURL-backed tablist（`nav[role="tablist"]`、direct `Link[role="tab"]`、`aria-selected`、`aria-current`、`aria-controls`、roving focus）へ補正し、active背景を明示してDaisyUIの直接子セレクターへ依存せず、並べ替え操作へ共通のButton視覚語彙を適用し、操作行とalertを分離する。URL/GPS、44px、focus-visibleを維持して`src/components/features/LocationCategoryNavigation.tsx`と`src/components/features/LocationSortControls.tsx`を更新する
+- [X] T101 [US3] T099の`VERDICT: PASS`後、invalid `origin`のalert表示責務をカテゴリページへ限定し、client islandの重複alertを削除する。ページ側のalertへ必要な`text-base`・縦積み・全幅レイアウトを適用し、町字fallbackとURL保持を変更しない`src/app/locations/[category-id]/page.tsx`を更新する
+- [X] T102A [P] [US3] [RED-CORRECTION] T100/T101でinvalid `origin`のalert責務をpageへ一元化したため、旧client単体alert期待を公開契約へ更新し、`LocationSortControls`はGPS失敗alertだけを表示しinvalid URL originを二重通知しないこと、既存origin/町字・URL保持・非fetch契約を弱めないことを`src/components/features/__tests__/LocationSortControls.test.tsx`だけで検証する。productionは変更しない
+- [X] T102B [US3] [correction-review] T102Aのテストバイトだけをfresh read-onlyでレビューし、page-level invalid-origin alertとの責務分離、GPS failure alert、既存origin維持、router/fetch負の境界を確認して`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を報告する。書込先は持たない
+- [X] T102C [P] [US5] [RED-CORRECTION] T100で`nav[role="tablist"]`へ意味論を補正したため、既存カテゴリpage visual contractの`navigation` role期待を`tablist`・tab panel semanticsへ更新し、Card順序、カテゴリ名、active状態、詳細ページのナビ非表示、他のvisual境界を弱めないことを`src/app/locations/[category-id]/__tests__/page.visual-contract.test.tsx`だけで検証する。productionは変更しない
+- [X] T102D [US5] [correction-review] T102Cのテストバイトだけをfresh read-onlyでレビューし、`/discussions`準拠のtablist公開意味論と既存visual契約の保持を確認して`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を報告する。書込先は持たない
+- [X] T102 [US5] T100/T101およびT102B/T102Dの`VERDICT: PASS`後、T094/T096/T098と既存のGPS・origin・visual suitesをfocused GREENにし、strict TypeScript、scoped lint、`git diff --check`を実行する。親はDOM計測と変更範囲を確認する
+- [X] T103 [US5] T102後、現行023と`origin/dev@7cbf0a5`を1440px/390pxで再撮影し、GPS拒否とinvalid `origin`を含むスクリーンショットを目視比較する。active背景、同幅操作、alert一意性、tablist keyboard操作、横はみ出し0件を`specs/023-location-data-pages/quickstart.md`と`specs/023-location-data-pages/deletion-ledger.md`へ記録する。fresh production buildでGPS拒否の実クリックalert再現と6幅のoverflow 0件も確認済み。
+
+**Checkpoint**: 現在カテゴリが視認でき、2つの操作が同じButton視覚語彙で安定し、GPS拒否時に操作幅が潰れずalertが一つの全幅状態として表示される。既存のURL/GPS、距離帯、詳細、route-form契約は維持される。
+
+---
+
 ## Requirement Traceability
 
 The mappings below are explicit planning traceability. The task descriptions remain independently executable; the IDs make coverage review deterministic. `[correction-review]` tasks are cross-cutting evidence gates for their immediately preceding RED correction and inherit that correction's requirement/story coverage.
@@ -325,6 +355,7 @@ The mappings below are explicit planning traceability. The task descriptions rem
 | FR-044 | T071–T072, T078, T083–T088, T081–T082 |
 | FR-045 | T073–T074, T079, T081–T082 |
 | FR-046 | T075–T076, T080, T092–T093, T081–T082 |
+| Screenshot-driven UI correction | T094–T103 |
 
 | Success criteria range | Covering tasks |
 |---|---|
@@ -383,6 +414,8 @@ The mappings below are explicit planning traceability. The task descriptions rem
 - T054/T055 and T053 can run in parallel after all production edits stop.
 - T060 and T063 must remain separate RED chapters: T063 starts only after the artifact shape/reader contract is settled, and each chapter requires its own fresh review (T061 and T064).
 - T069、T071、T073、T075は書込ファイルが重ならないためRED作成を並列化できる。各章のreview（T070、T072、T074、T076）は対応章の完了後に直列実行し、T077–T080は該当reviewの`VERDICT: PASS`後に実行する。
+- T094、T096、T098は書込ファイルが重ならないためRED作成を並列化できる。各章のreview（T095、T097、T099）は対応章の完了後に直列実行し、T100/T101は三つすべての`VERDICT: PASS`後に実行する。
+- T102A、T102Cは書込ファイルが重ならないため補正REDを並列化できる。各章のreview（T102B、T102D）は対応章の完了後に直列実行し、T102は両方の`VERDICT: PASS`後に実行する。
 
 ## Implementation Strategy
 
@@ -405,7 +438,7 @@ The mappings below are explicit planning traceability. The task descriptions rem
 ## Notes
 
 - `tasks.md` explicitly includes deletion-ledger, reference-census, replacement-test, negative-search, and verification tasks. There is no generic cleanup-only task.
-- US5 explicitly records `origin/dev@7cbf0a5a57c66b0e8e114e28cc3871ab1f46fd15` and the component paths used for visual comparison; `CategoryTabs` is a visual reference only, not a behavior or state dependency.
+- US5 records `origin/dev@7cbf0a5a57c66b0e8e114e28cc3871ab1f46fd15`, the visual component paths, and `src/components/discussion/DiscussionTabLayout.tsx` as the tab semantics/keyboard reference. `CategoryTabs` is a visual vocabulary and behavior reference only; its local button state is not reused.
 - No production review task is added because the repository constitution assigns final production review to the parent; test-code review tasks remain blocking and explicit.
 - A task that modifies tests or production files invalidates any prior review verdict for those bytes.
 - Q21は仕様023へ後から追加された追補である。T003–T059の時点で実装が外部データローダーを使用していても、それ自体を仕様矛盾として扱わない。ただしT060–T068が完了するまでは、生成物だけを読む最終契約を満たしたことにしない。

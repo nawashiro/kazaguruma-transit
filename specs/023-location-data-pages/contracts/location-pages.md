@@ -30,9 +30,10 @@
 
 ## 3. Category navigation
 
-- 共通レイアウトの`nav`として提供する。
-- 通常の同一サイト内リンクを使い、現在ページは`aria-current="page"`で示す。
-- ルートページの「よく利用される施設から選択」と同じ`tabs tabs-box` / `tab text-base px-4 text-base-content ruby-text gap-0`の視覚クラスを使う。ただし、ページ移動をapplication tab stateに閉じ込めず、通常リンクの`nav`として提供する。狭い画面ではリンク項目の行だけを`flex-wrap`し、ラベルの`whitespace-nowrap`、44px操作領域、可視フォーカスを維持する。
+- 共通レイアウトの`nav[role="tablist"]`として提供する。
+- URLを持つ同一サイト内`Link[role="tab"]`を使い、現在ページは`aria-selected="true"`と`aria-current="page"`で示し、対応するカテゴリ内容を`aria-controls`で参照する。非選択項目は`aria-selected="false"`かつ`tabIndex="-1"`とする。
+- `/discussions`の`DiscussionManagementTabLayout`に合わせ、ArrowRight/ArrowLeft/Home/Endでタブ間のフォーカスを移動する。矢印キーではURLを変更せず、Enter/クリックで通常のURL遷移を行う。
+- ルートページの「よく利用される施設から選択」と同じ`tabs tabs-box` / `tab text-base px-4 text-base-content ruby-text gap-0`の視覚クラスを使う。狭い画面ではリンク項目の行だけを`flex-wrap`し、ラベルの`whitespace-nowrap`、44px操作領域、可視フォーカスを維持する。現在項目は`tab-active`に加えてactive背景を明示し、DaisyUIの直接子セレクターに依存しない。
 - 現在のカテゴリURLに有効な`origin`がある場合、カテゴリから別カテゴリへのリンクは同じ`origin`を保持する。
 - `/locations`入口、町字リセット、詳細リンク、その他ページリンクには不要な`origin`を付けない。
 
@@ -81,7 +82,7 @@
 
 - 視覚基準は`origin/dev`の`7cbf0a5a57c66b0e8e114e28cc3871ab1f46fd15`とする。
 - `PageHeader`の唯一の`h1`と説明文、`Card`の`section.card`・`card-body`・`card-title`の階層、`LocationCard`の画像・本文・余白・ホバー表現、`Button`の44px以上の操作領域を基準にする。
-- `CategoryTabs`は`tabs tabs-box`などの視覚クラスだけを参照する。場所ページでは`nav`・通常`Link`・`aria-current="page"`を使い、tab role、ローカルactive state、住所検索を復活させない。
+- `CategoryTabs`は`tabs tabs-box`などの視覚クラスと、`tab`、`tab-active`、`aria-selected`、roving focusの意味論を参照する。場所ページでは`nav[role="tablist"]`・URLを持つ`Link[role="tab"]`・`aria-current="page"`・`aria-controls`を使い、`/discussions`のキーボード操作を踏襲する。
 - 場所一覧は`dev`のカードグリッドを基準にし、町字表示は地域セクション、距離表示は`Nキロ離れています`の距離帯セクションへ分ける。
 - `dev`の補助案内カルーセルは表示しない。データ提供元カードの見出し、説明、リンク、案内は維持する。
 - カテゴリラベルは改行・省略せず、ナビゲーション項目の行だけを複数行へ折り返す。ナビゲーションとページ全体に横スクロールを設定しない。

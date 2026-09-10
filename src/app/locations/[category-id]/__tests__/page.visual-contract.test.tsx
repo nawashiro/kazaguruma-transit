@@ -405,13 +405,44 @@ describe("category page origin/dev visual contract", () => {
     expectCardStructure(nearbyCard, CARD_TITLES[1]);
     expectCardStructure(providerCard, CARD_TITLES[2]);
 
-    const categoryNavigations = screen.getAllByRole("navigation", {
+    const categoryTablist = screen.getByRole("tablist", {
       name: "場所カテゴリ",
     });
-    expect(categoryNavigations).toHaveLength(1);
+    expect(categoryTablist.tagName).toBe("NAV");
+    expect(categoryTablist).toHaveClass("tabs", "tabs-box");
     expect(
-      within(categoryCard).getByRole("navigation", { name: "場所カテゴリ" }),
-    ).toBe(categoryNavigations[0]);
+      within(categoryCard).getByRole("tablist", { name: "場所カテゴリ" }),
+    ).toBe(categoryTablist);
+
+    const categoryTabs = within(categoryTablist).getAllByRole("tab");
+    expect(categoryTabs).toHaveLength(1);
+    expect(
+      categoryTabs.every(
+        (tab) => tab.tagName === "A" && tab.parentElement === categoryTablist,
+      ),
+    ).toBe(true);
+
+    const currentTabs = categoryTabs.filter(
+      (tab) => tab.getAttribute("aria-selected") === "true",
+    );
+    expect(currentTabs).toHaveLength(1);
+    const currentTab = currentTabs[0];
+    expect(currentTab).toBeDefined();
+    if (!currentTab) {
+      throw new Error("current category tab was not rendered");
+    }
+    expect(currentTab).toHaveAttribute("aria-selected", "true");
+    expect(currentTab).toHaveAttribute("aria-current", "page");
+
+    const categoryPanel = document.getElementById("location-category-panel");
+    expect(categoryPanel).not.toBeNull();
+    if (!categoryPanel) {
+      throw new Error("location category panel was not rendered");
+    }
+    for (const tab of categoryTabs) {
+      expect(tab).toHaveAttribute("aria-controls", categoryPanel.id);
+    }
+    expect(currentTab).toHaveAttribute("aria-controls", categoryPanel.id);
 
     const nearbyLinks = within(nearbyCard).getAllByRole("link");
     const nearbyButtons = within(nearbyCard).getAllByRole("button");

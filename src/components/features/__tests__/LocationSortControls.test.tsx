@@ -362,7 +362,7 @@ describe("LocationSortControls GPS/origin/error contract (T033/T071 RED)", () =>
     },
   );
 
-  it("無効なoriginではalertにエラータイトルと具体的な日本語説明を表示する", async () => {
+  it("無効なoriginではclient alertを表示せず、町字fallbackとURLを維持する", () => {
     window.history.replaceState(
       {},
       "",
@@ -372,13 +372,20 @@ describe("LocationSortControls GPS/origin/error contract (T033/T071 RED)", () =>
     const townControl = getControl("link", "町字で並べる");
     const distanceControl = getControl("button", "近い順に並べる");
 
-    await expectJapaneseError(
-      "originの座標を解釈できません。町字で表示します。",
-    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("originの座標を解釈できません。町字で表示します。", {
+        exact: true,
+      }),
+    ).not.toBeInTheDocument();
     expectSelected(townControl, true);
     expectSelected(distanceControl, false);
     expect(getHref(townControl).search).toBe("");
+    expect(window.location.pathname).toBe(CATEGORY_PATH);
     expect(window.location.search).toBe("?origin=invalid-origin");
+    expect(new URLSearchParams(window.location.search).get("origin")).toBe(
+      "invalid-origin",
+    );
     expect(mockRouterReplace).not.toHaveBeenCalled();
     expect(mockFetch).not.toHaveBeenCalled();
   });

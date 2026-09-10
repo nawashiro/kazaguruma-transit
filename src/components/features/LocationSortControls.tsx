@@ -54,12 +54,11 @@ const UNSUPPORTED_GEOLOCATION_MESSAGE =
   "お使いのブラウザではGPSによる位置情報の取得に対応していません。";
 const INVALID_COORDINATES_MESSAGE =
   "GPSから有効な座標を取得できませんでした。";
-const INVALID_ORIGIN_MESSAGE =
-  "originの座標を解釈できません。町字で表示します。";
 const NEARBY_SORT_FOCUS_CLASSES = [
   "focus-visible:outline",
   "focus-visible:outline-2",
   "focus-visible:outline-offset-2",
+  "focus-visible:outline-primary",
 ] as const;
 
 function useOptionalPathname(): ReturnType<typeof usePathname> | null {
@@ -114,9 +113,6 @@ export default function LocationSortControls() {
 
   const parsedOrigin = parseLocationOrigin(searchParams?.get("origin"));
   const isDistanceMode = parsedOrigin.originState === "valid";
-  const originError =
-    parsedOrigin.originState === "invalid" ? INVALID_ORIGIN_MESSAGE : null;
-  const errorMessage = gpsError ?? originError;
 
   const handleDistanceSort = () => {
     setIsLocating(true);
@@ -169,36 +165,42 @@ export default function LocationSortControls() {
   };
 
   return (
-    <div ref={controlsRef} className="mt-6 flex flex-col gap-3 sm:flex-row">
-      <Link
-        href={pathnameOnly(pathname)}
-        className="btn text-base gap-0 min-h-[44px] min-w-[44px] flex-1"
-        aria-current={isDistanceMode ? undefined : "page"}
-      >
-        町字で並べる
-      </Link>
-      <Button
-        type="button"
-        className="flex-1"
-        aria-pressed={isDistanceMode}
-        disabled={isLocating}
-        loading={isLocating}
-        onClick={handleDistanceSort}
-      >
-        近い順に並べる
-      </Button>
+    <div ref={controlsRef} className="mt-6 flex flex-col gap-3">
+      <div className="flex w-full flex-col gap-3 sm:flex-row">
+        <Link
+          href={pathnameOnly(pathname)}
+          className="btn btn-primary text-base ruby-text gap-0 rounded-full dark:rounded-sm min-h-[44px] min-w-[44px] leading-relaxed font-medium inline-flex items-center justify-center flex-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          aria-current={isDistanceMode ? undefined : "page"}
+        >
+          町字で並べる
+        </Link>
+        <Button
+          type="button"
+          className="flex-1"
+          aria-pressed={isDistanceMode}
+          disabled={isLocating}
+          loading={isLocating}
+          onClick={handleDistanceSort}
+        >
+          近い順に並べる
+        </Button>
+      </div>
       {isLocating && (
-        <p role="status" aria-live="polite" className="sm:self-center">
+        <p
+          role="status"
+          aria-live="polite"
+          className="w-full self-stretch text-base"
+        >
           位置情報を取得中...
         </p>
       )}
-      {errorMessage && (
+      {gpsError && (
         <div
           role="alert"
-          className="alert alert-error alert-soft text-base-content! sm:self-center"
+          className="alert alert-error alert-soft text-base-content! w-full self-stretch"
         >
           <p className="font-semibold">エラー</p>
-          <p>{errorMessage}</p>
+          <p>{gpsError}</p>
         </div>
       )}
     </div>

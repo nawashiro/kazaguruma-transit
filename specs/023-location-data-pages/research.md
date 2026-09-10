@@ -89,18 +89,18 @@ GPSボタンだけのclient islandにし、場所データはビルド生成物�
 - **key_locations.jsonにareaフィールドを追加・依存する**: 正規スキーマに存在しないキーであり、データ契約を壊すため不採用。町字は座標からGeoJSONで導出する。
 - **距離計算ロジックを新規実装する**: 既存の距離計算とテストを重複させるため不採用。
 
-## Decision 6: 共通カテゴリナビゲーションはURLナビゲーションとして実装する
+## Decision 6: 共通カテゴリナビゲーションはURL-backed tablistとして実装する
 
 ### Decision
 
 - `/locations/layout.tsx`は共通shellとデータエラー境界だけを担当し、カテゴリナビゲーションを共有しない。カテゴリナビゲーションは`/locations/[category-id]/layout.tsx`だけが所有する。
-- `LocationCategoryNavigation`は`nav`・通常リンク・`aria-current="page"`を持つ。視覚的なtabs-boxは再利用してよいが、通常のサイト移動をapplication tab widgetとして複製しない。
+- `LocationCategoryNavigation`は`nav[role="tablist"]`、URLを持つ`Link[role="tab"]`、`aria-selected`、`aria-current="page"`、`aria-controls`を持つ。選択状態の正本は現在URLとし、`/discussions`の`DiscussionManagementTabLayout`に合わせてArrowRight/Left、Home、Endでフォーカスを移動する。矢印キーはURLを勝手に変更せず、Enter/クリックで通常のURL遷移を行う。
 - `origin`の読み取り・カテゴリ間リンクへの付与だけを小さなclient islandに限定し、場所データ取得は行わない。
 - `/discussions`の`DiscussionManagementTabLayout`は、active state、ページリンク、戻り導線、キーボード検証の参照として利用する。
 
 ### Rationale
 
-既存の`CategoryTabs`はbuttonと一時的なactive stateを持つため、カテゴリURLを正本にする要求とは異なる。`DiscussionManagementTabLayout`の構造・状態表示を参照しつつ、場所カテゴリでは通常ナビゲーションとして最小のclient境界にする。
+既存の`CategoryTabs`はbuttonと一時的なactive stateを持つため、カテゴリURLを正本にする要求とは異なる。`DiscussionManagementTabLayout`の`nav[role="tablist"]`、URL Link、ARIA状態、roving focusの構造を参照し、カテゴリURLを正本にしたURL-backed tablistとして最小のclient境界で実装する。カテゴリ項目の行は`flex-wrap`し、DaisyUIの直接子セレクターに依存せず、現在項目のactive背景を公開クラスで明示する。
 
 ## Decision 7: URL不在とデータエラーを分離する
 
@@ -150,7 +150,7 @@ URL不在と、存在するページのデータ破損・取得失敗を同じ�
 
 - UIの視覚基準は、実装開始時点の`origin/dev`の`7cbf0a5a57c66b0e8e114e28cc3871ab1f46fd15`を参照する。
 - `PageHeader`、`Card`、`CategoryTabs`、`LocationCard`、`Button`、`SidebarLayout`の表示クラス、余白、文字組み、カード階層、操作領域を確認する。
-- `CategoryTabs`は視覚的な参照だけに使い、場所ページでは`nav`、通常`Link`、`aria-current="page"`を正本とする。`role="tablist"`、`role="tab"`、ローカルactive stateは復活させない。
+- `CategoryTabs`は視覚的な参照に加え、`tabs tabs-box`、`tab`、`tab-active`、`aria-selected`、roving focusの意味論の参照に使う。場所ページでは`nav[role="tablist"]`、URLを持つ`Link[role="tab"]`、`aria-current="page"`、`aria-controls`を使い、`/discussions`のキーボード操作を踏襲する。
 - `dev`の場所ページにあるカルーセルは対象外とする。データ提供元カードの内容とリンクは維持する。
 - `dev`の現行カテゴリナビゲーションが使う横スクロールや最小幅固定は採用せず、カテゴリ項目の行だけを折り返す。ラベルは改行・省略しない。
 
@@ -161,7 +161,7 @@ URL不在と、存在するページのデータ破損・取得失敗を同じ�
 #### Alternatives considered
 
 - **現在のfeature branchの表示をそのまま正本にする**: 実装途中の変更を基準にしてしまい、`dev`からの視覚的な退行を検出できないため不採用。
-- **`CategoryTabs`をそのまま再利用する**: button、tab role、ローカル状態がURL正本の契約と衝突するため不採用。
+- **`CategoryTabs`をそのまま再利用する**: buttonとローカル状態はURL正本の契約と衝突するため不採用。ただし、`/discussions`のURL-backed tablist意味論（Link、ARIA状態、roving focus）とDaisyUIの視覚語彙は参照し、URLを正本とする場所カテゴリtablistへ適用する。
 - **新しいデザインシステムを導入する**: 既存表示との差分と実装量を増やすため不採用。
 
 ## Decision 11: レビュー指摘のUI・設定・町字順を既存契約へ戻す

@@ -124,9 +124,9 @@ export default function LocationCategoryNavigation({
   return (
     <nav
       aria-label="場所カテゴリ"
-      className="tabs tabs-box mb-6 w-full"
+      className="tabs tabs-box mb-6"
     >
-      <ul className="flex w-full flex-wrap">
+      <ul className="flex flex-wrap">
         {categories.map(({ category, "category:en": categoryId }, index) => {
           const isCurrent = isCategoryPath(pathname, categoryId);
           return (
@@ -136,7 +136,7 @@ export default function LocationCategoryNavigation({
                 ref={(element) => {
                   linkRefs.current[index] = element;
                 }}
-                className={`tab min-h-[44px] min-w-[44px] whitespace-nowrap px-4 text-base font-bold ruby-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary${isCurrent ? " tab-active" : ""}`}
+                className={`tab text-base px-4 text-base-content ruby-text gap-0 min-h-[44px] min-w-[44px] whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary${isCurrent ? " tab-active" : ""}`}
                 aria-current={isCurrent ? "page" : undefined}
                 onKeyDown={(event) => handleKeyDown(event, index)}
               >

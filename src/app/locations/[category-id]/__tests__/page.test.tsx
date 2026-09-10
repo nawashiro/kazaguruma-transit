@@ -289,8 +289,8 @@ describe("server category page", () => {
     expect(detailLinks).toHaveLength(2);
     expect(detailLinks.map((link) => link.tagName)).toEqual(["A", "A"]);
     expect(detailLinks.map((link) => link.getAttribute("href"))).toEqual([
-      `/locations/location-detail/${encodeURIComponent(farLocation.id)}`,
       `/locations/location-detail/${encodeURIComponent(nearLocation.id)}`,
+      `/locations/location-detail/${encodeURIComponent(farLocation.id)}`,
     ]);
   });
 
@@ -319,10 +319,10 @@ describe("server category page", () => {
       return;
     }
 
-    expectAreaHeadingOrder("神田", "九段南");
+    expectAreaHeadingOrder("九段南", "神田");
     const detailLinks = getNativeDetailLinks();
-    expect(detailLinks[0]).toHaveTextContent(farLocation.name);
-    expect(detailLinks[1]).toHaveTextContent(nearLocation.name);
+    expect(detailLinks[0]).toHaveTextContent(nearLocation.name);
+    expect(detailLinks[1]).toHaveTextContent(farLocation.name);
   });
 
   it.each([
@@ -385,7 +385,7 @@ describe("server category page", () => {
     }
 
     expect(screen.getByRole("status")).toHaveTextContent(/町字/);
-    expectAreaHeadingOrder("神田", "九段南");
+    expectAreaHeadingOrder("九段南", "神田");
     expect(mockNotFound).not.toHaveBeenCalled();
   });
 
@@ -424,7 +424,7 @@ describe("server category page", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent(/origin|座標|緯度|経度|位置情報/i);
     expect(screen.getByRole("status")).toHaveTextContent(/町字/);
-    expectAreaHeadingOrder("神田", "九段南");
+    expectAreaHeadingOrder("九段南", "神田");
     expect(mockNotFound).not.toHaveBeenCalled();
   });
 });

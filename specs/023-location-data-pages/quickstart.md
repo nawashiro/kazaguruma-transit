@@ -39,7 +39,8 @@ git show origin/dev:src/components/features/LocationCard.tsx
 - `document.documentElement.scrollWidth <= document.documentElement.clientWidth`になる。
 - 全カテゴリラベルが省略・改行されず、リンク項目の行だけが領域内で折り返される。
 - ページの`h1`が「場所をさがす」だけであり、説明文が表示される。
-- 「カテゴリを選択」「近いところから表示」「データ提供元」のカード階層と内容を確認する。
+- 「カテゴリを選択」「並べ替え」「データ提供元」のカード階層と内容を確認する。
+- カテゴリナビゲーションがルートの「よく利用される施設から選択」と同じ`tabs tabs-box` / `tab text-base px-4 text-base-content ruby-text gap-0`の視覚クラスを使い、リンク項目の行だけを折り返すことを確認する。
 - 町字表示は地域セクション、距離表示は`Nキロ離れています`の距離帯セクションを表示する。
 - 場所詳細ページにカテゴリナビゲーションがなく、戻りリンク・目的地設定・外部リンクを確認する。
 - `[role="tablist"]`、場所ページの`[role="tab"]`、補助案内カルーセルが存在しない。
@@ -57,6 +58,8 @@ git status --short --untracked-files=all
 ```
 
 `npm run build`はPrisma schema push、GTFS取得、場所データ・町字GeoJSONのビルド時取得・検証、Next buildを実行するため、作業ツリーへの副作用を確認できる最終段階でのみ実行する。場所データ・GeoJSONの取得または検証に失敗した場合は、公開用ビルドが非ゼロ終了することを確認する。
+
+`app-config.json`は運用・配布先固有の設定であり、ビルド前に存在しなければならない。`npm run build`やDockerfileが`app-config.json.example`から自動生成してはならない。CIでテスト用の設定が必要な場合は、workflow内で`cp app-config.json.example app-config.json`を明示的に実行してからビルドする。
 
 ## Focused test targets
 
@@ -91,6 +94,9 @@ npm test -- --runInBand --runTestsByPath \
 11. 存在しないカテゴリURL・場所詳細URLを開き、通常の404となることを確認する。ビルド時のデータ取得失敗・重複ID・JSON/GeoJSON不正は公開用ビルド失敗となり、404とは別であることを確認する。
 12. 成功したビルドのホームで「よく利用される施設」を表示し、ブラウザおよび実行中サーバーから場所データCDNへリクエストせず、選択した施設が既存の目的地入力へ引き継がれることを確認する。
 13. 住所・名前検索、Google Maps API、住所検索用レート制限UIが場所ページに存在しないことを確認する。
+14. GPS拒否・タイムアウト・無効な`origin`・データエラーで、`alert-soft`のアラート内に視認可能な「エラー」タイトルと具体的な説明が表示されることを確認する。色だけを手掛かりにしない。
+15. `app-config.json`を一時的に退避して`npm run build`を実行し、exampleから自動生成されず非ゼロで失敗することを確認する。確認後に運用設定を復元する。CI workflowは必要な場合だけ明示的にexampleをコピーする。
+16. 町字表示で地域セクションの見出しが表示用町字文字列の`localeCompare`昇順になり、同じ町字内の場所順が元データ順のままであることを確認する。
 
 ## Final checks
 

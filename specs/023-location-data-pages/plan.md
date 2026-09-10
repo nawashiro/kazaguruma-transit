@@ -229,7 +229,7 @@ UIの視覚基準は、実装開始時点の`origin/dev`を参照する。今回
 |---|---|---|
 | `src/app/locations/page.tsx` | `PageHeader`、説明文、`Card`による操作領域、場所一覧の地域・距離セクション、データ提供元カードの内容・リンク | クライアント取得、住所検索、カルーセル、ローカルカテゴリ状態を持ち込まない。カテゴリナビゲーションとGPS操作は仕様の順序・通常リンク契約へ置き換える。 |
 | `src/components/layouts/PageHeader.tsx` | `ruby-text`、左揃え、唯一の`h1`、`text-3xl`のページ見出し、`text-lg`の説明文 | カテゴリ名を追加の`h1`へしない。カテゴリページのH1は「場所をさがす」、説明は「位置とカテゴリから千代田区のスポットをさがす」とする。 |
-| `src/components/ui/Card.tsx` | `section.card`、`card-body`、`card-title`、`bg-base-100`、`shadow-sm`の階層 | 「カテゴリを選択」「近いところから表示」「データ提供元」のカードに再利用する。カード内部へデータ取得責務を置かない。 |
+| `src/components/ui/Card.tsx` | `section.card`、`card-body`、`card-title`、`bg-base-100`、`shadow-sm`の階層 | 「カテゴリを選択」「並べ替え」「データ提供元」のカードに再利用する。カード内部へデータ取得責務を置かない。 |
 | `src/components/ui/CategoryTabs.tsx` | `tabs tabs-box`、`tab`、`text-base`、`px-4`、`ruby-text`、現在項目の視覚表現 | 視覚クラスだけを参照する。`button`、`role="tablist"`、`role="tab"`、`aria-selected`、ローカルactive stateは採用せず、`nav`内の通常`Link`と`aria-current="page"`へ置き換える。 |
 | `src/components/features/LocationCard.tsx` | `origin/dev`におけるカード、画像の`object-cover`、カード本文、場所名・地域・説明の余白、ホバー時の影 | 視覚参照だけに使い、023では削除済みの未使用コンポーネントを復活させない。カテゴリページのserver-rendered summary markupが正規詳細URLとserver側の地域表示値を持つ。クライアントGeoJSON取得、`findLocationArea`、旧詳細URLは使用しない。 |
 | `src/components/ui/Button.tsx` | DaisyUIの`btn`、`text-base`、44px以上の操作領域、フォーカス表示 | GPS操作に再利用する。距離モードは明示クリックだけで開始し、状態を`aria-pressed`、処理中を`aria-busy`またはstatusで通知する。 |
@@ -303,3 +303,33 @@ Each cleanup slice in `tasks.md` must follow this order:
 ## Complexity Tracking
 
 No constitution violation requiring justification. The build-time data-generation boundary, artifact reader, runtime URL/distance boundary, and two small client islands are the minimum complexity required to preserve URL-based distance sorting while removing browser-side and runtime external data fetching and address search.
+
+## Review Correction Plan (2026-09-10)
+
+今回のレビュー指摘は、既存の023実装を置き換える新機能ではなく、公開UI・エラー・設定境界・表示順の契約補正として扱う。先に公開境界のREDテストを追加し、各テスト変更直後に独立したread-only reviewで`VERDICT: PASS`を得てから本番コードを変更する。
+
+| 指摘 | 実装方針 | 主な境界 |
+|---|---|---|
+| カテゴリナビゲーションの視覚差分 | ルートの`LocationSuggestions`→`CategoryTabs`と同じ`tabs tabs-box` / `tab text-base px-4 text-base-content ruby-text gap-0`を使う。場所ページ固有の`nav`・通常リンク・`aria-current`、flex-wrap、44px操作領域、focus-visibleは維持する。 | `LocationCategoryNavigation.tsx`、そのvisual contract |
+| 並べ替えCardのタイトル | Card titleだけを「並べ替え」に変更し、操作ラベルとURL/GPS挙動は変更しない。 | `[category-id]/page.tsx`、visual contract |
+| GPS・origin・データエラー | `alert alert-error alert-soft text-base-content!`と`role="alert"`を共通の見た目として使い、装飾アイコン、視認可能な「エラー」タイトル、具体的な説明を表示する。 | `LocationSortControls.tsx`、カテゴリ/入口/詳細のdata-error state |
+| app-configの自動生成 | `ensure-app-config.mjs`は存在確認だけに変更し、欠落時は非ゼロ終了する。package lifecycleとDockerはこれを検証境界として呼び、exampleコピーはCI workflowの明示的な準備へ移す。 | `scripts/ensure-app-config.mjs`、`package.json`、Dockerfile、CI、docs |
+| 町字順 | `groupLocationsByProvidedArea`が表示用町字名をキーに作ったグループを`localeCompare`昇順で返す。Mapの入力順には依存しない。グループ内の場所順は入力順で安定させる。 | `[category-id]/page.tsx`、page visual contract |
+
+### Correction gates
+
+1. T069/T071/T073/T075のREDテストを、互いに重複しないファイル境界で作成する。
+2. 各RED直後のT070/T072/T074/T076で、仕様・受入条件・負の契約・fixtureの妥当性をfresh read-only reviewする。
+3. `VERDICT: PASS`を得たテスト章だけをT077–T080の本番実装へ解放する。テストバイトが変わった場合は該当reviewを無効化し、同じ順序で再実施する。
+4. 実装後は親が差分・本番参照の負の検索・型/lint・focused/full test・build・ブラウザ表示を再確認する。CIがexampleを準備することと、アプリ自身が運用時に生成しないことを別々に検証する。
+
+### Constitution re-check for corrections
+
+| Gate | Result | 根拠 |
+|---|---|---|
+| Clear naming | PASS | `LocationSortControls`、`groupLocationsByProvidedArea`、`app-config`検証境界は既存の意図を保つ。 |
+| Simple Logic / KISS | PASS | 既存の共通Button・CategoryTabs視覚語彙と一つの設定検証境界を再利用し、新しい状態管理を追加しない。 |
+| Type Safety | PASS | UI変更は既存propsを利用し、設定検証は既存のcwd基準と明示的な終了コードを維持する。 |
+| Test-First Development | PASS (conditional gates) | 各指摘を公開RED→fresh review→実装の独立した作業単位にする。 |
+| Accessibility & UX | PASS | `alert-soft`、視認可能な「エラー」タイトル、通常リンク、44px操作領域、可視フォーカスを検証する。 |
+| Documentation & Comments | PASS | spec/plan/tasks/contracts/quickstartと運用ドキュメントの自動生成説明を同じ方針へ更新する。 |

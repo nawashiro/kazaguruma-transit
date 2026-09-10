@@ -1,5 +1,11 @@
 import React, { type ComponentType } from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import "@testing-library/jest-dom";
 
 /**
@@ -148,10 +154,22 @@ function getHref(control: HTMLElement): URL {
   return new URL(control.getAttribute("href") ?? "", BASE_URL);
 }
 
-async function expectJapaneseError(): Promise<HTMLElement> {
+async function expectJapaneseError(
+  expectedDescription?: string,
+): Promise<HTMLElement> {
   const alert = await waitFor(() => screen.getByRole("alert"));
   expect(alert.textContent ?? "").toMatch(/[ぁ-んァ-ン一-龯]/);
   expect(alert).toHaveTextContent(/位置情報|座標|取得|対応|GPS/);
+  expect(alert).toHaveClass(
+    "alert",
+    "alert-error",
+    "alert-soft",
+    "text-base-content!",
+  );
+  expect(within(alert).getByText("エラー", { exact: true })).toBeVisible();
+  if (expectedDescription) {
+    expect(alert).toHaveTextContent(expectedDescription);
+  }
   return alert;
 }
 
@@ -196,7 +214,7 @@ afterEach(() => {
   window.history.replaceState({}, "", originalBrowserUrl);
 });
 
-describe("LocationSortControls GPS/origin contract (T033 RED)", () => {
+describe("LocationSortControls GPS/origin/error contract (T033/T071 RED)", () => {
   it("カテゴリ直下に2操作を表示し、originなしでは町字モードを選択状態で伝える", () => {
     renderControls();
     const townControl = getControl("link", "町字で並べる");
@@ -265,11 +283,19 @@ describe("LocationSortControls GPS/origin contract (T033 RED)", () => {
   });
 
   it.each([
-    ["permission denied", createPositionError(1)],
-    ["timeout", createPositionError(3)],
+    [
+      "permission denied",
+      createPositionError(1),
+      "位置情報の利用が許可されませんでした。GPSの権限を確認してください。",
+    ],
+    [
+      "timeout",
+      createPositionError(3),
+      "位置情報の取得がタイムアウトしました。もう一度お試しください。",
+    ],
   ] as const)(
     "originなしのGPS %sでは日本語errorを表示し、originを追加しない",
-    async (_caseName, positionError) => {
+    async (_caseName, positionError, expectedDescription) => {
       renderControls();
       const townControl = getControl("link", "町字で並べる");
       const distanceControl = getControl("button", "近い順に並べる");
@@ -279,7 +305,7 @@ describe("LocationSortControls GPS/origin contract (T033 RED)", () => {
       });
       fireEvent.click(distanceControl);
 
-      await expectJapaneseError();
+      await expectJapaneseError(expectedDescription);
       expect(mockRouterReplace).not.toHaveBeenCalled();
       expectSelected(townControl, true);
       expectSelected(distanceControl, false);
@@ -301,7 +327,9 @@ describe("LocationSortControls GPS/origin contract (T033 RED)", () => {
     });
     fireEvent.click(distanceControl);
 
-    await expectJapaneseError();
+    await expectJapaneseError(
+      "お使いのブラウザではGPSによる位置情報の取得に対応していません。",
+    );
     expect(mockGetCurrentPosition).not.toHaveBeenCalled();
     expect(mockRouterReplace).not.toHaveBeenCalled();
     expect(mockFetch).not.toHaveBeenCalled();
@@ -325,7 +353,7 @@ describe("LocationSortControls GPS/origin contract (T033 RED)", () => {
       });
       fireEvent.click(distanceControl);
 
-      await expectJapaneseError();
+      await expectJapaneseError("GPSから有効な座標を取得できませんでした。");
       expect(mockRouterReplace).not.toHaveBeenCalled();
       expectSelected(townControl, true);
       expectSelected(distanceControl, false);
@@ -333,6 +361,27 @@ describe("LocationSortControls GPS/origin contract (T033 RED)", () => {
       expect(mockFetch).not.toHaveBeenCalled();
     },
   );
+
+  it("無効なoriginではalertにエラータイトルと具体的な日本語説明を表示する", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      `${CATEGORY_PATH}?origin=invalid-origin`,
+    );
+    renderControls(CATEGORY_PATH);
+    const townControl = getControl("link", "町字で並べる");
+    const distanceControl = getControl("button", "近い順に並べる");
+
+    await expectJapaneseError(
+      "originの座標を解釈できません。町字で表示します。",
+    );
+    expectSelected(townControl, true);
+    expectSelected(distanceControl, false);
+    expect(getHref(townControl).search).toBe("");
+    expect(window.location.search).toBe("?origin=invalid-origin");
+    expect(mockRouterReplace).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
 
   it("有効な既存originでGPS再取得に失敗しても距離モードとoriginを維持する", async () => {
     const expectedSearch = `?${new URLSearchParams({ origin: EXISTING_ORIGIN }).toString()}`;
@@ -352,7 +401,9 @@ describe("LocationSortControls GPS/origin contract (T033 RED)", () => {
     });
     fireEvent.click(distanceControl);
 
-    await expectJapaneseError();
+    await expectJapaneseError(
+      "位置情報の取得がタイムアウトしました。もう一度お試しください。",
+    );
     expect(window.location.pathname).toBe(CATEGORY_PATH);
     expect(window.location.search).toBe(expectedSearch);
     expect(new URLSearchParams(window.location.search).get("origin")).toBe(

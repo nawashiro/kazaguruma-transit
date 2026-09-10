@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import Button from "@/components/ui/Button";
 import {
   parseLocationOrigin,
   serializeLocationOrigin,
@@ -55,6 +56,11 @@ const INVALID_COORDINATES_MESSAGE =
   "GPSから有効な座標を取得できませんでした。";
 const INVALID_ORIGIN_MESSAGE =
   "originの座標を解釈できません。町字で表示します。";
+const NEARBY_SORT_FOCUS_CLASSES = [
+  "focus-visible:outline",
+  "focus-visible:outline-2",
+  "focus-visible:outline-offset-2",
+] as const;
 
 function useOptionalPathname(): ReturnType<typeof usePathname> | null {
   if (typeof usePathname !== "function") {
@@ -91,6 +97,16 @@ export default function LocationSortControls() {
   const router = useOptionalRouter();
   const [isLocating, setIsLocating] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    // Button owns the primary, target-size, and state classes; this control also
+    // exposes the explicit focus-visible utilities required by its public DOM contract.
+    const nearbySortButton = controlsRef.current?.querySelector<HTMLButtonElement>(
+      "button[aria-pressed]",
+    );
+    nearbySortButton?.classList.add(...NEARBY_SORT_FOCUS_CLASSES);
+  }, [isLocating, pathname]);
 
   if (!isLocationCategoryPath(pathname)) {
     return null;
@@ -153,7 +169,7 @@ export default function LocationSortControls() {
   };
 
   return (
-    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+    <div ref={controlsRef} className="mt-6 flex flex-col gap-3 sm:flex-row">
       <Link
         href={pathnameOnly(pathname)}
         className="btn text-base gap-0 min-h-[44px] min-w-[44px] flex-1"
@@ -161,24 +177,29 @@ export default function LocationSortControls() {
       >
         町字で並べる
       </Link>
-      <button
+      <Button
         type="button"
-        className="btn text-base gap-0 min-h-[44px] min-w-[44px] flex-1"
+        className="flex-1"
         aria-pressed={isDistanceMode}
         disabled={isLocating}
+        loading={isLocating}
         onClick={handleDistanceSort}
       >
         近い順に並べる
-      </button>
+      </Button>
       {isLocating && (
         <p role="status" aria-live="polite" className="sm:self-center">
           位置情報を取得中...
         </p>
       )}
       {errorMessage && (
-        <p role="alert" aria-live="assertive" className="sm:self-center">
-          {errorMessage}
-        </p>
+        <div
+          role="alert"
+          className="alert alert-error alert-soft text-base-content! sm:self-center"
+        >
+          <p className="font-semibold">エラー</p>
+          <p>{errorMessage}</p>
+        </div>
       )}
     </div>
   );

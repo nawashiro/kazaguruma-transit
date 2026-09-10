@@ -311,7 +311,16 @@ describe("LocationCategoryNavigation", () => {
     expect(navigation).toHaveClass("tabs", "tabs-box");
 
     getCategoryLinks().forEach((link) => {
-      expect(link).toHaveClass("tab", "text-base", "px-4", "ruby-text");
+      expect(link).toHaveClass(
+        "tab",
+        "text-base",
+        "px-4",
+        "text-base-content",
+        "ruby-text",
+        "gap-0",
+        "min-h-[44px]",
+        "min-w-[44px]",
+      );
       expect(link).toHaveClass(
         "focus-visible:outline",
         "focus-visible:outline-2",

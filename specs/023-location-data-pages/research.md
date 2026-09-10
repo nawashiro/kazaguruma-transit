@@ -164,6 +164,20 @@ URL不在と、存在するページのデータ破損・取得失敗を同じ�
 - **`CategoryTabs`をそのまま再利用する**: button、tab role、ローカル状態がURL正本の契約と衝突するため不採用。
 - **新しいデザインシステムを導入する**: 既存表示との差分と実装量を増やすため不採用。
 
+## Decision 11: レビュー指摘のUI・設定・町字順を既存契約へ戻す
+
+### Decision
+
+- 場所カテゴリナビゲーションは、ルートページの「よく利用される施設から選択」で使う`CategoryTabs`の視覚クラスを踏襲する。`tabs tabs-box`、`tab`、`text-base`、`px-4`、`text-base-content`、`ruby-text`、`gap-0`を基礎にし、場所ページ固有の通常`nav`・`Link`・`aria-current`・flex-wrap・focus-visible・44px操作領域を重ねる。
+- 並べ替えCardのタイトルは操作を総称する「並べ替え」とし、GPSの操作名は「近い順に並べる」のまま維持する。
+- GPS拒否などの利用者向けエラーは、他ページと同じDaisyUIの`alert alert-error alert-soft text-base-content!`と`role="alert"`を使い、表示テキスト「エラー」と具体的な説明を必ず含める。色だけでエラーを伝えない。
+- `app-config.json`の欠落はビルドを非ゼロ終了させる。アプリのnpm lifecycle、Dockerfile、生成スクリプトはexampleをコピーせず、CI workflowが必要時だけ明示的にコピーする。
+- 町字表示の地域グループは、表示用に整形した町字文字列の`localeCompare`昇順で並べ、同じ町字内は入力順を維持する。
+
+### Rationale
+
+既存のルートページと共有UIの視覚語彙を再利用すると、場所ページだけが別のデザインに見える差分を最小の変更で解消できる。エラーのタイトルと意味論を明示すれば、色覚に依存せず状態を理解できる。設定生成を運用側へ残すと、設定忘れが公開ビルドを通過するため、CIの一時準備と運用ビルドの責務を分離する。町字順はデータ取得順に依存せず、利用者が文字列順として予測できる表示にする。
+
 ## Evidence / official references
 
 - Current route query serialization: `src/lib/transit/route-search-query.ts:25-33,68-75,112-124`

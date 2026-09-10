@@ -259,6 +259,48 @@ description: "Task list for location data pages and JavaScript reduction"
 
 ---
 
+## Phase 10: レビュー指摘対応 — UI・エラー・設定・町字順
+
+**Purpose**: 023仕様PRのレビューで判明した視覚・意味論・運用境界・表示順の差分を、公開契約テストを先に追加してから補正する。
+
+**Correction boundary**: T069/T071/T073/T075/T083/T085/T087/T089は互いに書込ファイルが重ならないRED章である。各章の直後のreview taskが`SUBAGENT_STATUS: COMPLETE`かつ`VERDICT: PASS`になるまで、対応する本番ファイルを変更しない。レビュー後のテスト変更は旧verdictを無効にする。
+
+### RED tests and fresh reviews
+
+- [X] T069 [P] [US5] [RED] ルートの「よく利用される施設から選択」と同じ`tabs tabs-box` / `tab text-base px-4 text-base-content ruby-text gap-0`の視覚クラス、`並べ替え`Cardタイトル、通常リンク・tab role不使用・既存レスポンシブ条件を公開DOM契約として追加し、`src/components/features/__tests__/LocationCategoryNavigation.test.tsx`と`src/app/locations/[category-id]/__tests__/page.visual-contract.test.tsx`に記録する
+- [X] T070 [US5] [correction-review] T069の変更後テストだけをread-onlyでレビューし、視覚クラス、Card階層・順序、通常リンク、禁止されたtab semantics、負の契約が仕様を過不足なく表すことを確認して`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を報告する。書込先は持たない
+- [X] T071 [P] [US3] [RED] GPS拒否・タイムアウト・未対応・無効な`origin`のエラーが`role="alert"`、DaisyUI`alert-soft`、視認可能な「エラー」タイトル、具体的な日本語説明を持ち、色だけに依存しないことを`src/components/features/__tests__/LocationSortControls.test.tsx`で公開境界テストにする
+- [X] T072 [US3] [correction-review] 初回レビューは無効originのrouter非呼出しassertion不足を検出してBLOCK。補正T083と再レビューT084/T088で不足を解消し、最終ゲートはPASSとした。書込先は持たない
+- [X] T073 [P] [US3] [RED] `app-config.json`欠落時のビルド失敗、exampleからの自動生成なし、CIだけの明示的コピーを、script/package/Docker/CIの公開境界で検出するテストとして`src/app/__tests__/app-config-build-boundary.test.ts`と`scripts/__tests__/ensure-app-config.test.ts`へ追加する
+- [X] T074 [US3] [correction-review] T073の変更後テストだけをread-onlyでレビューし、実際のcwd・プロセス終了コード・ファイル未生成・package/Docker/CIの責務分離を検証して`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を報告する。書込先は持たない
+- [X] T075 [P] [US5] [RED] 町字グループが表示用町字文字列の`localeCompare`昇順で並び、同一町字内の場所順を入力順で維持する公開ページ契約を`src/app/locations/[category-id]/__tests__/page.town-order-contract.test.tsx`へ追加する
+- [X] T076 [US5] [correction-review] T075の変更後テストだけをread-onlyでレビューし、入力順依存の実装を検出する代表fixtureと、距離帯順を壊さない境界を確認して`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を報告する。書込先は持たない
+
+### Production implementation after review gates
+
+- [X] T083 [US3] [RED-CORRECTION] T072の指摘を受け、無効な`origin`を実際のブラウザURLへ設定したうえで、エラー表示後もURLと`origin`を保持することを`src/components/features/__tests__/LocationSortControls.test.tsx`だけで追加検証する。productionファイルは変更しない
+- [X] T084 [US3] [correction-review] T083の最終テストバイトだけをfresh read-onlyでレビューし、実URL保持・町字fallback・alert意味論・非fetchを公開境界で検出することを確認して`SUBAGENT_STATUS: COMPLETE`と`VERDICT: BLOCK`を報告したため、T087/T088で再補正・再レビューを行った。書込先は持たない
+- [X] T085 [P] [US3] [RED-CORRECTION] FR-044の場所データ／invalid originのページレベルalertについて、実際のカテゴリ公開ページ境界で`role="alert"`、`alert alert-error alert-soft text-base-content!`、視認可能な「エラー」タイトル、具体的な説明を検証するテストを`src/app/locations/[category-id]/__tests__/page.error-contract.test.tsx`へ新規追加する。productionファイルは変更しない
+- [X] T086 [US3] [correction-review] T085のテストだけをfresh read-onlyでレビューし、カテゴリ公開ページのdata errorとinvalid origin errorを実装詳細に依存せず検出することを確認して`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を報告する。書込先は持たない
+- [X] T087 [US3] [RED-CORRECTION] T084の指摘を受け、実際のブラウザURLに無効originを保持した状態で`mockRouterReplace`が呼ばれないことを`src/components/features/__tests__/LocationSortControls.test.tsx`へ追加assertionする。productionファイルは変更しない
+- [X] T088 [US3] [correction-review] T087の最終テストバイトだけをfresh read-onlyでレビューし、無効originのURL保持・町字fallback・router非呼出し・非fetch・alert意味論を確認して`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を報告する。書込先は持たない
+- [X] T089 [P] [US5] [RED] 「近い順に並べる」操作が既存のプライマリーカラーButtonスタイル（`btn btn-primary`、44px操作領域、可視フォーカス）を公開DOMで持つことを`src/components/features/__tests__/LocationSortControls.visual-contract.test.tsx`へ追加する。productionファイルは変更しない
+- [X] T090 [US5] [correction-review] T089の最終テストだけをfresh read-onlyでレビューし、プライマリーカラー、操作領域、focus-visible、既存操作名と機能契約を過不足なく検出して`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を報告する。書込先は持たない
+
+- [X] T077 [US5] T070、T086、T088、T090の`VERDICT: PASS`後、カテゴリナビゲーションをルートの`CategoryTabs`視覚クラスへ合わせ、並べ替えCardタイトルを「並べ替え」に変更する。通常リンク、`aria-current`、flex-wrap、44px操作領域、focus-visible、GPS/URL契約は維持し、`src/components/features/LocationCategoryNavigation.tsx`と`src/app/locations/[category-id]/page.tsx`を更新する
+- [X] T091 [US5] T090の`VERDICT: PASS`後、既存の共通`Button`を使って「近い順に並べる」操作をプライマリーカラーButtonへ統一し、GPS成功/失敗・既存origin維持・町字fallbackを変更しない`src/components/features/LocationSortControls.tsx`を更新する
+- [X] T078 [US3] T086、T088、T091の`VERDICT: PASS`後、GPS・invalid origin・必要な場所データエラーを`alert alert-error alert-soft text-base-content!`と視認可能な「エラー」タイトルを持つ意味論的なalertへ統一し、GPS成功/失敗・既存origin維持・町字fallbackを変更せず`src/components/features/LocationSortControls.tsx`、`src/app/locations/[category-id]/page.tsx`、`src/app/locations/page.tsx`、`src/app/locations/location-detail/[id]/page.tsx`を更新する
+- [X] T079 [US3] T074の`VERDICT: PASS`後、`app-config.json`の存在確認を欠落時非ゼロ終了へ変更し、npm lifecycleとDockerfileがexampleをコピーしないようにし、CI workflowが必要時だけ明示コピーする責務へ移す。`AGENTS.md`、`scripts/ensure-app-config.mjs`、`package.json`、`Dockerfile.dev`、`Dockerfile.prod`、`.github/workflows/quality-gate.yml`、`README.md`、`docs/manual/analytics.md`、`.env.local.example`を更新する
+- [X] T080 [US5] T076、T077、T078の`VERDICT: PASS`後、表示用町字名の比較結果で地域グループを安定ソートし、距離表示の昇順・同距離順・町字内の入力順を維持する`src/app/locations/[category-id]/page.tsx`を更新する
+- [X] T092 [US5] [RED-CORRECTION] T080後に旧挿入順を期待して失敗する既存の町字順assertionを新仕様の表示用町字`localeCompare`順へ更新し、同一町字内の入力順・距離帯順の検証を弱めない`src/app/locations/[category-id]/__tests__/page.test.tsx`だけを修整する
+- [X] T093 [US5] [correction-review] T092のテスト変更だけをfresh read-onlyでレビューし、旧期待値の単純な置換に留まらず町字順の公開契約と同一町字内・距離帯の負の境界を維持していることを確認し、`SUBAGENT_STATUS: COMPLETE`と`VERDICT: PASS`を報告する。書込先は持たない
+- [X] T081 Run focused GREEN suites for T069/T071/T073/T075/T083/T085/T087/T089/T092, then strict TypeScript, scoped lint, `git diff --check`, and the relevant browser DOM/error/config/町字順 checks; parent verifies no unrelated route-form behavior changed
+- [X] T082 Parent-owned final correction verification: reconcile T069–T093 against `spec.md`、`plan.md`、`research.md`、`contracts/location-pages.md`、`quickstart.md`、`tasks.md`、production-only negative searches, run the full required test/type/lint/build checks, and record exact results before marking the correction tasks `[X]`
+
+**Checkpoint**: カテゴリナビゲーションと並べ替えCardがルートの視覚語彙に揃い、各エラーがタイトル付き`alert-soft`で伝わり、設定欠落が自動生成なしでビルド失敗し、町字グループが文字列順に表示される。既存のURL/GPS、距離帯、詳細、route-form契約は維持される。
+
+---
+
 ## Requirement Traceability
 
 The mappings below are explicit planning traceability. The task descriptions remain independently executable; the IDs make coverage review deterministic. `[correction-review]` tasks are cross-cutting evidence gates for their immediately preceding RED correction and inherit that correction's requirement/story coverage.
@@ -279,6 +321,10 @@ The mappings below are explicit planning traceability. The task descriptions rem
 | FR-033–FR-039 | T018–T024, T045–T049, T052A–T052H, T057 |
 | FR-040 | T060–T068 |
 | FR-041 | T006–T009, T060–T068 |
+| FR-042–FR-043 | T069–T070, T077, T089–T091, T081–T082 |
+| FR-044 | T071–T072, T078, T083–T088, T081–T082 |
+| FR-045 | T073–T074, T079, T081–T082 |
+| FR-046 | T075–T076, T080, T092–T093, T081–T082 |
 
 | Success criteria range | Covering tasks |
 |---|---|
@@ -290,6 +336,7 @@ The mappings below are explicit planning traceability. The task descriptions rem
 | SC-014–SC-017 | T052A–T052H, T057 |
 | SC-018–SC-020 | T018–T024, T052A–T052H, T057 |
 | SC-021 | T060–T068 |
+| SC-022 | T069–T093 |
 
 ---
 
@@ -306,6 +353,7 @@ The mappings below are explicit planning traceability. The task descriptions rem
 - **Phase 7 US5**: depends on the settled US1–US4 route, navigation, and data contracts; its RED suite must pass review before visual implementation
 - **Phase 8 Pre-Q21 polish**: depends on US1–US5 and all deletion gates; its verification is an intermediate checkpoint because Q21 was added afterward.
 - **Phase 9 Q21追加対応**: depends on the settled location-page and UI contracts, supersedes pre-Q21 runtime loaders/fallbacks, and blocks final release verification until build generation, build-failure injection, runtime artifact-only reads, and no-network evidence are GREEN
+- **Phase 10 レビュー指摘対応**: depends on the Q21 release boundary; each correction RED chapter must pass its immediately following fresh read-only review before its production task, and T082 is the parent-owned final correction gate
 
 ### User Story Dependencies
 
@@ -334,6 +382,7 @@ The mappings below are explicit planning traceability. The task descriptions rem
 - T052A–T052C can be authored in parallel because they cover distinct visual-contract test files; all three must complete before T052D.
 - T054/T055 and T053 can run in parallel after all production edits stop.
 - T060 and T063 must remain separate RED chapters: T063 starts only after the artifact shape/reader contract is settled, and each chapter requires its own fresh review (T061 and T064).
+- T069、T071、T073、T075は書込ファイルが重ならないためRED作成を並列化できる。各章のreview（T070、T072、T074、T076）は対応章の完了後に直列実行し、T077–T080は該当reviewの`VERDICT: PASS`後に実行する。
 
 ## Implementation Strategy
 

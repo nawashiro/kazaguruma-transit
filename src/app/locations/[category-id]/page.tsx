@@ -178,7 +178,7 @@ function groupLocationsByProvidedArea(
   return Array.from(groups, ([name, groupedLocations]) => ({
     name,
     locations: groupedLocations,
-  }));
+  })).sort((first, second) => first.name.localeCompare(second.name));
 }
 
 function groupCategoryLocations(locations: KeyLocation[]): LocationAreaGroup[] {
@@ -223,16 +223,20 @@ function groupLocationsByDistance(
 
 function DataErrorState() {
   return (
-    <section className="py-8" role="alert" aria-live="assertive">
+    <section className="py-8">
       <PageHeader title="場所データエラー" />
-      <p className="mt-4">場所データを読み込めないため、一覧を表示できません。</p>
+      <div className="alert alert-error alert-soft text-base-content!" role="alert">
+        <p className="font-semibold">エラー</p>
+        <p className="mt-4">場所データを読み込めないため、一覧を表示できません。</p>
+      </div>
     </section>
   );
 }
 
 function OriginErrorState() {
   return (
-    <div className="alert alert-error alert-soft" role="alert">
+    <div className="alert alert-error alert-soft text-base-content!" role="alert">
+      <p className="font-semibold">エラー</p>
       <p>originの座標を解釈できません。町字で表示します。</p>
     </div>
   );
@@ -430,7 +434,12 @@ export default async function CategoryPage({
     locationList = (
       <>
         {parsedOrigin.originState === "invalid" && <OriginErrorState />}
-        <p className="mt-4" role="status" aria-live="polite">
+        <p
+          className="mt-4"
+          role="status"
+          aria-live="polite"
+          aria-label="町字ごとに表示しています。"
+        >
           町字ごとに表示しています。
         </p>
         <TownLocationList groups={areaGroups} />
@@ -450,7 +459,7 @@ export default async function CategoryPage({
           <LocationCategoryNavigation categories={data.categories} />
         </Card>
 
-        <Card title="近いところから表示">
+        <Card title="並べ替え">
           <LocationSortControls />
         </Card>
 

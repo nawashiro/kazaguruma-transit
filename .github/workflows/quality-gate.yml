@@ -35,7 +35,8 @@ jobs:
           cache: npm
 
       - name: Prepare public app configuration
-        run: node scripts/ensure-app-config.mjs
+        run: |
+          cp app-config.json.example app-config.json
 
       - name: Install dependencies
         run: npm ci

@@ -7,7 +7,7 @@
 1. Google Analytics アカウントにアクセスして、GA4 のプロパティを作成します。
 2. データストリームの設定で「Web」を選択し、サイト情報を入力します。
 3. 測定 ID（例: G-XXXXXXXXXX）を取得します。
-4. `app-config.json.example`を`app-config.json`へコピーし、`gaMeasurementId`へ測定IDを設定します。
+4. 運用者が`app-config.json.example`を`app-config.json`へコピーし、`gaMeasurementId`へ測定IDを設定します。
    `app-config.json`は配布先ごとの設定であり、Gitでは管理しません。
 
 ```json
@@ -16,8 +16,10 @@
 }
 ```
 
-公開設定はJSONを変更してからbuildします。`app-config.json`が無い場合は、`npm run dev`、`npm test`、
-`npm run build`、`npm start`がexampleから自動生成します。
+運用者が`app-config.json`を用意してJSONを変更してからbuildします。`npm run dev`、`npm test`、
+`npm run build`、`npm start`はファイルの存在だけを検証し、欠落時は非ゼロで終了します。
+これらのコマンドはexampleから自動生成しません。Quality GateのCIだけが、チェックアウト内に一時コピーを明示的に用意します。
+実際の測定IDなどの配布先固有値はリポジトリへ保存・公開しません。
 
 ## 使用方法
 

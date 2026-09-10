@@ -18,7 +18,7 @@ type CategoryPage = (
 
 const PAGE_TITLE = "場所をさがす";
 const PAGE_DESCRIPTION = "位置とカテゴリから千代田区のスポットをさがす";
-const CARD_TITLES = ["カテゴリを選択", "近いところから表示", "データ提供元"] as const;
+const CARD_TITLES = ["カテゴリを選択", "並べ替え", "データ提供元"] as const;
 const AUXILIARY_CAROUSEL_TITLES = [
   "悩みがあるけど、どうしたらいい？",
   "今夜、安心して泊まれる場所がない",

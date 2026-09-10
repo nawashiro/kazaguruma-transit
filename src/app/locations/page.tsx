@@ -12,6 +12,7 @@ function LocationDataError() {
         className="alert alert-error alert-soft text-base-content!"
         role="alert"
       >
+        <p className="font-semibold">エラー</p>
         <p>場所データの取得に失敗しました。時間をおいて再試行してください。</p>
       </div>
     </div>

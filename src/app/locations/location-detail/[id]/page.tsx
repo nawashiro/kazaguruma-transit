@@ -296,6 +296,7 @@ function DataErrorState({ title, message }: { title: string; message: string }) 
       </p>
       <PageHeader title={title} />
       <div className="alert alert-error alert-soft text-base-content!" role="alert">
+        <p className="font-semibold">エラー</p>
         <p>{message}</p>
       </div>
     </div>

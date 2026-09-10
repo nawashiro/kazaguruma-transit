@@ -32,13 +32,15 @@
 
 - 共通レイアウトの`nav`として提供する。
 - 通常の同一サイト内リンクを使い、現在ページは`aria-current="page"`で示す。
-- 視覚的にtabs-boxを使っても、ページ移動をapplication tab stateに閉じ込めない。
+- ルートページの「よく利用される施設から選択」と同じ`tabs tabs-box` / `tab text-base px-4 text-base-content ruby-text gap-0`の視覚クラスを使う。ただし、ページ移動をapplication tab stateに閉じ込めず、通常リンクの`nav`として提供する。狭い画面ではリンク項目の行だけを`flex-wrap`し、ラベルの`whitespace-nowrap`、44px操作領域、可視フォーカスを維持する。
 - 現在のカテゴリURLに有効な`origin`がある場合、カテゴリから別カテゴリへのリンクは同じ`origin`を保持する。
 - `/locations`入口、町字リセット、詳細リンク、その他ページリンクには不要な`origin`を付けない。
 
 ## 4. Sort controls
 
 カテゴリナビゲーションの直下に2つの操作を置く。
+
+この操作領域を含むCardのタイトルは「並べ替え」とする。操作ラベルは「町字で並べる」「近い順に並べる」とする。
 
 ### 町字で並べる
 
@@ -72,7 +74,7 @@
 
 - 共通レイアウトはページの単一`main`を所有する。
 - カテゴリナビ、並べ替え操作、詳細リンクはキーボード操作可能で、現在状態を支援技術へ伝える。
-- GPSのloading、permission denied、timeout、invalid originは日本語のstatus/errorとして通知する。
+- GPSのloading、permission denied、timeout、invalid origin、場所データの表示失敗は日本語のstatus/errorとして通知する。errorは`role="alert"`と`alert alert-error alert-soft text-base-content!`を持ち、視認可能な「エラー」タイトルと具体的な説明を含める。色だけを状態の根拠にしない。
 - 404は通常のアプリ共通404契約に従い、場所feature固有の重複案内を追加しない。
 
 ## 8. `origin/dev` visual contract
@@ -84,3 +86,5 @@
 - `dev`の補助案内カルーセルは表示しない。データ提供元カードの見出し、説明、リンク、案内は維持する。
 - カテゴリラベルは改行・省略せず、ナビゲーション項目の行だけを複数行へ折り返す。ナビゲーションとページ全体に横スクロールを設定しない。
 - WCAG 2.2 AA、通常文字16px以上、可視フォーカス、通常リンクの意味は、`dev`の視覚表現より優先する。
+- `app-config.json`がないビルドは非ゼロで失敗する。アプリのnpm lifecycle、Dockerfile、ビルドスクリプトは`app-config.json.example`から自動生成せず、CIが必要時に明示的にコピーする。
+- 町字表示の地域セクションは、表示用町字文字列を`localeCompare`昇順に並べ、同一町字内の場所順は入力順を維持する。

@@ -180,7 +180,12 @@ export async function POST(req: NextRequest) {
       // HTMLコンテンツを設定
       logger.log("HTMLコンテンツ設定開始");
       await page.setContent(html, {
-        waitUntil: "networkidle0",
+        waitUntil: "load",
+        timeout: 60000,
+      });
+      await page.waitForNetworkIdle({
+        concurrency: 0,
+        idleTime: 500,
         timeout: 60000,
       });
       logger.log("HTMLコンテンツ設定完了");

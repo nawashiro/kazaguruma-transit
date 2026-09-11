@@ -1,13 +1,35 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 interface PackageManifest {
   dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
   version?: string;
 }
 
 function readPackageManifest(packagePath: string): PackageManifest {
   return JSON.parse(readFileSync(packagePath, "utf8")) as PackageManifest;
+}
+
+function readInstalledPackageVersion(packageName: string): string {
+  let packageJsonPath: string;
+
+  try {
+    packageJsonPath = require.resolve(`${packageName}/package.json`);
+  } catch {
+    packageJsonPath = join(
+      dirname(require.resolve(packageName)),
+      "..",
+      "package.json"
+    );
+  }
+
+  expect(existsSync(packageJsonPath)).toBe(true);
+  return readPackageManifest(packageJsonPath).version ?? "0.0.0";
+}
+
+function getDeclaredMinimumVersion(range: string | undefined): string {
+  return range?.replace(/^[~^]/, "") ?? "0.0.0";
 }
 
 function isVersionAtLeast(version: string, minimumVersion: string): boolean {
@@ -33,7 +55,37 @@ describe("dependency security", () => {
     expect(packageJson.dependencies).not.toHaveProperty("next-iron-session");
   });
 
-  it("resolves Next.js PostCSS to a patched version", () => {
+  it("declares patched versions for externally reachable server dependencies", () => {
+    const packageJson = readPackageManifest(join(__dirname, "..", "package.json"));
+
+    expect(
+      isVersionAtLeast(
+        getDeclaredMinimumVersion(packageJson.dependencies?.next),
+        "15.5.21"
+      )
+    ).toBe(true);
+    expect(
+      isVersionAtLeast(
+        getDeclaredMinimumVersion(packageJson.dependencies?.puppeteer),
+        "25.10.0"
+      )
+    ).toBe(true);
+    expect(packageJson.dependencies).not.toHaveProperty(
+      "transit-departures-widget"
+    );
+    expect(packageJson.devDependencies).not.toHaveProperty("@types/puppeteer");
+  });
+
+  it("resolves patched versions for externally reachable server dependencies", () => {
+    expect(isVersionAtLeast(readInstalledPackageVersion("next"), "15.5.21")).toBe(
+      true
+    );
+    expect(
+      isVersionAtLeast(readInstalledPackageVersion("puppeteer"), "25.10.0")
+    ).toBe(true);
+  });
+
+  it("resolves Next.js dependencies to patched versions", () => {
     const nextPackageDirectory = dirname(require.resolve("next/package.json"));
     const postcssPackagePath = require.resolve("postcss/package.json", {
       paths: [nextPackageDirectory],
@@ -41,6 +93,12 @@ describe("dependency security", () => {
     const postcssVersion = readPackageManifest(postcssPackagePath).version;
 
     expect(postcssVersion).toBeDefined();
-    expect(isVersionAtLeast(postcssVersion ?? "0.0.0", "8.5.10")).toBe(true);
+    expect(isVersionAtLeast(postcssVersion ?? "0.0.0", "8.5.23")).toBe(true);
+    expect(isVersionAtLeast(readInstalledPackageVersion("sharp"), "0.35.0")).toBe(
+      true
+    );
+    expect(
+      isVersionAtLeast(readInstalledPackageVersion("nanoid"), "3.3.18")
+    ).toBe(true);
   });
 });

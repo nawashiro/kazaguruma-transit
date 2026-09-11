@@ -1,25 +1,15 @@
 import Image from "next/image";
 import PageHeader from "@/components/layouts/PageHeader";
-import {
-  AWARD_BADGE_IMAGE_URL,
-  AWARD_BADGE_URL,
-  AWARD_FINALIST_CATEGORY,
-  AWARD_ISSUED_DATE,
-  AWARD_ISSUER,
-  AWARD_NAME,
-  AWARD_PRIZE,
-  AWARD_PROJECT_URL,
-} from "@/lib/award/award-data";
 
 export default function AwardPage() {
   return (
     <div className="space-y-6 ruby-text">
       <PageHeader
-        eyebrow={AWARD_NAME}
+        eyebrow="都知事杯オープンデータ・ハッカソン2025"
         title="受賞について"
         description={
           <>
-          「風ぐるま乗換案内」の取組が、{AWARD_PRIZE}を受賞しました。
+          「風ぐるま乗換案内」の取組が、行政課題解決賞を受賞しました。
           </>
         }
       />
@@ -27,14 +17,14 @@ export default function AwardPage() {
       <section className="card card-border bg-base-100 shadow-sm md:card-side">
         <figure className="shrink-0 bg-base-200 p-6 md:w-72">
           <a
-            href={AWARD_BADGE_URL}
+            href="https://www.openbadge-global.com/ns/portal/openbadge/public/assertions/detail/RWRseGxrR0NmM0Q5QnAwdTdjeHFHdz09"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="オープンバッジを確認する（新しいタブで開く）"
           >
             <Image
-              src={AWARD_BADGE_IMAGE_URL}
-              alt={`${AWARD_PRIZE}のオープンバッジ`}
+              src="https://nlp.netlearning.co.jp/api/v1.0/openbadge/v2/Assertion/RWRseGxrR0NmM0Q5QnAwdTdjeHFHdz09/image"
+              alt="行政課題解決賞のオープンバッジ"
               width={250}
               height={250}
               unoptimized
@@ -46,22 +36,22 @@ export default function AwardPage() {
         <div className="card-body gap-4">
           <div>
             <h2 className="card-title inline text-xl ruby-text gap-0">
-              {AWARD_PRIZE}
+              行政課題解決賞
             </h2>
           </div>
 
           <dl className="grid gap-3">
             <div>
               <dt className="font-semibold">大会での選出</dt>
-              <dd>{AWARD_FINALIST_CATEGORY}</dd>
+              <dd>サービス開発部門 ファイナリスト</dd>
             </div>
             <div>
               <dt className="font-semibold">授与日</dt>
-              <dd>{AWARD_ISSUED_DATE}</dd>
+              <dd>2025年10月25日</dd>
             </div>
             <div>
               <dt className="font-semibold">発行者</dt>
-              <dd>{AWARD_ISSUER}</dd>
+              <dd>東京都デジタルサービス局（都知事杯オープンデータ・ハッカソン運営事務局）</dd>
             </div>
           </dl>
         </div>
@@ -82,7 +72,7 @@ export default function AwardPage() {
 
           <div className="card-actions flex-col items-stretch sm:flex-row">
             <a
-              href={AWARD_PROJECT_URL}
+              href="https://odhackathon.metro.tokyo.lg.jp/collection/54/?year=2025"
               target="_blank"
               rel="noopener noreferrer"
               className="btn text-base btn-neutral ruby-text gap-0 rounded-full dark:rounded-sm"
@@ -90,7 +80,7 @@ export default function AwardPage() {
               東京都の作品紹介を見る
             </a>
             <a
-              href={AWARD_BADGE_URL}
+              href="https://www.openbadge-global.com/ns/portal/openbadge/public/assertions/detail/RWRseGxrR0NmM0Q5QnAwdTdjeHFHdz09"
               target="_blank"
               rel="noopener noreferrer"
               className="btn text-base btn-outline ruby-text gap-0 rounded-full dark:rounded-sm"

@@ -7,10 +7,15 @@ export interface AddressLocation {
   name: string;
   lat: number;
   lng: number;
+  copyright?: string | null;
+  licence?: string | null;
+  licenceUri?: string | null;
+  [key: string]: string | number | null | undefined;
 }
 
 export interface AddressCategory {
   category: string;
+  "category:en"?: string;
   locations: AddressLocation[];
 }
 
@@ -37,42 +42,7 @@ export interface KeyLocationCategory {
   locations: KeyLocation[];
 }
 
-export async function loadAddressData(): Promise<AddressCategory[]> {
-  try {
-    const version = appConfig.locationsDataVersion;
-    const response = await fetch(
-      `https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@${version}/kazaguruma_json_min/main_facilities.json`
-    );
-    if (response.ok) {
-      logger.log("住所データを読み込みました");
-    } else {
-      throw new Error("住所データの取得に失敗しました");
-    }
-    const data = await response.json();
-    return data as AddressCategory[];
-  } catch (error) {
-    logger.error("住所データ読み込みエラー:", error);
-    return [];
-  }
-}
-
-// key_locations.jsonからデータを読み込む関数
-export async function loadKeyLocationsData(): Promise<KeyLocationCategory[]> {
-  try {
-    const version = appConfig.locationsDataVersion;
-    const response = await fetch(
-      `https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@${version}/kazaguruma_json_min/key_locations.json`
-    );
-    if (!response.ok) {
-      throw new Error("主要施設データの取得に失敗しました");
-    }
-    const data = await response.json();
-    return data as KeyLocationCategory[];
-  } catch (error) {
-    logger.error("主要施設データ読み込みエラー:", error);
-    return [];
-  }
-}
+export type AddressDataResult = LocationDataLoadResult<AddressCategory>;
 
 export type KeyLocationsDataResult = LocationDataLoadResult<KeyLocationCategory>;
 
@@ -110,14 +80,14 @@ function isKeyLocation(value: unknown): value is KeyLocation {
 
   return (
     isValidLocationId(value.id) &&
-    typeof value.name === "string" &&
+    isNonEmptyString(value.name) &&
     typeof value.lat === "number" &&
     Number.isFinite(value.lat) &&
     typeof value.lng === "number" &&
     Number.isFinite(value.lng) &&
-    typeof value.nodeCopyright === "string" &&
-    typeof value.licence === "string" &&
-    typeof value.licenceUri === "string" &&
+    isNonEmptyString(value.nodeCopyright) &&
+    isNonEmptyString(value.licence) &&
+    isNonEmptyString(value.licenceUri) &&
     hasOptionalStringField(value, "description") &&
     hasOptionalStringField(value, "descriptionCopyright") &&
     hasOptionalStringField(value, "imageUri") &&
@@ -130,15 +100,90 @@ function isKeyLocation(value: unknown): value is KeyLocation {
 
 /** Checks the documented category and primary-location wire shape. */
 export function isKeyLocationCategory(value: unknown): value is KeyLocationCategory {
-  if (!isRecord(value) || typeof value.category !== "string" || typeof value["category:en"] !== "string") {
+  if (
+    !isRecord(value) ||
+    !isNonEmptyString(value.category) ||
+    !isNonEmptyString(value["category:en"])
+  ) {
     return false;
   }
 
-  return Array.isArray(value.locations) && value.locations.every(isKeyLocation);
+  return (
+    Array.isArray(value.locations) &&
+    value.locations.length > 0 &&
+    value.locations.every(isKeyLocation)
+  );
 }
 
 function isKeyLocationCategoryArray(value: unknown): value is KeyLocationCategory[] {
-  return Array.isArray(value) && value.every(isKeyLocationCategory);
+  return Array.isArray(value) && value.length > 0 && value.every(isKeyLocationCategory);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isAddressLocation(value: unknown): value is AddressLocation {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isNonEmptyString(value.name) &&
+    isFiniteNumber(value.lat) &&
+    isFiniteNumber(value.lng) &&
+    isNonEmptyString(value.copyright) &&
+    isNonEmptyString(value.licence) &&
+    isNonEmptyString(value.licenceUri)
+  );
+}
+
+function isAddressCategory(value: unknown): value is AddressCategory {
+  if (
+    !isRecord(value) ||
+    !isNonEmptyString(value.category) ||
+    !isNonEmptyString(value["category:en"])
+  ) {
+    return false;
+  }
+
+  return (
+    Array.isArray(value.locations) &&
+    value.locations.length > 0 &&
+    value.locations.every(isAddressLocation)
+  );
+}
+
+function isAddressCategoryArray(value: unknown): value is AddressCategory[] {
+  return Array.isArray(value) && value.length > 0 && value.every(isAddressCategory);
+}
+
+/** Loads popular facilities while preserving transport and decoding failures. */
+export async function loadAddressDataResult(): Promise<AddressDataResult> {
+  try {
+    const version = appConfig.locationsDataVersion;
+    const response = await fetch(
+      `https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@${version}/kazaguruma_json_min/main_facilities.json`,
+    );
+    if (!response.ok) {
+      throw new Error(`住所データの取得に失敗しました (HTTP ${response.status})`);
+    }
+
+    const data: unknown = await response.json();
+    if (!isAddressCategoryArray(data)) {
+      throw new Error("住所データの形式が不正です");
+    }
+
+    return { status: "success", categories: data };
+  } catch (error) {
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    logger.error("住所データ読み込みエラー:", normalizedError);
+    return { status: "error", error: normalizedError };
+  }
 }
 
 /** Loads key locations while preserving transport and decoding failures. */

@@ -6,8 +6,7 @@ import SignupPage, { metadata as signupMetadata } from "@/app/signup/page";
 import RateLimitPage, { metadata as rateLimitMetadata } from "@/app/rate-limit/page";
 import LocationDetailPage, {
   generateMetadata as locationDetailGenerateMetadata,
-} from "@/app/location-detail/[id]/page";
-import LocationDetailLoading from "@/app/location-detail/[id]/loading";
+} from "@/app/locations/location-detail/[id]/page";
 import type {
   KeyLocation,
   KeyLocationCategory,
@@ -17,7 +16,11 @@ import type {
 const mockUseAuth = jest.fn();
 const mockRouterPush = jest.fn();
 const mockRouterReplace = jest.fn();
-const mockLoadKeyLocationsDataResult = jest.fn<
+const NEXT_NOT_FOUND = Symbol("NEXT_NOT_FOUND");
+const mockNotFound = jest.fn(() => {
+  throw NEXT_NOT_FOUND;
+});
+const mockLoadLocationPageData = jest.fn<
   Promise<KeyLocationsDataResult>,
   []
 >();
@@ -28,6 +31,7 @@ jest.mock("@/lib/auth/auth-context", () => ({
 }));
 
 jest.mock("next/navigation", () => ({
+  notFound: () => mockNotFound(),
   useRouter: () => ({
     push: mockRouterPush,
     replace: mockRouterReplace,
@@ -35,13 +39,9 @@ jest.mock("next/navigation", () => ({
   useSearchParams: () => mockSearchParams,
 }));
 
-jest.mock("@/utils/addressLoader", () => {
-  const actual = jest.requireActual("@/utils/addressLoader");
-  return {
-    ...actual,
-    loadKeyLocationsDataResult: () => mockLoadKeyLocationsDataResult(),
-  };
-});
+jest.mock("@/lib/location/location-page-data", () => ({
+  loadLocationPageData: () => mockLoadLocationPageData(),
+}));
 
 const primaryLocation: KeyLocation = {
   id: "kanda-library-日本",
@@ -115,7 +115,9 @@ async function renderLocationDetail(id: string) {
   });
 
   if (!React.isValidElement(element)) {
-    throw new Error("/location-detail/[id] did not render a public React element");
+    throw new Error(
+      "/locations/location-detail/[id] did not render a public React element",
+    );
   }
 
   return renderInHostMain(element);
@@ -126,14 +128,15 @@ describe("専用ページの共通 semantic/a11y 契約", () => {
     mockUseAuth.mockReset();
     mockRouterPush.mockReset();
     mockRouterReplace.mockReset();
+    mockNotFound.mockClear();
     mockSearchParams = new URLSearchParams();
     mockUseAuth.mockReturnValue({
       user: { isLoggedIn: false, pubkey: null },
       login: jest.fn().mockResolvedValue(undefined),
       createAccount: jest.fn().mockResolvedValue(undefined),
     });
-    mockLoadKeyLocationsDataResult.mockReset();
-    mockLoadKeyLocationsDataResult.mockResolvedValue({
+    mockLoadLocationPageData.mockReset();
+    mockLoadLocationPageData.mockResolvedValue({
       status: "success",
       categories: locationCategories,
     });
@@ -207,55 +210,14 @@ describe("専用ページの共通 semantic/a11y 契約", () => {
     assertNativeLinks(view.container);
   });
 
-  it("renders an invalid location detail as one main/h1 with a Japanese error heading, body, and return link", async () => {
-    mockLoadKeyLocationsDataResult.mockResolvedValue({
+  it("uses the standard notFound boundary for an invalid nested location detail", async () => {
+    mockLoadLocationPageData.mockResolvedValue({
       status: "success",
       categories: [],
     });
 
-    const view = await renderLocationDetail("unknown-location");
-
-    assertSingleProductionMainAndHeading(view.container);
-    const stateHeading = screen.getByRole("heading", {
-      level: 1,
-      name: "場所が見つかりません",
-    });
-    expect(stateHeading).toBeVisible();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-
-    const errorHeading = screen.getByRole("heading", {
-      level: 2,
-      name: "エラー",
-    });
-    expect(errorHeading).toBeVisible();
-
-    const message = "指定された場所は見つかりませんでした。場所一覧から選び直してください。";
-    const body = screen.getByText(message, { exact: true });
-    expect(body).toBeVisible();
-    const errorPanel = body.closest(".alert");
-    if (!(errorPanel instanceof HTMLElement)) {
-      throw new Error("expected the location error body to be inside an alert panel");
-    }
-    expect(errorPanel).toHaveClass(
-      "alert-error",
-      "alert-soft",
-      "text-base-content!"
-    );
-
-    const returnLink = screen.getByRole("link", { name: "場所一覧に戻る" });
-    expect(returnLink).toHaveAttribute("href", "/locations");
-    expect(returnLink.compareDocumentPosition(stateHeading)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING
-    );
-    assertNativeLinks(view.container);
-  });
-
-  it("renders the public loading state with one h1 and a Japanese status", () => {
-    const view = renderInHostMain(<LocationDetailLoading />);
-
-    assertSingleProductionMainAndHeading(view.container);
-    expect(screen.getByRole("status")).toHaveTextContent(/読み込み中/);
-    expect(screen.getByRole("status").tagName).toBe("P");
+    await expect(renderLocationDetail("unknown-location")).rejects.toBe(NEXT_NOT_FOUND);
+    expect(mockNotFound).toHaveBeenCalledTimes(1);
   });
 
   it("renders Rate Limit through the public Promise searchParams boundary with native return navigation", async () => {

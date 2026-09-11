@@ -1,85 +1,160 @@
-import {
-  calculateDistance,
-  createInitialLocationListState,
-  geocodeAddress,
-  reduceLocationListState,
-  sortLocationsByDistance,
-} from "../location-list-state";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+import type * as TypeScript from "typescript";
+import { calculateDistance, sortLocationsByDistance } from "../location-list-state";
+
+jest.unmock("fs");
+const ts: typeof import("typescript") = jest.requireActual("typescript");
+
+const PRODUCTION_ROOT = "src";
+const PRODUCTION_DIRECTORY_EXCLUSIONS = new Set([
+  ".next",
+  "__mocks__",
+  "__tests__",
+  "fixtures",
+]);
+const OBSOLETE_LOCATION_IDENTIFIERS = new Set([
+  "LocationListStatus",
+  "LocationListOperation",
+  "LocationListState",
+  "LocationListAction",
+  "GeocodingSuccess",
+  "GeocodingFailure",
+  "GeocodingResult",
+  "createInitialLocationListState",
+  "reduceLocationListState",
+  "geocodeAddress",
+  "loadLocationCategories",
+  "groupCategoryLocationsByArea",
+  "findLocationAreaName",
+]);
+
+type ProductionSource = {
+  path: string;
+  sourceFile: TypeScript.SourceFile;
+};
+
+function stripComments(sourceText: string): string {
+  const characters = sourceText.split("");
+  const scanner = ts.createScanner(
+    ts.ScriptTarget.Latest,
+    false,
+    ts.LanguageVariant.JSX,
+    sourceText,
+  );
+  let token = scanner.scan();
+
+  while (token !== ts.SyntaxKind.EndOfFileToken) {
+    if (
+      token === ts.SyntaxKind.SingleLineCommentTrivia ||
+      token === ts.SyntaxKind.MultiLineCommentTrivia
+    ) {
+      for (let index = scanner.getTokenPos(); index < scanner.getTextPos(); index += 1) {
+        if (characters[index] !== "\n" && characters[index] !== "\r") {
+          characters[index] = " ";
+        }
+      }
+    }
+    token = scanner.scan();
+  }
+
+  return characters.join("");
+}
+
+function collectProductionPaths(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    if (entry.isDirectory() && PRODUCTION_DIRECTORY_EXCLUSIONS.has(entry.name)) {
+      return [];
+    }
+
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      return collectProductionPaths(entryPath);
+    }
+    if (
+      !entry.isFile() ||
+      (!entry.name.endsWith(".ts") && !entry.name.endsWith(".tsx")) ||
+      entry.name.endsWith(".test.ts") ||
+      entry.name.endsWith(".test.tsx") ||
+      entry.name.endsWith(".spec.ts") ||
+      entry.name.endsWith(".spec.tsx")
+    ) {
+      return [];
+    }
+    return [entryPath];
+  });
+}
+
+function readProductionSources(): ProductionSource[] {
+  const paths = collectProductionPaths(path.resolve(process.cwd(), PRODUCTION_ROOT)).sort();
+  if (paths.length === 0) {
+    throw new Error("T041 RED setup failure: production source files were not found");
+  }
+
+  return paths.map((filePath) => {
+    const relativePath = path.relative(process.cwd(), filePath);
+    const source = stripComments(readFileSync(filePath, "utf8"));
+    return {
+      path: relativePath,
+      sourceFile: ts.createSourceFile(
+        relativePath,
+        source,
+        ts.ScriptTarget.Latest,
+        true,
+        filePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+      ),
+    };
+  });
+}
+
+function lineNumber(sourceFile: TypeScript.SourceFile, node: TypeScript.Node): number {
+  return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+}
+
+function collectObsoleteLocationStateViolations(): string[] {
+  const violations: string[] = [];
+
+  for (const { path: sourcePath, sourceFile } of readProductionSources()) {
+    const isClientGeoUtils = sourcePath.endsWith("/clientGeoUtils.ts");
+
+    function visit(node: TypeScript.Node): void {
+      if (ts.isIdentifier(node) && OBSOLETE_LOCATION_IDENTIFIERS.has(node.text)) {
+        violations.push(
+          `${sourcePath}:${lineNumber(sourceFile, node)} obsolete location-list symbol ${node.text}`,
+        );
+      }
+
+      if (
+        ts.isStringLiteralLike(node) &&
+        node.text.includes("clientGeoUtils") &&
+        !isClientGeoUtils
+      ) {
+        violations.push(
+          `${sourcePath}:${lineNumber(sourceFile, node)} clientGeoUtils production import`,
+        );
+      }
+
+      if (
+        isClientGeoUtils &&
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "fetch"
+      ) {
+        violations.push(
+          `${sourcePath}:${lineNumber(sourceFile, node)} clientGeoUtils client fetch`,
+        );
+      }
+
+      ts.forEachChild(node, visit);
+    }
+
+    visit(sourceFile);
+  }
+
+  return violations;
+}
 
 describe("location-list-state", () => {
-  it("カテゴリデータと位置処理の状態を分離して扱う", () => {
-    const initial = createInitialLocationListState();
-    const loading = reduceLocationListState(initial, {
-      type: "start",
-      requestId: 1,
-      operation: "categories",
-    });
-
-    expect(loading.status).toBe("loading");
-    expect(
-      reduceLocationListState(loading, {
-        type: "categories-ready",
-        requestId: 1,
-        categories: [{ category: "病院", "category:en": "hospital", locations: [] }],
-      }),
-    ).toMatchObject({ status: "ready", activeCategory: "病院" });
-  });
-
-  it("古い位置・詳細要求の結果を適用しない", () => {
-    const loading = reduceLocationListState(
-      reduceLocationListState(createInitialLocationListState(), {
-        type: "start",
-        requestId: 1,
-        operation: "position",
-      }),
-      { type: "start", requestId: 2, operation: "position" },
-    );
-
-    expect(
-      reduceLocationListState(loading, {
-        type: "position-ready",
-        requestId: 1,
-        position: { lat: 35.68, lng: 139.76 },
-      }),
-    ).toEqual(loading);
-  });
-
-  it("429 + limitExceeded returns a structured rate-limited state without retry", async () => {
-    const previousFetch = global.fetch;
-    const fetchMock = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 429,
-      json: async () => ({ limitExceeded: true }),
-    });
-    global.fetch = fetchMock;
-
-    try {
-      await expect(geocodeAddress("神田")).resolves.toEqual({
-        status: "rate-limited",
-        message: "利用制限に達しました",
-      });
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    } finally {
-      global.fetch = previousFetch;
-    }
-  });
-
-  it("位置情報や詳細取得の失敗を状態として表す", () => {
-    const loading = reduceLocationListState(createInitialLocationListState(), {
-      type: "start",
-      requestId: 1,
-      operation: "detail",
-    });
-
-    expect(
-      reduceLocationListState(loading, {
-        type: "error",
-        requestId: 1,
-        message: "詳細情報を取得できませんでした",
-      }),
-    ).toMatchObject({ status: "error", error: "詳細情報を取得できませんでした" });
-  });
-
   it("距離計算と距離順を共通処理として提供する", () => {
     expect(calculateDistance(35.68, 139.76, 35.69, 139.77)).toBeGreaterThan(0);
     expect(
@@ -90,27 +165,9 @@ describe("location-list-state", () => {
     ).toBe("近い");
   });
 
-  it("住所検索の空入力・成功・429を共通状態へ変換する", async () => {
-    await expect(geocodeAddress(" ")).resolves.toEqual({
-      status: "error",
-      message: "住所を入力してください",
-    });
+  it("production sourceから旧location state/geocodeとclient GeoJSON境界を除去する", () => {
+    const violations = collectObsoleteLocationStateViolations();
 
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ success: true, results: [{ lat: 35.68, lng: 139.76 }] }),
-    });
-    await expect(geocodeAddress("神田")).resolves.toEqual({
-      status: "success",
-      position: { lat: 35.68, lng: 139.76 },
-    });
-
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 429,
-      json: async () => ({ limitExceeded: true }),
-    });
-    await expect(geocodeAddress("神田")).resolves.toMatchObject({ status: "rate-limited" });
+    expect(violations).toEqual([]);
   });
 });

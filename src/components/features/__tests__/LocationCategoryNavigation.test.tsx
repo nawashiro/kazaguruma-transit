@@ -1,0 +1,437 @@
+import React from "react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom";
+
+export {};
+
+type LocationCategory = {
+  category: string;
+  "category:en": string;
+};
+
+type LocationCategoryNavigationProps = {
+  categories: readonly LocationCategory[];
+};
+
+type PublicModule = Record<string, unknown>;
+
+type ModuleState = {
+  exports: PublicModule | null;
+  error: unknown | null;
+};
+
+const usePathname = jest.fn(() => "/locations/city_office_and_branch_offices");
+const useSearchParams = jest.fn(() => new URLSearchParams());
+const mockLoadLocationCategories = jest.fn();
+const mockLoadKeyLocationsData = jest.fn();
+
+jest.mock("next/navigation", () => ({
+  usePathname: () => usePathname(),
+  useSearchParams: () => useSearchParams(),
+}));
+
+jest.mock("@/lib/location/location-list-state", () => {
+  const actual = jest.requireActual("@/lib/location/location-list-state");
+  return {
+    ...actual,
+    loadLocationCategories: (...args: unknown[]) =>
+      mockLoadLocationCategories(...args),
+  };
+});
+
+jest.mock("@/utils/addressLoader", () => {
+  const actual = jest.requireActual("@/utils/addressLoader");
+  return {
+    ...actual,
+    loadKeyLocationsData: (...args: unknown[]) =>
+      mockLoadKeyLocationsData(...args),
+  };
+});
+
+jest.mock("next/link", () => {
+  const MockLink = React.forwardRef<
+    HTMLAnchorElement,
+    React.PropsWithChildren<
+      React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }
+    >
+  >(({ children, ...props }, ref) => (
+    <a ref={ref} {...props}>
+      {children}
+    </a>
+  ));
+  MockLink.displayName = "MockLink";
+
+  return {
+    __esModule: true,
+    default: MockLink,
+  };
+});
+
+function loadPublicModule(modulePath: string): ModuleState {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- guarded public-boundary loader
+    const loaded: unknown = require(modulePath);
+    if (typeof loaded !== "object" || loaded === null) {
+      return {
+        exports: null,
+        error: new Error(`Expected ${modulePath} to export an object`),
+      };
+    }
+    return { exports: loaded as PublicModule, error: null };
+  } catch (error) {
+    return { exports: null, error };
+  }
+}
+
+function getLocationCategoryNavigation(): React.ComponentType<LocationCategoryNavigationProps> {
+  const modulePath = "../LocationCategoryNavigation";
+  const state = loadPublicModule(modulePath);
+
+  if (state.error) {
+    const detail = state.error instanceof Error ? state.error.message : String(state.error);
+    throw new Error(
+      `LocationCategoryNavigation is not implemented: public module ${modulePath} could not be loaded (${detail})`,
+    );
+  }
+  if (!state.exports) {
+    throw new Error(
+      `LocationCategoryNavigation is not implemented: public module ${modulePath} exported nothing`,
+    );
+  }
+
+  const component = state.exports.default;
+  if (typeof component !== "function") {
+    throw new Error(
+      `LocationCategoryNavigation is not implemented: public module ${modulePath} does not export a default component`,
+    );
+  }
+
+  return component as React.ComponentType<LocationCategoryNavigationProps>;
+}
+
+const categories: readonly LocationCategory[] = [
+  {
+    category: "区役所・出張所",
+    "category:en": "city_office_and_branch_offices",
+  },
+  {
+    category: "自然環境公園",
+    "category:en": "natural environment park",
+  },
+  {
+    category: "図書館",
+    "category:en": "libraries",
+  },
+  {
+    category: "区内の公園・緑地・自然環境に関する長いカテゴリ名",
+    "category:en": "long-natural-environment-category",
+  },
+];
+
+const LOCATION_CATEGORY_PANEL_ID = "location-category-panel";
+
+const BASE_URL = "https://kazaguruma.invalid";
+
+function renderNavigation(
+  pathname = "/locations/city_office_and_branch_offices",
+  searchParams = new URLSearchParams(),
+) {
+  usePathname.mockReturnValue(pathname);
+  useSearchParams.mockReturnValue(searchParams);
+
+  const LocationCategoryNavigation = getLocationCategoryNavigation();
+  return render(<LocationCategoryNavigation categories={categories} />);
+}
+
+function getCategoryLinks(): HTMLElement[] {
+  const links = screen.getAllByRole("tab");
+  expect(links).toHaveLength(categories.length);
+  return links;
+}
+
+function expectNoLegacyLocationLoaderCalls(): void {
+  expect(mockLoadLocationCategories).not.toHaveBeenCalled();
+  expect(mockLoadKeyLocationsData).not.toHaveBeenCalled();
+}
+
+describe("LocationCategoryNavigation", () => {
+  beforeEach(() => {
+    usePathname.mockReset();
+    usePathname.mockReturnValue("/locations/city_office_and_branch_offices");
+    useSearchParams.mockReset();
+    useSearchParams.mockReturnValue(new URLSearchParams());
+    mockLoadLocationCategories.mockReset();
+    mockLoadLocationCategories.mockResolvedValue(categories);
+    mockLoadKeyLocationsData.mockReset();
+    mockLoadKeyLocationsData.mockResolvedValue(categories);
+  });
+
+  it("renders a semantic tablist with every category as a native link", () => {
+    renderNavigation();
+
+    const navigation = screen.getByRole("tablist", { name: "場所カテゴリ" });
+    expect(navigation.tagName).toBe("NAV");
+    expect(navigation).toHaveAttribute("role", "tablist");
+    expect(navigation).toHaveClass("tabs", "tabs-box");
+
+    const tabs = getCategoryLinks();
+    expect(tabs.map((tab) => tab.textContent)).toEqual(
+      categories.map(({ category }) => category),
+    );
+
+    categories.forEach(({ category, "category:en": categoryId }) => {
+      const tab = screen.getByRole("tab", { name: category });
+      expect(tab.tagName).toBe("A");
+      expect(tab).toHaveAttribute(
+        "href",
+        `/locations/${encodeURIComponent(categoryId)}`,
+      );
+      expect(navigation.contains(tab)).toBe(true);
+    });
+  });
+
+  it("uses injected categories without invoking legacy location loaders", () => {
+    renderNavigation();
+
+    expectNoLegacyLocationLoaderCalls();
+  });
+
+  it("derives the current category from pathname and exposes aria-current page", () => {
+    renderNavigation("/locations/natural%20environment%20park");
+
+    const currentTab = screen.getByRole("tab", { name: "自然環境公園" });
+    expect(currentTab).toHaveAttribute("aria-current", "page");
+    expect(currentTab).toHaveAttribute("aria-selected", "true");
+    expect(currentTab).toHaveAttribute("tabindex", "0");
+    expect(currentTab).toHaveAttribute(
+      "aria-controls",
+      LOCATION_CATEGORY_PANEL_ID,
+    );
+
+    const firstTab = screen.getByRole("tab", { name: "区役所・出張所" });
+    expect(firstTab).not.toHaveAttribute("aria-current");
+    expect(firstTab).toHaveAttribute("aria-selected", "false");
+    expect(firstTab).toHaveAttribute("tabindex", "-1");
+    expect(firstTab).toHaveAttribute(
+      "aria-controls",
+      LOCATION_CATEGORY_PANEL_ID,
+    );
+    expect(screen.getByRole("tab", { name: "図書館" })).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
+  });
+
+  it("preserves a valid origin only on category-to-category links", () => {
+    renderNavigation(
+      "/locations/city_office_and_branch_offices",
+      new URLSearchParams("origin=51.5074%2C-0.1278"),
+    );
+
+    getCategoryLinks();
+    categories.forEach(({ category, "category:en": categoryId }) => {
+      const tab = screen.getByRole("tab", { name: category });
+      expect(tab).toHaveAttribute(
+        "href",
+        `/locations/${encodeURIComponent(categoryId)}?origin=51.5074%2C-0.1278`,
+      );
+    });
+  });
+
+  it.each([
+    ["absent", new URLSearchParams()],
+    ["invalid", new URLSearchParams("origin=NaN%2C-0.1278")],
+  ] as const)(
+    "does not preserve an %s origin on category links",
+    (_state, searchParams) => {
+      renderNavigation(
+        "/locations/city_office_and_branch_offices",
+        searchParams,
+      );
+
+      getCategoryLinks().forEach((link) => {
+        const href = new URL(link.getAttribute("href") ?? "", BASE_URL);
+        expect(href.searchParams.has("origin")).toBe(false);
+      });
+    },
+  );
+
+  it.each([
+    ["detail", "/locations/location-detail/library"],
+    ["other", "/routes"],
+    ["locations entry", "/locations"],
+  ] as const)(
+    "does not attach origin when the current pathname is a %s page",
+    (_pageKind, pathname) => {
+      renderNavigation(pathname, new URLSearchParams("origin=51.5074%2C-0.1278"));
+
+      getCategoryLinks().forEach((link) => {
+        const href = new URL(link.getAttribute("href") ?? "", BASE_URL);
+        expect(href.searchParams.has("origin")).toBe(false);
+      });
+    },
+  );
+
+  it("exposes URL-backed native tabs with active-only selection state", () => {
+    renderNavigation();
+
+    const navigation = screen.getByRole("tablist", { name: "場所カテゴリ" });
+    expect(navigation.tagName).toBe("NAV");
+    expect(navigation).toHaveAttribute("role", "tablist");
+    expect(navigation).toHaveClass("tabs", "tabs-box");
+
+    const tabs = getCategoryLinks();
+    expect(navigation.querySelectorAll('a[role="tab"]')).toHaveLength(
+      categories.length,
+    );
+
+    tabs.forEach((tab, index) => {
+      const category = categories[index];
+      const isCurrent = index === 0;
+      expect(navigation.contains(tab)).toBe(true);
+      expect(tab.tagName).toBe("A");
+      expect(tab).toHaveAttribute("role", "tab");
+      expect(tab).toHaveAttribute(
+        "href",
+        `/locations/${encodeURIComponent(category?.["category:en"] ?? "")}`,
+      );
+      expect(tab).toHaveAttribute(
+        "aria-selected",
+        isCurrent ? "true" : "false",
+      );
+      expect(tab).toHaveAttribute(
+        "aria-controls",
+        LOCATION_CATEGORY_PANEL_ID,
+      );
+      expect(tab).toHaveAttribute("tabindex", isCurrent ? "0" : "-1");
+      if (isCurrent) {
+        expect(tab).toHaveAttribute("aria-current", "page");
+        expect(tab).toHaveClass("tab-active", "bg-base-100");
+      } else {
+        expect(tab).not.toHaveAttribute("aria-current");
+        expect(tab).not.toHaveClass("tab-active", "bg-base-100");
+      }
+    });
+  });
+
+  it("supports Arrow, Home, and End traversal without changing the URL", () => {
+    renderNavigation();
+
+    const tabs = getCategoryLinks();
+    const initialUrl = window.location.href;
+    const initialHrefs = tabs.map((tab) => tab.getAttribute("href"));
+    tabs[0]?.focus();
+    fireEvent.keyDown(tabs[0] as HTMLElement, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(tabs[1]);
+    expect(document.activeElement?.tagName).toBe("A");
+
+    fireEvent.keyDown(tabs[1] as HTMLElement, { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(tabs[0]);
+
+    fireEvent.keyDown(tabs[0] as HTMLElement, { key: "End" });
+    expect(document.activeElement).toBe(tabs[tabs.length - 1]);
+    expect(document.activeElement?.tagName).toBe("A");
+
+    fireEvent.keyDown(tabs[tabs.length - 1] as HTMLElement, { key: "Home" });
+    expect(document.activeElement).toBe(tabs[0]);
+    expect(document.activeElement?.tagName).toBe("A");
+
+    fireEvent.keyDown(tabs[0] as HTMLElement, { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(tabs[tabs.length - 1]);
+    fireEvent.keyDown(tabs[tabs.length - 1] as HTMLElement, {
+      key: "ArrowRight",
+    });
+    expect(document.activeElement).toBe(tabs[0]);
+
+    expect(window.location.href).toBe(initialUrl);
+    expect(tabs.map((tab) => tab.getAttribute("href"))).toEqual(initialHrefs);
+    expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+    expect(tabs.slice(1).every((tab) => tab.getAttribute("aria-selected") === "false")).toBe(
+      true,
+    );
+  });
+
+  it("keeps every category label complete, single-line, and untruncated", () => {
+    renderNavigation();
+
+    getCategoryLinks().forEach((link, index) => {
+      expect(link.textContent).toBe(categories[index]?.category);
+      expect(link).toHaveClass("whitespace-nowrap");
+      expect(link.querySelector("br")).toBeNull();
+      expect(link).not.toHaveClass(
+        "truncate",
+        "text-ellipsis",
+        "line-clamp-1",
+        "overflow-hidden",
+      );
+    });
+  });
+
+  it("keeps the CategoryTabs visual vocabulary and exposes visible focus styles", () => {
+    renderNavigation();
+
+    const navigation = screen.getByRole("tablist", { name: "場所カテゴリ" });
+    expect(navigation).toHaveClass("tabs", "tabs-box");
+
+    getCategoryLinks().forEach((link) => {
+      expect(link).toHaveClass(
+        "tab",
+        "text-base",
+        "px-4",
+        "text-base-content",
+        "ruby-text",
+        "gap-0",
+        "min-h-[44px]",
+        "min-w-[44px]",
+      );
+      expect(link).toHaveClass(
+        "focus-visible:outline",
+        "focus-visible:outline-2",
+        "focus-visible:outline-offset-2",
+      );
+
+      link.focus();
+      expect(document.activeElement).toBe(link);
+    });
+  });
+
+  it("keeps one URL-selected tab and one roving-focus entry", () => {
+    renderNavigation();
+
+    const tabs = getCategoryLinks();
+    const selectedTabs = tabs.filter(
+      (tab) => tab.getAttribute("aria-selected") === "true",
+    );
+    const focusableTabs = tabs.filter(
+      (tab) => tab.getAttribute("tabindex") === "0",
+    );
+    expect(selectedTabs).toHaveLength(1);
+    expect(focusableTabs).toHaveLength(1);
+    expect(selectedTabs[0]).toBe(focusableTabs[0]);
+    expect(selectedTabs[0]).toHaveAttribute("aria-current", "page");
+    expect(selectedTabs[0]).toHaveClass("tab-active", "bg-base-100");
+
+    tabs
+      .filter((tab) => tab !== selectedTabs[0])
+      .forEach((tab) => {
+        expect(tab).toHaveAttribute("aria-selected", "false");
+        expect(tab).toHaveAttribute("tabindex", "-1");
+        expect(tab).not.toHaveAttribute("aria-current");
+        expect(tab).not.toHaveClass("tab-active", "bg-base-100");
+      });
+  });
+
+  it("wraps link rows without page-wide horizontal overflow utility classes", () => {
+    renderNavigation();
+
+    const navigation = screen.getByRole("tablist", { name: "場所カテゴリ" });
+    const tabRow = navigation.querySelector<HTMLElement>("ul") ?? navigation;
+    expect(tabRow).toHaveClass("flex", "flex-wrap");
+    expect(navigation).not.toHaveClass("overflow-x-auto", "min-w-max");
+    expect(tabRow).not.toHaveClass("overflow-x-auto", "min-w-max");
+    expect(
+      navigation.querySelector('[class~="overflow-x-auto"]'),
+    ).toBeNull();
+    expect(navigation.querySelector('[class~="min-w-max"]')).toBeNull();
+  });
+});

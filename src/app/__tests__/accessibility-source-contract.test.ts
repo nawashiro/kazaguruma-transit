@@ -15,7 +15,7 @@ const sourceFiles = [
 const dedicatedPageFiles = [
   "src/app/login/page.tsx",
   "src/app/signup/page.tsx",
-  "src/app/location-detail/[id]/page.tsx",
+  "src/app/locations/location-detail/[id]/page.tsx",
   "src/app/rate-limit/page.tsx",
 ];
 
@@ -23,7 +23,6 @@ const dedicatedConsumerFiles = [
   ...dedicatedPageFiles,
   "src/components/auth/AuthRoutePage.tsx",
   "src/components/auth/AuthenticationForm.tsx",
-  "src/components/features/LocationCard.tsx",
   "src/components/features/OriginSelector.tsx",
   "src/components/features/DestinationSelector.tsx",
   "src/components/features/RouteSearchResults.tsx",
@@ -93,10 +92,6 @@ describe("アクセシビリティ実装契約", () => {
         /<fieldset\b/,
         /<legend\b/,
       ],
-      "src/components/features/LocationCard.tsx": [
-        /<Link\b/,
-        /encodeURIComponent\(location\.id\)/,
-      ],
       "src/components/features/OriginSelector.tsx": [
         /<form\b/,
         /<InputField\b/,
@@ -109,7 +104,7 @@ describe("アクセシビリティ実装契約", () => {
         /role=\"alert\"/,
         /source=routes/,
       ],
-      "src/app/location-detail/[id]/page.tsx": [
+      "src/app/locations/location-detail/[id]/page.tsx": [
         /PageHeader/,
         /<Link\b/,
         /params: Promise/,

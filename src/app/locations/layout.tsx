@@ -1,4 +1,7 @@
+import type { ReactNode } from "react";
 import type { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "千代田区内の施設・スポット検索 風ぐるまでいける場所",
@@ -13,10 +16,11 @@ export const metadata: Metadata = {
   },
 };
 
+/** The common locations boundary deliberately exposes no category-only UI. */
 export default function LocationsLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
-  return <>{children}</>;
+  return children;
 }

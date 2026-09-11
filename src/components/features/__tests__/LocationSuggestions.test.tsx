@@ -1,42 +1,80 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import React from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
+import type { Location } from "@/types/core";
+import type {
+  AddressCategory,
+  AddressLocation,
+} from "@/utils/addressLoader";
 import LocationSuggestions from "../LocationSuggestions";
 
+const mockConvertToLocation = jest.fn(
+  (location: AddressLocation): Location => ({
+    lat: location.lat,
+    lng: location.lng,
+    address: location.name,
+  }),
+);
+
 jest.mock("@/utils/addressLoader", () => ({
-  loadAddressData: jest.fn().mockResolvedValue([
-    {
-      category: "公共施設",
-      locations: [{ name: "千代田区役所", address: "東京都千代田区" }],
-    },
-  ]),
-  convertToLocation: jest.fn((location) => location),
+  convertToLocation: (location: AddressLocation) => mockConvertToLocation(location),
 }));
 
-const addressLoaderMock = jest.requireMock("@/utils/addressLoader") as {
-  loadAddressData: jest.Mock;
+const popularFacility: AddressLocation = {
+  name: "千代田区役所",
+  lat: 35.694,
+  lng: 139.753,
+  copyright: "千代田区",
+  licence: "CC BY 4.0",
+  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
 };
-const mockLoadAddressData = addressLoaderMock.loadAddressData;
+
+const popularCategories: AddressCategory[] = [
+  {
+    category: "公共施設",
+    "category:en": "public-facilities",
+    locations: [popularFacility],
+  },
+];
+
+type PlannedLocationSuggestionsProps = {
+  categories: AddressCategory[];
+  onLocationSelected: (location: Location) => void;
+};
+
+function renderWithInjectedCategories(
+  onLocationSelected: (location: Location) => void,
+) {
+  return render(
+    React.createElement(
+      LocationSuggestions as unknown as React.ComponentType<PlannedLocationSuggestionsProps>,
+      {
+        categories: popularCategories,
+        onLocationSelected,
+      },
+    ),
+  );
+}
 
 describe("LocationSuggestions", () => {
+  let browserFetchSpy: jest.SpyInstance;
+
   beforeEach(() => {
-    mockLoadAddressData.mockReset();
-    mockLoadAddressData.mockResolvedValue([
-      {
-        category: "公共施設",
-        locations: [{ name: "千代田区役所", address: "東京都千代田区" }],
-      },
-    ]);
+    mockConvertToLocation.mockClear();
+    browserFetchSpy = jest.spyOn(global, "fetch");
   });
 
-  it("場所選択ボタンの内容を44px領域内で中央揃えにする", async () => {
-    render(<LocationSuggestions onLocationSelected={jest.fn()} />);
+  afterEach(() => {
+    browserFetchSpy.mockRestore();
+  });
+
+  it("serverから注入されたcategoriesを使い、場所選択ボタンを44px領域内で中央揃えにする", async () => {
+    renderWithInjectedCategories(jest.fn());
 
     await waitFor(() =>
-      expect(screen.getByRole("tab", { name: "公共施設" })).toBeInTheDocument()
+      expect(screen.getByRole("tab", { name: "公共施設" })).toBeInTheDocument(),
     );
-    await act(async () => {
-      fireEvent.click(screen.getByRole("tab", { name: "公共施設" }));
-    });
+    fireEvent.click(screen.getByRole("tab", { name: "公共施設" }));
 
     const locationButton = await screen.findByRole("button", {
       name: "千代田区役所",
@@ -45,21 +83,26 @@ describe("LocationSuggestions", () => {
       "flex",
       "min-h-[44px]",
       "w-full",
-      "items-center"
+      "items-center",
     );
+    expect(browserFetchSpy).not.toHaveBeenCalled();
   });
 
-  it("施設データ取得失敗をエラーアイコン付きalertとして通知する", async () => {
-    mockLoadAddressData.mockRejectedValueOnce(
-      new Error("住所データの取得に失敗しました")
+  it("注入されたpopular施設を既存のdestination callbackへLocationとして引き渡す", async () => {
+    const onLocationSelected = jest.fn();
+    renderWithInjectedCategories(onLocationSelected);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "公共施設" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "千代田区役所" }),
     );
 
-    render(<LocationSuggestions onLocationSelected={jest.fn()} />);
-
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(/^住所データの読み込みに失敗しました$/);
-    expect(alert).toHaveAttribute("aria-live", "assertive");
-    expect(alert).toHaveClass("alert-soft", "text-base-content!");
-    expect(alert.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(browserFetchSpy).not.toHaveBeenCalled();
+    expect(mockConvertToLocation).toHaveBeenCalledWith(popularFacility);
+    expect(onLocationSelected).toHaveBeenCalledWith({
+      lat: popularFacility.lat,
+      lng: popularFacility.lng,
+      address: popularFacility.name,
+    });
   });
 });

@@ -4,7 +4,7 @@ export type SafeReturnTarget = string & {
 };
 
 /** Identifies the fixed page that originated a rate-limit state. */
-export type RateLimitSource = "home" | "locations" | "routes";
+export type RateLimitSource = "home" | "routes";
 
 /** Public states rendered by the location detail page. */
 export type LocationPageState =

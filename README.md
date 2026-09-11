@@ -108,8 +108,8 @@ npm start                # 本番環境サーバーの起動
 
 ## 開発環境のセットアップ
 
-1. 初回だけ`cp app-config.json.example app-config.json`を実行する。`app-config.json`は配布先ごとの公開設定であり、Gitでは管理しない。
-2. 生成された`app-config.json`を編集する。公開URL、GA測定ID、場所データversion、
+1. 開発者または配布先の運用者が、初回に`cp app-config.json.example app-config.json`を実行して`app-config.json`を用意する。`app-config.json`は配布先ごとの公開設定であり、Gitでは管理しない。
+2. 用意した`app-config.json`を編集する。公開URL、GA測定ID、場所データversion、
    会話設定、Ko-fi支援表示をこのファイルで設定する。
 3. GTFSを使う場合は`transit-config.json.example`を参考に`transit-config.json`を作成する。このファイルは
    URL queryに秘密情報を含む可能性があるため、Git管理・公開JSON・client bundleへ入れない。
@@ -121,8 +121,10 @@ npm start                # 本番環境サーバーの起動
    `FUNDING.yml`はGitHubの開発・配布用metadataとして残し、アプリ表示の入力には使わない。
 6. ビルド時に Prisma クライアントが自動生成され、GTFS データがインポートされます。
 
-`npm run dev`、`npm test`、`npm run build`、`npm start`は、`app-config.json`が無い場合だけ
-`app-config.json.example`から生成し、既存の配布先設定は上書きしません。
+`npm run dev`、`npm test`、`npm run build`、`npm start`は、既存の`app-config.json`の存在だけを検証します。
+ファイルがない場合は非ゼロで終了し、これらのコマンドがサンプルから自動生成することはありません。
+配布先では運用者が実際の`app-config.json`を用意してください。Quality GateのCIだけは、
+チェックアウト内に一時的な検証用コピーを明示的に作成します。実際の設定値はリポジトリへ保存・公開しません。
 
 公開設定を変更した後は、Dockerのbuild argsや追加の`.env`生成を行わず、通常の`npm run build`を実行する。
 

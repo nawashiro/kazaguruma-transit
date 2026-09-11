@@ -1,50 +1,27 @@
 "use client";
 
-import { useState, useEffect, useId, memo } from "react";
-import { CircleAlert, MapPin } from "lucide-react";
+import { useState, useId, memo } from "react";
+import { MapPin } from "lucide-react";
 import { Location } from "@/types/core";
-import {
-  AddressCategory,
-  AddressLocation,
-  loadAddressData,
-  convertToLocation,
-} from "@/utils/addressLoader";
-import { logger } from "@/utils/logger";
-import Card from "@/components/ui/Card";
+import type { AddressCategory, AddressLocation } from "@/utils/addressLoader";
+import { convertToLocation } from "@/utils/addressLoader";
 import RubyWrapper from "@/components/ui/RubyWrapper";
 import CategoryTabs from "@/components/ui/CategoryTabs";
 
 interface LocationSuggestionsProps {
+  categories?: AddressCategory[];
   onLocationSelected: (location: Location) => void;
 }
 
-function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
-  const [categories, setCategories] = useState<AddressCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function LocationSuggestions({
+  categories = [],
+  onLocationSelected,
+}: LocationSuggestionsProps) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const uniqueId = useId();
   const categoryListId = `category-list-${uniqueId}`;
   const locationListId = `location-list-${uniqueId}`;
   const sectionId = `location-section-${uniqueId}`;
-
-  useEffect(() => {
-    async function fetchAddressData() {
-      try {
-        setLoading(true);
-        const data = await loadAddressData();
-        setCategories(data);
-        setError(null);
-      } catch (err) {
-        setError("住所データの読み込みに失敗しました");
-        logger.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchAddressData();
-  }, []);
 
   const handleLocationSelect = (location: AddressLocation) => {
     onLocationSelected(convertToLocation(location));
@@ -57,33 +34,6 @@ function LocationSuggestions({ onLocationSelected }: LocationSuggestionsProps) {
       setActiveCategory(category);
     }
   };
-
-  if (loading) {
-    return (
-      <div
-        className="flex items-center justify-center"
-        aria-live="polite"
-        aria-busy="true"
-      >
-        <span
-          className="loading loading-spinner loading-lg text-primary"
-          aria-hidden="true"
-        ></span>
-        <p className="ml-3 text-lg font-medium">施設データを読み込み中...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="mb-6 overflow-hidden">
-        <div className="alert alert-error alert-soft text-base-content!" role="alert" aria-live="assertive">
-          <CircleAlert className="stroke-current shrink-0 h-6 w-6" aria-hidden="true" />
-          <p>{error}</p>
-        </div>
-      </Card>
-    );
-  }
 
   return (
     <div data-testid={sectionId}>

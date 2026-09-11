@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Location } from "@/types/core";
+import type { AddressCategory } from "@/utils/addressLoader";
 import LocationSuggestions from "./LocationSuggestions";
 import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
@@ -11,10 +12,12 @@ import { Search } from "lucide-react";
 
 interface DestinationSelectorProps {
   onDestinationSelected: (location: Location) => void;
+  categories?: AddressCategory[];
 }
 
 export default function DestinationSelector({
   onDestinationSelected,
+  categories = [],
 }: DestinationSelectorProps) {
   const [address, setAddress] = useState("");
   const handleSelected = useCallback((location: Location) => onDestinationSelected(location), [onDestinationSelected]);
@@ -31,7 +34,10 @@ export default function DestinationSelector({
 
   return (
     <Card title="目的地を選択してください" className="mb-6">
-        <LocationSuggestions onLocationSelected={handleLocationSelected} />
+        <LocationSuggestions
+          categories={categories}
+          onLocationSelected={handleLocationSelected}
+        />
 
         <div className="divider">または</div>
 

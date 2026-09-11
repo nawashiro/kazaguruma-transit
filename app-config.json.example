@@ -2,6 +2,9 @@
   "appUrl": "http://localhost:3000",
   "gaMeasurementId": "G-RD0ELFR3RW",
   "locationsDataVersion": "2.1.1",
+  "mainFacilitiesUri": "https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@v2.1.1/kazaguruma_json_min/main_facilities.json",
+  "keyLocationsUri": "https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@v2.1.1/kazaguruma_json_min/key_locations.json",
+  "townGeoJsonUri": "https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_town_geojson@latest/chiyoda_city.json",
   "discussion": {
     "enabled": true,
     "adminPubkey": "npub1expp2ptfvemx6w40ks68rnrj6kdfmlfgsk4dy73nmgckshmulmuqssjd3w",

@@ -65,7 +65,7 @@ COPY . .
 # 一時的なデータベースファイルを削除
 RUN rm -rf prisma/.temp
 
-# 配布先固有の設定がなければ、追跡済みの公開設定例から生成
+# 配布先固有の公開設定が用意されていることだけを検証
 RUN node scripts/ensure-app-config.mjs
 
 # ビルド実行

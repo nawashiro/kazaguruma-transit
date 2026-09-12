@@ -1,6 +1,20 @@
 # 風ぐるま乗換案内
 
-千代田区の地域福祉交通「風ぐるま」の経路検索と時刻表を提供する非公式ウェブアプリです。
+障害者・高齢者・支援者を対象に、地域福祉交通を利用した移動計画を支援するウェブアプリケーションです。
+
+千代田区地域福祉交通「風ぐるま」利用者向けに、時刻表検索・ほかを提供しています。
+
+[ライセンス](#%E3%83%A9%E3%82%A4%E3%82%BB%E3%83%B3%E3%82%B9)を守って好きに使ってください。
+
+## 地域福祉交通とは
+
+大手交通機関が定型な労働者とみなさない人のための移動手段のことです。
+
+## だいじなこと（[constitution](docs//constitution.md) 抜粋）
+
+- ユーザーが必要に応じた目的地を選定できること。
+- ユーザーが制約のある手段で無理のない移動計画を得られること。
+- ユーザーが移動計画に含まれる障害を事前に得られること。
 
 ## 前提
 
@@ -19,18 +33,9 @@ git switch dev
 npm ci
 ```
 
-既存のcheckoutでは、変更前に状態を確認します。
-
-```bash
-git status --short --branch
-git switch dev
-git pull --ff-only origin dev
-git switch -c docs/<short-task-name>
-```
-
 ### 設定ファイル
 
-公開設定とサーバー設定を分けます。
+次の3ファイルを置いてください。
 
 ```bash
 cp app-config.json.example app-config.json
@@ -38,31 +43,25 @@ cp .env.local.example .env.local
 cp transit-config.json.example transit-config.json
 ```
 
-- `app-config.json`に配布先の`appUrl`、`gaMeasurementId`、場所データのURI、会話設定、お知らせ、支援表示を設定します。このファイルは公開設定ですが、Gitで管理しません。
-- `.env.local`にサーバー専用の設定を置きます。少なくとも`GOOGLE_MAPS_API_KEY`を設定し、必要に応じて`PUPPETEER_EXECUTABLE_PATH`を追加します。
-- `transit-config.json`にGTFS取得設定を置きます。URL queryに秘密情報を含められるため、Git、公開JSON、client bundleへ入れません。
-- 本番Composeは`.env`を読みます。`CLOUDFLARE_TUNNEL_TOKEN`などの秘密値を`.env`へ置き、リポジトリへ保存しません。
+`秘密` と `公開` を分けます。`秘密` をコミットしないでください。`公開` に秘密情報を書かないでください。
 
-`app-config.json`がない場合、`npm run dev`、`npm test`、`npm run build`、`npm start`は非ゼロで終了します。これらのコマンドは`app-config.json.example`から自動生成しません。Quality Gateだけがcheckout内へ一時コピーを作ります。
+| ファイル名 | 機密性 | 説明 |
+| --- | --- | --- |
+| `app-config.json` | 公開 | `appUrl`、`gaMeasurementId`、場所データのURI、会話設定、お知らせ、支援表示を設定します。 |
+| `.env.local` | 秘密 | 開発サーバーの設定を置きます。`GOOGLE_MAPS_API_KEY`（必須）、`PUPPETEER_EXECUTABLE_PATH`（任意）を設定します。 |
+| `transit-config.json` | 秘密 | GTFS取得URLを設定します。 |
+| `.env` | 秘密 | 本番Composeの設定です。`CLOUDFLARE_TUNNEL_TOKEN`などの秘密値を設定します。 |
 
-### 変更前の検証
-
-設定ファイルを用意した後、変更前の状態で次を実行します。
-
-```bash
-npm run lint
-npx tsc --noEmit --incremental false
-npm run build
-npm test -- --runInBand --ci
-```
+`app-config.json`がない場合、`npm run dev`、`npm test`、`npm run build`、`npm start`は非ゼロで終了します。Quality Gateだけが`app-config.json.example`を一時コピーし、設定として利用します。
 
 ## 開発
 
+ビルド生成物を用意し、開発サーバーを起動します。
+
 ```bash
+npm run build
 npm run dev
 ```
-
-`npm run dev`は`app-config.json`の存在を確認し、Prisma Clientを生成してTurbopackを起動します。`predev`は場所データartifactを生成しません。`public/generated/location-data.json`がない場合は、先に`npm run build`を実行します。
 
 反復してテストするときは、次のコマンドを使います。
 
@@ -80,21 +79,19 @@ npm run test:watch
 
 ## 目的別の文書
 
-| 目的 | 入口 |
-| --- | --- |
-| 開発、OpenSpec、検証 | [development-workflow](docs/how-to/development-workflow.md) |
-| Google Analytics設定 | [analytics](docs/how-to/analytics.md) |
-| Docker開発・本番構成 | [docker-setup](docs/how-to/docker-setup.md) |
-| SEOの現行実装 | [seo-optimization](docs/how-to/seo-optimization.md) |
-| ライセンス情報の更新 | [license-page](docs/how-to/license-page.md) |
-| ディスカッションの実装事実 | [discussion reference](docs/reference/discussion.md) |
-| 評価機能の実装事実 | [evaluation function reference](docs/reference/evaluation-function.md) |
-| UI設計の背景 | [frontend design](docs/explanation/frontend-design.md) |
-| 開発原則 | [constitution](docs/reference/constitution.md) |
-| 文書執筆規範 | [writing-style](docs/reference/writing-style.md) |
-| 技術スタック | [technology-stack](docs/reference/technology-stack.md) |
-
-開発原則、執筆規範、技術スタックは対応する正本を参照します。履歴資料を現行仕様の入口にしません。
+| 分類 | 目的 | 入口 |
+| --- | --- | --- |
+| how-to | 開発、OpenSpec、検証 | [development-workflow](docs/how-to/development-workflow.md) |
+| how-to | Google Analytics設定 | [analytics](docs/how-to/analytics.md) |
+| how-to | Docker開発・本番構成 | [docker-setup](docs/how-to/docker-setup.md) |
+| how-to | SEOの現行実装 | [seo-optimization](docs/how-to/seo-optimization.md) |
+| how-to | ライセンス情報の更新 | [license-page](docs/how-to/license-page.md) |
+| reference | 開発憲章 | [constitution](docs//constitution.md) |
+| reference | ディスカッションの実装事実 | [discussion reference](docs/reference/discussion.md) |
+| reference | 評価機能の実装事実 | [evaluation function reference](docs/reference/evaluation-function.md) |
+| reference　| 文書執筆規範 | [writing-style](docs/reference/writing-style.md) |
+| reference　| 技術スタック | [technology-stack](docs/reference/technology-stack.md) |
+| explanation | UI設計の背景 | [frontend design](docs/explanation/frontend-design.md) |
 
 ## Quality Gate
 
@@ -104,4 +101,4 @@ Pull Request後は、最新commitに対する`Quality Gate`のCheckが完了し�
 
 ## ライセンス
 
-本ソフトウェアのライセンスは[AGPL-3.0](LICENSE)です。
+本ソフトウェアのライセンスは[AGPL-3.0](LICENSE)です。非規範な日本語訳は[こちら](https://gpl.mhatta.org/agpl.ja.html)をご覧ください。

@@ -83,7 +83,7 @@ DaisyUI公式のButton/Cardドキュメントを確認した。
 
 - `5a541d3` は経路結果のリセットリンクを、親リンクを `ruby-text` にしたうえでプレーンなspanへ変更していた。
 - その変更は「ルビ対象と表示文字列を分ける」過去仕様を示すが、今回のユーザー指示により、さらに親の意味要素へルビ指定を寄せ、不要なspan自体を削除する。
-- `docs/ui-kiss-principle-review.md` は共通Buttonの自動 `ruby-text` ラッパーを過剰な責務として指摘している。Issue #106ではこの指摘のうち、既存挙動を壊さない最小境界として、共通Buttonの構造ラッパー撤去と `gap-0` 明示までを扱う。Button API全体の再設計は対象外とする。
+- `docs/records/ui-kiss-principle-review.md` は共通Buttonの自動 `ruby-text` ラッパーを過剰な責務として指摘している。Issue #106ではこの指摘のうち、既存挙動を壊さない最小境界として、共通Buttonの構造ラッパー撤去と `gap-0` 明示までを扱う。Button API全体の再設計は対象外とする。
 
 ## 6. 根本原因と実装境界
 

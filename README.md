@@ -1,178 +1,107 @@
-## プロジェクト概要
+# 風ぐるま乗換案内
 
-これは千代田区の福祉バス「風ぐるま」の非公式ウェブアプリケーションです。地域バスサービスの経路検索および時刻表情報を提供します。
+千代田区の地域福祉交通「風ぐるま」の経路検索と時刻表を提供する非公式ウェブアプリです。
 
-## 主要コマンド
+## 前提
 
-### 作業開始
+- Git
+- Node.js 22.x
+- npm
 
-```bash
-./scripts/start-work.sh
-```
+## 初回準備
 
-通常の開発は `dev` から開始します。ブランチ整理の判断根拠と開始手順は [docs/development-handoff.md](docs/development-handoff.md) を参照してください。
-
-### 開発
+### Cloneと依存関係
 
 ```bash
-npm run dev          # Turbopackを使用した開発サーバーの起動
-npm install          # 依存関係のインストール
+git clone https://github.com/nawashiro/kazaguruma-transit
+cd kazaguruma-transit
+git switch dev
+npm ci
 ```
 
-### テスト
+既存のcheckoutでは、変更前に状態を確認します。
 
 ```bash
-npm test             # Jestテストの実行
-npm test:watch       # Jestをウォッチモードで実行
-npm run lint         # ESLintによるコードチェック
-npx tsc --noEmit     # TypeScriptの型チェックのみ実行
+git status --short --branch
+git switch dev
+git pull --ff-only origin dev
+git switch -c docs/<short-task-name>
 ```
 
-### アクセシビリティ検査
+### 設定ファイル
 
-Lighthouseで主要ページを検査します。アクセシビリティカテゴリに加えて、WCAG 2.2の1.4.3（コントラスト最低）の検査に対応する`color-contrast`監査も実行します。各ページのHTML／JSONレポートは`artifacts/lighthouse/`に保存されます。
+公開設定とサーバー設定を分けます。
 
 ```bash
-# 既に http://127.0.0.1:3000 で開発サーバーを起動している場合
-npm run a11y
-
-# 開発サーバーを起動してから検査する場合（違反時は終了コード1）
-npm run accessibility:ci
-
-# 開発サーバーを起動済みの環境でstrict検査する場合
-npm run accessibility:strict
+cp app-config.json.example app-config.json
+cp .env.local.example .env.local
+cp transit-config.json.example transit-config.json
 ```
 
-`npm run a11y`は確認用の警告モード、`accessibility:strict`と`accessibility:ci`は違反時に失敗するstrictモードです。既定では`/`、`/beginners-guide`、`/locations`、`/license`、`/login`を検査します。対象URLやページを変更する場合は、次の環境変数を指定できます。
+- `app-config.json`に配布先の`appUrl`、`gaMeasurementId`、場所データのURI、会話設定、お知らせ、支援表示を設定します。このファイルは公開設定ですが、Gitで管理しません。
+- `.env.local`にサーバー専用の設定を置きます。少なくとも`GOOGLE_MAPS_API_KEY`を設定し、必要に応じて`PUPPETEER_EXECUTABLE_PATH`を追加します。
+- `transit-config.json`にGTFS取得設定を置きます。URL queryに秘密情報を含められるため、Git、公開JSON、client bundleへ入れません。
+- 本番Composeは`.env`を読みます。`CLOUDFLARE_TUNNEL_TOKEN`などの秘密値を`.env`へ置き、リポジトリへ保存しません。
+
+`app-config.json`がない場合、`npm run dev`、`npm test`、`npm run build`、`npm start`は非ゼロで終了します。これらのコマンドは`app-config.json.example`から自動生成しません。Quality Gateだけがcheckout内へ一時コピーを作ります。
+
+### 変更前の検証
+
+設定ファイルを用意した後、変更前の状態で次を実行します。
 
 ```bash
-LIGHTHOUSE_BASE_URL=https://staging.example.test \
-LIGHTHOUSE_ROUTES=/,/beginners-guide \
-npm run a11y
+npm run lint
+npx tsc --noEmit --incremental false
+npm run build
+npm test -- --runInBand --ci
 ```
 
-既定の警告をCIエラーに昇格する場合は`LIGHTHOUSE_ASSERTION_LEVEL=error`を指定してください。Chromeの起動引数を追加する必要がある環境では`LIGHTHOUSE_CHROME_FLAGS`で指定できます。自動検査だけでは判断できない動的コンテンツ、キーボード操作、実際の支援技術との組み合わせは、手動確認も必要です。
-
-### データベース & ビルド
+## 開発
 
 ```bash
-npm run prisma:generate  # Prismaクライアントの生成
-npm run prisma:migrate   # データベースマイグレーションの実行
-npm run prisma:studio    # Prisma Studioの起動
-npm run import-gtfs      # GTFS交通データのインポート
-npm run build            # 本番環境向けフルビルド（GTFSインポートを含む）
-npm start                # 本番環境サーバーの起動
+npm run dev
 ```
 
-## アーキテクチャ
+`npm run dev`は`app-config.json`の存在を確認し、Prisma Clientを生成してTurbopackを起動します。`predev`は場所データartifactを生成しません。`public/generated/location-data.json`がない場合は、先に`npm run build`を実行します。
 
-### 主要コンポーネント
+反復してテストするときは、次のコマンドを使います。
 
-- **Next.js 15** with App Router および React 19 を採用
-- **Prisma ORM**と SQLite を使用した GTFS 交通データ管理
-- **DaisyUI + Tailwind CSS**による UI コンポーネント
-- **交通サービス層**（`src/lib/transit/`）：経路アルゴリズムを実装
-- **Nostr 統合機能**（`src/lib/nostr/`）：分散型ディスカッション機能を実装
+```bash
+npm run test:watch
+```
 
-### データベーススキーマ
+経路検索は直通または最大1回乗換の経路を扱います。
 
-本アプリケーションは GTFS（General Transit Feed Specification）形式のデータを SQLite に格納しています：
+## 生成artifact
 
-- 交通データ用の`Stop`、`Route`、`Trip`、`StopTime`モデル
-- スケジュール管理用の`Calendar`、`CalendarDate`
-- API レート制限用の`RateLimit`
+`npm run build`の`prebuild`が`tsx scripts/generate-location-artifact.ts`を実行し、`app-config.json`の3つのデータURIから検証済みの`public/generated/location-data.json`を生成します。
 
-### 主要サービス
+`public/generated/location-data.json`は生成artifactです。直接編集せず、入力設定を変更して`npm run build`で再生成します。
 
-- **TransitService**（`src/lib/transit/transit-service.ts`）：経路検索、停留所検索、時刻表問い合わせを統括するメインサービスクラス
-- **TimeTableRouter**（`src/lib/transit/route-algorithm.ts`）：ダイクストラ法に基づく経路探索アルゴリズムを実装
-- **NostrService**（`src/lib/nostr/nostr-service.ts`）：ディスカッション機能のための Nostr プロトコル通信を処理
-- **EvaluationService**（`src/lib/evaluation/evaluation-service.ts`）：Polis ベースの合意形成分析によるディスカッション投稿評価
-- **API 保護用レート制限ミドルウェア**
+## 目的別の文書
 
-### API 構造
+| 目的 | 入口 |
+| --- | --- |
+| 開発、OpenSpec、検証 | [development-workflow](docs/how-to/development-workflow.md) |
+| Google Analytics設定 | [analytics](docs/how-to/analytics.md) |
+| Docker開発・本番構成 | [docker-setup](docs/how-to/docker-setup.md) |
+| SEOの現行実装 | [seo-optimization](docs/how-to/seo-optimization.md) |
+| ライセンス情報の更新 | [license-page](docs/how-to/license-page.md) |
+| ディスカッションの実装事実 | [discussion reference](docs/reference/discussion.md) |
+| 評価機能の実装事実 | [evaluation function reference](docs/reference/evaluation-function.md) |
+| UI設計の背景 | [frontend design](docs/explanation/frontend-design.md) |
+| 開発原則 | [constitution](docs/reference/constitution.md) |
+| 文書執筆規範 | [writing-style](docs/reference/writing-style.md) |
+| 技術スタック | [technology-stack](docs/reference/technology-stack.md) |
 
-メイン API エンドポイント`/api/transit`は以下の処理を担当：
+開発原則、執筆規範、技術スタックは対応する正本を参照します。履歴資料を現行仕様の入口にしません。
 
-- 経路問い合わせ（type: "route"）
-- 停留所検索（type: "stop"）
-- 時刻表リクエスト（type: "timetable"）
+## Quality Gate
 
-### 経路探索アルゴリズム
+[`.github/workflows/quality-gate.yml`](.github/workflows/quality-gate.yml)は`dev`または`master`へのpushとPull Requestを検査します。Node.js 22.xを使い、設定ファイルを一時準備し、`npm ci`、ESLint、strict TypeScript、`npm run build`、production serverの起動、Jestを実行します。
 
-2 つの探索戦略を採用：
+Pull Request後は、最新commitに対する`Quality Gate`のCheckが完了し、成功したことを確認します。失敗時は対象commitとworkflow logを確認してから修正します。
 
-1. **従来型探索**：起点/終点に最も近い停留所を使用
-2. **速度優先探索**：最適な経路のため周辺の複数停留所を考慮
-3. 直行便と乗り換えルートの両方に対応（最大 2 回乗り換え、3 時間の時間枠）
+## ライセンス
 
-## 開発環境のセットアップ
-
-1. 開発者または配布先の運用者が、初回に`cp app-config.json.example app-config.json`を実行して`app-config.json`を用意する。`app-config.json`は配布先ごとの公開設定であり、Gitでは管理しない。
-2. 用意した`app-config.json`を編集する。公開URL、GA測定ID、場所データversion、
-   会話設定、Ko-fi支援表示をこのファイルで設定する。
-3. GTFSを使う場合は`transit-config.json.example`を参考に`transit-config.json`を作成する。このファイルは
-   URL queryに秘密情報を含む可能性があるため、Git管理・公開JSON・client bundleへ入れない。
-4. `.env.local`にserver/deployment専用の環境変数を設定する。
-   - `GOOGLE_MAPS_API_KEY`
-   - `CLOUDFLARE_TUNNEL_TOKEN`（必要な場合）
-   - `PUPPETEER_EXECUTABLE_PATH`（必要な場合）
-5. Ko-fiの見出し・説明文・ユーザー名・表示可否は`app-config.json`の`support`を編集する。
-   `FUNDING.yml`はGitHubの開発・配布用metadataとして残し、アプリ表示の入力には使わない。
-6. ビルド時に Prisma クライアントが自動生成され、GTFS データがインポートされます。
-
-`npm run dev`、`npm test`、`npm run build`、`npm start`は、既存の`app-config.json`の存在だけを検証します。
-ファイルがない場合は非ゼロで終了し、これらのコマンドがサンプルから自動生成することはありません。
-配布先では運用者が実際の`app-config.json`を用意してください。Quality GateのCIだけは、
-チェックアウト内に一時的な検証用コピーを明示的に作成します。実際の設定値はリポジトリへ保存・公開しません。
-
-公開設定を変更した後は、Dockerのbuild argsや追加の`.env`生成を行わず、通常の`npm run build`を実行する。
-
-## テスト
-
-- React Testing Library を使用した Jest テスト
-- `__tests__`ディレクトリ内のテストファイルまたは`.test.ts/.test.tsx`形式のファイル
-- 外部依存関係のモックは`__mocks__/`および`src/__mocks__/`ディレクトリに配置
-
-## ファイル構造に関する注意点
-
-- コンポーネントは TypeScript を使用し、厳格な型チェックを実施
-- 日本語テキスト表示用の Ruby テキストサポートを実装
-- 経路情報の PDF エクスポート機能を装備
-- Google Maps 連携による位置情報サービスを採用
-- Google Analytics 4 を使用した分析機能を実装
-
-## 重要な設計パターン
-
-- TransitService クラスはシングルトンパターンを採用
-- エラー境界処理とローディング状態管理を実装
-- ARIA ラベルを使用したアクセシブルな UI 設計
-- API エンドポイントへのレート制限を適用
-- SEO 最適化のための構造化データ実装
-
-## UI
-
-UI には Tailwind + DaisyUI5 を採用しています。
-
-## img
-
-画像は外部 URL から読み込む場合があります。この場合、Image コンポーネントは使用できず、img タグを使用します。
-
-## btn
-
-daisyui のカップケーキ型角丸処理が機能しない場合があるため、`rounded-full dark:rounded-sm`を使用しています。
-
-## ディスカッション機能
-
-本アプリケーションには Nostr ベースの分散型ディスカッション機能を実装しています：
-
-- **NIP-72 準拠**：kind:34550（コミュニティ定義）と kind:4550（承認イベント）をサポートし、モデレートされたコミュニティを実現
-- **NIP-25 リアクション機能**：kind:7 イベントを使用して投稿評価を実施（評価タグではなくコンテンツベースの評価）
-- **合意形成分析**：Polis 風のアルゴリズムを実装し、投稿に対するグループ合意形成を分析
-- **権限管理システム**：作成者とモデレーターベースのアクセス制御を採用（ディスカッションにはグローバル管理者を設けない設計）
-
-### 主要プロトコル
-
-- 投稿には kind:1111（コミュニティ投稿）を使用（kind:1 との後方互換性あり）
-- 評価には kind:7 を使用し、コンテンツフィールドを採用（"-"で否定評価、その他は肯定評価として処理）
-- 承認システムでは、承認イベントのコンテンツフィールドに元の投稿データを保存
+本ソフトウェアのライセンスは[AGPL-3.0](LICENSE)です。

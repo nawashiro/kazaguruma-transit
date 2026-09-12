@@ -11,7 +11,7 @@ const publicBoundaryFiles = [
   "compose.prod.yml",
   ".env.local.example",
   "README.md",
-  "docs/manual/analytics.md",
+  "docs/how-to/analytics.md",
   "app-config.json.example",
   ".github/workflows/quality-gate.yml",
   "scripts/ensure-app-config.mjs",

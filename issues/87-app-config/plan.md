@@ -164,11 +164,11 @@ Jest、React Testing Library、Prisma、GTFS
 - `compose.prod.yml`
 - `.env.local.example`
 - `README.md`
-- `docs/manual/analytics.md`
+- `docs/how-to/analytics.md`
 - `scripts/ensure-app-config.mjs`
 - `.github/workflows/quality-gate.yml`
 - `package.json`
-- `docs/manual/docker_setup.md`
+- `docs/how-to/docker-setup.md`
 - `issues/87-app-config/` 配下の関連文書
 - `ko-fi-content.json.example`（削除）
 ### 変更禁止

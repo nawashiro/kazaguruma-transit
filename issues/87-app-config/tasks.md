@@ -108,7 +108,7 @@
 ## Phase 6: Docker公開注入・開発文書移行（US1/US3）
 
 - [x] T021 [US3] Docker/文書実装: `.gitignore`、`AGENTS.md`、`Dockerfile.dev`、`Dockerfile.prod`、`compose.yml`、`compose.prod.yml`、`.env.local.example`、
-  `README.md`、`docs/manual/analytics.md`、`docs/manual/docker_setup.md`、`package.json`、CI workflow、生成scriptを変更し、public build args、public `.env`生成、env exampleの`NEXT_PUBLIC_*`列挙を除去する。
+  `README.md`、`docs/how-to/analytics.md`、`docs/how-to/docker-setup.md`、`package.json`、CI workflow、生成scriptを変更し、public build args、public `.env`生成、env exampleの`NEXT_PUBLIC_*`列挙を除去する。
   `app-config.json.example`からignored `app-config.json`を必要時だけ生成する手順を文書化し、`GOOGLE_MAPS_API_KEY`、Cloudflare token、Puppeteer設定、`transit-config.json` secret mountを維持する。
   `.dockerignore`のtransit secret除外、build secret mount、`FUNDING.yml`、package/license metadataは変更しない。
 - [x] T022 [US3] Docker/文書親検証: `__tests__/app-config-contract.test.ts`、`__tests__/docker-secret-handling.test.ts`を再実行し、

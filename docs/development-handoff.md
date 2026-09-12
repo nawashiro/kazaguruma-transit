@@ -1,6 +1,6 @@
 # Development Handoff
 
-Last reviewed: 2026-07-09
+Last reviewed: 2026-09-12
 
 ## Default Branch
 
@@ -23,29 +23,35 @@ From the repository root:
 
 The script fetches remotes, switches to `dev`, fast-forwards it from `origin/dev`, installs dependencies with `npm ci` when needed, and generates the Prisma client.
 
-## Spec Kit
+## OpenSpec
 
-This repository is initialized with the official GitHub Spec Kit CLI (`specify 0.12.8`) using the Codex integration.
-
-Official project-local skills live in `.agents/skills/`:
+This repository uses OpenSpec (`@fission-ai/openspec` 1.13.0 at migration time) with the Hermes Agent integration. Current planning artifacts live under `openspec/`:
 
 ```text
-$speckit-specify
-$speckit-plan
-$speckit-tasks
-$speckit-implement
-$speckit-converge
+openspec/config.yaml
+openspec/specs/
+openspec/changes/
+openspec/changes/archive/
 ```
 
-Useful CLI checks:
+The former Spec Kit assets are preserved under `archive/v2/` and are historical only. OpenSpec artifacts are written in Japanese; structural headings and `SHALL`/`MUST` keywords remain in English.
+
+Initialize or refresh the project integration with the current CLI:
 
 ```bash
-specify --version
-specify check
-.specify/scripts/bash/create-new-feature.sh --dry-run --json --short-name example "Example feature"
+npx -y @fission-ai/openspec@latest init --tools hermes --language ja --no-animation
+npx -y @fission-ai/openspec@latest update
 ```
 
-Use `.specify/memory/constitution.md` as the project constitution. The repository keeps its customized constitution; Spec Kit generated scripts, templates, integration metadata, and workflow files are maintained under `.specify/`.
+Useful checks:
+
+```bash
+npx -y @fission-ai/openspec@latest --version
+npx -y @fission-ai/openspec@latest list --json
+npx -y @fission-ai/openspec@latest validate --all --json
+```
+
+The Hermes workflow skills generated in `.hermes/skills/` are project-local and intentionally excluded from Git. On a new machine, run `hermes skills trust` from this repository before using the OpenSpec slash commands.
 
 ## Branch Inventory
 

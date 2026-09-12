@@ -64,7 +64,7 @@ GTFS設定やAPI keyが含まれていないことを確認する。
 - Google Maps API key、Cloudflare token、Puppeteerのserver-only環境変数をJSONへ移すこと。
 - `FUNDING.yml`、`package.json`、`/license`のmetadata自体を削除または再設計すること。
 - Nostr protocol、認証、relay通信、UI構造、既存の支援リンク形式を変更すること。
-- 過去の`specs/`に保存された履歴上の`NEXT_PUBLIC_*`文字列を改稿すること。
+- 過去の`archive/v2/specs/`に保存された履歴上の`NEXT_PUBLIC_*`文字列を改稿すること。
 
 ## Assumptions
 

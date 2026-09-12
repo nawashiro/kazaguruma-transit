@@ -6,7 +6,7 @@
 
 ## 憲章ゲート
 
-根拠文書は`AGENTS.md`と`.specify/memory/constitution.md`（Version 3.0.0）である。
+根拠文書は`AGENTS.md`と`archive/v2/.specify/memory/constitution.md`（Version 3.0.0）である。
 
 - **Clear Naming:** `buildAuthRoute`、`buildSignupRoute`など、認証モードと動作を表す名前を使う。
 - **Simple Logic:** URL生成は共通関数へ集約し、settingsの表示はリンク2つの単純な分岐にする。余計な状態や自動再試行は追加しない。

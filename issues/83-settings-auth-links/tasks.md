@@ -20,7 +20,7 @@
 
 ## Phase 1: 事実確認と準備
 
-- [x] T001 Issue本文・全コメント、`AGENTS.md`、`.specify/memory/constitution.md`、既存の認証・settings・moderator・global CSS実装を確認する。
+- [x] T001 Issue本文・全コメント、`AGENTS.md`、`archive/v2/.specify/memory/constitution.md`、既存の認証・settings・moderator・global CSS実装を確認する。
 - [x] T002 `git fetch origin dev`、base SHA、branch、clean status、LFS status/fsck、重複PRと関連履歴を確認する。
 - [x] T003 baseline対象suiteを実行し、既存GREEN、環境障害（Jest一括SIGBUS、壊れたNext SWC）、LFS障害を記録する。
 - [x] T004 `issues/83-settings-auth-links/research.md`と`plan.md`を作成し、憲章gate、受入基準、変更境界、未対応の理由を固定する。

@@ -38,7 +38,7 @@
 
 ## 憲章ゲート
 
-根拠は `AGENTS.md` と `.specify/memory/constitution.md` Version 4.0.0である。憲章では `AGENTS.md` を実務上の正本とし、計画・実装・レビューで次を確認する。
+根拠は `AGENTS.md` と `archive/v2/.specify/memory/constitution.md` Version 4.0.0である。憲章では `AGENTS.md` を実務上の正本とし、計画・実装・レビューで次を確認する。
 
 | 原則・制約 | Issue #131での適用 | 判定 |
 |---|---|---|

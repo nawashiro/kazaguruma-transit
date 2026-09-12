@@ -22,7 +22,7 @@ status=## fix/issue-121-award-data-kiss...origin/dev
 git diff --check=exit 0
 ```
 
-リポジトリの実務上の規約は`AGENTS.md`、Spec Kit互換の憲章は`.specify/memory/constitution.md` Version 4.0.0である。実装前に両方を読み、作業言語、KISS、TypeScript strict、TDD、Jest・lint・build検証、既存UIとアクセシビリティ維持を適用する。
+リポジトリの実務上の規約は`AGENTS.md`、Spec Kit互換の憲章は`archive/v2/.specify/memory/constitution.md` Version 4.0.0である。実装前に両方を読み、作業言語、KISS、TypeScript strict、TDD、Jest・lint・build検証、既存UIとアクセシビリティ維持を適用する。
 
 Node.jsはリポジトリ指定の22.xとして、環境内の`v22.23.2`を使用する。
 
@@ -63,7 +63,7 @@ Issue #121を対象とするPRはない。「award data」には該当PRがな�
 基準SHAでproduction sourceを検索した結果は次のとおりである。
 
 ```text
-git grep -n 'award-data\|AWARD_' -- ':!issues/*' ':!specs/*'
+git grep -n 'award-data\|AWARD_' -- ':!issues/*' ':!archive/v2/specs/*'
 ```
 
 該当するimportは次の1箇所だけである。

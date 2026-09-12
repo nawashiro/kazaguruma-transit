@@ -13,7 +13,7 @@
 ## 実行規約
 
 - 作業言語は日本語とする。
-- `AGENTS.md` と `.specify/memory/constitution.md` の原則を適用する。
+- `AGENTS.md` と `archive/v2/.specify/memory/constitution.md` の原則を適用する。
 - TDDでテストを先に変更し、実装前にcollection/setupではない意味のあるREDを確認する。
 - テスト実装タスクの直後に、別fresh read-only subagentによるレビュータスクを置く。必須結果は次のとおり。
 

@@ -11,7 +11,7 @@
 ## 実行規約
 
 - 作業言語は日本語とする。
-- `AGENTS.md` と `.specify/memory/constitution.md` の命名、型安全性、単純性、文書化、検証方針を適用する。
+- `AGENTS.md` と `archive/v2/.specify/memory/constitution.md` の命名、型安全性、単純性、文書化、検証方針を適用する。
 - 今回はsecurity maintenanceであり、behavior TDDを作業の中心にしない。ただし既存security testを後退防止のcontractとして先に更新し、依存変更前に意味のある境界確認を行う。
 - writerは自分のhard writable pathsだけを変更し、commit、push、reset、clean、stageを行わない。
 - `src/**`（ただし`src/app/api/pdf/generate/route.ts`のnetwork idle待機の型互換だけを許可）、Docker、Prisma、GTFS、Lighthouse、既存spec/docs（本Issue文書を除く）は凍結する。

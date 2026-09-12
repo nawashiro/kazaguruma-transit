@@ -175,7 +175,7 @@ server/deployment設定として残す。Docker secret mountは維持し、公�
 - Google Maps API key、Cloudflare token、Puppeteer環境変数
 - `FUNDING.yml`・`package.json`のGitHub/npm metadata自体
 - Nostr protocol、relay通信、認証、Prisma/SQLite、UI構造
-- 過去の `specs/` に保存された履歴上の `NEXT_PUBLIC_*` 記述
+- 過去の `archive/v2/specs/` に保存された履歴上の `NEXT_PUBLIC_*` 記述
 
 ## 6. 基準検証
 

@@ -2,7 +2,7 @@
 
 **Issue**: [#120](https://github.com/nawashiro/kazaguruma-transit/issues/120)
 
-**入力**: `issues/120-description-copy/investigation.md`、`AGENTS.md`、`.specify/memory/constitution.md`
+**入力**: `issues/120-description-copy/investigation.md`、`AGENTS.md`、`archive/v2/.specify/memory/constitution.md`
 
 **Repository**: `/opt/data/kazaguruma-transit`
 

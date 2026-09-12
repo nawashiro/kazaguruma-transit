@@ -21,7 +21,7 @@
 ## Phase 1: 調査・設計
 
 - [x] T001 Issue #98本文・コメント・状態・関連PRを確認し、Issue本文が保存後自動遷移の抑制と明示リンクを求めていることを記録する。
-- [x] T002 `dev`を`origin/dev`へfast-forwardし、clean状態、`AGENTS.md`、`.specify/memory/constitution.md`、README、既存編集ページ実装・テストを確認する。
+- [x] T002 `dev`を`origin/dev`へfast-forwardし、clean状態、`AGENTS.md`、`archive/v2/.specify/memory/constitution.md`、README、既存編集ページ実装・テストを確認する。
 - [x] T003 `spec.md`、`research.md`、`plan.md`を作成し、根因、受入基準、非対象、変更manifest、検証計画を固定する。
 - [x] T004 変更前の編集ページfocused testを`npm test -- --runInBand --runTestsByPath "src/app/discussions/[naddr]/edit/__tests__/page.test.tsx"`で実行し、1 suite / 8 tests PASSを記録する。
 

@@ -25,14 +25,14 @@ VERDICT: PASS
 
 - writerは指定したhard writable pathsだけを変更し、commit、push、reset、clean、stageを行わない。
 - 親は各返却後にstatus、diff、対象ファイル、SHA、focused testの実測結果を再確認する。
-- `src/app/apple-icon.png`、`public/images/map_placeholder.png`は凍結する。`AGENTS.md`と`.specify/memory/constitution.md`はT001aの文書タスクで更新したため、以後の実装writerからは凍結する。
+- `src/app/apple-icon.png`、`public/images/map_placeholder.png`は凍結する。`AGENTS.md`と`archive/v2/.specify/memory/constitution.md`はT001aの文書タスクで更新したため、以後の実装writerからは凍結する。
 - `npm run build`は最終検証で一度だけ実行する。Nodeは`/opt/data/toolchains/node-v22.23.2/bin`をPATH先頭に置く。
 
 ## Phase 1: Investigation and setup
 
 - [x] T001 `origin/dev`をfetchし、ローカル`dev`を`d4fda9a6f69cc01452fa58eee3b22181eb51d057`へfast-forwardした。Issue #106のbody/comments、関連PR検索、規約、production span棚卸し、DaisyUI公式Button/Cardを調査し、`issues/106-span-element-cleanup/{research,plan,tasks}.md`を作成した。worktree初期のLFS由来`src/app/apple-icon.png`差分を凍結対象として記録した。
 
-- [x] T001a Issue #106の過去仕様を削除する。`AGENTS.md`から子spanの`ruby-text`規定を削除し、`.specify/memory/constitution.md`からも削除して版を`3.0.0`から`4.0.0`へ更新する。Sync Impact Reportへ理由、変更・削除項目、follow-upを記録し、両ファイルへ同じ規定が残っていないことを再検索する。
+- [x] T001a Issue #106の過去仕様を削除する。`AGENTS.md`から子spanの`ruby-text`規定を削除し、`archive/v2/.specify/memory/constitution.md`からも削除して版を`3.0.0`から`4.0.0`へ更新する。Sync Impact Reportへ理由、変更・削除項目、follow-upを記録し、両ファイルへ同じ規定が残っていないことを再検索する。
 
 **Checkpoint**: ベースSHA、Issue状態、既存作業なし、span分類、gap-0方針、凍結pathが確定している。
 

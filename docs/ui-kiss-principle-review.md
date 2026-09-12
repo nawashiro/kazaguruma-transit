@@ -73,7 +73,7 @@ PDF HTMLをReact画面と直接共有する必要はないが、まず「ルー�
 
 ### 5. 009仕様は必要な複雑性だが、BusStop系の投影処理は重複している — 高
 
-対象: 009仕様 [`specs/009-coracle-style-sync/spec.md`](../specs/009-coracle-style-sync/spec.md#L1-L20)、実装 [`useBusStopModeration.ts`](../src/components/discussion/useBusStopModeration.ts#L30-L127)、[`BusStopDiscussion.tsx`](../src/components/discussion/BusStopDiscussion.tsx#L68-L104)、[`BusStopMemo.tsx`](../src/components/discussion/BusStopMemo.tsx#L50-L109)、[`BusStopMemo.tsx`](../src/components/discussion/BusStopMemo.tsx#L154-L210)
+対象: 009仕様 [`archive/v2/specs/009-coracle-style-sync/spec.md`](../archive/v2/specs/009-coracle-style-sync/spec.md#L1-L20)、実装 [`useBusStopModeration.ts`](../src/components/discussion/useBusStopModeration.ts#L30-L127)、[`BusStopDiscussion.tsx`](../src/components/discussion/BusStopDiscussion.tsx#L68-L104)、[`BusStopMemo.tsx`](../src/components/discussion/BusStopMemo.tsx#L50-L109)、[`BusStopMemo.tsx`](../src/components/discussion/BusStopMemo.tsx#L154-L210)
 
 009では、画面目的別read、relay候補、completion、partial/unknown、承認イベントの `e` タグ結合、既知データ利用が明示的に要求されている。したがって `useBusStopModeration` が共通snapshotを利用し、readをdeduplicateしていること自体はKISS違反ではない（30〜65行目）。
 

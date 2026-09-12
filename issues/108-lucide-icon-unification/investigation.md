@@ -20,7 +20,7 @@
 
 ## 2. 憲章・リポジトリ規約
 
-`AGENTS.md` と `.specify/memory/constitution.md` を読み合わせた。今回直接適用する規約は次のとおり。
+`AGENTS.md` と `archive/v2/.specify/memory/constitution.md` を読み合わせた。今回直接適用する規約は次のとおり。
 
 - 作業言語は日本語。
 - 変更は TDD。テストを先に書き、意味のあるREDを確認してから本番コードを変更する。

@@ -6,7 +6,7 @@
 - 実装ブランチ: `fix/issue-118-dependency-vulnerabilities`
 - 作業言語: 日本語
 - 正本: `AGENTS.md`。Core PrinciplesのClear Naming、Simple Logic、Structured Organization、Type Safety、Test-First Development、Documentation & Commentsを適用する。
-- 憲章: `.specify/memory/constitution.md`。`dev`起点、親による受入条件・書込境界・検証結果の管理、完了前のcanonical verificationを適用する。
+- 憲章: `archive/v2/.specify/memory/constitution.md`。`dev`起点、親による受入条件・書込境界・検証結果の管理、完了前のcanonical verificationを適用する。
 - 今回は依存関係の解決値と宣言を直すsecurity maintenanceであり、業務ロジックのTDDを中心にしない。ただし将来の後退を検出する既存security testの最小guardrailは先に更新し、変更後に実行する。
 
 ## 2. 設計

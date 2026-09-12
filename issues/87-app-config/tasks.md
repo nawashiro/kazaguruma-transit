@@ -8,7 +8,7 @@
 
 ## 実行規約
 
-- `AGENTS.md`と`.specify/memory/constitution.md` Version 4.0.0を適用する。
+- `AGENTS.md`と`archive/v2/.specify/memory/constitution.md` Version 4.0.0を適用する。
 - 作業言語は日本語とし、commit/PR本文も日本語にする。
 - 実装タスクは1タスクにつき1サブエージェントへ委任する。親は依存関係、受入条件、hard write boundary、
   RED/GREEN、差分、最終検証を管理する。

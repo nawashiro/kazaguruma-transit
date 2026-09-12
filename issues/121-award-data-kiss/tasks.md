@@ -9,7 +9,7 @@
 
 ## 実行規約
 
-- `AGENTS.md`と`.specify/memory/constitution.md` Version 4.0.0を適用する。実務上の正本は`AGENTS.md`である。
+- `AGENTS.md`と`archive/v2/.specify/memory/constitution.md` Version 4.0.0を適用する。実務上の正本は`AGENTS.md`である。
 - Issueの対象は`src/lib/award/award-data.ts`の不要な専用データ抽象化である。合理的な`PageHeader`は維持する。
 - `award-data.ts`は最新基準でconsumerが`AwardPage`の1つだけなので削除する。別のshared data object、JSON、utility、fallbackは作らない。
 - #122で統合済みのホーム運営告知、`PageHeader`、route metadata、Sidebar、sitemap、CSS、設定、依存関係、Nostr、Prisma/SQLite、GTFS、認証は変更しない。
@@ -76,7 +76,7 @@ PATH=/opt/data/toolchains/node-v22.23.2/bin:$PATH npm test -- --runInBand --runT
 
 - [x] **T006 [PARENT-VERIFY-GREEN]** 親がT005の自己申告を信用せず、現行bytesとscoped diffを再確認した。許可manifest内のproduction差分、data module不在、PageHeader維持、focused Jest 5/5 GREEN、diff checkを確認した。
   - `git diff --name-status`がtest、page、data削除、Issue docsだけであることを確認する。
-  - `git grep -n 'award-data\|AWARD_' -- ':!issues/*' ':!specs/*'`でproduction consumerと旧export参照が0件であることを確認する。
+  - `git grep -n 'award-data\|AWARD_' -- ':!issues/*' ':!archive/v2/specs/*'`でproduction consumerと旧export参照が0件であることを確認する。
   - `PageHeader`、`award/layout.tsx`、`src/app/page.tsx`に差分がないことを確認する。
   - focused Jestを再実行し、既存3 testsと新規contractがGREENになることを確認する。
   - `git diff --check`を実行する。

@@ -9,7 +9,7 @@
 ## 実行規約
 
 - 作業言語は日本語とする。commit、PR本文、実装記録も日本語にする。
-- `AGENTS.md`と`.specify/memory/constitution.md` Version 4.0.0を適用する。
+- `AGENTS.md`と`archive/v2/.specify/memory/constitution.md` Version 4.0.0を適用する。
 - 実装タスクは1タスクにつき1サブエージェントへ委任する。親は依存関係、書込境界、RED/GREEN、変更path、最終検証を管理する。
 - テストタスクはproduction codeを書かず、実装前に意味のあるREDを確認する。新規moduleを直接importしてcollection errorにしないよう、必要なら既存のguarded public-boundary loader形式で「module未実装」の失敗をテスト本体へ閉じ込める。
 - 各テスト実装タスクの直後に、別fresh read-only reviewerを置く。`SUBAGENT_STATUS: COMPLETE`、`VERDICT: PASS`、`modified: false`、開始・終了SHA一致を親が確認するまでproduction taskへ進まない。
@@ -23,7 +23,7 @@
 ## Phase 1: 調査・憲章にもとづく計画
 
 - [x] T001 [INVESTIGATE] `dev`を`origin/dev`の`0215274d7f642a609a9ae0a26db56aadbd189564`へfast-forwardし、clean状態、Issue #128本文・コメント、重複PR、関連履歴、現行source/test、DaisyUI公式・実installed CSSを確認して`issues/128-minor-fixes/investigation.md`へ記録した。
-- [x] T002 [PLAN] `AGENTS.md`と`.specify/memory/constitution.md`の各原則をconstitution gateとして適用し、13項目の受入条件、変更境界、検証計画を`issues/128-minor-fixes/plan.md`へ記録した。
+- [x] T002 [PLAN] `AGENTS.md`と`archive/v2/.specify/memory/constitution.md`の各原則をconstitution gateとして適用し、13項目の受入条件、変更境界、検証計画を`issues/128-minor-fixes/plan.md`へ記録した。
 
 **Checkpoint:** Issueの全項目、根因、非対象、production/testのhard write boundary、RED→review→GREENの順序が確定している。
 
@@ -80,7 +80,7 @@
 
 ## Phase 5: PRレビュー追補
 
-- [x] T022 [PR-FOLLOWUP-VERIFIED] `discussions/[naddr]/edit`の説明上限を会話作成と同じ`DISCUSSION_DESCRIPTION_MAX_LENGTH`へ統一した。`src/app/discussions/[naddr]/edit/__tests__/page.test.tsx`で1000文字ちょうどの受入れ、1001文字のvalidation拒否、textarea `maxLength`、カウンターをtest-firstで固定し、旧500文字実装に対するREDと実装後9 tests GREENを確認した。`specs/011-discussion-edit-ux/data-model.md`、Issue調査・計画・タスク文書も更新した。追補後のfocusedは2 suite / 35 tests、全Jestは144 suites passed / 2 skipped・900 tests passed / 13 skipped、strict TypeScript・lint・build・diff checkは成功した。修正commit `91deacf79fe12b91cd0d0e66ef48392f77a33b5e`をpushし、PR #129のexact headに対するQuality Gate run `33696574312`をsuccess確認した。
+- [x] T022 [PR-FOLLOWUP-VERIFIED] `discussions/[naddr]/edit`の説明上限を会話作成と同じ`DISCUSSION_DESCRIPTION_MAX_LENGTH`へ統一した。`src/app/discussions/[naddr]/edit/__tests__/page.test.tsx`で1000文字ちょうどの受入れ、1001文字のvalidation拒否、textarea `maxLength`、カウンターをtest-firstで固定し、旧500文字実装に対するREDと実装後9 tests GREENを確認した。`archive/v2/specs/011-discussion-edit-ux/data-model.md`、Issue調査・計画・タスク文書も更新した。追補後のfocusedは2 suite / 35 tests、全Jestは144 suites passed / 2 skipped・900 tests passed / 13 skipped、strict TypeScript・lint・build・diff checkは成功した。修正commit `91deacf79fe12b91cd0d0e66ef48392f77a33b5e`をpushし、PR #129のexact headに対するQuality Gate run `33696574312`をsuccess確認した。
 
 ```text
 T001 → T002 → T003 → T004 → T003R → T004R → T005 → T006 → T005R → T006R → T005RR → T006RR → T007 → T008

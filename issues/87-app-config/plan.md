@@ -47,11 +47,11 @@ Jest、React Testing Library、Prisma、GTFS
 `NEXT_PUBLIC_*` fallbackを追加しない。既存のNostr、認証、Prisma、GTFS secret契約を壊さない。
 
 **Scale/Scope:** 現行の`NEXT_PUBLIC_*`参照、Ko-fi表示loader、Docker/Composeの公開設定注入、関連テストと
-開発ドキュメントに限定する。過去の`specs/`履歴は変更しない。
+開発ドキュメントに限定する。過去の`archive/v2/specs/`履歴は変更しない。
 
 ## Constitution Check（設計前）
 
-根拠は`AGENTS.md`と`.specify/memory/constitution.md` Version 4.0.0である。`AGENTS.md`が実務上の
+根拠は`AGENTS.md`と`archive/v2/.specify/memory/constitution.md` Version 4.0.0である。`AGENTS.md`が実務上の
 正本であり、以下を実装ゲートとする。
 
 | 原則・制約 | Issue #87への適用 | 判定 |
@@ -177,7 +177,7 @@ Jest、React Testing Library、Prisma、GTFS
 - `GOOGLE_MAPS_API_KEY`、`PUPPETEER_EXECUTABLE_PATH`、`CLOUDFLARE_TUNNEL_TOKEN`
 - Nostr relay実装、認証、Prisma schema、GTFS import logic、UIレイアウト・文言の無関係な整理
 - `FUNDING.yml`、`src/app/license`のmetadata表示ロジック
-- 過去の`specs/`、既存worktree、他Issue文書
+- 過去の`archive/v2/specs/`、既存worktree、他Issue文書
 
 ## 実装方針
 
@@ -261,7 +261,7 @@ git status --short --branch
 - **Ko-fiの表示退行:** loaderの既存exportとSidebar/SidebarLayoutの既存component testを保ち、表示可否だけを
   JSONへ移す。
 - **Docker以外の実行差:** `npm run build`を公開envなしで実行し、準備処理がtracked exampleからignored configを生成してから、JSON static importが成立することを確認する。
-- **過去文書との混同:** `specs/`は履歴として変更せず、Issue #87のactive docsだけを更新する。
+- **過去文書との混同:** `archive/v2/specs/`は履歴として変更せず、Issue #87のactive docsだけを更新する。
 
 ## 実装後の検証結果
 

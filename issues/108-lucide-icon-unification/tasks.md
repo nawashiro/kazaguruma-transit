@@ -2,7 +2,7 @@
 
 **Issue**: [#108](https://github.com/nawashiro/kazaguruma-transit/issues/108)
 
-**入力**: `issues/108-lucide-icon-unification/investigation.md`、`AGENTS.md`、`.specify/memory/constitution.md`
+**入力**: `issues/108-lucide-icon-unification/investigation.md`、`AGENTS.md`、`archive/v2/.specify/memory/constitution.md`
 
 **Repository**: `/opt/data/work/kazaguruma-transit-issue-108`
 

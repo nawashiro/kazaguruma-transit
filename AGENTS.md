@@ -10,7 +10,7 @@ Follow TDD principles. First, write the tests. Avoid writing tests for things th
 
 ## Core Principles
 
-These principles are the operational source of truth for agents working in this repository. `.specify/memory/constitution.md` exists for GitHub Spec Kit compatibility and should point back here instead of duplicating these rules.
+These principles are the operational source of truth for agents working in this repository. Historical Spec Kit assets are archived under `archive/v2/`; current change planning uses `openspec/`.
 
 ### Clear Naming
 

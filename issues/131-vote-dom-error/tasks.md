@@ -9,7 +9,7 @@
 ## 実行規約
 
 - 作業言語は日本語とする。commit、PR本文、実装記録も日本語にする。
-- `AGENTS.md`と`.specify/memory/constitution.md` Version 4.0.0を適用する。
+- `AGENTS.md`と`archive/v2/.specify/memory/constitution.md` Version 4.0.0を適用する。
 - 実装タスクは1タスクにつき1サブエージェントへ委任する。親は依存関係、受入条件、書込境界、RED/GREEN、変更path、最終検証を管理する。
 - test writerは指定test pathだけを変更し、production、Issue文書、設定、commit、push、reset、stage、cleanを変更しない。
 - test reviewerはread-onlyで全pathを変更しない。`SUBAGENT_STATUS: COMPLETE`、`VERDICT: PASS`、`modified: false`、開始・終了SHA一致を必須結果とする。

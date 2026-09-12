@@ -24,7 +24,7 @@ PR #129のレビューで、会話編集ページの説明だけが500文字に�
 
 ## 憲章ゲート
 
-根拠は`AGENTS.md`と`.specify/memory/constitution.md` Version 4.0.0である。憲章は`AGENTS.md`を実務上の正本とし、次のゲートを計画・実装・レビューで確認する。
+根拠は`AGENTS.md`と`archive/v2/.specify/memory/constitution.md` Version 4.0.0である。憲章は`AGENTS.md`を実務上の正本とし、次のゲートを計画・実装・レビューで確認する。
 
 | 原則・制約 | 本Issueでの適用 | 判定 |
 |---|---|---|
@@ -168,7 +168,7 @@ PR #129のレビューで、会話編集ページの説明だけが500文字に�
 
 ### 仕様更新
 
-- `specs/011-discussion-edit-ux/data-model.md`
+- `archive/v2/specs/011-discussion-edit-ux/data-model.md`
 
 ## 検証計画
 

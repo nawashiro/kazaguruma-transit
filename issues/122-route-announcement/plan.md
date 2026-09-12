@@ -19,7 +19,7 @@
 - 調査資料: `issues/122-route-announcement/investigation.md`
 - 仕様: `issues/122-route-announcement/spec.md`
 - 作業言語: 日本語
-- 憲章: `.specify/memory/constitution.md` Version 4.0.0、実務上の正本は`AGENTS.md`
+- 憲章: `archive/v2/.specify/memory/constitution.md` Version 4.0.0、実務上の正本は`AGENTS.md`
 
 ## Constitution Check（設計前）
 

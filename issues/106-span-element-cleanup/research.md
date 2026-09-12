@@ -20,7 +20,7 @@
 
 ## 2. 規約と今回の仕様境界
 
-`AGENTS.md` と `.specify/memory/constitution.md` を確認した。作業言語、日本語の文書、TDD、2-space、strict TypeScript、アクセシビリティ、最終的なtest/lint/build検証などの一般原則は適用する。
+`AGENTS.md` と `archive/v2/.specify/memory/constitution.md` を確認した。作業言語、日本語の文書、TDD、2-space、strict TypeScript、アクセシビリティ、最終的なtest/lint/build検証などの一般原則は適用する。
 
 Issue #106では、憲章・AGENTS.mdに残っていた「日本語ボタン文字列を必ず子spanの `ruby-text` 内に置く」という過去仕様を削除する。憲章のGovernanceに従い、版を`3.0.0`から`4.0.0`へ更新し、AGENTS.mdの同じ規定も削除する。Issue #106では次を現在の作業契約とする。
 

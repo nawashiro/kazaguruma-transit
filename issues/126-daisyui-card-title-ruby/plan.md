@@ -9,7 +9,7 @@
 - **KISS**: 表示崩れが発生する会話一覧の見出しだけを修正し、DaisyUIやRubyfulの共通実装は変更しない。
 - **DRY**: `Card` / `CarouselCard` ですでに採用している `inline` クラスを再利用し、新規CSSセレクターや重複ヘルパーを作らない。
 - **意味論の維持**: `h3`、リンク、タイトル内容、`ruby-text`、`gap-0`、ARIA、状態表示を維持する。
-- **憲章準拠**: `AGENTS.md` と `.specify/memory/constitution.md` の Clear Naming、Simple Logic、Structured Organization、Type Safety、Test-First Development、Accessibility & UX、Documentation & Comments を適用する。今回のUI変更に対応するため、レイアウト崩れの再発防止テストとブラウザ相当確認を計画へ含める。
+- **憲章準拠**: `AGENTS.md` と `archive/v2/.specify/memory/constitution.md` の Clear Naming、Simple Logic、Structured Organization、Type Safety、Test-First Development、Accessibility & UX、Documentation & Comments を適用する。今回のUI変更に対応するため、レイアウト崩れの再発防止テストとブラウザ相当確認を計画へ含める。
 
 ## 実装対象
 

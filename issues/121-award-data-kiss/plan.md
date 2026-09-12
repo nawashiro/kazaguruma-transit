@@ -6,7 +6,7 @@
 - 実装ブランチ: `fix/issue-121-award-data-kiss`
 - 仕様: [`spec.md`](./spec.md)
 - 調査: [`investigation.md`](./investigation.md)
-- 憲章: `.specify/memory/constitution.md` Version 4.0.0、実務上の正本は`AGENTS.md`
+- 憲章: `archive/v2/.specify/memory/constitution.md` Version 4.0.0、実務上の正本は`AGENTS.md`
 
 ## Goal
 

@@ -9,7 +9,7 @@
 
 ## 実行規約
 
-- `AGENTS.md`と`.specify/memory/constitution.md` Version 4.0.0を適用する。実務上の正本は`AGENTS.md`である。
+- `AGENTS.md`と`archive/v2/.specify/memory/constitution.md` Version 4.0.0を適用する。実務上の正本は`AGENTS.md`である。
 - 実装タスクは1タスクにつき1サブエージェントへ委任する。親は依存関係、受入条件、hard write boundary、RED/GREEN、変更path、最終検証を管理する。
 - test writerは指定したtest pathだけを変更し、production、設定、Issue文書、lockfile、commit、push、PRを変更しない。
 - test reviewerはread-onlyで全pathを変更しない。`SUBAGENT_STATUS: COMPLETE`、`VERDICT: PASS`、`modified: false`、開始／終了SHA一致を必須とする。

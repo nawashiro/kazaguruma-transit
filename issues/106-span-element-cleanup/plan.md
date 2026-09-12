@@ -11,7 +11,7 @@ Issue #106の「意味を持たないspanを駆逐する」という要求に対
 3. `badge`、`loading`、`sr-only`、`truncate`、`label-text`、ID・テスト参照・アイコンと文字列を分離する責務を持つspanは保持する。
 4. 共通 `Button` は自動生成するspanを撤去し、button自身を `ruby-text gap-0` のレイアウト境界とする。既存のprops、イベント、disabled/loading、ARIA属性は維持する。
 5. productionのDaisyUI `btn` と `card-title` は、暗黙のgapへ依存せず `gap-0` を明示する。アイコンとの間隔が必要な箇所は、既存の明示的なレイアウトまたはアイコン側marginで維持する。
-6. `ruby-text` の過去仕様を理由に子spanを残さない。Issue #106の対応として、同じ過去仕様を`AGENTS.md`と`.specify/memory/constitution.md`から削除し、憲章の版を`4.0.0`へ更新する。
+6. `ruby-text` の過去仕様を理由に子spanを残さない。Issue #106の対応として、同じ過去仕様を`AGENTS.md`と`archive/v2/.specify/memory/constitution.md`から削除し、憲章の版を`4.0.0`へ更新する。
 7. Nostr read/write、認証、router遷移、フォーム値、リンク先、accessible name、loading/error/partial状態を変更しない。
 8. `src/app/apple-icon.png` の既存LFS差分、`public/images/map_placeholder.png`は変更しない。憲章・AGENTS.mdはIssue #106の文書タスクで更新対象とし、実装writerの書込範囲からは除外する。
 

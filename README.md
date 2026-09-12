@@ -79,24 +79,31 @@ npm run test:watch
 
 ## 目的別の文書
 
-| 分類 | 目的 | 入口 |
-| --- | --- | --- |
-| how-to | Google Analytics設定 | [analytics](docs/how-to/analytics.md) |
-| how-to | Docker開発・本番構成 | [docker-setup](docs/how-to/docker-setup.md) |
-| how-to | SEOの現行実装 | [seo-optimization](docs/how-to/seo-optimization.md) |
-| how-to | ライセンス情報の更新 | [license-page](docs/how-to/license-page.md) |
-| reference | 開発憲章 | [constitution](docs/reference/constitution.md) |
-| reference | ディスカッションの実装事実 | [discussion reference](docs/reference/discussion.md) |
-| reference | 評価機能の実装事実 | [evaluation function reference](docs/reference/evaluation-function.md) |
-| reference　| 文書執筆規範 | [writing-style](docs/reference/writing-style.md) |
-| reference　| 技術スタック | [technology-stack](docs/reference/technology-stack.md) |
-| explanation | UI設計の背景 | [frontend design](docs/explanation/frontend-design.md) |
+| 分類 | 目的 |
+| --- | --- |
+| how-to | [Google Analytics設定](docs/how-to/analytics.md) |
+| how-to | [Docker開発・本番構成](docs/how-to/docker-setup.md) |
+| how-to | [SEOの現行実装](docs/how-to/seo-optimization.md) |
+| how-to | [ライセンス情報の更新](docs/how-to/license-page.md) |
+| reference | [開発憲章](docs/reference/constitution.md) |
+| reference | [ディスカッションの実装事実](docs/reference/discussion.md) |
+| reference | [評価機能の実装事実](docs/reference/evaluation-function.md) |
+| reference　| [文書執筆規範](docs/reference/writing-style.md) |
+| reference　| [技術スタック](docs/reference/technology-stack.md) |
+| explanation | [UI設計の背景](docs/explanation/frontend-design.md) |
 
 ## Quality Gate
 
-[`.github/workflows/quality-gate.yml`](.github/workflows/quality-gate.yml)は`dev`または`master`へのpushとPull Requestを検査します。Node.js 22.xを使い、設定ファイルを一時準備し、`npm ci`、ESLint、strict TypeScript、`npm run build`、production serverの起動、Jestを実行します。
+[`.github/workflows/quality-gate.yml`](.github/workflows/quality-gate.yml)は`dev`または`master`へのpushとPull Requestを検査します。
 
-Pull Request後は、最新commitに対する`Quality Gate`のCheckが完了し、成功したことを確認します。失敗時は対象commitとworkflow logを確認してから修正します。
+- Node.js 22.x
+- 設定ファイルを一時準備
+- `npm ci`
+- ESLint
+- strict TypeScript
+- `npm run build`
+- production serverの起動
+- Jest
 
 ## ライセンス
 

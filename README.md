@@ -10,7 +10,7 @@
 
 大手交通機関が定型な労働者とみなさない人のための移動手段のことです。
 
-## だいじなこと（[constitution](docs//constitution.md) 抜粋）
+## だいじなこと（[constitution](docs/reference/constitution.md) 抜粋）
 
 - ユーザーが必要に応じた目的地を選定できること。
 - ユーザーが制約のある手段で無理のない移動計画を得られること。
@@ -81,12 +81,11 @@ npm run test:watch
 
 | 分類 | 目的 | 入口 |
 | --- | --- | --- |
-| how-to | 開発、OpenSpec、検証 | [development-workflow](docs/how-to/development-workflow.md) |
 | how-to | Google Analytics設定 | [analytics](docs/how-to/analytics.md) |
 | how-to | Docker開発・本番構成 | [docker-setup](docs/how-to/docker-setup.md) |
 | how-to | SEOの現行実装 | [seo-optimization](docs/how-to/seo-optimization.md) |
 | how-to | ライセンス情報の更新 | [license-page](docs/how-to/license-page.md) |
-| reference | 開発憲章 | [constitution](docs//constitution.md) |
+| reference | 開発憲章 | [constitution](docs/reference/constitution.md) |
 | reference | ディスカッションの実装事実 | [discussion reference](docs/reference/discussion.md) |
 | reference | 評価機能の実装事実 | [evaluation function reference](docs/reference/evaluation-function.md) |
 | reference　| 文書執筆規範 | [writing-style](docs/reference/writing-style.md) |

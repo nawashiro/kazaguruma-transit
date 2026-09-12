@@ -6,7 +6,7 @@
 
 目標は[WCAG 2.2](https://www.w3.org/TR/WCAG22/)レベルAAです。目標を示す文書であり、適合証明ではありません。
 
-保存した外部原文[`docs/accessibility/Understanding/**`](../../accessibility/Understanding/)は変更しません。判定項目は[`wcag-22-checklist.md`](./wcag-22-checklist.md)で管理します。
+保存した外部原文[`external-docs/accessibility/Understanding/**`](../../../external-docs/accessibility/Understanding/)は変更しません。判定項目は[`wcag-22-checklist.md`](./wcag-22-checklist.md)で管理します。
 
 ## 現行方針
 

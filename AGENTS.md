@@ -5,5 +5,4 @@
 - [憲章](docs/reference/constitution.md)
 - [文書執筆規範](docs/reference/writing-style.md)
 - [技術スタック](docs/reference/technology-stack.md)
-- [開発手順](docs/how-to/development-workflow.md)
 - [OpenSpec](openspec/)

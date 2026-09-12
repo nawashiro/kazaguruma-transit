@@ -47,7 +47,7 @@ Webページ全体を対象に、WCAG 2.2（Web Content Accessibility Guidelines
 
 - [文書執筆規範](writing-style.md)
 - [技術スタック](technology-stack.md)
-- [開発手順](../how-to/development-workflow.md)
+- [OpenSpec](../../openspec/)
 - [ウェブアクセシビリティ方針](accessibility/web-accessibility-policy.md)
 - [WCAG2.2チェックリスト](accessibility/wcag-22-checklist.md)
 - [WCAG2.2公式原文](https://www.w3.org/TR/WCAG22/)

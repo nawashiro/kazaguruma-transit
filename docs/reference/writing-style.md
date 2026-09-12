@@ -4,7 +4,7 @@
 
 文書の目的を一つに定め、次の分類から配置先を選ぶ。
 
-- tutorial: 初学者が学習を進める順序を示す。説明と操作を一つの学習体験にまとめる。`docs/tutorials/`
+- Tutorial: 初学者が学習を進める順序を示す。説明と操作を一つの学習体験にまとめる。`docs/tutorials/`
 - How-to: 読者が特定の作業を完了する手順を示す。`docs/how-to/`
 - Reference: 読者が事実、仕様、設定、契約を確認する資料とする。`docs/reference/`
 - Explanation: 設計の理由、背景、選択肢を説明する。`docs/explanation/`

@@ -78,7 +78,12 @@ npm run test:watch
 | reference | [評価機能の実装事実](docs/reference/evaluation-function.md) |
 | reference　| [文書執筆規範](docs/reference/writing-style.md) |
 | reference　| [技術スタック](docs/reference/technology-stack.md) |
+| reference | [WCAG 2.2チェックリスト](docs/reference/accessibility/wcag-22-checklist.md) |
+| reference | [ウェブアクセシビリティ方針](docs/reference/accessibility/web-accessibility-policy.md) |
+| reference | [画面遷移設計](docs/reference/screen-transition-design.md) |
 | explanation | [UI設計の背景](docs/explanation/frontend-design.md) |
+| explanation | [Polisに着想を得た合意分析](docs/explanation/polis-consensus-algorithm.md) |
+| explanation | [Polisの理論背景と本アプリの適用範囲](docs/explanation/polis-consensus-whitepaper.md) |
 
 ## Quality Gate
 

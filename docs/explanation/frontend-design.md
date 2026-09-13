@@ -33,66 +33,6 @@ src/types・src/utils     型と共通補助処理
 
 ページは、サーバーでデータを読んでから描画する場合と、クライアントで操作状態を管理する場合があります。`force-dynamic`は認証コンテキストやNostr読み取りを必要とする画面で使います。
 
-## `src/components/layouts`
-
-レイアウト部品はページの外枠を担当します。
-
-- `SidebarLayout`: ドロワー、ヘッダー、テーマ切り替え、ルビ、メイン領域、支援フレーム、フッターを配置
-- `Sidebar`: サイト内ナビゲーションと外部入口を提供
-- `PageHeader`: ページの見出しと説明を表示
-
-`SidebarLayout`は`main#main-content`を1つ提供します。`SkipToContent`はこのIDへ移動します。サイドバーの表示は画面幅で変わります。ページ部品は共通シェルを重複して作りません。
-
-## `src/components/ui`
-
-`ui`は複数の機能で使う共有部品を置きます。例は次です。
-
-- `Button`: ボタンの種類、無効状態、読み込み状態を統一
-- `Card`: 情報のまとまりを表示
-- `InputField`: ラベル、入力、必須状態、エラーを統一
-- `SkipToContent`: メイン領域へのスキップリンクを提供
-- `ThemeToggle`: テーマを切り替え
-- `UserIdentity`と`NpubDisplay`: 利用者識別子を表示
-
-共有部品はpropsで表示と動作を受け取ります。読み込み表示やフォーカス属性など、共通で守る状態も部品側で扱います。機能固有の通信やドメイン判定は置きません。
-
-## `src/components/features`
-
-`features`は経路検索、場所検索、出力、支援などの機能部品を置きます。
-
-- `HomeRouteForm`: 目的地、出発地、日時、速度優先を管理し、`/routes`へ移動
-- `DestinationSelector`と`OriginSelector`: 場所の選択を提供
-- `DateTimeSelector`: 出発または到着日時を提供
-- `RouteSearchResults`: クエリを検証し、`/api/transit`の結果を表示
-- `IntegratedRouteDisplay`: 経路と停留所を表示
-- `LocationCategoryNavigation`と`LocationSortControls`: カテゴリ移動と並べ替えを提供
-- `RouteCalendarExport`と`RoutePdfExport`: 出力操作を提供
-- `KoFiSupport`と`Announcement`: 条件付きの案内を表示
-
-機能部品は共有UI部品を組み合わせます。ルートの検証やURLの生成は`src/lib/transit`へ委譲します。
-
-## `src/components/discussion`と`src/components/auth`
-
-`discussion`は意見交換のドメイン部品を置きます。`DiscussionDetailProvider`と`DiscussionManagementProvider`は読み取り状態とスナップショットを提供します。`DiscussionTabLayout`は会話固有のタブを提供します。`BusStopMemo`と`BusStopDiscussion`は経路結果の停留所別意見交換を提供します。`PermissionGuards`はログイン、管理者、モデレーター、作成者の表示と無効理由を統一します。
-
-`auth`は認証フォームと認証ルートの部品を置きます。ページは`useAuth`を通じて認証状態と署名処理を受け取ります。
-
-## `src/lib`
-
-`src/lib`はUIから独立した処理を置きます。
-
-- `lib/nostr`はNostrイベント、naddr、リレー通信、署名・公開を担当
-- `lib/discussion`は会話の設定、権限、読み取り計画、coordinator、承認状態を担当
-- `lib/evaluation`は評価変換、Polis合意分析、結果整形を担当
-- `lib/location`は場所データ、詳細解決、カテゴリ状態、距離計算を担当
-- `lib/transit`は経路クエリ、API境界、結果モデルを担当
-- `lib/config`は`app-config.json`の検証と機能設定を担当
-- `lib/auth`は認証コンテキストと認証状態を担当
-- `lib/navigation`は戻り先と安全なルートの生成を担当
-- `lib/preferences`はルビなどの利用者設定を担当
-
-リレー読み取りは`NostrService`と読み取りcoordinatorを通します。UIはリレーの重複除去、タイムアウト、段階読み取りを直接実装しません。評価画面は`EvaluationService`を通して`PolisConsensus`を呼び出します。
-
 ## 状態とアクセシビリティ
 
 各ページは読み込み中、成功、部分取得、エラーを区別します。状態メッセージは画面と支援技術へ通知します。フォームは明示的なラベルとエラーを持ちます。操作対象はネイティブの`button`または`a`を使います。

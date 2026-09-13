@@ -35,22 +35,16 @@ npm ci
 
 ### 設定ファイル
 
-開発用には次を実行してください。
-
-```bash
-cp app-config.json.example app-config.json
-cp .env.local.example .env.local
-cp transit-config.json.example transit-config.json
-```
-
 `秘密` と `公開` を分けます。`秘密` をコミットしないでください。`公開` に秘密情報を書かないでください。
+
+記入例は `${filename}.example` のファイルをご覧ください。
 
 | ファイル名 | 機密性 | 説明 |
 | --- | --- | --- |
-| `app-config.json` | 公開 | `appUrl`、`gaMeasurementId`、場所データのURI、会話設定、お知らせ、支援表示を設定します。 |
-| `.env.local` | 秘密 | 開発サーバーの設定を置きます。`GOOGLE_MAPS_API_KEY`（必須）、`PUPPETEER_EXECUTABLE_PATH`（任意）を設定します。 |
+| `app-config.json` | 公開 | アプリの各種設定です。提供URL、Google Analytics、場所データのURI、会話設定、お知らせ、支援表示を設定します。 |
+| `.env.local` | 秘密 | 開発サーバーの設定です。`GOOGLE_MAPS_API_KEY`（必須）、`PUPPETEER_EXECUTABLE_PATH`（任意）を設定します。 |
 | `transit-config.json` | 秘密 | GTFS取得URLを設定します。 |
-| `.env` | 秘密 | 本番Composeの設定です。`CLOUDFLARE_TUNNEL_TOKEN`などの秘密値を設定します。 |
+| `.env` | 秘密 | 本番サーバーの設定です。`CLOUDFLARE_TUNNEL_TOKEN`などの秘密値を設定します。 |
 
 設定ファイルがない場合、`npm run dev`、`npm test`、`npm run build`、`npm start`は非ゼロで終了します。
 

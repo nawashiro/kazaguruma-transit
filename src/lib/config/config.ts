@@ -22,11 +22,40 @@ export interface TransitConfig {
 }
 
 /**
+ * 設定ファイルのSQLiteパスを実行時の絶対パスへ解決する
+ */
+export function resolveSqlitePath(sqlitePath: string): string {
+  if (
+    sqlitePath === ":memory:" ||
+    sqlitePath.startsWith("/") ||
+    /^[A-Za-z]:[\\/]/.test(sqlitePath)
+  ) {
+    return sqlitePath;
+  }
+
+  return path.join(process.cwd(), sqlitePath);
+}
+
+/**
+ * Prismaへ渡すSQLite datasource URLを生成する
+ */
+export function getPrismaDatasourceUrl(sqlitePath: string): string {
+  return `file:${sqlitePath}`;
+}
+
+/**
  * 設定ファイルを読み込む
  */
 export function loadConfig(): TransitConfig {
   try {
-    return JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+    const config = JSON.parse(
+      fs.readFileSync(CONFIG_PATH, "utf8")
+    ) as TransitConfig;
+
+    return {
+      ...config,
+      sqlitePath: resolveSqlitePath(config.sqlitePath),
+    };
   } catch (error) {
     logger.error("設定ファイルの読み込みに失敗しました:", error);
     throw new Error("設定ファイルの読み込みに失敗しました");

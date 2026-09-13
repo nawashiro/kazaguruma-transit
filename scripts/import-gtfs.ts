@@ -2,23 +2,31 @@ import { PrismaClient } from "@prisma/client";
 import { importGtfs } from "gtfs";
 import fs from "fs";
 import path from "path";
-import { loadConfig } from "../src/lib/config/config";
+import {
+  getPrismaDatasourceUrl,
+  loadConfig,
+} from "../src/lib/config/config";
 import {
   redactSensitiveUrlQueryParameters,
   sanitizeGtfsLogError,
 } from "./gtfs-log-sanitizer";
 
-const prisma = new PrismaClient();
-
 /**
  * GTFSデータをインポートしてPrismaを使ってデータベースを再構築します
  */
 async function importGtfsData() {
+  let prismaClient: PrismaClient | undefined;
+
   try {
     console.log("GTFSデータのインポートを開始します...");
 
     // 設定ファイルを読み込む
     const config = loadConfig();
+    const client = new PrismaClient({
+      datasourceUrl: getPrismaDatasourceUrl(config.sqlitePath),
+    });
+    prismaClient = client;
+
     console.log("設定を読み込みました:", {
       sqlitePath: config.sqlitePath,
       agencyCount: config.agencies.length,
@@ -33,20 +41,20 @@ async function importGtfsData() {
     }
 
     // データベースディレクトリが存在することを確認
-    const dbDir = path.dirname(path.join(process.cwd(), config.sqlitePath));
+    const dbDir = path.dirname(config.sqlitePath);
     if (!fs.existsSync(dbDir)) {
       console.log(`データベースディレクトリを作成します: ${dbDir}`);
       fs.mkdirSync(dbDir, { recursive: true });
     }
 
     // データベースファイルが既に存在する場合のチェック
-    const dbPath = path.join(process.cwd(), config.sqlitePath);
+    const dbPath = config.sqlitePath;
     if (fs.existsSync(dbPath)) {
       console.log(`既存のデータベースファイルを確認: ${dbPath}`);
 
       try {
         // 既存のデータをチェック
-        const existingCount = await prisma.agency.count();
+        const existingCount = await client.agency.count();
         if (existingCount > 0) {
           console.log(
             `データベースには既に${existingCount}件のエージェンシーデータが存在します。`
@@ -77,7 +85,9 @@ async function importGtfsData() {
                 gtfsFilePath
               )}ディレクトリに必要なGTFSデータファイルを配置してください。`
             );
-            return;
+            throw new Error(
+              `GTFSデータファイルが見つかりません: ${gtfsFilePath}`
+            );
           }
         }
       }
@@ -95,10 +105,13 @@ async function importGtfsData() {
 
     console.log("データベースとの接続をテストしています...");
     // Prismaを使用してデータが正しくインポートされたか確認
-    const agencyCount = await prisma.agency.count();
-    const routeCount = await prisma.route.count();
-    const stopCount = await prisma.stop.count();
-    const tripCount = await prisma.trip.count();
+    const agencyCount = await client.agency.count();
+    const routeCount = await client.route.count();
+    const stopCount = await client.stop.count();
+    const tripCount = await client.trip.count();
+    const stopTimeCount = await client.stopTime.count();
+    const calendarCount = await client.calendar.count();
+    const calendarDateCount = await client.calendarDate.count();
 
     console.log(`
       インポート結果:
@@ -106,16 +119,29 @@ async function importGtfsData() {
       - ルート: ${routeCount}件
       - バス停: ${stopCount}件
       - トリップ: ${tripCount}件
+      - ストップタイム: ${stopTimeCount}件
+      - カレンダー: ${calendarCount}件
+      - カレンダー日付: ${calendarDateCount}件
     `);
 
-    if (
-      agencyCount === 0 &&
-      routeCount === 0 &&
-      stopCount === 0 &&
-      tripCount === 0
-    ) {
+    const requiredEntityCounts: Array<[string, number]> = [
+      ["エージェンシー", agencyCount],
+      ["ルート", routeCount],
+      ["バス停", stopCount],
+      ["トリップ", tripCount],
+      ["ストップタイム", stopTimeCount],
+      ["サービス情報", calendarCount + calendarDateCount],
+    ];
+    const missingRequiredEntities = requiredEntityCounts
+      .filter(([, count]) => count === 0)
+      .map(([entity]) => entity);
+
+    if (missingRequiredEntities.length > 0) {
       console.warn(
         "データがインポートされていないか、Prismaスキーマがテーブル名と一致していない可能性があります。"
+      );
+      throw new Error(
+        `必須のGTFSデータが不足しています: ${missingRequiredEntities.join("、")}`
       );
     } else {
       console.log(
@@ -127,8 +153,9 @@ async function importGtfsData() {
       "GTFSデータのインポート中にエラーが発生しました:",
       sanitizeGtfsLogError(error),
     );
+    throw error;
   } finally {
-    await prisma.$disconnect();
+    await prismaClient?.$disconnect();
   }
 }
 

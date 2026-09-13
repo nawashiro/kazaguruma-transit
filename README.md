@@ -43,6 +43,8 @@ cp .env.local.example .env.local
 cp transit-config.json.example transit-config.json
 ```
 
+`transit-config.json`は必須です。開発者は`cp transit-config.json.example transit-config.json`を実行し、リポジトリrootに設定を置いてください。配置せずに`npm run build`を実行すると、設定忘れを検出して意図的に非ゼロで終了します。
+
 `秘密` と `公開` を分けます。`秘密` をコミットしないでください。`公開` に秘密情報を書かないでください。
 
 | ファイル名 | 機密性 | 説明 |
@@ -104,6 +106,12 @@ npm run test:watch
 - `npm run build`
 - production serverの起動
 - Jest
+
+Quality GateはCI用の合成fixture経路を使います。CIは`cp ci/transit-config.json transit-config.json`を自動実行してから`npm run build`を実行します。ローカル開発では`transit-config.json.example`から自分の`transit-config.json`を準備してください。CIの合成fixture経路を通常の開発手順や本番運用の設定と混同しないでください。
+
+### CIの合成fixtureとライセンス境界
+
+`ci/gtfs`と`ci/transit-config.json`は、CI検証専用の架空・非秘密・非本番の合成データです。これらは本番のCC BY 4.0データの複製ではなく、第三者データ、本番GTFS、実データの識別情報を含みません。アプリケーションコードのライセンスは、既存の[LICENSE](LICENSE)（AGPL-3.0）に従います。この説明はCI用合成データだけに適用します。
 
 ## ライセンス
 

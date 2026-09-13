@@ -1,4 +1,8 @@
 import { PrismaClient, Prisma } from "@prisma/client";
+import {
+  getPrismaDatasourceUrl,
+  loadConfig,
+} from "../config/config";
 
 /**
  * グローバルPrismaインスタンスの型定義
@@ -17,9 +21,18 @@ const prismaClientOptions = {
       : (["error"] as Prisma.LogLevel[]),
 } satisfies Prisma.PrismaClientOptions;
 
+function createPrismaClient(): PrismaClient {
+  const config = loadConfig();
+
+  return new PrismaClient({
+    ...prismaClientOptions,
+    datasourceUrl: getPrismaDatasourceUrl(config.sqlitePath),
+  });
+}
+
 // シングルトンインスタンスを作成または再利用
 export const prisma =
-  globalForPrisma.prisma || new PrismaClient(prismaClientOptions);
+  globalForPrisma.prisma || createPrismaClient();
 
 // 開発環境のみ、グローバル変数にインスタンスを保存
 if (process.env.NODE_ENV !== "production") {

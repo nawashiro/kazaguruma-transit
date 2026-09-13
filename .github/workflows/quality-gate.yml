@@ -47,6 +47,8 @@ jobs:
       - name: Run strict TypeScript check
         run: npx tsc --noEmit --incremental false
 
+      - name: Place synthetic transit configuration
+        run: cp "ci/transit-config.json" "transit-config.json"
       - name: Build production app
         run: npm run build
 
@@ -72,3 +74,8 @@ jobs:
           if [ -f "$RUNNER_TEMP/next-server.pid" ]; then
             kill "$(cat "$RUNNER_TEMP/next-server.pid")" 2>/dev/null || true
           fi
+
+      - name: Remove synthetic transit configuration
+        if: always()
+        working-directory: .
+        run: rm -f -- "transit-config.json"

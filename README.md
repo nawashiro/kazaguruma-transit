@@ -35,15 +35,13 @@ npm ci
 
 ### 設定ファイル
 
-次の3ファイルを置いてください。
+開発用には次を実行してください。
 
 ```bash
 cp app-config.json.example app-config.json
 cp .env.local.example .env.local
 cp transit-config.json.example transit-config.json
 ```
-
-`transit-config.json`は必須です。開発者は`cp transit-config.json.example transit-config.json`を実行し、リポジトリrootに設定を置いてください。配置せずに`npm run build`を実行すると、設定忘れを検出して意図的に非ゼロで終了します。
 
 `秘密` と `公開` を分けます。`秘密` をコミットしないでください。`公開` に秘密情報を書かないでください。
 
@@ -54,14 +52,14 @@ cp transit-config.json.example transit-config.json
 | `transit-config.json` | 秘密 | GTFS取得URLを設定します。 |
 | `.env` | 秘密 | 本番Composeの設定です。`CLOUDFLARE_TUNNEL_TOKEN`などの秘密値を設定します。 |
 
-`app-config.json`がない場合、`npm run dev`、`npm test`、`npm run build`、`npm start`は非ゼロで終了します。Quality Gateだけが`app-config.json.example`を一時コピーし、設定として利用します。
+設定ファイルがない場合、`npm run dev`、`npm test`、`npm run build`、`npm start`は非ゼロで終了します。
 
 ## 開発
 
 ビルド生成物を用意し、開発サーバーを起動します。
 
 ```bash
-npm run build
+npm run build # サーバー起動にはビルド生成物が必要
 npm run dev
 ```
 
@@ -72,12 +70,6 @@ npm run test:watch
 ```
 
 経路検索は直通または最大1回乗換の経路を扱います。
-
-## 生成artifact
-
-`npm run build`の`prebuild`が`tsx scripts/generate-location-artifact.ts`を実行し、`app-config.json`の3つのデータURIから検証済みの`public/generated/location-data.json`を生成します。
-
-`public/generated/location-data.json`は生成artifactです。直接編集せず、入力設定を変更して`npm run build`で再生成します。
 
 ## 目的別の文書
 
@@ -106,12 +98,6 @@ npm run test:watch
 - `npm run build`
 - production serverの起動
 - Jest
-
-Quality GateはCI用の合成fixture経路を使います。CIは`cp ci/transit-config.json transit-config.json`を自動実行してから`npm run build`を実行します。ローカル開発では`transit-config.json.example`から自分の`transit-config.json`を準備してください。CIの合成fixture経路を通常の開発手順や本番運用の設定と混同しないでください。
-
-### CIの合成fixtureとライセンス境界
-
-`ci/gtfs`と`ci/transit-config.json`は、CI検証専用の架空・非秘密・非本番の合成データです。これらは本番のCC BY 4.0データの複製ではなく、第三者データ、本番GTFS、実データの識別情報を含みません。アプリケーションコードのライセンスは、既存の[LICENSE](LICENSE)（AGPL-3.0）に従います。この説明はCI用合成データだけに適用します。
 
 ## ライセンス
 

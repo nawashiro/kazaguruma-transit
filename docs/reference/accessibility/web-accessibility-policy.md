@@ -2,7 +2,7 @@
 
 ## 位置づけ
 
-この方針は、サイトで実施するアクセシビリティの方法を定めます。開発原則の正本は[`docs/reference/constitution.md`](../constitution.md)です。この文書は憲章を複製せず、ウェブ画面の運用へ具体化します。
+この方針は、サイトで実施するアクセシビリティの方法を定めます。開発憲章の正本は[`docs/reference/constitution.md`](../constitution.md)です。この文書はウェブ画面の運用を説明します。
 
 目標は[WCAG 2.2](https://www.w3.org/TR/WCAG22/)レベルAAです。目標を示す文書であり、適合証明ではありません。
 
@@ -38,4 +38,4 @@ Lighthouseの既定値は[`scripts/accessibility-audit-config.ts`](../../../scri
 - `LIGHTHOUSE_CHROME_FLAGS`
 - `LIGHTHOUSE_ASSERTION_LEVEL`
 
-自動検査に加えて、キーボード、フォーカス、読み上げ、拡大表示、狭い画面、エラー回復を手動確認します。監査の未達を文書の変更だけで隠しません。未対応の実装は別の修正課題として扱います。
+自動検査に加えて、キーボード、フォーカス、読み上げ、拡大表示、狭い画面、エラー回復を手動確認します。監査の未達を文書の変更だけで隠しません。

@@ -1,6 +1,10 @@
 # SEO実装の確認
 
-この文書は、現在のmetadata、structured data、sitemap、robotsの確認方法だけを示します。
+## 文書の範囲
+
+- metadata
+- structured data
+- sitemap
 
 ## metadata
 
@@ -8,7 +12,7 @@
 
 canonicalとsitemapの基底値は`app-config.json`の`appUrl`から読みます。配布先の値を使い、文書へ未確定の公開URLを書きません。
 
-ページ固有のmetadataは各routeの`layout.tsx`で定義します。対象ページの内容と値を照合します。
+ページ固有のmetadataは各routeの`layout.tsx`で定義します。
 
 ## structured data
 
@@ -27,23 +31,3 @@ canonicalとsitemapの基底値は`app-config.json`の`appUrl`から読みます
 - `/usage`
 - `/award`
 - `/license`
-
-routeを追加または削除したときは、sitemapの配列と実在するrouteを同時に確認します。
-
-## robots
-
-`public/robots.txt`が全crawlerへ`/`の巡回を許可し、sitemapの場所を示します。
-
-公開前に、sitemapの場所が配布先の実際の公開値と一致することを確認します。未確定の値を追加しません。
-
-## 確認
-
-1. `app-config.json`を用意します。
-2. `npm run build`を実行します。
-3. 起動後に対象routeのhead、JSON-LD、sitemap、robotsを確認します。
-4. source fileと実際の出力が一致することを確認します。
-
-```bash
-npm run lint
-npx tsc --noEmit --incremental false
-```

@@ -8,7 +8,9 @@
 cp app-config.json.example app-config.json
 ```
 
-`app-config.json`はGitで管理しません。測定IDを`.env.local`や`transit-config.json`へ移しません。サーバー秘密値を`app-config.json`へ入れません。
+- `app-config.json`はGitで管理しません。
+- 測定IDを`.env.local`や`transit-config.json`へ移しません。
+- サーバー秘密値を`app-config.json`へ入れません。
 
 `app-config.json`がない場合、`npm run dev`、`npm test`、`npm run build`、`npm start`は非ゼロで終了します。これらのコマンドはexampleから設定を自動生成しません。Quality Gateだけがcheckout内へ一時コピーを作ります。
 

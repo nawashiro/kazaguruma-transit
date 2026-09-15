@@ -39,14 +39,12 @@ Webページ全体を対象に、WCAG 2.2（Web Content Accessibility Guidelines
 - 意味のあるHTML、キーボード操作、可視フォーカス、明確なラベルを実装する。
 - 状態、エラー、動的な通知を支援技術へ伝える。
 - ルビを除くユーザー向け文字の算出フォントサイズを16px未満にしない。
-- UIのアイコンには`lucide-react`のアイコンを使う。
 - 該当する達成基準をチェックリストと公式原文で確認する。
 - 方針と実装都合が衝突したら、方針を優先し、理由と代替案を作業文書へ残す。
 
 ## 参照リンク
 
 - [文書執筆規範](writing-style.md)
-- [技術スタック](technology-stack.md)
 - [OpenSpec](../../openspec/)
 - [ウェブアクセシビリティ方針](accessibility/web-accessibility-policy.md)
 - [WCAG2.2チェックリスト](accessibility/wcag-22-checklist.md)

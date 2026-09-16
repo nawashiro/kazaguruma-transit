@@ -2,6 +2,8 @@
 
 このチェックリストは、サイトのアクセシビリティ確認に使います。目標はWCAG 2.2のレベルAAです。チェック結果は適合証明を意味しません。
 
+UI実装時に、必要な項目を参照してください。
+
 ## 正本と参照資料
 
 - [WCAG 2.2公式仕様](https://www.w3.org/TR/WCAG22/)
@@ -128,20 +130,6 @@
 
 - [ ] [達成基準4.1.2名前・役割・値（レベルA）](../../../external-docs/accessibility/Understanding/4-1/4-1-2.md)
 - [ ] [達成基準4.1.3ステータスメッセージ（レベルAA）](../../../external-docs/accessibility/Understanding/4-1/4-1-3.md)
-
-WCAG2.2で削除された旧パーシング項目は、チェックリストの判定対象に含めません。保存済み資料に同名の原文があっても、現行の判定項目として扱いません。
-
-## 実装とテストの照合先
-
-- 共通構造は[`src/app/layout.tsx`](../../../src/app/layout.tsx)と[`SidebarLayout`](../../../src/components/layouts/SidebarLayout.tsx)で確認します。
-- `SkipToContent`は[`src/components/ui/SkipToContent.tsx`](../../../src/components/ui/SkipToContent.tsx)で確認します。
-- 共通のメイン領域は`main#main-content`とし、キーボード移動先を提供します。
-- ナビゲーションは[`Sidebar`](../../../src/components/layouts/Sidebar.tsx)で確認します。ナビゲーション名、リンク名、ネイティブ要素を確認します。
-- ルートの意味構造は[`accessible-route-pages.test.tsx`](../../../src/app/__tests__/accessible-route-pages.test.tsx)で確認します。
-- 場所カテゴリのキーボード操作とレスポンシブ表示は[`location-pages-responsive-contract.test.tsx`](../../../src/app/__tests__/location-pages-responsive-contract.test.tsx)で確認します。
-- サイドバーの構造と状態は[`Sidebar.test.tsx`](../../../src/components/layouts/__tests__/Sidebar.test.tsx)と[`SidebarLayout.test.tsx`](../../../src/components/layouts/__tests__/SidebarLayout.test.tsx)で確認します。
-- Lighthouse監査の既定ルートと設定は[`scripts/accessibility-audit-config.ts`](../../../scripts/accessibility-audit-config.ts)で確認します。既定ルートは`/`、`/beginners-guide`、`/locations`、`/license`、`/login`です。
-- 監査は`npm run accessibility`で実行します。通常実行は失敗項目を警告として出し、厳格な終了判定は`npm run accessibility:strict`で実行します。strictではアクセシビリティまたは色コントラストの未達で終了します。
 
 ## 確認時の注意
 

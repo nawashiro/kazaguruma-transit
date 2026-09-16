@@ -4,8 +4,6 @@
 
 この文書は、現在のフロントエンド構成と責務を説明します。
 
-この文書は構成の説明です。個別のNostrイベント、評価式、設定値の正本ではありません。詳細は対応するreferenceと実装を参照します。
-
 ## 全体構成
 
 ページは画面の境界を持ちます。コンポーネントは表示と操作を組み立てます。`src/lib`はデータ変換、外部通信、状態計算を担当します。
@@ -25,7 +23,7 @@ src/types・src/utils     型と共通補助処理
 
 ## `src/app`
 
-`src/app`はNext.js App Routerのルート正本です。`page.tsx`は画面を提供し、`layout.tsx`は共通構造を提供します。現在の主な画面は次です。
+`src/app`はNext.js App Routerです。`page.tsx`は画面を提供し、`layout.tsx`は共通構造を提供します。現在の主な画面は次です。
 
 - `/`: `HomeRouteForm`で経路条件を入力
 - `/routes`: 経路検索結果を表示
@@ -37,25 +35,12 @@ src/types・src/utils     型と共通補助処理
 
 ページは、サーバーでデータを読んでから描画する場合と、クライアントで操作状態を管理する場合があります。`force-dynamic`は認証コンテキストやNostr読み取りを必要とする画面で使います。
 
-## 状態とアクセシビリティ
-
-各ページは読み込み中、成功、部分取得、エラーを区別します。状態メッセージは画面と支援技術へ通知します。フォームは明示的なラベルとエラーを持ちます。操作対象はネイティブの`button`または`a`を使います。
-
-共通の確認先は次です。
-
-- [`SidebarLayout.tsx`](../../src/components/layouts/SidebarLayout.tsx)
-- [`SkipToContent.tsx`](../../src/components/ui/SkipToContent.tsx)
-- [`accessible-route-pages.test.tsx`](../../src/app/__tests__/accessible-route-pages.test.tsx)
-- [`Sidebar.test.tsx`](../../src/components/layouts/__tests__/Sidebar.test.tsx)
-- [`SidebarLayout.test.tsx`](../../src/components/layouts/__tests__/SidebarLayout.test.tsx)
-- [`location-pages-responsive-contract.test.tsx`](../../src/app/__tests__/location-pages-responsive-contract.test.tsx)
-
 ## スタイル
 
 画面はTailwind CSSとDaisyUIのクラスを使います。
 
-- 実装者は[公式ドキュメント](https://daisyui.com/)を参照してください。
-- 実装エージェントは[公式LLMs](https://daisyui.com/llms.txt)を参照してください。
+- 実装者は[DaisyUI ドキュメント](https://daisyui.com/)を参照してください。
+- 実装エージェントは[DaisyUI LLMs](https://daisyui.com/llms.txt)を参照してください。
 
 アイコンには`lucide-react`を使います。
 

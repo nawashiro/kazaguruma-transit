@@ -6,14 +6,7 @@ Nostrの仕様は説明しません。NIP文書をご覧ください。
 
 ## 仕様と実装
 
-- 実装の入口は[`src/app/discussions`](../../src/app/discussions/)です。
-- Nostrの読み書きは[`nostr-service.ts`](../../src/lib/nostr/nostr-service.ts)、イベントの解釈は[`nostr-utils.ts`](../../src/lib/nostr/nostr-utils.ts)が担います。
-- naddrの変換は[`naddr-utils.ts`](../../src/lib/nostr/naddr-utils.ts)が担います。
-- 読み取り順序と部分取得の扱いは[`discussion-detail-read-coordinator.ts`](../../src/lib/discussion/discussion-detail-read-coordinator.ts)と[`discussion-management-read-coordinator.ts`](../../src/lib/discussion/discussion-management-read-coordinator.ts)が担います。
-- 設定の入力名は[`app-config.json.example`](../../app-config.json.example)と[`app-config.ts`](../../src/lib/config/app-config.ts)で確認します。
-- 権限判定は[`permission-system.ts`](../../src/lib/discussion/permission-system.ts)と各画面の権限ガードで確認します。
-
-NIP-72の公式文書には、現在「unrecommended: try NIP-29 instead」という注記があります。本アプリは既存のNIP-72連携を運用します。この文書は、新しいコミュニティ方式を推奨する文書ではありません。
+本アプリはNIP-72「管理されたコミュニティ」を運用します。
 
 - [NIP-72: Moderated Communities](https://github.com/nostr-protocol/nips/blob/master/72.md)
 - [NIP-25: Reactions](https://github.com/nostr-protocol/nips/blob/master/25.md)
@@ -21,12 +14,6 @@ NIP-72の公式文書には、現在「unrecommended: try NIP-29 instead」と�
 - [NIP-14: Subject tag](https://github.com/nostr-protocol/nips/blob/master/14.md)
 
 ## 識別子とURL
-
-会話はNIP-72の`kind:34550`アドレスイベントで識別します。内部の正規形は次です。
-
-```text
-34550:<author-pubkey>:<d-tag>
-```
 
 画面URLはnaddrを使います。会話詳細の実在するルートは次です。
 
@@ -83,18 +70,7 @@ NIP-72の公式文書には、現在「unrecommended: try NIP-29 instead」と�
 
 ## 設定
 
-アプリはルートのデプロイ用`app-config.json`を読み込みます。入力例は[`app-config.json.example`](../../app-config.json.example)です。意見交換に関係する設定名は次です。
-
-- `discussion.enabled`
-- `discussion.adminPubkey`
-- `discussion.busStopDiscussionId`
-- `discussion.discussionListNaddr`
-- `discussion.nostrRelays`
-- `discussion.nostrTimeoutMs`
-- `discussion.readStrategy.idleTimeoutMs`
-- `discussion.readStrategy.hardTimeoutMs`
-- `discussion.readStrategy.dedupWindowMs`
-
-`isDiscussionsEnabled()`は`discussion.enabled`と掲載一覧naddrの両方を確認します。リレー設定は読み書き両方に使います。読み取り戦略は範囲を制限します。idle timeoutは250msから30秒、hard timeoutはidle timeoutより長く90秒以下、重複除去時間は0から10秒です。
-
-`app-config.json`の不備は設定検証エラーになります。必須設定が欠ける場合、意見交換を有効化しません。
+- アプリはルートのデプロイ用`app-config.json`を読み込みます。入力例は[`app-config.json.example`](../../app-config.json.example)です。
+- `isDiscussionsEnabled()`は`discussion.enabled`と掲載一覧naddrの両方を確認します。
+- リレー設定は読み書き両方に使います。
+- app-config.json`の不備は設定検証エラーになります。必須設定が欠ける場合、意見交換を有効化しません。

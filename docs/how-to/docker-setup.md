@@ -13,14 +13,17 @@ cp transit-config.json.example transit-config.json
 chmod 600 .env.local transit-config.json
 ```
 
-設定を書き込んでください。
+設定を書き込んでください。設定ファイルがない場合、buildが失敗します。
 
-- `app-config.json`はクライアント設定です。公開されるので、秘密を書かないでください。
-- `.env.local`は開発用のサーバー設定です。`GOOGLE_MAPS_API_KEY`などの秘密値を置きます。本番では必要ありません。
-- `.env`は本番用のサーバー設定です。`compose.prod.yml`が読みます。開発では必要ありません。
-- `transit-config.json`はGTFS用のサーバー設定です。URL queryの秘密情報を含められるため、GitとDocker build contextへ入れません。
+以下は外部に公開される設定です。秘密を書かないでください。
 
-設定ファイルがない場合、buildが失敗します。
+- `app-config.json`: クライアントアプリ設定です。
+
+以下は秘密を含む設定です。コミットをしないでください。権限を狭めてください。
+
+- `.env.local`: 開発用のサーバー設定です。`GOOGLE_MAPS_API_KEY`などの秘密値を置きます。本番では必要ありません。
+- `.env`: 本番用のサーバー設定です。`compose.prod.yml`が読みます。開発では必要ありません。
+- `transit-config.json`: GTFS用のサーバー設定です。本番でも開発でも必要です。
 
 ## 開発Compose
 
@@ -35,7 +38,7 @@ chmod 600 .env.local transit-config.json
 docker compose up --build
 ```
 
-この構成は`npm run dev`を実行しません。`npm run start`を実行するため、コード編集の自動反映を保証しません。コードを変更した後はbuildと起動を確認します。
+この構成は`npm run dev`を実行しません。`npm run start`を実行するため、コード編集の自動反映を保証しません。コードを変更した後はbuildと起動をやり直してください。。
 
 ## 本番Compose
 

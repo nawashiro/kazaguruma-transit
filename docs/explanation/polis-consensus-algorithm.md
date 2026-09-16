@@ -17,23 +17,14 @@ Polisは、多数の自由記述と投票から参加者の意見空間を整理
 
 ## 現行パイプライン
 
-```text
-評価イベント
-  ↓
-承認済み投稿だけを選択
-  ↓
-参加者 × 投稿の投票行列
-  ↓
-PCAまたはSVD
-  ↓
-K-meansとCalinski-Harabasz Index
-  ↓
-クラスタ横断合意と代表性
-  ↓
-Benjamini-Hochberg補正
-  ↓
-画面表示
-```
+1. 評価イベント
+2. 承認済み投稿だけを選択
+3. 参加者 × 投稿の投票行列
+4. PCAまたはSVD
+5. K-meansとCalinski-Harabasz Index
+6. クラスタ横断合意と代表性
+7. Benjamini-Hochberg補正
+8. 画面表示
 
 `EvaluationService`は評価と投稿を投票データへ変換します。`PolisConsensus`はその投票データを分析します。会話詳細画面は、承認が確定した投稿だけを分析へ渡します。
 

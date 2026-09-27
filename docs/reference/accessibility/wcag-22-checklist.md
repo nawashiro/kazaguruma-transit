@@ -1,0 +1,136 @@
+# WCAG 2.2チェックリスト
+
+このチェックリストは、サイトのアクセシビリティ確認に使います。目標はWCAG 2.2のレベルAAです。チェック結果は適合証明を意味しません。
+
+UI実装時に、必要な項目を参照してください。
+
+## 正本と参照資料
+
+- [WCAG 2.2公式仕様](https://www.w3.org/TR/WCAG22/)
+- [WCAG 2.2 Understanding一覧](https://www.w3.org/WAI/WCAG22/Understanding/)
+- [リポジトリに保存したUnderstanding資料](../../../external-docs/accessibility/Understanding/)
+- [ウェブアクセシビリティ方針](./web-accessibility-policy.md)
+
+`external-docs/accessibility/Understanding/**`は保存した外部原文です。本文を変更しません。この文書から現行位置へリンクします。ローカル資料にない達成基準は、W3C公式Understandingへリンクします。
+
+## 判定欄
+
+各項目を実装、テスト、手動確認で判定します。
+
+- [ ] 未確認
+- [ ] 要対応
+- [ ] 確認済み
+
+## 1. 知覚可能
+
+情報とユーザーインターフェースを知覚できる形で提供します。
+
+### 1.1テキストによる代替
+
+- [ ] [達成基準1.1.1非テキストコンテンツ（レベルA）](../../../external-docs/accessibility/Understanding/1-1/1-1-1.md)
+
+### 1.2時間依存メディア
+
+- [ ] [達成基準1.2.1音声のみ及び映像のみ（収録済）（レベルA）](../../../external-docs/accessibility/Understanding/1-2/1-2-1.md)
+- [ ] [達成基準1.2.2キャプション（収録済）（レベルA）](../../../external-docs/accessibility/Understanding/1-2/1-2-2.md)
+- [ ] [達成基準1.2.3音声解説又はメディアに対する代替（収録済）（レベルA）](../../../external-docs/accessibility/Understanding/1-2/1-2-3.md)
+- [ ] [達成基準1.2.4キャプション（ライブ）（レベルAA）](../../../external-docs/accessibility/Understanding/1-2/1-2-4.md)
+- [ ] [達成基準1.2.5音声解説（収録済）（レベルAA）](../../../external-docs/accessibility/Understanding/1-2/1-2-5.md)
+
+### 1.3適応可能
+
+- [ ] [達成基準1.3.1情報及び関係性（レベルA）](../../../external-docs/accessibility/Understanding/1-3/1-3-1.md)
+- [ ] [達成基準1.3.2意味のある順序（レベルA）](../../../external-docs/accessibility/Understanding/1-3/1-3-2.md)
+- [ ] [達成基準1.3.3感覚的な特徴（レベルA）](../../../external-docs/accessibility/Understanding/1-3/1-3-3.md)
+- [ ] [達成基準1.3.4向き（レベルAA）](../../../external-docs/accessibility/Understanding/1-3/1-3-4.md)
+- [ ] [達成基準1.3.5入力目的の特定（レベルAA）](https://www.w3.org/WAI/WCAG22/Understanding/identify-input-purpose.html)
+
+### 1.4判別可能
+
+- [ ] [達成基準1.4.1色の使用（レベルA）](../../../external-docs/accessibility/Understanding/1-4/1-4-1.md)
+- [ ] [達成基準1.4.2音声の制御（レベルA）](../../../external-docs/accessibility/Understanding/1-4/1-4-2.md)
+- [ ] [達成基準1.4.3コントラスト（最低）（レベルAA）](../../../external-docs/accessibility/Understanding/1-4/1-4-3.md)
+- [ ] [達成基準1.4.4テキストのサイズ変更（レベルAA）](../../../external-docs/accessibility/Understanding/1-4/1-4-4.md)
+- [ ] [達成基準1.4.5画像化された文字（レベルAA）](../../../external-docs/accessibility/Understanding/1-4/1-4-5.md)
+- [ ] [達成基準1.4.10リフロー（レベルAA）](../../../external-docs/accessibility/Understanding/1-4/1-4-10.md)
+- [ ] [達成基準1.4.11非テキストのコントラスト（レベルAA）](../../../external-docs/accessibility/Understanding/1-4/1-4-11.md)
+- [ ] [達成基準1.4.12テキストの間隔（レベルAA）](../../../external-docs/accessibility/Understanding/1-4/1-4-12.md)
+- [ ] [達成基準1.4.13ホバー又はフォーカス時の内容表示（レベルAA）](../../../external-docs/accessibility/Understanding/1-4/1-4-13.md)
+
+## 2. 操作可能
+
+ユーザーインターフェースとナビゲーションを操作できるようにします。
+
+### 2.1キーボード操作可能
+
+- [ ] [達成基準2.1.1キーボード（レベルA）](../../../external-docs/accessibility/Understanding/2-1/2-1-1.md)
+- [ ] [達成基準2.1.2キーボードトラップなし（レベルA）](../../../external-docs/accessibility/Understanding/2-1/2-1-2.md)
+- [ ] [達成基準2.1.4文字キーショートカット（レベルA）](../../../external-docs/accessibility/Understanding/2-1/2-1-4.md)
+
+### 2.2十分な時間
+
+- [ ] [達成基準2.2.1タイミング調整可能（レベルA）](../../../external-docs/accessibility/Understanding/2-2/2-2-1.md)
+- [ ] [達成基準2.2.2一時停止、停止、非表示（レベルA）](../../../external-docs/accessibility/Understanding/2-2/2-2-2.md)
+
+### 2.3発作と身体的反応
+
+- [ ] [達成基準2.3.1 3回の閃光又は閾値以下（レベルA）](../../../external-docs/accessibility/Understanding/2-3/2-3-1.md)
+
+### 2.4ナビゲーション可能
+
+- [ ] [達成基準2.4.1ブロックスキップ（レベルA）](../../../external-docs/accessibility/Understanding/2-4/2-4-1.md)
+- [ ] [達成基準2.4.2ページタイトル（レベルA）](../../../external-docs/accessibility/Understanding/2-4/2-4-2.md)
+- [ ] [達成基準2.4.3フォーカス順序（レベルA）](../../../external-docs/accessibility/Understanding/2-4/2-4-3.md)
+- [ ] [達成基準2.4.4リンクの目的（コンテキスト内）（レベルA）](../../../external-docs/accessibility/Understanding/2-4/2-4-4.md)
+- [ ] [達成基準2.4.5複数の手段（レベルAA）](../../../external-docs/accessibility/Understanding/2-4/2-4-5.md)
+- [ ] [達成基準2.4.6見出し及びラベル（レベルAA）](../../../external-docs/accessibility/Understanding/2-4/2-4-6.md)
+- [ ] [達成基準2.4.7フォーカス可視（レベルAA）](../../../external-docs/accessibility/Understanding/2-4/2-4-7.md)
+- [ ] [達成基準2.4.11フォーカスが隠されない（最低限）（レベルAA）](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html)
+
+### 2.5入力モダリティ
+
+- [ ] [達成基準2.5.1ポインターによるジェスチャー（レベルA）](../../../external-docs/accessibility/Understanding/2-5/2-5-1.md)
+- [ ] [達成基準2.5.2ポインターのキャンセル（レベルA）](../../../external-docs/accessibility/Understanding/2-5/2-5-2.md)
+- [ ] [達成基準2.5.3ラベル名（レベルA）](../../../external-docs/accessibility/Understanding/2-5/2-5-3.md)
+- [ ] [達成基準2.5.4モーション起動（レベルA）](../../../external-docs/accessibility/Understanding/2-5/2-5-4.md)
+- [ ] [達成基準2.5.7ドラッグ操作（レベルAA）](../../../external-docs/accessibility/Understanding/2-5/2-5-7.md)
+- [ ] [達成基準2.5.8ターゲットサイズ（最小）（レベルAA）](../../../external-docs/accessibility/Understanding/2-5/2-5-8.md)
+
+## 3. 理解可能
+
+情報と操作方法を理解できるようにします。
+
+### 3.1読み取り可能
+
+- [ ] [達成基準3.1.1ページの言語（レベルA）](../../../external-docs/accessibility/Understanding/3-1/3-1-1.md)
+- [ ] [達成基準3.1.2一部の言語（レベルAA）](../../../external-docs/accessibility/Understanding/3-1/3-1-2.md)
+
+### 3.2予測可能
+
+- [ ] [達成基準3.2.1フォーカス時の動作（レベルA）](../../../external-docs/accessibility/Understanding/3-2/3-2-1.md)
+- [ ] [達成基準3.2.2入力時の動作（レベルA）](../../../external-docs/accessibility/Understanding/3-2/3-2-2.md)
+- [ ] [達成基準3.2.3一貫したナビゲーション（レベルAA）](../../../external-docs/accessibility/Understanding/3-2/3-2-3.md)
+- [ ] [達成基準3.2.4一貫した識別（レベルAA）](../../../external-docs/accessibility/Understanding/3-2/3-2-4.md)
+- [ ] [達成基準3.2.6一貫したヘルプ（レベルA）](https://www.w3.org/WAI/WCAG22/Understanding/consistent-help.html)
+
+### 3.3入力支援
+
+- [ ] [達成基準3.3.1エラーの特定（レベルA）](../../../external-docs/accessibility/Understanding/3-3/3-3-1.md)
+- [ ] [達成基準3.3.2ラベル又は説明（レベルA）](../../../external-docs/accessibility/Understanding/3-3/3-3-2.md)
+- [ ] [達成基準3.3.3エラー修正の提案（レベルAA）](../../../external-docs/accessibility/Understanding/3-3/3-3-3.md)
+- [ ] [達成基準3.3.4法的・財務・データのエラー防止（レベルAA）](../../../external-docs/accessibility/Understanding/3-3/3-3-4.md)
+- [ ] [達成基準3.3.7冗長な入力（レベルA）](https://www.w3.org/WAI/WCAG22/Understanding/redundant-entry.html)
+- [ ] [達成基準3.3.8アクセシブルな認証（最低限）（レベルAA）](https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum.html)
+
+## 4. 堅牢性
+
+コンテンツを現在と将来のユーザーエージェントや支援技術で解釈できるようにします。
+
+### 4.1互換性
+
+- [ ] [達成基準4.1.2名前・役割・値（レベルA）](../../../external-docs/accessibility/Understanding/4-1/4-1-2.md)
+- [ ] [達成基準4.1.3ステータスメッセージ（レベルAA）](../../../external-docs/accessibility/Understanding/4-1/4-1-3.md)
+
+## 確認時の注意
+
+自動監査だけで適合を判断しません。キーボード操作、フォーカス表示、読み上げ順序、エラー内容、縮小画面を手動でも確認します。未対応の項目は要対応として記録し、文書だけで実装済みと扱いません。

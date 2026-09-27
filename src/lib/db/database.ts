@@ -63,9 +63,7 @@ export class Database {
       );
 
       // データベースディレクトリが存在するか確認
-      const dbDir = path.dirname(
-        path.join(process.cwd(), this.config.sqlitePath)
-      );
+      const dbDir = path.dirname(this.config.sqlitePath);
       if (!fs.existsSync(dbDir)) {
         logger.log(
           `[DB:${this.connectionId}] ディレクトリを作成します: ${dbDir}`
@@ -114,7 +112,7 @@ export class Database {
    */
   public async checkIntegrity(): Promise<boolean> {
     try {
-      const dbFilePath = path.join(process.cwd(), this.config.sqlitePath);
+      const dbFilePath = this.config.sqlitePath;
       logger.log(
         `[DB:${this.connectionId}] データベース整合性チェック開始: ${dbFilePath}`
       );

@@ -11,6 +11,7 @@ interface Stop {
   stop_name?: string;
 }
 import { loadConfig, TransitConfig } from "../config/config";
+import { prisma } from "../db/prisma";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { logger } from "../../utils/logger";
 import fs from "fs";
@@ -51,7 +52,7 @@ export class TransitManager {
    */
   private constructor() {
     this.db = Database.getInstance();
-    this.prisma = new PrismaClient();
+    this.prisma = prisma;
     this.dataDir = path.join(process.cwd(), "data", "gtfs");
 
     try {
@@ -96,9 +97,7 @@ export class TransitManager {
           logger.log("GTFSデータをインポート中...");
 
           // ディレクトリの存在確認
-          const dbDir = path.dirname(
-            path.join(process.cwd(), this.config.sqlitePath)
-          );
+          const dbDir = path.dirname(this.config.sqlitePath);
           if (!fs.existsSync(dbDir)) {
             logger.log(`データベースディレクトリを作成します: ${dbDir}`);
             fs.mkdirSync(dbDir, { recursive: true });

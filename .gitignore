@@ -51,7 +51,7 @@ prisma/.temp/
 .docs/
 
 # transit
-transit-config.json
+/transit-config.json
 
 .gtfs/
 .codex/

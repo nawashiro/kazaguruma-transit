@@ -17,10 +17,10 @@
       "wss://nostr.mom",
       "wss://offchain.pub"
     ],
-    "nostrTimeoutMs": 5000,
+    "nostrTimeoutMs": 2000,
     "readStrategy": {
-      "idleTimeoutMs": 5000,
-      "hardTimeoutMs": 15000,
+      "idleTimeoutMs": 2000,
+      "hardTimeoutMs": 5000,
       "dedupWindowMs": 250
     }
   },
@@ -31,7 +31,7 @@
     "message": "運営のNawashiroは労働災害で負った障害により、通常の仕事に就くことができません。継続的な支援があれば、活動を続けることができるかもしれません。支援をお願いします。"
   },
   "announcement": {
-    "information": "ベビーカー利用ガイド修正案の投稿・投票を実施中です。",
+    "information": "「初めてのかたへ」修正案の投稿を実施中です。",
     "url": "/discussions/naddr1qvzqqqyx7cpzqjye4f6pjzcp8t6mugkqly96eph7xxtvaf5u24vjp4xe5c24dfunqqhkg6tnvd6hxumfdahz6dryxpjxzdecxvkkvvmrvckngdt9xvknsvp5xsknqce4x4jrydpsxqukvdgz70fx4"
   }
 }

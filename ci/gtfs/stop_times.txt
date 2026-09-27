@@ -1,0 +1,3 @@
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type,shape_dist_traveled,timepoint
+トリップ_日本語_0001,07:00:00,07:00:00,000001,1,,0,0,,
+トリップ_日本語_0001,07:05:00,07:05:00,終端_000002,2,,1,1,,

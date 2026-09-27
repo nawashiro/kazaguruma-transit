@@ -1,178 +1,103 @@
-## プロジェクト概要
+# 風ぐるま乗換案内
 
-これは千代田区の福祉バス「風ぐるま」の非公式ウェブアプリケーションです。地域バスサービスの経路検索および時刻表情報を提供します。
+障害者・高齢者・支援者を対象に、地域福祉交通を利用した移動計画を支援するウェブアプリケーションです。
 
-## 主要コマンド
+千代田区地域福祉交通「風ぐるま」利用者向けに、時刻表検索・ほかを提供しています。
 
-### 作業開始
+[ライセンス](#%E3%83%A9%E3%82%A4%E3%82%BB%E3%83%B3%E3%82%B9)を守って好きに使ってください。
 
-```bash
-./scripts/start-work.sh
-```
+> [!NOTE]
+> 地域福祉交通とは、大手交通機関が定型な労働者とみなさない人のための移動手段です。
 
-通常の開発は `dev` から開始します。ブランチ整理の判断根拠と開始手順は [docs/development-handoff.md](docs/development-handoff.md) を参照してください。
+## 目的（[constitution](docs/reference/constitution.md) 抜粋）
 
-### 開発
+- ユーザーが必要に応じた目的地を選定できること。
+- ユーザーが制約のある手段で無理のない移動計画を得られること。
+- ユーザーが移動計画に含まれる障害を事前に得られること。
 
-```bash
-npm run dev          # Turbopackを使用した開発サーバーの起動
-npm install          # 依存関係のインストール
-```
+## 前提
 
-### テスト
+- Git
+- Node.js 22.x
+- npm
 
-```bash
-npm test             # Jestテストの実行
-npm test:watch       # Jestをウォッチモードで実行
-npm run lint         # ESLintによるコードチェック
-npx tsc --noEmit     # TypeScriptの型チェックのみ実行
-```
+## 初回準備
 
-### アクセシビリティ検査
-
-Lighthouseで主要ページを検査します。アクセシビリティカテゴリに加えて、WCAG 2.2の1.4.3（コントラスト最低）の検査に対応する`color-contrast`監査も実行します。各ページのHTML／JSONレポートは`artifacts/lighthouse/`に保存されます。
+### Cloneと依存関係
 
 ```bash
-# 既に http://127.0.0.1:3000 で開発サーバーを起動している場合
-npm run a11y
-
-# 開発サーバーを起動してから検査する場合（違反時は終了コード1）
-npm run accessibility:ci
-
-# 開発サーバーを起動済みの環境でstrict検査する場合
-npm run accessibility:strict
+git clone https://github.com/nawashiro/kazaguruma-transit
+cd kazaguruma-transit
+git switch dev
+npm ci
 ```
 
-`npm run a11y`は確認用の警告モード、`accessibility:strict`と`accessibility:ci`は違反時に失敗するstrictモードです。既定では`/`、`/beginners-guide`、`/locations`、`/license`、`/login`を検査します。対象URLやページを変更する場合は、次の環境変数を指定できます。
+### 設定ファイル
+
+記入例は `${filename}.example` のファイルをご覧ください。
+
+設定ファイルがない場合、非ゼロで終了します。
+
+> [!WARNING]
+> `機密性` をご覧ください。`秘密` と `公開` を分けます。
+>
+> `秘密` をコミットしないでください。`公開` に秘密情報を書かないでください。
+
+| ファイル名            | 機密性 | 説明                                                                                                         |
+| --------------------- | ------ | ------------------------------------------------------------------------------------------------------------ |
+| `app-config.json`     | 公開   | アプリの各種設定です。提供URL、Google Analytics、場所データのURI、会話設定、お知らせ、支援表示を設定します。 |
+| `transit-config.json` | 秘密   | GTFS取得URLを設定します。                                                                                    |
+| `.env.local`          | 秘密   | 開発サーバーの設定です。`GOOGLE_MAPS_API_KEY`（必須）、`PUPPETEER_EXECUTABLE_PATH`（任意）を設定します。     |
+| `.env`                | 秘密   | 本番サーバーの設定です。`CLOUDFLARE_TUNNEL_TOKEN`などの秘密値を設定します。開発が目的なら必要ありません。    |
+
+## 開発
+
+ビルド生成物を用意し、開発サーバーを起動します。
 
 ```bash
-LIGHTHOUSE_BASE_URL=https://staging.example.test \
-LIGHTHOUSE_ROUTES=/,/beginners-guide \
-npm run a11y
+npm run build # サーバー起動にはビルド生成物が必要
+npm run dev
 ```
 
-既定の警告をCIエラーに昇格する場合は`LIGHTHOUSE_ASSERTION_LEVEL=error`を指定してください。Chromeの起動引数を追加する必要がある環境では`LIGHTHOUSE_CHROME_FLAGS`で指定できます。自動検査だけでは判断できない動的コンテンツ、キーボード操作、実際の支援技術との組み合わせは、手動確認も必要です。
-
-### データベース & ビルド
+反復してテストするときは、次のコマンドを使います。
 
 ```bash
-npm run prisma:generate  # Prismaクライアントの生成
-npm run prisma:migrate   # データベースマイグレーションの実行
-npm run prisma:studio    # Prisma Studioの起動
-npm run import-gtfs      # GTFS交通データのインポート
-npm run build            # 本番環境向けフルビルド（GTFSインポートを含む）
-npm start                # 本番環境サーバーの起動
+npm run test:watch
 ```
 
-## アーキテクチャ
+経路検索は直通または最大1回乗換の経路を扱います。
 
-### 主要コンポーネント
+## 目的別の文書
 
-- **Next.js 15** with App Router および React 19 を採用
-- **Prisma ORM**と SQLite を使用した GTFS 交通データ管理
-- **DaisyUI + Tailwind CSS**による UI コンポーネント
-- **交通サービス層**（`src/lib/transit/`）：経路アルゴリズムを実装
-- **Nostr 統合機能**（`src/lib/nostr/`）：分散型ディスカッション機能を実装
+| 分類        | 目的                                                                                   |
+| ----------- | -------------------------------------------------------------------------------------- |
+| how-to      | [Google Analytics設定](docs/how-to/analytics.md)                                       |
+| how-to      | [Docker開発・本番構成](docs/how-to/docker-setup.md)                                    |
+| how-to      | [SEOの現行実装](docs/how-to/seo-optimization.md)                                       |
+| how-to      | [ライセンス情報の更新](docs/how-to/license-page.md)                                    |
+| reference   | [開発憲章](docs/reference/constitution.md)                                             |
+| reference   | [ディスカッションの実装事実](docs/reference/discussion.md)                             |
+| reference　 | [文書執筆規範](docs/reference/writing-style.md)                                        |
+| reference　 | [技術スタック](docs/reference/technology-stack.md)                                     |
+| reference   | [WCAG 2.2チェックリスト](docs/reference/accessibility/wcag-22-checklist.md)            |
+| reference   | [ウェブアクセシビリティ方針](docs/reference/accessibility/web-accessibility-policy.md) |
+| explanation | [UI設計の背景](docs/explanation/frontend-design.md)                                    |
+| explanation | [Polisに着想を得た合意分析](docs/explanation/polis-consensus-algorithm.md)             |
+| explanation | [Polisの理論背景と本アプリの適用範囲](docs/explanation/polis-consensus-whitepaper.md)  |
 
-### データベーススキーマ
+## Quality Gate
 
-本アプリケーションは GTFS（General Transit Feed Specification）形式のデータを SQLite に格納しています：
+[`.github/workflows/quality-gate.yml`](.github/workflows/quality-gate.yml)は`dev`または`master`へのpushとPull Requestを検査します。
 
-- 交通データ用の`Stop`、`Route`、`Trip`、`StopTime`モデル
-- スケジュール管理用の`Calendar`、`CalendarDate`
-- API レート制限用の`RateLimit`
+- Node.js 22.x
+- 設定ファイルを一時準備
+- `npm ci`
+- ESLint
+- strict TypeScript
+- `npm run build`
+- production serverの起動
+- Jest
 
-### 主要サービス
+## ライセンス
 
-- **TransitService**（`src/lib/transit/transit-service.ts`）：経路検索、停留所検索、時刻表問い合わせを統括するメインサービスクラス
-- **TimeTableRouter**（`src/lib/transit/route-algorithm.ts`）：ダイクストラ法に基づく経路探索アルゴリズムを実装
-- **NostrService**（`src/lib/nostr/nostr-service.ts`）：ディスカッション機能のための Nostr プロトコル通信を処理
-- **EvaluationService**（`src/lib/evaluation/evaluation-service.ts`）：Polis ベースの合意形成分析によるディスカッション投稿評価
-- **API 保護用レート制限ミドルウェア**
-
-### API 構造
-
-メイン API エンドポイント`/api/transit`は以下の処理を担当：
-
-- 経路問い合わせ（type: "route"）
-- 停留所検索（type: "stop"）
-- 時刻表リクエスト（type: "timetable"）
-
-### 経路探索アルゴリズム
-
-2 つの探索戦略を採用：
-
-1. **従来型探索**：起点/終点に最も近い停留所を使用
-2. **速度優先探索**：最適な経路のため周辺の複数停留所を考慮
-3. 直行便と乗り換えルートの両方に対応（最大 2 回乗り換え、3 時間の時間枠）
-
-## 開発環境のセットアップ
-
-1. 開発者または配布先の運用者が、初回に`cp app-config.json.example app-config.json`を実行して`app-config.json`を用意する。`app-config.json`は配布先ごとの公開設定であり、Gitでは管理しない。
-2. 用意した`app-config.json`を編集する。公開URL、GA測定ID、場所データversion、
-   会話設定、Ko-fi支援表示をこのファイルで設定する。
-3. GTFSを使う場合は`transit-config.json.example`を参考に`transit-config.json`を作成する。このファイルは
-   URL queryに秘密情報を含む可能性があるため、Git管理・公開JSON・client bundleへ入れない。
-4. `.env.local`にserver/deployment専用の環境変数を設定する。
-   - `GOOGLE_MAPS_API_KEY`
-   - `CLOUDFLARE_TUNNEL_TOKEN`（必要な場合）
-   - `PUPPETEER_EXECUTABLE_PATH`（必要な場合）
-5. Ko-fiの見出し・説明文・ユーザー名・表示可否は`app-config.json`の`support`を編集する。
-   `FUNDING.yml`はGitHubの開発・配布用metadataとして残し、アプリ表示の入力には使わない。
-6. ビルド時に Prisma クライアントが自動生成され、GTFS データがインポートされます。
-
-`npm run dev`、`npm test`、`npm run build`、`npm start`は、既存の`app-config.json`の存在だけを検証します。
-ファイルがない場合は非ゼロで終了し、これらのコマンドがサンプルから自動生成することはありません。
-配布先では運用者が実際の`app-config.json`を用意してください。Quality GateのCIだけは、
-チェックアウト内に一時的な検証用コピーを明示的に作成します。実際の設定値はリポジトリへ保存・公開しません。
-
-公開設定を変更した後は、Dockerのbuild argsや追加の`.env`生成を行わず、通常の`npm run build`を実行する。
-
-## テスト
-
-- React Testing Library を使用した Jest テスト
-- `__tests__`ディレクトリ内のテストファイルまたは`.test.ts/.test.tsx`形式のファイル
-- 外部依存関係のモックは`__mocks__/`および`src/__mocks__/`ディレクトリに配置
-
-## ファイル構造に関する注意点
-
-- コンポーネントは TypeScript を使用し、厳格な型チェックを実施
-- 日本語テキスト表示用の Ruby テキストサポートを実装
-- 経路情報の PDF エクスポート機能を装備
-- Google Maps 連携による位置情報サービスを採用
-- Google Analytics 4 を使用した分析機能を実装
-
-## 重要な設計パターン
-
-- TransitService クラスはシングルトンパターンを採用
-- エラー境界処理とローディング状態管理を実装
-- ARIA ラベルを使用したアクセシブルな UI 設計
-- API エンドポイントへのレート制限を適用
-- SEO 最適化のための構造化データ実装
-
-## UI
-
-UI には Tailwind + DaisyUI5 を採用しています。
-
-## img
-
-画像は外部 URL から読み込む場合があります。この場合、Image コンポーネントは使用できず、img タグを使用します。
-
-## btn
-
-daisyui のカップケーキ型角丸処理が機能しない場合があるため、`rounded-full dark:rounded-sm`を使用しています。
-
-## ディスカッション機能
-
-本アプリケーションには Nostr ベースの分散型ディスカッション機能を実装しています：
-
-- **NIP-72 準拠**：kind:34550（コミュニティ定義）と kind:4550（承認イベント）をサポートし、モデレートされたコミュニティを実現
-- **NIP-25 リアクション機能**：kind:7 イベントを使用して投稿評価を実施（評価タグではなくコンテンツベースの評価）
-- **合意形成分析**：Polis 風のアルゴリズムを実装し、投稿に対するグループ合意形成を分析
-- **権限管理システム**：作成者とモデレーターベースのアクセス制御を採用（ディスカッションにはグローバル管理者を設けない設計）
-
-### 主要プロトコル
-
-- 投稿には kind:1111（コミュニティ投稿）を使用（kind:1 との後方互換性あり）
-- 評価には kind:7 を使用し、コンテンツフィールドを採用（"-"で否定評価、その他は肯定評価として処理）
-- 承認システムでは、承認イベントのコンテンツフィールドに元の投稿データを保存
+本ソフトウェアのライセンスは[AGPL-3.0](LICENSE)です。日本語は[参考訳（非公式）](LICENSE.ja.md)をご覧ください。

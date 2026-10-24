@@ -59,3 +59,27 @@ docker compose -f compose.prod.yml up --build -d
 ```bash
 docker compose -f compose.prod.yml down
 ```
+
+## セキュリティ更新時の再取得と確認
+
+本番設定を用意した環境で、ベースイメージと Chrome を取得し直してください。通常のビルドでは取得処理のキャッシュを再利用する場合があり、`--no-cache` だけではベースイメージを再取得しません。
+
+```bash
+docker compose -f compose.prod.yml build --pull --no-cache app
+docker compose -f compose.prod.yml run --rm --no-deps app node --version
+docker compose -f compose.prod.yml run --rm --no-deps app google-chrome-stable --version
+```
+
+Node.js は 22 系の 22.23.4 以上であることを確認してください。Chrome は実バージョンを[公式 stable 更新情報](https://chromereleases.googleblog.com/search/label/Stable%20updates)と照合してください。確認日時と両方のバージョンを記録し、生成イメージ内の Chrome で PDF を生成して内容と用紙設定を確認してください。
+
+確認したイメージを本番へ反映するときは、コンテナを再作成してください。
+
+```bash
+docker compose -f compose.prod.yml up -d --no-build --force-recreate app
+docker compose -f compose.prod.yml exec -T app node --version
+docker compose -f compose.prod.yml exec -T app google-chrome-stable --version
+```
+
+稼働コンテナでも修正条件を満たすことを確認し、日時とバージョンを記録してください。地図、画像表示、PDF 出力を確認してから反映完了としてください。起動時には GTFS の取込が走ります。
+
+Docker または本番設定がない環境では、イメージのビルド、Chrome と PDF の互換性、本番反映を未実施と記録してください。アプリのローカル検証だけでは本番の修正完了を確認できません。古いイメージへ戻すと修正前の脆弱性も復帰します。ロールバックしても DB の以前の状態への復帰は保証されません。

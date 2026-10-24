@@ -5,6 +5,7 @@ interface PackageManifest {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   version?: string;
+  overrides?: { next?: Record<string, string> };
 }
 
 function readPackageManifest(packagePath: string): PackageManifest {
@@ -61,7 +62,13 @@ describe("dependency security", () => {
     expect(
       isVersionAtLeast(
         getDeclaredMinimumVersion(packageJson.dependencies?.next),
-        "15.5.21"
+        "15.5.28"
+      )
+    ).toBe(true);
+    expect(
+      isVersionAtLeast(
+        getDeclaredMinimumVersion(packageJson.overrides?.next?.sharp),
+        "0.35.5"
       )
     ).toBe(true);
     expect(
@@ -77,7 +84,7 @@ describe("dependency security", () => {
   });
 
   it("resolves patched versions for externally reachable server dependencies", () => {
-    expect(isVersionAtLeast(readInstalledPackageVersion("next"), "15.5.21")).toBe(
+    expect(isVersionAtLeast(readInstalledPackageVersion("next"), "15.5.28")).toBe(
       true
     );
     expect(
@@ -94,9 +101,15 @@ describe("dependency security", () => {
 
     expect(postcssVersion).toBeDefined();
     expect(isVersionAtLeast(postcssVersion ?? "0.0.0", "8.5.23")).toBe(true);
-    expect(isVersionAtLeast(readInstalledPackageVersion("sharp"), "0.35.0")).toBe(
-      true
+    const sharpPackagePath = join(
+      dirname(require.resolve("sharp", { paths: [nextPackageDirectory] })),
+      "..",
+      "package.json"
     );
+    const sharpVersion = readPackageManifest(sharpPackagePath).version;
+
+    expect(sharpVersion).toBeDefined();
+    expect(isVersionAtLeast(sharpVersion ?? "0.0.0", "0.35.5")).toBe(true);
     expect(
       isVersionAtLeast(readInstalledPackageVersion("nanoid"), "3.3.18")
     ).toBe(true);

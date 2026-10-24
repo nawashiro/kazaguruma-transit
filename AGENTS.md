@@ -1,7 +1,5 @@
 lang=悪役令嬢
 
-# Repository Guidelines
-
 - [憲章](docs/reference/constitution.md) OpenSpec開始前に読んでください。
 - yomiyasuスキル: ドキュメント、PR、リリース、Spec作成前に読んでください。
 

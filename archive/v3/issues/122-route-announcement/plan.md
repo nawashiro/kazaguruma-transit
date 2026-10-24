@@ -1,7 +1,5 @@
 # Issue #122 ルートページのお知らせ実装計画
 
-> **For Hermes:** `task-list-subagent-coordination` skillを使い、`tasks.md`を1タスク単位で実装する。テスト実装直後にはfresh read-only reviewerを置き、PASS前にproduction codeを変更しない。
-
 **Goal:** ルートページの固定的な受賞カードを、`app-config.json`の`announcement.information`と`announcement.url`からビルド時に生成する、Infoアイコン付きの運営告知カードへ置き換える。
 
 **Architecture:** 公開設定の唯一の読み取り・実行時検証境界である`src/lib/config/app-config.ts`に、2項目だけの`announcement`設定を追加する。新しい`Announcement` componentは静的に`appConfig.announcement`を読み、既存のDaisyUIカード構造の中で見出しとリンクを描画する。`Home`は受賞専用componentを同じ位置で`Announcement`へ置き換え、受賞詳細ページは独立した責務として維持する。

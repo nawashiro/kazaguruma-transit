@@ -1,8 +1,8 @@
 <div align="center">
     <a href="https://kazaguruma-transit.nawashiro.dev" target="_blank">
         <h1 style="border-bottom: none">風ぐるま乗換案内</h1>
-        <img src="src/app/icon.svg" alt="風ぐるまロゴ" />
     </a>
+    <a href="https://kazaguruma-transit.nawashiro.dev" target="_blank"><img src="src/app/icon.svg" alt="風ぐるまロゴ" /></a>
     <p>
         <a href="https://kazaguruma-transit.nawashiro.dev/">
             <img src="https://img.shields.io/website?url=https%3A%2F%2Fkazaguruma-transit.nawashiro.dev" alt="Site-status" />

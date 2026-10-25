@@ -11,11 +11,11 @@
     "busStopDiscussionId": "naddr1qvzqqqyx7cpzpjvzz5zkjenkd5a2ldp5w8x894v6nh7j3pd26far8k33dp0helhcqqrj6wfc8yer2vq94g3w9",
     "discussionListNaddr": "naddr1qvzqqqyx7cpzpjvzz5zkjenkd5a2ldp5w8x894v6nh7j3pd26far8k33dp0helhcqq8hgetnwskkg6tnvd6hxumfdahq9reds2",
     "nostrRelays": [
-      "wss://relay.damus.io",
-      "wss://relay.nostr.band",
-      "wss://nos.lol",
-      "wss://nostr.mom",
-      "wss://offchain.pub"
+      "wss://yabu.me",
+      "wss://relay.ditto.pub",
+      "wss://relay-jp.nostr.wirednet.jp",
+      "wss://nostr.fediverse.jp",
+      "wss://r.kojira.io"
     ],
     "nostrTimeoutMs": 2000,
     "readStrategy": {

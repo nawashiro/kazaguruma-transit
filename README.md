@@ -1,13 +1,37 @@
-# 風ぐるま乗換案内
+<div align="center">
+    <h1 style="border-bottom: none">
+        <a href="https://kazaguruma-transit.nawashiro.dev" target="_blank">風ぐるま乗換案内</a>
+    </h1>
+    <a href="https://kazaguruma-transit.nawashiro.dev" target="_blank">
+        <img src="src/app/icon.svg" alt="風ぐるまロゴ" />
+    </a>
+    <p>
+        <a href="https://kazaguruma-transit.nawashiro.dev/">
+            <img src="https://img.shields.io/website?url=https%3A%2F%2Fkazaguruma-transit.nawashiro.dev" alt="Site-status" />
+        </a>
+        <a href="LICENSE">
+            <img src="https://img.shields.io/badge/license-AGPLv3-purple" alt="License"/>
+        </a>
+        <a href="https://github.com/nawashiro/kazaguruma-transit/pulse">
+            <img src="https://img.shields.io/github/commit-activity/m/nawashiro/kazaguruma-transit" alt="Commits-per-month">
+        </a>
+    </p>
+</div>
 
-障害者・高齢者・支援者を対象に、地域福祉交通を利用した移動計画を支援するウェブアプリケーションです。
-
-千代田区地域福祉交通「風ぐるま」利用者向けに、時刻表検索・ほかを提供しています。
-
-[ライセンス](#%E3%83%A9%E3%82%A4%E3%82%BB%E3%83%B3%E3%82%B9)を守って好きに使ってください。
+障害者・高齢者・支援者を対象に、地域福祉交通を利用した移動計画を支援するウェブアプリケーションです。千代田区地域福祉交通「風ぐるま」利用者向けに、時刻表検索・ほかを提供しています。
 
 > [!NOTE]
 > 地域福祉交通とは、大手交通機関が定型な労働者とみなさない人のための移動手段です。
+
+## 受賞
+
+<p align="center">
+    <a href="https://odhackathon.metro.tokyo.lg.jp/collection/54/?year=2025" target="_blank">
+        <img src="assets/tokyo-award-badge.webp" alt="都知事杯オープンデータハッカソン2025 行政課題解決賞" width="100" height="100" /><br/>
+        <b>都知事杯オープンデータハッカソン2025</b><br/>
+        行政課題解決賞
+    </a>
+</p>
 
 ## 目的（[constitution](docs/reference/constitution.md) 抜粋）
 
@@ -77,8 +101,8 @@ npm run test:watch
 | how-to      | [ライセンス情報の更新](docs/how-to/license-page.md)                                    |
 | reference   | [開発憲章](docs/reference/constitution.md)                                             |
 | reference   | [ディスカッションの実装事実](docs/reference/discussion.md)                             |
-| reference　 | [文書執筆規範](docs/reference/writing-style.md)                                        |
-| reference　 | [技術スタック](docs/reference/technology-stack.md)                                     |
+| reference   | [文書執筆規範](docs/reference/writing-style.md)                                        |
+| reference   | [技術スタック](docs/reference/technology-stack.md)                                     |
 | reference   | [WCAG 2.2チェックリスト](docs/reference/accessibility/wcag-22-checklist.md)            |
 | reference   | [ウェブアクセシビリティ方針](docs/reference/accessibility/web-accessibility-policy.md) |
 | explanation | [UI設計の背景](docs/explanation/frontend-design.md)                                    |

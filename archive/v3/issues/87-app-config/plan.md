@@ -1,7 +1,5 @@
 # Issue #87 公開アプリ設定集約 実装計画
 
-> **For Hermes:** `task-list-subagent-coordination` skillを使い、tasks.mdを1タスク単位で実装する。
-
 **Goal:** 公開設定を `NEXT_PUBLIC_*` 環境変数とDocker build argsから、型付きのルート
 `app-config.json`へ移し、DockerなしのNext.js buildでも同じ設定を利用できるようにする。
 

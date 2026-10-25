@@ -83,27 +83,17 @@ function prepareCliSandbox(temporaryRoot: string): string {
   copyCliSandboxFile("scripts/import-gtfs.ts", temporaryRoot);
   copyCliSandboxFile("scripts/gtfs-log-sanitizer.ts", temporaryRoot);
   copyCliSandboxFile("src/lib/config/config.ts", temporaryRoot);
+  copyCliSandboxFile("src/lib/db/create-prisma-client.ts", temporaryRoot);
+  cpSync(path.join(projectRoot, "src/generated"), path.join(temporaryRoot, "src/generated"), { recursive: true });
   copyCliSandboxFile("src/utils/logger.ts", temporaryRoot);
 
   const sandboxFixturePath = path.join(temporaryRoot, "ci", "gtfs");
   mkdirSync(path.dirname(sandboxFixturePath), { recursive: true });
   cpSync(fixturePath, sandboxFixturePath, { recursive: true });
 
-  const sandboxNodeModules = path.join(temporaryRoot, "node_modules");
-  mkdirSync(path.join(sandboxNodeModules, "@prisma"), { recursive: true });
-  cpSync(
-    path.join(projectRoot, "node_modules", ".prisma"),
-    path.join(sandboxNodeModules, ".prisma"),
-    { recursive: true },
-  );
-  cpSync(
-    path.join(projectRoot, "node_modules", "@prisma", "client"),
-    path.join(sandboxNodeModules, "@prisma", "client"),
-    { recursive: true },
-  );
   symlinkSync(
-    path.join(projectRoot, "node_modules", "gtfs"),
-    path.join(sandboxNodeModules, "gtfs"),
+    path.join(projectRoot, "node_modules"),
+    path.join(temporaryRoot, "node_modules"),
     "dir",
   );
 

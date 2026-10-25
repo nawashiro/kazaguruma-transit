@@ -1,9 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "../src/generated/prisma/client";
+import { createPrismaClient } from "../src/lib/db/create-prisma-client";
 import { importGtfs } from "gtfs";
 import fs from "fs";
 import path from "path";
 import {
-  getPrismaDatasourceUrl,
   loadConfig,
 } from "../src/lib/config/config";
 import {
@@ -22,9 +22,7 @@ async function importGtfsData() {
 
     // 設定ファイルを読み込む
     const config = loadConfig();
-    const client = new PrismaClient({
-      datasourceUrl: getPrismaDatasourceUrl(config.sqlitePath),
-    });
+    const client = createPrismaClient(config.sqlitePath);
     prismaClient = client;
 
     console.log("設定を読み込みました:", {

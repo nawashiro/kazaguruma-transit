@@ -1,6 +1,6 @@
 import { prisma } from "./prisma";
 import { logger } from "../../utils/logger";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "../../generated/prisma/client";
 
 export interface RateLimitRecord {
   ip: string;

@@ -7,7 +7,6 @@ import {
   expect,
   beforeEach,
   afterEach,
-  jest,
 } from "@jest/globals";
 
 // GTFSモジュールの関数をモック
@@ -16,16 +15,12 @@ jest.mock("gtfs");
 // Prismaのモック
 jest.mock("../../db/prisma", () => ({
   prisma: {
-    // @ts-expect-error - モック関数の型定義問題を回避
     $queryRaw: jest.fn().mockResolvedValue([{ "1": 1 }]),
-    // @ts-expect-error - モック関数の型定義問題を回避
     $disconnect: jest.fn().mockResolvedValue(undefined),
     stop: {
-      // @ts-expect-error - モック関数の型定義問題を回避
       count: jest.fn().mockResolvedValue(10),
     },
     route: {
-      // @ts-expect-error - モック関数の型定義問題を回避
       count: jest.fn().mockResolvedValue(5),
     },
   },
@@ -42,7 +37,6 @@ jest.mock("fs", () => ({
   existsSync: jest.fn().mockReturnValue(true),
   mkdirSync: jest.fn(),
   writeFileSync: jest.fn(),
-  // @ts-expect-error - コールバック型が問題になる場合の対応
   unlink: jest.fn((path, callback) => callback(null)),
 }));
 

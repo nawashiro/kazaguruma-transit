@@ -12,7 +12,7 @@ interface Stop {
 }
 import { loadConfig, TransitConfig } from "../config/config";
 import { prisma } from "../db/prisma";
-import { PrismaClient, Prisma } from "@prisma/client";
+import type { PrismaClient, Prisma } from "../../generated/prisma/client";
 import { logger } from "../../utils/logger";
 import fs from "fs";
 import path from "path";

@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { loadConfig, TransitConfig } from "../config/config";
-import { PrismaClient, Prisma } from "@prisma/client";
+import type { PrismaClient, Prisma } from "../../generated/prisma/client";
 import { prisma } from "./prisma";
 import { logger } from "../../utils/logger";
 

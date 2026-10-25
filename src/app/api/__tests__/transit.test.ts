@@ -1,17 +1,16 @@
-import { describe, expect, it, jest } from "@jest/globals";
+import { describe, expect, it } from "@jest/globals";
 import { POST } from "../transit/route";
 import { NextRequest } from "next/server";
 import * as gtfs from "gtfs";
 import "isomorphic-fetch";
 
+jest.mock("../../../lib/db/prisma", () => ({ prisma: {} }));
+
 // DataManagerをモック
 jest.mock("../../../lib/db/data-manager", () => ({
   dataManager: {
-    // @ts-expect-error - mockResolvedValueの型定義が不足しているため
     init: jest.fn().mockResolvedValue(undefined),
-    // @ts-expect-error - mockResolvedValueの型定義が不足しているため
     getRateLimitByIp: jest.fn().mockResolvedValue(null),
-    // @ts-expect-error - mockResolvedValueの型定義が不足しているため
     incrementRateLimit: jest.fn().mockResolvedValue(undefined),
   },
 }));
@@ -126,9 +125,7 @@ beforeEach(() => {
     }
     return Promise.resolve(mockStoptimes);
   });
-  // @ts-expect-error mockResolvedValueの型定義が不足しているため、型エラーが発生します
   (gtfs.openDb as jest.Mock).mockResolvedValue(undefined);
-  // @ts-expect-error mockResolvedValueの型定義が不足しているため、型エラーが発生します
   (gtfs.closeDb as jest.Mock).mockResolvedValue(undefined);
 });
 

@@ -2,6 +2,8 @@
 
 このプロジェクトは`compose.yml`で開発構成を、`compose.prod.yml`で本番構成を起動します。
 
+Prisma 7でのキャッシュの扱いは[交通キャッシュの再生成](rebuild-transit-cache.md)を参照してください。Dockerfileは依存導入前にschemaを配置し、`npm ci`でクライアントを生成します。
+
 ## 起動前の設定
 
 凡例をコピーし、秘密を含むファイルの権限を狭めてください。

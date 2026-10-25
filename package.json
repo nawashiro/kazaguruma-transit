@@ -20,11 +20,11 @@
   },
   "scripts": {
     "predev": "node scripts/ensure-app-config.mjs",
-    "dev": "prisma generate && next dev --turbopack",
+    "dev": "prisma generate && tsx scripts/initialize-transit-cache.ts && npm run import-gtfs && next dev --turbopack",
     "prebuild": "node scripts/ensure-app-config.mjs && tsx scripts/generate-location-artifact.ts",
-    "build": "prisma generate && prisma db push --accept-data-loss && npm run import-gtfs && next build",
+    "build": "prisma generate && tsx scripts/initialize-transit-cache.ts && npm run import-gtfs && next build",
     "prestart": "node scripts/ensure-app-config.mjs",
-    "start": "prisma generate && prisma db push --accept-data-loss && npm run import-gtfs && next start",
+    "start": "prisma generate && tsx scripts/initialize-transit-cache.ts && npm run import-gtfs && next start",
     "lint": "next lint",
     "pretest": "node scripts/ensure-app-config.mjs",
     "test": "jest",
@@ -37,12 +37,14 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "import-gtfs": "tsx scripts/import-gtfs.ts"
+    "import-gtfs": "tsx scripts/import-gtfs.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@googlemaps/google-maps-services-js": "^3.4.1",
     "@nostr-dev-kit/ndk": "latest",
-    "@prisma/client": "^6.19.3",
+    "@prisma/adapter-better-sqlite3": "7.10.1",
+    "@prisma/client": "7.10.1",
     "@react-pdf/renderer": "^4.3.0",
     "@rx-nostr/crypto": "^3.1.6",
     "@types/luxon": "^3.4.2",
@@ -85,7 +87,7 @@
     "jest-localstorage-mock": "^2.4.26",
     "lighthouse": "^13.4.1",
     "postcss": "^8.5.28",
-    "prisma": "^6.19.3",
+    "prisma": "7.10.1",
     "start-server-and-test": "^3.0.12",
     "tailwindcss": "^4",
     "typescript": "^5"

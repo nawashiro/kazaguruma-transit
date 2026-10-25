@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../db/prisma";
 import { logger } from "@/utils/logger";
 import { parseGtfsTime } from "./walking";

@@ -84,6 +84,10 @@ CLIのDB構築、GTFS取込、アプリの読出しには、交通設定で指�
 
 DBはキャッシュであり、空の状態から構築する。旧DBのデータ移行・バックアップ・互換層を追加しない。取込元GTFSと公開設定は保持する。キャッシュの破棄は検証用の隔離先に限定し、稼働環境の削除は行わない。
 
+初期化スクリプトは設定先のDBファイルがない場合だけ、Prisma CLIでschemaを作成する。既存キャッシュへ毎回db pushを適用すると、GTFSが追加したshapes等のテーブルを削除する警告が出るため、build・start・devからの無条件実行を置き換える。CLIの強制データ損失フラグは使わない。DBを破棄した後は同じ構築・取込手順で再生成する。
+
+依存導入後にPrismaクライアントを生成する。Dockerfileは依存導入前にschemaを配置する。交通設定がない導入・型生成では接続先を設定せず、DBを使う操作には交通設定を要求する。Next.jsではSQLiteアダプターをserverExternalPackagesに指定し、ネイティブファイルの実パッケージ内の配置を維持する。
+
 Prisma移行に必要な上記の改修は範囲内とする。DB基盤や利用者向けAPIの変更が必要になった場合は、Prisma経路を戻して理由を記録する。
 
 ### 5. 各段階に同じ採用条件を適用する
@@ -166,3 +170,17 @@ lint、strict TypeScript、build、ローカル起動、Jest 174スイート・1
 SDK配下に限定したdecode-uri-component 0.5.1へのoverrideを試した。導入は成功したが、実query-stringの日本語等の往復でTypeError: decodeComponent is not a functionとなった。ES Modulesのdefault exportとCommonJSの関数取得が一致しなかった。更新前には同じ検証が成功していた。
 
 overrideとロックの差分を戻し、クリーン導入後に同じ実query-string・SDK検証が成功することを確認した。再監査は両範囲とも5件（high 3、moderate 2）であった。関数取得の失敗で採用条件を満たさないため、試行版でのNext.jsビルド・全回帰検証と互換実装は非該当とした。Google Maps経路は未採用である。decode-uri-componentとquery-stringの2警告を保留し、Prisma経路へ進む。
+
+### Prisma 7
+
+prisma、@prisma/client、@prisma/adapter-better-sqlite3を7.10.1へ揃えた。deepmerge-tsは8.0.2を解決し、対象警告は消えた。CLIとアプリは交通設定の同じSQLite保存先を使う。クライアント生成先はsrc/generated/prismaであり、生成物はGitへ含めない。postinstallで生成し、Dockerfileはnpm ciの前にschemaを配置する。交通設定のない隔離環境でも生成が成功した。
+
+空の隔離DBを初期化し、GTFS取込、再初期化、停留所・出発便・運行日例外・RateLimitのBigInt読書きを確認した。DBを破棄して同じ確認を繰り返し、成功した。Prisma 6で失敗したDATE列とStringの不一致もPrisma 7では再現しなかった。既存キャッシュへの無条件db pushはGTFSのshapes等を削除する警告を出したため、DBファイルがないときだけ初期化する処理へ置き換えた。強制データ損失フラグと旧DBの移行処理は追加していない。
+
+実HTTPの本番API確認で、SQLiteのネイティブファイルを見つけられない失敗を確認した。回帰テストは修正前に失敗し、Next.jsでアダプターを外部パッケージへ指定した後に成功した。GETの不正入力と、レート制限DBを経由するPOSTの停留所検索を実HTTPで検証した。
+
+単体テストではjestのグローバル呼出しでDBモックを先に適用し、新しいネイティブ依存がモック済みfsを使わないよう対応した。不要になった型エラー抑制を削除した。実DBは隔離した子プロセスと本番HTTPで別に検証した。
+
+クリーン導入、lint、strict TypeScript、build、本番モードのローカル起動は成功した。Jestは176スイート・1,459件成功、2スイート・13件スキップとなった。Google Mapsの復元後の実SDK確認も成功した。監査は全依存・開発依存を除く両方でmoderate 2件、high・criticalは0件となった。残るdecode-uri-componentとquery-stringは前節の互換性不一致によって保留する。
+
+DockerコマンドとChromeがないため、Dockerイメージの構築・本番ランタイムの版確認・ChromeでのPDF出力は未実施である。実Google通信も未確認である。地図・PDFの既存契約テストとSDKの通信応答を代替した確認を実施した。本番へのデプロイと稼働DBの操作は行っていない。

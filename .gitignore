@@ -68,3 +68,5 @@ Thumbs.db
 
 # config
 app-config.json
+
+/src/generated/prisma/

@@ -1,5 +1,7 @@
-import { describe, test, expect, beforeEach, jest } from "@jest/globals";
+import { describe, test, expect, beforeEach } from "@jest/globals";
 import { TransitManager } from "../transit-manager";
+
+jest.mock("../prisma", () => ({ prisma: {} }));
 
 // fsモジュールのモックを先に設定
 jest.mock("fs", () => {
@@ -18,7 +20,6 @@ jest.mock("fs", () => {
       return Promise.resolve();
     }),
     promises: {
-      // @ts-expect-error - モック関数の戻り値型の不一致を無視
       unlink: jest.fn().mockResolvedValue(undefined),
     },
   };
@@ -26,11 +27,8 @@ jest.mock("fs", () => {
 
 // GTFSモジュールのモック
 jest.mock("gtfs", () => ({
-  // @ts-expect-error - モック関数の型定義問題を回避するための対応
   openDb: jest.fn().mockResolvedValue(undefined),
-  // @ts-expect-error - モック関数の型定義問題を回避するための対応
   closeDb: jest.fn().mockResolvedValue(undefined),
-  // @ts-expect-error - モック関数の型定義問題を回避するための対応
   getStops: jest.fn().mockResolvedValue([
     {
       stop_id: "stop1",
@@ -45,7 +43,6 @@ jest.mock("gtfs", () => ({
       stop_lon: "139.775327",
     },
   ]),
-  // @ts-expect-error - モック関数の型定義問題を回避するための対応
   getRoutes: jest.fn().mockResolvedValue([
     {
       route_id: "route1",
@@ -60,7 +57,6 @@ jest.mock("gtfs", () => ({
       route_color: "00FF00",
     },
   ]),
-  // @ts-expect-error - モック関数の型定義問題を回避するための対応
   getTrips: jest.fn().mockResolvedValue([
     {
       trip_id: "trip1",
@@ -73,7 +69,6 @@ jest.mock("gtfs", () => ({
       service_id: "service1",
     },
   ]),
-  // @ts-expect-error - モック関数の型定義問題を回避するための対応
   getStoptimes: jest.fn().mockResolvedValue([
     {
       trip_id: "trip1",
@@ -88,7 +83,6 @@ jest.mock("gtfs", () => ({
       stop_sequence: 1,
     },
   ]),
-  // @ts-expect-error - モック関数の型定義問題を回避するための対応
   importGtfs: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -121,11 +115,8 @@ const setupDatabaseMock = () => {
   return {
     Database: {
       getInstance: jest.fn().mockReturnValue({
-        // @ts-expect-error - モック関数の戻り値型の不一致を無視
         ensureConnection: jest.fn().mockResolvedValue(undefined),
-        // @ts-expect-error - モック関数の戻り値型の不一致を無視
         closeConnection: jest.fn().mockResolvedValue(undefined),
-        // @ts-expect-error - モック関数の戻り値型の不一致を無視
         checkIntegrity: jest.fn().mockResolvedValue(true),
         withConnection: jest.fn().mockImplementation(async (callbackFn) => {
           // コールバックを実行
@@ -176,7 +167,6 @@ describe("TransitManager", () => {
     jest.doMock("../database", () => dbModule);
 
     // GTFSモックを設定
-    // @ts-expect-error - モジュールのモック化による型の不一致
     const gtfsModule = { importGtfs: jest.fn().mockResolvedValue({}) };
     jest.doMock("gtfs", () => gtfsModule);
 
@@ -185,14 +175,12 @@ describe("TransitManager", () => {
     // @ts-expect-error - prepareGTFSDataの戻り値型定義と実際の戻り値の不一致
     expect(result.success).toBe(true);
     // モックがプロパティにアクセスできない場合は、適切なアサーションに変更
-    // @ts-expect-error - モックオブジェクトの型定義と実際の実装の不一致
     expect(dbModule.Database.getInstance().checkIntegrity).toHaveBeenCalled();
     expect(gtfsModule.importGtfs).not.toHaveBeenCalled();
   });
 
   test.skip("getStops returns formatted stops data", async () => {
     // withConnectionのモックを更新
-    // @ts-expect-error - モックオブジェクトの型定義と実際の実装の不一致
     const db = jest.requireMock("../database").Database.getInstance();
     db.withConnection.mockImplementationOnce(async (callbackFn: (db: unknown) => Promise<unknown>) => {
       // コールバックを実行
@@ -223,7 +211,6 @@ describe("TransitManager", () => {
 
   test.skip("getRoutes returns formatted routes data", async () => {
     // withConnectionのモックを更新
-    // @ts-expect-error - モックオブジェクトの型定義と実際の実装の不一致
     const db = jest.requireMock("../database").Database.getInstance();
     db.withConnection.mockImplementationOnce(async (callbackFn: (db: unknown) => Promise<unknown>) => {
       // コールバックを実行
@@ -270,7 +257,6 @@ describe("TransitManager", () => {
 
   test.skip("getDepartures returns properly formatted departures", async () => {
     // withConnectionのモックを更新
-    // @ts-expect-error - モックオブジェクトの型定義と実際の実装の不一致
     const db = jest.requireMock("../database").Database.getInstance();
     db.withConnection.mockImplementationOnce(async (callbackFn: (db: unknown) => Promise<unknown>) => {
       // コールバックを実行
@@ -311,7 +297,6 @@ describe("TransitManager", () => {
 
   test.skip("getNearestStops returns the closest stops to given coordinates", async () => {
     // withConnectionのモックを更新
-    // @ts-expect-error - モックオブジェクトの型定義と実際の実装の不一致
     const db = jest.requireMock("../database").Database.getInstance();
     db.withConnection.mockImplementationOnce(async (callbackFn: (db: unknown) => Promise<unknown>) => {
       // コールバックを実行

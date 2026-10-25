@@ -17,7 +17,6 @@ export interface TransitConfig {
       ({ path: string; url?: string } | { url: string; path?: string })
   >;
   verbose: boolean;
-  skipImport?: boolean;
 }
 
 /**

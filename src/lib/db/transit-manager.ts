@@ -1,4 +1,3 @@
-import { importGtfs } from "gtfs";
 import { Database } from "./database";
 import { Departure } from "@/types/core";
 
@@ -10,12 +9,9 @@ interface Stop {
   stop_id?: string;
   stop_name?: string;
 }
-import { loadConfig, TransitConfig } from "../config/config";
 import { prisma } from "../db/prisma";
 import type { PrismaClient, Prisma } from "../../generated/prisma/client";
 import { logger } from "../../utils/logger";
-import fs from "fs";
-import path from "path";
 
 // Prismaが生成した型定義
 type PrismaStop = Prisma.StopGetPayload<{ include: { stop_times: true } }>;
@@ -43,9 +39,7 @@ type FormattedDeparture = {
 export class TransitManager {
   private static instance: TransitManager;
   private db: Database;
-  private config: TransitConfig;
   private prisma: PrismaClient;
-  private dataDir: string;
 
   /**
    * プライベートコンストラクタでシングルトンパターンを実現
@@ -53,15 +47,7 @@ export class TransitManager {
   private constructor() {
     this.db = Database.getInstance();
     this.prisma = prisma;
-    this.dataDir = path.join(process.cwd(), "data", "gtfs");
 
-    try {
-      this.config = loadConfig();
-      logger.log("設定ファイルを読み込みました");
-    } catch (error) {
-      logger.error("設定ファイルの読み込みに失敗しました:", error);
-      throw new Error("TransitManager の初期化に失敗しました");
-    }
   }
 
   /**
@@ -72,81 +58,6 @@ export class TransitManager {
       TransitManager.instance = new TransitManager();
     }
     return TransitManager.instance;
-  }
-
-  /**
-   * GTFSデータをダウンロードして設定ファイルを作成する
-   */
-  public async prepareGTFSData(): Promise<boolean> {
-    try {
-      logger.log("GTFS データ準備を開始");
-
-      // データベースの整合性をチェック
-      const isValid = await this.db.checkIntegrity();
-      logger.log(`データベース整合性チェック結果: ${isValid}`);
-
-      // データベースが有効でなければインポートを実行
-      if (!isValid || this.config.skipImport === false) {
-        logger.log("GTFSデータのインポートを実行します");
-
-        try {
-          // 既存のデータベース接続を閉じる
-          await this.db.closeConnection();
-
-          // 新しいインポートを開始
-          logger.log("GTFSデータをインポート中...");
-
-          // ディレクトリの存在確認
-          const dbDir = path.dirname(this.config.sqlitePath);
-          if (!fs.existsSync(dbDir)) {
-            logger.log(`データベースディレクトリを作成します: ${dbDir}`);
-            fs.mkdirSync(dbDir, { recursive: true });
-          }
-
-          // 直接importGtfsを呼び出す
-          try {
-            // 設定ファイルをそのまま使用
-            const importConfig = this.config;
-
-            logger.log("使用する設定:", JSON.stringify(importConfig, null, 2));
-
-            const result = await importGtfs(importConfig);
-            logger.log("インポート結果:", result);
-          } catch (importError) {
-            logger.error("importGtfs中にエラーが発生しました:", importError);
-            // エラーがあっても処理を続行
-          }
-
-          // データベース接続を再確立
-          await this.db.ensureConnection();
-
-          // インポート後に再度整合性をチェック
-          const isValidAfterImport = await this.db.checkIntegrity();
-          logger.log(`インポート後のデータベース整合性: ${isValidAfterImport}`);
-
-          if (!isValidAfterImport) {
-            logger.error(
-              "インポート後もデータベースの整合性が確保できませんでした"
-            );
-            return false;
-          }
-
-          return true;
-        } catch (error) {
-          logger.error(
-            "GTFSデータのインポート中にエラーが発生しました:",
-            error
-          );
-          return false;
-        }
-      }
-
-      logger.log("既存のGTFSデータを使用します");
-      return true;
-    } catch (error) {
-      logger.error("GTFSデータ準備中にエラーが発生しました:", error);
-      return false;
-    }
   }
 
   /**

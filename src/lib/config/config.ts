@@ -12,11 +12,10 @@ export const CONFIG_PATH = path.join(process.cwd(), "transit-config.json");
  */
 export interface TransitConfig {
   sqlitePath: string;
-  agencies: Array<{
-    agency_key: string;
-    path?: string;
-    url?: string;
-  }>;
+  agencies: Array<
+    { agency_key: string } &
+      ({ path: string; url?: string } | { url: string; path?: string })
+  >;
   verbose: boolean;
   skipImport?: boolean;
 }

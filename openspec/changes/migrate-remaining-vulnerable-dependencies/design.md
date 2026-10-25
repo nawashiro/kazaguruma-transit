@@ -152,3 +152,11 @@ APIキーやChromeがない場合は、実通信やPDF出力を未確認と記�
 10パッケージを更新した。複数版のbrace-expansionとjs-yamlも修正版を解決した。親依存のメジャー更新と新しいoverrideはない。付随依存とnpmによるoptional依存のロック補完を含む。クリーン導入、lint、strict TypeScript、build、ローカル起動、Jest 174スイート・1,456件が成功した。13件は基準と同じスキップだった。実SDKのURL生成・代替応答処理、query-stringの日本語・プラス記号・不正パーセント表記の往復、sharpのSVGからPNGへの変換を確認した。地図・PDFの既存契約テストも成功した。実Google通信とChromeによるPDF出力は未確認である。
 
 監査は全依存・開発依存を除く両方で7件（high 3、moderate 4、critical 0）だった。残るのはPrisma系3、GTFS系2、Google Maps系2である。
+
+### GTFS
+
+GTFSを4.20.1に固定し、csv-parse 7.0.2とbetter-sqlite3 13.0.3へ更新した。新版の入力型に合わせ、交通設定の型はpathまたはurlを必須とした。実行時の入力処理は変更していない。型検査の失敗を先に確認し、対応後に成功した。作業環境へmakeとC++ビルド環境を追加し、クリーン導入を確認した。ビルド環境のファイルはGitに含めない。
+
+lint、strict TypeScript、build、ローカル起動、Jest 174スイート・1,456件は成功した。取込fixture・入力形式差異の2スイート6件も成功した。隔離したDBへのschema作成・GTFS取込後、アプリの実Prismaで停留所と25時台の便を読み出せた。監査は全依存・開発依存を除く両方で5件（high 3、moderate 2、critical 0）となった。
+
+運行日例外のある日付では、GTFSが作るDATE列をPrisma 6がStringへ変換できず失敗した。同じ隔離手順をGTFS 4.17.5へ戻しても再現したため、更新による回帰と区別した。GTFSを採用し、この既存の不一致はPrisma 7での検証にも含める。

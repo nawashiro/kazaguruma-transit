@@ -184,3 +184,11 @@ prisma、@prisma/client、@prisma/adapter-better-sqlite3を7.10.1へ揃えた。
 クリーン導入、lint、strict TypeScript、build、本番モードのローカル起動は成功した。Jestは176スイート・1,459件成功、2スイート・13件スキップとなった。Google Mapsの復元後の実SDK確認も成功した。監査は全依存・開発依存を除く両方でmoderate 2件、high・criticalは0件となった。残るdecode-uri-componentとquery-stringは前節の互換性不一致によって保留する。
 
 DockerコマンドとChromeがないため、Dockerイメージの構築・本番ランタイムの版確認・ChromeでのPDF出力は未実施である。実Google通信も未確認である。地図・PDFの既存契約テストとSDKの通信応答を代替した確認を実施した。本番へのデプロイと稼働DBの操作は行っていない。
+
+### Final integration and release candidate
+
+採用コミットはfc1726c（10パッケージ）、9faffef（GTFS）、911c49c（Prisma 7）である。Google Mapsの試行取消しは7e6321dに記録した。失敗したoverrideは残っていない。通常のnpm startから起動した本番APIでも、レート制限DBと停留所検索を経由してHTTP 200・success trueを確認した。
+
+全体検証はlint・strict TypeScript・build・Jest 176スイート1,459件が成功し、13件はスキップした。最終版を1.5.7へ更新してクリーン導入とビルドをやり直し、依存の修正下限・プロジェクト情報・ライセンス関連のテストも確認した。OpenSpec strict検証、差分検査、yomiyasuの検査・最終稿照合を実施した。
+
+コードの実装は完了した。検証係によるレビュー、GitHub CI、masterへの統合、正式リリースは後続の確認として扱う。公開前に指摘とCI結果を確認する。

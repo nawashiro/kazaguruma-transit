@@ -60,9 +60,6 @@ RUN npm ci
 # アプリケーションファイルをコピー
 COPY . .
 
-# 一時的なデータベースファイルを削除
-RUN rm -rf prisma/.temp
-
 # 配布先固有の公開設定が用意されていることだけを検証
 RUN node scripts/ensure-app-config.mjs
 

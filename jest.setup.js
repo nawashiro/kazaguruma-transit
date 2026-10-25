@@ -92,7 +92,6 @@ jest.mock("fs", () => ({
     JSON.stringify({
       sqlitePath: ".temp/gtfs/gtfs.db",
       agencies: [{ agency_key: "test", url: "http://example.com/gtfs.zip" }],
-      skipImport: true,
     })
   ),
 }));

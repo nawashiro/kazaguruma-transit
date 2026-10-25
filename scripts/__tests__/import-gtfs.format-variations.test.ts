@@ -102,6 +102,7 @@ function prepareCliSandbox(
   copyCliSandboxFile("package.json", temporaryRoot);
   copyCliSandboxFile("tsconfig.json", temporaryRoot);
   copyCliSandboxFile("prisma/schema.prisma", temporaryRoot);
+  copyCliSandboxFile("prisma.config.ts", temporaryRoot);
   copyCliSandboxFile("scripts/import-gtfs.ts", temporaryRoot);
   copyCliSandboxFile("scripts/gtfs-log-sanitizer.ts", temporaryRoot);
   copyCliSandboxFile("src/lib/config/config.ts", temporaryRoot);

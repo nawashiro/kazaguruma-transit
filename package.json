@@ -1,6 +1,6 @@
 {
   "name": "kazaguruma-transit",
-  "version": "1.5.7",
+  "version": "1.5.8",
   "author": {
     "name": "Nawashiro"
   },
@@ -20,11 +20,11 @@
   },
   "scripts": {
     "predev": "node scripts/ensure-app-config.mjs",
-    "dev": "prisma generate && tsx scripts/initialize-transit-cache.ts && npm run import-gtfs && next dev --turbopack",
+    "dev": "prisma generate && npm run import-gtfs && next dev --turbopack",
     "prebuild": "node scripts/ensure-app-config.mjs && tsx scripts/generate-location-artifact.ts",
-    "build": "prisma generate && tsx scripts/initialize-transit-cache.ts && npm run import-gtfs && next build",
+    "build": "prisma generate && next build",
     "prestart": "node scripts/ensure-app-config.mjs",
-    "start": "prisma generate && tsx scripts/initialize-transit-cache.ts && npm run import-gtfs && next start",
+    "start": "prisma generate && npm run import-gtfs && next start",
     "lint": "next lint",
     "pretest": "node scripts/ensure-app-config.mjs",
     "test": "jest",
@@ -60,6 +60,7 @@
     "next": "^15.5.28",
     "nosskey-sdk": "^0.0.2",
     "pdf-lib": "^1.17.1",
+    "prisma": "7.10.1",
     "puppeteer": "^25.16.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -87,7 +88,6 @@
     "jest-localstorage-mock": "^2.4.26",
     "lighthouse": "^13.4.1",
     "postcss": "^8.5.28",
-    "prisma": "7.10.1",
     "start-server-and-test": "^3.0.12",
     "tailwindcss": "^4",
     "typescript": "^5"

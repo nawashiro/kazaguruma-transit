@@ -15,7 +15,7 @@ cp transit-config.json.example transit-config.json
 chmod 600 .env.local transit-config.json
 ```
 
-設定を書き込んでください。設定ファイルがない場合、buildが失敗します。
+設定を書き込んでください。設定ファイルがない場合、buildが失敗します。ビルド中に交通DBを作成したりGTFSを取得したりすることはありません。場所データなど他のビルド入力は必要です。
 
 以下は外部に公開される設定です。秘密を書かないでください。
 
@@ -26,6 +26,10 @@ chmod 600 .env.local transit-config.json
 - `.env.local`: 開発用のサーバー設定です。`GOOGLE_MAPS_API_KEY`などの秘密値を置きます。本番では必要ありません。
 - `.env`: 本番用のサーバー設定です。`compose.prod.yml`が読みます。開発では必要ありません。
 - `transit-config.json`: GTFS用のサーバー設定です。本番でも開発でも必要です。
+
+起動のたびに交通DBを破棄し、スキーマ作成・GTFS取込・検証後に配信を始めます。APIレート制限のカウンターもリセットします。GTFSの取得先は起動時に利用可能である必要があります。`sqlitePath` はコンテナ内の書込可能な場所を指定してください。ホストのDBをイメージへコピーしないよう、`.dockerignore` でSQLiteファイルを除外しています。独自の拡張子を使う場合は、その保存先も除外してください。
+
+ローカルGTFSを使う場合は、Composeの `volumes` にGTFS入力ディレクトリの読取専用マウントを追加し、`agencies[].path` にコンテナ内のパスを指定してください。設定ファイルだけをマウントしても、ホストのGTFSは参照できません。DBを入力ディレクトリへ配置しないでください。
 
 ## 開発Compose
 
@@ -40,7 +44,13 @@ chmod 600 .env.local transit-config.json
 docker compose up --build
 ```
 
-この構成は`npm run dev`を実行しません。`npm run start`を実行するため、コード編集の自動反映を保証しません。コードを変更した後はbuildと起動をやり直してください。。
+この構成は`npm run dev`を実行しません。`npm run start`を実行するため、コード編集の自動反映を保証しません。コードを変更した後はbuildと起動をやり直してください。
+
+GTFS入力を更新した後は、次のコマンドで再生成して起動し直します。時刻表だけの更新に再ビルドは不要です。
+
+```bash
+docker compose restart app
+```
 
 ## 本番Compose
 
@@ -62,6 +72,14 @@ docker compose -f compose.prod.yml up --build -d
 docker compose -f compose.prod.yml down
 ```
 
+時刻表の更新後は、次を実行してください。
+
+```bash
+docker compose -f compose.prod.yml restart app
+```
+
+取込・検証に失敗した起動では配信を始めません。旧DBへは戻りません。ログで原因を確認して入力や権限を直し、起動し直してください。`restart: unless-stopped` の本番構成は失敗後も再起動を試みるため、調査中は `docker compose -f compose.prod.yml stop app` で停止できます。
+
 ## セキュリティ更新時の再取得と確認
 
 本番設定を用意した環境で、ベースイメージと Chrome を取得し直してください。通常のビルドでは取得処理のキャッシュを再利用する場合があり、`--no-cache` だけではベースイメージを再取得しません。
@@ -82,6 +100,6 @@ docker compose -f compose.prod.yml exec -T app node --version
 docker compose -f compose.prod.yml exec -T app google-chrome-stable --version
 ```
 
-稼働コンテナでも修正条件を満たすことを確認し、日時とバージョンを記録してください。地図、画像表示、PDF 出力を確認してから反映完了としてください。起動時には GTFS の取込が走ります。
+稼働コンテナでも修正条件を満たすことを確認し、日時とバージョンを記録してください。地図、画像表示、PDF 出力を確認してから反映完了としてください。起動時には交通DBを再生成します。
 
 Docker または本番設定がない環境では、イメージのビルド、Chrome と PDF の互換性、本番反映を未実施と記録してください。アプリのローカル検証だけでは本番の修正完了を確認できません。古いイメージへ戻すと修正前の脆弱性も復帰します。ロールバックしても DB の以前の状態への復帰は保証されません。

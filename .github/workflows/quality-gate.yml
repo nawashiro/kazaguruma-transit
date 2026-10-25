@@ -52,9 +52,9 @@ jobs:
 
       - name: Start production server
         run: |
-          node node_modules/next/dist/bin/next start -p 3100 > "$RUNNER_TEMP/next-start.log" 2>&1 &
+          PORT=3100 npm start > "$RUNNER_TEMP/next-start.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/next-server.pid"
-          for attempt in {1..60}; do
+          for attempt in {1..120}; do
             if curl --fail --silent http://127.0.0.1:3100/ >/dev/null; then
               exit 0
             fi

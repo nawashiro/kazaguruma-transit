@@ -10,7 +10,6 @@ jest.mock("fs", () => {
       JSON.stringify({
         sqlitePath: ".temp/gtfs/gtfs.db",
         agencies: [{ agency_key: "test", url: "test.zip" }],
-        skipImport: true,
       })
     ),
     existsSync: jest.fn().mockReturnValue(true),
@@ -144,39 +143,6 @@ describe("TransitManager", () => {
     const instance1 = TransitManager.getInstance();
     const instance2 = TransitManager.getInstance();
     expect(instance1).toBe(instance2);
-  });
-
-  test.skip("prepareGTFSData skips import when database is valid", async () => {
-    // モックを設定
-    const fsModule = {
-      existsSync: jest.fn().mockReturnValue(true),
-      readFileSync: jest.fn().mockReturnValue(
-        JSON.stringify({
-          sqlitePath: ".temp/gtfs/gtfs.db",
-          agencies: [{ agency_key: "test", url: "test.zip" }],
-          skipImport: true,
-        })
-      ),
-    };
-
-    // jest.setMockでモックを設定
-    jest.doMock("fs", () => fsModule);
-
-    // データベースモックを設定
-    const dbModule = setupDatabaseMock();
-    jest.doMock("../database", () => dbModule);
-
-    // GTFSモックを設定
-    const gtfsModule = { importGtfs: jest.fn().mockResolvedValue({}) };
-    jest.doMock("gtfs", () => gtfsModule);
-
-    const result = await transitManager.prepareGTFSData();
-
-    // @ts-expect-error - prepareGTFSDataの戻り値型定義と実際の戻り値の不一致
-    expect(result.success).toBe(true);
-    // モックがプロパティにアクセスできない場合は、適切なアサーションに変更
-    expect(dbModule.Database.getInstance().checkIntegrity).toHaveBeenCalled();
-    expect(gtfsModule.importGtfs).not.toHaveBeenCalled();
   });
 
   test.skip("getStops returns formatted stops data", async () => {

@@ -3,27 +3,21 @@ import { createPrismaClient } from "../src/lib/db/create-prisma-client";
 import { importGtfs } from "gtfs";
 import fs from "fs";
 import path from "path";
-import {
-  loadConfig,
-} from "../src/lib/config/config";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { loadConfig } from "../src/lib/config/config";
 import {
   redactSensitiveUrlQueryParameters,
   sanitizeGtfsLogError,
 } from "./gtfs-log-sanitizer";
 
-/**
- * GTFSデータをインポートしてPrismaを使ってデータベースを再構築します
- */
 async function importGtfsData() {
   let prismaClient: PrismaClient | undefined;
 
   try {
     console.log("GTFSデータのインポートを開始します...");
 
-    // 設定ファイルを読み込む
     const config = loadConfig();
-    const client = createPrismaClient(config.sqlitePath);
-    prismaClient = client;
 
     console.log("設定を読み込みました:", {
       sqlitePath: config.sqlitePath,
@@ -31,49 +25,10 @@ async function importGtfsData() {
       verbose: config.verbose,
     });
 
-    // 必要なディレクトリを作成
-    const tempDir = path.join(process.cwd(), "prisma", ".temp");
-    if (!fs.existsSync(tempDir)) {
-      console.log(`ディレクトリを作成: ${tempDir}`);
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-
-    // データベースディレクトリが存在することを確認
-    const dbDir = path.dirname(config.sqlitePath);
-    if (!fs.existsSync(dbDir)) {
-      console.log(`データベースディレクトリを作成します: ${dbDir}`);
-      fs.mkdirSync(dbDir, { recursive: true });
-    }
-
-    // データベースファイルが既に存在する場合のチェック
-    const dbPath = config.sqlitePath;
-    if (fs.existsSync(dbPath)) {
-      console.log(`既存のデータベースファイルを確認: ${dbPath}`);
-
-      try {
-        // 既存のデータをチェック
-        const existingCount = await client.agency.count();
-        if (existingCount > 0) {
-          console.log(
-            `データベースには既に${existingCount}件のエージェンシーデータが存在します。`
-          );
-          console.log(
-            "既存のデータを使用します。再インポートが必要な場合は、データベースファイルを削除してください。"
-          );
-          return;
-        }
-      } catch {
-        console.log(
-          "データベースへの接続に失敗しました。データを再インポートします。"
-        );
-      }
-    }
-
-    // GFTSファイルの存在確認（pathが設定されている場合のみ）
     if (config.agencies.some((agency) => agency.path)) {
       for (const agency of config.agencies) {
         if (agency.path) {
-          const gtfsFilePath = path.join(process.cwd(), agency.path);
+          const gtfsFilePath = path.resolve(process.cwd(), agency.path);
           if (!fs.existsSync(gtfsFilePath)) {
             console.error(
               `エラー: GTFSデータファイルが見つかりません: ${gtfsFilePath}`
@@ -91,7 +46,30 @@ async function importGtfsData() {
       }
     }
 
-    // importGtfsを使用してデータをインポート
+    for (const suffix of ["", "-wal", "-shm", "-journal"]) {
+      fs.rmSync(config.sqlitePath + suffix, { force: true });
+    }
+    fs.mkdirSync(path.dirname(config.sqlitePath), { recursive: true });
+    const schema = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(new URL("../node_modules/prisma/build/index.js", import.meta.url)),
+        "db",
+        "push",
+        "--config",
+        fileURLToPath(new URL("../prisma.config.ts", import.meta.url)),
+      ],
+      { encoding: "utf8" },
+    );
+    if (schema.error) throw schema.error;
+    if (schema.status !== 0) {
+      throw new Error(redactSensitiveUrlQueryParameters(
+        `Prismaスキーマの作成に失敗しました: ${schema.stdout}\n${schema.stderr}`,
+      ));
+    }
+    const client = createPrismaClient(config.sqlitePath);
+    prismaClient = client;
+
     console.log("GTFSデータをインポートしています...");
     await importGtfs({
       ...config,
@@ -102,7 +80,6 @@ async function importGtfsData() {
     console.log("GTFSデータのインポートが完了しました");
 
     console.log("データベースとの接続をテストしています...");
-    // Prismaを使用してデータが正しくインポートされたか確認
     const agencyCount = await client.agency.count();
     const routeCount = await client.route.count();
     const stopCount = await client.stop.count();
@@ -141,11 +118,17 @@ async function importGtfsData() {
       throw new Error(
         `必須のGTFSデータが不足しています: ${missingRequiredEntities.join("、")}`
       );
-    } else {
-      console.log(
-        "インポートが正常に完了し、Prismaからデータにアクセスできることを確認しました。"
-      );
     }
+    await client.$transaction(async (tx) => {
+      await tx.rateLimit.create({
+        data: { ip: "cache-validation", count: 0, last_access: BigInt(0) },
+      });
+      await tx.rateLimit.findUniqueOrThrow({ where: { ip: "cache-validation" } });
+      await tx.rateLimit.delete({ where: { ip: "cache-validation" } });
+    });
+    console.log(
+      "インポートが正常に完了し、Prismaからデータにアクセスできることを確認しました。"
+    );
   } catch (error) {
     console.error(
       "GTFSデータのインポート中にエラーが発生しました:",
@@ -157,7 +140,6 @@ async function importGtfsData() {
   }
 }
 
-// スクリプトを実行
 importGtfsData()
   .then(() => {
     console.log("スクリプトの実行が完了しました");

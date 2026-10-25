@@ -160,3 +160,9 @@ GTFSを4.20.1に固定し、csv-parse 7.0.2とbetter-sqlite3 13.0.3へ更新し�
 lint、strict TypeScript、build、ローカル起動、Jest 174スイート・1,456件は成功した。取込fixture・入力形式差異の2スイート6件も成功した。隔離したDBへのschema作成・GTFS取込後、アプリの実Prismaで停留所と25時台の便を読み出せた。監査は全依存・開発依存を除く両方で5件（high 3、moderate 2、critical 0）となった。
 
 運行日例外のある日付では、GTFSが作るDATE列をPrisma 6がStringへ変換できず失敗した。同じ隔離手順をGTFS 4.17.5へ戻しても再現したため、更新による回帰と区別した。GTFSを採用し、この既存の不一致はPrisma 7での検証にも含める。
+
+### Google Maps — not adopted
+
+SDK配下に限定したdecode-uri-component 0.5.1へのoverrideを試した。導入は成功したが、実query-stringの日本語等の往復でTypeError: decodeComponent is not a functionとなった。ES Modulesのdefault exportとCommonJSの関数取得が一致しなかった。更新前には同じ検証が成功していた。
+
+overrideとロックの差分を戻し、クリーン導入後に同じ実query-string・SDK検証が成功することを確認した。再監査は両範囲とも5件（high 3、moderate 2）であった。関数取得の失敗で採用条件を満たさないため、試行版でのNext.jsビルド・全回帰検証と互換実装は非該当とした。Google Maps経路は未採用である。decode-uri-componentとquery-stringの2警告を保留し、Prisma経路へ進む。

@@ -1,5 +1,5 @@
 <div align="center">
-    <h1 style="border-bottom: none">
+    <h1>
         <a href="https://kazaguruma-transit.nawashiro.dev" target="_blank">風ぐるま乗換案内</a>
     </h1>
     <a href="https://kazaguruma-transit.nawashiro.dev" target="_blank">
@@ -10,10 +10,10 @@
             <img src="https://img.shields.io/website?url=https%3A%2F%2Fkazaguruma-transit.nawashiro.dev" alt="Site-status" />
         </a>
         <a href="LICENSE">
-            <img src="https://img.shields.io/badge/license-AGPLv3-purple" alt="License"/>
+            <img src="https://img.shields.io/badge/license-AGPLv3-purple" alt="License" />
         </a>
         <a href="https://github.com/nawashiro/kazaguruma-transit/pulse">
-            <img src="https://img.shields.io/github/commit-activity/m/nawashiro/kazaguruma-transit" alt="Commits-per-month">
+            <img src="https://img.shields.io/github/commit-activity/m/nawashiro/kazaguruma-transit" alt="Commits-per-month" />
         </a>
     </p>
 </div>

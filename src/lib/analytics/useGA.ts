@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import ReactGA from "react-ga4";
 import { logger } from "@/utils/logger";
@@ -9,39 +9,42 @@ import { appConfig } from "@/lib/config/app-config";
 const GA_MEASUREMENT_ID = appConfig.gaMeasurementId;
 const isDevelopment = process.env.NODE_ENV === "development";
 
-/**
- * GA4を初期化し、ページ遷移を追跡するためのカスタムフック
- */
+function sanitizeUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return "";
+  }
+}
+
 export const useGA = () => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const queryString = searchParams?.toString() ?? "";
+  const previousPage = useRef<{ key: string; location: string } | null>(null);
 
   useEffect(() => {
-    // 開発環境ではGAを初期化しない
-    if (isDevelopment) {
-      logger.log("開発環境のため、Google Analyticsは無効化されています");
-      return;
+    if (!pathname || isDevelopment || !GA_MEASUREMENT_ID) return;
+
+    const key = `${pathname}?${queryString}`;
+    if (previousPage.current?.key === key) return;
+
+    const page = {
+      page_path: pathname,
+      page_location: `${window.location.origin}${pathname}`,
+      page_referrer: previousPage.current?.location ?? sanitizeUrl(document.referrer),
+    };
+    ReactGA.set(page);
+    if (!ReactGA.isInitialized) {
+      ReactGA.initialize(GA_MEASUREMENT_ID, {
+        gtagOptions: { send_page_view: false },
+      });
     }
 
-    // GA4の初期化（アプリケーション起動時に一度だけ実行）
-    if (GA_MEASUREMENT_ID) {
-      ReactGA.initialize(GA_MEASUREMENT_ID);
-      logger.log("Google Analyticsが初期化されました");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!pathname || isDevelopment) return;
-
-    // URLパラメータがある場合、それらを含めたパスを生成
-    const queryString = searchParams?.toString();
-    const path = queryString ? `${pathname}?${queryString}` : pathname;
-
-    // ページビューイベントを送信
-    if (GA_MEASUREMENT_ID) {
-      ReactGA.send({ hitType: "pageview", page: path });
-    }
-  }, [pathname, searchParams]);
+    ReactGA.send({ hitType: "pageview", ...page });
+    previousPage.current = { key, location: page.page_location };
+  }, [pathname, queryString]);
 };
 
 /**

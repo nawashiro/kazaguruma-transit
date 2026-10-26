@@ -38,7 +38,7 @@ describe("OriginSelector", () => {
     expect(search.closest("form")).toContainElement(input);
     const gps = within(group).getByRole("button", { name: "端末のGPSを許可する" });
     expect(gps).toHaveTextContent("端末のGPSを許可する");
-    expect(gps).not.toHaveAttribute("aria-label");
+    expect(gps).toHaveAccessibleName("端末のGPSを許可する");
     expect(gps).toHaveAttribute("type", "button");
     expect(container.querySelector(".card")).toBeNull();
   });

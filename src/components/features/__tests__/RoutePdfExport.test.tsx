@@ -118,7 +118,7 @@ describe("RoutePdfExport", () => {
 
     // ボタンが表示されることを確認
     await waitFor(() => {
-      expect(screen.getByText("印刷する")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "印刷する" })).toBeInTheDocument();
     });
   });
 
@@ -156,7 +156,7 @@ describe("RoutePdfExport", () => {
 
     // ボタンが表示されることを確認し、クリック
     await waitFor(() => {
-      const button = screen.getByText("印刷する");
+      const button = screen.getByRole("button", { name: "印刷する" });
       expect(button).toBeInTheDocument();
       fireEvent.click(button);
     });
@@ -277,7 +277,7 @@ describe("RoutePdfExport", () => {
 
     // ボタンをクリック
     await waitFor(() => {
-      const button = screen.getByText("印刷する");
+      const button = screen.getByRole("button", { name: "印刷する" });
       fireEvent.click(button);
     });
 

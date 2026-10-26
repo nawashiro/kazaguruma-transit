@@ -44,7 +44,6 @@ const SHARED_BUTTON_CLASSES = [
   "btn",
   "btn-primary",
   "text-base",
-  "ruby-text",
   "gap-0",
   "rounded-full",
   "dark:rounded-sm",

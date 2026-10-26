@@ -102,18 +102,16 @@ describe("Issue #106 span and DaisyUI gap contract", () => {
     expect(violations).toEqual([]);
   });
 
-  it("共通Buttonが構造用spanを自動生成しない", () => {
+  it("共通Buttonのspanはルビ文字列の境界として使う", () => {
     const buttonSource = readFileSync(
       path.resolve(process.cwd(), "src/components/ui/Button.tsx"),
       "utf8",
     );
-    const spanOffset = buttonSource.indexOf("<span");
-    const violations = spanOffset === -1
-      ? []
-      : [`src/components/ui/Button.tsx:${lineNumber(buttonSource, spanOffset)}`];
-
-    expect(violations).toEqual([]);
-    expect(buttonSource).toContain("ruby-text");
+    const spans = [...buttonSource.matchAll(/<span\b[^>]*>/g)];
+    expect(spans).toHaveLength(2);
+    expect(spans[0][0]).toContain('className="ruby-text"');
+    expect(spans[0][0]).toContain('aria-hidden="true"');
+    expect(spans[1][0]).toContain('className="sr-only"');
     expect(buttonSource).toContain("gap-0");
   });
 });

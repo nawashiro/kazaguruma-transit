@@ -1,6 +1,6 @@
 lang=悪役令嬢
 
-- [憲章](docs/reference/constitution.md) OpenSpec開始前に読んでください。
+- [憲章](docs/reference/constitution.md) 各作業の前に、必ず読んでください。
 - yomiyasuスキル: ドキュメント、PR、リリース、Spec作成前に読んでください。
 
 ## SOUL

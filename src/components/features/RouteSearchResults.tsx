@@ -10,7 +10,7 @@ interface RouteSearchResultsProps {
 export default function RouteSearchResults({ result }: RouteSearchResultsProps) {
   return (
     <div className="flex min-w-0 flex-col gap-4 text-base break-words">
-      <Link href="/" className="link inline-flex min-h-[44px] items-center self-start text-base ruby-text">
+      <Link href="/" className="link min-h-[44px] self-start py-3 text-base ruby-text">
         入力画面に戻る
       </Link>
       {result.status === "error" ? (

@@ -24,10 +24,6 @@
   --focus-color-light: rgba(128, 191, 255, 0.3);
 }
 
-.transit-button:not(:disabled) {
-  border-color: currentColor;
-}
-
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -147,7 +143,6 @@ textarea:focus-visible {
   background-color: var(--color-primary);
   color: var(--color-primary-content);
   box-shadow: none;
-  border: 2px solid currentColor;
   border-radius: var(--radius-md);
 }
 

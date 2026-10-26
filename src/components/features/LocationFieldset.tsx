@@ -35,7 +35,7 @@ export default function LocationFieldset({
             <p data-selected-location tabIndex={-1} data-testid={testId} className="min-w-0 break-words text-base focus-visible:outline-2 focus-visible:outline-offset-2">
               {selectedLocation.address || `緯度: ${selectedLocation.lat.toFixed(6)}, 経度: ${selectedLocation.lng.toFixed(6)}`}
             </p>
-            <Button onClick={onEdit}>なおす</Button>
+            <p className="min-w-0 text-base"><Button onClick={onEdit}>なおす</Button></p>
           </>
         ) : children}
       </fieldset>

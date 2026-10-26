@@ -23,8 +23,6 @@ export default function DestinationSelector({
 
   return (
     <LocationFieldset label="目的地" selectedLocation={selectedLocation} onEdit={onEdit} testId="selected-destination">
-      <LocationSuggestions categories={categories} onLocationSelected={handleSelected} />
-      <div className="divider text-base">または</div>
       <form onSubmit={async event => { event.preventDefault(); await search(address); }} className="space-y-4 min-w-0">
         <h3 className="text-base font-bold ruby-text">名前で検索</h3>
         <InputField label="目的地" placeholder="神田駿河台" value={address}
@@ -33,6 +31,8 @@ export default function DestinationSelector({
           endAdornment={<SearchButton disabled={loading} loading={loading} joined testId="search-button" />} />
         {loading && <p role="status" className="text-base">住所を検索しています</p>}
       </form>
+      <div className="divider text-base">または</div>
+      <LocationSuggestions categories={categories} onLocationSelected={handleSelected} />
     </LocationFieldset>
   );
 }

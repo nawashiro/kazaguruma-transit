@@ -5,7 +5,7 @@ import { flushSync } from "react-dom";
 import DateTimeSelector from "@/components/features/DateTimeSelector";
 import OriginSelector from "@/components/features/OriginSelector";
 import DestinationSelector from "@/components/features/DestinationSelector";
-import SearchButton from "@/components/ui/SearchButton";
+import Button from "@/components/ui/Button";
 import PageHeader from "@/components/layouts/PageHeader";
 import Announcement from "@/components/features/Announcement";
 import type { Location } from "@/types/core";
@@ -83,7 +83,7 @@ export default function HomeRouteForm({ popularCategories }: HomeRouteFormProps)
               </label>
             ))}
           </fieldset>
-          <SearchButton testId="search-route" />
+          <Button type="submit" testId="search-route">経路を検索</Button>
         </form>
         <div className="ruby-text text-base">
           <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>

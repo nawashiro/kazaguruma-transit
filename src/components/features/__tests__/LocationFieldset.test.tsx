@@ -42,4 +42,14 @@ describe("LocationFieldset", () => {
     rerender(<LocationFieldset label="目的地" testId="selected" onEdit={onEdit} selectedLocation={null}>{children}</LocationFieldset>);
     expect(screen.getByRole("textbox", { name: "目的地" })).toHaveFocus();
   });
+
+  it("なおすはfieldsetの直接の格子項目にせず全幅へ引き伸ばさない", () => {
+    render(<LocationFieldset label="目的地" testId="selected" onEdit={() => {}} selectedLocation={{ lat: 35, lng: 139 }}>
+      <input aria-label="目的地" />
+    </LocationFieldset>);
+    const group = screen.getByRole("group", { name: "目的地" });
+    const button = screen.getByRole("button", { name: "なおす" });
+    expect(button).not.toHaveClass("w-full");
+    expect(button.parentElement).not.toBe(group);
+  });
 });

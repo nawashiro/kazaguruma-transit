@@ -47,6 +47,16 @@ describe("DestinationSelector", () => {
     expect(container.querySelector(".card")).toBeNull();
   });
 
+  it("名前で検索をよく使う施設より先に表示する", () => {
+    render(<Selector />);
+    const group = screen.getByRole("group", { name: "目的地" });
+    const form = screen.getByRole("textbox", { name: "目的地" }).closest("form")!;
+    const suggestions = screen.getByText("よく利用される施設から選択");
+    expect(group).toContainElement(form);
+    expect(group).toContainElement(suggestions);
+    expect(form.compareDocumentPosition(suggestions) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+  });
+
   it("Enterで検索し、複数候補の先頭を同じfieldset内に確定する", async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, results: [
       { lat: location.lat, lng: location.lng, formattedAddress: location.address },

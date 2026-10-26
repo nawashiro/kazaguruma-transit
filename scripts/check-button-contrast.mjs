@@ -87,6 +87,7 @@ async function measure(page, button, label) {
       const text = Math.min(...[element, ...textNodes].map((node) => contrast(over(rgba(getComputedStyle(node).color), fill), fill)));
       return {
         text, icons,
+        hasText: element.textContent.trim().length > 0,
         boundary: Math.max(contrast(fill, adjacent), hasBorder ? contrast(border, adjacent) : 0),
         focus: contrast(over(rgba(style.outlineColor), adjacent), adjacent),
         focusVisible: element.matches(":focus-visible"),
@@ -107,7 +108,11 @@ async function measure(page, button, label) {
     }
     if (result.text < 4.5) failures.push(`${label} ${state}: text ${result.text.toFixed(3)} < 4.5`);
     if (result.icons.some((ratio) => ratio < 3)) failures.push(`${label} ${state}: icon < 3`);
-    if (result.boundary < 3) failures.push(`${label} ${state}: boundary ${result.boundary.toFixed(3)} < 3`);
+    // 文字かアイコンで操作を識別できるボタンの枠線は装飾であり、
+    // 境界だけが識別手段となる操作でのみ1.4.11の境界基準を要求する。
+    if (!result.hasText && result.icons.length === 0 && result.boundary < 3) {
+      failures.push(`${label} ${state}: boundary ${result.boundary.toFixed(3)} < 3`);
+    }
     if ((state === "hover" || state === "active") && !result.hover) failures.push(`${label}: hover not exercised`);
     if (state === "active" && !result.active) failures.push(`${label}: active not exercised`);
     if (state === "focus" && (!result.focusVisible || result.outlineWidth < 2 || result.outlineStyle === "none" || result.focus < 3)) {

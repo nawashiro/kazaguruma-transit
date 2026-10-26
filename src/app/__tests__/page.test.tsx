@@ -275,16 +275,20 @@ describe("Home", () => {
     expect(screen.queryByRole("button", { name: /リセット/ })).not.toBeInTheDocument();
   });
 
-  it("全検索ボタンは装飾アイコンのみのsubmitで名前を検索に統一する", async () => {
+  it("住所検索はアイコン専用、最終検索は可視文字「経路を検索」のsubmitに分ける", async () => {
     await renderPublicHome();
-    const buttons = screen.getAllByRole("button", { name: "検索" });
-    expect(buttons).toHaveLength(3);
-    for (const button of buttons) {
+    const addressButtons = screen.getAllByRole("button", { name: "検索" });
+    expect(addressButtons).toHaveLength(2);
+    for (const button of addressButtons) {
       expect(button).toHaveAttribute("type", "submit");
       expect(button).toHaveAttribute("aria-label", "検索");
       expect(button.textContent?.trim()).toBe("");
       expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
     }
+    const submit = within(routeForm()).getByRole("button", { name: "経路を検索" });
+    expect(submit).toHaveAttribute("type", "submit");
+    expect(submit).toHaveAccessibleName("経路を検索");
+    expect(within(submit).getAllByText("経路を検索").some(node => !node.classList.contains("sr-only"))).toBe(true);
   });
 
   it("住所欄のEnterは空の日時に妨げられず住所だけを検索する", async () => {

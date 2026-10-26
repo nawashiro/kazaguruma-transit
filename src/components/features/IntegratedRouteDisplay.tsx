@@ -26,13 +26,13 @@ function formatTime(time: string): string {
 function Segment({ routeName, from, to, departure, arrival }: {
   routeName: string; from: string; to: string; departure: string; arrival: string;
 }) {
-  return <>
-    <h3 className="mb-3 text-lg font-bold">{routeName}</h3>
-    <ol className="space-y-3">
-      <li><StopTimeDisplay stopName={from} time={formatTime(departure)} dateTime={departure} /></li>
-      <li><StopTimeDisplay stopName={to} time={formatTime(arrival)} dateTime={arrival} /></li>
-    </ol>
-  </>;
+  return <ol className="space-y-3">
+    <li><StopTimeDisplay stopName={from} time={formatTime(departure)} dateTime={departure} /></li>
+    <li className="min-w-0 text-base">
+      <span className="badge badge-primary badge-md h-auto min-h-[44px] p-3 text-base whitespace-normal break-words">{routeName}</span>
+    </li>
+    <li><StopTimeDisplay stopName={to} time={formatTime(arrival)} dateTime={arrival} /></li>
+  </ol>;
 }
 
 export default function IntegratedRouteDisplay({
@@ -54,7 +54,6 @@ export default function IntegratedRouteDisplay({
     ? generateGoogleMapDirectionLink(destinationStopLat, destinationStopLng, destLat, destLng) : undefined;
 
   return <section className="min-w-0 space-y-4 break-words text-base">
-    <h2 className="text-xl font-bold">経路</h2>
     {originMap && <a href={originMap} target="_blank" rel="noopener noreferrer" className="link block text-base">出発地 → {originStop.stopName} Googleマップ</a>}
     <ul className="space-y-6">
       {routes.map((route) => {

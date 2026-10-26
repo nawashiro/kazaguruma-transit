@@ -71,10 +71,23 @@ describe("IntegratedRouteDisplay", () => {
     },
   ];
 
-  it("見出し・リスト・区切り線で経路を表しカードで囲まない", () => {
+  it("区間を乗車停留所・路線名・降車停留所の順で示し、重複する見出しを置かない", () => {
     const { container } = render(<IntegratedRouteDisplay originStop={mockOriginStop} destinationStop={mockDestinationStop} routes={mockRoutes} type="transfer" />);
-    expect(screen.getByRole("heading", { name: "ルート1" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "ルート2" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "経路" })).toBeNull();
+    const routeItem = screen.getAllByRole("listitem").find(item => item.textContent === "ルート1");
+    expect(routeItem).toBeDefined();
+    const segment = routeItem!.parentElement!;
+    expect(segment.tagName).toBe("OL");
+    expect(segment.children).toHaveLength(3);
+    expect(segment.children[0]).toHaveTextContent("出発バス停");
+    expect(segment.children[1]).toHaveTextContent("ルート1");
+    expect(segment.children[2]).toHaveTextContent("乗換バス停");
+    const transferItem = screen.getAllByRole("listitem").find(item => item.textContent === "ルート2");
+    expect(transferItem).toBeDefined();
+    const transferSegment = transferItem!.parentElement!;
+    expect(transferSegment.children[0]).toHaveTextContent("乗換バス停");
+    expect(transferSegment.children[1]).toHaveTextContent("ルート2");
+    expect(transferSegment.children[2]).toHaveTextContent("到着バス停");
     expect(screen.getAllByRole("list").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("listitem").length).toBeGreaterThan(1);
     expect(screen.getByRole("separator")).toBeInTheDocument();
@@ -82,6 +95,18 @@ describe("IntegratedRouteDisplay", () => {
     for (const time of container.querySelectorAll("time")) {
       expect(time).toHaveClass("text-base");
       expect(time.parentElement).toHaveClass("flex-wrap");
+    }
+  });
+
+  it("路線名と停留所名を同じ16px以上の文字サイズで表現する", () => {
+    render(<IntegratedRouteDisplay originStop={mockOriginStop} destinationStop={mockDestinationStop} routes={mockRoutes} type="direct" />);
+    const routeItem = screen.getAllByRole("listitem").find(item => item.textContent === "ルート1");
+    expect(routeItem).toHaveClass("text-base");
+    expect(routeItem!.firstElementChild).not.toHaveClass("text-lg");
+    for (const name of ["出発バス停", "到着バス停"]) {
+      const stop = screen.getAllByText(name).at(-1)!;
+      expect(stop).toHaveClass("font-bold");
+      expect(stop.closest(".text-base")).not.toBeNull();
     }
   });
 

@@ -53,3 +53,17 @@ ESLint全体は未成功である。同品質検査の`npx eslint .`は生成`.n
 長いメモの初期fixtureは既存PDF CSSで省略表示された。今回の短い非空メモの成功は、長文を省略せず出力する保証ではない。読み上げの音声聴取、実GPS測位、実Nostrリレーの一連の動作は未検証である。
 
 参照元: `/tmp/route-final-verification.md`、`/tmp/route-final-quality.md`、`/tmp/route-audit-resolution.md`、`/tmp/route-memo-report.md`。初回報告の未解決監査と非空メモの証拠不足は上記の後続結果で更新し、未確定のハーネス安定性は留保する。
+
+## 2026-10-26 レビュー対応（#149）の再検証
+
+レビューのマージ阻害事項と追加指摘に対する、改定要件（design 1・2・5・8・10・12）の検証記録である。証拠の操作スクリプトは`/tmp/opencode/review-149-probes/`にある。
+
+**RED / GREEN**。タスク9.1〜9.3、10.1、11.1〜11.3は、対応するコンポーネントテスト・CSS契約テスト・ページテストを先に追加または改め、失敗を確認してから実装して成功させた。対象は`DestinationSelector.test.tsx`（名前検索のDOM順）、`page.test.tsx`（住所検索2か所はアイコン専用、最終submitは可視文字と読み上げ名「経路を検索」）、`LocationFieldset.test.tsx`（なおすをfieldsetの直接の格子項目にしない）、`button-border-contract.test.ts`（新設。forced-colorsメディア外で`.transit-button`と`.my-toggle`が文字色の枠線を強制しない）、`IntegratedRouteDisplay.test.tsx`（区間の乗車停留所・路線名・降車停留所順、重複する「経路」見出しなし、路線名と停留所名の同サイズ）、`RouteSearchResults.test.tsx`（戻るリンクをflexで分割しない）。全体Jestは180 suites・1506 tests成功、6 tests失敗は既知の本番ポート3100接続拒否のみで、失敗内容は改定前と同じである。
+
+**実ブラウザ（devとproduction）**。`next dev --turbopack`と`npm run build`後の`npm run start`を別々に起動し、Chromium（puppeteer）で実画面460pxを中心に確認した。両環境で、目的地の名前で検索が施設一覧よりDOM順・表示順とも先であること、最終submitの可視文字「経路を検索」と読み上げ名の一致、住所検索2か所がアイコン専用のまま別フォームを送信すること、確定後の「なおす」が内容幅84px（親394px）で全幅に伸びないこと、GPSボタンが226pxで内容幅であること、ページh1「経路検索結果」以外の重複見出しがないこと、区間が毎日新聞→神田ルート→神田公園出張所の順で路線名が停留所間にありbadgesと区切り線のスタイルを持つこと、を確認した。両テーマ（cupcake / dark）×320 / 1440pxで、戻るリンクの3つのルビが同一行（`display: block`、インラインの文として流れる）、横溢れなし、計測した全要素の算出フォントサイズ16px同一を確認した。ルビのON / OFF切替後もこれらを維持した。ICS・PDF出力はdevでクリックし、PDF API 200（バッファ426261バイト）とエラーなき完了を確認した。ダウンロード完了イベント自体は今回取得しておらず、両テーマでのICS・PDFのバイト一致は前節の既存記録に依る。
+
+**装飾枠線とコントラスト**。`src/app/globals.css`から`.transit-button:not(:disabled)`の`border-color: currentColor`と`.my-toggle`の`border: 2px solid currentColor`を除き、DaisyUIとテーマの既定表現に戻した。forced-colorsメディアの枠線と可視フォーカスは残す。`scripts/check-button-contrast.mjs`の境界判定を、文字かアイコンで識別できる操作の装飾枠線を対象外とする規則へ改めた（[Understanding 1.4.11 Boundaries](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html#boundaries)照合）。改定後の実行でapp 120状態・コンポーネント統合288状態が全成功し、既定・cupcake・darkの3テーマを含む。
+
+**監査と品質検査**。本番サーバーに対し`npm run accessibility`と`npm run accessibility:strict`を再実行し、ともにexit 0、全ページaccessibility・color-contrast 1.00だった（`artifacts/lighthouse/`）。`npx tsc --noEmit --incremental false`、`npx eslint src scripts`（0 errors / 42 warnings）、`npm run lint`（成功、既存warningのみ）を確認した。
+
+**SyntaxErrorの調査（design 12・タスク12.1）**。devとproductionを分けて実ブラウザで計36回以上のロード（7画面×3周、コールド起動直後、15セッションの並行遷移、ルビ切替3回、フォーム入力・送信、結果画面、ICS・PDF出力）を行い、pageerror・console・応答を収集した。アプリが配信するスクリプト（dev チャンク、インラインflight、外部Rubyful v2）からは1件もSyntaxError・Unexpected tokenを観測しなかった。観測した失敗は外部のみである（Ko-fiウィジェットの`ERR_BLOCKED_BY_RESPONSE`、Nostrリレー`wss://purplepag.es`の握手502。サンドボックスの外部経路に起因）。既存記録が留保する「検証ハーネス付近で観測した断続的な`SyntaxError: Invalid or unexpected token`」は、このクリーンな操作系では再現せず、アプリの配信文字列ではなくハーネス注入文字列側のAttributionを示す証拠と整合する。アプリ側の文字列生成・配信に原因箇所を特定できなかったため、アプリコードの修正対象はない。レビュアー環境で再発した場合は、失敗したスクリプトURLと行・列、配信応答の取得によって配信文字列と注入文字列を区別する。

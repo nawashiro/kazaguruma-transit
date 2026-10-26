@@ -27,7 +27,7 @@ export default function DestinationSelector({
         <h3 className="text-base font-bold ruby-text">名前で検索</h3>
         <InputField label="目的地" placeholder="神田駿河台" value={address}
           onChange={event => setAddress(event.target.value)} disabled={loading} testId="address-input"
-          error={error || validationError} description="千代田区内の住所や場所名を入力してください。建物名だけでも大丈夫な場合がほとんどです。"
+          error={error || validationError} description="建物名だけでも大丈夫な場合がほとんどです。"
           endAdornment={<SearchButton disabled={loading} loading={loading} joined testId="search-button" />} />
         {loading && <p role="status" className="text-base">住所を検索しています</p>}
       </form>

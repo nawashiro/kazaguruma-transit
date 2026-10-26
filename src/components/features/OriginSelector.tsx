@@ -55,7 +55,7 @@ export default function OriginSelector({ onOriginSelected, selectedLocation, onE
       <form onSubmit={async event => { event.preventDefault(); await search(address); }} className="space-y-4 min-w-0">
         <InputField label="出発地" placeholder="千代田区役所" value={address}
           onChange={event => setAddress(event.target.value)} disabled={loading} testId="address-input" required
-          error={error || validationError} description="千代田区内の住所や場所名を入力してください。自動的に「千代田区」が先頭に追加されます。"
+          error={error || validationError} description="建物名だけでも大丈夫な場合がほとんどです。"
           endAdornment={<SearchButton disabled={loading} loading={loading} joined testId="search-button" />} />
         <Button type="button" onClick={handleUseCurrentLocation} disabled={loading} loading={loading} testId="gps-button">
           <LocateFixed className="mr-2 h-5 w-5 shrink-0" aria-hidden="true" />

@@ -22,23 +22,23 @@ function LocationSuggestions({
       </h3>
       <div className="space-y-2 min-w-0">
         {categories.map((category) => (
-          <details key={category.category} className="min-w-0">
-            <summary className="cursor-pointer min-h-[44px] p-2 whitespace-normal break-words text-base rounded-box focus-visible:outline-2 focus-visible:outline-offset-2">
-              {category.category}
-            </summary>
-            <ul className="w-full min-w-0 space-y-1">
-              {category.locations.map((location) => (
-                <li key={location.name} className="min-w-0">
-                  <button
-                    type="button"
-                    className="min-h-[44px] w-full min-w-0 p-2 text-start text-base whitespace-normal break-words rounded-box hover:bg-base-200 focus-visible:outline-2 focus-visible:outline-offset-2"
-                    onClick={() => onLocationSelected(convertToLocation(location))}
-                  >
-                    {location.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
+          <details key={category.category} className="collapse collapse-arrow bg-base-100 border border-base-300">
+            <summary className="collapse-title">{category.category}</summary>
+            <div className="collapse-content">
+              <ul className="w-full min-w-0 space-y-1">
+                {category.locations.map((location) => (
+                  <li key={location.name} className="min-w-0">
+                    <button
+                      type="button"
+                      className="min-h-[44px] w-full min-w-0 p-2 text-start text-base whitespace-normal break-words rounded-box hover:bg-base-200 focus-visible:outline-2 focus-visible:outline-offset-2"
+                      onClick={() => onLocationSelected(convertToLocation(location))}
+                    >
+                      {location.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </details>
         ))}
       </div>

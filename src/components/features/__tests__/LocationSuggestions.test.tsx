@@ -43,6 +43,17 @@ describe("LocationSuggestions", () => {
     }
   });
 
+  it("カテゴリのdetailsはdaisyUIのcollapse表現でクリック可能に見える", () => {
+    const { container } = renderSuggestions();
+    for (const detail of Array.from(container.querySelectorAll("details"))) {
+      expect(detail).toHaveClass("collapse", "collapse-arrow");
+      const summary = detail.firstElementChild!;
+      expect(summary.tagName).toBe("SUMMARY");
+      expect(summary).toHaveClass("collapse-title");
+      expect(detail.querySelector(".collapse-content")).toContainElement(detail.querySelector("ul"));
+    }
+  });
+
   it("複数カテゴリを同時展開でき、施設をulとliのボタンとして提供する", async () => {
     const user = userEvent.setup();
     const { container } = renderSuggestions();

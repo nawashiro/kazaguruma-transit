@@ -22,7 +22,7 @@ function LocationSuggestions({
       </h3>
       <div className="space-y-2 min-w-0">
         {categories.map((category) => (
-          <details key={category.category} className="collapse collapse-arrow bg-base-100 border border-base-300">
+          <details key={category.category} name="facility-categories" className="collapse collapse-arrow bg-base-100 border border-base-300">
             <summary className="collapse-title">{category.category}</summary>
             <div className="collapse-content">
               <ul className="w-full min-w-0 space-y-1">

@@ -34,7 +34,7 @@ describe("LocationSuggestions", () => {
         expect(detail.open).toBe(false);
         expect(detail.firstElementChild?.tagName).toBe("SUMMARY");
         expect(detail.firstElementChild).toHaveTextContent(categories[index].category);
-        expect(detail).not.toHaveAttribute("name");
+        expect(detail).toHaveAttribute("name", "facility-categories");
       });
       expect(container.querySelector('[role="tablist"], [role="tab"], [role="tabpanel"]')).toBeNull();
       expect(fetchSpy).not.toHaveBeenCalled();
@@ -54,24 +54,19 @@ describe("LocationSuggestions", () => {
     }
   });
 
-  it("複数カテゴリを同時展開でき、施設をulとliのボタンとして提供する", async () => {
+  it("カテゴリは同名のnameグループで開閉し、施設をulとliのボタンとして提供する", async () => {
     const user = userEvent.setup();
     const { container } = renderSuggestions();
-    await user.click(screen.getByText(categories[0].category));
-    await user.click(screen.getByText(categories[1].category));
     const details = container.querySelectorAll("details");
-    expect(details).toHaveLength(2);
-    details.forEach((detail) => {
-      expect(detail.open).toBe(true);
-      const list = within(detail).getByRole("list");
-      expect(list.tagName).toBe("UL");
-      const item = within(list).getByRole("listitem");
-      expect(item.tagName).toBe("LI");
-      expect(within(item).getByRole("button")).toHaveAttribute("type", "button");
-    });
+    await user.click(screen.getByText(categories[0].category));
+    expect(details[0].open).toBe(true);
+    const list = within(details[0]).getByRole("list");
+    expect(list.tagName).toBe("UL");
+    const item = within(list).getByRole("listitem");
+    expect(item.tagName).toBe("LI");
+    expect(within(item).getByRole("button")).toHaveAttribute("type", "button");
     await user.click(screen.getByText(categories[0].category));
     expect(details[0].open).toBe(false);
-    expect(details[1].open).toBe(true);
   });
 
   it("カテゴリを開いた後、施設ボタンをEnterで選択できる", async () => {

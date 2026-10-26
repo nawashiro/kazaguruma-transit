@@ -42,6 +42,8 @@ RubyfulのDOM置換後のButton更新は`/tmp/ruby-button-red.log`で2件失敗�
 
 専用マーカー`transit-button`への変更後、`/tmp/full-test-final.log`で183 suites・1515 tests成功、2 suites・12 testsスキップを確認した。型検査、ソースESLint、`npm run lint`、配色マトリクス、スキップリンク検証も再実行して成功した。最後の通常・strict監査はともにexit 0で、既定5ページすべてaccessibility・color-contrastが1.00だった（`/tmp/route-a11y-last.log`、`/tmp/route-a11y-strict-last.log`）。
 
+master向けPRでは、別件のAnalytics変更を含めない専用ブランチへ今回の2コミットだけを移した。このブランチの全体テストは182 suites・1507 tests成功、2 suites・12 testsスキップだった（`/tmp/route-pr-tests-retry.log`）。初回は既存のdiscussion streamingテスト10件が失敗したが、同ファイルの単独実行と全体再実行は成功した。この不安定さを隠さず、上記の元ブランチの件数と区別する。PR用ブランチでも型検査・ソースESLint・`npm run lint`は成功した。
+
 ESLint全体は未成功である。同品質検査の`npx eslint .`は生成`.next`を含み807 errors / 4454 warnings、`.next`除外後も2 errors / 47 warningsだった。残るエラーはNext生成`next-env.d.ts`のtriple-slash参照と、既存`tailwind.config.js`のrequireである。`src __tests__ scripts`の検査は0 errors / 42 warnings。`npm run lint`成功をリポジトリ全体のESLint成功と読み替えず、正しさのルールも無効化しない。
 
 ## 残る検証上の制約

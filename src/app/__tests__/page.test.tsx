@@ -1,21 +1,17 @@
-/* eslint-disable react/display-name */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import Home from "../page";
 import type {
   LocationArtifact,
   LocationArtifactReadResult,
 } from "@/lib/location/location-artifact";
-import type {
-  AddressCategory,
-  AddressLocation,
-} from "@/utils/addressLoader";
+import type { AddressLocation } from "@/utils/addressLoader";
 
 const mockRouterPush = jest.fn();
 const mockReadLocationArtifact = jest.fn();
-const mockDestinationSelectorProps = jest.fn();
+
 const ANNOUNCEMENT_INFORMATION =
   "運行情報の更新";
 const ANNOUNCEMENT_URL = "/service-update";
@@ -118,90 +114,11 @@ jest.mock("@/lib/location/location-artifact", () => ({
   readLocationArtifact: (...args: unknown[]) => mockReadLocationArtifact(...args),
 }));
 
-jest.mock("@/components/features/DateTimeSelector", () =>
-  ({ onDateTimeSelected }: any) => (
-    <button
-      data-testid="mock-date-time-selector"
-      onClick={() =>
-        onDateTimeSelected({ dateTime: "2026-07-18T09:30", isDeparture: true })
-      }
-    />
-  ),
-);
-
-jest.mock("@/components/features/OriginSelector", () =>
-  ({ onOriginSelected }: any) => (
-    <button
-      data-testid="mock-origin-selector"
-      onClick={() => onOriginSelected({ lat: 35.68, lng: 139.76, address: "テスト住所" })}
-    />
-  ),
-);
-
-jest.mock("@/components/features/DestinationSelector", () =>
-  ({ onDestinationSelected, categories }: any) => {
-    mockDestinationSelectorProps({ categories });
-
-    return (
-      <>
-        <button
-          data-testid="mock-destination-selector"
-          onClick={() =>
-            onDestinationSelected({ lat: 35.7, lng: 139.78, address: "テスト目的地" })
-          }
-        />
-        {categories?.flatMap((category: AddressCategory) =>
-          category.locations.map((location: AddressLocation) => (
-            <button
-              key={location.name}
-              type="button"
-              data-testid={`popular-facility-${location.name}`}
-              onClick={() =>
-                onDestinationSelected({
-                  lat: location.lat,
-                  lng: location.lng,
-                  address: location.name,
-                })
-              }
-            >
-              {location.name}
-            </button>
-          )),
-        )}
-      </>
-    );
-  },
-);
-
 type PublicHomePage = () => React.ReactNode | Promise<React.ReactNode>;
-
-function isLegacyClientInvocation(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    /Invalid hook call|reading ['"]use[A-Z][A-Za-z]+['"]/.test(error.message)
-  );
-}
 
 async function renderPublicHome() {
   const page = Home as unknown as PublicHomePage;
-  const consoleError = jest
-    .spyOn(console, "error")
-    .mockImplementation(() => undefined);
-  let element: React.ReactNode;
-
-  try {
-    element = await page();
-  } catch (error) {
-    if (!isLegacyClientInvocation(error)) {
-      throw error;
-    }
-
-    // The current page is a client component. Keep the RED suite runnable
-    // until the public default export becomes the async server boundary.
-    element = React.createElement(Home as React.ComponentType);
-  } finally {
-    consoleError.mockRestore();
-  }
+  const element = await page();
 
   if (!React.isValidElement(element)) {
     throw new Error("Home public page did not return a React element");
@@ -333,49 +250,144 @@ describe("Home", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("目的地、出発地、日時を順に入力する", async () => {
-    await renderPublicHome();
-    fireEvent.click(screen.getByTestId("mock-destination-selector"));
-    expect(screen.getByTestId("mock-origin-selector")).toBeInTheDocument();
+  function routeForm() {
+    const form = document.querySelector<HTMLFormElement>('form[action="/routes"]');
+    if (!form) throw new Error("最終検索フォームがありません");
+    return form;
+  }
 
-    fireEvent.click(screen.getByTestId("mock-origin-selector"));
-    expect(screen.getByTestId("mock-date-time-selector")).toBeInTheDocument();
-    expect(screen.getByText("テスト目的地")).toBeInTheDocument();
-    expect(screen.getByText("テスト住所")).toBeInTheDocument();
+  async function selectAddress(label: string, lat: number, lng: number) {
+    browserFetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true, results: [{ lat, lng, formattedAddress: `確定${label}` }] }),
+    });
+    await userEvent.setup().type(screen.getByRole("textbox", { name: label }), "神田駅{Enter}");
+    expect(await screen.findByTestId(label === "目的地" ? "selected-destination" : "selected-origin")).toHaveTextContent(`確定${label}`);
+  }
+
+  it("4つのfieldsetを最初から順に表示し、フォームを入れ子にしない", async () => {
+    const { container } = await renderPublicHome();
+    expect(Array.from(container.querySelectorAll("fieldset > legend"), node => node.textContent)).toEqual(["目的地", "出発地", "日時", "優先条件"]);
+    expect(container.querySelectorAll("form")).toHaveLength(3);
+    expect(container.querySelector("form form")).toBeNull();
+    expect(container.querySelector('[aria-live] form')).toBeNull();
+    expect(container.querySelector("fieldset .card")).toBeNull();
+    expect(screen.queryByRole("button", { name: /リセット/ })).not.toBeInTheDocument();
   });
 
-  it("検索条件をGET結果ページURLへ渡し、入力ページではfetchしない", async () => {
+  it("全検索ボタンは装飾アイコンのみのsubmitで名前を検索に統一する", async () => {
     await renderPublicHome();
-    fireEvent.click(screen.getByTestId("mock-destination-selector"));
-    fireEvent.click(screen.getByTestId("mock-origin-selector"));
-    fireEvent.click(screen.getByTestId("mock-date-time-selector"));
-    fireEvent.click(screen.getByTestId("search-route"));
+    const buttons = screen.getAllByRole("button", { name: "検索" });
+    expect(buttons).toHaveLength(3);
+    for (const button of buttons) {
+      expect(button).toHaveAttribute("type", "submit");
+      expect(button).toHaveAttribute("aria-label", "検索");
+      expect(button.textContent?.trim()).toBe("");
+      expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    }
+  });
 
-    expect(mockRouterPush).toHaveBeenCalledWith(
-      "/routes?origin=35.68%2C139.76&destination=35.7%2C139.78&time=2026-07-18T09%3A30&isDeparture=true&prioritizeSpeed=false",
-    );
+  it("住所欄のEnterは空の日時に妨げられず住所だけを検索する", async () => {
+    await renderPublicHome();
+    fireEvent.change(screen.getByLabelText("日時", { selector: "input" }), { target: { value: "" } });
+    const submit = jest.fn();
+    routeForm().addEventListener("submit", submit);
+    await selectAddress("目的地", 35.7, 139.78);
+    expect(browserFetchSpy).toHaveBeenCalledTimes(1);
+    expect(submit).not.toHaveBeenCalled();
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it("確定座標と日時・ラジオ値を通常のGET送信に渡す", async () => {
+    await renderPublicHome();
+    await selectAddress("目的地", 35.7, 139.78);
+    await selectAddress("出発地", 35.68, 139.76);
+    fireEvent.change(screen.getByLabelText("日時", { selector: "input" }), { target: { value: "2026-07-18T09:30" } });
+    const form = routeForm();
+    expect(form).toHaveAttribute("method", "get");
+    expect(Object.fromEntries(new FormData(form))).toEqual({ origin: "35.68,139.76", destination: "35.7,139.78", time: "2026-07-18T09:30", isDeparture: "true", prioritizeSpeed: "false" });
+    const event = new Event("submit", { bubbles: true, cancelable: true });
+    fireEvent(form, event);
+    expect(event.defaultPrevented).toBe(false);
+    expect(mockRouterPush).not.toHaveBeenCalled();
+    expect(browserFetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(["目的地", "出発地"])("%sの再編集はその座標だけを無効化し条件を保持する", async label => {
+    await renderPublicHome();
+    await selectAddress("目的地", 35.7, 139.78);
+    await selectAddress("出発地", 35.68, 139.76);
+    const time = screen.getByLabelText("日時", { selector: "input" });
+    fireEvent.change(time, { target: { value: "2026-07-18T09:30" } });
+    fireEvent.click(screen.getByRole("radio", { name: "歩いてもいい、早く着きたい" }));
+    const group = screen.getByRole("group", { name: label });
+    expect(within(group).getByTestId(label === "目的地" ? "selected-destination" : "selected-origin").tagName).toBe("P");
+    fireEvent.click(within(group).getByRole("button", { name: "なおす" }));
+    expect(screen.getByRole("textbox", { name: label })).toHaveFocus();
+    const data = new FormData(routeForm());
+    expect(data.get(label === "目的地" ? "destination" : "origin") || "").toBe("");
+    expect(data.get(label === "目的地" ? "origin" : "destination")).toBe(label === "目的地" ? "35.68,139.76" : "35.7,139.78");
+    expect(time).toHaveValue("2026-07-18T09:30");
+    expect(data.get("prioritizeSpeed")).toBe("true");
+    screen.getByTestId("search-route").focus();
+    const event = new Event("submit", { bubbles: true, cancelable: true });
+    fireEvent(routeForm(), event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(screen.getByRole("textbox", { name: label })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("textbox", { name: label })).toHaveFocus();
+  });
+
+  it("未確定地点は送信を止めて両項目にエラーを関連付ける", async () => {
+    await renderPublicHome();
+    screen.getByTestId("search-route").focus();
+    const event = new Event("submit", { bubbles: true, cancelable: true });
+    fireEvent(routeForm(), event);
+    expect(event.defaultPrevented).toBe(true);
+    const destination = screen.getByRole("textbox", { name: "目的地" });
+    expect(destination).toHaveFocus();
+    expect(destination).toHaveAccessibleDescription(expect.stringContaining("目的地を確定してください"));
+    screen.getByTestId("search-route").focus();
+    fireEvent.submit(routeForm());
+    expect(destination).toHaveFocus();
+    for (const label of ["目的地", "出発地"]) expect(screen.getByRole("textbox", { name: label })).toHaveAttribute("aria-invalid", "true");
+    expect(mockRouterPush).not.toHaveBeenCalled();
     expect(browserFetchSpy).not.toHaveBeenCalled();
   });
 
-  it("はやさ優先をURLへ明示して端末設定に依存させない", async () => {
+  it("既存の目的地ディープリンクも全グループを表示する", async () => {
+    window.history.replaceState({}, "", `/?destination=${encodeURIComponent(JSON.stringify({ lat: 35.7, lng: 139.78, address: "リンク目的地" }))}`);
     await renderPublicHome();
-    fireEvent.click(screen.getByTestId("mock-destination-selector"));
-    fireEvent.click(screen.getByTestId("mock-origin-selector"));
-    fireEvent.click(screen.getByTestId("mock-date-time-selector"));
-    fireEvent.click(screen.getByRole("checkbox", { name: "はやさ優先" }));
-    fireEvent.click(screen.getByTestId("search-route"));
-
-    expect(mockRouterPush).toHaveBeenCalledWith(
-      expect.stringContaining("prioritizeSpeed=true"),
-    );
+    expect(screen.getByTestId("selected-destination")).toHaveTextContent("リンク目的地");
+    expect(within(screen.getByRole("group", { name: "目的地" })).getByRole("button", { name: "なおす" })).toBeInTheDocument();
+    for (const name of ["出発地", "日時", "優先条件"]) expect(screen.getByRole("group", { name })).toBeInTheDocument();
+    expect(browserFetchSpy).not.toHaveBeenCalled();
   });
 
-  it("リセットで目的地入力へ戻る", async () => {
+  it("優先条件を既存キーから復元して保存し、到着指定と共に送信する", async () => {
+    localStorage.setItem("prioritizeSpeed", "true");
     await renderPublicHome();
-    fireEvent.click(screen.getByTestId("mock-destination-selector"));
-    fireEvent.click(screen.getByRole("button", { name: "検索条件をリセット" }));
+    expect(screen.getByRole("radio", { name: "歩いてもいい、早く着きたい" })).toBeChecked();
+    fireEvent.click(screen.getByRole("radio", { name: "なるべく歩きたくない、時間がかかってもいい" }));
+    expect(localStorage.getItem("prioritizeSpeed")).toBe("false");
+    fireEvent.click(screen.getByRole("radio", { name: "到着" }));
+    expect(new FormData(routeForm()).get("isDeparture")).toBe("false");
+    expect(new FormData(routeForm()).get("prioritizeSpeed")).toBe("false");
+  });
 
-    expect(screen.getByTestId("mock-destination-selector")).toBeInTheDocument();
+  it("localStorageが使えなくても優先条件を選択して送信できる", async () => {
+    const storage = window.localStorage;
+    Object.defineProperty(window, "localStorage", { configurable: true, value: {
+      getItem: jest.fn(() => { throw new Error("denied"); }),
+      setItem: jest.fn(() => { throw new Error("denied"); }),
+    } });
+    try {
+      await renderPublicHome();
+      expect(screen.getByRole("radio", { name: "なるべく歩きたくない、時間がかかってもいい" })).toBeChecked();
+      fireEvent.click(screen.getByRole("radio", { name: "歩いてもいい、早く着きたい" }));
+      expect(new FormData(routeForm()).get("prioritizeSpeed")).toBe("true");
+    } finally {
+      Object.defineProperty(window, "localStorage", { configurable: true, value: storage });
+    }
   });
 
   it("server data boundaryからpopular施設を受け取り、ブラウザCDN fetchを開始しない", async () => {
@@ -384,36 +396,17 @@ describe("Home", () => {
     expect(mockReadLocationArtifact).toHaveBeenCalledTimes(1);
     expect(mockReadLocationArtifact).toHaveBeenCalledWith();
     expect(browserFetchSpy).not.toHaveBeenCalled();
-    expect(mockDestinationSelectorProps).toHaveBeenCalledWith({
-      categories: successfulArtifact.sources.mainFacilities,
-    });
-
-    const popularFacilityButton = screen.queryByTestId(
-      "popular-facility-千代田区役所",
-    );
+    fireEvent.click(screen.getByText("公共施設", { selector: "summary" }));
+    const popularFacilityButton = screen.queryByRole("button", { name: "千代田区役所" });
     expect(popularFacilityButton).toBeInTheDocument();
   });
 
   it("注入されたpopular施設の選択を既存の目的地入力へ引き継ぐ", async () => {
     await renderPublicHome();
 
-    const popularFacilityButton = screen.queryByTestId(
-      "popular-facility-千代田区役所",
-    );
-    expect(popularFacilityButton).toBeInTheDocument();
-    if (!popularFacilityButton) {
-      return;
-    }
-
-    fireEvent.click(popularFacilityButton);
-
-    const selectedDestination = screen.queryByTestId("selected-destination");
-    expect(selectedDestination).toBeInTheDocument();
-    if (!selectedDestination) {
-      return;
-    }
-
-    expect(selectedDestination).toHaveTextContent("千代田区役所");
+    fireEvent.click(screen.getByText("公共施設", { selector: "summary" }));
+    fireEvent.click(screen.getByRole("button", { name: "千代田区役所" }));
+    expect(screen.getByTestId("selected-destination")).toHaveTextContent("千代田区役所");
     expect(browserFetchSpy).not.toHaveBeenCalled();
   });
 
@@ -427,7 +420,7 @@ describe("Home", () => {
 
     expect(mockReadLocationArtifact).toHaveBeenCalledTimes(1);
     expectJapaneseHomeDataError();
-    expect(screen.queryByTestId("popular-facility-千代田区役所")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "千代田区役所" })).not.toBeInTheDocument();
     expect(browserFetchSpy).not.toHaveBeenCalled();
   });
 
@@ -441,7 +434,7 @@ describe("Home", () => {
 
     expect(mockReadLocationArtifact).toHaveBeenCalledTimes(1);
     expectJapaneseHomeDataError();
-    expect(screen.queryByTestId("popular-facility-千代田区役所")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "千代田区役所" })).not.toBeInTheDocument();
     expect(browserFetchSpy).not.toHaveBeenCalled();
   });
 });

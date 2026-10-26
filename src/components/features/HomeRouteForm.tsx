@@ -1,62 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { ComponentProps, ComponentType } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { flushSync } from "react-dom";
 import DateTimeSelector from "@/components/features/DateTimeSelector";
 import OriginSelector from "@/components/features/OriginSelector";
 import DestinationSelector from "@/components/features/DestinationSelector";
-import Button from "@/components/ui/Button";
-import ResetButton from "@/components/ui/ResetButton";
+import SearchButton from "@/components/ui/SearchButton";
 import PageHeader from "@/components/layouts/PageHeader";
-import Card from "@/components/ui/Card";
 import Announcement from "@/components/features/Announcement";
-import type { Location, TransitFormData } from "@/types/core";
+import type { Location } from "@/types/core";
 import type { AddressCategory } from "@/utils/addressLoader";
-import { buildRouteResultsUrl } from "@/lib/transit/route-search-query";
 import { logger } from "@/utils/logger";
 
 interface HomeRouteFormProps {
   popularCategories: AddressCategory[];
 }
 
-type DestinationSelectorWithCategoriesProps = ComponentProps<
-  typeof DestinationSelector
-> & {
-  categories: AddressCategory[];
-};
-
-const DestinationSelectorWithCategories = DestinationSelector as ComponentType<
-  DestinationSelectorWithCategoriesProps
->;
-
-export default function HomeRouteForm({
-  popularCategories,
-}: HomeRouteFormProps) {
-  const router = useRouter();
+export default function HomeRouteForm({ popularCategories }: HomeRouteFormProps) {
   const [selectedOrigin, setSelectedOrigin] = useState<Location | null>(null);
   const [selectedDestination, setSelectedDestination] = useState<Location | null>(null);
-  const [selectedDateTime, setSelectedDateTime] = useState("");
-  const [isDeparture, setIsDeparture] = useState(true);
   const [prioritizeSpeed, setPrioritizeSpeed] = useState(false);
+  const [validateLocations, setValidateLocations] = useState(false);
+  const locationInputs = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const savedPrioritizeSpeed = localStorage.getItem("prioritizeSpeed");
-    if (savedPrioritizeSpeed) {
-      setPrioritizeSpeed(savedPrioritizeSpeed === "true");
+    try {
+      setPrioritizeSpeed(localStorage.getItem("prioritizeSpeed") === "true");
+    } catch {
+      // ブラウザが保存領域を拒否しても、画面内の選択は利用できる。
     }
-
     const params = new URLSearchParams(window.location.search);
     const destinationParam = params.get("destination");
     if (!destinationParam) return;
-
     try {
       const destination = JSON.parse(decodeURIComponent(destinationParam)) as Location;
-      if (
-        Number.isFinite(destination.lat) &&
-        Number.isFinite(destination.lng) &&
-        typeof destination.address === "string"
-      ) {
+      if (Number.isFinite(destination.lat) && Number.isFinite(destination.lng) && typeof destination.address === "string") {
         setSelectedDestination(destination);
         window.history.replaceState({}, document.title, window.location.pathname);
       }
@@ -65,122 +43,53 @@ export default function HomeRouteForm({
     }
   }, []);
 
-  const resetSearch = () => {
-    setSelectedOrigin(null);
-    setSelectedDestination(null);
-    setSelectedDateTime("");
-  };
-
-  const handleDateTimeSelected = (formData: TransitFormData) => {
-    setSelectedDateTime(formData.dateTime || "");
-    setIsDeparture(formData.isDeparture ?? true);
-  };
-
-  const handleSearch = () => {
-    if (!selectedOrigin || !selectedDestination || !selectedDateTime) return;
-
-    router.push(
-      buildRouteResultsUrl({
-        origin: selectedOrigin,
-        destination: selectedDestination,
-        time: selectedDateTime,
-        isDeparture,
-        prioritizeSpeed,
-      }),
-    );
-  };
-
-  const locationText = (location: Location): string =>
-    location.address || `緯度: ${location.lat.toFixed(6)}, 経度: ${location.lng.toFixed(6)}`;
-
-  const renderInput = () => {
-    if (!selectedDestination) {
-      return (
-        <DestinationSelectorWithCategories
-          onDestinationSelected={setSelectedDestination}
-          categories={popularCategories}
-        />
-      );
+  const selectPriority = (value: boolean) => {
+    setPrioritizeSpeed(value);
+    try {
+      localStorage.setItem("prioritizeSpeed", String(value));
+    } catch {
+      // 保存できない端末でも、GET送信は選択値を使う。
     }
+  };
 
-    if (!selectedOrigin) {
-      return (
-        <div className="flex flex-col gap-4">
-          <Card title="選択された目的地">
-            <p data-testid="selected-destination">{locationText(selectedDestination)}</p>
-          </Card>
-          <OriginSelector onOriginSelected={setSelectedOrigin} />
-          <ResetButton onReset={resetSearch} className="order-first" />
-        </div>
-      );
+  const validateSearch = (event: FormEvent<HTMLFormElement>) => {
+    if (!selectedOrigin || !selectedDestination) {
+      event.preventDefault();
+      flushSync(() => setValidateLocations(true));
+      locationInputs.current?.querySelector<HTMLInputElement>('input[aria-invalid="true"]')?.focus();
     }
-
-    return (
-      <div className="flex flex-col gap-4">
-        <Card title="選択された目的地">
-          <p data-testid="selected-destination">{locationText(selectedDestination)}</p>
-        </Card>
-        <Card title="選択された出発地">
-          <p data-testid="selected-origin">{locationText(selectedOrigin)}</p>
-        </Card>
-        <Card title="日時の選択">
-          <DateTimeSelector onDateTimeSelected={handleDateTimeSelected} />
-          <div className="form-control mt-4 space-y-2">
-            <p className="text-base mt-1 ruby-text">
-              早く到着したい場合はオンにしてください。<br />
-              歩きを最小限にしたい場合はオフにしてください。
-            </p>
-            <label className="flex cursor-pointer items-center space-x-2">
-              <span className="label-text ruby-text">はやさ優先</span>
-              <input
-                type="checkbox"
-                className="toggle toggle-primary"
-                checked={prioritizeSpeed}
-                onChange={(event) => {
-                  setPrioritizeSpeed(event.target.checked);
-                  localStorage.setItem("prioritizeSpeed", String(event.target.checked));
-                }}
-                aria-label="はやさ優先"
-              />
-              <span className="label-text" aria-hidden="true">
-                {prioritizeSpeed ? "ON" : "OFF"}
-              </span>
-            </label>
-          </div>
-          <div className="card-actions justify-center">
-            <Button
-              className="w-full"
-              onClick={handleSearch}
-              disabled={!selectedDateTime}
-              testId="search-route"
-            >
-              検索
-            </Button>
-          </div>
-        </Card>
-        <ResetButton onReset={resetSearch} className="order-first" />
-      </div>
-    );
   };
 
   return (
-    <div>
-      <PageHeader
-        title={
-          <>
-            <ruby>風<rt>かざ</rt></ruby>ぐるま乗換案内
-          </>
-        }
-        description="千代田区地域福祉交通「風ぐるま」の自動案内サイト"
-      />
+    <div className="min-w-0">
+      <PageHeader title={<><ruby>風<rt>かざ</rt></ruby>ぐるま乗換案内</>} description="千代田区地域福祉交通「風ぐるま」の自動案内サイト" />
       <div className="mb-6"><Announcement /></div>
-      <div className="space-y-4">
-        <div aria-live="polite" className="space-y-4">{renderInput()}</div>
-        <Card bodyClassName="ruby-text">
+      <div ref={locationInputs} className="space-y-4 min-w-0">
+        <DestinationSelector categories={popularCategories} selectedLocation={selectedDestination}
+          onDestinationSelected={setSelectedDestination} onEdit={() => setSelectedDestination(null)}
+          validationError={validateLocations && !selectedDestination ? "目的地を確定してください" : undefined} />
+        <OriginSelector selectedLocation={selectedOrigin} onOriginSelected={setSelectedOrigin} onEdit={() => setSelectedOrigin(null)}
+          validationError={validateLocations && !selectedOrigin ? "出発地を確定してください" : undefined} />
+        <form action="/routes" method="get" onSubmit={validateSearch} className="space-y-4 min-w-0">
+          {selectedOrigin && <input type="hidden" name="origin" value={`${selectedOrigin.lat},${selectedOrigin.lng}`} />}
+          {selectedDestination && <input type="hidden" name="destination" value={`${selectedDestination.lat},${selectedDestination.lng}`} />}
+          <DateTimeSelector />
+          <fieldset className="fieldset min-w-0 w-full border border-base-300 rounded-box bg-base-200 p-4 text-base">
+            <legend className="fieldset-legend text-base">優先条件</legend>
+            {[{ value: false, label: "なるべく歩きたくない、時間がかかってもいい" }, { value: true, label: "歩いてもいい、早く着きたい" }].map(option => (
+              <label key={String(option.value)} className="flex items-center gap-2 text-base cursor-pointer">
+                <input type="radio" className="radio shrink-0" name="prioritizeSpeed" value={String(option.value)} checked={prioritizeSpeed === option.value} onChange={() => selectPriority(option.value)} />
+                <span className="ruby-text">{option.label}</span>
+              </label>
+            ))}
+          </fieldset>
+          <SearchButton testId="search-route" />
+        </form>
+        <div className="ruby-text text-base">
           <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
           <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>
           <p><a href="https://lin.ee/CgIBOSd" target="_blank" rel="noopener noreferrer" className="link">千代田区公式LINE</a>で最新の運行情報を確認できます</p>
-        </Card>
+        </div>
       </div>
     </div>
   );

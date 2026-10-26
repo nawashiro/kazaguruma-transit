@@ -1,241 +1,35 @@
-"use client";
-
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
-import Card from "@/components/ui/Card";
 import IntegratedRouteDisplay from "./IntegratedRouteDisplay";
-import RoutePdfExport from "./RoutePdfExport";
-import RouteCalendarExport from "./RouteCalendarExport";
-import { BusStopDiscussion, BusStopMemo, getBusStopMemoData } from "@/components/discussion";
-import { isDiscussionsEnabled } from "@/lib/config/discussion-config";
-import {
-  buildTransitApiUrl,
-  parseRouteSearchParams,
-} from "@/lib/transit/route-search-query";
-import {
-  createRouteResultViewModel,
-  type RouteResultData,
-  type RouteResultViewModel,
-} from "@/lib/transit/route-result-model";
-import type { PostWithStats } from "@/types/discussion";
-import { logger } from "@/utils/logger";
-
-interface ApiResponse {
-  success: boolean;
-  data?: RouteResultData;
-  error?: string;
-  limitExceeded?: boolean;
-}
-
-type ResultState =
-  | { status: "loading"; searchParams: string }
-  | { status: "success"; searchParams: string; routeInfo: RouteResultViewModel }
-  | { status: "error"; searchParams: string; message: string };
+import RouteResultActions from "./RouteResultActions";
+import type { RouteSearchResult } from "@/lib/transit/search-routes";
 
 interface RouteSearchResultsProps {
-  searchParams: string;
+  result: Exclude<RouteSearchResult, { status: "limited" }>;
 }
 
-type RateLimitRouter = {
-  push: (href: string) => void;
-};
-
-const fallbackRateLimitRouter: RateLimitRouter = {
-  push: () => undefined,
-};
-const publicRouterHook = useRouter as (() => RateLimitRouter) | undefined;
-const getRateLimitRouter = publicRouterHook ?? (() => fallbackRateLimitRouter);
-
-function ResetSearchConditionsLink() {
+export default function RouteSearchResults({ result }: RouteSearchResultsProps) {
   return (
-    <div className="flex justify-center">
-      <Link
-        href="/"
-        className="btn gap-0 text-base btn-secondary rounded-full dark:rounded-sm min-h-[44px] min-w-[44px] leading-relaxed font-medium inline-flex items-center justify-center ruby-text"
-      >
-        検索条件をリセット
+    <div className="flex min-w-0 flex-col gap-4 text-base break-words">
+      <Link href="/" className="link inline-flex min-h-[44px] items-center self-start text-base ruby-text">
+        入力画面に戻る
       </Link>
-    </div>
-  );
-}
-
-function getBusStops(routeInfo: RouteResultViewModel): string[] {
-  if (routeInfo.type === "none") return [];
-
-  const busStops = [routeInfo.originStop.stopName, routeInfo.destinationStop.stopName];
-  for (const route of routeInfo.routes) {
-    for (const transfer of route.transfers ?? []) {
-      busStops.push(transfer.transferStop.stopName);
-    }
-  }
-  return [...new Set(busStops)];
-}
-
-function SearchError({ message }: { message: string }) {
-  return (
-    <Card>
-      <div role="alert" className="alert alert-error alert-soft text-base-content! mb-4">
-        <p>{message}</p>
-      </div>
-      <ResetSearchConditionsLink />
-    </Card>
-  );
-}
-
-export default function RouteSearchResults({ searchParams }: RouteSearchResultsProps) {
-  const parsed = useMemo(
-    () => parseRouteSearchParams(new URLSearchParams(searchParams)),
-    [searchParams],
-  );
-  const [resultState, setResultState] = useState<ResultState>({ status: "loading", searchParams });
-  const router = getRateLimitRouter();
-  const routerRef = useRef(router);
-  routerRef.current = router;
-  const [memoData, setMemoData] = useState<Map<string, PostWithStats>>(new Map());
-
-  useEffect(() => {
-    if (!parsed.isValid) return;
-
-    const abortController = new AbortController();
-    setResultState({ status: "loading", searchParams });
-
-    const search = async () => {
-      try {
-        const response = await fetch(buildTransitApiUrl(parsed.query), {
-          method: "GET",
-          headers: { Accept: "application/json" },
-          signal: abortController.signal,
-        });
-        const apiResponse = (await response.json()) as ApiResponse;
-
-        if (response.status === 429 && apiResponse.limitExceeded) {
-          setResultState({
-            status: "error",
-            searchParams,
-            message: "利用制限に達しました",
-          });
-          routerRef.current.push("/rate-limit?source=routes");
-          return;
-        }
-        if (!response.ok || !apiResponse.success) {
-          setResultState({
-            status: "error",
-            searchParams,
-            message: apiResponse.error || "経路検索に失敗しました",
-          });
-          return;
-        }
-
-        setResultState({
-          status: "success",
-          searchParams,
-          routeInfo: createRouteResultViewModel(
-            apiResponse.data,
-            parsed.query.origin,
-            parsed.query.destination,
-          ),
-        });
-      } catch (error) {
-        if (abortController.signal.aborted) return;
-        logger.error("経路検索リクエストエラー:", error);
-        setResultState({
-          status: "error",
-          searchParams,
-          message: error instanceof Error ? error.message : "予期せぬエラーが発生しました",
-        });
-      }
-    };
-
-    void search();
-    return () => abortController.abort();
-  }, [parsed, searchParams]);
-
-  useEffect(() => {
-    if (
-      resultState.status !== "success" ||
-      resultState.routeInfo.type === "none" ||
-      !isDiscussionsEnabled()
-    ) {
-      setMemoData(new Map());
-      return;
-    }
-
-    void getBusStopMemoData(getBusStops(resultState.routeInfo)).then(setMemoData);
-  }, [resultState]);
-
-  if (!parsed.isValid) return <SearchError message={parsed.error} />;
-  if (resultState.status === "loading" || resultState.searchParams !== searchParams) {
-    return (
-      <Card bodyClassName="items-center">
-        <div role="status" className="flex flex-col items-center gap-2">
-          <span className="loading loading-spinner loading-lg" aria-hidden="true" />
-          <p className="ruby-text">経路を検索中...</p>
+      {result.status === "error" ? (
+        <div role="alert" className="alert alert-error alert-soft text-base-content!">
+          <p>{result.message}</p>
         </div>
-      </Card>
-    );
-  }
-  if (resultState.status === "error") {
-    return <SearchError message={resultState.message} />;
-  }
-
-  const { routeInfo } = resultState;
-  const busStops = getBusStops(routeInfo);
-  return (
-    <div className="flex flex-col gap-4">
-      <ResetSearchConditionsLink />
-      <IntegratedRouteDisplay
-        originStop={routeInfo.originStop}
-        destinationStop={routeInfo.destinationStop}
-        routes={routeInfo.routes}
-        type={routeInfo.type}
-        _transfers={routeInfo.transfers}
-        _message={routeInfo.message}
-        originLat={parsed.query.origin.lat}
-        originLng={parsed.query.origin.lng}
-        destLat={parsed.query.destination.lat}
-        destLng={parsed.query.destination.lng}
-      />
-      {routeInfo.type !== "none" && (
-        <>
-          <div className="flex flex-col items-center gap-4">
-            <RouteCalendarExport
-              originStop={routeInfo.originStop}
-              destinationStop={routeInfo.destinationStop}
-              routes={routeInfo.routes}
-              selectedDateTime={parsed.query.time}
-              originLat={parsed.query.origin.lat}
-              originLng={parsed.query.origin.lng}
-              destLat={parsed.query.destination.lat}
-              destLng={parsed.query.destination.lng}
-            />
-            <RoutePdfExport
-              originStop={routeInfo.originStop}
-              destinationStop={routeInfo.destinationStop}
-              routes={routeInfo.routes}
-              type={routeInfo.type}
-              transfers={routeInfo.transfers}
-              originLat={parsed.query.origin.lat}
-              originLng={parsed.query.origin.lng}
-              destLat={parsed.query.destination.lat}
-              destLng={parsed.query.destination.lng}
-              selectedDateTime={parsed.query.time}
-              memoData={memoData}
-            />
-          </div>
-          {isDiscussionsEnabled() && (
-            <>
-              <div className="mt-4"><BusStopMemo busStops={busStops} /></div>
-              <div className="mt-4">
-                <BusStopDiscussion
-                  busStops={busStops}
-                  className="border-t border-gray-200 dark:border-gray-700 pt-8"
-                />
-              </div>
-            </>
-          )}
-        </>
-      )}
+      ) : <>
+        <IntegratedRouteDisplay
+          originStop={result.routeInfo.originStop}
+          destinationStop={result.routeInfo.destinationStop}
+          routes={result.routeInfo.routes}
+          type={result.routeInfo.type}
+          originLat={result.query.origin.lat}
+          originLng={result.query.origin.lng}
+          destLat={result.query.destination.lat}
+          destLng={result.query.destination.lng}
+        />
+        {result.routeInfo.type !== "none" && <RouteResultActions routeInfo={result.routeInfo} query={result.query} />}
+      </>}
     </div>
   );
 }

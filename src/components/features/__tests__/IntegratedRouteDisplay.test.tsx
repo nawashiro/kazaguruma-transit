@@ -71,6 +71,25 @@ describe("IntegratedRouteDisplay", () => {
     },
   ];
 
+  it("見出し・リスト・区切り線で経路を表しカードで囲まない", () => {
+    const { container } = render(<IntegratedRouteDisplay originStop={mockOriginStop} destinationStop={mockDestinationStop} routes={mockRoutes} type="transfer" />);
+    expect(screen.getByRole("heading", { name: "ルート1" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "ルート2" })).toBeInTheDocument();
+    expect(screen.getAllByRole("list").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("listitem").length).toBeGreaterThan(1);
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+    expect(container.querySelector(".card")).toBeNull();
+    for (const time of container.querySelectorAll("time")) {
+      expect(time).toHaveClass("text-base");
+      expect(time.parentElement).toHaveClass("flex-wrap");
+    }
+  });
+
+  it("両端の徒歩地図リンクを表示する", () => {
+    render(<IntegratedRouteDisplay originStop={{ ...mockOriginStop, stop_lat: 35.1, stop_lon: 139.1 }} destinationStop={{ ...mockDestinationStop, stop_lat: 35.2, stop_lon: 139.2 }} routes={mockRoutes} type="transfer" originLat={35} originLng={139} destLat={36} destLng={140} />);
+    expect(screen.getAllByRole("link", { name: /Googleマップ/ })).toHaveLength(2);
+  });
+
   it("出発/到着バス停と時刻情報が表示されること", () => {
     render(
       <IntegratedRouteDisplay

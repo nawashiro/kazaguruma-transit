@@ -1,204 +1,101 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import React from "react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import DateTimeSelector from "../DateTimeSelector";
 
+function localDateTime(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 describe("DateTimeSelector", () => {
-  const mockStopId = "stop1";
-  const mockOnSubmit = jest.fn();
-  const mockOnDateTimeSelected = jest.fn();
-
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-10-26T01:23:00Z"));
   });
 
-  it("出発日時入力フィールドが表示され、値を入力できること", () => {
-    render(
-      <DateTimeSelector initialStopId={mockStopId} onSubmit={mockOnSubmit} />
+  afterEach(() => jest.useRealTimers());
+
+  it("端末の現在日時を一度設定して両callbackへ通知する", () => {
+    const onSubmit = jest.fn();
+    const onDateTimeSelected = jest.fn();
+    const { rerender } = render(
+      <React.StrictMode>
+        <DateTimeSelector initialStopId="stop1" onSubmit={onSubmit} onDateTimeSelected={onDateTimeSelected} />
+      </React.StrictMode>,
     );
-
-    // 出発日時入力フィールドが存在することを確認
-    const departureDateTimeInput = screen.getByTestId("departure-input");
-    expect(departureDateTimeInput).toBeInTheDocument();
-    expect(screen.getByTestId("departure-label")).toHaveTextContent("出発日時");
-
-    // 値を設定
-    fireEvent.change(departureDateTimeInput, {
-      target: { value: "2023-11-01T09:00" },
-    });
-    expect(departureDateTimeInput).toHaveValue("2023-11-01T09:00");
-
-    // 値変更時にonSubmitが呼ばれることを確認
-    expect(mockOnSubmit).toHaveBeenCalledWith({
-      stopId: mockStopId,
-      dateTime: "2023-11-01T09:00",
-      isDeparture: true,
-    });
+    const expected = localDateTime(new Date());
+    expect(screen.getByLabelText("日時")).toHaveValue(expected);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onDateTimeSelected).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledWith({ stopId: "stop1", dateTime: expected, isDeparture: true });
+    act(() => jest.setSystemTime(new Date("2026-10-27T05:00:00Z")));
+    rerender(
+      <React.StrictMode>
+        <DateTimeSelector initialStopId="stop2" onSubmit={onSubmit} onDateTimeSelected={onDateTimeSelected} />
+      </React.StrictMode>,
+    );
+    expect(screen.getByLabelText("日時")).toHaveValue(expected);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
-  it("出発/到着切り替えが機能し、到着日時入力フィールドに切り替わること", async () => {
-    render(
-      <DateTimeSelector
-        initialStopId={mockStopId}
-        onSubmit={mockOnSubmit}
-        onDateTimeSelected={mockOnDateTimeSelected}
-      />
-    );
-
-    // デフォルトでは出発日時が表示されていることを確認
-    expect(screen.getByTestId("departure-label")).toHaveTextContent("出発日時");
-
-    // モックがコンポーネント初期化時に呼ばれたことをリセット
-    mockOnDateTimeSelected.mockClear();
-
-    // 到着タブをクリック
-    const arrivalTab = screen.getByTestId("arrival-radio");
-    fireEvent.click(arrivalTab);
-
-    // 到着日時入力フィールドが表示されていることを確認
-    await waitFor(() => {
-      expect(screen.getByTestId("arrival-label")).toHaveTextContent("到着日時");
-      expect(screen.getByTestId("arrival-input")).toBeInTheDocument();
-    });
-
-    // タブ切り替え時にonDateTimeSelectedが呼ばれ、isDepartureがfalseになることを確認
-    expect(mockOnDateTimeSelected).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stopId: mockStopId,
-        isDeparture: false,
-      })
-    );
+  it("通常のラジオと固定ラベルで出発・到着を切り替え、GET用の値を持つ", () => {
+    const onDateTimeSelected = jest.fn();
+    const { container } = render(<form><DateTimeSelector onDateTimeSelected={onDateTimeSelected} /></form>);
+    const input = screen.getByLabelText("日時");
+    const departure = screen.getByRole("radio", { name: "出発" });
+    const arrival = screen.getByRole("radio", { name: "到着" });
+    expect(departure).toHaveAttribute("name", "isDeparture");
+    expect(departure).toHaveAttribute("value", "true");
+    expect(arrival).toHaveAttribute("name", "isDeparture");
+    expect(arrival).toHaveAttribute("value", "false");
+    expect(departure).toBeChecked();
+    expect(input).toHaveAttribute("type", "datetime-local");
+    expect(input).toHaveAttribute("name", "time");
+    expect(input).toHaveAccessibleName("日時");
+    expect(input).not.toHaveAttribute("aria-label");
+    expect(container.querySelector("fieldset")).not.toHaveAttribute("role");
+    const initialValue = (input as HTMLInputElement).value;
+    fireEvent.click(arrival);
+    expect(arrival).toBeChecked();
+    expect(departure).not.toBeChecked();
+    expect(screen.getByLabelText("日時")).toBe(input);
+    expect(input).toHaveValue(initialValue);
+    const form = container.querySelector("form")!;
+    expect(new FormData(form).get("isDeparture")).toBe("false");
+    expect(new FormData(form).get("time")).toBe(initialValue);
+    expect(onDateTimeSelected).toHaveBeenLastCalledWith({ stopId: "", dateTime: initialValue, isDeparture: false });
+    fireEvent.click(departure);
+    expect(new FormData(form).get("isDeparture")).toBe("true");
   });
 
-  it("初期値が設定され、onSubmitが初期化時に呼ばれること", async () => {
-    render(
-      <DateTimeSelector initialStopId={mockStopId} onSubmit={mockOnSubmit} />
-    );
-
-    // コンポーネント初期化時にonSubmitが呼ばれることを確認
-    await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
-      expect(mockOnSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          stopId: mockStopId,
-          isDeparture: true,
-        })
-      );
-    });
+  it("日時の変更を通知し、空欄は現在日時で補充せず標準必須検証に任せる", () => {
+    const onSubmit = jest.fn();
+    const { rerender } = render(<DateTimeSelector onSubmit={onSubmit} />);
+    const input = screen.getByLabelText("日時") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "2026-11-01T09:00" } });
+    expect(input).toHaveValue("2026-11-01T09:00");
+    expect(onSubmit).toHaveBeenLastCalledWith({ stopId: "", dateTime: "2026-11-01T09:00", isDeparture: true });
+    fireEvent.change(input, { target: { value: "" } });
+    expect(input).toBeRequired();
+    expect(input.validity.valueMissing).toBe(true);
+    expect(input.checkValidity()).toBe(false);
+    fireEvent.click(screen.getByRole("radio", { name: "到着" }));
+    rerender(<DateTimeSelector onSubmit={onSubmit} />);
+    expect(input).toHaveValue("");
+    expect(onSubmit).toHaveBeenLastCalledWith({ stopId: "", dateTime: "", isDeparture: false });
   });
 
-  it("アクセシビリティ：時間タイプがネイティブラジオとして公開されていること", async () => {
-    render(
-      <DateTimeSelector
-        initialStopId={mockStopId}
-        onSubmit={mockOnSubmit}
-        onDateTimeSelected={mockOnDateTimeSelected}
-      />
-    );
-
-    // fieldset/legendのラジオグループ契約を維持する
-    const fieldsetRadiogroup = screen.getByRole("radiogroup");
-    expect(fieldsetRadiogroup).toBeInTheDocument();
-
-    const labelId = fieldsetRadiogroup.getAttribute("aria-labelledby");
-    const label = document.getElementById(labelId || "");
-    expect(label).toHaveTextContent("時間タイプを選択");
-
-    // roleを付けた別要素ではなく、実DOMのネイティブラジオを要求する
-    const radioInputs = Array.from(
-      fieldsetRadiogroup.querySelectorAll('input[type="radio"]')
-    );
-    expect(radioInputs).toHaveLength(2);
-    radioInputs.forEach((radioInput) => {
-      expect(radioInput).toBeInstanceOf(HTMLInputElement);
-      expect(radioInput.tagName).toBe("INPUT");
-      expect(radioInput).toHaveAttribute("name");
-      expect(radioInput.getAttribute("name")).not.toBe("");
-      expect(radioInput).toHaveAttribute("id");
-      expect(radioInput.getAttribute("id")).not.toBe("");
-    });
-    expect(radioInputs[0].getAttribute("name")).toBe(
-      radioInputs[1].getAttribute("name")
-    );
-
-    // labelの公開経路で同じinputを取得し、htmlForの関連付けを検証する
-    const departureRadio = screen.getByLabelText("出発");
-    const arrivalRadio = screen.getByLabelText("到着");
-    expect(departureRadio).toBeInstanceOf(HTMLInputElement);
-    expect(arrivalRadio).toBeInstanceOf(HTMLInputElement);
-    expect(departureRadio).toHaveAttribute("type", "radio");
-    expect(arrivalRadio).toHaveAttribute("type", "radio");
-
-    const departureLabel = departureRadio.closest("label") as HTMLLabelElement | null;
-    const arrivalLabel = arrivalRadio.closest("label") as HTMLLabelElement | null;
-    expect(departureLabel).not.toBeNull();
-    expect(arrivalLabel).not.toBeNull();
-    if (!departureLabel || !arrivalLabel) {
-      throw new Error("Native radio labels are missing");
-    }
-    expect(departureLabel.tagName).toBe("LABEL");
-    expect(arrivalLabel.tagName).toBe("LABEL");
-    expect(departureLabel.htmlFor).not.toBe("");
-    expect(arrivalLabel.htmlFor).not.toBe("");
-    expect(departureLabel.htmlFor).toBe(departureRadio.id);
-    expect(arrivalLabel.htmlFor).toBe(arrivalRadio.id);
-    expect(fieldsetRadiogroup.querySelector(".join")).toBeNull();
-    expect(departureLabel).not.toHaveClass("btn", "join-item", "btn-primary");
-    expect(arrivalLabel).not.toHaveClass("btn", "join-item", "btn-primary");
-
-    // 初期選択とネイティブinputのクリックによる切り替えを検証する
-    expect(departureRadio).toBeChecked();
-    expect(arrivalRadio).not.toBeChecked();
-    mockOnDateTimeSelected.mockClear();
-    fireEvent.click(arrivalRadio);
-
-    await waitFor(() => {
-      expect(arrivalRadio).toBeChecked();
-      expect(departureRadio).not.toBeChecked();
-      expect(screen.getByTestId("arrival-label")).toHaveTextContent("到着日時");
-      expect(screen.getByTestId("arrival-input")).toBeInTheDocument();
-      expect(mockOnDateTimeSelected).toHaveBeenCalledWith(
-        expect.objectContaining({
-          stopId: mockStopId,
-          isDeparture: false,
-        })
-      );
-    });
+  it("日時ラベルにテーマ本文色を使う", () => {
+    render(<DateTimeSelector />);
+    const input = screen.getByLabelText("日時");
+    const label = document.querySelector(`label[for="${input.id}"]`);
+    expect(label).toHaveClass("text-base-content");
   });
 
-  it("アクセシビリティ：日時入力フィールドが適切なaria属性を持つこと", () => {
-    render(
-      <DateTimeSelector initialStopId={mockStopId} onSubmit={mockOnSubmit} />
-    );
-
-    // 日時入力フィールドのaria属性確認
-    const dateTimeInput = screen.getByTestId("departure-input");
-    expect(dateTimeInput).toHaveAttribute("aria-required", "true");
-
-    // 到着時間に切り替えた場合のaria属性確認
-    const arrivalBtn = screen.getByTestId("arrival-radio");
-    fireEvent.click(arrivalBtn);
-
-    const arrivalInput = screen.getByTestId("arrival-input");
-    expect(arrivalInput).toHaveAttribute("aria-required", "true");
-  });
-
-  it("アクセシビリティ：無効状態のボタンが適切に処理されること", () => {
-    render(
-      <DateTimeSelector
-        initialStopId={mockStopId}
-        onSubmit={mockOnSubmit}
-        disabled={true}
-      />
-    );
-
-    // ラジオボタンが無効状態になることを確認
-    const departureRadio = screen.getByTestId("departure-radio");
-    const arrivalRadio = screen.getByTestId("arrival-radio");
-    expect(departureRadio).toBeDisabled();
-    expect(arrivalRadio).toBeDisabled();
-
-    // 無効状態の入力フィールドチェック
-    const dateTimeInput = screen.getByTestId("departure-input");
-    expect(dateTimeInput).toBeDisabled();
+  it("disabled時には日時と両ラジオを無効にする", () => {
+    render(<DateTimeSelector disabled />);
+    expect(screen.getByLabelText("日時")).toBeDisabled();
+    screen.getAllByRole("radio").forEach((radio) => expect(radio).toBeDisabled());
   });
 });

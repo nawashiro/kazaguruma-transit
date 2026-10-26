@@ -1,210 +1,114 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { useState } from "react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import DestinationSelector from "../DestinationSelector";
+import type { Location } from "@/types/core";
 
 const mockRouterPush = jest.fn();
+jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockRouterPush }) }));
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
+const location: Location = { lat: 35.694, lng: 139.753, address: "千代田区役所" };
+const categories = [{ category: "公共施設", "category:en": "public", locations: [{ name: location.address!, lat: location.lat, lng: location.lng }] }];
 
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: (url: string) => mockRouterPush(url),
-  }),
-}));
+function Selector({ validationError }: { validationError?: string }) {
+  const [selected, setSelected] = useState<Location | null>(null);
+  return <DestinationSelector categories={categories} selectedLocation={selected} onDestinationSelected={setSelected} onEdit={() => setSelected(null)} validationError={validationError} />;
+}
 
-// LocationSuggestionsコンポーネントをモック
-jest.mock("../LocationSuggestions", () => {
-  return function MockLocationSuggestions({ onLocationSelected }: { onLocationSelected: (location: { lat: number; lng: number; address: string }) => void }) {
-    return (
-      <div data-testid="location-suggestions">
-        <button
-          data-testid="select-suggestion"
-          onClick={() =>
-            onLocationSelected({
-              lat: 35.69404386157018,
-              lng: 139.7534462933312,
-              address: "千代田区役所",
-            })
-          }
-        >
-          サンプル施設を選択
-        </button>
-      </div>
-    );
-  };
-});
+async function submitAddress(value = "神田駅") {
+  await userEvent.setup().type(screen.getByRole("textbox", { name: "目的地" }), `${value}{Enter}`);
+}
 
-// モックのfetch API
-global.fetch = jest.fn();
-const mockFetch = global.fetch as jest.Mock;
+function expectInputError() {
+  const input = screen.getByRole("textbox", { name: "目的地" });
+  expect(input).toHaveAttribute("aria-invalid", "true");
+  const ids = input.getAttribute("aria-describedby")?.split(/\s+/) ?? [];
+  expect(ids.some(id => document.getElementById(id)?.textContent?.match(/失敗|見つかりません|ありません|確定/))).toBe(true);
+  expect(input).toHaveValue("神田駅");
+}
 
 describe("DestinationSelector", () => {
-  const mockOnDestinationSelected = jest.fn();
+  beforeEach(() => { jest.clearAllMocks(); mockFetch.mockReset(); });
 
-  beforeEach(() => {
-    jest.clearAllMocks();
+  it("目的地のlegendとlabelを持ち、アイコンのみの検索submitを提供する", () => {
+    const { container } = render(<Selector />);
+    const group = screen.getByRole("group", { name: "目的地" });
+    expect(group.tagName).toBe("FIELDSET");
+    expect(group.querySelector("legend")).toHaveTextContent("目的地");
+    const input = screen.getByRole("textbox", { name: "目的地" });
+    const button = within(group).getByRole("button", { name: "検索" });
+    expect(button).toHaveAttribute("type", "submit");
+    expect(button).toHaveAttribute("aria-label", "検索");
+    expect(button.textContent?.trim()).toBe("");
+    expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    expect(button.closest("form")).toContainElement(input);
+    expect(container.querySelector(".card")).toBeNull();
   });
 
-  it("目的地入力フォームと検索ボタンが表示される", () => {
-    render(
-      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
-    );
-
-    expect(screen.getByText("目的地を選択してください")).toBeInTheDocument();
-    expect(screen.getByTestId("location-suggestions")).toBeInTheDocument();
-    expect(screen.getByTestId("address-input")).toBeInTheDocument();
-    expect(screen.getByTestId("search-button")).toBeInTheDocument();
+  it("Enterで検索し、複数候補の先頭を同じfieldset内に確定する", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, results: [
+      { lat: location.lat, lng: location.lng, formattedAddress: location.address },
+      { lat: 36, lng: 140, formattedAddress: "二番目" },
+    ] }) });
+    render(<Selector />);
+    await submitAddress();
+    const selected = await screen.findByTestId("selected-destination");
+    expect(selected.tagName).toBe("P");
+    expect(selected).toHaveTextContent("千代田区役所");
+    const group = screen.getByRole("group", { name: "目的地" });
+    expect(group).toContainElement(selected);
+    const edit = within(group).getByRole("button", { name: "なおす" });
+    expect(group).toContainElement(document.activeElement as HTMLElement);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith(`/api/geocode?address=${encodeURIComponent("千代田区 神田駅")}`);
+    fireEvent.click(edit);
+    expect(screen.getByRole("textbox", { name: "目的地" })).toHaveFocus();
+    expect(screen.queryByTestId("selected-destination")).not.toBeInTheDocument();
   });
 
-  it("検索欄に明示的なラベル「目的地」を付け、入力欄と関連付ける", () => {
-    render(
-      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
-    );
-
-    const input = screen.getByTestId("address-input");
-    const label = screen.getByText("目的地", { selector: "label" });
-
-    expect(input.id).not.toBe("");
-    expect(label).toHaveAttribute("for", input.id);
-    expect(screen.getByLabelText("目的地")).toBe(input);
-  });
-
-  it("目的地検索を入力欄と検索アイコンのjoinとして表示する", () => {
-    render(
-      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
-    );
-
-    const input = screen.getByTestId("address-input");
-    const searchButton = screen.getByRole("button", {
-      name: "目的地の住所や場所を検索",
-    });
-
-    expect(input).toHaveClass("join-item", "min-h-[44px]");
-    expect(searchButton).toHaveClass("join-item", "h-11", "min-h-[44px]");
-    expect(input.closest(".join")).toContainElement(searchButton);
-    expect(screen.queryByText("検索")).not.toBeInTheDocument();
-  });
-
-  it("入力が空の場合はコールバックが呼ばれない", async () => {
-    render(
-      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
-    );
-
-    // 空入力の状態で検索ボタンをクリック
-    const searchButton = screen.getByTestId("search-button");
-    fireEvent.click(searchButton);
-
-    expect(await screen.findByText("住所を入力してください")).toBeInTheDocument();
-    // コールバックが呼ばれていないことを確認
-    expect(mockOnDestinationSelected).not.toHaveBeenCalled();
+  it("注入された施設を選ぶと同じグループに確定しブラウザ取得しない", () => {
+    render(<Selector />);
+    fireEvent.click(screen.getByText("公共施設", { selector: "summary" }));
+    fireEvent.click(screen.getByRole("button", { name: "千代田区役所" }));
+    expect(within(screen.getByRole("group", { name: "目的地" })).getByTestId("selected-destination")).toHaveTextContent("千代田区役所");
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it("目的地が入力された場合に検索を実行する", async () => {
-    // APIレスポンスのモック
-    const mockLocation = {
-      lat: 35.6895,
-      lng: 139.6917,
-      address: "東京都千代田区霞が関１丁目",
-    };
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        success: true,
-        results: [{ ...mockLocation, formattedAddress: mockLocation.address }],
-      }),
-    });
-
-    render(
-      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
-    );
-
-    const destinationInput = screen.getByTestId("address-input");
-    const searchButton = screen.getByTestId("search-button");
-
-    fireEvent.change(destinationInput, {
-      target: { value: "東京都千代田区霞が関" },
-    });
-    fireEvent.click(searchButton);
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(mockFetch).toHaveBeenCalledWith(
-        "/api/geocode?address=%E6%9D%B1%E4%BA%AC%E9%83%BD%E5%8D%83%E4%BB%A3%E7%94%B0%E5%8C%BA%E9%9C%9E%E3%81%8C%E9%96%A2"
-      );
-      expect(mockOnDestinationSelected).toHaveBeenCalledTimes(1);
-      expect(mockOnDestinationSelected).toHaveBeenCalledWith(mockLocation);
-    });
+  it.each(["empty", "network", "api"])("%sの失敗は入力を保持しエラーを関連付ける", async kind => {
+    if (kind === "network") mockFetch.mockRejectedValueOnce(new Error("通信に失敗しました"));
+    else mockFetch.mockResolvedValueOnce({ ok: kind === "empty", json: async () => kind === "empty" ? { success: true, results: [] } : { error: "住所検索に失敗しました" } });
+    render(<Selector />);
+    await submitAddress();
+    await waitFor(expectInputError);
+    expect(screen.queryByTestId("selected-destination")).not.toBeInTheDocument();
   });
 
-  it("APIがエラーを返した場合にエラーメッセージを表示する", async () => {
-    // APIエラーのモック
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({
-        error: "ジオコーディングに失敗しました: ZERO_RESULTS",
-      }),
-    });
-
-    render(
-      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
-    );
-
-    const destinationInput = screen.getByTestId("address-input");
-    const searchButton = screen.getByTestId("search-button");
-
-    fireEvent.change(destinationInput, { target: { value: "存在しない住所" } });
-    fireEvent.click(searchButton);
-
-    expect(
-      await screen.findByText("ジオコーディングに失敗しました: ZERO_RESULTS")
-    ).toBeInTheDocument();
-    expect(mockOnDestinationSelected).not.toHaveBeenCalled();
+  it("未確定地点の検証エラーを入力へ関連付ける", () => {
+    render(<Selector validationError="目的地を確定してください" />);
+    const input = screen.getByRole("textbox", { name: "目的地" });
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAccessibleDescription(expect.stringContaining("目的地を確定してください"));
   });
 
-  it("429 + limitExceededでは一度だけrate-limitへ遷移し、旧モーダルを表示しない", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 429,
-      json: async () => ({ limitExceeded: true }),
-    });
+  it("空の住所では取得せず入力のエラーを表示する", async () => {
+    render(<Selector />);
+    fireEvent.submit(screen.getByRole("button", { name: "検索" }).closest("form")!);
+    expect(await screen.findByText("住所を入力してください")).toBeInTheDocument();
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: "目的地" })).toHaveAttribute("aria-invalid", "true");
+  });
 
-    const view = render(
-      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
-    );
-    const addressInput = screen.getByTestId("address-input");
-    const searchButton = screen.getByTestId("search-button");
-
-    fireEvent.change(addressInput, { target: { value: "神田駅" } });
-    fireEvent.click(searchButton);
-
-    await waitFor(() => expect(addressInput).not.toBeDisabled());
-    expect(searchButton).not.toBeDisabled();
+  it("429では一度だけ利用制限へ案内する", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({ limitExceeded: true }) });
+    const view = render(<Selector />);
+    await submitAddress();
+    await waitFor(() => expect(mockRouterPush).toHaveBeenCalledWith("/rate-limit?source=home"));
+    view.rerender(<Selector />);
+    expect(mockRouterPush).toHaveBeenCalledTimes(1);
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockRouterPush).toHaveBeenCalledTimes(1);
-    expect(mockRouterPush).toHaveBeenCalledWith("/rate-limit?source=home");
+    expect(screen.getByRole("textbox", { name: "目的地" })).toHaveValue("神田駅");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(mockOnDestinationSelected).not.toHaveBeenCalled();
-
-    view.rerender(
-      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
-    );
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
-    expect(mockRouterPush).toHaveBeenCalledTimes(1);
-  });
-
-  it("LocationSuggestionsから場所を選択すると、onDestinationSelectedが呼ばれる", () => {
-    render(
-      <DestinationSelector onDestinationSelected={mockOnDestinationSelected} />
-    );
-
-    const selectSuggestionButton = screen.getByTestId("select-suggestion");
-    fireEvent.click(selectSuggestionButton);
-
-    expect(mockOnDestinationSelected).toHaveBeenCalledTimes(1);
-    expect(mockOnDestinationSelected).toHaveBeenCalledWith({
-      lat: 35.69404386157018,
-      lng: 139.7534462933312,
-      address: "千代田区役所",
-    });
   });
 });

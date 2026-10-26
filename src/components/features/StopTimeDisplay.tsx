@@ -7,20 +7,17 @@ interface StopTimeDisplayProps {
   className?: string;
 }
 
-/**
- * 停留所名と時刻を表示するコンポーネント
- */
 const StopTimeDisplay: React.FC<StopTimeDisplayProps> = ({
   stopName,
   time,
   dateTime,
 }) => {
   return (
-    <div className="flex justify-between items-center mb-2">
-      <div className="flex-1">
+    <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-base">
+      <div className="min-w-0 flex-1 break-words">
         <div className="font-bold">{stopName}</div>
       </div>
-      <time className="badge badge-secondary badge-md p-3" dateTime={dateTime}>
+      <time className="badge badge-md bg-base-200 text-base-content h-auto shrink-0 p-3 text-base" dateTime={dateTime}>
         {time}
       </time>
     </div>

@@ -1,0 +1,36 @@
+# Proposal
+
+## Why
+
+現在の経路入力画面は項目を順に出し替える独自の操作とカードの重なりに依存し、検索結果もブラウザの追加リクエストを待って表示される。Issue [#142](https://github.com/nawashiro/kazaguruma-transit/issues/142) に沿って、標準のフォーム要素で入力し、検索結果を可能な範囲でサーバー描画する構成へ改める。
+
+## What Changes
+
+- 目的地・出発地・日時・優先条件を最初から縦一列に表示する。section、fieldset、legend、label、form、submitの意味に沿って構造を整理し、フォームを入れ子にしない。
+- 住所の確定後は同じfieldset内に住所と「なおす」を表示する。住所検索結果は先頭を採用し、GPS操作には「端末のGPSを許可する」を使う。
+- 日時は端末の現在日時を初期値とし、出発・到着の選択で「日時」のラベルを変更しない。優先条件は2つのラジオボタンとし、localStorageへの保存を続ける。
+- 施設カテゴリを標準のdetails / summaryへ変更する。施設一覧からピンアイコン、省略表示、高さ制限、内部スクロールを除く。
+- 検索結果の取得と静的な経路情報の描画をサーバー側へ移す。Nostr、PDF・カレンダー操作など必要な部分はクライアント側に残す。
+- 入力画面と結果画面のカードの多重囲みをやめる。フォームにはDaisyUIの「Fieldset with background and border」を使い、結果には見出し・リスト・区切り線を使う。
+- サイト全体の検索ボタンを虫眼鏡アイコンのみの見た目と、`aria-label="検索"` に統一する。可視ラベルで名前が伝わる項目では、重複・上書きするARIAを整理する。
+- 全体リセットを削除する。結果画面から入力画面へ戻る通常の導線は残す。
+
+## Capabilities
+
+### New Capabilities
+
+- `route-search-form`: 経路条件の入力、住所の確定・再編集、施設選択、日時・優先条件の選択とフォーム送信。
+- `route-search-results`: URLで指定された経路のサーバー検索・描画、エラーと利用制限、クライアント機能との分離。
+- `search-controls`: サイト全体の検索ボタンの見た目、アクセシブルな名前とフォーム内の役割。
+
+### Modified Capabilities
+
+なし。現時点でメイン仕様は存在しない。
+
+## Impact
+
+- `src/app/page.tsx`、`src/components/features/HomeRouteForm.tsx`、住所・日時・施設選択コンポーネントと対応テスト。
+- `src/app/routes/page.tsx`、`RouteSearchResults.tsx`、`IntegratedRouteDisplay.tsx`、経路取得と利用制限のサーバー処理、および結果画面のテスト。
+- 検索ボタン、関連するARIA、スタイル検証。サイト内の実際の検索操作を対象とし、通常のリンクや検索以外の操作は変更しない。
+- 既存の結果URL、目的地ディープリンク、住所検索API、経路API、利用制限、PDF・カレンダー・Nostr連携を維持する。新規依存パッケージは追加しない。
+- JavaScriptの完全排除、JS無効時の全面的な動作保証、日時初期化のサーバー移行、経路アルゴリズムの変更、サイト全体のカード撤去は対象外。全体のスタイル改修は [#77](https://github.com/nawashiro/kazaguruma-transit/issues/77) と分ける。

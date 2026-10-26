@@ -763,7 +763,12 @@ export class TransitService {
         {
           id: from.stopId,
           name: from.stopName,
-          distance: 0,
+          distance: this.calculateDistance(
+            origin.lat,
+            origin.lng,
+            from.lat,
+            from.lng
+          ),
           lat: parseFloat(from.lat.toString()),
           lng: parseFloat(from.lng.toString()),
         },
@@ -771,7 +776,12 @@ export class TransitService {
         {
           id: to.stopId,
           name: to.stopName,
-          distance: 0,
+          distance: this.calculateDistance(
+            to.lat,
+            to.lng,
+            destination.lat,
+            destination.lng
+          ),
           lat: parseFloat(to.lat.toString()),
           lng: parseFloat(to.lng.toString()),
         },

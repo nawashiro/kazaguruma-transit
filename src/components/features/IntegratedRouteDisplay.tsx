@@ -1,289 +1,206 @@
-"use client";
-
-import React, { memo } from "react";
-import { Departure } from "@/types/core";
-import { generateGoogleMapDirectionLink } from "@/utils/maps";
-import Card from "@/components/ui/Card";
+import { Fragment } from "react";
+import type { RouteDetailInfo, RouteDisplayStop } from "@/lib/transit/route-result-model";
+import { generateGoogleMapDirectionLink, generateGoogleMapPointLink } from "@/utils/maps";
 import StopTimeDisplay from "./StopTimeDisplay";
 import { calculateArrivalTime } from "@/lib/transit/route-display-model";
-
-interface RouteInfo {
-  routeId: string;
-  routeName: string;
-  routeShortName: string;
-  routeLongName: string;
-  routeColor: string;
-  routeTextColor: string;
-  departureTime?: string; // 出発時刻
-  arrivalTime?: string; // 到着時刻
-  stopCount?: number; // 通過駅数
-  transfers?: {
-    transferStop: {
-      stopId: string;
-      stopName: string;
-      stopLat: number;
-      stopLon: number;
-    };
-    nextRoute: RouteInfo;
-  }[];
-}
+import { calculateWalkingTimeMinutes } from "@/lib/transit/walking";
+import { TRANSIT_PARAMS } from "@/lib/transit/transit-params";
 
 interface IntegratedRouteDisplayProps {
-  originStop: {
-    stopId: string;
-    stopName: string;
-    distance: number;
-    stop_lat?: number;
-    stop_lon?: number;
-    lat?: number;
-    lng?: number;
-  };
-  destinationStop: {
-    stopId: string;
-    stopName: string;
-    distance: number;
-    stop_lat?: number;
-    stop_lon?: number;
-    lat?: number;
-    lng?: number;
-  };
-  routes: RouteInfo[];
+  originStop: RouteDisplayStop;
+  destinationStop: RouteDisplayStop;
+  routes: RouteDetailInfo[];
   type: "direct" | "transfer" | "none";
-  _transfers?: number; // 未使用のためアンダースコア接頭辞を追加
-  departures?: Departure[];
-  _message?: string; // 未使用のためアンダースコア接頭辞を追加
   originLat?: number;
   originLng?: number;
   destLat?: number;
   destLng?: number;
 }
 
-const IntegratedRouteDisplay: React.FC<IntegratedRouteDisplayProps> = ({
-  originStop,
-  destinationStop,
-  routes,
-  type,
-  originLat,
-  originLng,
-  destLat,
-  destLng,
-}) => {
-  // 出発時刻を取得する関数
-  const getDepartureTime = (stopId: string, routeId?: string) => {
-    return (
-      routes.find((route) => route.routeId === routeId)?.departureTime ||
-      "時刻不明"
-    );
-  };
+function toMinutes(time: string): number | undefined {
+  const match = time.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (!match) return undefined;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
 
-  // Googleマップリンクを生成（両方の緯度経度が存在する場合のみ）
-  const hasOriginCoordinates = Boolean(originLat && originLng);
-  const originStopLatitude = originStop.stop_lat || originStop.lat || 0;
-  const originStopLongitude = originStop.stop_lon || originStop.lng || 0;
-  const hasOriginStopCoordinates = Boolean(
-    originStopLatitude && originStopLongitude
-  );
+function shiftTime(time: string, minutes: number): string {
+  const base = toMinutes(time);
+  if (base === undefined) return "時刻不明";
+  const total = base + minutes;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
 
-  const originToStopMapLink =
-    hasOriginCoordinates && hasOriginStopCoordinates
-      ? generateGoogleMapDirectionLink(
-          originLat!,
-          originLng!,
-          parseFloat(originStopLatitude.toString()),
-          parseFloat(originStopLongitude.toString())
-        )
-      : undefined;
+function formatTime(time: string): string {
+  const base = toMinutes(time);
+  if (base === undefined) return time;
+  return `${Math.floor(base / 60)}時${base % 60}分`;
+}
 
-  const hasDestinationCoordinates = Boolean(destLat && destLng);
-  const destinationStopLatitude =
-    destinationStop.stop_lat || destinationStop.lat || 0;
-  const destinationStopLongitude =
-    destinationStop.stop_lon || destinationStop.lng || 0;
-  const hasDestinationStopCoordinates = Boolean(
-    destinationStopLatitude && destinationStopLongitude
-  );
+function walkMinutes(stop: RouteDisplayStop): number {
+  return Math.ceil(calculateWalkingTimeMinutes(stop.distance, TRANSIT_PARAMS.WALKING_SPEED_KM_H)) + 5;
+}
 
-  const stopToDestinationMapLink =
-    hasDestinationCoordinates && hasDestinationStopCoordinates
-      ? generateGoogleMapDirectionLink(
-          parseFloat(destinationStopLatitude.toString()),
-          parseFloat(destinationStopLongitude.toString()),
-          destLat!,
-          destLng!
-        )
-      : undefined;
+function AccentEdge() {
+  return <hr className="bg-accent" />;
+}
 
-  return (
-    <Card className="rounded-lg" bodyClassName="p-4">
-      {type === "none" ? (
-        // ルートが見つからない場合の表示
-        <div>
-          <h3 className="text-xl font-bold mb-2 ">ルートが見つかりません</h3>
-          <p>この2つの地点を結ぶルートが見つかりませんでした</p>
-          <p className="mt-2 ">別の交通手段をご検討ください</p>
+function SecondaryEdge() {
+  return <hr className="bg-secondary" />;
+}
+
+function BusNode() {
+  return <div className="timeline-middle">
+    <span className="block size-4 rounded-full border-2 shadow-sm border-secondary-content bg-secondary"></span>
+  </div>;
+}
+
+function WalkNode() {
+  return <div className="timeline-middle">
+    <span className="block size-4 rounded-full border-2 shadow-sm border-accent-content bg-accent"></span>
+  </div>;
+}
+
+function RouteName({ routeName }: { routeName: string }) {
+  return <p className="py-1 font-bold text-secondary-content dark:text-secondary">{routeName}</p>;
+}
+
+function TransferLabel() {
+  return <p className="py-1">ここで乗り換え</p>;
+}
+
+function WalkLink({ href }: { href: string }) {
+  return <a href={href} target="_blank" rel="noopener noreferrer" className="link">徒歩で移動(Googleマップ)</a>;
+}
+
+export default function IntegratedRouteDisplay({
+  originStop, destinationStop, routes, type, originLat, originLng, destLat, destLng,
+}: IntegratedRouteDisplayProps) {
+  if (type === "none") return <section className="text-base">
+    <h2 className="mb-2 text-xl font-bold">ルートが見つかりません</h2>
+    <p>この2つの地点を結ぶルートが見つかりませんでした</p>
+    <p className="mt-2">別の交通手段をご検討ください</p>
+  </section>;
+
+  const originStopLat = originStop.stop_lat || originStop.lat || 0;
+  const originStopLng = originStop.stop_lon || originStop.lng || 0;
+  const destinationStopLat = destinationStop.stop_lat || destinationStop.lat || 0;
+  const destinationStopLng = destinationStop.stop_lon || destinationStop.lng || 0;
+  const originMap = originLat && originLng && originStopLat && originStopLng
+    ? generateGoogleMapDirectionLink(originLat, originLng, originStopLat, originStopLng) : undefined;
+  const destinationMap = destLat && destLng && destinationStopLat && destinationStopLng
+    ? generateGoogleMapDirectionLink(destinationStopLat, destinationStopLng, destLat, destLng) : undefined;
+  const originPoint = originLat && originLng ? generateGoogleMapPointLink(originLat, originLng) : undefined;
+  const destinationPoint = destLat && destLng ? generateGoogleMapPointLink(destLat, destLng) : undefined;
+
+  const firstRoute = routes[0];
+  const lastArrivalTime = firstRoute?.transfers?.length
+    ? firstRoute.transfers[firstRoute.transfers.length - 1].nextRoute.arrivalTime
+    : firstRoute?.arrivalTime;
+  const originDeparture = firstRoute?.departureTime && originMap
+    ? shiftTime(firstRoute.departureTime, -walkMinutes(originStop)) : undefined;
+  const destinationArrival = lastArrivalTime && destinationMap
+    ? shiftTime(lastArrivalTime, walkMinutes(destinationStop)) : undefined;
+
+  return <section className="min-w-0 space-y-4 break-words text-base">
+    <ol className="timeline timeline-vertical timeline-compact">
+      {originPoint && originDeparture && <li>
+        <WalkNode />
+        <div className="timeline-end min-w-0 w-full">
+          <StopTimeDisplay stopName="出発地" href={originPoint} time={formatTime(originDeparture)} dateTime={originDeparture} />
         </div>
-      ) : (
-        // ルートが見つかった場合
-        <div>
-          {/* 出発地から出発地バス停へのリンク */}
-          {originToStopMapLink && (
-            <div className="mb-4">
-              <a
-                href={originToStopMapLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="link text-base"
-              >
-                出発地 → {originStop.stopName} Googleマップ
-              </a>
+        <AccentEdge />
+      </li>}
+      {originMap && <li>
+        <AccentEdge />
+        <div className="timeline-middle"></div>
+        <div className="timeline-end min-w-0 w-full">
+          <WalkLink href={originMap} />
+        </div>
+        <AccentEdge />
+      </li>}
+      {routes.map((route) => {
+        const departure = route.departureTime || "時刻不明";
+        const arrival = route.arrivalTime || calculateArrivalTime(departure, type === "direct" ? 45 : 30);
+        const transfer = route.transfers?.[0];
+        const transferDeparture = transfer?.nextRoute.departureTime || calculateArrivalTime(arrival, 15);
+        const transferArrival = transfer?.nextRoute.arrivalTime || calculateArrivalTime(calculateArrivalTime(arrival, 15), 30);
+        const afterRideEdge = (transfer || destinationMap) ? <AccentEdge /> : null;
+        return <Fragment key={route.routeId}>
+          <li>
+            {originMap ? <AccentEdge /> : null}
+            <BusNode />
+            <div className="timeline-end min-w-0 w-full">
+              <StopTimeDisplay stopName={originStop.stopName} time={formatTime(departure)} dateTime={departure} />
             </div>
-          )}
-
-          {routes.map((route) => {
-            // 各ルートの時刻を計算
-            const departureTime =
-              route.departureTime ||
-              getDepartureTime(originStop.stopId, route.routeId || "");
-
-            const firstSegmentDuration = type === "direct" ? 45 : 30; // 直通か乗換かで所要時間を調整
-            const arrivalTime =
-              route.arrivalTime ||
-              calculateArrivalTime(departureTime, firstSegmentDuration);
-
-            // 時刻表示のためのフォーマッター
-            const formatTimeDisplay = (time: string) => {
-              if (time === "時刻不明") {
-                return time;
-              }
-              // 秒を省略して表示（例：12:34:56 → 12:34）
-              const match = time.match(/^(\d{2}):(\d{2}):\d{2}$/);
-              return match ? `${match[1]}時${match[2]}分` : time;
-            };
-
-            return (
-              <div key={route.routeId} className="mb-6">
-                {/* 最初のセグメント */}
-                <Card
-                  className="mb-4 border-l-4 border-primary"
-                  bodyClassName="p-4"
-                >
-                  {/* 出発バス停と時刻 */}
-                  <StopTimeDisplay
-                    stopName={originStop.stopName}
-                    time={formatTimeDisplay(departureTime)}
-                    dateTime={departureTime}
-                  />
-
-                  {/* ルート情報 */}
-                  <div className="flex items-center my-3">
-                    <div className="badge badge-primary badge-md mr-2">
-                      {route.routeName}
-                    </div>
-                  </div>
-
-                  {/* 到着バス停と時刻（乗換がない場合は最終目的地） */}
-                  {(() => {
-                    const hasTransfers =
-                      route.transfers && route.transfers.length > 0;
-                    const stopName = hasTransfers
-                      ? route.transfers![0].transferStop.stopName
-                      : destinationStop.stopName;
-
-                    return (
-                      <StopTimeDisplay
-                        stopName={stopName}
-                        time={formatTimeDisplay(arrivalTime)}
-                        dateTime={arrivalTime}
-                      />
-                    );
-                  })()}
-                </Card>
-
-                {/* 乗換情報（ある場合） */}
-                {(() => {
-                  if (!route.transfers || route.transfers.length === 0) {
-                    return null;
-                  }
-
-                  return (
-                    <>
-                      <div className="my-4">
-                        <div className="inline-block bg-blue-100 px-4 py-2 rounded-full font-bold text-blue-800 border border-blue-300 shadow-sm">
-                          ここで乗り換え
-                        </div>
-                      </div>
-
-                      {route.transfers.map((transfer) => {
-                        // 乗換後の時刻を計算
-                        const transferWaitTime = 15; // 乗換待ち時間（分）
-                        const transferDepartureTime = calculateArrivalTime(
-                          arrivalTime,
-                          transferWaitTime
-                        );
-                        const finalArrivalTime = calculateArrivalTime(
-                          transferDepartureTime,
-                          30
-                        ); // 乗換後の所要時間
-
-                        return (
-                          <Card
-                            key={transfer.transferStop.stopId}
-                            className="mb-4 border-l-4 border-primary"
-                            bodyClassName="p-4"
-                          >
-                            {/* 乗換駅出発時刻 */}
-                            <StopTimeDisplay
-                              stopName={transfer.transferStop.stopName}
-                              time={formatTimeDisplay(
-                                transfer.nextRoute.departureTime ||
-                                  transferDepartureTime
-                              )}
-                              dateTime={transferDepartureTime}
-                            />
-
-                            {/* 次のルート情報 */}
-                            <div className="flex items-center my-3">
-                              <div className="badge badge-primary badge-md mr-2">
-                                {transfer.nextRoute.routeName}
-                              </div>
-                            </div>
-
-                            {/* 最終到着駅と時刻 */}
-                            <StopTimeDisplay
-                              stopName={destinationStop.stopName}
-                              time={formatTimeDisplay(
-                                transfer.nextRoute.arrivalTime ||
-                                  finalArrivalTime
-                              )}
-                              dateTime={finalArrivalTime}
-                            />
-                          </Card>
-                        );
-                      })}
-                    </>
-                  );
-                })()}
+            <SecondaryEdge />
+          </li>
+          <li>
+            <SecondaryEdge />
+            <div className="timeline-middle"></div>
+            <div className="timeline-end min-w-0 w-full">
+              <RouteName routeName={route.routeName} />
+            </div>
+            <SecondaryEdge />
+          </li>
+          <li>
+            <SecondaryEdge />
+            <BusNode />
+            <div className="timeline-end min-w-0 w-full">
+              <StopTimeDisplay stopName={transfer?.transferStop.stopName ?? destinationStop.stopName} time={formatTime(arrival)} dateTime={arrival} />
+            </div>
+            {afterRideEdge}
+          </li>
+          {transfer && <Fragment key={transfer.transferStop.stopId}>
+            <li>
+              <AccentEdge />
+              <div className="timeline-middle"></div>
+              <div className="timeline-end min-w-0 w-full">
+                <TransferLabel />
               </div>
-            );
-          })}
-
-          {/* 目的地バス停から目的地へのリンク */}
-          {stopToDestinationMapLink && (
-            <div className="mt-4">
-              <a
-                href={stopToDestinationMapLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="link text-base"
-              >
-                {destinationStop.stopName} → 目的地 Googleマップ
-              </a>
-            </div>
-          )}
+              <AccentEdge />
+            </li>
+            <li>
+              <AccentEdge />
+              <BusNode />
+              <div className="timeline-end min-w-0 w-full">
+                <StopTimeDisplay stopName={transfer.transferStop.stopName} time={formatTime(transferDeparture)} dateTime={transferDeparture} />
+              </div>
+              <SecondaryEdge />
+            </li>
+            <li>
+              <SecondaryEdge />
+              <div className="timeline-middle"></div>
+              <div className="timeline-end min-w-0 w-full">
+                <RouteName routeName={transfer.nextRoute.routeName} />
+              </div>
+              <SecondaryEdge />
+            </li>
+            <li>
+              <SecondaryEdge />
+              <BusNode />
+              <div className="timeline-end min-w-0 w-full">
+                <StopTimeDisplay stopName={destinationStop.stopName} time={formatTime(transferArrival)} dateTime={transferArrival} />
+              </div>
+              {destinationMap ? <AccentEdge /> : null}
+            </li>
+          </Fragment>}
+        </Fragment>;
+      })}
+      {destinationMap && <li>
+        <AccentEdge />
+        <div className="timeline-middle"></div>
+        <div className="timeline-end min-w-0 w-full">
+          <WalkLink href={destinationMap} />
         </div>
-      )}
-    </Card>
-  );
-};
-
-export default memo(IntegratedRouteDisplay);
+        <AccentEdge />
+      </li>}
+      {destinationPoint && destinationArrival && <li>
+        <AccentEdge />
+        <WalkNode />
+        <div className="timeline-end min-w-0 w-full">
+          <StopTimeDisplay stopName="目的地" href={destinationPoint} time={formatTime(destinationArrival)} dateTime={destinationArrival} />
+        </div>
+      </li>}
+    </ol>
+  </section>;
+}

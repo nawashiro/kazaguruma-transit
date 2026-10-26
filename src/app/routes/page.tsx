@@ -1,23 +1,29 @@
-"use client";
-
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import PageHeader from "@/components/layouts/PageHeader";
 import RouteSearchResults from "@/components/features/RouteSearchResults";
-import Card from "@/components/ui/Card";
+import { searchRoutes } from "@/lib/transit/search-routes";
 
-function RouteSearchResultsFromUrl() {
-  const searchParams = useSearchParams();
-  return <RouteSearchResults searchParams={searchParams.toString()} />;
+export const dynamic = "force-dynamic";
+
+interface RoutesPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default function RoutesPage() {
+export default async function RoutesPage({ searchParams }: RoutesPageProps) {
+  const params = new URLSearchParams();
+  for (const [name, values] of Object.entries(await searchParams)) {
+    for (const value of Array.isArray(values) ? values : values === undefined ? [] : [values]) {
+      params.append(name, value);
+    }
+  }
+  const result = await searchRoutes(params, await headers());
+  if (result.status === "limited") redirect("/rate-limit?source=routes");
+
   return (
     <div>
       <PageHeader title="経路検索結果" description="自動作成されたスケジュール" />
-      <Suspense fallback={<Card>経路を検索中...</Card>}>
-        <RouteSearchResultsFromUrl />
-      </Suspense>
+      <RouteSearchResults result={result} />
     </div>
   );
 }

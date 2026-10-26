@@ -12,6 +12,18 @@
   --focus-color-light: rgba(0, 86, 179, 0.3);
 }
 
+:root:not([data-theme]) :is(.transit-button, .my-toggle),
+[data-theme="cupcake"] :is(.transit-button, .my-toggle) {
+  --color-primary-content: oklch(41% 0.078 188.216);
+}
+
+[data-theme="dark"] :is(.transit-button, .my-toggle) {
+  --color-primary: oklch(54% 0.233 277.117);
+  --color-secondary: oklch(54% 0.241 354.308);
+  --focus-color: #80bfff;
+  --focus-color-light: rgba(128, 191, 255, 0.3);
+}
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -131,7 +143,6 @@ textarea:focus-visible {
   background-color: var(--color-primary);
   color: var(--color-primary-content);
   box-shadow: none;
-  border: 2px solid color-mix(in oklab, var(--color-primary), rgb(0, 0, 0) calc(5%));
   border-radius: var(--radius-md);
 }
 

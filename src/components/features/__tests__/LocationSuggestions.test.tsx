@@ -1,108 +1,104 @@
-import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import type { Location } from "@/types/core";
-import type {
-  AddressCategory,
-  AddressLocation,
-} from "@/utils/addressLoader";
+import type { AddressCategory, AddressLocation } from "@/utils/addressLoader";
 import LocationSuggestions from "../LocationSuggestions";
 
-const mockConvertToLocation = jest.fn(
-  (location: AddressLocation): Location => ({
-    lat: location.lat,
-    lng: location.lng,
-    address: location.name,
-  }),
-);
-
-jest.mock("@/utils/addressLoader", () => ({
-  convertToLocation: (location: AddressLocation) => mockConvertToLocation(location),
-}));
-
-const popularFacility: AddressLocation = {
-  name: "千代田区役所",
+const facility: AddressLocation = {
+  name: "千代田区役所のとても長い施設名と地域福祉交通の総合相談窓口ABCDEFGHIJKLMNOPQRSTUVWXYZ",
   lat: 35.694,
   lng: 139.753,
   copyright: "千代田区",
   licence: "CC BY 4.0",
   licenceUri: "https://creativecommons.org/licenses/by/4.0/",
 };
-
-const popularCategories: AddressCategory[] = [
-  {
-    category: "公共施設",
-    "category:en": "public-facilities",
-    locations: [popularFacility],
-  },
+const categories: AddressCategory[] = [
+  { category: "公共施設と地域福祉交通の長いカテゴリ名ABCDEFGHIJKLMNOPQRSTUVWXYZ", "category:en": "public", locations: [facility] },
+  { category: "医療機関", "category:en": "medical", locations: [{ ...facility, name: "病院" }] },
 ];
 
-type PlannedLocationSuggestionsProps = {
-  categories: AddressCategory[];
-  onLocationSelected: (location: Location) => void;
-};
+jest.mock("@/components/ui/RubyWrapper", () => ({ __esModule: true, default: () => null }));
 
-function renderWithInjectedCategories(
-  onLocationSelected: (location: Location) => void,
-) {
-  return render(
-    React.createElement(
-      LocationSuggestions as unknown as React.ComponentType<PlannedLocationSuggestionsProps>,
-      {
-        categories: popularCategories,
-        onLocationSelected,
-      },
-    ),
-  );
+function renderSuggestions(onLocationSelected = jest.fn()) {
+  return render(<LocationSuggestions categories={categories} onLocationSelected={onLocationSelected} />);
 }
 
 describe("LocationSuggestions", () => {
-  let browserFetchSpy: jest.SpyInstance;
-
-  beforeEach(() => {
-    mockConvertToLocation.mockClear();
-    browserFetchSpy = jest.spyOn(global, "fetch");
+  it("注入されたカテゴリを初期閉鎖の独立したdetailsとsummaryで表示し、追加取得しない", () => {
+    const fetchSpy = jest.spyOn(global, "fetch");
+    try {
+      const { container } = renderSuggestions();
+      const details = container.querySelectorAll("details");
+      expect(details).toHaveLength(2);
+      details.forEach((detail, index) => {
+        expect(detail.open).toBe(false);
+        expect(detail.firstElementChild?.tagName).toBe("SUMMARY");
+        expect(detail.firstElementChild).toHaveTextContent(categories[index].category);
+        expect(detail).toHaveAttribute("name", "facility-categories");
+      });
+      expect(container.querySelector('[role="tablist"], [role="tab"], [role="tabpanel"]')).toBeNull();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 
-  afterEach(() => {
-    browserFetchSpy.mockRestore();
+  it("カテゴリのdetailsはdaisyUIのcollapse表現でクリック可能に見える", () => {
+    const { container } = renderSuggestions();
+    for (const detail of Array.from(container.querySelectorAll("details"))) {
+      expect(detail).toHaveClass("collapse", "collapse-arrow");
+      const summary = detail.firstElementChild!;
+      expect(summary.tagName).toBe("SUMMARY");
+      expect(summary).toHaveClass("collapse-title");
+      expect(detail.querySelector(".collapse-content")).toContainElement(detail.querySelector("ul"));
+    }
   });
 
-  it("serverから注入されたcategoriesを使い、場所選択ボタンを44px領域内で中央揃えにする", async () => {
-    renderWithInjectedCategories(jest.fn());
-
-    await waitFor(() =>
-      expect(screen.getByRole("tab", { name: "公共施設" })).toBeInTheDocument(),
-    );
-    fireEvent.click(screen.getByRole("tab", { name: "公共施設" }));
-
-    const locationButton = await screen.findByRole("button", {
-      name: "千代田区役所",
-    });
-    expect(locationButton).toHaveClass(
-      "flex",
-      "min-h-[44px]",
-      "w-full",
-      "items-center",
-    );
-    expect(browserFetchSpy).not.toHaveBeenCalled();
+  it("カテゴリは同名のnameグループで開閉し、施設をulとliのボタンとして提供する", async () => {
+    const user = userEvent.setup();
+    const { container } = renderSuggestions();
+    const details = container.querySelectorAll("details");
+    await user.click(screen.getByText(categories[0].category));
+    expect(details[0].open).toBe(true);
+    const list = within(details[0]).getByRole("list");
+    expect(list.tagName).toBe("UL");
+    const item = within(list).getByRole("listitem");
+    expect(item.tagName).toBe("LI");
+    expect(within(item).getByRole("button")).toHaveAttribute("type", "button");
+    await user.click(screen.getByText(categories[0].category));
+    expect(details[0].open).toBe(false);
   });
 
-  it("注入されたpopular施設を既存のdestination callbackへLocationとして引き渡す", async () => {
+  it("カテゴリを開いた後、施設ボタンをEnterで選択できる", async () => {
+    const user = userEvent.setup();
     const onLocationSelected = jest.fn();
-    renderWithInjectedCategories(onLocationSelected);
+    const { container } = renderSuggestions(onLocationSelected);
+    const summary = container.querySelector("summary");
+    expect(summary).not.toBeNull();
+    await user.click(summary!);
+    const button = screen.getByRole("button", { name: facility.name });
+    button.focus();
+    expect(button).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(onLocationSelected).toHaveBeenCalledWith({ lat: facility.lat, lng: facility.lng, address: facility.name });
+  });
 
-    fireEvent.click(await screen.findByRole("tab", { name: "公共施設" }));
-    fireEvent.click(
-      await screen.findByRole("button", { name: "千代田区役所" }),
-    );
-
-    expect(browserFetchSpy).not.toHaveBeenCalled();
-    expect(mockConvertToLocation).toHaveBeenCalledWith(popularFacility);
-    expect(onLocationSelected).toHaveBeenCalledWith({
-      lat: popularFacility.lat,
-      lng: popularFacility.lng,
-      address: popularFacility.name,
+  it("長い施設名を全文表示し、ピン・省略・高さ制限・内部スクロールを持たない", () => {
+    const { container } = renderSuggestions();
+    fireEvent.click(screen.getByText(categories[0].category));
+    const button = screen.getByRole("button", { name: facility.name });
+    expect(button).toHaveTextContent(facility.name);
+    expect(button).toHaveClass("min-h-[44px]", "w-full", "text-base", "whitespace-normal", "break-words", "text-start");
+    expect(container.querySelector("svg")).toBeNull();
+    container.querySelectorAll("*").forEach((element) => {
+      expect(element.className).not.toMatch(/truncate|line-clamp|overflow-|max-h-|whitespace-nowrap|\bh-\d/);
+      expect(element.getAttribute("style") || "").not.toMatch(/max-height|overflow|text-overflow/);
     });
+  });
+
+  it("施設データがない場合も一覧取得せず表示できる", () => {
+    const { container } = render(<LocationSuggestions onLocationSelected={jest.fn()} />);
+    expect(screen.getByText("よく利用される施設から選択")).toBeInTheDocument();
+    expect(container.querySelector("details")).toBeNull();
   });
 });

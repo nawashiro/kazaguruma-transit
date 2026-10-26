@@ -19,7 +19,6 @@ const BADGE_PRODUCTION_FILES = [
   "src/components/discussion/ApprovalStatusTabs.tsx",
   "src/components/discussion/EvaluationComponent.tsx",
   "src/components/discussion/PostPreview.tsx",
-  "src/components/features/IntegratedRouteDisplay.tsx",
   "src/components/features/StopTimeDisplay.tsx",
 ] as const;
 

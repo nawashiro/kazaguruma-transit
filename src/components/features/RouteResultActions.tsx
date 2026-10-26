@@ -60,7 +60,7 @@ export default function RouteResultActions({ routeInfo, query }: RouteResultActi
   };
 
   return <>
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-start gap-4">
       <RouteCalendarExport {...exportProps} />
       <RoutePdfExport {...exportProps} type={routeInfo.type} transfers={routeInfo.transfers} memoData={memoData} />
     </div>

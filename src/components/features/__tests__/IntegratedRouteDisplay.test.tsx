@@ -216,6 +216,23 @@ describe("IntegratedRouteDisplay", () => {
     }
   });
 
+  it("タイムラインの全行でノード列の幅をそろえる", () => {
+    render(
+      <IntegratedRouteDisplay
+        originStop={mockOriginStop}
+        destinationStop={mockDestinationStop}
+        routes={mockRoutes}
+        type="transfer"
+        {...coordinateProps}
+      />
+    );
+    const middles = [...document.querySelectorAll("ol.timeline > li > .timeline-middle")];
+    expect(middles.length).toBeGreaterThan(0);
+    for (const middle of middles) {
+      expect(middle).toHaveClass("w-4");
+    }
+  });
+
   it("ルートが見つからない場合は適切なメッセージが表示されること", () => {
     render(
       <IntegratedRouteDisplay

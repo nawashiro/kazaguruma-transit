@@ -49,13 +49,13 @@ function SecondaryEdge() {
 }
 
 function BusNode() {
-  return <div className="timeline-middle">
+  return <div className="timeline-middle w-4">
     <span className="block size-4 rounded-full border-2 shadow-sm border-secondary-content bg-secondary"></span>
   </div>;
 }
 
 function WalkNode() {
-  return <div className="timeline-middle">
+  return <div className="timeline-middle w-4">
     <span className="block size-4 rounded-full border-2 shadow-sm border-accent-content bg-accent"></span>
   </div>;
 }
@@ -112,7 +112,7 @@ export default function IntegratedRouteDisplay({
       </li>}
       {originMap && <li>
         <AccentEdge />
-        <div className="timeline-middle"></div>
+        <div className="timeline-middle w-4"></div>
         <div className="timeline-end min-w-0 w-full">
           <WalkLink href={originMap} />
         </div>
@@ -136,7 +136,7 @@ export default function IntegratedRouteDisplay({
           </li>
           <li>
             <SecondaryEdge />
-            <div className="timeline-middle"></div>
+            <div className="timeline-middle w-4"></div>
             <div className="timeline-end min-w-0 w-full">
               <RouteName routeName={route.routeName} />
             </div>
@@ -153,7 +153,7 @@ export default function IntegratedRouteDisplay({
           {transfer && <Fragment key={transfer.transferStop.stopId}>
             <li>
               <AccentEdge />
-              <div className="timeline-middle"></div>
+              <div className="timeline-middle w-4"></div>
               <div className="timeline-end min-w-0 w-full">
                 <TransferLabel />
               </div>
@@ -169,7 +169,7 @@ export default function IntegratedRouteDisplay({
             </li>
             <li>
               <SecondaryEdge />
-              <div className="timeline-middle"></div>
+              <div className="timeline-middle w-4"></div>
               <div className="timeline-end min-w-0 w-full">
                 <RouteName routeName={transfer.nextRoute.routeName} />
               </div>
@@ -188,7 +188,7 @@ export default function IntegratedRouteDisplay({
       })}
       {destinationMap && <li>
         <AccentEdge />
-        <div className="timeline-middle"></div>
+        <div className="timeline-middle w-4"></div>
         <div className="timeline-end min-w-0 w-full">
           <WalkLink href={destinationMap} />
         </div>

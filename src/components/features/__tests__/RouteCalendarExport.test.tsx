@@ -27,8 +27,8 @@ afterEach(() => {
   mockAnchorClick.mockRestore();
 });
 
-test("プライマリ色のカレンダーボタンからicsファイルをダウンロードする", () => {
-  render(
+test("カレンダーボタンからICSを通常のリンクとして開き、URLをアンマウントまで保持する", () => {
+  const { unmount } = render(
     <RouteCalendarExport
       originStop={{ stopId: "from", stopName: "出発", distance: 0 }}
       destinationStop={{ stopId: "to", stopName: "到着", distance: 0 }}
@@ -51,13 +51,32 @@ test("プライマリ色のカレンダーボタンからicsファイルをダ�
   const button = screen.getByRole("button", { name: "カレンダーに追加" });
   expect(button).toHaveClass("btn", "btn-primary", "rounded-full");
 
+  mockCreateObjectURL.mockReturnValueOnce("blob:first-calendar");
+  mockCreateObjectURL.mockReturnValueOnce("blob:second-calendar");
   fireEvent.click(button);
 
   expect(mockCreateObjectURL).toHaveBeenCalledWith(
     expect.objectContaining({ type: "text/calendar;charset=utf-8" })
   );
   expect(mockAnchorClick).toHaveBeenCalledTimes(1);
-  expect(mockRevokeObjectURL).toHaveBeenCalledWith("blob:calendar-url");
+  const firstLink = mockAnchorClick.mock.instances[0] as HTMLAnchorElement;
+  expect(firstLink.href).toBe("blob:first-calendar");
+  expect(firstLink).not.toHaveAttribute("download");
+  expect(mockRevokeObjectURL).not.toHaveBeenCalled();
+
+  fireEvent.click(button);
+
+  const secondLink = mockAnchorClick.mock.instances[1] as HTMLAnchorElement;
+  expect(secondLink.href).toBe("blob:second-calendar");
+  expect(secondLink).not.toHaveAttribute("download");
+  expect(mockRevokeObjectURL).not.toHaveBeenCalled();
+
+  unmount();
+
+  expect(mockRevokeObjectURL.mock.calls).toEqual([
+    ["blob:first-calendar"],
+    ["blob:second-calendar"],
+  ]);
 });
 
 test("不正な日時のカレンダー生成失敗をalertで知らせ、追加操作を維持する", () => {
@@ -84,6 +103,8 @@ test("不正な日時のカレンダー生成失敗をalertで知らせ、追加
   fireEvent.click(screen.getByRole("button", { name: "カレンダーに追加" }));
 
   const alert = screen.getByRole("alert");
+  expect(mockCreateObjectURL).not.toHaveBeenCalled();
+  expect(mockAnchorClick).not.toHaveBeenCalled();
   expect(alert).toHaveTextContent(
     "カレンダー生成エラー: カレンダーに必要な日付情報がありません"
   );

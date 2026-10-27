@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Calendar } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { buildRouteCalendar } from "@/lib/calendar/route-calendar";
@@ -9,18 +9,20 @@ import { logger } from "@/utils/logger";
 
 type RouteCalendarExportProps = RouteCalendarInput;
 
-function createCalendarFilename(originName: string, destinationName: string) {
-  const unsafeFilenameCharacters = /[\\/:*?"<>|]/g;
-  return `乗換案内_${originName}_${destinationName}.ics`.replace(
-    unsafeFilenameCharacters,
-    "_"
-  );
-}
-
 export default function RouteCalendarExport(props: RouteCalendarExportProps) {
   const [calendarError, setCalendarError] = useState<string | null>(null);
 
-  const handleDownload = () => {
+  const calendarUrls = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const urls = calendarUrls.current;
+    return () => {
+      urls.forEach((url) => window.URL.revokeObjectURL(url));
+      urls.clear();
+    };
+  }, []);
+
+  const handleOpen = () => {
     try {
       setCalendarError(null);
       const calendar = buildRouteCalendar(props);
@@ -28,19 +30,15 @@ export default function RouteCalendarExport(props: RouteCalendarExportProps) {
         type: "text/calendar;charset=utf-8",
       });
       const url = window.URL.createObjectURL(blob);
+      calendarUrls.current.add(url);
       const link = document.createElement("a");
       link.style.display = "none";
       link.href = url;
-      link.download = createCalendarFilename(
-        props.originStop.stopName,
-        props.destinationStop.stopName
-      );
       document.body.appendChild(link);
       try {
         link.click();
       } finally {
         link.remove();
-        window.URL.revokeObjectURL(url);
       }
     } catch (error) {
       logger.error("カレンダー生成エラー:", error);
@@ -62,7 +60,7 @@ export default function RouteCalendarExport(props: RouteCalendarExportProps) {
           <p className="ruby-text">カレンダー生成エラー: {calendarError}</p>
         </div>
       )}
-      <Button onClick={handleDownload}>
+      <Button onClick={handleOpen}>
         <Calendar className="mr-2 h-5 w-5" aria-hidden="true" />
         カレンダーに追加
       </Button>

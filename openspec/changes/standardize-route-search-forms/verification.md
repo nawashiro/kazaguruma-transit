@@ -67,8 +67,3 @@ ESLint全体は未成功である。同品質検査の`npx eslint .`は生成`.n
 **監査と品質検査**。本番サーバーに対し`npm run accessibility`と`npm run accessibility:strict`を再実行し、ともにexit 0、全ページaccessibility・color-contrast 1.00だった（`artifacts/lighthouse/`）。`npx tsc --noEmit --incremental false`、`npx eslint src scripts`（0 errors / 42 warnings）、`npm run lint`（成功、既存warningのみ）を確認した。
 
 **SyntaxErrorの調査（design 12・タスク12.1）**。devとproductionを分けて実ブラウザで計36回以上のロード（7画面×3周、コールド起動直後、15セッションの並行遷移、ルビ切替3回、フォーム入力・送信、結果画面、ICS・PDF出力）を行い、pageerror・console・応答を収集した。アプリが配信するスクリプト（dev チャンク、インラインflight、外部Rubyful v2）からは1件もSyntaxError・Unexpected tokenを観測しなかった。観測した失敗は外部のみである（Ko-fiウィジェットの`ERR_BLOCKED_BY_RESPONSE`、Nostrリレー`wss://purplepag.es`の握手502。サンドボックスの外部経路に起因）。既存記録が留保する「検証ハーネス付近で観測した断続的な`SyntaxError: Invalid or unexpected token`」は、このクリーンな操作系では再現せず、アプリの配信文字列ではなくハーネス注入文字列側のAttributionを示す証拠と整合する。アプリ側の文字列生成・配信に原因箇所を特定できなかったため、アプリコードの修正対象はない。レビュアー環境で再発した場合は、失敗したスクリプトURLと行・列、配信応答の取得によって配信文字列と注入文字列を区別する。
-
-
-## 2026-10-27 独立検証による補足
-
-[追加の検証記録](verification-2026-10-27.md)を参照。過去のSyntaxErrorについて原因箇所・最小再現・REDの証拠がそろっていないため、アプリ側に原因がないという従来の結論は確定扱いにしない。12.1を未完了へ戻した。

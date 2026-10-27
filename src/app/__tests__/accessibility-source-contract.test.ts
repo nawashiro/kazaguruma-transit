@@ -92,17 +92,12 @@ describe("アクセシビリティ実装契約", () => {
         /<fieldset\b/,
         /<legend\b/,
       ],
-      "src/components/features/OriginSelector.tsx": [
-        /<form\b/,
-        /<InputField\b/,
-        /<fieldset\b/,
-        /<legend\b/,
-      ],
-      "src/components/features/DestinationSelector.tsx": [/<form\b/, /<InputField\b/],
+      "src/components/features/OriginSelector.tsx": [/<form\b/, /<InputField\b/, /<LocationFieldset\b/],
+      "src/components/features/DestinationSelector.tsx": [/<form\b/, /<InputField\b/, /<LocationFieldset\b/],
+      "src/components/features/LocationFieldset.tsx": [/<fieldset\b/, /<legend\b/],
       "src/components/features/RouteSearchResults.tsx": [
         /<Link\b/,
         /role=\"alert\"/,
-        /source=routes/,
       ],
       "src/app/locations/location-detail/[id]/page.tsx": [
         /PageHeader/,

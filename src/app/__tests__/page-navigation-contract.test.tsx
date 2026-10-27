@@ -49,15 +49,6 @@ jest.mock("@/lib/location/location-artifact", () => ({
   readLocationArtifact: (...args: unknown[]) => mockReadLocationArtifact(...args),
 }));
 
-jest.mock("@/components/features/DateTimeSelector", () => function MockDateTimeSelector() {
-  return <div />;
-});
-jest.mock("@/components/features/OriginSelector", () => function MockOriginSelector() {
-  return <div />;
-});
-jest.mock("@/components/features/DestinationSelector", () => function MockDestinationSelector() {
-  return <div />;
-});
 jest.mock("@/components/features/IntegratedRouteDisplay", () => function MockIntegratedRouteDisplay() {
   return <div />;
 });
@@ -66,9 +57,6 @@ jest.mock("@/components/features/RoutePdfExport", () => function MockRoutePdfExp
 });
 jest.mock("@/components/ui/Button", () => function MockButton({ children }: { children: React.ReactNode }) {
   return <button>{children}</button>;
-});
-jest.mock("@/components/ui/ResetButton", () => function MockResetButton() {
-  return <button>リセット</button>;
 });
 
 async function renderPublicHome() {

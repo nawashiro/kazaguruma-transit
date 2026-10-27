@@ -25,6 +25,8 @@ export default function SidebarLayout({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   return (
+    <>
+      <SkipToContent />
     <div className="drawer lg:drawer-open">
       {/* Rubyful v2 */}
       <Script
@@ -59,7 +61,6 @@ export default function SidebarLayout({
           logger.log("Rubyful v2 loaded with saved preference");
         }}
       />
-      <SkipToContent />
       <input
         id="drawer"
         type="checkbox"
@@ -138,5 +139,6 @@ export default function SidebarLayout({
         </footer>
       </div>
     </div>
+    </>
   );
 }

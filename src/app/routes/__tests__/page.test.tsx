@@ -1,186 +1,55 @@
-/* eslint-disable react/display-name */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
-import "@testing-library/jest-dom";
+import { render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server.node";
 import RoutesPage from "../page";
+import { searchRoutes } from "@/lib/transit/search-routes";
+import { createRouteResultViewModel } from "@/lib/transit/route-result-model";
 
-let mockSearchParams = new URLSearchParams();
-const mockRouterPush = jest.fn();
+jest.mock("@/lib/transit/search-routes", () => ({ searchRoutes: jest.fn() }));
+jest.mock("next/headers", () => ({ headers: async () => new Headers({ "x-forwarded-for": "192.0.2.1" }) }));
+jest.mock("next/navigation", () => ({ redirect: jest.fn((href: string) => { throw new Error(`redirect:${href}`); }) }));
+jest.mock("@/components/features/RouteResultActions", () => function Actions() { return <div data-testid="actions" />; });
+const query = { origin: { lat: 35, lng: 139 }, destination: { lat: 36, lng: 140 }, time: "2026-07-18T09:30", isDeparture: true, prioritizeSpeed: false };
+function success(name = "サーバー路線") {
+  return { status: "success" as const, query, routeInfo: createRouteResultViewModel({ journeys: [{ from: "始発", to: "終点", departure: "09:30", arrival: "10:00", duration: 30, transfers: 0, route: name }], stops: [] }, query.origin, query.destination) };
+}
 
-jest.mock("next/navigation", () => ({
-  useSearchParams: () => mockSearchParams,
-  useRouter: () => ({ push: mockRouterPush }),
-}));
-
-jest.mock("@/components/features/IntegratedRouteDisplay", () => () => (
-  <div data-testid="mock-route-display" />
-));
-jest.mock("@/components/features/RoutePdfExport", () => () => (
-  <div data-testid="mock-pdf-export" />
-));
-jest.mock("@/components/features/RouteCalendarExport", () => () => (
-  <div data-testid="mock-calendar-export" />
-));
-jest.mock("@/components/discussion", () => ({
-  BusStopDiscussion: () => <div data-testid="mock-bus-stop-discussion" />,
-  BusStopMemo: () => <div data-testid="mock-bus-stop-memo" />,
-  getBusStopMemoData: jest.fn().mockResolvedValue(new Map()),
-}));
-jest.mock("@/lib/config/discussion-config", () => ({
-  isDiscussionsEnabled: () => true,
-}));
-const validSearch =
-  "origin=35.68%2C139.76&destination=35.7%2C139.78&time=2026-07-18T09%3A30&isDeparture=true&prioritizeSpeed=false";
-const nextValidSearch =
-  "origin=35.68%2C139.76&destination=35.7%2C139.78&time=2026-07-18T10%3A00&isDeparture=true&prioritizeSpeed=false";
-
-const successfulResponse = {
-  success: true,
-  data: {
-    journeys: [
-      {
-        departure: "09:00",
-        arrival: "09:15",
-        duration: 15,
-        transfers: 0,
-        route: "テスト路線",
-        from: "出発バス停",
-        to: "到着バス停",
-      },
-    ],
-    stops: [
-      { id: "origin", name: "出発バス停", distance: 100, lat: 35.681, lng: 139.761 },
-      { id: "destination", name: "到着バス停", distance: 200, lat: 35.701, lng: 139.781 },
-    ],
-  },
-};
-
-describe("RoutesPage", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockSearchParams = new URLSearchParams(validSearch);
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => successfulResponse,
-    });
-  });
-
-  it("URLの全条件をGET APIへ渡して結果と出力機能を表示する", async () => {
-    render(<RoutesPage />);
-
-    expect(screen.getByRole("status")).toHaveTextContent("経路を検索中");
-    expect(await screen.findByTestId("mock-route-display")).toBeInTheDocument();
-    expect(global.fetch).toHaveBeenCalledWith(
-      "/api/transit?type=route&origin=35.68%2C139.76&destination=35.7%2C139.78&time=2026-07-18T09%3A30&isDeparture=true&prioritizeSpeed=false",
-      expect.objectContaining({ method: "GET" }),
-    );
-    expect(screen.getByTestId("mock-calendar-export")).toBeInTheDocument();
-    expect(screen.getByTestId("mock-pdf-export")).toBeInTheDocument();
-    expect(screen.getByTestId("mock-bus-stop-memo")).toBeInTheDocument();
-    expect(screen.getByTestId("mock-bus-stop-discussion")).toBeInTheDocument();
-  });
-
-  it("不正なURLではfetchせず日本語エラーと入力ページへの導線を表示する", () => {
-    mockSearchParams = new URLSearchParams("origin=91%2C139.76");
-
-    render(<RoutesPage />);
-
-    expect(screen.getByRole("alert")).toHaveTextContent("検索条件");
-    const changeSearchLink = screen.getByRole("link", { name: "検索条件をリセット" });
-    expect(changeSearchLink).toHaveAttribute("href", "/");
-    expect(changeSearchLink).toHaveClass(
-      "btn",
-      "btn-secondary",
-      "rounded-full",
-      "dark:rounded-sm",
-      "ruby-text",
-      "gap-0",
-    );
-    expect(changeSearchLink.querySelector("span")).toBeNull();
+describe("RoutesPage server HTML", () => {
+  beforeEach(() => { jest.clearAllMocks(); jest.mocked(searchRoutes).mockResolvedValue(success()); global.fetch = jest.fn(); });
+  it("URLの重複値を保ってサーバー検索しHTMLに本文を含める", async () => {
+    const element = await RoutesPage({ searchParams: Promise.resolve({ origin: ["invalid", "35,139"], time: query.time }) });
+    const html = renderToStaticMarkup(element);
+    expect(html).toContain("サーバー路線");
+    expect(html).toContain("始発");
+    expect(searchRoutes).toHaveBeenCalledTimes(1);
+    expect(jest.mocked(searchRoutes).mock.calls[0][0].getAll("origin")).toEqual(["invalid", "35,139"]);
+    expect(jest.mocked(searchRoutes).mock.calls[0][1].get("x-forwarded-for")).toBe("192.0.2.1");
+    render(element);
+    expect(screen.getByRole("link", { name: "入力画面に戻る" })).toHaveAttribute("href", "/");
+    expect(screen.queryByText("検索条件をリセット")).toBeNull();
     expect(global.fetch).not.toHaveBeenCalled();
   });
-
-  it("経路なしも結果ページ内の既存表示へ渡す", async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ success: true, data: { journeys: [], stops: [] } }),
-    });
-
-    render(<RoutesPage />);
-
-    expect(await screen.findByTestId("mock-route-display")).toBeInTheDocument();
-    expect(screen.queryByTestId("mock-pdf-export")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("mock-calendar-export")).not.toBeInTheDocument();
+  it("リクエストごとに異なる結果を描画する", async () => {
+    const first = renderToStaticMarkup(await RoutesPage({ searchParams: Promise.resolve({ time: "first" }) }));
+    jest.mocked(searchRoutes).mockResolvedValue(success("別の路線"));
+    const second = renderToStaticMarkup(await RoutesPage({ searchParams: Promise.resolve({ time: "second" }) }));
+    expect(first).not.toContain("別の路線");
+    expect(second).toContain("別の路線");
+    expect(second).not.toContain("サーバー路線");
   });
-
-  it("APIエラーを日本語で表示して入力ページへ戻せる", async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => ({ success: false, error: "経路APIエラー" }),
-    });
-
-    render(<RoutesPage />);
-
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("経路APIエラー");
-    expect(alert).toHaveClass("alert-soft", "text-base-content!");
-    expect(screen.getByRole("link", { name: "検索条件をリセット" })).toBeInTheDocument();
+  it("条件不正・検索失敗はサーバーのエラーと戻るリンクを表示する", async () => {
+    jest.mocked(searchRoutes).mockResolvedValue({ status: "error", message: "検索条件が正しくありません" });
+    render(await RoutesPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByRole("alert")).toHaveTextContent("検索条件");
+    expect(screen.getByRole("link", { name: "入力画面に戻る" })).toBeInTheDocument();
   });
-
-  it("429を公開アラートとレート制限ページへの一度きりの遷移へ接続する", async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: false,
-      status: 429,
-      json: async () => ({ success: false, limitExceeded: true }),
-    });
-
-    render(<RoutesPage />);
-
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent("利用制限");
-      expect(mockRouterPush).toHaveBeenCalledTimes(1);
-    });
-    expect(mockRouterPush).toHaveBeenCalledWith("/rate-limit?source=routes");
+  it("経路なしもHTML表示し出力操作は付けない", async () => {
+    jest.mocked(searchRoutes).mockResolvedValue({ status: "success", query, routeInfo: createRouteResultViewModel(undefined, query.origin, query.destination) });
+    render(await RoutesPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByText("ルートが見つかりません")).toBeInTheDocument();
+    expect(screen.queryByTestId("actions")).toBeNull();
   });
-
-  it("新しい検索条件の読み込み中は前回のalertを残さない", async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => ({ success: false, error: "経路APIエラー" }),
-    });
-
-    const view = render(<RoutesPage />);
-    expect(await screen.findByRole("alert")).toHaveTextContent("経路APIエラー");
-
-    mockSearchParams = new URLSearchParams(nextValidSearch);
-    let alertDuringNextFetch: HTMLElement | null = null;
-    let statusTextDuringNextFetch = "";
-    (global.fetch as jest.Mock).mockImplementationOnce(() => {
-      alertDuringNextFetch = screen.queryByRole("alert");
-      statusTextDuringNextFetch = screen.queryByRole("status")?.textContent ?? "";
-      return new Promise(() => undefined);
-    });
-    view.rerender(<RoutesPage />);
-
-    expect(alertDuringNextFetch).toBeNull();
-    expect(statusTextDuringNextFetch).toContain("経路を検索中");
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("経路を検索中");
-  });
-
-  it("検索結果ページの説明に自動作成されたスケジュールを表示する", async () => {
-    render(<RoutesPage />);
-
-    expect(await screen.findByTestId("mock-route-display")).toBeInTheDocument();
-    const heading = screen.getByRole("heading", { name: "経路検索結果" });
-    const pageHeader = heading.closest("header");
-    expect(pageHeader).not.toBeNull();
-    expect(pageHeader).toHaveTextContent("自動作成されたスケジュール");
-    expect(pageHeader).not.toHaveTextContent("指定した条件の乗換経路");
+  it("制限時はredirectを検索エラーとして捕捉しない", async () => {
+    jest.mocked(searchRoutes).mockResolvedValue({ status: "limited" });
+    await expect(RoutesPage({ searchParams: Promise.resolve({}) })).rejects.toThrow("redirect:/rate-limit?source=routes");
   });
 });

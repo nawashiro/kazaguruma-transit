@@ -18,7 +18,50 @@ interface ButtonProps {
   "aria-controls"?: string;
   "aria-describedby"?: string;
   iconOnly?: boolean;
+  /**
+   * Text in HTML elements and fragments gets ruby; SVG, MathML, hidden subtrees
+   * and custom components stay opaque. Custom components opt in with ButtonLabel.
+   */
   children: React.ReactNode;
+}
+
+/** A text-only Rubyful boundary for labels rendered by custom components. */
+export function ButtonLabel({ children }: { children: string | number }) {
+  // Rubyful v2 (t=20250507022654) replaces innerHTML and gives ruby nodes reading-only names.
+  return (
+    <>
+      <span key={String(children)} className="ruby-text" aria-hidden="true">
+        {children}
+      </span>
+      <span className="sr-only">{children}</span>
+    </>
+  );
+}
+
+function withRubyLabels(children: React.ReactNode): React.ReactNode {
+  return React.Children.map(children, (child) => {
+    if (typeof child === "string" || typeof child === "number") {
+      return <ButtonLabel>{child}</ButtonLabel>;
+    }
+    if (!React.isValidElement<{
+      children?: React.ReactNode;
+      "aria-hidden"?: boolean | "true" | "false";
+    }>(child)) {
+      return child;
+    }
+    if (
+      (typeof child.type !== "string" && child.type !== React.Fragment) ||
+      child.type === "svg" ||
+      child.type === "math" ||
+      child.props["aria-hidden"] === true ||
+      child.props["aria-hidden"] === "true"
+    ) {
+      return child;
+    }
+    return child.props.children === undefined
+      ? child
+      : React.cloneElement(child, { children: withRubyLabels(child.props.children) });
+  });
 }
 
 export default function Button({
@@ -40,8 +83,8 @@ export default function Button({
   children,
 }: ButtonProps) {
   const baseClasses = secondary
-    ? `btn btn-secondary ruby-text gap-0 ${joined ? "" : "rounded-full dark:rounded-sm"}`
-    : `btn btn-primary ruby-text gap-0 ${joined ? "" : "rounded-full dark:rounded-sm"}`;
+    ? `btn btn-secondary gap-0 ${joined ? "" : "rounded-full dark:rounded-sm"}`
+    : `btn btn-primary gap-0 ${joined ? "" : "rounded-full dark:rounded-sm"}`;
   const widthClass = fullWidth ? "w-full" : "";
   const iconOnlyClass = iconOnly ? "aspect-square p-0" : "";
   const disabledClass = disabled || loading ? "cursor-not-allowed" : "";
@@ -87,7 +130,7 @@ export default function Button({
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
-      className={`${baseClasses} ${widthClass} ${iconOnlyClass} ${disabledClass} ${accessibilityClass} ${textClass} ${safeClassName} text-base`}
+      className={`transit-button ${baseClasses} ${widthClass} ${iconOnlyClass} ${disabledClass} ${accessibilityClass} ${textClass} ${safeClassName} text-base`}
       data-testid={testId}
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
@@ -96,7 +139,7 @@ export default function Button({
       aria-describedby={ariaDescribedby}
       aria-busy={loading ? "true" : undefined}
     >
-      {children}
+      {withRubyLabels(children)}
     </button>
   );
 }

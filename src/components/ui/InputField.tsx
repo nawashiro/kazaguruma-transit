@@ -40,12 +40,11 @@ export default function InputField({
   const errorId = error ? `error-${uniqueId}` : undefined;
   const hasError = !!error;
 
-  // アクセシビリティのために必要なaria-describedby属性の値を構築
   const ariaDescribedby =
     [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
-    <div className="form-control w-full space-y-2">
+    <div className="form-control min-w-0 w-full space-y-2 text-base">
       {label && (
         <label htmlFor={inputId} className="sr-only">
           {label}
@@ -59,7 +58,7 @@ export default function InputField({
           {description}
         </p>
       )}
-      <div className={endAdornment ? "join w-full" : ""}>
+      <div className={endAdornment ? "join min-w-0 w-full" : ""}>
         <input
           id={inputId}
           type={type}
@@ -70,7 +69,7 @@ export default function InputField({
           required={required}
           name={name}
           maxLength={maxLength}
-          className={`input min-h-[44px] leading-relaxed ${hasError ? "input-error" : ""
+          className={`input min-w-0 text-base min-h-[44px] leading-relaxed ${hasError ? "input-error" : ""
             } ${endAdornment ? "join-item flex-1" : "w-full"} ${disabled ? "cursor-not-allowed" : ""
             }`}
           aria-invalid={hasError ? "true" : undefined}

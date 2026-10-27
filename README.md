@@ -1,5 +1,5 @@
 <div align="center">
-    <h1 style="border-bottom: none">
+    <h1>
         <a href="https://kazaguruma-transit.nawashiro.dev" target="_blank">風ぐるま乗換案内</a>
     </h1>
     <a href="https://kazaguruma-transit.nawashiro.dev" target="_blank">
@@ -10,10 +10,10 @@
             <img src="https://img.shields.io/website?url=https%3A%2F%2Fkazaguruma-transit.nawashiro.dev" alt="Site-status" />
         </a>
         <a href="LICENSE">
-            <img src="https://img.shields.io/badge/license-AGPLv3-purple" alt="License"/>
+            <img src="https://img.shields.io/badge/license-AGPLv3-purple" alt="License" />
         </a>
         <a href="https://github.com/nawashiro/kazaguruma-transit/pulse">
-            <img src="https://img.shields.io/github/commit-activity/m/nawashiro/kazaguruma-transit" alt="Commits-per-month">
+            <img src="https://img.shields.io/github/commit-activity/m/nawashiro/kazaguruma-transit" alt="Commits-per-month" />
         </a>
     </p>
 </div>
@@ -63,16 +63,16 @@ npm ci
 設定ファイルがない場合、非ゼロで終了します。
 
 > [!WARNING]
-> `機密性` をご覧ください。`秘密` と `公開` を分けます。
+> `機密性` をご覧ください。
 >
 > `秘密` をコミットしないでください。`公開` に秘密情報を書かないでください。
 
 | ファイル名            | 機密性 | 説明                                                                                                         |
 | --------------------- | ------ | ------------------------------------------------------------------------------------------------------------ |
-| `app-config.json`     | 公開   | アプリの各種設定です。提供URL、Google Analytics、場所データのURI、会話設定、お知らせ、支援表示を設定します。 |
+| `app-config.json`     | 公開   | クライアントの設定です。提供URL、Google Analytics、場所データのURI、会話設定、お知らせ、支援表示を設定します。 |
 | `transit-config.json` | 秘密   | GTFS取得URLを設定します。                                                                                    |
-| `.env.local`          | 秘密   | 開発サーバーの設定です。`GOOGLE_MAPS_API_KEY`（必須）、`PUPPETEER_EXECUTABLE_PATH`（任意）を設定します。     |
-| `.env`                | 秘密   | 本番サーバーの設定です。`CLOUDFLARE_TUNNEL_TOKEN`などの秘密値を設定します。開発が目的なら必要ありません。    |
+| `.env.local`          | 秘密   | 開発サーバーの環境変数です。`GOOGLE_MAPS_API_KEY`（必須）、`PUPPETEER_EXECUTABLE_PATH`（任意）を設定します。     |
+| `.env`                | 秘密   | 本番サーバーの環境変数です。`CLOUDFLARE_TUNNEL_TOKEN`などの秘密値を設定します。開発が目的なら必要ありません。    |
 
 ## 開発
 

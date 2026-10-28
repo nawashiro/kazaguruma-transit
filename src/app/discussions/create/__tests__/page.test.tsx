@@ -235,7 +235,7 @@ describe("DiscussionCreatePage", () => {
       "alert-soft",
       "text-base-content!",
     );
-    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(alert.querySelectorAll("li")).toHaveLength(2);
     for (const error of creationErrors) {
       expect(alert).toHaveTextContent(error);
     }

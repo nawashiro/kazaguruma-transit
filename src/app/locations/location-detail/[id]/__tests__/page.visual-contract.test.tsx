@@ -197,8 +197,11 @@ describe("location detail visual contract", () => {
         name: detailLocation.name,
       }),
     ).toBeInTheDocument();
+    const breadcrumbNav = screen.getByRole("navigation", { name: "パンくずリスト" });
     expect(
-      screen.getByRole("link", { name: "公共施設に戻る" }),
+      Array.from(breadcrumbNav.querySelectorAll("a")).find(
+        (candidate) => (candidate.textContent ?? "").includes(detailCategory.category),
+      ),
     ).toHaveAttribute(
       "href",
       `/locations/${encodeURIComponent(detailCategory["category:en"])}`,

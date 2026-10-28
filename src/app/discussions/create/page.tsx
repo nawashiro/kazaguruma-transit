@@ -229,14 +229,13 @@ export default function DiscussionCreatePage() {
     <div className="py-8">
       <div>
         <div className="mb-8">
-          <Link
-            href="/discussions"
-            className="btn text-base btn-ghost ruby-text gap-0 min-h-[44px] rounded-full dark:rounded-sm mb-4"
-          >
-            ← 会話一覧に戻る
-          </Link>
-
-          <PageHeader title="会話を作成" />
+          <PageHeader
+            title="会話を作成"
+            breadcrumbs={[
+              { label: "会話一覧", href: "/discussions" },
+              { label: "会話を作成" },
+            ]}
+          />
 
           {/* 3ステップ説明 */}
           <div className="card bg-base-100 shadow-sm border border-gray-200 dark:border-gray-700 mb-8">

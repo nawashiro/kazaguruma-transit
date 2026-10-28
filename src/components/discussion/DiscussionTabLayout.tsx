@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { arePubkeysEqual } from "@/lib/discussion/permission-system";
 import { DiscussionReadStatus } from "@/components/discussion/DiscussionReadStatus";
+import Breadcrumbs from "@/components/layouts/Breadcrumbs";
 import { DiscussionMetaReadState } from "@/components/discussion/DiscussionMetaReadState";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useDiscussionDetail } from "@/components/discussion/DiscussionDetailProvider";
@@ -163,12 +164,12 @@ function DiscussionTabLayoutContent({
     <>
       {showNavigation ? <div>
         <div className="mb-4">
-          <Link
-            href="/discussions"
-            className="btn text-base btn-ghost gap-0 ruby-text rounded-full dark:rounded-sm"
-          >
-            ← 会話一覧に戻る
-          </Link>
+          <Breadcrumbs
+            items={[
+              { label: "会話一覧", href: "/discussions" },
+              { label: discussion?.title ?? "会話" },
+            ]}
+          />
         </div>
 
         <DiscussionMetaReadState

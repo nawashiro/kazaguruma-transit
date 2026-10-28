@@ -9,16 +9,8 @@ it("経路なしの静的本文と入力画面リンクを表示しブラウザ�
   global.fetch = jest.fn();
   render(<RouteSearchResults result={{ status: "success", query, routeInfo: createRouteResultViewModel(undefined, query.origin, query.destination) }} />);
   expect(screen.getByRole("heading", { name: "ルートが見つかりません" })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "入力画面に戻る" })).toHaveAttribute("href", "/");
   expect(screen.queryByRole("button")).toBeNull();
   expect(global.fetch).not.toHaveBeenCalled();
 });
 
-it("戻るリンクはルビを含む文章をflexで分割しない", () => {
-  global.fetch = jest.fn();
-  render(<RouteSearchResults result={{ status: "success", query, routeInfo: createRouteResultViewModel(undefined, query.origin, query.destination) }} />);
-  const link = screen.getByRole("link", { name: "入力画面に戻る" });
-  expect(link).toHaveClass("ruby-text");
-  expect(link).not.toHaveClass("inline-flex");
-  expect(link).not.toHaveClass("flex-col");
-});
+

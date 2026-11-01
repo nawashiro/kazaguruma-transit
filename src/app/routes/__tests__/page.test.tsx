@@ -30,7 +30,7 @@ describe("RoutesPage server HTML", () => {
     );
     expect(topLink).toHaveAccessibleName("トップ");
     expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent("経路検索結果");
-    expect(nav).toHaveClass("ruby-text");
+    expect(nav).not.toHaveClass("ruby-text");
     for (const anchor of Array.from(nav.querySelectorAll("a"))) {
       expect(anchor).not.toHaveClass("inline-flex");
       expect(anchor).not.toHaveClass("flex-col");

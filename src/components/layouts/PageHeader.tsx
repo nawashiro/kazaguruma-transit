@@ -18,14 +18,15 @@ export default function PageHeader({
   breadcrumbs,
 }: PageHeaderProps) {
   return (
-    <header className="my-4 space-y-2 ruby-text">
+    // ヘッダー自体に.ruby-textを付けると内側のパンくずまでRubyful v2の置換対象になるため、ルビは本文側の要素に付ける
+    <header className="my-4 space-y-2">
       {breadcrumbs && breadcrumbs.length > 0 && (
         <Breadcrumbs items={breadcrumbs} />
       )}
-      {eyebrow && <p className="font-semibold">{eyebrow}</p>}
-      <h1 className="text-3xl font-bold">{title}</h1>
+      {eyebrow && <p className="font-semibold ruby-text">{eyebrow}</p>}
+      <h1 className="text-3xl font-bold ruby-text">{title}</h1>
       {description && (
-        <p className="whitespace-pre-line text-lg">{description}</p>
+        <p className="whitespace-pre-line text-lg ruby-text">{description}</p>
       )}
     </header>
   );

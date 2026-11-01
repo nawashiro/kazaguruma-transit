@@ -7,7 +7,11 @@ export interface BreadcrumbItem {
 
 export default function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   return (
-    <nav aria-label="パンくずリスト" className="breadcrumbs text-base ruby-text">
+    // Rubyful v2は.ruby-text要素のテキストを辞書セグメント単位のrubyへ置換するため、パンくずのラベルはこのクラスを付けない
+    <nav
+      aria-label="パンくずリスト"
+      className="breadcrumbs text-base"
+    >
       <ul>
         {items.map((item, index) => {
           const isCurrent = index === items.length - 1;

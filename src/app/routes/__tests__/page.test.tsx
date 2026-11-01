@@ -24,7 +24,17 @@ describe("RoutesPage server HTML", () => {
     expect(jest.mocked(searchRoutes).mock.calls[0][0].getAll("origin")).toEqual(["invalid", "35,139"]);
     expect(jest.mocked(searchRoutes).mock.calls[0][1].get("x-forwarded-for")).toBe("192.0.2.1");
     render(element);
-    expect(screen.getByRole("link", { name: "入力画面に戻る" })).toHaveAttribute("href", "/");
+    const nav = screen.getByRole("navigation", { name: "パンくずリスト" });
+    const topLink = Array.from(nav.querySelectorAll("a")).find(
+      (candidate) => candidate.getAttribute("href") === "/",
+    );
+    expect(topLink).toHaveAccessibleName("トップ");
+    expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent("経路検索結果");
+    expect(nav).toHaveClass("ruby-text");
+    for (const anchor of Array.from(nav.querySelectorAll("a"))) {
+      expect(anchor).not.toHaveClass("inline-flex");
+      expect(anchor).not.toHaveClass("flex-col");
+    }
     expect(screen.queryByText("検索条件をリセット")).toBeNull();
     expect(global.fetch).not.toHaveBeenCalled();
   });
@@ -40,7 +50,7 @@ describe("RoutesPage server HTML", () => {
     jest.mocked(searchRoutes).mockResolvedValue({ status: "error", message: "検索条件が正しくありません" });
     render(await RoutesPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByRole("alert")).toHaveTextContent("検索条件");
-    expect(screen.getByRole("link", { name: "入力画面に戻る" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "パンくずリスト" })).toBeInTheDocument();
   });
   it("経路なしもHTML表示し出力操作は付けない", async () => {
     jest.mocked(searchRoutes).mockResolvedValue({ status: "success", query, routeInfo: createRouteResultViewModel(undefined, query.origin, query.destination) });

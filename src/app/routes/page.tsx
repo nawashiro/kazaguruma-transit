@@ -22,7 +22,14 @@ export default async function RoutesPage({ searchParams }: RoutesPageProps) {
 
   return (
     <div>
-      <PageHeader title="経路検索結果" description="自動作成されたスケジュール" />
+      <PageHeader
+        title="経路検索結果"
+        description="自動作成されたスケジュール"
+        breadcrumbs={[
+          { label: "トップ", href: "/" },
+          { label: "経路検索結果" },
+        ]}
+      />
       <RouteSearchResults result={result} />
     </div>
   );

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import PageHeader from "@/components/layouts/PageHeader";
+import type { BreadcrumbItem } from "@/components/layouts/Breadcrumbs";
 import type { LocationDetailResult } from "@/types/access-route-pages";
 import {
   resolveLocationDetail,
@@ -114,27 +114,22 @@ function findLocationCategory(
   );
 }
 
-function LocationBackLink({
-  category,
-}: {
-  category: KeyLocationCategory | null;
-}) {
+function locationBreadcrumbs(
+  category: KeyLocationCategory | null,
+  title: string,
+): BreadcrumbItem[] {
   if (category === null) {
-    return (
-      <Link href="/locations" className="link">
-        場所一覧に戻る
-      </Link>
-    );
+    return [{ label: "場所一覧", href: "/locations" }, { label: title }];
   }
 
-  return (
-    <Link
-      href={`/locations/${encodeURIComponent(category["category:en"])}`}
-      className="link"
-    >
-      {category.category}に戻る
-    </Link>
-  );
+  return [
+    { label: "場所一覧", href: "/locations" },
+    {
+      label: category.category,
+      href: `/locations/${encodeURIComponent(category["category:en"])}`,
+    },
+    { label: title },
+  ];
 }
 
 function DestinationLink({ location }: { location: KeyLocation }) {
@@ -289,12 +284,10 @@ function LocationDetailContent({
 function DataErrorState({ title, message }: { title: string; message: string }) {
   return (
     <div className="py-8">
-      <p className="mb-4">
-        <Link href="/locations" className="link">
-          場所一覧に戻る
-        </Link>
-      </p>
-      <PageHeader title={title} />
+      <PageHeader
+        title={title}
+        breadcrumbs={[{ label: "場所一覧", href: "/locations" }, { label: title }]}
+      />
       <div className="alert alert-error alert-soft text-base-content!" role="alert">
         <p className="font-semibold">エラー</p>
         <p>{message}</p>
@@ -363,10 +356,10 @@ export default async function LocationDetailPage({
 
   return (
     <div className="py-8">
-      <p className="mb-4">
-        <LocationBackLink category={category} />
-      </p>
-      <PageHeader title={result.location.name} />
+      <PageHeader
+        title={result.location.name}
+        breadcrumbs={locationBreadcrumbs(category, result.location.name)}
+      />
       <LocationDetailContent location={result.location} areaName={areaName} />
     </div>
   );

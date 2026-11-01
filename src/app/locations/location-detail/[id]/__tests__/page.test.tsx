@@ -314,16 +314,15 @@ function expectDefinitionListPairs(
   }
 }
 
-function getCategoryBackLink(): HTMLAnchorElement {
-  const link = Array.from(screen.getAllByRole("link")).find(
+function getCategoryBreadcrumbLink(): HTMLAnchorElement {
+  const nav = screen.getByRole("navigation", { name: "パンくずリスト" });
+  const link = Array.from(nav.querySelectorAll("a")).find(
     (candidate): candidate is HTMLAnchorElement =>
-      candidate.tagName === "A" &&
-      (candidate.textContent ?? "").includes(detailCategory.category) &&
-      (candidate.textContent ?? "").includes("戻る"),
+      (candidate.textContent ?? "").includes(detailCategory.category),
   );
 
   if (!link) {
-    throw new Error("expected a native category back link containing the category name");
+    throw new Error("expected a category breadcrumb link containing the category name");
   }
   return link;
 }
@@ -372,7 +371,7 @@ function expectSafeDataErrorState(
 
   const links = screen.getAllByRole("link");
   expect(links).toHaveLength(1);
-  expect(links[0]).toHaveAccessibleName("場所一覧に戻る");
+  expect(links[0]).toHaveAccessibleName("場所一覧");
   expect(links[0]).toHaveAttribute("href", "/locations");
   expect(links[0].getAttribute("href")).not.toContain("origin=");
 
@@ -450,12 +449,14 @@ describe("/locations/location-detail/[id] public server page", () => {
     expect(licenceLink).toHaveAttribute("target", "_blank");
     expect(licenceLink).toHaveAttribute("rel", "noopener noreferrer");
 
-    const backLink = getCategoryBackLink();
-    expect(backLink).toHaveAttribute(
+    const categoryBreadcrumbLink = getCategoryBreadcrumbLink();
+    expect(categoryBreadcrumbLink).toHaveAttribute(
       "href",
       `/locations/${encodeURIComponent(detailCategory["category:en"])}`,
     );
-    expect(backLink.getAttribute("href")).not.toContain("origin=");
+    expect(categoryBreadcrumbLink.getAttribute("href")).not.toContain("origin=");
+    const breadcrumbNav = screen.getByRole("navigation", { name: "パンくずリスト" });
+    expect(breadcrumbNav.querySelector('[aria-current="page"]')).toHaveTextContent(completeLocation.name);
 
     const destinationLink = screen.getByRole("link", { name: "ここへ行く" });
     expect(destinationLink.tagName).toBe("A");
@@ -532,7 +533,7 @@ describe("/locations/location-detail/[id] public server page", () => {
     expect(externalLinks[0]).toHaveAttribute("target", "_blank");
     expect(externalLinks[0]).toHaveAttribute("rel", "noopener noreferrer");
 
-    const backLink = getCategoryBackLink();
+    const backLink = getCategoryBreadcrumbLink();
     expect(backLink).toHaveAttribute(
       "href",
       `/locations/${encodeURIComponent(detailCategory["category:en"])}`,
@@ -566,16 +567,15 @@ describe("/locations/location-detail/[id] public server page", () => {
       }),
     ).toBeInTheDocument();
 
-    const backLinks = screen.getAllByRole("link").filter((link) =>
-      (link.textContent ?? "").includes("戻る"),
-    );
-    expect(backLinks).toHaveLength(1);
-    expect(backLinks[0]).toHaveAccessibleName("場所一覧に戻る");
-    expect(backLinks[0]).toHaveAttribute("href", "/locations");
-    expect(backLinks[0].getAttribute("href")).not.toContain("origin=");
+    const breadcrumbNav = screen.getByRole("navigation", { name: "パンくずリスト" });
+    const breadcrumbLinks = breadcrumbNav.querySelectorAll("a");
+    expect(breadcrumbLinks).toHaveLength(1);
+    expect(breadcrumbLinks[0]).toHaveAccessibleName("場所一覧");
+    expect(breadcrumbLinks[0]).toHaveAttribute("href", "/locations");
+    expect(breadcrumbLinks[0].getAttribute("href")).not.toContain("origin=");
     expect(
-      screen.queryByRole("link", { name: /公共施設.*戻る/ }),
-    ).not.toBeInTheDocument();
+      breadcrumbNav.querySelector('[aria-current="page"]'),
+    ).toHaveTextContent(completeLocation.name);
   });
 
   const standardNotFoundCases: ReadonlyArray<

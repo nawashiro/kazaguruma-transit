@@ -136,6 +136,32 @@ describe("DiscussionTabLayout", () => {
     });
   });
 
+  describe("breadcrumb navigation", () => {
+    it("shows the discussion list breadcrumb with the discussion title as the current position", () => {
+      mockUseDiscussionDetail.mockReturnValue(
+        createDetailModel({
+          state: "ready",
+          snapshot: detailSnapshot,
+          completionReason: "eose",
+        }),
+      );
+
+      render(<DiscussionTabLayout baseHref="/discussions/naddr123">子</DiscussionTabLayout>);
+
+      const nav = screen.getByRole("navigation", { name: "パンくずリスト" });
+      const listLink = Array.from(nav.querySelectorAll("a")).find(
+        (candidate) => candidate.getAttribute("href") === "/discussions",
+      );
+      expect(listLink).toHaveAccessibleName("会話一覧");
+      expect(
+        nav.querySelector('[aria-current="page"]'),
+      ).toHaveTextContent("テスト会話");
+      expect(
+        screen.queryByRole("link", { name: "← 会話一覧に戻る" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe("ARIA attributes", () => {
     it("renders tablist with proper role", () => {
       render(

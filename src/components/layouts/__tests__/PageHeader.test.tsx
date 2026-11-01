@@ -33,4 +33,33 @@ describe("PageHeader", () => {
       screen.getByText("公開ページの説明"),
     );
   });
+
+  it("パンくずをh1より上に表示する", () => {
+    render(
+      <PageHeader
+        title="場所の詳細"
+        breadcrumbs={[
+          { label: "場所一覧", href: "/locations" },
+          { label: "場所の詳細" },
+        ]}
+      />,
+    );
+
+    const nav = screen.getByRole("navigation", { name: "パンくずリスト" });
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "場所の詳細",
+    });
+    expect(
+      nav.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("パンくずを持たないときはnavを表示しない", () => {
+    render(<PageHeader title="ページタイトル" />);
+
+    expect(
+      screen.queryByRole("navigation", { name: "パンくずリスト" }),
+    ).not.toBeInTheDocument();
+  });
 });

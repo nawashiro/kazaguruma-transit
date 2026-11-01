@@ -31,6 +31,15 @@ describe("Breadcrumbs", () => {
     expect(screen.queryByRole("link", { name: "千代田公園" })).not.toBeInTheDocument();
   });
 
+  it("パンくずをRubyfulの対象にしない", () => {
+    render(<Breadcrumbs items={items} />);
+
+    const nav = screen.getByRole("navigation", { name: "パンくずリスト" });
+    expect(nav).not.toHaveClass("ruby-text");
+    expect(nav.querySelector("ruby")).toBeNull();
+    expect(screen.getByRole("link", { name: "場所一覧" }).closest(".ruby-text")).toBeNull();
+  });
+
   it("単一段のパンくずでも現在位置を示す", () => {
     render(<Breadcrumbs items={[{ label: "経路検索結果" }]} />);
 

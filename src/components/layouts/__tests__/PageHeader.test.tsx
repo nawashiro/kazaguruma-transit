@@ -55,6 +55,29 @@ describe("PageHeader", () => {
     ).toBeTruthy();
   });
 
+  it("パンくずとh1の両方をRubyfulの対象から分離し、見出しにはルビを保つ", () => {
+    render(
+      <PageHeader
+        title="場所の詳細"
+        description="説明"
+        eyebrow="補足"
+        breadcrumbs={[
+          { label: "場所一覧", href: "/locations" },
+          { label: "場所の詳細" },
+        ]}
+      />,
+    );
+
+    const heading = screen.getByRole("heading", { level: 1, name: "場所の詳細" });
+    const header = heading.closest("header");
+
+    expect(header).not.toHaveClass("ruby-text");
+    expect(screen.getByRole("navigation", { name: "パンくずリスト" }).closest(".ruby-text")).toBeNull();
+    expect(heading).toHaveClass("ruby-text");
+    expect(screen.getByText("補足")).toHaveClass("ruby-text");
+    expect(screen.getByText("説明")).toHaveClass("ruby-text");
+  });
+
   it("パンくずを持たないときはnavを表示しない", () => {
     render(<PageHeader title="ページタイトル" />);
 

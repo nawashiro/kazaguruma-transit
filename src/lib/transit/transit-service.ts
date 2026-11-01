@@ -713,6 +713,14 @@ export class TransitService {
       const walkTimeFromLastStop =
         walkFromLastStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
 
+      const radiusKm = TRANSIT_PARAMS.DEFAULT_SEARCH_RADIUS / 1000;
+      if (walkToFirstStop > radiusKm || walkFromLastStop > radiusKm) {
+        logger.log(
+          `[findConventionalRoute] 最寄りバス停までの徒歩が上限を超える: 出発=${walkToFirstStop.toFixed(3)}km, 到着=${walkFromLastStop.toFixed(3)}km`
+        );
+        return { journeys: [], stops: [] };
+      }
+
       const timeTableRouter = new TimeTableRouter();
       const userRequestedTime = time ? new Date(time) : new Date();
 
@@ -1308,7 +1316,7 @@ export class TransitService {
   private async findNearbyStops(
     lat: number,
     lng: number,
-    radiusKm: number = TRANSIT_PARAMS.DEFAULT_SEARCH_RADIUS / 1000 // デフォルト500メートル
+    radiusKm: number = TRANSIT_PARAMS.DEFAULT_SEARCH_RADIUS / 1000
   ): Promise<NearbyStop[]> {
     try {
       logger.log(
@@ -1344,7 +1352,7 @@ export class TransitService {
             distance,
           };
         })
-        .filter((stop) => stop.distance <= radiusKm) // 半径内のバス停だけをフィルタリング
+        .filter((stop) => calculateGridWalkingDistanceKm(stop.distance) <= radiusKm) // 半径内のバス停だけをフィルタリング
         .sort((firstStop, secondStop) => firstStop.distance - secondStop.distance);
 
       logger.log(

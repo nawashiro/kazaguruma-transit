@@ -227,14 +227,15 @@ export class TransitService {
         lat: true,
         lon: true,
       },
-      take: 10,
     });
 
     const stopsWithDistance = stops.map((stop) => {
-      const latitudeDifference = stop.lat - location.lat;
-      const longitudeDifference = stop.lon - location.lng;
-      const distance =
-        Math.sqrt(latitudeDifference * latitudeDifference + longitudeDifference * longitudeDifference) * 111.32;
+      const distance = this.calculateDistance(
+        location.lat,
+        location.lng,
+        stop.lat,
+        stop.lon
+      );
 
       return {
         id: stop.id,
@@ -246,8 +247,8 @@ export class TransitService {
     });
 
     const sortedStops = stopsWithDistance
-      .sort((firstStop, secondStop) => firstStop.distance - secondStop.distance)
       .filter((stop) => stop.distance <= radius)
+      .sort((firstStop, secondStop) => firstStop.distance - secondStop.distance)
       .slice(0, 10);
 
     return {
@@ -426,16 +427,19 @@ export class TransitService {
     targetLng: number
   ) {
     const stopsWithDistance = stops.map((stop) => {
-      const latitudeDifference = stop.lat - targetLat;
-      const longitudeDifference = stop.lon - targetLng;
-      const squaredDistance = latitudeDifference * latitudeDifference + longitudeDifference * longitudeDifference;
+      const distance = this.calculateDistance(
+        targetLat,
+        targetLng,
+        stop.lat,
+        stop.lon
+      );
 
       return {
         stopId: stop.id,
         stopName: stop.name,
         stopLat: stop.lat,
         stopLon: stop.lon,
-        distance: squaredDistance,
+        distance,
       };
     });
 

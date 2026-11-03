@@ -88,7 +88,7 @@ export default function HomeRouteForm({ popularCategories }: HomeRouteFormProps)
         <div className="ruby-text text-base">
           <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
           <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>
-          <p><a href="https://lin.ee/CgIBOSd" target="_blank" rel="noopener noreferrer" className="link">千代田区公式LINE</a>で最新の運行情報を確認できます</p>
+          <p><a href="https://kazaguruma.bus-go.com/sp/sp-busgo.php" target="_blank" rel="noopener noreferrer" className="link">最新の運行情報はこちら【千代田区公式】</a></p>
         </div>
       </div>
     </div>

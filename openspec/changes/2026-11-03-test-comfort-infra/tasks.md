@@ -2,7 +2,8 @@
 
 ## 1. skip済みテストの除去
 
-- [ ] 1.1 `src/app/api/__tests__/nearest-stop.test.ts`・`src/app/api/__tests__/transit.test.ts`・`src/lib/discussion/__tests__/integration.test.ts` を削除し、既存テスト全量がテストスイート数・テスト数とも欠損なく流れることを `npm run test:unit` で確認する。
+- [x] 1.1 `src/app/api/__tests__/nearest-stop.test.ts`・`src/app/api/__tests__/transit.test.ts`・`src/lib/discussion/__tests__/integration.test.ts` を削除し、既存テスト全量がテストスイート数・テスト数とも欠損なく流れることを `npm run test:unit` で確認する。
+- [x] 1.2 `src/lib/db/__tests__/transit-manager.test.ts`（skip済み4件を含む）を削除し、`transit-manager.ts`・`database.ts` は保持する。対象モジュールは `transit-cache-rebuild` が実使用する。検証: `transit-cache-rebuild` を含む全テスト緑。
 
 ## 2. 並列化のためのプロジェクト分離とサーバ自動管理
 

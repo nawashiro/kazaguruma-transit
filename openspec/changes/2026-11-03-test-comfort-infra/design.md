@@ -27,7 +27,7 @@
 - **PORTの安定性**: `next start` には `PORT=3100` を渡し、PID を globalSetup からテストへ共有する（`).jest/server.pid` 等のファイルで渡す）。globalTeardown このファイルから PID を読み、自分が起動したものだけを `SIGTERM`→（短い待機→`SIGKILL`）で止める。既存サーバを流用した場合は teardown は何もしない。
 - **test script**: `package.json` に `test: NODE_ENV=test jest`、`test:watch`、CI 用に `test:unit: NODE_ENV=test jest --selectProjects unit --ci`、`test:server: NODE_ENV=test jest --selectProjects server --runInBand --ci` の4本。`npm test` はどちらも流用可能な表現にして（両プロジェクト実行）、CI は unit → server の2段に分解する。
 - **手動モック**: `src/components/features/__mocks__/DestinationSelector.tsx`・`OriginSelector.tsx` を作り props を素通しで stub にする。HomeRouteForm テストは factory 無し `jest.mock("../DestinationSelector")` 等に替える。他のスイートが既存の factory/mock 방법を保持する（自前モックの置き換えはしない）。
-- **skip テストの除去**: 3ファイルをまるごと削除する。`transit.test.ts` は全件 skipで活きているケースがないため。必要な動作の保証は既に API レベル（transit-production）と route-unit で担う。
+- **skip テストの除去**: 12件。8件はプレースホルダや旧リクエスト形のままのテスト3ファイル。残り4件は `transit-manager.test.ts` のもので、対象の `TransitManager` 自体は `transit-cache-rebuild` が実使用するためモジュールは保持し、実体をほぼ持たないテストファイル（スキップ4件＋シングルトン単一assert1件）だけを除去する。動作保証は transit-cache-rebuild（実DB結合）と API レベルの transit-production が担う。
 
 ## Risks / Trade-offs
 

@@ -27,5 +27,5 @@
 
 - [x] 6.1 `scripts/global-setup.mjs` の `pidsListeningOnPort` を `/proc/net/tcp(6)` の inode 列（第10列）から取得するよう修正し、LISTEN 中のソケットに対し当該 PID を返すことを実リスナーで確認する。
 - [x] 6.2 `src/lib/discussion/__tests__/integration.test.ts` を dev から復元し、proposal・design・tasks の件数と削除範囲の記述を実態に合わせる。
-- [x] 6.3誤コミット `nohup.out` をリポジトリから除去し `.gitignore` に追加する。
+- [x] 6.3 誤コミット `nohup.out` をリポジトリから除去し `.gitignore` に追加する。
 - [x] 6.4 unit 側の `testPathIgnorePatterns` をサーバ依存2ファイルに絞り、`location-pages-responsive-contract.test.tsx` が実行対象に復帰することを `npm run test:unit` の検出数で確認する。

@@ -27,7 +27,7 @@
 - **サーバ起動とPID管理**: `npm start`（import-gtfs でキャッシュを再構築する）を避け、`node node_modules/next/dist/bin/next start -p 3100` を直接起動する。PID 前提の停止は、next-server がプロセス群を engine から離脱させる挙動をしたため、teardown が SIGTERM 後に /proc/net/tcp と /proc/*/fd から 3100 の LISTEN socket の所有 PID を特定して確実に解放する（3000 など他ポートの next-server には触れない）。
 - **test script**: `package.json` に `test`・`test:watch`（両プロジェクト実行）と、`test:unit`・`test:server`（並列・serial分離。`--runInBand` はserver側）を置く。CI は `test:unit:ci` → `test:server:ci` の2stepを使う。
 - **手動モック**: `src/components/features/__mocks__/DestinationSelector.tsx`・`OriginSelector.tsx` を作り props を素通しで stub にする。HomeRouteForm テストは factory 無し `jest.mock("../DestinationSelector")` 等に替える。他のスイートが既存の factory/mock 방법を保持する（自前モックの置き換えはしない）。
-- **skip テストの除去**: 11件。7件は `nearest-stop.test.ts`・`transit.test.ts` のプレースホルダや旧リクエスト形のままのテスト。残り4件は `transit-manager.test.ts` のもので、対象の `TransitManager` 自体は `transit-cache-rebuild` が実使用するためモジュールは保持し、実体をほぼ持たないテストファイル（スキップ4件＋シングルトン単一assert1件）だけを除去する。`discussion/integration.test.ts` は skip 1件と現行コードで通る回帰10件が同居するため除去対象から外し、実行中に検出されたため除去対象から外し、初回の削除判断は撤回する。動作保証は transit-cache-rebuild（実DB結合）と API レベルの transit-production が担う。
+- **skip テストの除去**: 11件。7件は `nearest-stop.test.ts`・`transit.test.ts` のプレースホルダや旧リクエスト形のままのテスト。残り4件は `transit-manager.test.ts` のもので、対象の `TransitManager` 自体は `transit-cache-rebuild` が実使用するためモジュールは保持し、実体をほぼ持たないテストファイル（スキップ4件＋シングルトン単一assert1件）だけを除去する。`discussion/integration.test.ts` は skip 1件と現行コードで通る回帰10件が同居するため除去対象から外し、初回の削除判断は撤回する。動作保証は transit-cache-rebuild（実DB結合）と API レベルの transit-production が担う。
 
 ## Risks / Trade-offs
 

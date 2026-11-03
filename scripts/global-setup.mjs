@@ -76,7 +76,11 @@ function resolveDbPath(sqlitePath) {
 
 export function ensureDatabaseSchema() {
   const configPath = path.join(projectRoot, "transit-config.json");
-  if (!existsSync(configPath)) return;
+  if (!existsSync(configPath)) {
+    throw new Error(
+      "transit-config.json がありません。テストを実行できません。",
+    );
+  }
 
   let sqlitePath;
   try {

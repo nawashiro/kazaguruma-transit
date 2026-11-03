@@ -718,19 +718,37 @@ describe("Quality GateのCI transit入力安全境界契約", () => {
     }
   });
 
-  it("localhost疎通stepをtransit入力と誤判定せず、禁止経路の回帰fixtureは検出する", () => {
-    const healthCheckSteps = transitBuildJobs.flatMap((job) =>
-      job.steps.filter((step) =>
-        commandText(step).includes("http://127.0.0.1:3100"),
-      ),
+  it("localhost疎通stepをtransit入力と誤判定せず、jest実行stepも検査対象から除外する", () => {
+    const healthCheckStep: WorkflowStep = {
+      name: "Start production server",
+      run: `curl --fail http://127.0.0.1:3100/ >/dev/null`,
+    };
+    expect(isTransitInputStep(healthCheckStep, transitBoundary)).toBe(
+      false,
     );
+    expect(isDownloadLikeStep(healthCheckStep)).toBe(true);
+    expect(externalUrlsIn(healthCheckStep)).toEqual([]);
 
-    expect(healthCheckSteps.length).toBeGreaterThan(0);
-    for (const step of healthCheckSteps) {
+    const jestStepRuns = workflow.jobs
+      .flatMap((job) => job.steps)
+      .flatMap((step) =>
+        /npm run test:(unit|server)(:ci)?$/.test(commandText(step))
+          ? [commandText(step).trim()]
+          : [],
+      );
+    const configuredJestRuns = [
+      "npm run test:unit:ci",
+      "npm run test:server:ci",
+    ];
+    expect(jestStepRuns).toEqual(configuredJestRuns);
+    for (const run of configuredJestRuns) {
+      const step: WorkflowStep = { name: "Run Jest", run };
       expect(isTransitInputStep(step, transitBoundary)).toBe(false);
-      expect(isDownloadLikeStep(step)).toBe(true);
       expect(externalUrlsIn(step)).toEqual([]);
     }
+    expect(isDownloadLikeStep({ name: "Run Jest", run: "npm run test:server:ci" })).toBe(
+      false,
+    );
 
     const configuredGtfsPath = transitBoundary.gtfsPaths[0];
     expect(configuredGtfsPath).toBeDefined();

@@ -1,0 +1,11 @@
+   ▲ Next.js 15.5.28
+   - Local:        http://localhost:3100
+   - Network:      http://192.168.0.39:3100
+
+ ✓ Starting...
+ ✓ Ready in 478ms
+トランジットAPIエラー: Error: 検索条件が不足しているか、正しくありません。
+    at m (.next/server/app/api/transit/route.js:1:9272)
+    at async k (.next/server/app/api/transit/route.js:1:4934)
+    at async g (.next/server/app/api/transit/route.js:1:5937)
+    at async y (.next/server/app/api/transit/route.js:1:7059)

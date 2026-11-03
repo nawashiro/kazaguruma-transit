@@ -70,3 +70,4 @@ Thumbs.db
 app-config.json
 
 /src/generated/prisma/
+/.jest/

@@ -50,28 +50,11 @@ jobs:
       - name: Build production app
         run: npm run build
 
-      - name: Start production server
-        run: |
-          PORT=3100 npm start > "$RUNNER_TEMP/next-start.log" 2>&1 &
-          echo $! > "$RUNNER_TEMP/next-server.pid"
-          for attempt in {1..120}; do
-            if curl --fail --silent http://127.0.0.1:3100/ >/dev/null; then
-              exit 0
-            fi
-            sleep 1
-          done
-          cat "$RUNNER_TEMP/next-start.log"
-          exit 1
+      - name: Run Jest unit suites
+        run: npm run test:unit:ci
 
-      - name: Run Jest
-        run: npm test -- --runInBand --ci
-
-      - name: Stop production server
-        if: always()
-        run: |
-          if [ -f "$RUNNER_TEMP/next-server.pid" ]; then
-            kill "$(cat "$RUNNER_TEMP/next-server.pid")" 2>/dev/null || true
-          fi
+      - name: Run Jest production-server suites
+        run: npm run test:server:ci
 
       - name: Remove synthetic transit configuration
         if: always()

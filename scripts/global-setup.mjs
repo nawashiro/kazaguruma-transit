@@ -14,13 +14,13 @@ export function pidsListeningOnPort(portNumber) {
     if (!existsSync(table)) continue;
     for (const line of readFileSync(table, "utf8").split("\n").slice(1)) {
       const columns = line.trim().split(/\s+/);
-      const [socketEntry, localAddress] = columns;
-      if (!socketEntry || !localAddress) continue;
+      const localAddress = columns[1];
+      if (!localAddress || !columns[9]) continue;
       const [, localPortHex] = localAddress.split(":");
-      if (localPortHex !== hexPort) continue;
+      if (localPortHex.toLowerCase() !== hexPort) continue;
       if (columns[3] !== "0A") continue; // 0A = LISTEN
-      const [, inode] = socketEntry.split(":");
-      inodes.add(inode);
+      // /proc/net/tcp(6) の列順は proc(5) が固定しており、inode は第10列
+      inodes.add(columns[9]);
     }
   }
   if (inodes.size === 0) return [];

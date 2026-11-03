@@ -47,7 +47,8 @@ export default async () => {
         testPathIgnorePatterns: [
           ...baseConfig.testPathIgnorePatterns,
           "src/app/api/__tests__/transit-production",
-          "src/app/__tests__/location-pages-",
+          "src/app/__tests__/location-pages-404",
+          "src/app/__tests__/location-pages-origin-runtime",
         ],
       },
       {

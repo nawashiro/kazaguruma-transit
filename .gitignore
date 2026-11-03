@@ -71,3 +71,4 @@ app-config.json
 
 /src/generated/prisma/
 /.jest/
+/nohup.out

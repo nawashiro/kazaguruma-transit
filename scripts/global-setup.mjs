@@ -63,10 +63,61 @@ async function probe(retries, intervalMs) {
   return false;
 }
 
+function resolveDbPath(sqlitePath) {
+  if (
+    sqlitePath === ":memory:" ||
+    path.isAbsolute(sqlitePath) ||
+    /^[A-Za-z]:[\\/]/.test(sqlitePath)
+  ) {
+    return sqlitePath;
+  }
+  return path.join(projectRoot, sqlitePath);
+}
+
+export function ensureDatabaseSchema() {
+  const configPath = path.join(projectRoot, "transit-config.json");
+  if (!existsSync(configPath)) return;
+
+  let sqlitePath;
+  try {
+    sqlitePath = JSON.parse(readFileSync(configPath, "utf8")).sqlitePath;
+  } catch {
+    throw new Error("transit-config.json を読めませんでした。");
+  }
+  if (typeof sqlitePath !== "string" || !sqlitePath) {
+    throw new Error(
+      "transit-config.json の sqlitePath が不正です。テストを実行できません。",
+    );
+  }
+
+  const dbFile = resolveDbPath(sqlitePath);
+  if (dbFile === ":memory:" || existsSync(dbFile)) return;
+
+  // Prismaはfile:パスの親ディレクトリを自前では作らない
+  mkdirSync(path.dirname(dbFile), { recursive: true });
+
+  const push = spawnSync(
+    process.execPath,
+    [
+      path.join(projectRoot, "node_modules", "prisma", "build", "index.js"),
+      "db",
+      "push",
+      "--config",
+      path.join(projectRoot, "prisma.config.ts"),
+    ],
+    { cwd: projectRoot, stdio: "inherit" },
+  );
+  if (push.status !== 0) {
+    throw new Error("テスト用データベースのスキーマ作成に失敗しました。");
+  }
+}
+
 export default async function globalSetup() {
   if (await probe(1, 0)) {
     return;
   }
+
+  ensureDatabaseSchema();
 
   if (!existsSync(path.join(projectRoot, ".next", "BUILD_ID"))) {
     const build = spawnSync("npm", ["run", "build"], {

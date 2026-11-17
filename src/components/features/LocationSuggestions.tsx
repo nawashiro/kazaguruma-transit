@@ -2,12 +2,12 @@
 
 import { memo } from "react";
 import { Location } from "@/types/core";
-import type { AddressCategory } from "@/utils/addressLoader";
+import type { RouteDestinationCategory } from "@/types/route-destinations";
 import { convertToLocation } from "@/utils/addressLoader";
 import RubyWrapper from "@/components/ui/RubyWrapper";
 
 interface LocationSuggestionsProps {
-  categories?: AddressCategory[];
+  categories?: RouteDestinationCategory[];
   onLocationSelected: (location: Location) => void;
 }
 

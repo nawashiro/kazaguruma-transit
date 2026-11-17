@@ -4,7 +4,7 @@ import {
   readLocationArtifact,
   type LocationArtifactReadResult,
 } from "@/lib/location/location-artifact";
-import type { AddressCategory } from "@/utils/addressLoader";
+import type { RouteDestinationCategory } from "@/types/route-destinations";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -51,7 +51,9 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function isPopularCategories(value: unknown): value is AddressCategory[] {
+function isRouteDestinations(
+  value: unknown,
+): value is RouteDestinationCategory[] {
   if (
     !isSerializableValue(value) ||
     !Array.isArray(value) ||
@@ -71,28 +73,21 @@ function isPopularCategories(value: unknown): value is AddressCategory[] {
       return false;
     }
 
-    return category.locations.every((location) => {
-      if (!isRecord(location)) {
-        return false;
-      }
-
-      return (
+    return category.locations.every(
+      (location) =>
+        isRecord(location) &&
         isNonEmptyString(location.name) &&
         typeof location.lat === "number" &&
         Number.isFinite(location.lat) &&
         typeof location.lng === "number" &&
-        Number.isFinite(location.lng) &&
-        isNonEmptyString(location.copyright) &&
-        isNonEmptyString(location.licence) &&
-        isNonEmptyString(location.licenceUri)
-      );
-    });
+        Number.isFinite(location.lng),
+    );
   });
 }
 
-function getPopularCategories(
+function getRouteDestinations(
   result: LocationArtifactReadResult,
-): AddressCategory[] | null {
+): RouteDestinationCategory[] | null {
   if (result.status !== "success") {
     return null;
   }
@@ -102,10 +97,8 @@ function getPopularCategories(
     return null;
   }
 
-  const popularCategories: unknown = artifact.sources.mainFacilities;
-  return isPopularCategories(popularCategories)
-    ? popularCategories
-    : null;
+  const routeDestinations: unknown = artifact.sources.routeDestinations;
+  return isRouteDestinations(routeDestinations) ? routeDestinations : null;
 }
 
 function HomeDataError() {
@@ -138,10 +131,10 @@ export default function Home() {
     return <HomeDataError />;
   }
 
-  const popularCategories = getPopularCategories(result);
-  if (popularCategories === null) {
+  const routeDestinations = getRouteDestinations(result);
+  if (routeDestinations === null) {
     return <HomeDataError />;
   }
 
-  return <HomeRouteForm popularCategories={popularCategories} />;
+  return <HomeRouteForm routeDestinations={routeDestinations} />;
 }

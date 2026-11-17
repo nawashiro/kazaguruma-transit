@@ -127,23 +127,21 @@ jest.mock("@/components/features/HomeRouteForm", () => ({
 const validArtifact: LocationArtifact = {
   status: "validated",
   sourceUris: {
-    mainFacilitiesUri: "https://fixtures.example.test/v2/main_facilities.json",
-    keyLocationsUri: "https://fixtures.example.test/v2/key_locations.json",
-    townGeoJsonUri: "https://fixtures.example.test/v2/chiyoda-towns.geojson",
+    placesJsonLdUri: "https://fixtures.example.test/places.jsonld",
+    osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
+    keyLocationsUri: "https://fixtures.example.test/key_locations.json",
+    townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
   },
   sources: {
-    mainFacilities: [
+    routeDestinations: [
       {
-        category: "区役所・出張所",
-        "category:en": "city-office-and-branch-offices",
+        category: "行政・相談",
+        "category:en": "government-and-consultation",
         locations: [
           {
             name: "千代田区役所",
             lat: 35.694,
             lng: 139.753,
-            copyright: "© OpenStreetMap contributors",
-            licence: "Open Database License (ODbL) 1.0",
-            licenceUri: "https://opendatacommons.org/licenses/odbl/",
           },
         ],
       },
@@ -359,7 +357,7 @@ describe("home runtime artifact-only boundary", () => {
       expect(screen.getByTestId("artifact-backed-home-route-form")).toBeInTheDocument();
       expect(mockHomeRouteFormProps).toHaveBeenCalledTimes(1);
       expect(mockHomeRouteFormProps).toHaveBeenCalledWith({
-        popularCategories: validArtifact.sources.mainFacilities,
+        routeDestinations: validArtifact.sources.routeDestinations,
       });
       expectArtifactOnlyRuntimeSources();
     });

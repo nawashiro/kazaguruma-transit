@@ -8,12 +8,19 @@ import {
 } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 
+import {
+  findOsmElementKey,
+  validateDestinationCatalog,
+  type DestinationCatalog,
+} from "../src/lib/location/destination-catalog";
+
 const LOCATION_PREFIX = "東京都千代田区";
 const INVALID_LOCATION_ID_PATTERN = /[\\/?#\u0000-\u001f\u007f-\u009f]/;
 const INVALID_URI_CHARACTER_PATTERN = /[\u0000-\u0020\u007f-\u009f]/;
 
 export interface LocationArtifactSourceUris {
-  mainFacilitiesUri: string;
+  placesJsonLdUri: string;
+  osmMirrorUri: string;
   keyLocationsUri: string;
   townGeoJsonUri: string;
 }
@@ -34,6 +41,7 @@ export type LocationArtifactWriter = (
 
 export interface GenerateLocationArtifactOptions {
   appConfig: unknown;
+  destinationCatalog: unknown;
   transport: LocationArtifactTransport;
   writeArtifact: LocationArtifactWriter;
 }
@@ -43,12 +51,6 @@ type UnknownLocation = JsonRecord & {
   lat: number;
   lng: number;
 };
-type MainFacility = UnknownLocation & {
-  name: string;
-  copyright: string;
-  licence: string;
-  licenceUri: string;
-};
 type KeyLocation = UnknownLocation & {
   id: string;
   name: string;
@@ -57,16 +59,222 @@ type KeyLocation = UnknownLocation & {
   licenceUri: string;
 };
 
-type MainFacilityCategory = JsonRecord & {
-  category: string;
-  "category:en": string;
-  locations: MainFacility[];
-};
 type KeyLocationCategory = JsonRecord & {
   category: string;
   "category:en": string;
   locations: KeyLocation[];
 };
+
+export interface RouteDestinationLocation {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
+export interface RouteDestinationCategory {
+  category: string;
+  "category:en": string;
+  locations: RouteDestinationLocation[];
+}
+
+interface RouteDestinationGroup {
+  category: string;
+  "category:en": string;
+  codes: readonly string[];
+}
+
+const ROUTE_DESTINATION_GROUPS: readonly RouteDestinationGroup[] = [
+  {
+    category: "行政・相談",
+    "category:en": "government-and-consultation",
+    codes: ["1302", "1304", "1219", "1606"],
+  },
+  {
+    category: "子育て・福祉",
+    "category:en": "childcare-and-welfare",
+    codes: ["1307", "1402", "1403", "1499"],
+  },
+  {
+    category: "学び・図書館",
+    "category:en": "learning-and-libraries",
+    codes: ["1512"],
+  },
+  {
+    category: "博物館・美術館",
+    "category:en": "museums-and-galleries",
+    codes: ["0801", "0802", "0803"],
+  },
+  {
+    category: "映画館",
+    "category:en": "cinemas",
+    codes: ["1011"],
+  },
+  {
+    category: "公園・自然",
+    "category:en": "parks-and-nature",
+    codes: ["1003", "1004"],
+  },
+  {
+    category: "寺社・教会",
+    "category:en": "temples-and-churches",
+    codes: ["0702", "0703"],
+  },
+  {
+    category: "くらし・余暇",
+    "category:en": "daily-life-and-leisure",
+    codes: ["0903", "2603"],
+  },
+];
+
+const GROUP_BY_CODE = new Map<string, RouteDestinationGroup>(
+  ROUTE_DESTINATION_GROUPS.flatMap((group) =>
+    group.codes.map((code) => [code, group] as const),
+  ),
+);
+
+function parsePlacesJsonLd(value: unknown): Map<string, JsonRecord> {
+  if (!isRecord(value) || !Array.isArray(value["@graph"])) {
+    fail("places JSON-LD must contain an @graph array");
+  }
+
+  const records = new Map<string, JsonRecord>();
+  for (const record of value["@graph"]) {
+    if (!isRecord(record)) {
+      continue;
+    }
+    const id = record["@id"];
+    if (typeof id === "string" && id.startsWith("urn:uuid:")) {
+      records.set(id, record);
+    }
+  }
+  return records;
+}
+
+function parseOsmNames(value: unknown): Map<string, string | null> {
+  if (!isRecord(value) || !Array.isArray(value.elements)) {
+    fail("OSM tag mirror must contain an elements array");
+  }
+
+  const names = new Map<string, string | null>();
+  for (const element of value.elements) {
+    if (!isRecord(element)) {
+      continue;
+    }
+    const type = element.type;
+    const id = element.id;
+    if (
+      typeof type !== "string" ||
+      (typeof id !== "number" && typeof id !== "string")
+    ) {
+      continue;
+    }
+    const tags = element.tags;
+    const name = isRecord(tags) ? tags.name : undefined;
+    names.set(`${type}/${id}`, isNonEmptyString(name) ? name.trim() : null);
+  }
+  return names;
+}
+
+function readRouteDestinationCoordinates(
+  record: JsonRecord,
+  id: string,
+): { lat: number; lng: number } {
+  const geo = record["schema:geo"];
+  if (!isRecord(geo)) {
+    fail(`掲載recordの座標が不正です: ${id}`);
+  }
+  const lat = geo["schema:latitude"];
+  const lng = geo["schema:longitude"];
+  if (
+    typeof lat !== "number" ||
+    !Number.isFinite(lat) ||
+    typeof lng !== "number" ||
+    !Number.isFinite(lng) ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180
+  ) {
+    fail(`掲載recordの座標が不正です: ${id}`);
+  }
+  return { lat, lng };
+}
+
+function readGifPoiCode(record: JsonRecord, id: string): string {
+  const identifiers = record["schema:identifier"];
+  const codes = Array.isArray(identifiers)
+    ? identifiers
+        .filter(isRecord)
+        .filter((identifier) => identifier["schema:propertyID"] === "gif-poi")
+        .map((identifier) => identifier["schema:value"])
+        .filter((value): value is string => isNonEmptyString(value))
+    : [];
+
+  if (codes.length !== 1) {
+    fail(
+      `掲載recordのgif-poi分類コードは1件である必要があります: ${id} (${codes.length}件)`,
+    );
+  }
+  return codes[0];
+}
+
+function buildRouteDestinations(
+  catalog: DestinationCatalog,
+  placesPayload: unknown,
+  osmPayload: unknown,
+): RouteDestinationCategory[] {
+  const records = parsePlacesJsonLd(placesPayload);
+  const osmNames = parseOsmNames(osmPayload);
+  const locationsByCategory = new Map<string, RouteDestinationLocation[]>();
+
+  for (const entry of catalog.places) {
+    if (!entry.includeInRouteForm) {
+      continue;
+    }
+
+    const record = records.get(entry.id);
+    if (record === undefined) {
+      fail(`公開JSON-LDに掲載IDがありません: ${entry.id}`);
+    }
+
+    const coordinates = readRouteDestinationCoordinates(record, entry.id);
+    const code = readGifPoiCode(record, entry.id);
+    const group = GROUP_BY_CODE.get(code);
+    if (group === undefined) {
+      fail(`gif-poiコードが表示グループにありません: ${code} (${entry.id})`);
+    }
+
+    const osmElementKey = findOsmElementKey(record["rdfs:seeAlso"]);
+    if (osmElementKey === null) {
+      fail(`掲載recordにOSM要素の関連付けがありません: ${entry.id}`);
+    }
+    if (!osmNames.has(osmElementKey)) {
+      fail(`OSMタグミラーに要素がありません: ${osmElementKey} (${entry.id})`);
+    }
+    const name = osmNames.get(osmElementKey);
+    if (name === null || name === undefined) {
+      fail(`OSM要素にnameがありません: ${osmElementKey} (${entry.id})`);
+    }
+
+    const locations = locationsByCategory.get(group["category:en"]) ?? [];
+    locations.push({ name, lat: coordinates.lat, lng: coordinates.lng });
+    locationsByCategory.set(group["category:en"], locations);
+  }
+
+  return ROUTE_DESTINATION_GROUPS.flatMap((group): RouteDestinationCategory[] => {
+    const locations = locationsByCategory.get(group["category:en"]);
+    if (locations === undefined || locations.length === 0) {
+      return [];
+    }
+    return [
+      {
+        category: group.category,
+        "category:en": group["category:en"],
+        locations,
+      },
+    ];
+  });
+}
 
 type PolygonCoordinates = number[][][];
 type MultiPolygonCoordinates = number[][][][];
@@ -91,7 +299,7 @@ export interface LocationArtifact {
   status: "validated";
   sourceUris: LocationArtifactSourceUris;
   sources: {
-    mainFacilities: MainFacilityCategory[];
+    routeDestinations: RouteDestinationCategory[];
     keyLocations: KeyLocationCategory[];
     townGeoJson: TownGeoJson;
   };
@@ -199,33 +407,6 @@ function validateOptionalFiniteNumber(
   requireFiniteNumber(record[fieldName], fieldPath);
 }
 
-function validateMainFacility(
-  value: unknown,
-  fieldPath: string,
-): MainFacility {
-  if (!isRecord(value)) {
-    fail(`${fieldPath} must be an object`);
-  }
-
-  const location: MainFacility = value as MainFacility;
-  requireNonEmptyString(location.name, `${fieldPath}.name`);
-  requireFiniteNumber(location.lat, `${fieldPath}.lat`);
-  requireFiniteNumber(location.lng, `${fieldPath}.lng`);
-  requireNonEmptyString(location.copyright, `${fieldPath}.copyright`);
-  requireNonEmptyString(location.licence, `${fieldPath}.licence`);
-  requireAbsoluteHttpUri(location.licenceUri, `${fieldPath}.licenceUri`);
-  validateOptionalString(location, "description", `${fieldPath}.description`);
-  validateOptionalUri(location, "imageUri", `${fieldPath}.imageUri`);
-  validateOptionalString(
-    location,
-    "imageCopyright",
-    `${fieldPath}.imageCopyright`,
-  );
-  validateOptionalUri(location, "uri", `${fieldPath}.uri`);
-
-  return location;
-}
-
 function isValidLocationId(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -282,16 +463,15 @@ function validateKeyLocation(value: unknown, fieldPath: string): KeyLocation {
   return location;
 }
 
-function validateCategoryArray(
+function validateKeyLocationCategories(
   value: unknown,
   sourceName: string,
-  locationValidator: (value: unknown, fieldPath: string) => UnknownLocation,
-): Array<MainFacilityCategory | KeyLocationCategory> {
+): KeyLocationCategory[] {
   if (!Array.isArray(value) || value.length === 0) {
     fail(`${sourceName} must be a non-empty category array`);
   }
 
-  const categories: Array<MainFacilityCategory | KeyLocationCategory> = [];
+  const categories: KeyLocationCategory[] = [];
   const categoryIds = new Set<string>();
 
   value.forEach((rawCategory, categoryIndex) => {
@@ -316,31 +496,22 @@ function validateCategoryArray(
     }
 
     const locations = rawLocations.map((location, locationIndex) =>
-      locationValidator(location, `${categoryPath}.locations[${locationIndex}]`),
+      validateKeyLocation(
+        location,
+        `${categoryPath}.locations[${locationIndex}]`,
+      ),
     );
     categories.push({
       ...rawCategory,
       locations,
-    } as MainFacilityCategory | KeyLocationCategory);
+    } as KeyLocationCategory);
   });
 
   return categories;
 }
 
-function validateMainFacilities(value: unknown): MainFacilityCategory[] {
-  return validateCategoryArray(
-    value,
-    "mainFacilities",
-    validateMainFacility,
-  ) as MainFacilityCategory[];
-}
-
 function validateKeyLocations(value: unknown): KeyLocationCategory[] {
-  const categories = validateCategoryArray(
-    value,
-    "keyLocations",
-    validateKeyLocation,
-  ) as KeyLocationCategory[];
+  const categories = validateKeyLocationCategories(value, "keyLocations");
   const locationIds = new Set<string>();
 
   for (const [categoryIndex, category] of categories.entries()) {
@@ -469,9 +640,13 @@ function validateSourceUris(value: unknown): LocationArtifactSourceUris {
   }
 
   return {
-    mainFacilitiesUri: requireAbsoluteHttpUri(
-      value.mainFacilitiesUri,
-      "appConfig.mainFacilitiesUri",
+    placesJsonLdUri: requireAbsoluteHttpUri(
+      value.placesJsonLdUri,
+      "appConfig.placesJsonLdUri",
+    ),
+    osmMirrorUri: requireAbsoluteHttpUri(
+      value.osmMirrorUri,
+      "appConfig.osmMirrorUri",
     ),
     keyLocationsUri: requireAbsoluteHttpUri(
       value.keyLocationsUri,
@@ -591,7 +766,7 @@ async function fetchJson(
 }
 
 /**
- * Acquires, validates, and atomically publishes the three location data sources.
+ * Acquires, validates, and atomically publishes every location data source.
  * The writer is called exactly once, after every source and derived region has
  * passed validation.
  */
@@ -609,20 +784,37 @@ export async function generateLocationArtifact(
   }
 
   const sourceUris = validateSourceUris(options.appConfig);
-  const [mainPayload, keyPayload, townPayload] = await Promise.all([
-    fetchJson("mainFacilities", sourceUris.mainFacilitiesUri, options.transport),
+  const catalog = validateDestinationCatalog(options.destinationCatalog);
+  if (catalog.source.placesUri !== sourceUris.placesJsonLdUri) {
+    fail(
+      "目録のsource.placesUriとappConfig.placesJsonLdUriが一致しません。目録を再生成してください",
+    );
+  }
+  if (catalog.source.osmMirrorUri !== sourceUris.osmMirrorUri) {
+    fail(
+      "目録のsource.osmMirrorUriとappConfig.osmMirrorUriが一致しません。目録を再生成してください",
+    );
+  }
+
+  const [placesPayload, osmPayload, keyPayload, townPayload] = await Promise.all([
+    fetchJson("placesJsonLd", sourceUris.placesJsonLdUri, options.transport),
+    fetchJson("osmMirror", sourceUris.osmMirrorUri, options.transport),
     fetchJson("keyLocations", sourceUris.keyLocationsUri, options.transport),
     fetchJson("townGeoJson", sourceUris.townGeoJsonUri, options.transport),
   ]);
 
-  const mainFacilities = validateMainFacilities(mainPayload);
+  const routeDestinations = buildRouteDestinations(
+    catalog,
+    placesPayload,
+    osmPayload,
+  );
   const keyLocations = validateKeyLocations(keyPayload);
   const townGeoJson = validateTownGeoJson(townPayload);
   const artifact: LocationArtifact = {
     status: "validated",
     sourceUris,
     sources: {
-      mainFacilities,
+      routeDestinations,
       keyLocations,
       townGeoJson,
     },
@@ -691,9 +883,14 @@ async function runCli(): Promise<void> {
       "location-data.json",
     );
     const appConfig = JSON.parse(await readFile(appConfigPath, "utf8")) as unknown;
+    const catalogPath = resolve(projectRoot, "data", "destinations.json");
+    const destinationCatalog = JSON.parse(
+      await readFile(catalogPath, "utf8"),
+    ) as unknown;
 
     await generateLocationArtifact({
       appConfig,
+      destinationCatalog,
       transport: fetchFromNetwork,
       writeArtifact: (artifact) => writeArtifactAtomically(artifact, artifactPath),
     });

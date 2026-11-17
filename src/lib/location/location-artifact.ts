@@ -1,24 +1,26 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type {
+  RouteDestinationCategory,
+  RouteDestinationLocation,
+} from "@/types/route-destinations";
+
 const INVALID_LOCATION_ID_PATTERN = /[\\/?#\u0000-\u001f\u007f-\u009f]/;
 const INVALID_URI_CHARACTER_PATTERN = /[\u0000-\u0020\u007f-\u009f]/;
 
 export interface LocationArtifactSourceUris {
-  mainFacilitiesUri: string;
+  placesJsonLdUri: string;
+  osmMirrorUri: string;
   keyLocationsUri: string;
   townGeoJsonUri: string;
 }
 
 type JsonRecord = Record<string, unknown>;
-type LocationRecord = JsonRecord & { lat: number; lng: number };
-type MainFacilityCategory = JsonRecord & {
-  category: string;
-  "category:en": string;
-  locations: LocationRecord[];
-};
-type KeyLocation = LocationRecord & {
+type KeyLocation = JsonRecord & {
   id: string;
+  lat: number;
+  lng: number;
 };
 type KeyLocationCategory = JsonRecord & {
   category: string;
@@ -44,7 +46,7 @@ export interface LocationArtifact {
   status: "validated";
   sourceUris: LocationArtifactSourceUris;
   sources: {
-    mainFacilities: MainFacilityCategory[];
+    routeDestinations: RouteDestinationCategory[];
     keyLocations: KeyLocationCategory[];
     townGeoJson: TownGeoJson;
   };
@@ -172,22 +174,14 @@ function requireLocationId(value: unknown, fieldPath: string): string {
   return value;
 }
 
-function validateLocationFields(
-  value: unknown,
-  fieldPath: string,
-  requireKeyFields: boolean,
-): LocationRecord {
+function validateKeyLocation(value: unknown, fieldPath: string): KeyLocation {
   if (!isRecord(value)) {
     fail(`${fieldPath} はオブジェクトである必要があります`);
   }
 
-  const location = value as LocationRecord;
-  if (requireKeyFields) {
-    requireLocationId(location.id, `${fieldPath}.id`);
-    requireNonEmptyString(location.nodeCopyright, `${fieldPath}.nodeCopyright`);
-  } else {
-    requireNonEmptyString(location.copyright, `${fieldPath}.copyright`);
-  }
+  const location = value as KeyLocation;
+  requireLocationId(location.id, `${fieldPath}.id`);
+  requireNonEmptyString(location.nodeCopyright, `${fieldPath}.nodeCopyright`);
   requireNonEmptyString(location.name, `${fieldPath}.name`);
   requireFiniteNumber(location.lat, `${fieldPath}.lat`);
   requireFiniteNumber(location.lng, `${fieldPath}.lng`);
@@ -201,40 +195,36 @@ function validateLocationFields(
     "imageCopyright",
     `${fieldPath}.imageCopyright`,
   );
+  validateOptionalString(
+    location,
+    "imageCopylight",
+    `${fieldPath}.imageCopylight`,
+  );
   validateOptionalUri(location, "uri", `${fieldPath}.uri`);
-  if (requireKeyFields) {
-    validateOptionalString(
-      location,
-      "descriptionCopyright",
-      `${fieldPath}.descriptionCopyright`,
-    );
-    validateOptionalString(
-      location,
-      "imageCopylight",
-      `${fieldPath}.imageCopylight`,
-    );
-    validateOptionalFiniteNumber(
-      location,
-      "nodeSourceId",
-      `${fieldPath}.nodeSourceId`,
-    );
-  }
+  validateOptionalString(
+    location,
+    "descriptionCopyright",
+    `${fieldPath}.descriptionCopyright`,
+  );
+  validateOptionalFiniteNumber(
+    location,
+    "nodeSourceId",
+    `${fieldPath}.nodeSourceId`,
+  );
 
   return location;
 }
 
-function validateCategories(
-  value: unknown,
-  sourceName: string,
-  requireKeyFields: boolean,
-): MainFacilityCategory[] | KeyLocationCategory[] {
+function validateKeyLocations(value: unknown): KeyLocationCategory[] {
   if (!Array.isArray(value) || value.length === 0) {
-    fail(`${sourceName} は空でないカテゴリ配列である必要があります`);
+    fail("sources.keyLocations は空でないカテゴリ配列である必要があります");
   }
 
   const categoryIds = new Set<string>();
-  const categories = value.map((rawCategory, categoryIndex) => {
-    const categoryPath = `${sourceName}[${categoryIndex}]`;
+  const locationIds = new Set<string>();
+
+  return value.map((rawCategory, categoryIndex) => {
+    const categoryPath = `sources.keyLocations[${categoryIndex}]`;
     if (!isRecord(rawCategory)) {
       fail(`${categoryPath} はオブジェクトである必要があります`);
     }
@@ -245,7 +235,7 @@ function validateCategories(
     );
     requireNonEmptyString(rawCategory.category, `${categoryPath}.category`);
     if (categoryIds.has(categoryId)) {
-      fail(`${sourceName} に重複カテゴリ識別子があります: ${categoryId}`);
+      fail(`sources.keyLocations に重複カテゴリ識別子があります: ${categoryId}`);
     }
     categoryIds.add(categoryId);
 
@@ -253,48 +243,66 @@ function validateCategories(
       fail(`${categoryPath}.locations は空でない配列である必要があります`);
     }
 
-    const locations = rawCategory.locations.map((location, locationIndex) =>
-      validateLocationFields(
-        location,
-        `${categoryPath}.locations[${locationIndex}]`,
-        requireKeyFields,
-      ),
-    );
+    const locations = rawCategory.locations.map((location, locationIndex) => {
+      const fieldPath = `${categoryPath}.locations[${locationIndex}]`;
+      const validated = validateKeyLocation(location, fieldPath);
+      if (locationIds.has(validated.id)) {
+        fail(`sources.keyLocations に重複場所識別子があります: ${validated.id}`);
+      }
+      locationIds.add(validated.id);
+      return validated;
+    });
+
     return {
       ...rawCategory,
       locations,
-    } as MainFacilityCategory | KeyLocationCategory;
+    } as KeyLocationCategory;
   });
-
-  return categories as MainFacilityCategory[] | KeyLocationCategory[];
 }
 
-function validateMainFacilities(value: unknown): MainFacilityCategory[] {
-  return validateCategories(value, "sources.mainFacilities", false) as MainFacilityCategory[];
-}
-
-function validateKeyLocations(value: unknown): KeyLocationCategory[] {
-  const categories = validateCategories(
-    value,
-    "sources.keyLocations",
-    true,
-  ) as KeyLocationCategory[];
-  const locationIds = new Set<string>();
-
-  for (const [categoryIndex, category] of categories.entries()) {
-    for (const [locationIndex, location] of category.locations.entries()) {
-      const locationId = requireLocationId(
-        location.id,
-        `sources.keyLocations[${categoryIndex}].locations[${locationIndex}].id`,
-      );
-      if (locationIds.has(locationId)) {
-        fail(`sources.keyLocations に重複場所識別子があります: ${locationId}`);
-      }
-      locationIds.add(locationId);
-    }
+function validateRouteDestinations(value: unknown): RouteDestinationCategory[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    fail("sources.routeDestinations は空でないカテゴリ配列である必要があります");
   }
 
-  return categories;
+  const categoryIds = new Set<string>();
+  return value.map((rawCategory, categoryIndex) => {
+    const categoryPath = `sources.routeDestinations[${categoryIndex}]`;
+    if (!isRecord(rawCategory)) {
+      fail(`${categoryPath} はオブジェクトである必要があります`);
+    }
+
+    const categoryId = requireNonEmptyString(
+      rawCategory["category:en"],
+      `${categoryPath}.category:en`,
+    );
+    requireNonEmptyString(rawCategory.category, `${categoryPath}.category`);
+    if (categoryIds.has(categoryId)) {
+      fail(`sources.routeDestinations に重複カテゴリ識別子があります: ${categoryId}`);
+    }
+    categoryIds.add(categoryId);
+
+    if (!Array.isArray(rawCategory.locations) || rawCategory.locations.length === 0) {
+      fail(`${categoryPath}.locations は空でない配列である必要があります`);
+    }
+
+    const locations = rawCategory.locations.map((location, locationIndex) => {
+      const locationPath = `${categoryPath}.locations[${locationIndex}]`;
+      if (!isRecord(location)) {
+        fail(`${locationPath} はオブジェクトである必要があります`);
+      }
+      return {
+        name: requireNonEmptyString(location.name, `${locationPath}.name`),
+        lat: requireFiniteNumber(location.lat, `${locationPath}.lat`),
+        lng: requireFiniteNumber(location.lng, `${locationPath}.lng`),
+      } satisfies RouteDestinationLocation;
+    });
+
+    return {
+      ...rawCategory,
+      locations,
+    } as RouteDestinationCategory;
+  });
 }
 
 function validatePosition(value: unknown, fieldPath: string): number[] {
@@ -405,9 +413,13 @@ function validateSourceUris(value: unknown): LocationArtifactSourceUris {
     fail("sourceUris はオブジェクトである必要があります");
   }
   return {
-    mainFacilitiesUri: requireAbsoluteHttpUri(
-      value.mainFacilitiesUri,
-      "sourceUris.mainFacilitiesUri",
+    placesJsonLdUri: requireAbsoluteHttpUri(
+      value.placesJsonLdUri,
+      "sourceUris.placesJsonLdUri",
+    ),
+    osmMirrorUri: requireAbsoluteHttpUri(
+      value.osmMirrorUri,
+      "sourceUris.osmMirrorUri",
     ),
     keyLocationsUri: requireAbsoluteHttpUri(
       value.keyLocationsUri,
@@ -452,7 +464,9 @@ function validateArtifact(value: unknown): LocationArtifact {
     fail("sources はオブジェクトである必要があります");
   }
 
-  const mainFacilities = validateMainFacilities(value.sources.mainFacilities);
+  const routeDestinations = validateRouteDestinations(
+    value.sources.routeDestinations,
+  );
   const keyLocations = validateKeyLocations(value.sources.keyLocations);
   const townGeoJson = validateTownGeoJson(value.sources.townGeoJson);
   const sourceUris = validateSourceUris(value.sourceUris);
@@ -462,7 +476,7 @@ function validateArtifact(value: unknown): LocationArtifact {
     status: "validated",
     sourceUris,
     sources: {
-      mainFacilities,
+      routeDestinations,
       keyLocations,
       townGeoJson,
     },

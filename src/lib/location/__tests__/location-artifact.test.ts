@@ -6,15 +6,6 @@ import { resolveLocationDetail } from "../location-detail-resolver";
 
 export {};
 
-jest.mock("@/utils/addressLoader", () => {
-  const actual = jest.requireActual("@/utils/addressLoader");
-  return {
-    ...actual,
-    loadAddressDataResult: jest.fn(),
-    loadKeyLocationsDataResult: jest.fn(),
-  };
-});
-
 jest.mock("@/utils/geoUtils", () => {
   const actual = jest.requireActual("@/utils/geoUtils");
   return {
@@ -32,7 +23,8 @@ type ModuleState = {
 };
 
 type SourceUris = {
-  mainFacilitiesUri: string;
+  placesJsonLdUri: string;
+  osmMirrorUri: string;
   keyLocationsUri: string;
   townGeoJsonUri: string;
 };
@@ -57,24 +49,21 @@ const originalReadFileSync = fs.readFileSync.bind(fs);
 const originalReadFile = fs.promises.readFile.bind(fs.promises);
 
 const sourceUris: SourceUris = {
-  mainFacilitiesUri: "https://fixtures.example.test/v2/main_facilities.json",
-  keyLocationsUri: "https://fixtures.example.test/v2/key_locations.json",
-  townGeoJsonUri: "https://fixtures.example.test/v2/chiyoda-towns.geojson",
+  placesJsonLdUri: "https://fixtures.example.test/places.jsonld",
+  osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
+  keyLocationsUri: "https://fixtures.example.test/key_locations.json",
+  townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
 };
 
-const mainFacilities = [
+const routeDestinations = [
   {
-    category: "区役所・出張所",
-    "category:en": "city-office-and-branch-offices",
+    category: "行政・相談",
+    "category:en": "government-and-consultation",
     locations: [
       {
         name: "千代田区役所",
         lat: 35.694,
         lng: 139.753,
-        copyright: "© OpenStreetMap contributors",
-        licence: "Open Database License (ODbL) 1.0",
-        licenceUri: "https://opendatacommons.org/licenses/odbl/",
-        description: "千代田区の行政窓口",
       },
     ],
   },
@@ -131,8 +120,8 @@ const validArtifact = {
   status: "validated",
   sourceUris,
   sources: {
-    // mainFacilities is the home "よく利用される施設" data.
-    mainFacilities,
+    // routeDestinations is the home "よく利用される施設" data.
+    routeDestinations,
     // keyLocations is the category and detail data. It deliberately has no area.
     keyLocations,
     // townGeoJson is the build-time source used to derive display regions.
@@ -294,8 +283,6 @@ const originalFetch = global.fetch;
 describe("readLocationArtifact runtime artifact boundary", () => {
   let readFileSyncSpy: jest.SpyInstance;
   let readFileSpy: jest.SpyInstance;
-  let legacyMainFacilitiesSpy: jest.SpyInstance;
-  let legacyKeyLocationsSpy: jest.SpyInstance;
   let geoJsonProviderSpy: jest.SpyInstance;
 
   const hasPublicReader =
@@ -334,27 +321,14 @@ describe("readLocationArtifact runtime artifact boundary", () => {
       }) as typeof fs.promises.readFile,
     );
 
-    // These are the forbidden pre-Q21 sources. Make an accidental call fail
+    // This is a forbidden runtime source. Make an accidental call fail
     // immediately and retain a direct interaction assertion below.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- access the mocked forbidden-source boundary
-    const legacySources = require("@/utils/addressLoader") as {
-      loadAddressDataResult: jest.MockedFunction<() => Promise<unknown>>;
-      loadKeyLocationsDataResult: jest.MockedFunction<() => Promise<unknown>>;
-    };
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- access the mocked forbidden-source boundary
     const geoJsonSources = require("@/utils/geoUtils") as {
       loadGeoJSON: jest.MockedFunction<() => Promise<unknown>>;
     };
 
-    legacyMainFacilitiesSpy = legacySources.loadAddressDataResult;
-    legacyKeyLocationsSpy = legacySources.loadKeyLocationsDataResult;
     geoJsonProviderSpy = geoJsonSources.loadGeoJSON;
-    legacyMainFacilitiesSpy.mockReset().mockRejectedValue(
-      new Error("legacy main-facilities source was called"),
-    );
-    legacyKeyLocationsSpy.mockReset().mockRejectedValue(
-      new Error("legacy key-locations source was called"),
-    );
     geoJsonProviderSpy.mockReset().mockRejectedValue(
       new Error("GeoJSON provider was called"),
     );
@@ -379,7 +353,7 @@ describe("readLocationArtifact runtime artifact boundary", () => {
         status: "validated",
         sourceUris,
         sources: expect.objectContaining({
-          mainFacilities,
+          routeDestinations,
           keyLocations,
           townGeoJson,
         }),
@@ -390,12 +364,10 @@ describe("readLocationArtifact runtime artifact boundary", () => {
     });
     expectArtifactReadAttempt(readFileSyncSpy, readFileSpy);
     expect(global.fetch).not.toHaveBeenCalled();
-    expect(legacyMainFacilitiesSpy).not.toHaveBeenCalled();
-    expect(legacyKeyLocationsSpy).not.toHaveBeenCalled();
     expect(geoJsonProviderSpy).not.toHaveBeenCalled();
 
     const artifact = (result as { status: "success"; artifact: typeof validArtifact }).artifact;
-    expect(artifact.sources.mainFacilities).toEqual(mainFacilities);
+    expect(artifact.sources.routeDestinations).toEqual(routeDestinations);
     expect(artifact.sources.keyLocations).toEqual(keyLocations);
     expect(artifact.sources.townGeoJson).toEqual(townGeoJson);
     expect(artifact.sources.keyLocations[0].locations[0]).not.toHaveProperty("area");
@@ -407,16 +379,6 @@ describe("readLocationArtifact runtime artifact boundary", () => {
     const artifactWithNullOptionals = artifactWith({
       sources: {
         ...validArtifact.sources,
-        mainFacilities: [{
-          ...mainFacilities[0],
-          locations: [{
-            ...mainFacilities[0].locations[0],
-            description: null,
-            imageUri: null,
-            imageCopyright: null,
-            uri: null,
-          }],
-        }],
         keyLocations: [{
           ...keyLocations[0],
           locations: [{
@@ -452,8 +414,6 @@ describe("readLocationArtifact runtime artifact boundary", () => {
     });
     expectArtifactReadAttempt(readFileSyncSpy, readFileSpy);
     expect(global.fetch).not.toHaveBeenCalled();
-    expect(legacyMainFacilitiesSpy).not.toHaveBeenCalled();
-    expect(legacyKeyLocationsSpy).not.toHaveBeenCalled();
     expect(geoJsonProviderSpy).not.toHaveBeenCalled();
   });
 
@@ -477,8 +437,6 @@ describe("readLocationArtifact runtime artifact boundary", () => {
 
       expectReaderError(result, readFileSyncSpy, readFileSpy);
       expect(global.fetch).not.toHaveBeenCalled();
-      expect(legacyMainFacilitiesSpy).not.toHaveBeenCalled();
-      expect(legacyKeyLocationsSpy).not.toHaveBeenCalled();
       expect(geoJsonProviderSpy).not.toHaveBeenCalled();
     },
   );
@@ -489,11 +447,20 @@ describe("readLocationArtifact runtime artifact boundary", () => {
     ["malformed source URI", artifactWith({
       sourceUris: { ...sourceUris, townGeoJsonUri: "not-an-absolute-uri" },
     })],
-    ["missing main facilities", artifactWith({
-      sources: { ...validArtifact.sources, mainFacilities: undefined },
+    ["missing route destinations", artifactWith({
+      sources: { ...validArtifact.sources, routeDestinations: undefined },
     })],
-    ["empty home categories", artifactWith({
-      sources: { ...validArtifact.sources, mainFacilities: [] },
+    ["empty route destination categories", artifactWith({
+      sources: { ...validArtifact.sources, routeDestinations: [] },
+    })],
+    ["invalid route destination location", artifactWith({
+      sources: {
+        ...validArtifact.sources,
+        routeDestinations: [{
+          ...routeDestinations[0],
+          locations: [{ ...routeDestinations[0].locations[0], name: "" }],
+        }],
+      },
     })],
     ["missing key locations", artifactWith({
       sources: { ...validArtifact.sources, keyLocations: undefined },
@@ -542,8 +509,6 @@ describe("readLocationArtifact runtime artifact boundary", () => {
 
       expectReaderError(result, readFileSyncSpy, readFileSpy);
       expect(global.fetch).not.toHaveBeenCalled();
-      expect(legacyMainFacilitiesSpy).not.toHaveBeenCalled();
-      expect(legacyKeyLocationsSpy).not.toHaveBeenCalled();
       expect(geoJsonProviderSpy).not.toHaveBeenCalled();
     },
   );
@@ -573,7 +538,6 @@ describe("readLocationArtifact runtime artifact boundary", () => {
 
     expectReaderError(result, readFileSyncSpy, readFileSpy);
     expect(global.fetch).not.toHaveBeenCalled();
-    expect(legacyKeyLocationsSpy).not.toHaveBeenCalled();
     expect(geoJsonProviderSpy).not.toHaveBeenCalled();
   });
 
@@ -599,7 +563,6 @@ describe("readLocationArtifact runtime artifact boundary", () => {
 
     expectReaderError(result, readFileSyncSpy, readFileSpy);
     expect(global.fetch).not.toHaveBeenCalled();
-    expect(legacyKeyLocationsSpy).not.toHaveBeenCalled();
     expect(geoJsonProviderSpy).not.toHaveBeenCalled();
   });
 });

@@ -121,23 +121,21 @@ const serverGeoJson = {
 const validArtifact: LocationArtifact = {
   status: "validated",
   sourceUris: {
-    mainFacilitiesUri: "https://fixtures.example.test/v2/main_facilities.json",
-    keyLocationsUri: "https://fixtures.example.test/v2/key_locations.json",
-    townGeoJsonUri: "https://fixtures.example.test/v2/chiyoda-towns.geojson",
+    placesJsonLdUri: "https://fixtures.example.test/places.jsonld",
+    osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
+    keyLocationsUri: "https://fixtures.example.test/key_locations.json",
+    townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
   },
   sources: {
-    mainFacilities: [
+    routeDestinations: [
       {
-        category: "公共施設",
-        "category:en": "public-facilities",
+        category: "行政・相談",
+        "category:en": "government-and-consultation",
         locations: [
           {
             name: "千代田区役所",
             lat: 35.694,
             lng: 139.753,
-            copyright: "千代田区",
-            licence: "CC BY 4.0",
-            licenceUri: "https://creativecommons.org/licenses/by/4.0/",
           },
         ],
       },

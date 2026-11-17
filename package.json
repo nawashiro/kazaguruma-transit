@@ -42,6 +42,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "import-gtfs": "tsx scripts/import-gtfs.ts",
+    "update-destinations": "tsx scripts/update-destinations.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

@@ -1,18 +1,18 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import type { AddressCategory, AddressLocation } from "@/utils/addressLoader";
+import type {
+  RouteDestinationCategory,
+  RouteDestinationLocation,
+} from "@/types/route-destinations";
 import LocationSuggestions from "../LocationSuggestions";
 
-const facility: AddressLocation = {
+const facility: RouteDestinationLocation = {
   name: "千代田区役所のとても長い施設名と地域福祉交通の総合相談窓口ABCDEFGHIJKLMNOPQRSTUVWXYZ",
   lat: 35.694,
   lng: 139.753,
-  copyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
 };
-const categories: AddressCategory[] = [
+const categories: RouteDestinationCategory[] = [
   { category: "公共施設と地域福祉交通の長いカテゴリ名ABCDEFGHIJKLMNOPQRSTUVWXYZ", "category:en": "public", locations: [facility] },
   { category: "医療機関", "category:en": "medical", locations: [{ ...facility, name: "病院" }] },
 ];

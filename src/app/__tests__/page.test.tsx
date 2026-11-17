@@ -7,7 +7,6 @@ import type {
   LocationArtifact,
   LocationArtifactReadResult,
 } from "@/lib/location/location-artifact";
-import type { AddressLocation } from "@/utils/addressLoader";
 
 const mockRouterPush = jest.fn();
 const mockReadLocationArtifact = jest.fn();
@@ -16,27 +15,25 @@ const ANNOUNCEMENT_INFORMATION =
   "運行情報の更新";
 const ANNOUNCEMENT_URL = "/service-update";
 
-const popularFacility: AddressLocation = {
+const popularFacility = {
   name: "千代田区役所",
   lat: 35.694,
   lng: 139.753,
-  copyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
 };
 
 const successfulArtifact: LocationArtifact = {
   status: "validated",
   sourceUris: {
-    mainFacilitiesUri: "https://fixtures.example.test/v2/main_facilities.json",
-    keyLocationsUri: "https://fixtures.example.test/v2/key_locations.json",
-    townGeoJsonUri: "https://fixtures.example.test/v2/chiyoda-towns.geojson",
+    placesJsonLdUri: "https://fixtures.example.test/places.jsonld",
+    osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
+    keyLocationsUri: "https://fixtures.example.test/key_locations.json",
+    townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
   },
   sources: {
-    mainFacilities: [
+    routeDestinations: [
       {
-        category: "公共施設",
-        "category:en": "public-facilities",
+        category: "行政・相談",
+        "category:en": "government-and-consultation",
         locations: [popularFacility],
       },
     ],
@@ -93,7 +90,7 @@ const emptyPopularArtifact: LocationArtifact = {
   ...successfulArtifact,
   sources: {
     ...successfulArtifact.sources,
-    mainFacilities: [],
+    routeDestinations: [],
   },
 };
 
@@ -394,13 +391,84 @@ describe("Home", () => {
     }
   });
 
+  it("artifactの掲載20件を3グループで表示し、実行時に外部取得をしない", async () => {
+    const routeDestinations = [
+      {
+        category: "行政・相談",
+        "category:en": "government-and-consultation",
+        names: [
+          "千代田区役所",
+          "千代田区 富士見出張所・区民館",
+          "千代田区神保町出張所・区民館",
+          "千代田区役所 神田公園出張所・区民館",
+          "千代田区役所和泉橋出張所",
+        ],
+      },
+      {
+        category: "子育て・福祉",
+        "category:en": "childcare-and-welfare",
+        names: [
+          "千代田区立障害者福祉センター　えみふる",
+          "千代田区障害者よろず相談 Light",
+          "千代田区立一番町高齢者在宅介護支援センター",
+          "岩本町ほほえみプラザ",
+          "ちよだパークサイドプラザ",
+          "神田児童館",
+          "西神田児童・家庭支援センター",
+          "千代田区立四番町児童館",
+          "一番町児童館",
+          "富士見みらい館",
+        ],
+      },
+      {
+        category: "学び・図書館",
+        "category:en": "learning-and-libraries",
+        names: [
+          "千代田区立千代田図書館",
+          "昌平まちかど図書館",
+          "千代田区立神田まちかど図書館",
+          "ちよだパークサイドプラザ区民図書室",
+          "千代田区立四番町図書館",
+        ],
+      },
+    ].map(({ category, "category:en": categoryEn, names }) => ({
+      category,
+      "category:en": categoryEn,
+      locations: names.map((name) => ({ name, lat: 35.694, lng: 139.753 })),
+    }));
+
+    mockReadLocationArtifact.mockReturnValueOnce({
+      status: "success",
+      artifact: {
+        ...successfulArtifact,
+        sources: {
+          ...successfulArtifact.sources,
+          routeDestinations,
+        },
+      },
+    } satisfies LocationArtifactReadResult);
+
+    await renderPublicHome();
+
+    expect(mockReadLocationArtifact).toHaveBeenCalledTimes(1);
+    expect(browserFetchSpy).not.toHaveBeenCalled();
+    for (const category of routeDestinations) {
+      fireEvent.click(screen.getByText(category.category, { selector: "summary" }));
+      for (const location of category.locations) {
+        expect(screen.getByRole("button", { name: location.name })).toBeInTheDocument();
+      }
+    }
+    expect(routeDestinations).toHaveLength(3);
+    expect(routeDestinations.flatMap((category) => category.locations)).toHaveLength(20);
+  });
+
   it("server data boundaryからpopular施設を受け取り、ブラウザCDN fetchを開始しない", async () => {
     await renderPublicHome();
 
     expect(mockReadLocationArtifact).toHaveBeenCalledTimes(1);
     expect(mockReadLocationArtifact).toHaveBeenCalledWith();
     expect(browserFetchSpy).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByText("公共施設", { selector: "summary" }));
+    fireEvent.click(screen.getByText("行政・相談", { selector: "summary" }));
     const popularFacilityButton = screen.queryByRole("button", { name: "千代田区役所" });
     expect(popularFacilityButton).toBeInTheDocument();
   });
@@ -408,7 +476,7 @@ describe("Home", () => {
   it("注入されたpopular施設の選択を既存の目的地入力へ引き継ぐ", async () => {
     await renderPublicHome();
 
-    fireEvent.click(screen.getByText("公共施設", { selector: "summary" }));
+    fireEvent.click(screen.getByText("行政・相談", { selector: "summary" }));
     fireEvent.click(screen.getByRole("button", { name: "千代田区役所" }));
     expect(screen.getByTestId("selected-destination")).toHaveTextContent("千代田区役所");
     expect(browserFetchSpy).not.toHaveBeenCalled();

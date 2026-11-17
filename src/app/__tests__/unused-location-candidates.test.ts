@@ -79,11 +79,12 @@ function exportedNames(sourcePath: string): ProductionExportName[] {
 }
 
 describe("Spec023 T053A unused production candidate boundaries", () => {
-  it("removes legacy loadAddressData while retaining loadAddressDataResult", () => {
+  it("removes the unused address and key-location loaders", () => {
     const names = exportedNames(ADDRESS_LOADER_SOURCE);
 
-    expect(names).toContain("loadAddressDataResult");
     expect(names).not.toContain("loadAddressData");
+    expect(names).not.toContain("loadAddressDataResult");
+    expect(names).not.toContain("loadKeyLocationsDataResult");
   });
 
   it("removes the unused LocationCard production module", () => {

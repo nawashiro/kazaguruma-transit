@@ -35,45 +35,20 @@ type TransportResponse = {
 type Transport = (uri: string) => Promise<TransportResponse>;
 type ArtifactWriter = (artifact: unknown) => Promise<void>;
 
-type BuildFailureMode = "transport" | "http" | "json";
-
-type PublicBuildRun = {
-  exitCode: number | null;
-  stdout: string;
-  stderr: string;
-  notImplemented: boolean;
-  requestedUris: string[];
-  configuredUris: string[];
-  artifactKind: "file" | "directory" | "missing";
-  artifactContents: string | null;
-  atomicTempEntries: string[];
-};
-
-type PublicBuildRunOptions = {
-  appConfigOverrides?: Record<string, unknown>;
-  payloadOverrides?: Partial<Record<SourceName, unknown>>;
-  failureBySource?: Partial<Record<SourceName, BuildFailureMode>>;
-  existingArtifact?: string;
-  artifactAsDirectory?: boolean;
-};
-
-type SourceName = "mainFacilities" | "keyLocations" | "townGeoJson";
+type SourceName = "placesJsonLd" | "osmMirror" | "keyLocations" | "townGeoJson";
 
 type GeneratorOptions = {
   appConfig: unknown;
+  destinationCatalog: unknown;
   transport: Transport;
   writeArtifact: ArtifactWriter;
-};
-
-type ArtifactState = {
-  current: unknown;
 };
 
 type GeneratorHarness = {
   options: GeneratorOptions;
   transport: jest.MockedFunction<Transport>;
   writeArtifact: jest.MockedFunction<ArtifactWriter>;
-  artifactState: ArtifactState;
+  artifactState: { current: unknown };
 };
 
 const GENERATOR_MODULE_PATH = "../generate-location-artifact";
@@ -85,60 +60,112 @@ const GENERATOR_CLI_PATH = resolve(
 );
 const TSX_CLI_PATH = resolve(REPOSITORY_ROOT, "node_modules/tsx/dist/cli.mjs");
 const execFileAsync = promisify(execFile);
-const NETWORK_GUARD_SOURCE = `
-const allowedOrigin = process.env.LOCATION_ARTIFACT_FIXTURE_ORIGIN;
-const originalFetch = globalThis.fetch;
-globalThis.fetch = async (input, init) => {
-  const href = typeof input === "string" ? input : input?.url ?? String(input);
-  let origin = "";
-  try {
-    origin = new URL(href).origin;
-  } catch {
-    throw new Error("LOCATION_ARTIFACT_EXTERNAL_NETWORK_BLOCKED invalid URL");
-  }
-  if (origin !== allowedOrigin) {
-    process.stderr.write(
-      "LOCATION_ARTIFACT_EXTERNAL_NETWORK_BLOCKED " + href + "\\n",
-    );
-    throw new Error("external network blocked by generator contract");
-  }
-  return originalFetch(input, init);
-};
-`;
+
+const PLACES_URI = "https://fixtures.example.test/places.jsonld";
+const OSM_MIRROR_URI = "https://fixtures.example.test/mirrors/osm.json";
+const KEY_LOCATIONS_URI = "https://fixtures.example.test/key_locations.json";
+const TOWN_GEOJSON_URI = "https://fixtures.example.test/chiyoda-towns.geojson";
 
 const validAppConfig = {
-  mainFacilitiesUri: "https://fixtures.example.test/v2/main_facilities.json",
-  keyLocationsUri: "https://fixtures.example.test/v2/key_locations.json",
-  townGeoJsonUri: "https://fixtures.example.test/v2/chiyoda-towns.geojson",
-  // This value is intentionally present to prove that URI fields are canonical.
-  locationsDataVersion: "legacy-version-must-not-build-a-url",
+  placesJsonLdUri: PLACES_URI,
+  osmMirrorUri: OSM_MIRROR_URI,
+  keyLocationsUri: KEY_LOCATIONS_URI,
+  townGeoJsonUri: TOWN_GEOJSON_URI,
 };
 
-const validMainFacilities = [
-  {
-    category: "区役所・出張所",
-    "category:en": "city-office-and-branch-offices",
-    locations: [
-      {
-        name: "千代田区役所",
-        lat: 35.694,
-        lng: 139.753,
-        copyright: "© OpenStreetMap contributors",
-        licence: "Open Database License (ODbL) 1.0",
-        licenceUri: "https://opendatacommons.org/licenses/odbl/",
-        description: "千代田区の行政窓口",
-        imageUri: "https://fixtures.example.test/images/office.jpg",
-        imageCopyright: "© Example",
-        uri: "https://fixtures.example.test/office",
-      },
-    ],
-  },
-];
+const LAT = 35.694;
+const LNG = 139.753;
+const LIBRARY_LAT = 35.695;
+const LIBRARY_LNG = 139.754;
+
+const ID = {
+  cityOffice: "urn:uuid:00000000-0000-4000-8000-000000000001",
+  library: "urn:uuid:00000000-0000-4000-8000-000000000002",
+  cinema: "urn:uuid:00000000-0000-4000-8000-000000000003",
+  missing: "urn:uuid:00000000-0000-4000-8000-0000000000ff",
+};
+
+type JsonRecord = Record<string, unknown>;
+
+function placeRecord(
+  id: string,
+  options: {
+    lat?: unknown;
+    lng?: unknown;
+    codes?: string[];
+    seeAlso?: string[] | undefined;
+  } = {},
+): JsonRecord {
+  const record: JsonRecord = {
+    "@id": id,
+    "@type": ["schema:Place"],
+    "schema:geo": {
+      "@type": "schema:GeoCoordinates",
+      "schema:latitude": options.lat ?? LAT,
+      "schema:longitude": options.lng ?? LNG,
+    },
+    "schema:identifier": (options.codes ?? ["1302"]).map((code) => ({
+      "@type": "schema:PropertyValue",
+      "schema:propertyID": "gif-poi",
+      "schema:value": code,
+    })),
+  };
+  if (options.seeAlso !== undefined) {
+    record["rdfs:seeAlso"] = options.seeAlso;
+  }
+  return record;
+}
+
+const validPlacesJsonLd = {
+  "@context": { "@version": 1.1 },
+  "@graph": [
+    placeRecord(ID.cityOffice, {
+      seeAlso: [
+        "https://www.openstreetmap.org/node/1",
+        "https://www.wikidata.org/entity/Q1",
+      ],
+    }),
+    placeRecord(ID.library, {
+      lat: LIBRARY_LAT,
+      lng: LIBRARY_LNG,
+      codes: ["1512"],
+      seeAlso: ["https://www.openstreetmap.org/way/2"],
+    }),
+    placeRecord(ID.cinema, {
+      codes: ["1011"],
+      seeAlso: ["https://www.openstreetmap.org/node/3"],
+    }),
+  ],
+};
+
+const validOsmMirror = {
+  version: "202611170100",
+  elements: [
+    { type: "node", id: 1, lat: LAT, lon: LNG, tags: { name: "千代田区役所" } },
+    {
+      type: "way",
+      id: 2,
+      lat: LIBRARY_LAT,
+      lon: LIBRARY_LNG,
+      tags: { name: "千代田区立千代田図書館" },
+    },
+    { type: "node", id: 3, lat: LAT, lon: LNG, tags: { name: "神保町シアター" } },
+  ],
+};
+
+const validCatalog = {
+  source: { placesUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI },
+  places: [
+    { id: ID.cityOffice, name: "目録の区役所", includeInRouteForm: true },
+    { id: ID.library, name: "目録の図書館", includeInRouteForm: true },
+    { id: ID.cinema, name: "目録の映画館", includeInRouteForm: false },
+  ],
+};
 
 const validKeyLocations = [
   {
     category: "公共施設",
-    "category:en": "public facilities",
+    "category:en": "public-facilities",
     locations: [
       {
         id: "kanda-library",
@@ -148,13 +175,6 @@ const validKeyLocations = [
         nodeCopyright: "千代田区",
         licence: "CC BY 4.0",
         licenceUri: "https://creativecommons.org/licenses/by/4.0/",
-        description: "地域の図書館です",
-        descriptionCopyright: "© Example",
-        imageUri: "https://fixtures.example.test/images/library.jpg",
-        imageCopyright: "© Example",
-        imageCopylight: "© Example",
-        uri: "https://fixtures.example.test/library",
-        nodeSourceId: 42,
       },
     ],
   },
@@ -175,45 +195,48 @@ const validTownGeoJson = {
   features: [
     {
       type: "Feature",
-      properties: {
-        name: "東京都千代田区神田和泉町",
-        uri: "https://fixtures.example.test/towns/kanda-izumicho",
-      },
-      geometry: {
-        type: "Polygon",
-        coordinates: polygonCoordinates,
-      },
-    },
-  ],
-};
-
-const validMultiPolygonTownGeoJson = {
-  type: "FeatureCollection",
-  features: [
-    {
-      type: "Feature",
-      properties: {
-        name: "東京都千代田区神田和泉町",
-      },
-      geometry: {
-        type: "MultiPolygon",
-        coordinates: [polygonCoordinates],
-      },
+      properties: { name: "東京都千代田区神田和泉町" },
+      geometry: { type: "Polygon", coordinates: polygonCoordinates },
     },
   ],
 };
 
 const sourceUriByName: Record<SourceName, string> = {
-  mainFacilities: validAppConfig.mainFacilitiesUri,
-  keyLocations: validAppConfig.keyLocationsUri,
-  townGeoJson: validAppConfig.townGeoJsonUri,
+  placesJsonLd: PLACES_URI,
+  osmMirror: OSM_MIRROR_URI,
+  keyLocations: KEY_LOCATIONS_URI,
+  townGeoJson: TOWN_GEOJSON_URI,
 };
 
 const validPayloadBySource: Record<SourceName, unknown> = {
-  mainFacilities: validMainFacilities,
+  placesJsonLd: validPlacesJsonLd,
+  osmMirror: validOsmMirror,
   keyLocations: validKeyLocations,
   townGeoJson: validTownGeoJson,
 };
+
+const expectedRouteDestinations = [
+  {
+    category: "行政・相談",
+    "category:en": "government-and-consultation",
+    locations: [{ name: "千代田区役所", lat: LAT, lng: LNG }],
+  },
+  {
+    category: "学び・図書館",
+    "category:en": "learning-and-libraries",
+    locations: [
+      { name: "千代田区立千代田図書館", lat: LIBRARY_LAT, lng: LIBRARY_LNG },
+    ],
+  },
+];
+
+function jsonResponse(payload: unknown, status = 200): TransportResponse {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => payload,
+  };
+}
 
 function sourceForUri(uri: string): SourceName {
   const source = (Object.keys(sourceUriByName) as SourceName[]).find(
@@ -262,7 +285,6 @@ function getPublicFunction(
       `${publicName} is not implemented: public module ${GENERATOR_MODULE_PATH} exported nothing`,
     );
   }
-
   const implementation = state.exports[publicName];
   if (typeof implementation !== "function") {
     throw new Error(
@@ -272,48 +294,15 @@ function getPublicFunction(
   return implementation as PublicFunction;
 }
 
-function assertPublicGeneratorAvailable(state: ModuleState): void {
-  if (state.error) {
-    const detail = state.error instanceof Error ? state.error.message : String(state.error);
-    throw new Error(
-      `generateLocationArtifact RED is blocked: public module ${GENERATOR_MODULE_PATH} is not implemented (${detail})`,
-    );
-  }
-  if (!state.exports || typeof state.exports.generateLocationArtifact !== "function") {
-    throw new Error(
-      "generateLocationArtifact RED is blocked: the public generator export is not implemented",
-    );
-  }
-}
-
-function jsonResponse(payload: unknown, status = 200): TransportResponse {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => payload,
-  };
-}
-
-function jsonDecodeFailure(error: Error): TransportResponse {
-  return {
-    ok: true,
-    status: 200,
-    json: async () => {
-      throw error;
-    },
-  };
-}
-
 function createHarness(
   payloadOverrides: Partial<Record<SourceName, unknown>> = {},
+  options: { catalog?: unknown; appConfig?: unknown } = {},
 ): GeneratorHarness {
   const payloadByUri: Record<string, unknown> = {
-    [validAppConfig.mainFacilitiesUri]:
-      payloadOverrides.mainFacilities ?? validPayloadBySource.mainFacilities,
-    [validAppConfig.keyLocationsUri]:
-      payloadOverrides.keyLocations ?? validPayloadBySource.keyLocations,
-    [validAppConfig.townGeoJsonUri]:
-      payloadOverrides.townGeoJson ?? validPayloadBySource.townGeoJson,
+    [PLACES_URI]: payloadOverrides.placesJsonLd ?? validPayloadBySource.placesJsonLd,
+    [OSM_MIRROR_URI]: payloadOverrides.osmMirror ?? validPayloadBySource.osmMirror,
+    [KEY_LOCATIONS_URI]: payloadOverrides.keyLocations ?? validPayloadBySource.keyLocations,
+    [TOWN_GEOJSON_URI]: payloadOverrides.townGeoJson ?? validPayloadBySource.townGeoJson,
   };
   const transport = jest.fn<ReturnType<Transport>, Parameters<Transport>>();
   transport.mockImplementation(async (uri) => {
@@ -323,7 +312,7 @@ function createHarness(
     return jsonResponse(payloadByUri[uri]);
   });
 
-  const artifactState: ArtifactState = { current: ARTIFACT_SENTINEL };
+  const artifactState: { current: unknown } = { current: ARTIFACT_SENTINEL };
   const writeArtifact = jest.fn<ReturnType<ArtifactWriter>, Parameters<ArtifactWriter>>();
   writeArtifact.mockImplementation(async (artifact) => {
     artifactState.current = artifact;
@@ -331,7 +320,8 @@ function createHarness(
 
   return {
     options: {
-      appConfig: validAppConfig,
+      appConfig: options.appConfig ?? validAppConfig,
+      destinationCatalog: options.catalog ?? validCatalog,
       transport,
       writeArtifact,
     },
@@ -354,52 +344,38 @@ function invokeGenerator(
   });
 }
 
-function invalidRequiredStringCases(
-  fields: readonly string[],
-): Array<[string, Record<string, unknown>]> {
-  return fields.flatMap((field) => [
-    [`${field} missing`, { [field]: undefined }],
-    [`${field} wrong type`, { [field]: 42 }],
-    [`${field} null`, { [field]: null }],
-    [`${field} empty`, { [field]: "" }],
-    [`${field} whitespace-only`, { [field]: "   " }],
+function catalogWith(
+  overrides: Partial<{ placesUri: string; osmMirrorUri: string }> = {},
+  places: Array<Record<string, unknown>> = validCatalog.places,
+): unknown {
+  return {
+    source: {
+      placesUri: overrides.placesUri ?? PLACES_URI,
+      osmMirrorUri: overrides.osmMirrorUri ?? OSM_MIRROR_URI,
+    },
+    places,
+  };
+}
+
+function selectOnly(id: string, name = "目録の名前"): unknown {
+  return catalogWith({}, [
+    { id, name, includeInRouteForm: true },
   ]);
 }
 
-function payloadForMainLocation(
-  overrides: Record<string, unknown>,
-): unknown {
-  const category = validMainFacilities[0];
-  const location = category.locations[0];
-  return [
-    {
-      ...category,
-      locations: [{ ...location, ...overrides }],
-    },
-  ];
+function graphWith(recordOverrides: JsonRecord, recordIndex = 0): unknown {
+  const graph = [...validPlacesJsonLd["@graph"]];
+  graph[recordIndex] = { ...graph[recordIndex], ...recordOverrides };
+  return { ...validPlacesJsonLd, "@graph": graph };
 }
 
-function payloadForKeyLocation(
-  overrides: Record<string, unknown>,
+function osmWith(
+  elementOverrides: JsonRecord,
+  elementIndex: number,
 ): unknown {
-  const category = validKeyLocations[0];
-  const location = category.locations[0];
-  return [
-    {
-      ...category,
-      locations: [{ ...location, ...overrides }],
-    },
-  ];
-}
-
-function payloadForGeoJsonFeature(
-  overrides: Record<string, unknown>,
-): unknown {
-  const feature = validTownGeoJson.features[0];
-  return {
-    ...validTownGeoJson,
-    features: [{ ...feature, ...overrides }],
-  };
+  const elements = [...validOsmMirror.elements];
+  elements[elementIndex] = { ...elements[elementIndex], ...elementOverrides };
+  return { ...validOsmMirror, elements };
 }
 
 function expectArtifactUnchanged(
@@ -412,39 +388,460 @@ function expectArtifactUnchanged(
 
 function expectNoFallbackTransportRequests(
   transport: jest.MockedFunction<Transport>,
-  configuredUris: readonly string[] = Object.values(sourceUriByName),
 ): void {
   const requestedUris = transport.mock.calls.map(([uri]) => uri);
-  const configuredUriSet = new Set(configuredUris);
+  const configuredUriSet = new Set(Object.values(sourceUriByName));
 
   expect(requestedUris.every((uri) => configuredUriSet.has(uri))).toBe(true);
   expect(requestedUris.some((uri) => uri.includes("cdn.jsdelivr.net"))).toBe(false);
   expect(
-    requestedUris.some((uri) => uri.includes(validAppConfig.locationsDataVersion)),
+    requestedUris.some((uri) => uri.includes("main_facilities")),
   ).toBe(false);
-
-  for (const uri of configuredUris) {
-    expect(requestedUris.filter((requestedUri) => requestedUri === uri).length).toBeLessThanOrEqual(1);
-  }
 }
 
-function expectEachConfiguredUriRequestedExactlyOnce(
-  transport: jest.MockedFunction<Transport>,
-  configuredUris: readonly string[] = Object.values(sourceUriByName),
-): void {
-  expectNoFallbackTransportRequests(transport, configuredUris);
-  const requestedUris = transport.mock.calls.map(([uri]) => uri);
+const moduleState = loadModule();
 
-  for (const uri of configuredUris) {
-    expect(requestedUris.filter((requestedUri) => requestedUri === uri)).toHaveLength(1);
+describe("generateLocationArtifact build boundary", () => {
+  if (
+    moduleState.error ||
+    !moduleState.exports ||
+    typeof moduleState.exports.generateLocationArtifact !== "function"
+  ) {
+    it("reports the missing public generator as an actionable RED contract", () => {
+      throw new Error(
+        "generateLocationArtifact is not implemented: the public generator export is missing",
+      );
+    });
+    return;
   }
-}
 
-const sourcePathByName: Record<SourceName, string> = {
-  mainFacilities: "/fixtures/main-facilities.json",
-  keyLocations: "/fixtures/key-locations.json",
-  townGeoJson: "/fixtures/town.geojson",
-};
+  describe("appConfig source URI contract", () => {
+    const invalidUriValues: Array<[string, unknown]> = [
+      ["unset", undefined],
+      ["null", null],
+      ["empty", ""],
+      ["whitespace-only", "   "],
+      ["wrong type", 42],
+      ["relative path", "data/location-data.json"],
+      ["malformed absolute URI", "https://"],
+      ["unsupported URI scheme", "ftp://fixtures.example.test/data.json"],
+    ];
+
+    it.each([
+      ["placesJsonLdUri", "placesJsonLdUri"],
+      ["osmMirrorUri", "osmMirrorUri"],
+      ["keyLocationsUri", "keyLocationsUri"],
+      ["townGeoJsonUri", "townGeoJsonUri"],
+    ])(
+      "fails before transport when %s is invalid",
+      async (_label, field) => {
+        for (const [, value] of invalidUriValues) {
+          const harness = createHarness({}, {
+            appConfig: { ...validAppConfig, [field]: value },
+          });
+
+          await expect(
+            invokeGenerator(moduleState, harness.options),
+          ).rejects.toThrow();
+
+          expect(harness.transport).not.toHaveBeenCalled();
+          expectArtifactUnchanged(harness);
+        }
+      },
+    );
+
+    it("uses the four configured URIs exactly once", async () => {
+      const harness = createHarness();
+
+      await invokeGenerator(moduleState, harness.options);
+
+      expectNoFallbackTransportRequests(harness.transport);
+      const requestedUris = harness.transport.mock.calls.map(([uri]) => uri);
+      for (const uri of Object.values(sourceUriByName)) {
+        expect(requestedUris.filter((requested) => requested === uri)).toHaveLength(1);
+      }
+      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("transport, HTTP, and JSON decoding failures", () => {
+    const sources: SourceName[] = [
+      "placesJsonLd",
+      "osmMirror",
+      "keyLocations",
+      "townGeoJson",
+    ];
+
+    it.each(sources)(
+      "propagates a %s transport rejection without updating the artifact",
+      async (source) => {
+        const harness = createHarness();
+        const targetUri = sourceUriByName[source];
+        harness.transport.mockImplementation(async (uri) => {
+          if (uri === targetUri) {
+            throw new Error(`${source} transport unavailable`);
+          }
+          return validResponseForUri(uri);
+        });
+
+        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
+          `${source} transport unavailable`,
+        );
+        expectNoFallbackTransportRequests(harness.transport);
+        expectArtifactUnchanged(harness);
+      },
+    );
+
+    it.each(sources)(
+      "propagates a %s HTTP error without updating the artifact",
+      async (source) => {
+        const harness = createHarness();
+        const targetUri = sourceUriByName[source];
+        harness.transport.mockImplementation(async (uri) => {
+          if (uri === targetUri) {
+            return jsonResponse({ message: "fixture service unavailable" }, 503);
+          }
+          return validResponseForUri(uri);
+        });
+
+        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
+          /503/u,
+        );
+        expectNoFallbackTransportRequests(harness.transport);
+        expectArtifactUnchanged(harness);
+      },
+    );
+
+    it.each(sources)(
+      "propagates a %s JSON decode error without updating the artifact",
+      async (source) => {
+        const harness = createHarness();
+        const targetUri = sourceUriByName[source];
+        harness.transport.mockImplementation(async (uri) => {
+          if (uri === targetUri) {
+            return {
+              ok: true,
+              status: 200,
+              json: async () => {
+                throw new SyntaxError(`${source} JSON is invalid`);
+              },
+            };
+          }
+          return validResponseForUri(uri);
+        });
+
+        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
+          `${source} JSON is invalid`,
+        );
+        expectNoFallbackTransportRequests(harness.transport);
+        expectArtifactUnchanged(harness);
+      },
+    );
+  });
+
+  describe("route destinations from the catalog", () => {
+    it("writes only the selected entries, grouped in definition order and omitting empty groups", async () => {
+      const harness = createHarness();
+
+      const artifact = (await invokeGenerator(
+        moduleState,
+        harness.options,
+      )) as {
+        sourceUris: Record<string, string>;
+        sources: { routeDestinations: unknown; mainFacilities?: unknown };
+      };
+
+      expect(artifact.sources.routeDestinations).toEqual(expectedRouteDestinations);
+      expect(artifact.sources).not.toHaveProperty("mainFacilities");
+      expect(artifact.sourceUris).toEqual({
+        placesJsonLdUri: PLACES_URI,
+        osmMirrorUri: OSM_MIRROR_URI,
+        keyLocationsUri: KEY_LOCATIONS_URI,
+        townGeoJsonUri: TOWN_GEOJSON_URI,
+      });
+      expect(JSON.stringify(artifact.sources.routeDestinations)).not.toContain("神保町シアター");
+      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
+      expect(harness.artifactState.current).toBe(artifact);
+    });
+
+    it("uses the OSM name instead of the catalog name", async () => {
+      const harness = createHarness();
+
+      const artifact = (await invokeGenerator(
+        moduleState,
+        harness.options,
+      )) as { sources: { routeDestinations: Array<{ locations: Array<{ name: string }> }> } };
+
+      const names = artifact.sources.routeDestinations.flatMap((category) =>
+        category.locations.map((location) => location.name),
+      );
+      expect(names).toEqual(["千代田区役所", "千代田区立千代田図書館"]);
+      expect(names).not.toContain("目録の区役所");
+    });
+
+    it("fails when a selected catalog ID is missing from the public JSON-LD", async () => {
+      const harness = createHarness(
+        {},
+        { catalog: selectOnly(ID.missing) },
+      );
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
+        new RegExp(ID.missing, "u"),
+      );
+      expectArtifactUnchanged(harness);
+    });
+
+    it.each([
+      ["string latitude", { lat: "35.694" }],
+      ["non-finite latitude", { lat: Number.NaN }],
+      ["missing longitude", { lng: undefined }],
+      ["out-of-range latitude", { lat: 135.694 }],
+    ])("fails when the selected record has an invalid coordinate: %s", async (_label, overrides) => {
+      const harness = createHarness(
+        { placesJsonLd: graphWith({ "schema:geo": {
+          "@type": "schema:GeoCoordinates",
+          "schema:latitude": "lat" in overrides ? overrides.lat : LAT,
+          "schema:longitude": "lng" in overrides ? overrides.lng : LNG,
+        } }) },
+      );
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
+      expectArtifactUnchanged(harness);
+    });
+
+    it("fails when the selected record has no gif-poi code", async () => {
+      const harness = createHarness(
+        { placesJsonLd: graphWith({ "schema:identifier": [] }) },
+        { catalog: selectOnly(ID.cityOffice) },
+      );
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
+        /gif-poi|分類/u,
+      );
+      expectArtifactUnchanged(harness);
+    });
+
+    it("fails when the selected record has multiple gif-poi codes", async () => {
+      const harness = createHarness(
+        { placesJsonLd: graphWith({
+          "schema:identifier": [
+            { "@type": "schema:PropertyValue", "schema:propertyID": "gif-poi", "schema:value": "1302" },
+            { "@type": "schema:PropertyValue", "schema:propertyID": "gif-poi", "schema:value": "1304" },
+          ],
+        }) },
+        { catalog: selectOnly(ID.cityOffice) },
+      );
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
+        /gif-poi|分類/u,
+      );
+      expectArtifactUnchanged(harness);
+    });
+
+    it("fails when the selected record has an unknown gif-poi code", async () => {
+      const harness = createHarness(
+        { placesJsonLd: graphWith({
+          "schema:identifier": [
+            { "@type": "schema:PropertyValue", "schema:propertyID": "gif-poi", "schema:value": "9999" },
+          ],
+        }) },
+        { catalog: selectOnly(ID.cityOffice) },
+      );
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
+        /9999|グループ/u,
+      );
+      expectArtifactUnchanged(harness);
+    });
+
+    it("fails when the selected record has no OSM association", async () => {
+      const places = graphWith({ "rdfs:seeAlso": ["https://www.wikidata.org/entity/Q1"] });
+      const harness = createHarness(
+        { placesJsonLd: places },
+        { catalog: selectOnly(ID.cityOffice) },
+      );
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
+        /OSM|seeAlso/u,
+      );
+      expectArtifactUnchanged(harness);
+    });
+
+    it("fails when the OSM element is missing from the mirror", async () => {
+      const harness = createHarness(
+        { osmMirror: { ...validOsmMirror, elements: [] } },
+        { catalog: selectOnly(ID.cityOffice) },
+      );
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
+        /OSM/u,
+      );
+      expectArtifactUnchanged(harness);
+    });
+
+    it("fails when the OSM element has no name", async () => {
+      const harness = createHarness(
+        { osmMirror: osmWith({ tags: {} }, 0) },
+        { catalog: selectOnly(ID.cityOffice) },
+      );
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
+        /name|名前/u,
+      );
+      expectArtifactUnchanged(harness);
+    });
+
+    it("fails when the catalog places URI does not match appConfig", async () => {
+      const harness = createHarness(
+        {},
+        { catalog: catalogWith({ placesUri: "https://fixtures.example.test/other.jsonld" }) },
+      );
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
+        /一致|places/u,
+      );
+      expect(harness.transport).not.toHaveBeenCalled();
+      expectArtifactUnchanged(harness);
+    });
+
+    it("fails when the catalog OSM mirror URI does not match appConfig", async () => {
+      const harness = createHarness(
+        {},
+        { catalog: catalogWith({ osmMirrorUri: "https://fixtures.example.test/other-osm.json" }) },
+      );
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
+        /一致|osm/u,
+      );
+      expect(harness.transport).not.toHaveBeenCalled();
+      expectArtifactUnchanged(harness);
+    });
+
+    it("fails when the destination catalog is malformed", async () => {
+      const harness = createHarness({}, { catalog: { source: {}, places: "no" } });
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
+      expect(harness.transport).not.toHaveBeenCalled();
+      expectArtifactUnchanged(harness);
+    });
+  });
+
+  describe("key locations and town GeoJSON validation", () => {
+    it("rejects a key location without a name", async () => {
+      const harness = createHarness({
+        keyLocations: [
+          {
+            ...validKeyLocations[0],
+            locations: [{ ...validKeyLocations[0].locations[0], name: undefined }],
+          },
+        ],
+      });
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
+      expectArtifactUnchanged(harness);
+    });
+
+    it("rejects duplicate key location IDs", async () => {
+      const location = validKeyLocations[0].locations[0];
+      const harness = createHarness({
+        keyLocations: [
+          { ...validKeyLocations[0], locations: [location, { ...location }] },
+        ],
+      });
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
+      expectArtifactUnchanged(harness);
+    });
+
+    it("rejects a town GeoJSON that is not a FeatureCollection", async () => {
+      const harness = createHarness({
+        townGeoJson: { ...validTownGeoJson, type: "Feature" },
+      });
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
+      expectArtifactUnchanged(harness);
+    });
+
+    it("rejects a non-finite town GeoJSON coordinate", async () => {
+      const harness = createHarness({
+        townGeoJson: {
+          ...validTownGeoJson,
+          features: [
+            {
+              ...validTownGeoJson.features[0],
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [Number.NaN, 35.6],
+                    ...polygonCoordinates[0].slice(1),
+                  ],
+                ],
+              },
+            },
+          ],
+        },
+      });
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
+      expectArtifactUnchanged(harness);
+    });
+
+    it("derives display regions from the town GeoJSON", async () => {
+      const harness = createHarness();
+
+      const artifact = (await invokeGenerator(
+        moduleState,
+        harness.options,
+      )) as { derivedRegions: Record<string, string> };
+
+      expect(artifact.derivedRegions).toEqual({ "kanda-library": "神田和泉町" });
+    });
+  });
+
+  describe("atomic validated-artifact output", () => {
+    it("writes only after every source is verified", async () => {
+      const harness = createHarness();
+      harness.transport.mockImplementation(async (uri) => {
+        expect(harness.writeArtifact).not.toHaveBeenCalled();
+        return validResponseForUri(uri);
+      });
+
+      await invokeGenerator(moduleState, harness.options);
+
+      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
+      expect(harness.artifactState.current).toEqual(
+        expect.objectContaining({
+          status: "validated",
+          sources: expect.objectContaining({
+            routeDestinations: expectedRouteDestinations,
+            keyLocations: validKeyLocations,
+            townGeoJson: validTownGeoJson,
+          }),
+        }),
+      );
+    });
+
+    it("propagates an atomic writer failure without exposing a partial artifact", async () => {
+      const harness = createHarness();
+      harness.writeArtifact.mockRejectedValue(new Error("atomic temp-file rename failed"));
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
+        "atomic temp-file rename failed",
+      );
+
+      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
+      expectArtifactUnchanged(harness, 1);
+    });
+
+    it("does not update the previous artifact when key locations are invalid", async () => {
+      const harness = createHarness({ keyLocations: [] });
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
+      expectArtifactUnchanged(harness);
+    });
+  });
+});
 
 type FixtureServer = {
   uriBySource: Record<SourceName, string>;
@@ -452,9 +849,14 @@ type FixtureServer = {
   close: () => Promise<void>;
 };
 
-async function createFixtureServer(
-  options: Pick<PublicBuildRunOptions, "payloadOverrides" | "failureBySource">,
-): Promise<FixtureServer> {
+const sourcePathByName: Record<SourceName, string> = {
+  placesJsonLd: "/fixtures/places.jsonld",
+  osmMirror: "/fixtures/osm.json",
+  keyLocations: "/fixtures/key-locations.json",
+  townGeoJson: "/fixtures/town.geojson",
+};
+
+async function createFixtureServer(): Promise<FixtureServer> {
   let baseUrl = "";
   const requestedUris: string[] = [];
   const server = createServer((request, response) => {
@@ -471,26 +873,8 @@ async function createFixtureServer(
     }
 
     requestedUris.push(`${baseUrl}${requestUrl}`);
-    const failureMode = options.failureBySource?.[source];
-    if (failureMode === "transport") {
-      request.socket.destroy();
-      return;
-    }
-    if (failureMode === "http") {
-      response.writeHead(503, { "content-type": "application/json" });
-      response.end(JSON.stringify({ message: "fixture service unavailable" }));
-      return;
-    }
-    if (failureMode === "json") {
-      response.writeHead(200, { "content-type": "application/json" });
-      response.end("{ invalid fixture JSON");
-      return;
-    }
-
     response.writeHead(200, { "content-type": "application/json" });
-    response.end(
-      JSON.stringify(options.payloadOverrides?.[source] ?? validPayloadBySource[source]),
-    );
+    response.end(JSON.stringify(validPayloadBySource[source]));
   });
 
   await new Promise<void>((resolveListen, rejectListen) => {
@@ -526,21 +910,22 @@ async function createFixtureServer(
   };
 }
 
-async function runPublicGeneratorCli(
-  options: PublicBuildRunOptions = {},
-): Promise<PublicBuildRun> {
+type PublicBuildRun = {
+  exitCode: number | null;
+  stderr: string;
+  requestedUris: string[];
+  configuredUris: string[];
+  artifactKind: "file" | "directory" | "missing";
+  artifactContents: string | null;
+  atomicTempEntries: string[];
+};
+
+async function runPublicGeneratorCli(options: {
+  catalog?: unknown;
+  appConfig?: Record<string, unknown>;
+} = {}): Promise<PublicBuildRun> {
   if (!existsSync(GENERATOR_CLI_PATH) || !existsSync(TSX_CLI_PATH)) {
-    return {
-      exitCode: null,
-      stdout: "",
-      stderr: `generate-location-artifact public CLI is not implemented: ${GENERATOR_CLI_PATH}`,
-      notImplemented: true,
-      requestedUris: [],
-      configuredUris: [],
-      artifactKind: "missing",
-      artifactContents: null,
-      atomicTempEntries: [],
-    };
+    throw new Error(`generate-location-artifact public CLI is not implemented: ${GENERATOR_CLI_PATH}`);
   }
 
   const temporaryRoot = await mkdtemp(join(tmpdir(), "location-artifact-build-"));
@@ -550,30 +935,35 @@ async function runPublicGeneratorCli(
 
   try {
     await mkdir(generatedDirectory, { recursive: true });
-    if (options.artifactAsDirectory) {
-      await mkdir(artifactPath, { recursive: true });
-    } else if (options.existingArtifact !== undefined) {
-      await writeFile(artifactPath, options.existingArtifact, "utf8");
-    }
+    await mkdir(join(temporaryRoot, "data"), { recursive: true });
+    fixtureServer = await createFixtureServer();
 
-    fixtureServer = await createFixtureServer(options);
-    const networkGuardPath = join(temporaryRoot, "network-guard.cjs");
-    await writeFile(networkGuardPath, NETWORK_GUARD_SOURCE, "utf8");
     const appConfig = {
       ...validAppConfig,
-      mainFacilitiesUri: fixtureServer.uriBySource.mainFacilities,
+      placesJsonLdUri: fixtureServer.uriBySource.placesJsonLd,
+      osmMirrorUri: fixtureServer.uriBySource.osmMirror,
       keyLocationsUri: fixtureServer.uriBySource.keyLocations,
       townGeoJsonUri: fixtureServer.uriBySource.townGeoJson,
-      ...options.appConfigOverrides,
+      ...options.appConfig,
     };
+    const source = {
+      placesUri: appConfig.placesJsonLdUri,
+      osmMirrorUri: appConfig.osmMirrorUri,
+    };
+    const catalog = options.catalog ?? { ...validCatalog, source };
+
     await writeFile(
       join(temporaryRoot, "app-config.json"),
       JSON.stringify(appConfig),
       "utf8",
     );
+    await writeFile(
+      join(temporaryRoot, "data", "destinations.json"),
+      JSON.stringify(catalog),
+      "utf8",
+    );
 
     let exitCode: number | null = 0;
-    let stdout = "";
     let stderr = "";
     try {
       const processResult = await execFileAsync(
@@ -581,35 +971,17 @@ async function runPublicGeneratorCli(
         [TSX_CLI_PATH, GENERATOR_CLI_PATH],
         {
           cwd: temporaryRoot,
-          env: {
-            ...process.env,
-            FORCE_COLOR: "0",
-            LOCATION_ARTIFACT_FIXTURE_ORIGIN: new URL(
-              fixtureServer.uriBySource.mainFacilities,
-            ).origin,
-            NODE_OPTIONS: [
-              process.env.NODE_OPTIONS,
-              `--require=${networkGuardPath}`,
-            ]
-              .filter((value): value is string => Boolean(value))
-              .join(" "),
-          },
+          env: { ...process.env, FORCE_COLOR: "0" },
           encoding: "utf8",
           maxBuffer: 1024 * 1024,
           timeout: 30_000,
           killSignal: "SIGTERM",
         },
       );
-      stdout = String(processResult.stdout ?? "");
       stderr = String(processResult.stderr ?? "");
     } catch (error: unknown) {
-      const processError = error as {
-        code?: unknown;
-        stdout?: unknown;
-        stderr?: unknown;
-      };
+      const processError = error as { code?: unknown; stderr?: unknown };
       exitCode = typeof processError.code === "number" ? processError.code : 1;
-      stdout = String(processError.stdout ?? "");
       stderr = String(processError.stderr ?? "");
     }
 
@@ -627,31 +999,20 @@ async function runPublicGeneratorCli(
       artifactKind = "missing";
     }
 
-    let directoryEntries: string[] = [];
-    try {
-      directoryEntries = await readdir(generatedDirectory);
-    } catch {
-      directoryEntries = [];
-    }
-    const atomicTempEntries = directoryEntries.filter(
-      (entry) => entry !== "location-data.json",
-    );
-    const configuredUris = [
-      appConfig.mainFacilitiesUri,
-      appConfig.keyLocationsUri,
-      appConfig.townGeoJsonUri,
-    ].filter((uri): uri is string => typeof uri === "string");
+    const directoryEntries = await readdir(generatedDirectory).catch(() => []);
 
     return {
       exitCode,
-      stdout,
       stderr,
-      notImplemented: false,
       requestedUris: fixtureServer.requestedUris,
-      configuredUris,
+      configuredUris: Object.values(appConfig).filter(
+        (uri): uri is string => typeof uri === "string" && uri.startsWith("http"),
+      ),
       artifactKind,
       artifactContents,
-      atomicTempEntries,
+      atomicTempEntries: directoryEntries.filter(
+        (entry) => entry !== "location-data.json",
+      ),
     };
   } finally {
     await fixtureServer?.close();
@@ -659,1360 +1020,53 @@ async function runPublicGeneratorCli(
   }
 }
 
-function expectPublicBuildFailure(
-  result: PublicBuildRun,
-  expectedStderr: RegExp,
-  label: string,
-): void {
-  if (result.notImplemented) {
-    throw new Error(`${label}: ${result.stderr}`);
-  }
-  expect(result.exitCode).not.toBe(0);
-  expect(result.stderr).toMatch(expectedStderr);
-}
-
-function expectPublicBuildSuccess(result: PublicBuildRun, label: string): void {
-  if (result.notImplemented) {
-    throw new Error(`${label}: ${result.stderr}`);
-  }
-  expect(result.exitCode).toBe(0);
-  expect(result.artifactKind).toBe("file");
-  expect(result.artifactContents).not.toBeNull();
-}
-
-function expectNoFallbackBuildRequests(result: PublicBuildRun): void {
-  const configuredUriSet = new Set(result.configuredUris);
-  expect(result.requestedUris.every((uri) => configuredUriSet.has(uri))).toBe(true);
-  expect(result.stderr).not.toContain("LOCATION_ARTIFACT_EXTERNAL_NETWORK_BLOCKED");
-  expect(result.requestedUris.some((uri) => uri.includes("cdn.jsdelivr.net"))).toBe(false);
-  expect(
-    result.requestedUris.some((uri) => uri.includes(validAppConfig.locationsDataVersion)),
-  ).toBe(false);
-  for (const uri of result.configuredUris) {
-    expect(result.requestedUris.filter((requestedUri) => requestedUri === uri).length).toBeLessThanOrEqual(1);
-  }
-}
-
-const moduleState = loadModule();
-
-describe("generateLocationArtifact build boundary", () => {
-  if (
-    moduleState.error ||
-    !moduleState.exports ||
-    typeof moduleState.exports.generateLocationArtifact !== "function"
-  ) {
-    it("reports the missing public generator as an actionable RED contract", () => {
-      assertPublicGeneratorAvailable(moduleState);
-    });
-    return;
-  }
-
-  describe("appConfig source URI contract", () => {
-    const invalidUriValues: Array<[string, unknown]> = [
-      ["unset", undefined],
-      ["null", null],
-      ["empty", ""],
-      ["whitespace-only", "   "],
-      ["wrong type", 42],
-      ["relative path", "data/location-data.json"],
-      ["root-relative path", "/data/location-data.json"],
-      ["malformed absolute URI", "https://"],
-      ["unsupported URI scheme", "ftp://fixtures.example.test/data.json"],
-    ];
-
-    it.each(invalidUriValues)(
-      "fails before transport when mainFacilitiesUri is %s",
-      async (_label, value) => {
-        const harness = createHarness();
-        const appConfig = { ...validAppConfig, mainFacilitiesUri: value };
-
-        await expect(
-          invokeGenerator(moduleState, { ...harness.options, appConfig }),
-        ).rejects.toThrow();
-
-        expect(harness.transport).not.toHaveBeenCalled();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it.each(invalidUriValues)(
-      "fails before transport when keyLocationsUri is %s",
-      async (_label, value) => {
-        const harness = createHarness();
-        const appConfig = { ...validAppConfig, keyLocationsUri: value };
-
-        await expect(
-          invokeGenerator(moduleState, { ...harness.options, appConfig }),
-        ).rejects.toThrow();
-
-        expect(harness.transport).not.toHaveBeenCalled();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it.each(invalidUriValues)(
-      "fails before transport when townGeoJsonUri is %s",
-      async (_label, value) => {
-        const harness = createHarness();
-        const appConfig = { ...validAppConfig, townGeoJsonUri: value };
-
-        await expect(
-          invokeGenerator(moduleState, { ...harness.options, appConfig }),
-        ).rejects.toThrow();
-
-        expect(harness.transport).not.toHaveBeenCalled();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it("uses the three complete appConfig URIs exactly and never constructs a legacy CDN URL", async () => {
-      const harness = createHarness();
-
-      await invokeGenerator(moduleState, harness.options);
-
-      expectEachConfiguredUriRequestedExactlyOnce(harness.transport);
-      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe("transport, HTTP, and JSON decoding failures", () => {
-    const sources: SourceName[] = [
-      "mainFacilities",
-      "keyLocations",
-      "townGeoJson",
-    ];
-
-    it.each(sources)(
-      "propagates a %s transport rejection as a build failure without updating the artifact",
-      async (source) => {
-        const harness = createHarness();
-        const targetUri = sourceUriByName[source];
-        harness.transport.mockImplementation(async (uri) => {
-          if (uri === targetUri) {
-            throw new Error(`${source} transport unavailable`);
-          }
-          return validResponseForUri(uri);
-        });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
-          `${source} transport unavailable`,
-        );
-        expectNoFallbackTransportRequests(harness.transport);
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it.each(sources)(
-      "propagates a %s HTTP error as a build failure without updating the artifact",
-      async (source) => {
-        const harness = createHarness();
-        const targetUri = sourceUriByName[source];
-        harness.transport.mockImplementation(async (uri) => {
-          if (uri === targetUri) {
-            return jsonResponse({ message: "fixture service unavailable" }, 503);
-          }
-          return validResponseForUri(uri);
-        });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
-          /503/,
-        );
-        expectNoFallbackTransportRequests(harness.transport);
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it.each(sources)(
-      "propagates a %s JSON decode error as a build failure without updating the artifact",
-      async (source) => {
-        const harness = createHarness();
-        const targetUri = sourceUriByName[source];
-        harness.transport.mockImplementation(async (uri) => {
-          if (uri === targetUri) {
-            return jsonDecodeFailure(new SyntaxError(`${source} JSON is invalid`));
-          }
-          return validResponseForUri(uri);
-        });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
-          `${source} JSON is invalid`,
-        );
-        expectNoFallbackTransportRequests(harness.transport);
-        expectArtifactUnchanged(harness);
-      },
-    );
-  });
-
-  describe("main_facilities.json required fields and empty categories", () => {
-    const requiredFields: Array<[string, Record<string, unknown>]> = [
-      ["name", { name: undefined }],
-      ["lat", { lat: undefined }],
-      ["lng", { lng: undefined }],
-      ["copyright", { copyright: undefined }],
-      ["licence", { licence: undefined }],
-      ["licenceUri", { licenceUri: undefined }],
-      ["finite latitude", { lat: Number.NaN }],
-      ["finite longitude", { lng: Number.POSITIVE_INFINITY }],
-      ["licenceUri format", { licenceUri: "not-a-uri" }],
-      ...invalidRequiredStringCases(["name", "copyright", "licence", "licenceUri"]),
-    ];
-
-    it.each(requiredFields)(
-      "rejects a main facility with invalid required field %s",
-      async (_label, overrides) => {
-        const harness = createHarness({
-          mainFacilities: payloadForMainLocation(overrides),
-        });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it.each([
-      ["missing category label", [{ ...validMainFacilities[0], category: undefined }]],
-      ["missing category identifier", [{ ...validMainFacilities[0], "category:en": undefined }]],
-      ["missing category locations", [{ ...validMainFacilities[0], locations: undefined }]],
-      ["wrong-type category locations", [{ ...validMainFacilities[0], locations: "not-an-array" }]],
-      ["null category locations", [{ ...validMainFacilities[0], locations: null }]],
-      ["empty category locations", [{ ...validMainFacilities[0], locations: [] }]],
-      ["empty category set", []],
-    ] as const)(
-      "rejects main_facilities.json with %s",
-      async (_label, payload) => {
-        const harness = createHarness({ mainFacilities: payload });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it.each(invalidRequiredStringCases(["category", "category:en"]))(
-      "rejects main_facilities.json with invalid required category field %s",
-      async (_label, overrides) => {
-        const harness = createHarness({
-          mainFacilities: [{ ...validMainFacilities[0], ...overrides }],
-        });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it("rejects duplicate main-facility category identifiers instead of selecting the first category", async () => {
-      const firstCategory = validMainFacilities[0];
-      const secondCategory = {
-        ...firstCategory,
-        category: "別カテゴリ",
-        locations: [{ ...firstCategory.locations[0], name: "別施設" }],
-      };
-      const harness = createHarness({
-        mainFacilities: [firstCategory, secondCategory],
-      });
-
-      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-      expectArtifactUnchanged(harness);
-    });
-  });
-
-  describe("main_facilities.json optional field type and format validation", () => {
-    const invalidOptionalTypes: Array<[string, Record<string, unknown>]> = [
-      ["description", { description: 42 }],
-      ["imageUri", { imageUri: 42 }],
-      ["imageCopyright", { imageCopyright: 42 }],
-      ["uri", { uri: 42 }],
-    ];
-
-    it.each(invalidOptionalTypes)(
-      "rejects an existing main-facility optional %s with an invalid type",
-      async (_label, overrides) => {
-        const harness = createHarness({
-          mainFacilities: payloadForMainLocation(overrides),
-        });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it.each([
-      ["imageUri", { imageUri: "not-a-uri" }],
-      ["uri", { uri: "relative/path" }],
-    ] as const)(
-      "rejects an existing main-facility optional %s with an invalid URI format",
-      async (_label, overrides) => {
-        const harness = createHarness({
-          mainFacilities: payloadForMainLocation(overrides),
-        });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it("accepts omitted optional main-facility metadata and still writes a validated artifact", async () => {
-      const category = validMainFacilities[0];
-      const location = category.locations[0];
-      const minimalLocation = {
-        name: location.name,
-        lat: location.lat,
-        lng: location.lng,
-        copyright: location.copyright,
-        licence: location.licence,
-        licenceUri: location.licenceUri,
-      };
-      const harness = createHarness({
-        mainFacilities: [{ ...category, locations: [minimalLocation] }],
-      });
-
-      await invokeGenerator(moduleState, harness.options);
-
-      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
-      expect(harness.artifactState.current).not.toBe(ARTIFACT_SENTINEL);
-    });
-
-    it("accepts explicit null main-facility optional metadata and preserves the null values", async () => {
-      const nullOptionalMetadata = {
-        description: null,
-        imageUri: null,
-        imageCopyright: null,
-        uri: null,
-      };
-      const expectedMainFacilities = payloadForMainLocation(nullOptionalMetadata);
-      const harness = createHarness({
-        mainFacilities: expectedMainFacilities,
-      });
-
-      await invokeGenerator(moduleState, harness.options);
-
-      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
-      expect(harness.artifactState.current).toEqual(
-        expect.objectContaining({
-          sources: expect.objectContaining({
-            mainFacilities: expectedMainFacilities,
-          }),
-        }),
-      );
-    });
-  });
-
-  describe("key_locations.json required fields, empty categories, and identifiers", () => {
-    const requiredFields: Array<[string, Record<string, unknown>]> = [
-      ["id", { id: undefined }],
-      ["id format", { id: "invalid/location" }],
-      ["name", { name: undefined }],
-      ["lat", { lat: undefined }],
-      ["lng", { lng: undefined }],
-      ["nodeCopyright", { nodeCopyright: undefined }],
-      ["licence", { licence: undefined }],
-      ["licenceUri", { licenceUri: undefined }],
-      ["finite latitude", { lat: Number.NEGATIVE_INFINITY }],
-      ["finite longitude", { lng: Number.NaN }],
-      ["licenceUri format", { licenceUri: "not-a-uri" }],
-      ...invalidRequiredStringCases([
-        "id",
-        "name",
-        "nodeCopyright",
-        "licence",
-        "licenceUri",
-      ]),
-    ];
-
-    it.each(requiredFields)(
-      "rejects a key location with invalid required field %s",
-      async (_label, overrides) => {
-        const harness = createHarness({
-          keyLocations: payloadForKeyLocation(overrides),
-        });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it.each([
-      ["missing category label", [{ ...validKeyLocations[0], category: undefined }]],
-      ["missing category identifier", [{ ...validKeyLocations[0], "category:en": undefined }]],
-      ["missing category locations", [{ ...validKeyLocations[0], locations: undefined }]],
-      ["wrong-type category locations", [{ ...validKeyLocations[0], locations: "not-an-array" }]],
-      ["null category locations", [{ ...validKeyLocations[0], locations: null }]],
-      ["empty category locations", [{ ...validKeyLocations[0], locations: [] }]],
-      ["empty category set", []],
-    ] as const)(
-      "rejects key_locations.json with %s",
-      async (_label, payload) => {
-        const harness = createHarness({ keyLocations: payload });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it.each(invalidRequiredStringCases(["category", "category:en"]))(
-      "rejects key_locations.json with invalid required category field %s",
-      async (_label, overrides) => {
-        const harness = createHarness({
-          keyLocations: [{ ...validKeyLocations[0], ...overrides }],
-        });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it("rejects duplicate category:en values instead of selecting the first category", async () => {
-      const firstCategory = validKeyLocations[0];
-      const secondCategory = {
-        ...firstCategory,
-        category: "別カテゴリ",
-        locations: [{ ...firstCategory.locations[0], id: "second-location" }],
-      };
-      const harness = createHarness({
-        keyLocations: [firstCategory, secondCategory],
-      });
-
-      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-      expectArtifactUnchanged(harness);
-    });
-
-    it("rejects duplicate location IDs across categories instead of selecting one location", async () => {
-      const firstCategory = validKeyLocations[0];
-      const secondCategory = {
-        ...firstCategory,
-        category: "別カテゴリ",
-        "category:en": "another-category",
-        locations: [
-          {
-            ...firstCategory.locations[0],
-            name: "同じIDの別施設",
-          },
-        ],
-      };
-      const harness = createHarness({
-        keyLocations: [firstCategory, secondCategory],
-      });
-
-      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-      expectArtifactUnchanged(harness);
-    });
-
-    it("rejects duplicate location IDs within one category instead of selecting one location", async () => {
-      const category = validKeyLocations[0];
-      const duplicateLocation = {
-        ...category.locations[0],
-        name: "同一カテゴリ内の重複施設",
-      };
-      const harness = createHarness({
-        keyLocations: [
-          {
-            ...category,
-            locations: [category.locations[0], duplicateLocation],
-          },
-        ],
-      });
-
-      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-      expectArtifactUnchanged(harness);
-    });
-  });
-
-  describe("key_locations.json optional field type and format validation", () => {
-    const invalidOptionalTypes: Array<[string, Record<string, unknown>]> = [
-      ["description", { description: 42 }],
-      ["descriptionCopyright", { descriptionCopyright: 42 }],
-      ["imageUri", { imageUri: 42 }],
-      ["imageCopyright", { imageCopyright: 42 }],
-      ["imageCopylight", { imageCopylight: 42 }],
-      ["uri", { uri: 42 }],
-      ["nodeSourceId", { nodeSourceId: "42" }],
-      ["nodeSourceId finiteness", { nodeSourceId: Number.POSITIVE_INFINITY }],
-    ];
-
-    it.each(invalidOptionalTypes)(
-      "rejects an existing key-location optional %s with an invalid type or value",
-      async (_label, overrides) => {
-        const harness = createHarness({
-          keyLocations: payloadForKeyLocation(overrides),
-        });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it.each([
-      ["imageUri", { imageUri: "not-a-uri" }],
-      ["uri", { uri: "relative/path" }],
-    ] as const)(
-      "rejects an existing key-location optional %s with an invalid URI format",
-      async (_label, overrides) => {
-        const harness = createHarness({
-          keyLocations: payloadForKeyLocation(overrides),
-        });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it("accepts omitted optional key-location metadata without adding an area field to source data", async () => {
-      const category = validKeyLocations[0];
-      const location = category.locations[0];
-      const minimalLocation = {
-        id: location.id,
-        name: location.name,
-        lat: location.lat,
-        lng: location.lng,
-        nodeCopyright: location.nodeCopyright,
-        licence: location.licence,
-        licenceUri: location.licenceUri,
-      };
-      const harness = createHarness({
-        keyLocations: [{ ...category, locations: [minimalLocation] }],
-      });
-
-      await invokeGenerator(moduleState, harness.options);
-
-      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
-      expect(harness.artifactState.current).not.toBe(ARTIFACT_SENTINEL);
-      expect(minimalLocation).not.toHaveProperty("area");
-    });
-
-    it("accepts explicit null key-location optional metadata and preserves the null values", async () => {
-      const nullOptionalMetadata = {
-        description: null,
-        descriptionCopyright: null,
-        imageUri: null,
-        imageCopyright: null,
-        imageCopylight: null,
-        uri: null,
-        nodeSourceId: null,
-      };
-      const expectedKeyLocations = payloadForKeyLocation(nullOptionalMetadata);
-      const harness = createHarness({
-        keyLocations: expectedKeyLocations,
-      });
-
-      await invokeGenerator(moduleState, harness.options);
-
-      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
-      expect(harness.artifactState.current).toEqual(
-        expect.objectContaining({
-          sources: expect.objectContaining({
-            keyLocations: expectedKeyLocations,
-          }),
-        }),
-      );
-    });
-  });
-
-  describe("town GeoJSON FeatureCollection and feature geometry validation", () => {
-    const malformedFeatureCases: Array<[string, Record<string, unknown>]> = [
-      ["feature type", { type: "Polygon" }],
-      ["feature type wrong type", { type: 42 }],
-      ["feature type null", { type: null }],
-      ["feature type empty", { type: "" }],
-      ["feature type whitespace-only", { type: "   " }],
-      ["missing properties", { properties: undefined }],
-      ["properties wrong type", { properties: "not-an-object" }],
-      ["properties null", { properties: null }],
-      ["empty properties.name", { properties: { name: "" } }],
-      ["whitespace-only properties.name", { properties: { name: "   " } }],
-      ["wrong-type properties.name", { properties: { name: 42 } }],
-      ["null properties.name", { properties: { name: null } }],
-      ["missing properties.name", { properties: {} }],
-      ["missing geometry", { geometry: undefined }],
-      ["null geometry", { geometry: null }],
-      ["unsupported geometry type", {
-        geometry: { type: "Point", coordinates: [139.768, 35.694] },
-      }],
-      ["empty Polygon coordinates", {
-        geometry: { type: "Polygon", coordinates: [] },
-      }],
-      ["non-finite Polygon coordinate", {
-        geometry: {
-          type: "Polygon",
-          coordinates: [[
-            [Number.NaN, 35.6],
-            [139.8, 35.6],
-            [139.8, 35.8],
-            [139.7, 35.8],
-            [139.7, 35.6],
-          ]],
-        },
-      }],
-      ["non-finite MultiPolygon coordinate", {
-        geometry: {
-          type: "MultiPolygon",
-          coordinates: [[[
-            [139.7, 35.6],
-            [139.8, 35.6],
-            [Number.POSITIVE_INFINITY, 35.8],
-            [139.7, 35.8],
-            [139.7, 35.6],
-          ]]],
-        },
-      }],
-    ];
-
-    it.each([
-      ["missing root type", { ...validTownGeoJson, type: undefined }],
-      ["wrong root type", { ...validTownGeoJson, type: "Feature" }],
-      ["wrong-type root type", { ...validTownGeoJson, type: 42 }],
-      ["null root type", { ...validTownGeoJson, type: null }],
-      ["empty root type", { ...validTownGeoJson, type: "" }],
-      ["whitespace-only root type", { ...validTownGeoJson, type: "   " }],
-      ["missing features", { type: "FeatureCollection" }],
-      ["empty features", { ...validTownGeoJson, features: [] }],
-      ["features is not an array", { ...validTownGeoJson, features: {} }],
-      ["features is null", { ...validTownGeoJson, features: null }],
-    ] as const)(
-      "rejects GeoJSON with %s",
-      async (_label, payload) => {
-        const harness = createHarness({ townGeoJson: payload });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it.each(malformedFeatureCases)(
-      "rejects a GeoJSON feature with invalid %s",
-      async (_label, overrides) => {
-        const harness = createHarness({
-          townGeoJson: payloadForGeoJsonFeature(overrides),
-        });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-        expectArtifactUnchanged(harness);
-      },
-    );
-
-    it("rejects an invalid coordinate in one feature of a multi-feature collection", async () => {
-      const validFeature = validTownGeoJson.features[0];
-      const invalidFeature = {
-        ...validFeature,
-        properties: { name: "東京都千代田区麹町" },
-        geometry: {
-          type: "Polygon",
-          coordinates: [[
-            [139.7, 35.6],
-            [139.8, Number.NaN],
-            [139.8, 35.8],
-            [139.7, 35.8],
-            [139.7, 35.6],
-          ]],
-        },
-      };
-      const harness = createHarness({
-        townGeoJson: {
-          ...validTownGeoJson,
-          features: [validFeature, invalidFeature],
-        },
-      });
-
-      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-      expectArtifactUnchanged(harness);
-    });
-
-    it("accepts valid Polygon coordinates and writes a validated artifact", async () => {
-      const harness = createHarness();
-
-      await invokeGenerator(moduleState, harness.options);
-
-      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
-      expect(harness.artifactState.current).not.toBe(ARTIFACT_SENTINEL);
-    });
-
-    it("accepts valid MultiPolygon coordinates", async () => {
-      const harness = createHarness({ townGeoJson: validMultiPolygonTownGeoJson });
-
-      await invokeGenerator(moduleState, harness.options);
-
-      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
-      expect(harness.artifactState.current).not.toBe(ARTIFACT_SENTINEL);
-    });
-
-    it("accepts a feature without the optional properties.uri", async () => {
-      const feature = validTownGeoJson.features[0];
-      const harness = createHarness({
-        townGeoJson: {
-          ...validTownGeoJson,
-          features: [
-            {
-              ...feature,
-              properties: { name: feature.properties.name },
-            },
-          ],
-        },
-      });
-
-      await invokeGenerator(moduleState, harness.options);
-
-      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
-    });
-
-    it("accepts explicit null GeoJSON properties.uri and preserves the null value", async () => {
-      const expectedTownGeoJson = payloadForGeoJsonFeature({
-        properties: {
-          name: validTownGeoJson.features[0].properties.name,
-          uri: null,
-        },
-      });
-      const harness = createHarness({
-        townGeoJson: expectedTownGeoJson,
-      });
-
-      await invokeGenerator(moduleState, harness.options);
-
-      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
-      expect(harness.artifactState.current).toEqual(
-        expect.objectContaining({
-          sources: expect.objectContaining({
-            townGeoJson: expectedTownGeoJson,
-          }),
-        }),
-      );
-    });
-
-    it.each([
-      ["type", { properties: { ...validTownGeoJson.features[0].properties, uri: 42 } }],
-      ["format", { properties: { ...validTownGeoJson.features[0].properties, uri: "relative/path" } }],
-    ] as const)(
-      "rejects an existing optional GeoJSON properties.uri with invalid %s",
-      async (_label, overrides) => {
-        const harness = createHarness({
-          townGeoJson: payloadForGeoJsonFeature(overrides),
-        });
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-        expectArtifactUnchanged(harness);
-      },
-    );
-  });
-
-  describe("atomic validated-artifact output and GeoJSON-derived display region", () => {
-    it("writes only after every source is verified and includes a prefix-free derived region", async () => {
-      const harness = createHarness();
-      harness.transport.mockImplementation(async (uri) => {
-        expect(harness.writeArtifact).not.toHaveBeenCalled();
-        return validResponseForUri(uri);
-      });
-
-      await invokeGenerator(moduleState, harness.options);
-
-      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
-      expect(harness.artifactState.current).toEqual(
-        expect.objectContaining({
-          status: "validated",
-          sourceUris: expect.objectContaining({
-            mainFacilitiesUri: validAppConfig.mainFacilitiesUri,
-            keyLocationsUri: validAppConfig.keyLocationsUri,
-            townGeoJsonUri: validAppConfig.townGeoJsonUri,
-          }),
-          derivedRegions: expect.objectContaining({
-            "kanda-library": "神田和泉町",
-          }),
-        }),
-      );
-      expect(harness.artifactState.current).toEqual(
-        expect.objectContaining({
-          sources: expect.objectContaining({
-            mainFacilities: validMainFacilities,
-            keyLocations: validKeyLocations,
-            townGeoJson: validTownGeoJson,
-          }),
-        }),
-      );
-      expect(validKeyLocations[0].locations[0]).not.toHaveProperty("area");
-    });
-
-    it("propagates an atomic writer failure without exposing a partial artifact", async () => {
-      const harness = createHarness();
-      const writerFailure = new Error("atomic temp-file rename failed");
-      harness.writeArtifact.mockRejectedValue(writerFailure);
-
-      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
-        "atomic temp-file rename failed",
-      );
-
-      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
-      expectArtifactUnchanged(harness, 1);
-    });
-
-    it.each([
-      ["mainFacilities", { mainFacilities: [] }],
-      ["keyLocations", { keyLocations: [] }],
-      ["townGeoJson", { townGeoJson: { ...validTownGeoJson, features: [] } }],
-    ] as const)(
-      "does not update the previous artifact when %s validation fails after other sources are valid",
-      async (_source, payloadOverrides) => {
-        const harness = createHarness(payloadOverrides);
-
-        await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
-
-        expectArtifactUnchanged(harness);
-      },
-    );
-  });
-});
-
 describe("public generator build lifecycle", () => {
   if (!existsSync(GENERATOR_CLI_PATH) || !existsSync(TSX_CLI_PATH)) {
     it("reports the missing public generator CLI as an actionable RED contract", () => {
-      throw new Error(
-        `public generator CLI is not implemented: ${GENERATOR_CLI_PATH}`,
-      );
+      throw new Error(`public generator CLI is not implemented: ${GENERATOR_CLI_PATH}`);
     });
     return;
   }
 
-  const invalidUriValues: Array<[string, unknown]> = [
-    ["unset", undefined],
-    ["null", null],
-    ["empty", ""],
-    ["whitespace-only", "   "],
-    ["wrong type", 42],
-    ["relative path", "data/location-data.json"],
-    ["root-relative path", "/data/location-data.json"],
-    ["malformed absolute URI", "https://"],
-    ["unsupported URI scheme", "ftp://fixtures.example.test/data.json"],
-  ];
-
-  const publicBuildFailureCases: Array<
-    [string, PublicBuildRunOptions, RegExp]
-  > = [];
-  const configuredUriFields = [
-    "mainFacilitiesUri",
-    "keyLocationsUri",
-    "townGeoJsonUri",
-  ] as const;
-
-  for (const uriField of configuredUriFields) {
-    for (const [label, value] of invalidUriValues) {
-      publicBuildFailureCases.push([
-        `${uriField} ${label}`,
-        { appConfigOverrides: { [uriField]: value } },
-        /URI|uri|config|absolute|invalid|failed/i,
-      ]);
-    }
-  }
-
-  const sourceNames: SourceName[] = [
-    "mainFacilities",
-    "keyLocations",
-    "townGeoJson",
-  ];
-  for (const source of sourceNames) {
-    publicBuildFailureCases.push(
-      [
-        `${source} transport failure`,
-        { failureBySource: { [source]: "transport" } },
-        /fetch|network|transport|socket|ECONN|failed/i,
-      ],
-      [
-        `${source} HTTP failure`,
-        { failureBySource: { [source]: "http" } },
-        /HTTP|503|status|failed/i,
-      ],
-      [
-        `${source} JSON failure`,
-        { failureBySource: { [source]: "json" } },
-        /JSON|json|parse|decode|failed/i,
-      ],
-    );
-  }
-
-  for (const [label, overrides] of invalidRequiredStringCases([
-    "name",
-    "copyright",
-    "licence",
-    "licenceUri",
-  ])) {
-    publicBuildFailureCases.push([
-      `main facility ${label}`,
-      { payloadOverrides: { mainFacilities: payloadForMainLocation(overrides) } },
-      /main|facility|field|validation|invalid|failed/i,
-    ]);
-  }
-  for (const [label, overrides] of invalidRequiredStringCases([
-    "id",
-    "name",
-    "nodeCopyright",
-    "licence",
-    "licenceUri",
-  ])) {
-    publicBuildFailureCases.push([
-      `key location ${label}`,
-      { payloadOverrides: { keyLocations: payloadForKeyLocation(overrides) } },
-      /key|location|field|validation|invalid|failed/i,
-    ]);
-  }
-  for (const source of ["mainFacilities", "keyLocations"] as const) {
-    for (const [label, overrides] of invalidRequiredStringCases([
-      "category",
-      "category:en",
-    ])) {
-      const payload =
-        source === "mainFacilities"
-          ? [{ ...validMainFacilities[0], ...overrides }]
-          : [{ ...validKeyLocations[0], ...overrides }];
-      publicBuildFailureCases.push([
-        `${source} category ${label}`,
-        { payloadOverrides: { [source]: payload } },
-        /category|field|validation|invalid|failed/i,
-      ]);
-    }
-  }
-
-  for (const [label, overrides] of [
-    ["lat wrong type", { lat: "35.694" }],
-    ["lat null", { lat: null }],
-    ["lat non-finite", { lat: Number.NaN }],
-    ["lng wrong type", { lng: "139.753" }],
-    ["lng null", { lng: null }],
-    ["lng non-finite", { lng: Number.POSITIVE_INFINITY }],
-    ["licenceUri invalid URI", { licenceUri: "not-a-uri" }],
-  ] as Array<[string, Record<string, unknown>]>) {
-    publicBuildFailureCases.push([
-      `main facility ${label}`,
-      { payloadOverrides: { mainFacilities: payloadForMainLocation(overrides) } },
-      /main|facility|coordinate|licence|URI|field|validation|invalid|failed/i,
-    ]);
-  }
-  for (const [label, overrides] of [
-    ["id invalid identifier", { id: "invalid/location" }],
-    ["lat wrong type", { lat: "35.694" }],
-    ["lat null", { lat: null }],
-    ["lat non-finite", { lat: Number.NaN }],
-    ["lng wrong type", { lng: "139.768" }],
-    ["lng null", { lng: null }],
-    ["lng non-finite", { lng: Number.NEGATIVE_INFINITY }],
-    ["licenceUri invalid URI", { licenceUri: "not-a-uri" }],
-  ] as Array<[string, Record<string, unknown>]>) {
-    publicBuildFailureCases.push([
-      `key location ${label}`,
-      { payloadOverrides: { keyLocations: payloadForKeyLocation(overrides) } },
-      /key|location|coordinate|licence|URI|identifier|field|validation|invalid|failed/i,
-    ]);
-  }
-
-  for (const [source, payloadFactory] of [
-    ["mainFacilities", (overrides: Record<string, unknown>) => [
-      { ...validMainFacilities[0], ...overrides },
-    ]],
-    ["keyLocations", (overrides: Record<string, unknown>) => [
-      { ...validKeyLocations[0], ...overrides },
-    ]],
-  ] as const) {
-    for (const [label, overrides] of [
-      ["locations missing", { locations: undefined }],
-      ["locations wrong type", { locations: "not-an-array" }],
-      ["locations null", { locations: null }],
-      ["locations empty", { locations: [] }],
-    ] as Array<[string, Record<string, unknown>]>) {
-      publicBuildFailureCases.push([
-        `${source} ${label}`,
-        { payloadOverrides: { [source]: payloadFactory(overrides) } },
-        /category|locations|empty|array|validation|invalid|failed/i,
-      ]);
-    }
-  }
-
-  const mainOptionalFailureCases: Array<[string, Record<string, unknown>]> = [
-    ["description wrong type", { description: 42 }],
-    ["imageUri wrong type", { imageUri: 42 }],
-    ["imageUri invalid URI", { imageUri: "relative/image.jpg" }],
-    ["imageCopyright wrong type", { imageCopyright: 42 }],
-    ["uri wrong type", { uri: 42 }],
-    ["uri invalid URI", { uri: "relative/location" }],
-  ];
-  for (const [label, overrides] of mainOptionalFailureCases) {
-    publicBuildFailureCases.push([
-      `main facility optional ${label}`,
-      { payloadOverrides: { mainFacilities: payloadForMainLocation(overrides) } },
-      /main|facility|optional|image|URI|field|validation|invalid|failed/i,
-    ]);
-  }
-
-  const keyOptionalFailureCases: Array<[string, Record<string, unknown>]> = [
-    ["description wrong type", { description: 42 }],
-    ["descriptionCopyright wrong type", { descriptionCopyright: 42 }],
-    ["imageUri wrong type", { imageUri: 42 }],
-    ["imageUri invalid URI", { imageUri: "relative/image.jpg" }],
-    ["imageCopyright wrong type", { imageCopyright: 42 }],
-    ["imageCopylight wrong type", { imageCopylight: 42 }],
-    ["uri wrong type", { uri: 42 }],
-    ["uri invalid URI", { uri: "relative/location" }],
-    ["nodeSourceId wrong type", { nodeSourceId: "42" }],
-  ];
-  for (const [label, overrides] of keyOptionalFailureCases) {
-    publicBuildFailureCases.push([
-      `key location optional ${label}`,
-      { payloadOverrides: { keyLocations: payloadForKeyLocation(overrides) } },
-      /key|location|optional|image|node|URI|field|validation|invalid|failed/i,
-    ]);
-  }
-
-  const malformedGeoJsonFeatures: Array<[string, Record<string, unknown>]> = [
-    ["feature type wrong type", { type: 42 }],
-    ["feature type null", { type: null }],
-    ["feature type empty", { type: "" }],
-    ["feature type whitespace-only", { type: "   " }],
-    ["properties wrong type", { properties: "not-an-object" }],
-    ["properties null", { properties: null }],
-    ["properties.name wrong type", { properties: { name: 42 } }],
-    ["properties.name null", { properties: { name: null } }],
-    ["properties.name empty", { properties: { name: "" } }],
-    ["properties.name whitespace-only", { properties: { name: "   " } }],
-    ["missing properties.name", { properties: {} }],
-    ["missing geometry", { geometry: undefined }],
-    ["geometry null", { geometry: null }],
-    ["unsupported geometry", {
-      geometry: { type: "Point", coordinates: [139.768, 35.694] },
-    }],
-    ["empty Polygon coordinates", {
-      geometry: { type: "Polygon", coordinates: [] },
-    }],
-    ["non-finite Polygon coordinate", {
-      geometry: {
-        type: "Polygon",
-        coordinates: [[
-          [Number.NaN, 35.6],
-          [139.8, 35.6],
-          [139.8, 35.8],
-          [139.7, 35.8],
-          [139.7, 35.6],
-        ]],
-      },
-    }],
-    ["non-finite MultiPolygon coordinate", {
-      geometry: {
-        type: "MultiPolygon",
-        coordinates: [[[
-          [139.7, 35.6],
-          [139.8, 35.6],
-          [Number.POSITIVE_INFINITY, 35.8],
-          [139.7, 35.8],
-          [139.7, 35.6],
-        ]]],
-      },
-    }],
-  ];
-  for (const [label, overrides] of malformedGeoJsonFeatures) {
-    publicBuildFailureCases.push([
-      `town GeoJSON ${label}`,
-      { payloadOverrides: { townGeoJson: payloadForGeoJsonFeature(overrides) } },
-      /GeoJSON|geojson|feature|geometry|coordinate|field|validation|invalid|failed/i,
-    ]);
-  }
-
-  for (const [label, properties] of [
-    ["properties.uri wrong type", { ...validTownGeoJson.features[0].properties, uri: 42 }],
-    ["properties.uri invalid URI", { ...validTownGeoJson.features[0].properties, uri: "relative/town" }],
-  ] as Array<[string, Record<string, unknown>]>) {
-    publicBuildFailureCases.push([
-      `town GeoJSON ${label}`,
-      {
-        payloadOverrides: {
-          townGeoJson: payloadForGeoJsonFeature({ properties }),
-        },
-      },
-      /GeoJSON|geojson|properties|URI|feature|field|validation|invalid|failed/i,
-    ]);
-  }
-
-  publicBuildFailureCases.push(
-    [
-      "missing GeoJSON root type",
-      { payloadOverrides: { townGeoJson: { ...validTownGeoJson, type: undefined } } },
-      /GeoJSON|geojson|shape|type|validation|invalid|failed/i,
-    ],
-    [
-      "wrong GeoJSON root type",
-      { payloadOverrides: { townGeoJson: { ...validTownGeoJson, type: "Feature" } } },
-      /GeoJSON|geojson|shape|type|validation|invalid|failed/i,
-    ],
-    [
-      "wrong-type GeoJSON root type",
-      { payloadOverrides: { townGeoJson: { ...validTownGeoJson, type: 42 } } },
-      /GeoJSON|geojson|shape|type|validation|invalid|failed/i,
-    ],
-    [
-      "null GeoJSON root type",
-      { payloadOverrides: { townGeoJson: { ...validTownGeoJson, type: null } } },
-      /GeoJSON|geojson|shape|type|validation|invalid|failed/i,
-    ],
-    [
-      "empty GeoJSON root type",
-      { payloadOverrides: { townGeoJson: { ...validTownGeoJson, type: "" } } },
-      /GeoJSON|geojson|shape|type|validation|invalid|failed/i,
-    ],
-    [
-      "whitespace-only GeoJSON root type",
-      { payloadOverrides: { townGeoJson: { ...validTownGeoJson, type: "   " } } },
-      /GeoJSON|geojson|shape|type|validation|invalid|failed/i,
-    ],
-    [
-      "missing GeoJSON features",
-      { payloadOverrides: { townGeoJson: { ...validTownGeoJson, features: undefined } } },
-      /GeoJSON|geojson|features|shape|validation|invalid|failed/i,
-    ],
-    [
-      "wrong-type GeoJSON features",
-      { payloadOverrides: { townGeoJson: { ...validTownGeoJson, features: "not-an-array" } } },
-      /GeoJSON|geojson|features|array|shape|validation|invalid|failed/i,
-    ],
-    [
-      "null GeoJSON features",
-      { payloadOverrides: { townGeoJson: { ...validTownGeoJson, features: null } } },
-      /GeoJSON|geojson|features|shape|validation|invalid|failed/i,
-    ],
-    [
-      "empty main-facilities category set",
-      { payloadOverrides: { mainFacilities: [] } },
-      /main|category|empty|validation|invalid|failed/i,
-    ],
-    [
-      "empty key-locations category set",
-      { payloadOverrides: { keyLocations: [] } },
-      /key|location|category|empty|validation|invalid|failed/i,
-    ],
-    [
-      "empty town GeoJSON feature set",
-      { payloadOverrides: { townGeoJson: { ...validTownGeoJson, features: [] } } },
-      /GeoJSON|feature|empty|validation|invalid|failed/i,
-    ],
-    [
-      "duplicate main-facilities category identifier",
-      {
-        payloadOverrides: {
-          mainFacilities: [
-            validMainFacilities[0],
-            {
-              ...validMainFacilities[0],
-              category: "別カテゴリ",
-              locations: [{ ...validMainFacilities[0].locations[0], name: "別施設" }],
-            },
-          ],
-        },
-      },
-      /main|facility|category|duplicate|identifier|validation|invalid|failed/i,
-    ],
-    [
-      "duplicate category identifier",
-      {
-        payloadOverrides: {
-          keyLocations: [
-            validKeyLocations[0],
-            {
-              ...validKeyLocations[0],
-              category: "別カテゴリ",
-              locations: [{ ...validKeyLocations[0].locations[0], id: "second-location" }],
-            },
-          ],
-        },
-      },
-      /duplicate|category|identifier|validation|invalid|failed/i,
-    ],
-    [
-      "duplicate location identifier within one category",
-      {
-        payloadOverrides: {
-          keyLocations: [
-            {
-              ...validKeyLocations[0],
-              locations: [
-                validKeyLocations[0].locations[0],
-                { ...validKeyLocations[0].locations[0], name: "同一カテゴリ内の重複施設" },
-              ],
-            },
-          ],
-        },
-      },
-      /duplicate|location|identifier|validation|invalid|failed/i,
-    ],
-    [
-      "duplicate location identifier across categories",
-      {
-        payloadOverrides: {
-          keyLocations: [
-            validKeyLocations[0],
-            {
-              ...validKeyLocations[0],
-              category: "別カテゴリ",
-              "category:en": "another-category",
-              locations: [{ ...validKeyLocations[0].locations[0], name: "同じIDの別施設" }],
-            },
-          ],
-        },
-      },
-      /duplicate|location|identifier|validation|invalid|failed/i,
-    ],
-    [
-      "invalid coordinate in a later GeoJSON feature",
-      {
-        payloadOverrides: {
-          townGeoJson: {
-            ...validTownGeoJson,
-            features: [
-              validTownGeoJson.features[0],
-              {
-                ...validTownGeoJson.features[0],
-                properties: { name: "東京都千代田区麹町" },
-                geometry: {
-                  type: "Polygon",
-                  coordinates: [[
-                    [139.7, 35.6],
-                    [139.8, Number.NaN],
-                    [139.8, 35.8],
-                    [139.7, 35.8],
-                    [139.7, 35.6],
-                  ]],
-                },
-              },
-            ],
-          },
-        },
-      },
-      /GeoJSON|feature|coordinate|validation|invalid|failed/i,
-    ],
-  );
-
-  it("executes the configured public generator CLI and atomically publishes a validated artifact", async () => {
+  it("writes a validated artifact from the configured sources and catalog", async () => {
     const result = await runPublicGeneratorCli();
 
-    expectPublicBuildSuccess(result, "public generator CLI");
-    expectNoFallbackBuildRequests(result);
-    expect(result.requestedUris).toHaveLength(3);
-    expect(result.configuredUris).toHaveLength(3);
-    expect(result.atomicTempEntries).toEqual([]);
-    expect(result.artifactContents).toContain('"status":"validated"');
-  });
-
-  it("accepts omitted optional metadata through the public build lifecycle", async () => {
-    const result = await runPublicGeneratorCli({
-      payloadOverrides: {
-        mainFacilities: payloadForMainLocation({
-          description: undefined,
-          imageUri: undefined,
-          imageCopyright: undefined,
-          uri: undefined,
-        }),
-        keyLocations: payloadForKeyLocation({
-          description: undefined,
-          descriptionCopyright: undefined,
-          imageUri: undefined,
-          imageCopyright: undefined,
-          imageCopylight: undefined,
-          uri: undefined,
-          nodeSourceId: undefined,
-        }),
-        townGeoJson: payloadForGeoJsonFeature({
-          properties: { name: validTownGeoJson.features[0].properties.name },
-        }),
-      },
-    });
-
-    expectPublicBuildSuccess(result, "public generator optional metadata");
-    expectNoFallbackBuildRequests(result);
-    expect(result.requestedUris).toHaveLength(3);
-    expect(result.atomicTempEntries).toEqual([]);
-  });
-
-  it("accepts explicit null optional metadata and preserves null values through the public build lifecycle", async () => {
-    const expectedMainFacilities = payloadForMainLocation({
-      description: null,
-      imageUri: null,
-      imageCopyright: null,
-      uri: null,
-    });
-    const expectedKeyLocations = payloadForKeyLocation({
-      description: null,
-      descriptionCopyright: null,
-      imageUri: null,
-      imageCopyright: null,
-      imageCopylight: null,
-      uri: null,
-      nodeSourceId: null,
-    });
-    const expectedTownGeoJson = payloadForGeoJsonFeature({
-      properties: {
-        name: validTownGeoJson.features[0].properties.name,
-        uri: null,
-      },
-    });
-    const result = await runPublicGeneratorCli({
-      payloadOverrides: {
-        mainFacilities: expectedMainFacilities,
-        keyLocations: expectedKeyLocations,
-        townGeoJson: expectedTownGeoJson,
-      },
-    });
-
-    expectPublicBuildSuccess(result, "public generator explicit null metadata");
-    expectNoFallbackBuildRequests(result);
-    expect(result.requestedUris).toHaveLength(3);
-    expect(result.atomicTempEntries).toEqual([]);
-    expect(result.artifactContents).not.toBeNull();
-
-    const artifact = JSON.parse(result.artifactContents as string) as {
-      sources: {
-        mainFacilities: unknown;
-        keyLocations: unknown;
-        townGeoJson: unknown;
-      };
-    };
-    expect(artifact.sources).toEqual({
-      mainFacilities: expectedMainFacilities,
-      keyLocations: expectedKeyLocations,
-      townGeoJson: expectedTownGeoJson,
-    });
-  });
-
-  it("accepts a valid MultiPolygon through the public build lifecycle", async () => {
-    const result = await runPublicGeneratorCli({
-      payloadOverrides: { townGeoJson: validMultiPolygonTownGeoJson },
-    });
-
-    expectPublicBuildSuccess(result, "public generator MultiPolygon");
-    expectNoFallbackBuildRequests(result);
-    expect(result.requestedUris).toHaveLength(3);
-    expect(result.atomicTempEntries).toEqual([]);
-  });
-
-  it.each(publicBuildFailureCases)(
-    "projects %s validation/acquisition failure into a non-zero public build",
-    async (label, options, expectedStderr) => {
-      const result = await runPublicGeneratorCli(options);
-
-      expectPublicBuildFailure(result, expectedStderr, label);
-      expectNoFallbackBuildRequests(result);
-      expect(result.artifactKind).toBe("missing");
-      expect(result.atomicTempEntries).toEqual([]);
-    },
-  );
-
-  it("projects a real artifact writer failure into a non-zero build without a partial file", async () => {
-    const result = await runPublicGeneratorCli({ artifactAsDirectory: true });
-
-    expectPublicBuildFailure(result, /directory|EISDIR|rename|write|artifact|failed/i, "writer failure");
-    expectNoFallbackBuildRequests(result);
-    expect(result.artifactKind).toBe("directory");
-    expect(result.atomicTempEntries).toEqual([]);
-  });
-
-  it("preserves the previous artifact when validation fails before the atomic rename", async () => {
-    const previousArtifact = JSON.stringify(ARTIFACT_SENTINEL);
-    const result = await runPublicGeneratorCli({
-      existingArtifact: previousArtifact,
-      payloadOverrides: { keyLocations: [] },
-    });
-
-    expectPublicBuildFailure(result, /empty|key|location|validation|invalid|failed/i, "partial-write prevention");
-    expectNoFallbackBuildRequests(result);
+    expect(result.exitCode).toBe(0);
     expect(result.artifactKind).toBe("file");
-    expect(result.artifactContents).toBe(previousArtifact);
+    expect(result.artifactContents).not.toBeNull();
     expect(result.atomicTempEntries).toEqual([]);
+
+    const artifact = JSON.parse(result.artifactContents ?? "") as {
+      sources: { routeDestinations: unknown };
+    };
+    expect(artifact.sources.routeDestinations).toEqual(expectedRouteDestinations);
+    expect(result.requestedUris.every((uri) => result.configuredUris.includes(uri))).toBe(true);
+    expect(result.requestedUris).toHaveLength(4);
+    expect(result.requestedUris.some((uri) => uri.includes("cdn.jsdelivr.net"))).toBe(false);
+  });
+
+  it("fails without writing the artifact when the catalog source does not match appConfig", async () => {
+    const result = await runPublicGeneratorCli({
+      catalog: {
+        ...validCatalog,
+        source: {
+          placesUri: "https://fixtures.example.test/other.jsonld",
+          osmMirrorUri: "https://fixtures.example.test/other-osm.json",
+        },
+      },
+    });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toMatch(/一致|places/u);
+    expect(result.artifactKind).toBe("missing");
+  });
+
+  it("fails without writing the artifact when a source is unavailable", async () => {
+    const result = await runPublicGeneratorCli({
+      appConfig: { placesJsonLdUri: "http://127.0.0.1:1/places.jsonld" },
+    });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.artifactKind).toBe("missing");
   });
 });

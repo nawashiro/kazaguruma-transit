@@ -14,6 +14,7 @@ export interface LocationArtifactSourceUris {
   osmMirrorUri: string;
   keyLocationsUri: string;
   townGeoJsonUri: string;
+  categoryNamesUri: string;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -273,8 +274,8 @@ function validateRouteDestinations(value: unknown): RouteDestinationCategory[] {
     }
 
     const categoryId = requireNonEmptyString(
-      rawCategory["category:en"],
-      `${categoryPath}.category:en`,
+      rawCategory.categoryId,
+      `${categoryPath}.categoryId`,
     );
     requireNonEmptyString(rawCategory.category, `${categoryPath}.category`);
     if (categoryIds.has(categoryId)) {
@@ -428,6 +429,10 @@ function validateSourceUris(value: unknown): LocationArtifactSourceUris {
     townGeoJsonUri: requireAbsoluteHttpUri(
       value.townGeoJsonUri,
       "sourceUris.townGeoJsonUri",
+    ),
+    categoryNamesUri: requireAbsoluteHttpUri(
+      value.categoryNamesUri,
+      "sourceUris.categoryNamesUri",
     ),
   };
 }

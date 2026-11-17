@@ -208,7 +208,6 @@ function applySelection(
     }
     return {
       ...candidate,
-      ...(previous.group === undefined ? {} : { group: previous.group }),
       includeInRouteForm: previous.includeInRouteForm,
     };
   });

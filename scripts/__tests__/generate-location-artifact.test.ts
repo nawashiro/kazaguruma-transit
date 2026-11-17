@@ -35,7 +35,12 @@ type TransportResponse = {
 type Transport = (uri: string) => Promise<TransportResponse>;
 type ArtifactWriter = (artifact: unknown) => Promise<void>;
 
-type SourceName = "placesJsonLd" | "osmMirror" | "keyLocations" | "townGeoJson";
+type SourceName =
+  | "placesJsonLd"
+  | "osmMirror"
+  | "keyLocations"
+  | "townGeoJson"
+  | "categoryNames";
 
 type GeneratorOptions = {
   appConfig: unknown;
@@ -65,12 +70,15 @@ const PLACES_URI = "https://fixtures.example.test/places.jsonld";
 const OSM_MIRROR_URI = "https://fixtures.example.test/mirrors/osm.json";
 const KEY_LOCATIONS_URI = "https://fixtures.example.test/key_locations.json";
 const TOWN_GEOJSON_URI = "https://fixtures.example.test/chiyoda-towns.geojson";
+const CATEGORY_NAMES_URI =
+  "https://fixtures.example.test/category-names.jsonld";
 
 const validAppConfig = {
   placesJsonLdUri: PLACES_URI,
   osmMirrorUri: OSM_MIRROR_URI,
   keyLocationsUri: KEY_LOCATIONS_URI,
   townGeoJsonUri: TOWN_GEOJSON_URI,
+  categoryNamesUri: CATEGORY_NAMES_URI,
 };
 
 const LAT = 35.694;
@@ -153,6 +161,23 @@ const validOsmMirror = {
   ],
 };
 
+const categoryTerm = (code: string, name: string): JsonRecord => ({
+  "@type": "schema:DefinedTerm",
+  "@id": `${CATEGORY_NAMES_URI}#${code}`,
+  "schema:name": name,
+});
+
+const validCategoryNames = {
+  "@context": { "@version": 1.1, schema: "https://schema.org/" },
+  "@type": "schema:DefinedTermSet",
+  "schema:hasDefinedTerm": [
+    categoryTerm("1512", "図書館"),
+    categoryTerm("1302", "市役所・東京都の区役所"),
+    categoryTerm("1304", "役場支所及び出張所"),
+    categoryTerm("1011", "映画館"),
+  ],
+};
+
 const validCatalog = {
   source: { placesUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI },
   places: [
@@ -206,6 +231,7 @@ const sourceUriByName: Record<SourceName, string> = {
   osmMirror: OSM_MIRROR_URI,
   keyLocations: KEY_LOCATIONS_URI,
   townGeoJson: TOWN_GEOJSON_URI,
+  categoryNames: CATEGORY_NAMES_URI,
 };
 
 const validPayloadBySource: Record<SourceName, unknown> = {
@@ -213,20 +239,21 @@ const validPayloadBySource: Record<SourceName, unknown> = {
   osmMirror: validOsmMirror,
   keyLocations: validKeyLocations,
   townGeoJson: validTownGeoJson,
+  categoryNames: validCategoryNames,
 };
 
 const expectedRouteDestinations = [
   {
-    category: "区役所・出張所",
-    "category:en": "city-offices",
-    locations: [{ name: "千代田区役所", lat: LAT, lng: LNG }],
-  },
-  {
     category: "図書館",
-    "category:en": "libraries",
+    categoryId: "1512",
     locations: [
       { name: "千代田区立千代田図書館", lat: LIBRARY_LAT, lng: LIBRARY_LNG },
     ],
+  },
+  {
+    category: "市役所・東京都の区役所",
+    categoryId: "1302",
+    locations: [{ name: "千代田区役所", lat: LAT, lng: LNG }],
   },
 ];
 
@@ -303,6 +330,8 @@ function createHarness(
     [OSM_MIRROR_URI]: payloadOverrides.osmMirror ?? validPayloadBySource.osmMirror,
     [KEY_LOCATIONS_URI]: payloadOverrides.keyLocations ?? validPayloadBySource.keyLocations,
     [TOWN_GEOJSON_URI]: payloadOverrides.townGeoJson ?? validPayloadBySource.townGeoJson,
+    [CATEGORY_NAMES_URI]:
+      payloadOverrides.categoryNames ?? validPayloadBySource.categoryNames,
   };
   const transport = jest.fn<ReturnType<Transport>, Parameters<Transport>>();
   transport.mockImplementation(async (uri) => {
@@ -432,6 +461,7 @@ describe("generateLocationArtifact build boundary", () => {
       ["osmMirrorUri", "osmMirrorUri"],
       ["keyLocationsUri", "keyLocationsUri"],
       ["townGeoJsonUri", "townGeoJsonUri"],
+      ["categoryNamesUri", "categoryNamesUri"],
     ])(
       "fails before transport when %s is invalid",
       async (_label, field) => {
@@ -450,7 +480,7 @@ describe("generateLocationArtifact build boundary", () => {
       },
     );
 
-    it("uses the four configured URIs exactly once", async () => {
+    it("uses the five configured URIs exactly once", async () => {
       const harness = createHarness();
 
       await invokeGenerator(moduleState, harness.options);
@@ -460,6 +490,7 @@ describe("generateLocationArtifact build boundary", () => {
       for (const uri of Object.values(sourceUriByName)) {
         expect(requestedUris.filter((requested) => requested === uri)).toHaveLength(1);
       }
+      expect(requestedUris).toHaveLength(5);
       expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
     });
   });
@@ -470,6 +501,7 @@ describe("generateLocationArtifact build boundary", () => {
       "osmMirror",
       "keyLocations",
       "townGeoJson",
+      "categoryNames",
     ];
 
     it.each(sources)(
@@ -539,8 +571,8 @@ describe("generateLocationArtifact build boundary", () => {
     );
   });
 
-  describe("route destinations from the catalog", () => {
-    it("writes only the selected entries, grouped in definition order and omitting empty groups", async () => {
+  describe("route destinations from the published category dictionary", () => {
+    it("writes one category per code in dictionary order and omits dictionary categories without entries", async () => {
       const harness = createHarness();
 
       const artifact = (await invokeGenerator(
@@ -558,10 +590,61 @@ describe("generateLocationArtifact build boundary", () => {
         osmMirrorUri: OSM_MIRROR_URI,
         keyLocationsUri: KEY_LOCATIONS_URI,
         townGeoJsonUri: TOWN_GEOJSON_URI,
+        categoryNamesUri: CATEGORY_NAMES_URI,
       });
       expect(JSON.stringify(artifact.sources.routeDestinations)).not.toContain("神保町シアター");
       expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
       expect(harness.artifactState.current).toBe(artifact);
+    });
+
+    it("does not merge different codes into one category", async () => {
+      const places = {
+        ...validPlacesJsonLd,
+        "@graph": [
+          placeRecord(ID.cityOffice, {
+            codes: ["1302"],
+            seeAlso: ["https://www.openstreetmap.org/node/1"],
+          }),
+          placeRecord(ID.library, {
+            lat: LIBRARY_LAT,
+            lng: LIBRARY_LNG,
+            codes: ["1304"],
+            seeAlso: ["https://www.openstreetmap.org/way/2"],
+          }),
+        ],
+      };
+      const harness = createHarness(
+        { placesJsonLd: places },
+        {
+          catalog: catalogWith({}, [
+            { id: ID.cityOffice, name: "区役所", includeInRouteForm: true },
+            { id: ID.library, name: "出張所", includeInRouteForm: true },
+          ]),
+        },
+      );
+
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { routeDestinations: unknown[] };
+      };
+
+      expect(artifact.sources.routeDestinations).toEqual([
+        {
+          category: "市役所・東京都の区役所",
+          categoryId: "1302",
+          locations: [{ name: "千代田区役所", lat: LAT, lng: LNG }],
+        },
+        {
+          category: "役場支所及び出張所",
+          categoryId: "1304",
+          locations: [
+            {
+              name: "千代田区立千代田図書館",
+              lat: LIBRARY_LAT,
+              lng: LIBRARY_LNG,
+            },
+          ],
+        },
+      ]);
     });
 
     it("uses the OSM name instead of the catalog name", async () => {
@@ -575,7 +658,7 @@ describe("generateLocationArtifact build boundary", () => {
       const names = artifact.sources.routeDestinations.flatMap((category) =>
         category.locations.map((location) => location.name),
       );
-      expect(names).toEqual(["千代田区役所", "千代田区立千代田図書館"]);
+      expect(names).toEqual(["千代田区立千代田図書館", "千代田区役所"]);
       expect(names).not.toContain("目録の区役所");
     });
 
@@ -649,23 +732,58 @@ describe("generateLocationArtifact build boundary", () => {
       );
 
       await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
-        /9999|グループ/u,
+        /9999|辞書/u,
       );
       expectArtifactUnchanged(harness);
     });
 
-    it("uses the catalog group when the gif-poi code alone is ambiguous", async () => {
-      const places = graphWith({
-        "schema:identifier": [
-          {
-            "@type": "schema:PropertyValue",
-            "schema:propertyID": "gif-poi",
-            "schema:value": "1499",
-          },
-        ],
-      });
+    it.each([
+      [
+        "the root is not a DefinedTermSet",
+        { ...validCategoryNames, "@type": "schema:Thing" },
+      ],
+      [
+        "the term list is empty",
+        { ...validCategoryNames, "schema:hasDefinedTerm": [] },
+      ],
+      [
+        "the term list is missing",
+        { ...validCategoryNames, "schema:hasDefinedTerm": undefined },
+      ],
+      [
+        "a term has no four-digit code",
+        {
+          ...validCategoryNames,
+          "schema:hasDefinedTerm": [categoryTerm("13", "市役所")],
+        },
+      ],
+      [
+        "a term has an empty name",
+        {
+          ...validCategoryNames,
+          "schema:hasDefinedTerm": [categoryTerm("1302", "   ")],
+        },
+      ],
+      [
+        "two terms share a code",
+        {
+          ...validCategoryNames,
+          "schema:hasDefinedTerm": [
+            categoryTerm("1302", "市役所"),
+            categoryTerm("1302", "区役所"),
+          ],
+        },
+      ],
+    ])("fails when the dictionary is malformed: %s", async (_label, payload) => {
+      const harness = createHarness({ categoryNames: payload });
+
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
+      expectArtifactUnchanged(harness);
+    });
+
+    it("ignores a catalog group and uses the dictionary category", async () => {
       const harness = createHarness(
-        { placesJsonLd: places },
+        {},
         {
           catalog: catalogWith({}, [
             {
@@ -684,32 +802,14 @@ describe("generateLocationArtifact build boundary", () => {
 
       expect(artifact.sources.routeDestinations).toEqual([
         {
-          category: "障害者支援",
-          "category:en": "disability-support",
+          category: "市役所・東京都の区役所",
+          categoryId: "1302",
           locations: [{ name: "千代田区役所", lat: LAT, lng: LNG }],
         },
       ]);
-    });
-
-    it("fails when an ambiguous gif-poi code has no catalog group", async () => {
-      const places = graphWith({
-        "schema:identifier": [
-          {
-            "@type": "schema:PropertyValue",
-            "schema:propertyID": "gif-poi",
-            "schema:value": "1499",
-          },
-        ],
-      });
-      const harness = createHarness(
-        { placesJsonLd: places },
-        { catalog: selectOnly(ID.cityOffice) },
+      expect(JSON.stringify(artifact.sources.routeDestinations)).not.toContain(
+        "disability-support",
       );
-
-      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
-        /1499|グループ/u,
-      );
-      expectArtifactUnchanged(harness);
     });
 
     it("skips a selected record with no OSM association", async () => {
@@ -769,7 +869,7 @@ describe("generateLocationArtifact build boundary", () => {
       expect(artifact.sources.routeDestinations).toEqual([
         {
           category: "図書館",
-          "category:en": "libraries",
+          categoryId: "1512",
           locations: [
             { name: "千代田区立千代田図書館", lat: LIBRARY_LAT, lng: LIBRARY_LNG },
           ],
@@ -940,6 +1040,7 @@ const sourcePathByName: Record<SourceName, string> = {
   osmMirror: "/fixtures/osm.json",
   keyLocations: "/fixtures/key-locations.json",
   townGeoJson: "/fixtures/town.geojson",
+  categoryNames: "/fixtures/category-names.jsonld",
 };
 
 async function createFixtureServer(): Promise<FixtureServer> {
@@ -1030,6 +1131,7 @@ async function runPublicGeneratorCli(options: {
       osmMirrorUri: fixtureServer.uriBySource.osmMirror,
       keyLocationsUri: fixtureServer.uriBySource.keyLocations,
       townGeoJsonUri: fixtureServer.uriBySource.townGeoJson,
+      categoryNamesUri: fixtureServer.uriBySource.categoryNames,
       ...options.appConfig,
     };
     const source = {
@@ -1127,7 +1229,7 @@ describe("public generator build lifecycle", () => {
     };
     expect(artifact.sources.routeDestinations).toEqual(expectedRouteDestinations);
     expect(result.requestedUris.every((uri) => result.configuredUris.includes(uri))).toBe(true);
-    expect(result.requestedUris).toHaveLength(4);
+    expect(result.requestedUris).toHaveLength(5);
     expect(result.requestedUris.some((uri) => uri.includes("cdn.jsdelivr.net"))).toBe(false);
   });
 

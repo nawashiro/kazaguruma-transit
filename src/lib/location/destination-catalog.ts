@@ -13,7 +13,6 @@ export interface DestinationCatalogEntry {
   id: string;
   name: string;
   includeInRouteForm: boolean;
-  group?: string;
 }
 
 export interface DestinationCatalog {
@@ -130,12 +129,6 @@ function validatePlaces(value: unknown): DestinationCatalogEntry[] {
       name: rawEntry.name,
       includeInRouteForm: rawEntry.includeInRouteForm,
     };
-    if (rawEntry.group !== undefined) {
-      if (!isNonEmptyString(rawEntry.group)) {
-        fail(`${entryPath}.group は空でない文字列である必要があります`);
-      }
-      entry.group = rawEntry.group;
-    }
     return entry;
   });
 }

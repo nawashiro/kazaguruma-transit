@@ -4,7 +4,7 @@
 
 ## 前提
 
-- `app-config.json`に`placesJsonLdUri`と`osmMirrorUri`を設定します。
+- `app-config.json`に`placesJsonLdUri`、`osmMirrorUri`、`categoryNamesUri`を設定します。
 - 経路検索用の交通DBに停留所を取り込みます。目録の徒歩圏判定はこの停留所を使います。
 - Node.js 22で実行します。
 
@@ -39,13 +39,14 @@
 
 ## 掲載するentryの選択
 
-ルートページへ表示するentryは、`data/destinations.json`の`includeInRouteForm`を`true`にします。表示グループは`gif-poi`コードからビルド時に決まるため、目録へグループを書きません。
+ルートページへ表示するentryは、`data/destinations.json`の`includeInRouteForm`を`true`にします。表示カテゴリは、ビルドが公開カテゴリ名辞書から`gif-poi`コードで引くため、目録へグループやカテゴリ名を書きません。
 
 掲載entryを選んだら、変更をコミットする前に`npm run build`を実行してください。ビルドは次の場合に失敗します。
 
 - 掲載IDが公開JSON-LDにない。
 - 座標または`gif-poi`コードが不正である。
-- `gif-poi`コードが表示グループにない。
+- `gif-poi`コードがカテゴリ名辞書にない。
+- カテゴリ名辞書を取得できない、または形式が不正である。
 - 目録の`source`が`app-config.json`の取得先と一致しない。
 
 OSM関連付けまたはOSMの名前がない掲載entryは、ビルドを失敗させず、そのentryだけをartifactから外します。掲載件数と表示件数がずれるため、ビルド後の`public/generated/location-data.json`で表示件数を確認してください。

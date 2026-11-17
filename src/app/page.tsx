@@ -66,7 +66,7 @@ function isRouteDestinations(
     if (
       !isRecord(category) ||
       !isNonEmptyString(category.category) ||
-      !isNonEmptyString(category["category:en"]) ||
+      !isNonEmptyString(category.categoryId) ||
       !Array.isArray(category.locations) ||
       category.locations.length === 0
     ) {

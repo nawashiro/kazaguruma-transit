@@ -149,7 +149,12 @@ const stops: StopPosition[] = [
 const existingCatalog = {
   source: { placesUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI },
   places: [
-    { id: ID.cityOffice, name: "旧い名前", includeInRouteForm: true },
+    {
+      id: ID.cityOffice,
+      name: "旧い名前",
+      group: "disability-support",
+      includeInRouteForm: true,
+    },
     { id: ID.library, name: "千代田区立千代田図書館", includeInRouteForm: false },
     { id: ID.far, name: "遠い施設", includeInRouteForm: true },
     { id: ID.vanished, name: "消えた施設", includeInRouteForm: false },
@@ -318,6 +323,20 @@ describe("updateDestinationCatalog", () => {
 
     expect(catalog.places.find((place) => place.id === ID.cityOffice)?.includeInRouteForm).toBe(true);
     expect(catalog.places.find((place) => place.id === ID.library)?.includeInRouteForm).toBe(false);
+  });
+
+  it("既存entryのgroupを引き継がない", async () => {
+    const harness = createHarness();
+
+    const catalog = await getUpdater()(harness.options);
+
+    const cityOffice = catalog.places.find((place) => place.id === ID.cityOffice);
+    expect(cityOffice).toEqual({
+      id: ID.cityOffice,
+      name: "千代田区役所",
+      includeInRouteForm: true,
+    });
+    expect(cityOffice).not.toHaveProperty("group");
   });
 
   it("掲載entryが徒歩圏外になったらIDを報告して目録から除く", async () => {

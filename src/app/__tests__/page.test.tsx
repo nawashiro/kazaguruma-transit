@@ -28,12 +28,13 @@ const successfulArtifact: LocationArtifact = {
     osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
     keyLocationsUri: "https://fixtures.example.test/key_locations.json",
     townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
+    categoryNamesUri: "https://fixtures.example.test/category-names.jsonld",
   },
   sources: {
     routeDestinations: [
       {
         category: "行政・相談",
-        "category:en": "government-and-consultation",
+        categoryId: "1302",
         locations: [popularFacility],
       },
     ],
@@ -391,11 +392,11 @@ describe("Home", () => {
     }
   });
 
-  it("artifactの掲載21件を3グループで表示し、実行時に外部取得をしない", async () => {
+  it("artifactの掲載21件をカテゴリごとに表示し、実行時に外部取得をしない", async () => {
     const routeDestinations = [
       {
         category: "行政・相談",
-        "category:en": "government-and-consultation",
+        categoryId: "1302",
         names: [
           "千代田区役所",
           "千代田区 富士見出張所・区民館",
@@ -407,7 +408,7 @@ describe("Home", () => {
       },
       {
         category: "子育て・福祉",
-        "category:en": "childcare-and-welfare",
+        categoryId: "1499",
         names: [
           "千代田区立障害者福祉センター　えみふる",
           "千代田区障害者よろず相談 Light",
@@ -423,7 +424,7 @@ describe("Home", () => {
       },
       {
         category: "学び・図書館",
-        "category:en": "learning-and-libraries",
+        categoryId: "1512",
         names: [
           "千代田区立千代田図書館",
           "昌平まちかど図書館",
@@ -432,9 +433,9 @@ describe("Home", () => {
           "千代田区立四番町図書館",
         ],
       },
-    ].map(({ category, "category:en": categoryEn, names }) => ({
+    ].map(({ category, categoryId, names }) => ({
       category,
-      "category:en": categoryEn,
+      categoryId,
       locations: names.map((name) => ({ name, lat: 35.694, lng: 139.753 })),
     }));
 

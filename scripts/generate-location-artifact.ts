@@ -23,6 +23,7 @@ export interface LocationArtifactSourceUris {
   osmMirrorUri: string;
   keyLocationsUri: string;
   townGeoJsonUri: string;
+  categoryNamesUri: string;
 }
 
 export interface LocationArtifactTransportResponse {
@@ -73,93 +74,60 @@ export interface RouteDestinationLocation {
 
 export interface RouteDestinationCategory {
   category: string;
-  "category:en": string;
+  categoryId: string;
   locations: RouteDestinationLocation[];
 }
 
-interface RouteDestinationGroup {
-  category: string;
-  "category:en": string;
-  codes: readonly string[];
+interface CategoryName {
+  code: string;
+  name: string;
 }
 
-const ROUTE_DESTINATION_GROUPS: readonly RouteDestinationGroup[] = [
-  {
-    category: "区役所・出張所",
-    "category:en": "city-offices",
-    codes: ["1302", "1304"],
-  },
-  {
-    category: "子育て",
-    "category:en": "childcare",
-    codes: ["1307", "1402", "1403"],
-  },
-  {
-    category: "高齢者支援",
-    "category:en": "elderly-support",
-    codes: [],
-  },
-  {
-    category: "障害者支援",
-    "category:en": "disability-support",
-    codes: [],
-  },
-  {
-    category: "図書館",
-    "category:en": "libraries",
-    codes: ["1512"],
-  },
-  {
-    category: "保健所",
-    "category:en": "health-centers",
-    codes: ["1606"],
-  },
-  {
-    category: "仕事・就労",
-    "category:en": "work-support",
-    codes: ["1219"],
-  },
-  {
-    category: "博物館・美術館",
-    "category:en": "museums-and-galleries",
-    codes: ["0801", "0802", "0803"],
-  },
-  {
-    category: "映画館",
-    "category:en": "cinemas",
-    codes: ["1011"],
-  },
-  {
-    category: "公園・自然",
-    "category:en": "parks-and-nature",
-    codes: ["1003", "1004"],
-  },
-  {
-    category: "寺社・教会",
-    "category:en": "temples-and-churches",
-    codes: ["0702", "0703"],
-  },
-  {
-    category: "公衆浴場",
-    "category:en": "public-baths",
-    codes: ["0903"],
-  },
-  {
-    category: "買い物",
-    "category:en": "shopping",
-    codes: ["2603"],
-  },
-];
+const CATEGORY_CODE_PATTERN = /^[0-9]{4}$/u;
 
-const GROUP_BY_CODE = new Map<string, RouteDestinationGroup>(
-  ROUTE_DESTINATION_GROUPS.flatMap((group) =>
-    group.codes.map((code) => [code, group] as const),
-  ),
-);
+function parseCategoryNames(value: unknown): CategoryName[] {
+  if (!isRecord(value) || value["@type"] !== "schema:DefinedTermSet") {
+    fail("カテゴリ名辞書は schema:DefinedTermSet である必要があります");
+  }
 
-const GROUP_BY_ID = new Map<string, RouteDestinationGroup>(
-  ROUTE_DESTINATION_GROUPS.map((group) => [group["category:en"], group]),
-);
+  const terms = value["schema:hasDefinedTerm"];
+  if (!Array.isArray(terms) || terms.length === 0) {
+    fail("カテゴリ名辞書の schema:hasDefinedTerm は空でない配列である必要があります");
+  }
+
+  const categories: CategoryName[] = [];
+  const codes = new Set<string>();
+  terms.forEach((term, index) => {
+    const termPath = `カテゴリ名辞書の schema:hasDefinedTerm[${index}]`;
+    if (!isRecord(term)) {
+      fail(`${termPath} はオブジェクトである必要があります`);
+    }
+
+    const id = term["@id"];
+    if (typeof id !== "string") {
+      fail(`${termPath}.@id は文字列である必要があります`);
+    }
+    const fragmentIndex = id.lastIndexOf("#");
+    const code =
+      fragmentIndex === -1 ? "" : id.slice(fragmentIndex + 1);
+    if (!CATEGORY_CODE_PATTERN.test(code)) {
+      fail(`${termPath}.@id のfragmentは4桁コードである必要があります`);
+    }
+    if (codes.has(code)) {
+      fail(`カテゴリ名辞書に重複したコードがあります: ${code}`);
+    }
+    codes.add(code);
+
+    const name = term["schema:name"];
+    if (!isNonEmptyString(name)) {
+      fail(`${termPath}.schema:name は空でない文字列である必要があります`);
+    }
+
+    categories.push({ code, name });
+  });
+
+  return categories;
+}
 
 function parsePlacesJsonLd(value: unknown): Map<string, JsonRecord> {
   if (!isRecord(value) || !Array.isArray(value["@graph"])) {
@@ -249,12 +217,14 @@ function readGifPoiCode(record: JsonRecord, id: string): string {
 
 function buildRouteDestinations(
   catalog: DestinationCatalog,
+  categoryNames: CategoryName[],
   placesPayload: unknown,
   osmPayload: unknown,
 ): RouteDestinationCategory[] {
   const records = parsePlacesJsonLd(placesPayload);
   const osmNames = parseOsmNames(osmPayload);
-  const locationsByCategory = new Map<string, RouteDestinationLocation[]>();
+  const knownCodes = new Set(categoryNames.map((category) => category.code));
+  const locationsByCode = new Map<string, RouteDestinationLocation[]>();
 
   for (const entry of catalog.places) {
     if (!entry.includeInRouteForm) {
@@ -268,15 +238,9 @@ function buildRouteDestinations(
 
     const coordinates = readRouteDestinationCoordinates(record, entry.id);
     const code = readGifPoiCode(record, entry.id);
-    const group =
-      entry.group === undefined
-        ? GROUP_BY_CODE.get(code)
-        : GROUP_BY_ID.get(entry.group);
-    if (group === undefined) {
+    if (!knownCodes.has(code)) {
       fail(
-        `gif-poiコードまたは目録のgroupに対応する表示グループがありません: ${
-          entry.group ?? code
-        } (${entry.id})`,
+        `gif-poiコードがカテゴリ名辞書にありません: ${code} (${entry.id})`,
       );
     }
 
@@ -287,20 +251,20 @@ function buildRouteDestinations(
       continue;
     }
 
-    const locations = locationsByCategory.get(group["category:en"]) ?? [];
+    const locations = locationsByCode.get(code) ?? [];
     locations.push({ name, lat: coordinates.lat, lng: coordinates.lng });
-    locationsByCategory.set(group["category:en"], locations);
+    locationsByCode.set(code, locations);
   }
 
-  return ROUTE_DESTINATION_GROUPS.flatMap((group): RouteDestinationCategory[] => {
-    const locations = locationsByCategory.get(group["category:en"]);
+  return categoryNames.flatMap((category): RouteDestinationCategory[] => {
+    const locations = locationsByCode.get(category.code);
     if (locations === undefined || locations.length === 0) {
       return [];
     }
     return [
       {
-        category: group.category,
-        "category:en": group["category:en"],
+        category: category.name,
+        categoryId: category.code,
         locations,
       },
     ];
@@ -687,6 +651,10 @@ function validateSourceUris(value: unknown): LocationArtifactSourceUris {
       value.townGeoJsonUri,
       "appConfig.townGeoJsonUri",
     ),
+    categoryNamesUri: requireAbsoluteHttpUri(
+      value.categoryNamesUri,
+      "appConfig.categoryNamesUri",
+    ),
   };
 }
 
@@ -827,15 +795,23 @@ export async function generateLocationArtifact(
     );
   }
 
-  const [placesPayload, osmPayload, keyPayload, townPayload] = await Promise.all([
+  const [
+    placesPayload,
+    osmPayload,
+    keyPayload,
+    townPayload,
+    categoryNamesPayload,
+  ] = await Promise.all([
     fetchJson("placesJsonLd", sourceUris.placesJsonLdUri, options.transport),
     fetchJson("osmMirror", sourceUris.osmMirrorUri, options.transport),
     fetchJson("keyLocations", sourceUris.keyLocationsUri, options.transport),
     fetchJson("townGeoJson", sourceUris.townGeoJsonUri, options.transport),
+    fetchJson("categoryNames", sourceUris.categoryNamesUri, options.transport),
   ]);
 
   const routeDestinations = buildRouteDestinations(
     catalog,
+    parseCategoryNames(categoryNamesPayload),
     placesPayload,
     osmPayload,
   );

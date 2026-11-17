@@ -27,6 +27,7 @@ type SourceUris = {
   osmMirrorUri: string;
   keyLocationsUri: string;
   townGeoJsonUri: string;
+  categoryNamesUri: string;
 };
 
 type ReaderErrorResult = {
@@ -53,12 +54,13 @@ const sourceUris: SourceUris = {
   osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
   keyLocationsUri: "https://fixtures.example.test/key_locations.json",
   townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
+  categoryNamesUri: "https://fixtures.example.test/category-names.jsonld",
 };
 
 const routeDestinations = [
   {
     category: "行政・相談",
-    "category:en": "government-and-consultation",
+    categoryId: "1302",
     locations: [
       {
         name: "千代田区役所",
@@ -459,6 +461,15 @@ describe("readLocationArtifact runtime artifact boundary", () => {
         routeDestinations: [{
           ...routeDestinations[0],
           locations: [{ ...routeDestinations[0].locations[0], name: "" }],
+        }],
+      },
+    })],
+    ["missing route destination category ID", artifactWith({
+      sources: {
+        ...validArtifact.sources,
+        routeDestinations: [{
+          category: routeDestinations[0].category,
+          locations: routeDestinations[0].locations,
         }],
       },
     })],

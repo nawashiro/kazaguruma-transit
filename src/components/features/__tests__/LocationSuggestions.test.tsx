@@ -13,8 +13,8 @@ const facility: RouteDestinationLocation = {
   lng: 139.753,
 };
 const categories: RouteDestinationCategory[] = [
-  { category: "公共施設と地域福祉交通の長いカテゴリ名ABCDEFGHIJKLMNOPQRSTUVWXYZ", "category:en": "public", locations: [facility] },
-  { category: "医療機関", "category:en": "medical", locations: [{ ...facility, name: "病院" }] },
+  { category: "公共施設と地域福祉交通の長いカテゴリ名ABCDEFGHIJKLMNOPQRSTUVWXYZ", categoryId: "1302", locations: [facility] },
+  { category: "医療機関", categoryId: "1606", locations: [{ ...facility, name: "病院" }] },
 ];
 
 jest.mock("@/components/ui/RubyWrapper", () => ({ __esModule: true, default: () => null }));

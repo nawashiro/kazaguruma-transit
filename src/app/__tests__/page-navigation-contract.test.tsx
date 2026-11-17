@@ -18,12 +18,13 @@ const mockArtifactResult: LocationArtifactReadResult = {
       osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
       keyLocationsUri: "https://fixtures.example.test/key_locations.json",
       townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
+      categoryNamesUri: "https://fixtures.example.test/category-names.jsonld",
     },
     sources: {
       routeDestinations: [
         {
           category: "行政・相談",
-          "category:en": "government-and-consultation",
+          categoryId: "1302",
           locations: [
             {
               name: "テスト施設",

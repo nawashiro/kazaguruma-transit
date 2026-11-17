@@ -27,7 +27,6 @@
     {
       "id": "urn:uuid:019fa880-5cd4-729d-8095-deb5f1a4597f",
       "name": "千代田区立障害者福祉センター　えみふる",
-      "group": "disability-support",
       "includeInRouteForm": true
     },
     {
@@ -53,7 +52,6 @@
     {
       "id": "urn:uuid:019fa880-5cd4-7d3c-a9e1-f01c12ebf008",
       "name": "千代田区障害者よろず相談 Light",
-      "group": "disability-support",
       "includeInRouteForm": true
     },
     {
@@ -154,7 +152,6 @@
     {
       "id": "urn:uuid:019fa880-5cd5-7b01-9dd8-2e4787f423aa",
       "name": "西神田児童・家庭支援センター",
-      "group": "childcare",
       "includeInRouteForm": true
     },
     {
@@ -180,7 +177,6 @@
     {
       "id": "urn:uuid:019fa880-5cd5-7d11-8560-3ac4e0486633",
       "name": "千代田区立一番町高齢者在宅介護支援センター",
-      "group": "elderly-support",
       "includeInRouteForm": true
     },
     {
@@ -201,7 +197,6 @@
     {
       "id": "urn:uuid:019fa880-5cd5-7d31-9979-79d32157427a",
       "name": "岩本町ほほえみプラザ",
-      "group": "elderly-support",
       "includeInRouteForm": true
     },
     {

@@ -6,6 +6,6 @@ export interface RouteDestinationLocation {
 
 export interface RouteDestinationCategory {
   category: string;
-  "category:en": string;
+  categoryId: string;
   locations: RouteDestinationLocation[];
 }

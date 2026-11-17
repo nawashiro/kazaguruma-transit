@@ -23,13 +23,9 @@
 4. `data/destinations.json`の差分を確認します。
 5. `npm run build`を実行し、目録のIDと公開データが一致することを確認します。
 
-コマンドは公開JSON-LDとOSMタグミラーを取得します。その後、次の条件をすべて満たすrecordを候補にします。
+コマンドは公開JSON-LDとOSMタグミラーを取得します。経路検索と同じ補正徒歩距離が500m以下のrecordを候補にします。候補の`name`はOSMタグミラーの`name`を使います。OSM名を解決できないrecordは、目録に同じIDのentryがあり、その名前がある場合だけ候補として残します。
 
-- 経路検索と同じ補正徒歩距離が500m以下である。
-- `rdfs:seeAlso`にOSM要素を持つ。
-- OSMタグミラーに要素があり、空でない`name`を持つ。
-
-コマンドは候補だけを目録へ書き、候補でないrecordを書きません。同じIDが残るentryの`includeInRouteForm`を引き継ぎます。新しい候補は`includeInRouteForm: false`で追加し、`name`はOSMの名前に更新します。
+コマンドは候補だけを目録へ書き、候補でないrecordを書きません。同じIDが残るentryの`includeInRouteForm`を引き継ぎます。新しい候補は`includeInRouteForm: false`で追加し、`name`はOSMの名前に更新します。OSM名がないentryは既存の名前を保ちます。
 
 ## 報告の読み方
 
@@ -39,7 +35,7 @@
 - `削除:` 掲載していないentryを目録から除いた。
 - `掲載解除:` 掲載していたentryを目録から除いた。ルートページからも消える。
 
-`掲載解除:`が出た場合は、停留所の変更、OSM関連付けの消失、OSMの名前の消失、公開JSON-LDからのrecordの消失のどれが原因かを確認してください。名前検索では引き続き施設を選べます。
+`掲載解除:`が出た場合は、停留所の変更か公開JSON-LDからのrecordの消失を確認してください。OSM関連付けやOSM名を失っただけの掲載entryは目録に残り、ビルドでスキップされます。名前検索では引き続き施設を選べます。
 
 ## 掲載するentryの選択
 
@@ -50,5 +46,6 @@
 - 掲載IDが公開JSON-LDにない。
 - 座標または`gif-poi`コードが不正である。
 - `gif-poi`コードが表示グループにない。
-- OSM関連付けまたはOSMの名前がない。
 - 目録の`source`が`app-config.json`の取得先と一致しない。
+
+OSM関連付けまたはOSMの名前がない掲載entryは、ビルドを失敗させず、そのentryだけをartifactから外します。掲載件数と表示件数がずれるため、ビルド後の`public/generated/location-data.json`で表示件数を確認してください。

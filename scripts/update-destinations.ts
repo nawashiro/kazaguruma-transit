@@ -146,6 +146,7 @@ function selectCandidates(
   records: JsonRecord[],
   osmNames: Map<string, string>,
   stops: StopPosition[],
+  previousEntries: Map<string, DestinationCatalogEntry>,
 ): DestinationCatalogEntry[] {
   const candidates = new Map<string, DestinationCatalogEntry>();
 
@@ -160,19 +161,17 @@ function selectCandidates(
       continue;
     }
 
-    const osmElementKey = findOsmElementKey(record["rdfs:seeAlso"]);
-    if (osmElementKey === null) {
-      continue;
-    }
-
-    const name = osmNames.get(osmElementKey);
-    if (name === undefined) {
-      continue;
-    }
-
     if (
       selectNearbyStops(stops, coordinates.lat, coordinates.lng).length === 0
     ) {
+      continue;
+    }
+
+    const osmElementKey = findOsmElementKey(record["rdfs:seeAlso"]);
+    const osmName =
+      osmElementKey === null ? undefined : osmNames.get(osmElementKey);
+    const name = osmName ?? previousEntries.get(id)?.name;
+    if (name === undefined) {
       continue;
     }
 
@@ -207,7 +206,11 @@ function applySelection(
       report(`追加: ${candidate.id}`);
       return candidate;
     }
-    return { ...candidate, includeInRouteForm: previous.includeInRouteForm };
+    return {
+      ...candidate,
+      ...(previous.group === undefined ? {} : { group: previous.group }),
+      includeInRouteForm: previous.includeInRouteForm,
+    };
   });
 
   for (const previous of previousEntries.values()) {
@@ -259,7 +262,12 @@ export async function updateDestinationCatalog(
   const previousEntries = readPreviousEntries(existingCatalog);
   const records = readPlaceRecords(placesPayload);
   const osmNames = readOsmNames(osmPayload);
-  const candidates = selectCandidates(records, osmNames, stops);
+  const candidates = selectCandidates(
+    records,
+    osmNames,
+    stops,
+    previousEntries,
+  );
   const places = applySelection(candidates, previousEntries, options.report);
   const catalog: DestinationCatalog = { source, places };
 

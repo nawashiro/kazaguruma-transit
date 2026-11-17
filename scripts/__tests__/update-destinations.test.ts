@@ -152,7 +152,6 @@ const existingCatalog = {
     { id: ID.cityOffice, name: "旧い名前", includeInRouteForm: true },
     { id: ID.library, name: "千代田区立千代田図書館", includeInRouteForm: false },
     { id: ID.far, name: "遠い施設", includeInRouteForm: true },
-    { id: ID.noOsmLink, name: "OSMなし", includeInRouteForm: true },
     { id: ID.vanished, name: "消えた施設", includeInRouteForm: false },
   ],
 };
@@ -239,7 +238,7 @@ function jsonResponse(payload: unknown, status = 200): TransportResponse {
 }
 
 describe("updateDestinationCatalog", () => {
-  it("公開JSON-LDのIDを取り、500m以内でOSM名のある候補だけを書く", async () => {
+  it("公開JSON-LDのIDを取り、500m以内の候補を書いてOSM名のない新規recordを除く", async () => {
     const harness = createHarness();
 
     const catalog = await getUpdater()(harness.options);
@@ -288,7 +287,7 @@ describe("updateDestinationCatalog", () => {
     expect(harness.reported).toContainEqual(expect.stringContaining("追加"));
   });
 
-  it("OSM関連付けのないrecordを候補にしない", async () => {
+  it("OSM関連付けのない新しいrecordを候補にしない", async () => {
     const harness = createHarness();
 
     const catalog = await getUpdater()(harness.options);
@@ -304,7 +303,7 @@ describe("updateDestinationCatalog", () => {
     expect(catalog.places.map((place) => place.id)).not.toContain(ID.missingElement);
   });
 
-  it("OSM名が空のrecordを候補にしない", async () => {
+  it("OSM名が空の新しいrecordを候補にしない", async () => {
     const harness = createHarness();
 
     const catalog = await getUpdater()(harness.options);
@@ -330,13 +329,24 @@ describe("updateDestinationCatalog", () => {
     expect(harness.reported).toContainEqual(expect.stringContaining(`掲載解除: ${ID.far}`));
   });
 
-  it("掲載entryがOSM不完全になったらIDを報告して目録から除く", async () => {
-    const harness = createHarness();
+  it("掲載entryがOSM不完全になっても、既存の名前と掲載選択を保持する", async () => {
+    const harness = createHarness({
+      existingCatalog: {
+        source: { placesUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI },
+        places: [{ id: ID.noOsmLink, name: "OSMなし", includeInRouteForm: true }],
+      },
+    });
 
     const catalog = await getUpdater()(harness.options);
 
-    expect(catalog.places.map((place) => place.id)).not.toContain(ID.noOsmLink);
-    expect(harness.reported).toContainEqual(expect.stringContaining(`掲載解除: ${ID.noOsmLink}`));
+    expect(catalog.places).toContainEqual({
+      id: ID.noOsmLink,
+      name: "OSMなし",
+      includeInRouteForm: true,
+    });
+    expect(harness.reported).not.toContainEqual(
+      expect.stringContaining(ID.noOsmLink),
+    );
   });
 
   it("公開JSON-LDから消えたentryのIDを報告して目録から除く", async () => {

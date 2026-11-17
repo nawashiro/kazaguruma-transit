@@ -217,13 +217,13 @@ const validPayloadBySource: Record<SourceName, unknown> = {
 
 const expectedRouteDestinations = [
   {
-    category: "行政・相談",
-    "category:en": "government-and-consultation",
+    category: "区役所・出張所",
+    "category:en": "city-offices",
     locations: [{ name: "千代田区役所", lat: LAT, lng: LNG }],
   },
   {
-    category: "学び・図書館",
-    "category:en": "learning-and-libraries",
+    category: "図書館",
+    "category:en": "libraries",
     locations: [
       { name: "千代田区立千代田図書館", lat: LIBRARY_LAT, lng: LIBRARY_LNG },
     ],
@@ -654,41 +654,127 @@ describe("generateLocationArtifact build boundary", () => {
       expectArtifactUnchanged(harness);
     });
 
-    it("fails when the selected record has no OSM association", async () => {
-      const places = graphWith({ "rdfs:seeAlso": ["https://www.wikidata.org/entity/Q1"] });
+    it("uses the catalog group when the gif-poi code alone is ambiguous", async () => {
+      const places = graphWith({
+        "schema:identifier": [
+          {
+            "@type": "schema:PropertyValue",
+            "schema:propertyID": "gif-poi",
+            "schema:value": "1499",
+          },
+        ],
+      });
+      const harness = createHarness(
+        { placesJsonLd: places },
+        {
+          catalog: catalogWith({}, [
+            {
+              id: ID.cityOffice,
+              name: "目録の名前",
+              group: "disability-support",
+              includeInRouteForm: true,
+            },
+          ]),
+        },
+      );
+
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { routeDestinations: unknown[] };
+      };
+
+      expect(artifact.sources.routeDestinations).toEqual([
+        {
+          category: "障害者支援",
+          "category:en": "disability-support",
+          locations: [{ name: "千代田区役所", lat: LAT, lng: LNG }],
+        },
+      ]);
+    });
+
+    it("fails when an ambiguous gif-poi code has no catalog group", async () => {
+      const places = graphWith({
+        "schema:identifier": [
+          {
+            "@type": "schema:PropertyValue",
+            "schema:propertyID": "gif-poi",
+            "schema:value": "1499",
+          },
+        ],
+      });
       const harness = createHarness(
         { placesJsonLd: places },
         { catalog: selectOnly(ID.cityOffice) },
       );
 
       await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
-        /OSM|seeAlso/u,
+        /1499|グループ/u,
       );
       expectArtifactUnchanged(harness);
     });
 
-    it("fails when the OSM element is missing from the mirror", async () => {
+    it("skips a selected record with no OSM association", async () => {
+      const places = graphWith({ "rdfs:seeAlso": ["https://www.wikidata.org/entity/Q1"] });
+      const harness = createHarness(
+        { placesJsonLd: places },
+        { catalog: selectOnly(ID.cityOffice) },
+      );
+
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { routeDestinations: unknown[] };
+      };
+
+      expect(artifact.sources.routeDestinations).toEqual([]);
+      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
+    });
+
+    it("skips a selected record whose OSM element is missing from the mirror", async () => {
       const harness = createHarness(
         { osmMirror: { ...validOsmMirror, elements: [] } },
         { catalog: selectOnly(ID.cityOffice) },
       );
 
-      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
-        /OSM/u,
-      );
-      expectArtifactUnchanged(harness);
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { routeDestinations: unknown[] };
+      };
+
+      expect(artifact.sources.routeDestinations).toEqual([]);
+      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
     });
 
-    it("fails when the OSM element has no name", async () => {
+    it("skips a selected record whose OSM element has no name", async () => {
       const harness = createHarness(
         { osmMirror: osmWith({ tags: {} }, 0) },
         { catalog: selectOnly(ID.cityOffice) },
       );
 
-      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(
-        /name|名前/u,
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { routeDestinations: unknown[] };
+      };
+
+      expect(artifact.sources.routeDestinations).toEqual([]);
+      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps other selected entries when one has no OSM name", async () => {
+      const places = graphWith({ "rdfs:seeAlso": ["https://www.wikidata.org/entity/Q1"] });
+      const harness = createHarness(
+        { placesJsonLd: places },
+        { catalog: catalogWith({}, validCatalog.places) },
       );
-      expectArtifactUnchanged(harness);
+
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { routeDestinations: unknown[] };
+      };
+
+      expect(artifact.sources.routeDestinations).toEqual([
+        {
+          category: "図書館",
+          "category:en": "libraries",
+          locations: [
+            { name: "千代田区立千代田図書館", lat: LIBRARY_LAT, lng: LIBRARY_LNG },
+          ],
+        },
+      ]);
     });
 
     it("fails when the catalog places URI does not match appConfig", async () => {

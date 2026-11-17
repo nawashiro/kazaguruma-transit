@@ -85,19 +85,39 @@ interface RouteDestinationGroup {
 
 const ROUTE_DESTINATION_GROUPS: readonly RouteDestinationGroup[] = [
   {
-    category: "行政・相談",
-    "category:en": "government-and-consultation",
-    codes: ["1302", "1304", "1219", "1606"],
+    category: "区役所・出張所",
+    "category:en": "city-offices",
+    codes: ["1302", "1304"],
   },
   {
-    category: "子育て・福祉",
-    "category:en": "childcare-and-welfare",
-    codes: ["1307", "1402", "1403", "1499"],
+    category: "子育て",
+    "category:en": "childcare",
+    codes: ["1307", "1402", "1403"],
   },
   {
-    category: "学び・図書館",
-    "category:en": "learning-and-libraries",
+    category: "高齢者支援",
+    "category:en": "elderly-support",
+    codes: [],
+  },
+  {
+    category: "障害者支援",
+    "category:en": "disability-support",
+    codes: [],
+  },
+  {
+    category: "図書館",
+    "category:en": "libraries",
     codes: ["1512"],
+  },
+  {
+    category: "保健所",
+    "category:en": "health-centers",
+    codes: ["1606"],
+  },
+  {
+    category: "仕事・就労",
+    "category:en": "work-support",
+    codes: ["1219"],
   },
   {
     category: "博物館・美術館",
@@ -120,9 +140,14 @@ const ROUTE_DESTINATION_GROUPS: readonly RouteDestinationGroup[] = [
     codes: ["0702", "0703"],
   },
   {
-    category: "くらし・余暇",
-    "category:en": "daily-life-and-leisure",
-    codes: ["0903", "2603"],
+    category: "公衆浴場",
+    "category:en": "public-baths",
+    codes: ["0903"],
+  },
+  {
+    category: "買い物",
+    "category:en": "shopping",
+    codes: ["2603"],
   },
 ];
 
@@ -130,6 +155,10 @@ const GROUP_BY_CODE = new Map<string, RouteDestinationGroup>(
   ROUTE_DESTINATION_GROUPS.flatMap((group) =>
     group.codes.map((code) => [code, group] as const),
   ),
+);
+
+const GROUP_BY_ID = new Map<string, RouteDestinationGroup>(
+  ROUTE_DESTINATION_GROUPS.map((group) => [group["category:en"], group]),
 );
 
 function parsePlacesJsonLd(value: unknown): Map<string, JsonRecord> {
@@ -239,21 +268,23 @@ function buildRouteDestinations(
 
     const coordinates = readRouteDestinationCoordinates(record, entry.id);
     const code = readGifPoiCode(record, entry.id);
-    const group = GROUP_BY_CODE.get(code);
+    const group =
+      entry.group === undefined
+        ? GROUP_BY_CODE.get(code)
+        : GROUP_BY_ID.get(entry.group);
     if (group === undefined) {
-      fail(`gif-poiコードが表示グループにありません: ${code} (${entry.id})`);
+      fail(
+        `gif-poiコードまたは目録のgroupに対応する表示グループがありません: ${
+          entry.group ?? code
+        } (${entry.id})`,
+      );
     }
 
     const osmElementKey = findOsmElementKey(record["rdfs:seeAlso"]);
-    if (osmElementKey === null) {
-      fail(`掲載recordにOSM要素の関連付けがありません: ${entry.id}`);
-    }
-    if (!osmNames.has(osmElementKey)) {
-      fail(`OSMタグミラーに要素がありません: ${osmElementKey} (${entry.id})`);
-    }
-    const name = osmNames.get(osmElementKey);
+    const name =
+      osmElementKey === null ? undefined : osmNames.get(osmElementKey);
     if (name === null || name === undefined) {
-      fail(`OSM要素にnameがありません: ${osmElementKey} (${entry.id})`);
+      continue;
     }
 
     const locations = locationsByCategory.get(group["category:en"]) ?? [];

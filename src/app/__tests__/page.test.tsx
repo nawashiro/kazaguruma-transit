@@ -391,7 +391,7 @@ describe("Home", () => {
     }
   });
 
-  it("artifactの掲載20件を3グループで表示し、実行時に外部取得をしない", async () => {
+  it("artifactの掲載21件を3グループで表示し、実行時に外部取得をしない", async () => {
     const routeDestinations = [
       {
         category: "行政・相談",
@@ -401,6 +401,7 @@ describe("Home", () => {
           "千代田区 富士見出張所・区民館",
           "千代田区神保町出張所・区民館",
           "千代田区役所 神田公園出張所・区民館",
+          "千代田区役所 万世橋出張所・区民館",
           "千代田区役所和泉橋出張所",
         ],
       },
@@ -459,7 +460,7 @@ describe("Home", () => {
       }
     }
     expect(routeDestinations).toHaveLength(3);
-    expect(routeDestinations.flatMap((category) => category.locations)).toHaveLength(20);
+    expect(routeDestinations.flatMap((category) => category.locations)).toHaveLength(21);
   });
 
   it("server data boundaryからpopular施設を受け取り、ブラウザCDN fetchを開始しない", async () => {

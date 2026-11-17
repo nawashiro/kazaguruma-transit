@@ -1,10 +1,9 @@
-# Spec Delta
+# destination-catalog Specification
 
 ## Purpose
-
 ルートページと場所検索ページが共有する目的地目録を、公開JSON-LDのID参照として維持し、ルートページに掲載する候補を明示的に選ぶ。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 公開JSON-LDのIDによる同一性
 
@@ -20,9 +19,9 @@
 - **WHEN** 同じIDを持つentryが2つある
 - **THEN** 目録の検証は失敗する
 
-### Requirement: 徒歩圏とOSM関連付けによる候補抽出
+### Requirement: 徒歩圏と名前解決による候補抽出
 
-目録の更新は、経路検索の停留所選択と同じ碁盤目補正後の徒歩距離を使い、`TRANSIT_PARAMS.DEFAULT_SEARCH_RADIUS`（500m）以内のrecordだけを候補にしなければならない（MUST）。上限ちょうどの距離は候補に含める。候補は、`rdfs:seeAlso`にOSM要素を持ち、OSMタグミラーに空でない`name`があるrecordに限る（MUST）。
+目録の更新は、経路検索の停留所選択と同じ碁盤目補正後の徒歩距離を使い、`TRANSIT_PARAMS.DEFAULT_SEARCH_RADIUS`（500m）以内のrecordだけを候補にしなければならない（MUST）。上限ちょうどの距離は候補に含める。候補の名前は、`rdfs:seeAlso`にあるOSM要素の`name`を使う（MUST）。OSM名を解決できないrecordは、既存entryの名前がある場合に限り候補にし、既存entryがなければ候補にしない（MUST）。
 
 #### Scenario: 上限以内のrecordを候補にする
 
@@ -34,15 +33,15 @@
 - **WHEN** 最寄り停留所までの補正徒歩距離が500mを超える
 - **THEN** そのrecordは目録に追加されない
 
-#### Scenario: OSM関連付けのないrecordを候補にしない
+#### Scenario: OSM関連付けのない新しいrecordを候補にしない
 
-- **WHEN** recordが`rdfs:seeAlso`にOSM要素を持たない
-- **THEN** そのrecordは不完全として目録に追加されない
+- **WHEN** recordが`rdfs:seeAlso`にOSM要素を持たず、既存entryもない
+- **THEN** そのrecordは目録に追加されない
 
-#### Scenario: OSMの名前がないrecordを候補にしない
+#### Scenario: OSM名がない既存entryを候補に残す
 
-- **WHEN** recordのOSM要素に空でない`name`がない
-- **THEN** そのrecordは不完全として目録に追加されない
+- **WHEN** recordのOSM要素に空でない`name`がなく、既存entryの名前がある
+- **THEN** そのrecordは候補になり、既存entryの名前をコメントとして保つ
 
 #### Scenario: 掲載entryが徒歩圏外になる
 
@@ -65,7 +64,7 @@
 
 ### Requirement: 目録更新での掲載選択の保持
 
-目録の再更新は、同じIDが残るentryの`includeInRouteForm`を保持しなければならない（MUST）。名前は人間用のコメントであり、更新時にOSMの名前で置き換えてよい。新しい候補は`false`で追加する。掲載entryが候補から外れたときは、そのIDを報告する。
+目録の再更新は、同じIDが残るentryの`includeInRouteForm`を保持しなければならない（MUST）。名前は人間用のコメントであり、更新時にOSMの名前で置き換えてよい。OSM名がないentryは既存の名前を保つ。新しい候補は`false`で追加する。掲載entryが徒歩圏外になった、または公開JSON-LDから消えたときは、そのIDを報告する。
 
 #### Scenario: 既存entryの掲載選択を保持する
 
@@ -127,7 +126,7 @@
 
 ### Requirement: OSMタグミラーからの表示名
 
-ビルドはOSMタグミラーを取得し、掲載entryの`rdfs:seeAlso`にあるOSM要素の`name`を表示名に使わなければならない（MUST）。目録の名前は表示に使ってはならない（MUST NOT）。OSM関連付けまたは空でない`name`がない掲載entryがある場合、ビルドを失敗させる。
+ビルドはOSMタグミラーを取得し、掲載entryの`rdfs:seeAlso`にあるOSM要素の`name`を表示名に使わなければならない（MUST）。目録の名前は表示に使ってはならない（MUST NOT）。OSM関連付けまたは空でない`name`がない掲載entryは、そのentryをartifactに含めず、残りのentryで出力する（MUST）。ビルドを失敗させてはならない（MUST NOT）。
 
 #### Scenario: OSMの名前を表示する
 
@@ -142,7 +141,8 @@
 #### Scenario: 掲載entryのOSM名がない
 
 - **WHEN** 掲載entryにOSM関連付けまたは空でない`name`がない
-- **THEN** ビルドは失敗する
+- **THEN** そのentryはartifactに含まれず、残りの掲載entryが出力される
+- **THEN** ビルドは成功する
 
 #### Scenario: OSMタグミラーを取得できない
 

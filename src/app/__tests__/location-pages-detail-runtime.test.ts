@@ -94,6 +94,6 @@ describe("runtime location detail resolution", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain(location.name);
-    expect(response.body).toContain("バリアフリー情報");
+    expect(response.body).toContain("車いす情報");
   });
 });

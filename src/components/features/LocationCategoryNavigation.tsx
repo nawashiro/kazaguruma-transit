@@ -10,7 +10,8 @@ import {
 
 export type LocationCategoryNavigationCategory = {
   category: string;
-  "category:en": string;
+  categoryId: string;
+  "category:en"?: string;
 };
 
 export type LocationCategoryNavigationProps = {
@@ -80,8 +81,8 @@ export default function LocationCategoryNavigation({
   const pathname = useOptionalPathname();
   const searchParams = useOptionalSearchParams();
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-  const isCategoryPage = categories.some(({ "category:en": categoryId }) =>
-    isCategoryPath(pathname, categoryId),
+  const isCategoryPage = categories.some((c) =>
+    isCategoryPath(pathname, c.categoryId ?? (c as unknown as Record<string, string>)["category:en"]),
   );
   const parsedOrigin = isCategoryPage
     ? parseLocationOrigin(searchParams?.get("origin"))
@@ -127,7 +128,9 @@ export default function LocationCategoryNavigation({
       aria-label="場所カテゴリ"
       className="tabs tabs-box mb-6 flex w-full flex-wrap"
     >
-      {categories.map(({ category, "category:en": categoryId }, index) => {
+      {categories.map((entry, index) => {
+        const category = entry.category;
+        const categoryId = entry.categoryId ?? (entry as unknown as Record<string, string>)["category:en"];
         const isCurrent = isCategoryPath(pathname, categoryId);
         return (
           <Link

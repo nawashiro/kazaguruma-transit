@@ -3,21 +3,21 @@ import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type { LocationDetailResult } from "@/types/access-route-pages";
 import type {
-  KeyLocation,
-  KeyLocationCategory,
-  KeyLocationsDataResult,
-} from "@/utils/addressLoader";
+  LocationWithArea,
+  LocationCategoryWithArea,
+  LocationPageDataResult,
+} from "@/lib/location/location-page-data";
 
 const mockNotFound = jest.fn(() => {
   throw new Error("unexpected detail notFound() in visual-contract fixture");
 });
 const mockLoadLocationPageData = jest.fn<
-  Promise<KeyLocationsDataResult>,
+  Promise<LocationPageDataResult>,
   []
 >();
 const mockResolveLocationDetail = jest.fn<
-  LocationDetailResult<KeyLocation>,
-  [string, KeyLocationsDataResult]
+  LocationDetailResult<LocationWithArea>,
+  [string, LocationPageDataResult]
 >();
 
 jest.mock("next/navigation", () => ({
@@ -39,23 +39,22 @@ type LocationDetailPage = (props: {
   params: Promise<{ id: string }>;
 }) => ReactNode | Promise<ReactNode>;
 
-const detailCategory: KeyLocationCategory = {
+const detailCategory: LocationCategoryWithArea = {
   category: "公共施設",
-  "category:en": "public facilities",
+  categoryId: "1302",
   locations: [],
 };
 
-const detailLocation: KeyLocation = {
-  id: "visual-detail-location",
+const detailLocation: LocationWithArea = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000041",
   name: "視覚契約の詳細施設",
   lat: 35.694,
   lng: 139.768,
   area: "神田",
-  description: "詳細ページのカテゴリナビゲーション省略を確認する施設です",
-  uri: "https://example.test/visual-detail-location",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  relatedPages: [],
+  osmElement: { type: "node", id: 41 },
+  wheelchair: "yes",
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=41",
 };
 
 const DERIVED_AREA_WITH_PREFIX = "東京都千代田区神田和泉町";
@@ -65,36 +64,35 @@ const FULL_LOCATION_ADDRESS = "東京都千代田区神田和泉町1-2-3";
 
 // Region fixtures enter through the public page-data boundary; this suite
 // intentionally does not mock or invoke source acquisition.
-const derivedAreaLocation: KeyLocation = {
-  id: "visual-derived-area-location",
+const derivedAreaLocation: LocationWithArea = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000042",
   name: FULL_LOCATION_ADDRESS,
   lat: 35.694,
   lng: 139.768,
   area: DERIVED_AREA_WITH_PREFIX,
-  description: "地域表示だけを整形し住所全文を保持する施設です",
-  uri: "https://example.test/visual-derived-area-location",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  relatedPages: [],
+  osmElement: { type: "node", id: 42 },
+  wheelchair: "yes",
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=42",
 };
 
-const prefixFreeAreaLocation: KeyLocation = {
+const prefixFreeAreaLocation: LocationWithArea = {
   ...derivedAreaLocation,
-  id: "visual-prefix-free-area-location",
+  id: "urn:uuid:00000000-0000-4000-8000-000000000043",
   name: "接頭辞なし地域の視覚契約施設",
   area: PREFIX_FREE_AREA,
 };
 
-const unknownAreaLocation: KeyLocation = {
+const unknownAreaLocation = {
   ...derivedAreaLocation,
-  id: "visual-unknown-area-location",
+  id: "urn:uuid:00000000-0000-4000-8000-000000000044",
   name: "地域不明時の視覚契約施設",
   lat: 35.8,
   lng: 139.9,
   area: null,
-};
+} as unknown as LocationWithArea;
 
-function successfulDataFor(location: KeyLocation): KeyLocationsDataResult {
+function successfulDataFor(location: LocationWithArea): LocationPageDataResult {
   return {
     status: "success",
     categories: [
@@ -106,7 +104,7 @@ function successfulDataFor(location: KeyLocation): KeyLocationsDataResult {
   };
 }
 
-function successfulData(): KeyLocationsDataResult {
+function successfulData(): LocationPageDataResult {
   return successfulDataFor(detailLocation);
 }
 
@@ -144,7 +142,7 @@ async function renderDetailRoute(): Promise<HTMLElement> {
   return container;
 }
 
-async function renderDetailPageFor(location: KeyLocation): Promise<HTMLElement> {
+async function renderDetailPageFor(location: LocationWithArea): Promise<HTMLElement> {
   const data = successfulDataFor(location);
   mockLoadLocationPageData.mockResolvedValueOnce(data);
   mockResolveLocationDetail.mockReturnValueOnce({
@@ -204,7 +202,7 @@ describe("location detail visual contract", () => {
       ),
     ).toHaveAttribute(
       "href",
-      `/locations/${encodeURIComponent(detailCategory["category:en"])}`,
+      `/locations/${encodeURIComponent(detailCategory.categoryId)}`,
     );
 
     expect(
@@ -262,5 +260,62 @@ describe("location detail region display visual contract", () => {
         name: unknownAreaLocation.name,
       }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("location detail facts visual contract", () => {
+  const factsVisualLocation = {
+    ...detailLocation,
+    id: "urn:uuid:00000000-0000-4000-8000-000000000071",
+    phone: { display: "03-3264-2111", tel: "tel:0332642111" },
+    websiteUri: "https://www.city.chiyoda.lg.jp/",
+    wikipediaUri: "https://ja.wikipedia.org/wiki/%E5%8D%83%E4%BB%A3%E7%94%B0",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=71",
+    osmElement: { type: "node", id: 71 } as const,
+  };
+
+  it("keeps facts links at 44px, 16px text, safe rel and visible focus", async () => {
+    await renderDetailPageFor(factsVisualLocation as any);
+
+    const editLink = screen.getByRole("link", { name: /編集する.*OpenStreetMap/ });
+    expect(editLink).toHaveClass("min-h-[44px]");
+    expect(editLink).toHaveClass("text-base");
+    expect(editLink).toHaveAttribute("rel", "noopener noreferrer");
+    expect(editLink).toHaveAttribute("target", "_blank");
+    expect(editLink.className).toMatch(/focus-visible:/);
+
+    const basicHeading = screen.getByRole("heading", { level: 2, name: "基本情報" });
+    expect(basicHeading).toHaveClass("text-xl");
+    const telLink = screen.getByRole("link", { name: /03-3264-2111/ });
+    expect(telLink).toHaveClass("min-h-[44px]");
+    expect(telLink).toHaveClass("text-base");
+    const websiteLink = screen.getByRole("link", { name: /ウェブサイトを開く/ });
+    expect(websiteLink).toHaveClass("min-h-[44px]");
+    expect(websiteLink).toHaveAttribute("rel", "noopener noreferrer");
+    expect(websiteLink.className).toMatch(/focus-visible:/);
+  });
+});
+
+describe("location detail hours visual contract", () => {
+  const hoursVisualLocation = {
+    ...detailLocation,
+    id: "urn:uuid:00000000-0000-4000-8000-000000000081",
+    openingHours: "Tu-Su 10:00-17:30",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=81",
+    osmElement: { type: "node", id: 81 } as const,
+  };
+
+  it("keeps hours status text, 16px text and time elements without color-only meaning", async () => {
+    const container = await renderDetailPageFor(hoursVisualLocation as any);
+
+    const hoursHeading = screen.getByRole("heading", { level: 2, name: "営業時間" });
+    expect(hoursHeading).toHaveClass("text-xl");
+    expect(screen.getByText(/営業中|営業時間外/)).toHaveClass("text-base");
+    const times = container.querySelectorAll("time");
+    expect(times.length).toBeGreaterThanOrEqual(7);
+    times.forEach((time) => {
+      expect(time).toHaveAttribute("dateTime");
+    });
+    expect(screen.getByText("目安なので、正確な時間は施設に問い合わせてください。")).toHaveClass("text-base");
   });
 });

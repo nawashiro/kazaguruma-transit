@@ -38,9 +38,9 @@ type ArtifactWriter = (artifact: unknown) => Promise<void>;
 type SourceName =
   | "placesJsonLd"
   | "osmMirror"
-  | "keyLocations"
   | "townGeoJson"
-  | "categoryNames";
+  | "categoryNames"
+  | "wikidataMirror";
 
 type GeneratorOptions = {
   appConfig: unknown;
@@ -68,17 +68,17 @@ const execFileAsync = promisify(execFile);
 
 const PLACES_URI = "https://fixtures.example.test/places.jsonld";
 const OSM_MIRROR_URI = "https://fixtures.example.test/mirrors/osm.json";
-const KEY_LOCATIONS_URI = "https://fixtures.example.test/key_locations.json";
 const TOWN_GEOJSON_URI = "https://fixtures.example.test/chiyoda-towns.geojson";
 const CATEGORY_NAMES_URI =
   "https://fixtures.example.test/category-names.jsonld";
+const WIKIDATA_MIRROR_URI = "https://fixtures.example.test/mirrors/wikidata.json";
 
 const validAppConfig = {
   placesJsonLdUri: PLACES_URI,
   osmMirrorUri: OSM_MIRROR_URI,
-  keyLocationsUri: KEY_LOCATIONS_URI,
   townGeoJsonUri: TOWN_GEOJSON_URI,
   categoryNamesUri: CATEGORY_NAMES_URI,
+  wikidataMirrorUri: WIKIDATA_MIRROR_URI,
 };
 
 const LAT = 35.694;
@@ -167,6 +167,25 @@ const categoryTerm = (code: string, name: string): JsonRecord => ({
   "schema:name": name,
 });
 
+const validWikidataMirror = {
+  sourceId: "wikidata",
+  retrievedAt: "2026-11-18T00:00:00Z",
+  entities: {
+    Q11405293: {
+      id: "Q11405293",
+      sitelinks: {
+        jawiki: { site: "jawiki", title: "千代田区役所" },
+      },
+    },
+    Q61886796: {
+      id: "Q61886796",
+      sitelinks: {
+        enwiki: { site: "enwiki", title: "Chiyoda Library" },
+      },
+    },
+  },
+};
+
 const validCategoryNames = {
   "@context": { "@version": 1.1, schema: "https://schema.org/" },
   "@type": "schema:DefinedTermSet",
@@ -186,24 +205,6 @@ const validCatalog = {
     { id: ID.cinema, name: "目録の映画館", includeInRouteForm: false },
   ],
 };
-
-const validKeyLocations = [
-  {
-    category: "公共施設",
-    "category:en": "public-facilities",
-    locations: [
-      {
-        id: "kanda-library",
-        name: "神田図書館",
-        lat: 35.694,
-        lng: 139.768,
-        nodeCopyright: "千代田区",
-        licence: "CC BY 4.0",
-        licenceUri: "https://creativecommons.org/licenses/by/4.0/",
-      },
-    ],
-  },
-];
 
 const polygonCoordinates = [
   [
@@ -229,17 +230,17 @@ const validTownGeoJson = {
 const sourceUriByName: Record<SourceName, string> = {
   placesJsonLd: PLACES_URI,
   osmMirror: OSM_MIRROR_URI,
-  keyLocations: KEY_LOCATIONS_URI,
   townGeoJson: TOWN_GEOJSON_URI,
   categoryNames: CATEGORY_NAMES_URI,
+  wikidataMirror: WIKIDATA_MIRROR_URI,
 };
 
 const validPayloadBySource: Record<SourceName, unknown> = {
   placesJsonLd: validPlacesJsonLd,
   osmMirror: validOsmMirror,
-  keyLocations: validKeyLocations,
   townGeoJson: validTownGeoJson,
   categoryNames: validCategoryNames,
+  wikidataMirror: validWikidataMirror,
 };
 
 const expectedRouteDestinations = [
@@ -328,10 +329,11 @@ function createHarness(
   const payloadByUri: Record<string, unknown> = {
     [PLACES_URI]: payloadOverrides.placesJsonLd ?? validPayloadBySource.placesJsonLd,
     [OSM_MIRROR_URI]: payloadOverrides.osmMirror ?? validPayloadBySource.osmMirror,
-    [KEY_LOCATIONS_URI]: payloadOverrides.keyLocations ?? validPayloadBySource.keyLocations,
     [TOWN_GEOJSON_URI]: payloadOverrides.townGeoJson ?? validPayloadBySource.townGeoJson,
     [CATEGORY_NAMES_URI]:
       payloadOverrides.categoryNames ?? validPayloadBySource.categoryNames,
+    [WIKIDATA_MIRROR_URI]:
+      payloadOverrides.wikidataMirror ?? validPayloadBySource.wikidataMirror,
   };
   const transport = jest.fn<ReturnType<Transport>, Parameters<Transport>>();
   transport.mockImplementation(async (uri) => {
@@ -459,9 +461,9 @@ describe("generateLocationArtifact build boundary", () => {
     it.each([
       ["placesJsonLdUri", "placesJsonLdUri"],
       ["osmMirrorUri", "osmMirrorUri"],
-      ["keyLocationsUri", "keyLocationsUri"],
       ["townGeoJsonUri", "townGeoJsonUri"],
       ["categoryNamesUri", "categoryNamesUri"],
+      ["wikidataMirrorUri", "wikidataMirrorUri"],
     ])(
       "fails before transport when %s is invalid",
       async (_label, field) => {
@@ -499,9 +501,9 @@ describe("generateLocationArtifact build boundary", () => {
     const sources: SourceName[] = [
       "placesJsonLd",
       "osmMirror",
-      "keyLocations",
       "townGeoJson",
       "categoryNames",
+      "wikidataMirror",
     ];
 
     it.each(sources)(
@@ -588,9 +590,9 @@ describe("generateLocationArtifact build boundary", () => {
       expect(artifact.sourceUris).toEqual({
         placesJsonLdUri: PLACES_URI,
         osmMirrorUri: OSM_MIRROR_URI,
-        keyLocationsUri: KEY_LOCATIONS_URI,
-        townGeoJsonUri: TOWN_GEOJSON_URI,
+              townGeoJsonUri: TOWN_GEOJSON_URI,
         categoryNamesUri: CATEGORY_NAMES_URI,
+        wikidataMirrorUri: WIKIDATA_MIRROR_URI,
       });
       expect(JSON.stringify(artifact.sources.routeDestinations)).not.toContain("神保町シアター");
       expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
@@ -912,33 +914,249 @@ describe("generateLocationArtifact build boundary", () => {
     });
   });
 
-  describe("key locations and town GeoJSON validation", () => {
-    it("rejects a key location without a name", async () => {
-      const harness = createHarness({
-        keyLocations: [
-          {
-            ...validKeyLocations[0],
-            locations: [{ ...validKeyLocations[0].locations[0], name: undefined }],
-          },
-        ],
-      });
+  describe("locations projection for accessibility", () => {
+    function accessiblePlaces() {
+      const base = structuredClone(validPlacesJsonLd) as {
+        "@graph": Array<Record<string, unknown>>;
+      };
+      const city = base["@graph"][0] as Record<string, unknown>;
+      city["schema:image"] = {
+        "@type": "schema:ImageObject",
+        "schema:contentUrl": "https://fixtures.example.test/images/city.jpg",
+        "schema:license": "https://creativecommons.org/licenses/by-sa/3.0/",
+        "schema:creator": {
+          "@type": "schema:Person",
+          "schema:name": "さくら",
+        },
+      };
+      city["schema:subjectOf"] = [
+        {
+          "@type": "schema:WebPage",
+          "schema:name": "東京バリアフリーマップ",
+          "schema:url": "https://fixtures.example.test/bfm/city",
+        },
+      ];
+      const library = base["@graph"][1] as Record<string, unknown>;
+      library["schema:image"] = {
+        "@type": "schema:ImageObject",
+        "schema:contentUrl": "https://fixtures.example.test/images/lib.jpg",
+        "schema:license": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "schema:creator": {
+          "@type": "schema:Person",
+          "schema:name": "たろう",
+        },
+      };
+      library["schema:subjectOf"] = [
+        {
+          "@type": "schema:WebPage",
+          "schema:name": "言葉の道案内",
+          "schema:url": "https://fixtures.example.test/guide/lib",
+        },
+        {
+          "@type": "schema:WebPage",
+          "schema:name": "壊れたリンク",
+          "schema:url": "not-a-uri",
+        },
+      ];
+      return base;
+    }
 
-      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
+    function accessibleOsm() {
+      return {
+        version: "202611170100",
+        elements: [
+          { type: "node", id: 1, lat: LAT, lon: LNG, tags: { name: "千代田区役所", wheelchair: "yes" } },
+          { type: "way", id: 2, lat: LIBRARY_LAT, lon: LIBRARY_LNG, tags: { name: "千代田区立千代田図書館", wheelchair: "limited" } },
+          { type: "node", id: 3, lat: LAT, lng: LNG, tags: { name: "神保町シアター", wheelchair: "no" } },
+        ],
+      };
+    }
+
+    it("projects all records with OSM names into dictionary-ordered locations", async () => {
+      const harness = createHarness({
+        placesJsonLd: accessiblePlaces(),
+        osmMirror: accessibleOsm(),
+      });
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { locations: Array<{ category: string; categoryId: string; locations: Array<Record<string, unknown>> }> };
+        derivedRegions: Record<string, string>;
+      };
+      expect(artifact.sources.locations).toBeDefined();
+      expect(artifact.sources.locations.map((c) => c.categoryId)).toEqual(["1512", "1302", "1011"]);
+      const cityEntry = artifact.sources.locations
+        .flatMap((c) => c.locations)
+        .find((l) => l["id"] === ID.cityOffice);
+      expect(cityEntry).toMatchObject({
+        id: ID.cityOffice,
+        name: "千代田区役所",
+        lat: LAT,
+        lng: LNG,
+        osmElement: { type: "node", id: 1 },
+        wheelchair: "yes",
+        imageUri: "https://fixtures.example.test/images/city.jpg",
+        imageCreator: "さくら",
+        imageLicense: "https://creativecommons.org/licenses/by-sa/3.0/",
+      });
+      expect(cityEntry?.["relatedPages"]).toEqual([
+        { name: "東京バリアフリーマップ", url: "https://fixtures.example.test/bfm/city" },
+      ]);
+      const libraryEntry = artifact.sources.locations
+        .flatMap((c) => c.locations)
+        .find((l) => l["id"] === ID.library);
+      expect(libraryEntry).toMatchObject({
+        osmElement: { type: "way", id: 2 },
+        wheelchair: "limited",
+      });
+      expect(libraryEntry?.["relatedPages"]).toEqual([
+        { name: "言葉の道案内", url: "https://fixtures.example.test/guide/lib" },
+      ]);
+      expect(artifact.derivedRegions[ID.cityOffice]).toBe("神田和泉町");
+      expect(artifact.derivedRegions[ID.library]).toBe("神田和泉町");
+    });
+
+    it("excludes records without OSM names and maps unknown wheelchair to null", async () => {
+      const places = accessiblePlaces() as { "@graph": Array<Record<string, unknown>> };
+      places["@graph"][2]["rdfs:seeAlso"] = ["https://www.wikidata.org/entity/Q1"];
+      const osm = {
+        version: "202611170100",
+        elements: [
+          { type: "node", id: 1, lat: LAT, lon: LNG, tags: { name: "千代田区役所", wheelchair: "bogus" } },
+          { type: "way", id: 2, lat: LIBRARY_LAT, lon: LIBRARY_LNG, tags: { name: "千代田区立千代田図書館" } },
+        ],
+      };
+      const harness = createHarness({ placesJsonLd: places, osmMirror: osm });
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { locations: Array<{ locations: Array<Record<string, unknown>> }> };
+      };
+      const all = artifact.sources.locations.flatMap((c) => c.locations);
+      expect(all.find((l) => l["id"] === ID.cinema)).toBeUndefined();
+      expect(all.find((l) => l["id"] === ID.cityOffice)?.["wheelchair"]).toBeNull();
+      expect(all.find((l) => l["id"] === ID.library)?.["wheelchair"]).toBeNull();
+      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
+    });
+
+    it("skips images without attribution and keeps other locations", async () => {
+      const places = accessiblePlaces() as { "@graph": Array<Record<string, unknown>> };
+      (places["@graph"][0] as Record<string, unknown>)["schema:image"] = {
+        "@type": "schema:ImageObject",
+        "schema:contentUrl": "https://fixtures.example.test/images/city.jpg",
+      };
+      const harness = createHarness({ placesJsonLd: places, osmMirror: accessibleOsm() });
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { locations: Array<{ locations: Array<Record<string, unknown>> }> };
+      };
+      const cityEntry = artifact.sources.locations
+        .flatMap((c) => c.locations)
+        .find((l) => l["id"] === ID.cityOffice);
+      expect(cityEntry?.["imageUri"]).toBeUndefined();
+      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
+    });
+
+    it("fails when the same urn:uuid appears twice", async () => {
+      const places = accessiblePlaces() as { "@graph": Array<Record<string, unknown>> };
+      places["@graph"].push(structuredClone(places["@graph"][0]));
+      const harness = createHarness({ placesJsonLd: places, osmMirror: accessibleOsm() });
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(/重複|duplicate/u);
       expectArtifactUnchanged(harness);
     });
 
-    it("rejects duplicate key location IDs", async () => {
-      const location = validKeyLocations[0].locations[0];
-      const harness = createHarness({
-        keyLocations: [
-          { ...validKeyLocations[0], locations: [location, { ...location }] },
-        ],
-      });
+    it("fails when a location record has an unknown gif-poi code", async () => {
+      const places = accessiblePlaces() as { "@graph": Array<Record<string, unknown>> };
+      (places["@graph"][0] as Record<string, unknown>)["schema:identifier"] = [
+        { "@type": "schema:PropertyValue", "schema:propertyID": "gif-poi", "schema:value": "9999" },
+      ];
+      const harness = createHarness({ placesJsonLd: places, osmMirror: accessibleOsm() });
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow(/9999|辞書/u);
+      expectArtifactUnchanged(harness);
+    });
+  });
 
-      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
+  describe("location facts projection", () => {
+    function factsOsm() {
+      return {
+        version: "202611170100",
+        elements: [
+          { type: "node", id: 1, lat: LAT, lon: LNG, tags: { name: "千代田区役所", phone: "+81-3-32642111", website: "https://www.city.chiyoda.lg.jp/", wikipedia: "ja:千代田区役所", wikidata: "Q11405293" } },
+          { type: "way", id: 2, lat: LIBRARY_LAT, lon: LIBRARY_LNG, tags: { name: "千代田区立千代田図書館", "contact:phone": "03-5211-4290", "contact:website": "https://www.library.chiyoda.tokyo.jp/chiyoda/", wikidata: "Q61886796" } },
+          { type: "node", id: 3, lat: LAT, lon: LNG, tags: { name: "神保町シアター", phone: "invalid", website: "not-a-uri", wikipedia: "xx" } },
+        ],
+      };
+    }
+
+    function factsPlaces() {
+      const base = structuredClone(validPlacesJsonLd) as { "@graph": Array<Record<string, unknown>> };
+      return base;
+    }
+
+    it("normalizes phone numbers and resolves website priority", async () => {
+      const harness = createHarness({ osmMirror: factsOsm(), placesJsonLd: factsPlaces() });
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { locations: Array<{ locations: Array<Record<string, unknown>> }> };
+      };
+      const all = artifact.sources.locations.flatMap((c) => c.locations);
+      const city = all.find((l) => l["id"] === ID.cityOffice);
+      expect(city?.["phone"]).toEqual({ display: "03-3264-2111", tel: "tel:0332642111" });
+      expect(city?.["websiteUri"]).toBe("https://www.city.chiyoda.lg.jp/");
+      expect(city?.["osmEditUrl"]).toBe("https://www.openstreetmap.org/edit?node=1");
+    });
+
+    it("prefers contact:phone and contact:website when primary tags are missing", async () => {
+      const harness = createHarness({ osmMirror: factsOsm(), placesJsonLd: factsPlaces() });
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { locations: Array<{ locations: Array<Record<string, unknown>> }> };
+      };
+      const all = artifact.sources.locations.flatMap((c) => c.locations);
+      const lib = all.find((l) => l["id"] === ID.library);
+      expect(lib?.["phone"]).toEqual({ display: "03-5211-4290", tel: "tel:0352114290" });
+      expect(lib?.["websiteUri"]).toBe("https://www.library.chiyoda.tokyo.jp/chiyoda/");
+      expect(lib?.["osmEditUrl"]).toBe("https://www.openstreetmap.org/edit?way=2");
+    });
+
+    it("hides invalid phone and website but keeps other locations", async () => {
+      const harness = createHarness({ osmMirror: factsOsm(), placesJsonLd: factsPlaces() });
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { locations: Array<{ locations: Array<Record<string, unknown>> }> };
+      };
+      const all = artifact.sources.locations.flatMap((c) => c.locations);
+      const cinema = all.find((l) => l["id"] === ID.cinema);
+      expect(cinema?.["phone"]).toBeUndefined();
+      expect(cinema?.["websiteUri"]).toBeUndefined();
+      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
+    });
+
+    it("resolves wikipedia via OSM ja, wikidata jawiki, OSM other, wikidata enwiki", async () => {
+      const harness = createHarness({ osmMirror: factsOsm(), placesJsonLd: factsPlaces() });
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { locations: Array<{ locations: Array<Record<string, unknown>> }> };
+      };
+      const all = artifact.sources.locations.flatMap((c) => c.locations);
+      const city = all.find((l) => l["id"] === ID.cityOffice);
+      expect(city?.["wikipediaUri"]).toBe("https://ja.wikipedia.org/wiki/%E5%8D%83%E4%BB%A3%E7%94%B0%E5%8C%BA%E5%BD%B9%E6%89%80");
+      const lib = all.find((l) => l["id"] === ID.library);
+      expect(lib?.["wikipediaUri"]).toBe("https://en.wikipedia.org/wiki/Chiyoda_Library");
+    });
+
+    it("fails when wikidata mirror cannot be fetched", async () => {
+      const harness = createHarness();
+      const targetUri = sourceUriByName.wikidataMirror;
+      harness.transport.mockImplementation(async (uri) => {
+        if (uri === targetUri) {
+          throw new Error("wikidataMirror transport unavailable");
+        }
+        return validResponseForUri(uri);
+      });
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow("wikidataMirror transport unavailable");
       expectArtifactUnchanged(harness);
     });
 
+    it("fails when wikidata mirror is malformed", async () => {
+      const harness = createHarness({ wikidataMirror: { entities: null } });
+      await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
+      expectArtifactUnchanged(harness);
+    });
+  });
+
+  describe("town GeoJSON validation", () => {
     it("rejects a town GeoJSON that is not a FeatureCollection", async () => {
       const harness = createHarness({
         townGeoJson: { ...validTownGeoJson, type: "Feature" },
@@ -981,7 +1199,11 @@ describe("generateLocationArtifact build boundary", () => {
         harness.options,
       )) as { derivedRegions: Record<string, string> };
 
-      expect(artifact.derivedRegions).toEqual({ "kanda-library": "神田和泉町" });
+      expect(artifact.derivedRegions).toEqual({
+        [ID.cityOffice]: "神田和泉町",
+        [ID.library]: "神田和泉町",
+        [ID.cinema]: "神田和泉町",
+      });
     });
   });
 
@@ -1001,8 +1223,7 @@ describe("generateLocationArtifact build boundary", () => {
           status: "validated",
           sources: expect.objectContaining({
             routeDestinations: expectedRouteDestinations,
-            keyLocations: validKeyLocations,
-            townGeoJson: validTownGeoJson,
+                      townGeoJson: validTownGeoJson,
           }),
         }),
       );
@@ -1020,8 +1241,8 @@ describe("generateLocationArtifact build boundary", () => {
       expectArtifactUnchanged(harness, 1);
     });
 
-    it("does not update the previous artifact when key locations are invalid", async () => {
-      const harness = createHarness({ keyLocations: [] });
+    it("does not update the previous artifact when town GeoJSON is invalid", async () => {
+      const harness = createHarness({ townGeoJson: { type: "Feature" } });
 
       await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
       expectArtifactUnchanged(harness);
@@ -1038,9 +1259,9 @@ type FixtureServer = {
 const sourcePathByName: Record<SourceName, string> = {
   placesJsonLd: "/fixtures/places.jsonld",
   osmMirror: "/fixtures/osm.json",
-  keyLocations: "/fixtures/key-locations.json",
   townGeoJson: "/fixtures/town.geojson",
   categoryNames: "/fixtures/category-names.jsonld",
+  wikidataMirror: "/fixtures/wikidata.json",
 };
 
 async function createFixtureServer(): Promise<FixtureServer> {
@@ -1129,9 +1350,9 @@ async function runPublicGeneratorCli(options: {
       ...validAppConfig,
       placesJsonLdUri: fixtureServer.uriBySource.placesJsonLd,
       osmMirrorUri: fixtureServer.uriBySource.osmMirror,
-      keyLocationsUri: fixtureServer.uriBySource.keyLocations,
       townGeoJsonUri: fixtureServer.uriBySource.townGeoJson,
       categoryNamesUri: fixtureServer.uriBySource.categoryNames,
+      wikidataMirrorUri: fixtureServer.uriBySource.wikidataMirror,
       ...options.appConfig,
     };
     const source = {

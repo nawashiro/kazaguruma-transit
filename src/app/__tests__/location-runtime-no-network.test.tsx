@@ -47,9 +47,9 @@ const mockRouterPush = jest.fn();
 const mockRouterReplace = jest.fn();
 const mockReadLocationArtifact = jest.fn();
 const mockLegacyMainFacilitiesLoader = jest.fn();
-const mockLegacyKeyLocationsLoader = jest.fn();
+const mockLegacyLocationsLoader = jest.fn();
 const mockLegacyMainFacilitiesAlias = jest.fn();
-const mockLegacyKeyLocationsAlias = jest.fn();
+const mockLegacyLocationsAlias = jest.fn();
 const mockGeoJsonProvider = jest.fn();
 const mockHomeRouteFormProps = jest.fn();
 
@@ -92,15 +92,15 @@ jest.mock("@/utils/addressLoader", () => {
     ...actual,
     loadAddressDataResult: (...args: unknown[]) =>
       mockLegacyMainFacilitiesLoader(...args),
-    loadKeyLocationsDataResult: (...args: unknown[]) =>
-      mockLegacyKeyLocationsLoader(...args),
+    loadLocationPageDataResult: (...args: unknown[]) =>
+      mockLegacyLocationsLoader(...args),
     // Keep the older names guarded as well; an accidental reintroduction of
     // either loader must fail this public runtime contract instead of reaching
     // a network.
     loadAddressData: (...args: unknown[]) =>
       mockLegacyMainFacilitiesAlias(...args),
-    loadKeyLocationsData: (...args: unknown[]) =>
-      mockLegacyKeyLocationsAlias(...args),
+    loadLocationPageData: (...args: unknown[]) =>
+      mockLegacyLocationsAlias(...args),
   };
 });
 
@@ -129,7 +129,6 @@ const validArtifact: LocationArtifact = {
   sourceUris: {
     placesJsonLdUri: "https://fixtures.example.test/places.jsonld",
     osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
-    keyLocationsUri: "https://fixtures.example.test/key_locations.json",
     townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
     categoryNamesUri: "https://fixtures.example.test/category-names.jsonld",
   },
@@ -147,32 +146,30 @@ const validArtifact: LocationArtifact = {
         ],
       },
     ],
-    keyLocations: [
+    locations: [
       {
         category: "自然環境公園",
-        "category:en": "natural environment park",
+        categoryId: "1302",
         locations: [
           {
-            id: "park-far-日本",
+            id: "urn:uuid:00000000-0000-4000-8000-7f1f49978bed",
             name: "皇居外苑入口",
             lat: 35.704,
             lng: 139.778,
-            description: "自然環境公園の入口です",
-            uri: "https://fixtures.example.test/park-far",
-            nodeCopyright: "千代田区",
-            licence: "CC BY 4.0",
-            licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+            relatedPages: [],
+            osmElement: { type: "node", id: 353 },
+            wheelchair: "yes",
+            osmEditUrl: "https://www.openstreetmap.org/edit?node=353",
           },
           {
-            id: "park-near",
+            id: "urn:uuid:00000000-0000-4000-8000-28e2b21b7a4e",
             name: "日比谷公園入口",
             lat: 35.681,
             lng: 139.761,
-            description: "近い自然環境公園です",
-            uri: "https://fixtures.example.test/park-near",
-            nodeCopyright: "千代田区",
-            licence: "CC BY 4.0",
-            licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+            relatedPages: [],
+            osmElement: { type: "node", id: 266 },
+            wheelchair: "yes",
+            osmEditUrl: "https://www.openstreetmap.org/edit?node=266",
           },
         ],
       },
@@ -184,7 +181,6 @@ const validArtifact: LocationArtifact = {
           type: "Feature",
           properties: {
             name: "東京都千代田区日比谷公園周辺",
-            uri: "https://fixtures.example.test/towns/hibiya",
           },
           geometry: {
             type: "Polygon",
@@ -202,11 +198,11 @@ const validArtifact: LocationArtifact = {
       ],
     },
   },
-  // The key-location fixture intentionally omits `area`; runtime pages must
+  // The locations fixture intentionally omits `area`; runtime pages must
   // consume this build-time projection rather than call the GeoJSON provider.
   derivedRegions: {
-    "park-far-日本": "皇居外苑",
-    "park-near": "日比谷公園周辺",
+    "urn:uuid:00000000-0000-4000-8000-7f1f49978bed": "皇居外苑",
+    "urn:uuid:00000000-0000-4000-8000-28e2b21b7a4e": "日比谷公園周辺",
   },
 };
 
@@ -277,13 +273,13 @@ function resetRuntimeSourceGuards(): void {
   mockLegacyMainFacilitiesLoader
     .mockReset()
     .mockRejectedValue(new Error("legacy main-facilities loader was called"));
-  mockLegacyKeyLocationsLoader
+  mockLegacyLocationsLoader
     .mockReset()
     .mockRejectedValue(new Error("legacy key-locations loader was called"));
   mockLegacyMainFacilitiesAlias
     .mockReset()
     .mockRejectedValue(new Error("legacy main-facilities alias was called"));
-  mockLegacyKeyLocationsAlias
+  mockLegacyLocationsAlias
     .mockReset()
     .mockRejectedValue(new Error("legacy key-locations alias was called"));
   mockGeoJsonProvider
@@ -299,9 +295,9 @@ function resetRuntimeSourceGuards(): void {
 
 function expectArtifactOnlyRuntimeSources(): void {
   expect(mockLegacyMainFacilitiesLoader).not.toHaveBeenCalled();
-  expect(mockLegacyKeyLocationsLoader).not.toHaveBeenCalled();
+  expect(mockLegacyLocationsLoader).not.toHaveBeenCalled();
   expect(mockLegacyMainFacilitiesAlias).not.toHaveBeenCalled();
-  expect(mockLegacyKeyLocationsAlias).not.toHaveBeenCalled();
+  expect(mockLegacyLocationsAlias).not.toHaveBeenCalled();
   expect(mockGeoJsonProvider).not.toHaveBeenCalled();
   expect(global.fetch).not.toHaveBeenCalled();
   expect(mockReadLocationArtifact).toHaveBeenCalled();
@@ -377,7 +373,7 @@ describe("category runtime artifact-only boundary", () => {
         categoryPageModule,
         "default",
       );
-      const categoryId = "natural environment park";
+      const categoryId = "1302";
       const origin = "35.680000,139.760000";
       mockPathname.mockReturnValue(
         `/locations/${encodeURIComponent(categoryId)}`,
@@ -429,7 +425,7 @@ describe("detail runtime artifact-only boundary", () => {
         detailPageModule,
         "default",
       );
-      const location = validArtifact.sources.keyLocations[0]?.locations[1];
+      const location = validArtifact.sources.locations[0]?.locations[1];
       if (!location || typeof location.name !== "string") {
         throw new Error("detail artifact fixture is missing its target location");
       }
@@ -470,7 +466,7 @@ describe("detail runtime artifact-only boundary", () => {
         detailPageModule,
         "generateMetadata",
       );
-      const location = validArtifact.sources.keyLocations[0]?.locations[1];
+      const location = validArtifact.sources.locations[0]?.locations[1];
       if (!location || typeof location.name !== "string") {
         throw new Error("detail artifact fixture is missing its target location");
       }

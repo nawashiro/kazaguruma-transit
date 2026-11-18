@@ -82,6 +82,59 @@ describe("アクセシビリティ実装契約", () => {
     });
   });
 
+  it("バリアフリー表示は状態テキストと外部リンクの安全属性を持つ", () => {
+    const barrierSource = readSource(
+      "src/components/features/BarrierAccessibility.tsx",
+    );
+    const wheelchairSourceForStates = readSource(
+      "src/lib/location/wheelchair-status.ts",
+    );
+    for (const state of ["全面", "一部", "非対応", "情報なし"]) {
+      expect(wheelchairSourceForStates).toContain(state);
+    }
+    expect(barrierSource).toContain("バリアフリー情報");
+    expect(barrierSource).toContain("情報源: OpenStreetMap");
+    expect(barrierSource).toContain('target="_blank"');
+    expect(barrierSource).toContain('rel="noopener noreferrer"');
+    expect(barrierSource).toContain("sr-only");
+    expect(barrierSource).toContain("（新しいタブで開きます）");
+    expect(barrierSource).not.toMatch(/aria-label\s*=/);
+    expect(barrierSource).toContain("text-base");
+    expect(barrierSource).toContain("text-xl");
+    expect(barrierSource).toContain("badge");
+
+    const wheelchairSource = readSource("src/lib/location/wheelchair-status.ts");
+    expect(wheelchairSource).toContain("入口には段がなく");
+    expect(wheelchairSource).toContain("7センチ");
+    expect(wheelchairSource).toContain("車いす不可");
+    expect(wheelchairSource).toContain("wheelmap.org/nodes/");
+    expect(wheelchairSource).toContain("/relation/");
+
+    const detailSource = readSource(
+      "src/app/locations/location-detail/[id]/page.tsx",
+    );
+    expect(detailSource).toContain("BarrierDetailBlock");
+    expect(detailSource).toContain("figcaption");
+    expect(detailSource).toContain("imageCreator");
+    expect(detailSource).toContain("imageLicense");
+    expect(detailSource).toContain("基本情報");
+    expect(detailSource).toContain("編集する（OpenStreetMapを開きます）");
+    expect(detailSource).toContain("ウェブサイトを開く");
+    expect(detailSource).toContain("Wikipediaを開く");
+    expect(detailSource).toContain("min-h-[44px]");
+    expect(detailSource).toContain("text-base");
+    expect(detailSource).toContain('rel="noopener noreferrer"');
+    expect(detailSource).toContain("focus-visible:");
+    expect(detailSource).toContain("OpeningHoursSection");
+    expect(detailSource).toContain("営業時間");
+    expect(detailSource).toContain("営業中");
+    expect(detailSource).toContain("営業時間外");
+    expect(detailSource).toContain("24時間営業");
+    expect(detailSource).toContain("目安なので、正確な時間は施設に問い合わせてください。");
+    expect(detailSource).toContain("祝日は通常と異なる場合があります。");
+    expect(detailSource).toContain("<time");
+  });
+
   it("auth/detail/rateの公開consumerはnative navigation and form markersを持つ", () => {
     const markers: Record<string, RegExp[]> = {
       "src/components/auth/AuthRoutePage.tsx": [/<Link\b/, /AuthenticationForm/],

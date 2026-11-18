@@ -6,12 +6,15 @@ import type { LocationDetailResult } from "@/types/access-route-pages";
 import {
   resolveLocationDetail,
 } from "@/lib/location/location-detail-resolver";
-import { loadLocationPageData } from "@/lib/location/location-page-data";
-import type {
-  KeyLocation,
-  KeyLocationCategory,
-  KeyLocationsDataResult,
-} from "@/utils/addressLoader";
+import {
+  loadLocationPageData,
+  type LocationWithArea,
+  type LocationCategoryWithArea,
+  type LocationPageDataResult,
+} from "@/lib/location/location-page-data";
+import { BarrierDetailBlock } from "@/components/features/BarrierAccessibility";
+import { evaluateOpeningHours } from "@/lib/location/opening-hours";
+import { Pencil } from "lucide-react";
 
 const LOCATION_DETAIL_FALLBACK_TITLE = "場所詳細 | 風ぐるま乗換案内";
 const LOCATION_DETAIL_DESCRIPTION = "風ぐるまで行ける場所の詳細情報";
@@ -25,7 +28,7 @@ const DUPLICATE_ID_ERROR_MESSAGE =
 const CHIYODA_AREA_PREFIX = "東京都千代田区";
 
 export const dynamicParams = false;
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 export async function generateStaticParams(): Promise<Array<{ id: string }>> {
   const data = await loadLocationPageData();
@@ -42,10 +45,10 @@ type LocationDetailPageProps = {
   params: Promise<{ id: string }>;
 };
 
-type ResolvedLocationDetail = LocationDetailResult<KeyLocation>;
+type ResolvedLocationDetail = LocationDetailResult<LocationWithArea>;
 
 type LocationDetailPageData = {
-  data: KeyLocationsDataResult;
+  data: LocationPageDataResult;
   result: ResolvedLocationDetail;
 };
 
@@ -54,7 +57,7 @@ function normalizeError(error: unknown): Error {
 }
 
 async function loadAndResolveLocation(id: string): Promise<LocationDetailPageData> {
-  let data: KeyLocationsDataResult;
+  let data: LocationPageDataResult;
 
   try {
     data = await loadLocationPageData();
@@ -90,7 +93,7 @@ function normalizeAreaName(name: string): string {
     : name;
 }
 
-function resolveAreaName(location: KeyLocation): string | null {
+function resolveAreaName(location: LocationWithArea): string | null {
   const providedArea = location.area;
   if (hasNonEmptyText(providedArea)) {
     return normalizeAreaName(providedArea);
@@ -100,9 +103,9 @@ function resolveAreaName(location: KeyLocation): string | null {
 }
 
 function findLocationCategory(
-  data: KeyLocationsDataResult,
-  location: KeyLocation,
-): KeyLocationCategory | null {
+  data: LocationPageDataResult,
+  location: LocationWithArea,
+): LocationCategoryWithArea | null {
   if (data.status !== "success" || !Array.isArray(data.categories)) {
     return null;
   }
@@ -115,7 +118,7 @@ function findLocationCategory(
 }
 
 function locationBreadcrumbs(
-  category: KeyLocationCategory | null,
+  category: LocationCategoryWithArea | null,
   title: string,
 ): BreadcrumbItem[] {
   if (category === null) {
@@ -126,13 +129,13 @@ function locationBreadcrumbs(
     { label: "場所一覧", href: "/locations" },
     {
       label: category.category,
-      href: `/locations/${encodeURIComponent(category["category:en"])}`,
+      href: `/locations/${encodeURIComponent(category.categoryId)}`,
     },
     { label: title },
   ];
 }
 
-function DestinationLink({ location }: { location: KeyLocation }) {
+function DestinationLink({ location }: { location: LocationWithArea }) {
   const destination = {
     lat: location.lat,
     lng: location.lng,
@@ -149,66 +152,79 @@ function DestinationLink({ location }: { location: KeyLocation }) {
   );
 }
 
-function LocationProvidedInformation({ location }: { location: KeyLocation }) {
-  const imageUri = location.imageUri;
-  const description = location.description;
-  const nodeCopyright = location.nodeCopyright;
-  const licence = location.licence;
-  const licenceUri = location.licenceUri;
-  const imageCopyrightValue = location.imageCopyright;
-  const legacyImageCopyrightValue = location.imageCopylight;
-  const descriptionCopyrightValue = location.descriptionCopyright;
-  const hasImage = hasNonEmptyText(imageUri);
-  const hasDescription = hasNonEmptyText(description);
-  const imageCopyright = hasNonEmptyText(imageCopyrightValue)
-    ? imageCopyrightValue
-    : hasNonEmptyText(legacyImageCopyrightValue)
-      ? legacyImageCopyrightValue
-      : null;
-  const descriptionCopyright = hasNonEmptyText(descriptionCopyrightValue)
-    ? descriptionCopyrightValue
-    : null;
-
+function EditLocationLink({ location }: { location: LocationWithArea }) {
+  const href = location.osmEditUrl;
+  if (!hasNonEmptyText(href)) {
+    return null;
+  }
   return (
-    <section className="mt-6 ruby-text" aria-labelledby="location-provided-heading">
-      <h2 id="location-provided-heading" className="mb-4 text-xl font-bold">
-        提供
+    <p className="mt-4 flex justify-end">
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn btn-outline h-auto min-h-[44px] gap-2 whitespace-normal text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        <Pencil aria-hidden="true" className="size-4" />
+        <span>編集する（OpenStreetMapを開きます）</span>
+        <span className="sr-only">（新しいタブで開きます）</span>
+      </a>
+    </p>
+  );
+}
+
+function BasicInfoSection({ location }: { location: LocationWithArea }) {
+  const phone = location.phone;
+  const websiteUri = hasNonEmptyText(location.websiteUri) ? location.websiteUri : null;
+  const wikipediaUri = hasNonEmptyText(location.wikipediaUri) ? location.wikipediaUri : null;
+  if (phone === undefined && websiteUri === null && wikipediaUri === null) {
+    return null;
+  }
+  return (
+    <section aria-labelledby="basic-info-heading" className="ruby-text">
+      <h2 id="basic-info-heading" className="mb-4 text-xl font-bold">
+        基本情報
       </h2>
-      <dl className="list">
-        {hasNonEmptyText(nodeCopyright) && (
+      <dl className="list text-base">
+        {phone !== undefined && (
           <div className="list-row">
-            <dt>座標データ提供</dt>
-            <dd>{nodeCopyright}</dd>
-          </div>
-        )}
-        {hasImage && imageCopyright !== null && (
-          <div className="list-row">
-            <dt>画像提供</dt>
-            <dd>{imageCopyright}</dd>
-          </div>
-        )}
-        {hasDescription && descriptionCopyright !== null && (
-          <div className="list-row">
-            <dt>説明文提供</dt>
-            <dd>{descriptionCopyright}</dd>
-          </div>
-        )}
-        {hasNonEmptyText(licence) && (
-          <div className="list-row">
-            <dt>ライセンス</dt>
+            <dt>電話</dt>
             <dd>
-              {hasNonEmptyText(licenceUri) && isHttpUrl(licenceUri) ? (
-                <a
-                  href={licenceUri}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="link ml-1"
-                >
-                  {licence}
-                </a>
-              ) : (
-                licence
-              )}
+              <a href={phone.tel} className="link min-h-[44px] inline-flex items-center text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                {phone.display}
+              </a>
+            </dd>
+          </div>
+        )}
+        {websiteUri !== null && (
+          <div className="list-row">
+            <dt>ウェブサイト</dt>
+            <dd>
+              <a
+                href={websiteUri}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link min-h-[44px] inline-flex items-center text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                ウェブサイトを開く
+                <span className="sr-only">（新しいタブで開きます）</span>
+              </a>
+            </dd>
+          </div>
+        )}
+        {wikipediaUri !== null && (
+          <div className="list-row">
+            <dt>Wikipedia</dt>
+            <dd>
+              <a
+                href={wikipediaUri}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link min-h-[44px] inline-flex items-center text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                Wikipediaを開く
+                <span className="sr-only">（新しいタブで開きます）</span>
+              </a>
             </dd>
           </div>
         )}
@@ -217,25 +233,143 @@ function LocationProvidedInformation({ location }: { location: KeyLocation }) {
   );
 }
 
+function formatTimeTokyo(date: Date): string {
+  return new Intl.DateTimeFormat("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Tokyo",
+  }).format(date);
+}
+
+function formatDateTokyo(date: Date): { text: string; iso: string } {
+  const timeZone = "Asia/Tokyo";
+  const text = new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    timeZone,
+  }).format(date);
+  const iso = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone,
+  }).format(date);
+  return { text, iso };
+}
+
+function OpeningHoursSection({ location }: { location: LocationWithArea }) {
+  const rule = location.openingHours;
+  if (typeof rule !== "string" || rule.trim().length === 0) {
+    return null;
+  }
+  const evaluation = evaluateOpeningHours(rule, new Date());
+  const showWarning = evaluation.showHolidayWarning;
+
+  if (evaluation.state === "unknown") {
+    return (
+      <section aria-labelledby="hours-heading" className="ruby-text">
+        <h2 id="hours-heading" className="mb-4 text-xl font-bold">
+          営業時間
+        </h2>
+        <p className="text-base">
+          <code>{evaluation.raw}</code>
+        </p>
+        <p className="mt-2 text-base">目安なので、正確な時間は施設に問い合わせてください。</p>
+        {showWarning && <p className="mt-2 text-base">祝日は通常と異なる場合があります。</p>}
+      </section>
+    );
+  }
+
+  if (evaluation.state === "all-day") {
+    return (
+      <section aria-labelledby="hours-heading" className="ruby-text">
+        <h2 id="hours-heading" className="mb-4 text-xl font-bold">
+          営業時間
+        </h2>
+        <p className="text-base">24時間営業</p>
+        <p className="mt-2 text-base">目安なので、正確な時間は施設に問い合わせてください。</p>
+        {showWarning && <p className="mt-2 text-base">祝日は通常と異なる場合があります。</p>}
+      </section>
+    );
+  }
+
+  const statusText = evaluation.state === "open" ? "営業中" : "営業時間外";
+  const nextText =
+    evaluation.nextChange !== undefined
+      ? evaluation.state === "open"
+        ? `${formatTimeTokyo(evaluation.nextChange)}まで`
+        : `${formatTimeTokyo(evaluation.nextChange)}から`
+      : undefined;
+
+  return (
+    <section aria-labelledby="hours-heading" className="ruby-text">
+      <h2 id="hours-heading" className="mb-4 text-xl font-bold">
+        営業時間
+      </h2>
+      <p className="text-base">
+        {statusText}
+        {nextText !== undefined && ` ${nextText}`}
+      </p>
+      {evaluation.week !== undefined && (
+        <dl className="mt-2 space-y-1">
+          {evaluation.week.map((day) => {
+            const { text, iso } = formatDateTokyo(day.date);
+            return (
+              <div key={iso} className="flex gap-2 text-base">
+                <dt>
+                  <time dateTime={iso}>{text}</time>
+                </dt>
+                <dd>
+                  {day.closed || day.intervals.length === 0 ? (
+                    "休み"
+                  ) : (
+                    <>
+                      {day.intervals.map((interval, index) => (
+                        <span key={`${iso}-${index}`}>
+                          {index > 0 && "、"}
+                          <time dateTime={interval.start.toISOString()}>
+                            {formatTimeTokyo(interval.start)}
+                          </time>
+                          -
+                          <time dateTime={interval.end.toISOString()}>
+                            {formatTimeTokyo(interval.end)}
+                          </time>
+                        </span>
+                      ))}
+                    </>
+                  )}
+                </dd>
+              </div>
+            );
+          })}
+        </dl>
+      )}
+      <p className="mt-2 text-base">目安なので、正確な時間は施設に問い合わせてください。</p>
+      {showWarning && <p className="mt-2 text-base">祝日は通常と異なる場合があります。</p>}
+    </section>
+  );
+}
+
 function LocationDetailContent({
   location,
   areaName,
 }: {
-  location: KeyLocation;
+  location: LocationWithArea;
   areaName: string | null;
 }) {
-  const imageUriValue = location.imageUri;
-  const descriptionValue = location.description;
-  const websiteUriValue = location.uri;
-  const imageUri = hasNonEmptyText(imageUriValue) ? imageUriValue : null;
-  const description = hasNonEmptyText(descriptionValue) ? descriptionValue : null;
-  const websiteUri =
-    hasNonEmptyText(websiteUriValue) && isHttpUrl(websiteUriValue)
-      ? websiteUriValue
-      : null;
+  const imageUri = hasNonEmptyText(location.imageUri) ? location.imageUri : null;
+  const imageCreator = hasNonEmptyText(location.imageCreator)
+    ? location.imageCreator
+    : null;
+  const imageLicense = hasNonEmptyText(location.imageLicense)
+    ? location.imageLicense
+    : null;
 
   return (
     <div className="space-y-4">
+      <EditLocationLink location={location} />
       {areaName !== null && (
         <dl className="text-base join space-x-2">
           <dt className="font-bold join-item">地域</dt>
@@ -244,35 +378,38 @@ function LocationDetailContent({
       )}
 
       {imageUri !== null && (
-        <figure className="relative aspect-[4/3] w-full overflow-hidden">
+        <figure className="relative w-full overflow-hidden">
           <img
             src={imageUri}
             alt=""
-            className="h-full w-full rounded-xl object-cover"
+            className="h-full w-full rounded-xl object-cover aspect-[4/3]"
           />
+          {imageCreator !== null && imageLicense !== null && (
+            <figcaption className="mt-2 text-base">
+              {imageCreator}・
+              <a
+                href={imageLicense}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link"
+              >
+                {imageLicense}
+                <span className="sr-only">（新しいタブで開きます）</span>
+              </a>
+            </figcaption>
+          )}
         </figure>
       )}
 
-      {description !== null && (
-        <div className="mt-4 ruby-text">
-          <p className="text-base">{description}</p>
-        </div>
-      )}
+      <BarrierDetailBlock
+        wheelchair={location.wheelchair}
+        osmElement={location.osmElement}
+        relatedPages={location.relatedPages}
+      />
 
-      {websiteUri !== null && (
-        <p className="mt-4">
-          <a
-            href={websiteUri}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="link ruby-text"
-          >
-            ウェブサイトを見る
-          </a>
-        </p>
-      )}
+      <OpeningHoursSection location={location} />
 
-      <LocationProvidedInformation location={location} />
+      <BasicInfoSection location={location} />
 
       <div className="mt-4">
         <DestinationLink location={location} />

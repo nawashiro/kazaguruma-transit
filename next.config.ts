@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import WebpackLicensePlugin from "webpack-license-plugin";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@prisma/adapter-better-sqlite3"],
+  serverExternalPackages: ["@prisma/adapter-better-sqlite3", "opening_hours"],
   images: {
     remotePatterns: [
       {

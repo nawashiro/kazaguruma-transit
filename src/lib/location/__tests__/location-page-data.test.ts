@@ -13,10 +13,10 @@ type ModuleState = {
   error: unknown | null;
 };
 
-type ArtifactKeyLocation =
-  LocationArtifact["sources"]["keyLocations"][number]["locations"][number];
-type ArtifactKeyLocationCategory =
-  LocationArtifact["sources"]["keyLocations"][number];
+type ArtifactLocation =
+  LocationArtifact["sources"]["locations"][number]["locations"][number];
+type ArtifactLocationCategory =
+  LocationArtifact["sources"]["locations"][number];
 
 const mockReadLocationArtifact = jest.fn();
 
@@ -68,30 +68,32 @@ function getPublicFunction(state: ModuleState, publicName: string): PublicFuncti
   return implementation as PublicFunction;
 }
 
-const primaryLocation: ArtifactKeyLocation = {
-  id: "kanda-library",
-  name: "神田図書館",
+const primaryLocation: ArtifactLocation = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000001",
+  name: "千代田区役所",
   lat: 35.694,
-  lng: 139.768,
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  lng: 139.753,
+  relatedPages: [],
+  osmElement: { type: "node", id: 1 },
+  wheelchair: "yes",
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
 };
 
-const unmatchedLocation: ArtifactKeyLocation = {
-  id: "outside-location",
+const unmatchedLocation: ArtifactLocation = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000002",
   name: "区域外施設",
   lat: 35.8,
   lng: 139.9,
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  relatedPages: [],
+  osmElement: { type: "node", id: 2 },
+  wheelchair: null,
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=2",
 };
 
-const successCategories: ArtifactKeyLocationCategory[] = [
+const successCategories: ArtifactLocationCategory[] = [
   {
-    category: "公共施設",
-    "category:en": "public-facilities",
+    category: "市役所・東京都の区役所",
+    categoryId: "1302",
     locations: [primaryLocation],
   },
 ];
@@ -123,7 +125,6 @@ const validArtifact: LocationArtifact = {
   sourceUris: {
     placesJsonLdUri: "https://fixtures.example.test/places.jsonld",
     osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
-    keyLocationsUri: "https://fixtures.example.test/key_locations.json",
     townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
     categoryNamesUri: "https://fixtures.example.test/category-names.jsonld",
   },
@@ -141,7 +142,7 @@ const validArtifact: LocationArtifact = {
         ],
       },
     ],
-    keyLocations: successCategories,
+    locations: successCategories,
     townGeoJson: {
       type: "FeatureCollection",
       features: [
@@ -168,12 +169,12 @@ const validArtifact: LocationArtifact = {
     },
   },
   derivedRegions: {
-    "kanda-library": "神田",
+    "urn:uuid:00000000-0000-4000-8000-000000000001": "神田",
   },
 };
 
 function artifactResult(
-  categories: ArtifactKeyLocationCategory[] = successCategories,
+  categories: ArtifactLocationCategory[] = successCategories,
 ): LocationArtifactReadResult {
   return {
     status: "success",
@@ -181,7 +182,7 @@ function artifactResult(
       ...validArtifact,
       sources: {
         ...validArtifact.sources,
-        keyLocations: categories,
+        locations: categories,
       },
     },
   };
@@ -200,14 +201,14 @@ describe("location-page-data server boundary", () => {
     global.fetch = originalFetch;
   });
 
-  it("preserves non-empty key-location success categories and projects derived regions without mutating sources", async () => {
+  it("preserves non-empty locations success categories and projects derived regions without mutating sources", async () => {
     const load = getPublicFunction(moduleState, "loadLocationPageData");
     const expected = {
       status: "success",
       categories: [
         {
-          category: "公共施設",
-          "category:en": "public-facilities",
+          category: "市役所・東京都の区役所",
+          categoryId: "1302",
           locations: [{ ...primaryLocation, area: "神田" }],
         },
       ],
@@ -220,24 +221,21 @@ describe("location-page-data server boundary", () => {
       status: "success",
       categories: [
         {
-          category: "公共施設",
-          "category:en": "public-facilities",
+          category: "市役所・東京都の区役所",
+          categoryId: "1302",
           locations: [
             expect.objectContaining({
-              id: "kanda-library",
-              name: "神田図書館",
+              id: "urn:uuid:00000000-0000-4000-8000-000000000001",
+              name: "千代田区役所",
               lat: 35.694,
-              lng: 139.768,
-              nodeCopyright: "千代田区",
-              licence: "CC BY 4.0",
-              licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+              lng: 139.753,
               area: "神田",
             }),
           ],
         },
       ],
     });
-    expect(validArtifact.sources.keyLocations[0]?.locations[0]).not.toHaveProperty(
+    expect(validArtifact.sources.locations[0]?.locations[0]).not.toHaveProperty(
       "area",
     );
     expect(mockReadLocationArtifact).toHaveBeenCalledTimes(1);
@@ -259,7 +257,7 @@ describe("location-page-data server boundary", () => {
     expect(mockReadLocationArtifact).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects a successful empty artifact key-location set at the server page boundary", async () => {
+  it("rejects a successful empty artifact locations set at the server page boundary", async () => {
     const load = getPublicFunction(moduleState, "loadLocationPageData");
     mockReadLocationArtifact.mockReturnValue(artifactResult([]));
 
@@ -274,11 +272,11 @@ describe("location-page-data server boundary", () => {
 
   it("rejects duplicate location IDs across the complete artifact dataset instead of selecting one", async () => {
     const load = getPublicFunction(moduleState, "loadLocationPageData");
-    const duplicateCategories: ArtifactKeyLocationCategory[] = [
+    const duplicateCategories: ArtifactLocationCategory[] = [
       successCategories[0],
       {
         category: "別カテゴリ",
-        "category:en": "another-category",
+        categoryId: "1512",
         locations: [{ ...primaryLocation, name: "同じIDの別施設" }],
       },
     ];
@@ -291,6 +289,55 @@ describe("location-page-data server boundary", () => {
       error: expect.any(Error),
     }));
     expect(result).not.toHaveProperty("categories");
+  });
+
+  it("passes facts through to detail and leaves missing facts as undefined", async () => {
+    const load = getPublicFunction(moduleState, "loadLocationPageData");
+    const withFacts = {
+      ...primaryLocation,
+      phone: { display: "03-3264-2111", tel: "tel:0332642111" },
+      websiteUri: "https://www.city.chiyoda.lg.jp/",
+      wikipediaUri: "https://ja.wikipedia.org/wiki/%E5%8D%83%E4%BB%A3%E7%94%B0",
+      osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
+    };
+    const withoutFacts = {
+      ...unmatchedLocation,
+      osmEditUrl: "https://www.openstreetmap.org/edit?node=2",
+    };
+    mockReadLocationArtifact.mockReturnValue({
+      status: "success",
+      artifact: {
+        ...validArtifact,
+        sources: {
+          ...validArtifact.sources,
+          locations: [
+            { category: "市役所・東京都の区役所", categoryId: "1302", locations: [withFacts] },
+            { category: "図書館", categoryId: "1512", locations: [withoutFacts] },
+          ],
+        },
+        derivedRegions: {
+          [withFacts.id]: "神田",
+          [withoutFacts.id]: "その他",
+        },
+      },
+    });
+
+    const result = (await load()) as any;
+    expect(result.status).toBe("success");
+    if (result.status !== "success") {
+      throw new Error("expected success");
+    }
+    const factLoc = (result.categories as any[]).flatMap((c: any) => c.locations).find((l: any) => l.id === withFacts.id);
+    expect(factLoc).toMatchObject({
+      phone: { display: "03-3264-2111", tel: "tel:0332642111" },
+      websiteUri: "https://www.city.chiyoda.lg.jp/",
+      osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
+    });
+    const missingLoc = (result.categories as any[]).flatMap((c: any) => c.locations).find((l: any) => l.id === withoutFacts.id);
+    expect(missingLoc?.phone).toBeUndefined();
+    expect(missingLoc?.websiteUri).toBeUndefined();
+    expect(missingLoc?.wikipediaUri).toBeUndefined();
+    expect(missingLoc?.osmEditUrl).toBe("https://www.openstreetmap.org/edit?node=2");
   });
 
   it("groups locations with server-provided GeoJSON and places unmatched points in その他", () => {

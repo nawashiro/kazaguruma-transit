@@ -64,6 +64,7 @@
     "ml-pca": "^4.1.1",
     "next": "^15.5.28",
     "nosskey-sdk": "^0.0.2",
+    "opening_hours": "3.16.0",
     "pdf-lib": "^1.17.1",
     "prisma": "7.10.1",
     "puppeteer": "^25.16.0",

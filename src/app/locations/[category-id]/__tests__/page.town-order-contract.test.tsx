@@ -2,10 +2,10 @@ import React from "react";
 import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type {
-  KeyLocation,
-  KeyLocationCategory,
-  KeyLocationsDataResult,
-} from "../../../../utils/addressLoader";
+  LocationWithArea,
+  LocationCategoryWithArea,
+  LocationPageDataResult,
+} from "@/lib/location/location-page-data";
 
 type CategoryPageProps = {
   params: Promise<{ "category-id": string }>;
@@ -20,7 +20,7 @@ const mockNotFound = jest.fn(() => {
   throw new Error("unexpected notFound() in town-order contract fixture");
 });
 const mockLoadLocationPageData = jest.fn<
-  Promise<KeyLocationsDataResult>,
+  Promise<LocationPageDataResult>,
   []
 >();
 
@@ -36,41 +36,42 @@ jest.mock("@/lib/location/location-page-data", () => {
   };
 });
 
-const CATEGORY_ID = "town-order contract category";
+const CATEGORY_ID = "1302";
 const DERIVED_AREA_PREFIX = "東京都千代田区";
 
 function makeLocation(
   id: string,
   name: string,
   town: string,
-): KeyLocation {
+  index: number,
+): LocationWithArea {
+  const osmId = 1000 + index;
   return {
     id,
     name,
-    lat: 35.68,
+    lat: 35.68 + index * 0.001,
     lng: 139.76,
     area: `${DERIVED_AREA_PREFIX}${town}`,
-    description: `${town}の公開契約fixtureです`,
-    uri: `https://example.test/${id}`,
-    nodeCopyright: "千代田区",
-    licence: "CC BY 4.0",
-    licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+    relatedPages: [],
+    osmElement: { type: "node", id: osmId },
+    wheelchair: index % 3 === 0 ? "yes" : index % 3 === 1 ? "limited" : null,
+    osmEditUrl: `https://www.openstreetmap.org/edit?node=${osmId}`,
   };
 }
 
 // Deliberately interleave towns so Map insertion order differs from localeCompare order.
-const townLocations: KeyLocation[] = [
-  makeLocation("akasaka-first", "赤坂の入力先頭の場所", "赤坂"),
-  makeLocation("kanda-first", "神田の入力先頭の場所", "神田"),
-  makeLocation("kudan-first", "九段南の入力先頭の場所", "九段南"),
-  makeLocation("kanda-second", "神田の入力後続の場所", "神田"),
-  makeLocation("kudan-second", "九段南の入力後続の場所", "九段南"),
-  makeLocation("akasaka-second", "赤坂の入力後続の場所", "赤坂"),
+const townLocations: LocationWithArea[] = [
+  makeLocation("urn:uuid:00000000-0000-4000-8000-000000000011", "赤坂の入力先頭の場所", "赤坂", 0),
+  makeLocation("urn:uuid:00000000-0000-4000-8000-000000000012", "神田の入力先頭の場所", "神田", 1),
+  makeLocation("urn:uuid:00000000-0000-4000-8000-000000000013", "九段南の入力先頭の場所", "九段南", 2),
+  makeLocation("urn:uuid:00000000-0000-4000-8000-000000000014", "神田の入力後続の場所", "神田", 3),
+  makeLocation("urn:uuid:00000000-0000-4000-8000-000000000015", "九段南の入力後続の場所", "九段南", 4),
+  makeLocation("urn:uuid:00000000-0000-4000-8000-000000000016", "赤坂の入力後続の場所", "赤坂", 5),
 ];
 
-const townCategory: KeyLocationCategory = {
+const townCategory: LocationCategoryWithArea = {
   category: "町字順契約カテゴリ",
-  "category:en": CATEGORY_ID,
+  categoryId: CATEGORY_ID,
   locations: townLocations,
 };
 

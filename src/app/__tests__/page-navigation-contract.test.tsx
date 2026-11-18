@@ -16,8 +16,7 @@ const mockArtifactResult: LocationArtifactReadResult = {
     sourceUris: {
       placesJsonLdUri: "https://fixtures.example.test/places.jsonld",
       osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
-      keyLocationsUri: "https://fixtures.example.test/key_locations.json",
-      townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
+        townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
       categoryNamesUri: "https://fixtures.example.test/category-names.jsonld",
     },
     sources: {
@@ -34,7 +33,7 @@ const mockArtifactResult: LocationArtifactReadResult = {
           ],
         },
       ],
-      keyLocations: [],
+      locations: [],
       townGeoJson: {
         type: "FeatureCollection",
         features: [],

@@ -1,24 +1,20 @@
 import type { ReactNode } from "react";
 import { render, screen, within } from "@testing-library/react";
-import type { KeyLocation } from "@/utils/addressLoader";
+import type { LocationWithArea } from "@/lib/location/location-page-data";
 import SidebarLayout from "../SidebarLayout";
 
 const mockLoadLocationPageData = jest.fn();
 
-const locationDetailFixture: KeyLocation = {
-  id: "location-detail-host-fixture",
-  name: "神田図書館",
+const locationDetailFixture: LocationWithArea = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000072",
+  name: "千代田区役所",
   lat: 35.694,
-  lng: 139.768,
+  lng: 139.753,
   area: "神田",
-  description: "地域の図書館です",
-  descriptionCopyright: "千代田区オープンデータ",
-  imageUri: "https://example.test/kanda-library.jpg",
-  imageCopyright: "市民写真家",
-  uri: "https://example.test/kanda-library",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  relatedPages: [],
+  osmElement: { type: "node", id: 72 },
+  wheelchair: "yes",
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=72",
 };
 
 jest.mock("@/lib/location/location-page-data", () => ({

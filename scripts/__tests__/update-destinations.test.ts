@@ -44,7 +44,6 @@ const ID = {
 const appConfig = {
   placesJsonLdUri: PLACES_URI,
   osmMirrorUri: OSM_MIRROR_URI,
-  keyLocationsUri: "https://fixtures.example.test/key_locations.json",
   townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
 };
 

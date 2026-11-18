@@ -3,9 +3,9 @@
   "gaMeasurementId": "G-RD0ELFR3RW",
   "placesJsonLdUri": "https://nawashiro.github.io/chiyoda_city_main_facilities/places.jsonld",
   "osmMirrorUri": "https://nawashiro.github.io/chiyoda_city_main_facilities/mirrors/osm.json",
-  "keyLocationsUri": "https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_main_facilities@v2.1.1/kazaguruma_json_min/key_locations.json",
   "townGeoJsonUri": "https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_town_geojson@latest/chiyoda_city.json",
   "categoryNamesUri": "https://nawashiro.github.io/chiyoda_city_main_facilities/category-names.jsonld",
+  "wikidataMirrorUri": "https://nawashiro.github.io/chiyoda_city_main_facilities/mirrors/wikidata.json",
   "discussion": {
     "enabled": true,
     "adminPubkey": "npub1expp2ptfvemx6w40ks68rnrj6kdfmlfgsk4dy73nmgckshmulmuqssjd3w",

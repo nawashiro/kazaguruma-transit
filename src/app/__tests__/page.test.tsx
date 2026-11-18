@@ -26,7 +26,6 @@ const successfulArtifact: LocationArtifact = {
   sourceUris: {
     placesJsonLdUri: "https://fixtures.example.test/places.jsonld",
     osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
-    keyLocationsUri: "https://fixtures.example.test/key_locations.json",
     townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
     categoryNamesUri: "https://fixtures.example.test/category-names.jsonld",
   },
@@ -38,19 +37,20 @@ const successfulArtifact: LocationArtifact = {
         locations: [popularFacility],
       },
     ],
-    keyLocations: [
+    locations: [
       {
         category: "公共施設",
-        "category:en": "public-facilities",
+        categoryId: "public-facilities",
         locations: [
           {
-            id: "kanda-library",
+            id: "urn:uuid:00000000-0000-4000-8000-2db34a2b56d3",
             name: "神田図書館",
             lat: 35.694,
             lng: 139.768,
-            nodeCopyright: "千代田区",
-            licence: "CC BY 4.0",
-            licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+            relatedPages: [],
+            osmElement: { type: "node", id: 263 },
+            wheelchair: "yes",
+            osmEditUrl: "https://www.openstreetmap.org/edit?node=263",
           },
         ],
       },

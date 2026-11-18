@@ -16,18 +16,54 @@ import {
   type LocationOrigin,
 } from "@/lib/location/location-origin-query";
 import {
-  isKeyLocationCategory,
-  type KeyLocation,
-  type KeyLocationCategory,
-  type KeyLocationsDataResult,
-} from "@/utils/addressLoader";
+  type LocationWithArea,
+  type LocationCategoryWithArea,
+  type LocationPageDataResult,
+} from "@/lib/location/location-page-data";
+import { BarrierBadge } from "@/components/features/BarrierAccessibility";
+
+const UUID_URN_PATTERN =
+  /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+
+function isLocationCategoryWithArea(value: unknown): value is LocationCategoryWithArea {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  const categoryId =
+    record["categoryId"] ?? (record as Record<string, unknown>)["category:en"];
+  if (
+    typeof record["category"] !== "string" ||
+    typeof categoryId !== "string" ||
+    !Array.isArray(record["locations"]) ||
+    (record["locations"] as unknown[]).length === 0
+  ) {
+    return false;
+  }
+  return (record["locations"] as unknown[]).every((loc) => {
+    if (typeof loc !== "object" || loc === null) {
+      return false;
+    }
+    const l = loc as Record<string, unknown>;
+    return (
+      typeof l["id"] === "string" &&
+      UUID_URN_PATTERN.test(l["id"]) &&
+      typeof l["name"] === "string" &&
+      (l["name"] as string).trim().length > 0 &&
+      typeof l["lat"] === "number" &&
+      Number.isFinite(l["lat"]) &&
+      typeof l["lng"] === "number" &&
+      Number.isFinite(l["lng"])
+    );
+  });
+}
 
 type CategoryPageProps = {
   params: Promise<{ "category-id": string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-type LocationWithDisplayArea = KeyLocation & {
+type LocationWithDisplayArea = LocationWithArea & {
   displayAreaName?: string;
 };
 
@@ -47,7 +83,7 @@ type DistanceBand = {
 
 type SuccessfulLocationData = {
   status: "success";
-  categories: KeyLocationCategory[];
+  categories: LocationCategoryWithArea[];
 };
 
 const INVALID_ORIGIN_QUERY = "__invalid-origin-query__";
@@ -67,7 +103,7 @@ export async function generateStaticParams(): Promise<
   }
 
   return data.categories.map((category) => ({
-    "category-id": category["category:en"],
+    "category-id": category.categoryId,
   }));
 }
 
@@ -90,7 +126,7 @@ function decodeCategoryId(categoryId: unknown): string {
   return decodedCategoryId;
 }
 
-function hasDuplicateLocationIds(categories: KeyLocationCategory[]): boolean {
+function hasDuplicateLocationIds(categories: LocationCategoryWithArea[]): boolean {
   const locationIds = new Set<string>();
 
   for (const category of categories) {
@@ -105,14 +141,14 @@ function hasDuplicateLocationIds(categories: KeyLocationCategory[]): boolean {
   return false;
 }
 
-function hasDuplicateCategoryIds(categories: KeyLocationCategory[]): boolean {
+function hasDuplicateCategoryIds(categories: LocationCategoryWithArea[]): boolean {
   const categoryIds = new Set<string>();
 
   for (const category of categories) {
-    if (categoryIds.has(category["category:en"])) {
+    if (categoryIds.has(category.categoryId)) {
       return true;
     }
-    categoryIds.add(category["category:en"]);
+    categoryIds.add(category.categoryId);
   }
 
   return false;
@@ -133,7 +169,7 @@ function isSuccessfulLocationData(
   if (
     !Array.isArray(categories) ||
     categories.length === 0 ||
-    !categories.every(isKeyLocationCategory)
+    !categories.every(isLocationCategoryWithArea)
   ) {
     return false;
   }
@@ -159,9 +195,9 @@ function normalizeAreaName(name: string): string {
 }
 
 function groupLocationsByProvidedArea(
-  locations: KeyLocation[],
+  locations: LocationWithArea[],
 ): LocationAreaGroup[] {
-  const groups = new Map<string, KeyLocation[]>();
+  const groups = new Map<string, LocationWithArea[]>();
 
   for (const location of locations) {
     const areaName = typeof location.area === "string" ? location.area.trim() : "";
@@ -181,7 +217,7 @@ function groupLocationsByProvidedArea(
   })).sort((first, second) => first.name.localeCompare(second.name));
 }
 
-function groupCategoryLocations(locations: KeyLocation[]): LocationAreaGroup[] {
+function groupCategoryLocations(locations: LocationWithArea[]): LocationAreaGroup[] {
   return groupLocationsByProvidedArea(locations);
 }
 
@@ -249,6 +285,7 @@ function LocationSummary({
   location: LocationWithDisplayArea;
   areaName?: string;
 }) {
+  const displayArea = areaName ?? location.displayAreaName ?? location.area;
   return (
     <Link
       href={`/locations/location-detail/${encodeURIComponent(location.id)}`}
@@ -258,7 +295,7 @@ function LocationSummary({
         <figure className="relative w-full overflow-hidden">
           <img
             src={location.imageUri}
-            alt={location.name}
+            alt=""
             className="h-48 w-full max-w-full object-cover"
           />
         </figure>
@@ -267,12 +304,14 @@ function LocationSummary({
         <h3 className="card-title inline gap-0 break-words text-xl">
           {location.name}
         </h3>
-        {areaName && <p className="break-words text-base">{areaName}</p>}
-        {location.description && (
-          <p className="mt-1 break-words text-base ruby-text">
-            {location.description}
-          </p>
-        )}
+        <div className="flex items-center justify-between gap-2">
+          <span>
+            <BarrierBadge wheelchair={location.wheelchair} />
+          </span>
+          {displayArea && (
+            <span className="break-words text-base">{displayArea}</span>
+          )}
+        </div>
       </div>
     </Link>
   );
@@ -338,20 +377,12 @@ function DistanceLocationList({ bands }: { bands: readonly DistanceBand[] }) {
 function DataProviderCard() {
   return (
     <Card title="データ提供元" className="ruby-text">
+      <p>千代田区の主要施設を表示しています。</p>
       <p>
-        この場所データは、ボランティアがつくった
-        <a
-          href="https://github.com/nawashiro/chiyoda_city_main_facilities"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="link"
-        >
-          千代田区主要施設座標データ
-        </a>
-        による「<ruby>風<rt>かざ</rt></ruby>ぐるまの停留所から徒歩圏内（600m以内）であることがわかっている場所」を使用しています。
+        バリアフリー情報はOpenStreetMapのwheelchairタグに基づきます。電話・ウェブサイトもOpenStreetMap由来です。最新情報はWheelMapまたはOpenStreetMapで確認でき、OSMで修正できます。
       </p>
       <p>
-        誤りが含まれていたり、古いデータが残っていたり、新たに加えてほしい場所があるときは、直接プルリクエストを送るか、
+        誤りがあるときは、OpenStreetMapまたはWheelMapで修正するか、
         <a
           href="https://docs.google.com/forms/d/e/1FAIpQLSeZ1eufe_2aZkRWQwr-RuCceUYUMJ7WmSfUr1ZsX5QTDRqFKQ/viewform?usp=header"
           target="_blank"
@@ -362,7 +393,6 @@ function DataProviderCard() {
         </a>
         からお知らせください。
       </p>
-      <p>写真のご提供も歓迎しています。</p>
     </Card>
   );
 }
@@ -374,7 +404,7 @@ export default async function CategoryPage({
   const { "category-id": encodedCategoryId } = await params;
   const categoryId = decodeCategoryId(encodedCategoryId);
 
-  let data: KeyLocationsDataResult;
+  let data: LocationPageDataResult;
   try {
     data = await loadLocationPageData();
   } catch {
@@ -386,7 +416,7 @@ export default async function CategoryPage({
   }
 
   const category = data.categories.find(
-    (candidate) => candidate["category:en"] === categoryId,
+    (candidate) => candidate.categoryId === categoryId,
   );
   if (!category) {
     notFound();

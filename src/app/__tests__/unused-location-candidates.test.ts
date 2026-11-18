@@ -84,7 +84,7 @@ describe("Spec023 T053A unused production candidate boundaries", () => {
 
     expect(names).not.toContain("loadAddressData");
     expect(names).not.toContain("loadAddressDataResult");
-    expect(names).not.toContain("loadKeyLocationsDataResult");
+    expect(names).not.toContain("loadLocationPageDataResult");
   });
 
   it("removes the unused LocationCard production module", () => {

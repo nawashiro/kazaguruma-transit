@@ -23,7 +23,7 @@ type ModuleState = {
 const usePathname = jest.fn(() => "/locations/city_office_and_branch_offices");
 const useSearchParams = jest.fn(() => new URLSearchParams());
 const mockLoadLocationCategories = jest.fn();
-const mockLoadKeyLocationsData = jest.fn();
+const mockLoadLocationPageData = jest.fn();
 
 jest.mock("next/navigation", () => ({
   usePathname: () => usePathname(),
@@ -43,8 +43,8 @@ jest.mock("@/utils/addressLoader", () => {
   const actual = jest.requireActual("@/utils/addressLoader");
   return {
     ...actual,
-    loadKeyLocationsData: (...args: unknown[]) =>
-      mockLoadKeyLocationsData(...args),
+    loadLocationPageData: (...args: unknown[]) =>
+      mockLoadLocationPageData(...args),
   };
 });
 
@@ -151,7 +151,7 @@ function getCategoryLinks(): HTMLElement[] {
 
 function expectNoLegacyLocationLoaderCalls(): void {
   expect(mockLoadLocationCategories).not.toHaveBeenCalled();
-  expect(mockLoadKeyLocationsData).not.toHaveBeenCalled();
+  expect(mockLoadLocationPageData).not.toHaveBeenCalled();
 }
 
 describe("LocationCategoryNavigation", () => {
@@ -162,8 +162,8 @@ describe("LocationCategoryNavigation", () => {
     useSearchParams.mockReturnValue(new URLSearchParams());
     mockLoadLocationCategories.mockReset();
     mockLoadLocationCategories.mockResolvedValue(categories);
-    mockLoadKeyLocationsData.mockReset();
-    mockLoadKeyLocationsData.mockResolvedValue(categories);
+    mockLoadLocationPageData.mockReset();
+    mockLoadLocationPageData.mockResolvedValue(categories);
   });
 
   it("renders a semantic tablist with every category as a native link", () => {

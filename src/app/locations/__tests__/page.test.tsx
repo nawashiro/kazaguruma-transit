@@ -5,10 +5,10 @@ import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type * as TypeScript from "typescript";
 import type {
-  KeyLocation,
-  KeyLocationCategory,
-  KeyLocationsDataResult,
-} from "../../../utils/addressLoader";
+  LocationWithArea,
+  LocationCategoryWithArea,
+  LocationPageDataResult,
+} from "@/lib/location/location-page-data";
 
 jest.unmock("fs");
 const ts: typeof import("typescript") = jest.requireActual("typescript");
@@ -17,7 +17,6 @@ const mockRedirect = jest.fn();
 const mockNotFound = jest.fn();
 const mockLoadLocationPageData = jest.fn();
 const mockLoadLocationCategories = jest.fn();
-const mockLoadKeyLocationsData = jest.fn();
 
 jest.mock("next/navigation", () => ({
   redirect: (url: string) => mockRedirect(url),
@@ -36,15 +35,6 @@ jest.mock("@/lib/location/location-list-state", () => {
     ...actual,
     loadLocationCategories: (...args: unknown[]) =>
       mockLoadLocationCategories(...args),
-  };
-});
-
-jest.mock("@/utils/addressLoader", () => {
-  const actual = jest.requireActual("@/utils/addressLoader");
-  return {
-    ...actual,
-    loadKeyLocationsData: (...args: unknown[]) =>
-      mockLoadKeyLocationsData(...args),
   };
 });
 
@@ -261,38 +251,38 @@ function collectLocationRateLimitBranchViolations(): string[] {
 type PublicPage = () => React.ReactNode | Promise<React.ReactNode>;
 type PublicPageModule = { default?: unknown };
 
-const locationFixture: KeyLocation = {
-  id: "kanda-library-日本",
-  name: "神田図書館",
+const locationFixture: LocationWithArea = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000001",
+  name: "千代田区役所",
   lat: 35.694,
-  lng: 139.768,
-  area: "千代田",
-  description: "地域の図書館です",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  lng: 139.753,
+  area: "神田",
+  relatedPages: [],
+  osmElement: { type: "node", id: 1 },
+  wheelchair: "yes",
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
 };
 
-const firstCategoryFixture: KeyLocationCategory = {
-  category: "区役所・出張所",
-  "category:en": "city office/branch offices",
+const firstCategoryFixture: LocationCategoryWithArea = {
+  category: "市役所・東京都の区役所",
+  categoryId: "1302",
   locations: [locationFixture],
 };
 
-const secondCategoryFixture: KeyLocationCategory = {
-  category: "公共施設",
-  "category:en": "public-facilities",
-  locations: [{ ...locationFixture, id: "public-library-日本" }],
+const secondCategoryFixture: LocationCategoryWithArea = {
+  category: "図書館",
+  categoryId: "1512",
+  locations: [{ ...locationFixture, id: "urn:uuid:00000000-0000-4000-8000-000000000002" }],
 };
 
-const locationCategoriesFixture: KeyLocationCategory[] = [
+const locationCategoriesFixture: LocationCategoryWithArea[] = [
   firstCategoryFixture,
   secondCategoryFixture,
 ];
 
 function successData(
-  categories: KeyLocationCategory[] = locationCategoriesFixture,
-): KeyLocationsDataResult {
+  categories: LocationCategoryWithArea[] = locationCategoriesFixture,
+): LocationPageDataResult {
   return { status: "success", categories };
 }
 
@@ -381,7 +371,6 @@ function expectLocationDataErrorBoundary() {
 
 function expectNoLegacyLocationLoaderCalls(): void {
   expect(mockLoadLocationCategories).not.toHaveBeenCalled();
-  expect(mockLoadKeyLocationsData).not.toHaveBeenCalled();
 }
 
 describe("/locations server entry", () => {
@@ -391,11 +380,10 @@ describe("/locations server entry", () => {
     mockLoadLocationPageData.mockReset();
     mockLoadLocationCategories.mockReset();
     mockLoadLocationCategories.mockResolvedValue(locationCategoriesFixture);
-    mockLoadKeyLocationsData.mockReset();
-    mockLoadKeyLocationsData.mockResolvedValue(locationCategoriesFixture);
+    mockLoadLocationPageData.mockResolvedValue(successData());
   });
 
-  it("成功データの決定的な先頭category:enをエンコードしたカテゴリURLへ解決する", async () => {
+  it("成功データの決定的な先頭categoryIdをエンコードしたカテゴリURLへ解決する", async () => {
     mockLoadLocationPageData.mockResolvedValue(successData());
 
     await invokePublicPage();
@@ -403,7 +391,7 @@ describe("/locations server entry", () => {
     expect(mockLoadLocationPageData).toHaveBeenCalledTimes(1);
     expect(mockRedirect).toHaveBeenCalledTimes(1);
     expect(mockRedirect).toHaveBeenCalledWith(
-      `/locations/${encodeURIComponent(firstCategoryFixture["category:en"])}`,
+      `/locations/${encodeURIComponent(firstCategoryFixture.categoryId)}`,
     );
     expect(mockNotFound).not.toHaveBeenCalled();
   });
@@ -432,7 +420,7 @@ describe("/locations server entry", () => {
     mockLoadLocationPageData.mockResolvedValue({
       status: "error",
       error: new Error("HTTP 503"),
-    } satisfies KeyLocationsDataResult);
+    } satisfies LocationPageDataResult);
 
     await invokePublicPage();
 

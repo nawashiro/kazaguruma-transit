@@ -2,7 +2,6 @@ export interface LocationWithDistance {
   lat: number;
   lng: number;
   distance?: number;
-  [key: string]: unknown;
 }
 
 export function calculateDistance(

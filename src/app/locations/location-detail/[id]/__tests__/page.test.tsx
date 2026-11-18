@@ -1,14 +1,14 @@
 import { isValidElement, type ReactNode } from "react";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type {
   LocationDetailResult,
 } from "@/types/access-route-pages";
 import type {
-  KeyLocation,
-  KeyLocationCategory,
-  KeyLocationsDataResult,
-} from "@/utils/addressLoader";
+  LocationWithArea,
+  LocationCategoryWithArea,
+  LocationPageDataResult,
+} from "@/lib/location/location-page-data";
 
 const NEXT_NOT_FOUND = Symbol("NEXT_NOT_FOUND");
 const NEXT_REDIRECT = Symbol("NEXT_REDIRECT");
@@ -34,12 +34,12 @@ jest.mock("@/lib/location/location-detail-resolver", () => ({
 }));
 
 type LoadLocationPageDataMock = jest.Mock<
-  Promise<KeyLocationsDataResult>,
+  Promise<LocationPageDataResult>,
   []
 >;
 type ResolveLocationDetailMock = jest.Mock<
-  LocationDetailResult<KeyLocation>,
-  [unknown, KeyLocationsDataResult]
+  LocationDetailResult<LocationWithArea>,
+  [unknown, LocationPageDataResult]
 >;
 
 type LocationPageDataModuleMock = {
@@ -59,38 +59,39 @@ const locationDetailResolverMock = jest.requireMock(
 const mockLoadLocationPageData = locationPageDataMock.loadLocationPageData;
 const mockResolveLocationDetail = locationDetailResolverMock.resolveLocationDetail;
 
-const detailCategory: KeyLocationCategory = {
-  category: "公共施設",
-  "category:en": "public facilities",
+const detailCategory: LocationCategoryWithArea = {
+  category: "市役所・東京都の区役所",
+  categoryId: "1302",
   locations: [],
 };
 
-const completeLocation: KeyLocation = {
-  id: "kanda-library-日本",
-  name: "神田図書館",
+const completeLocation: LocationWithArea = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000001",
+  name: "千代田区役所",
   lat: 35.694,
-  lng: 139.768,
+  lng: 139.753,
   area: "神田",
-  description: "地域の図書館です",
-  descriptionCopyright: "千代田区オープンデータ",
-  imageUri: "https://example.test/kanda-library.jpg",
-  imageCopyright: "市民写真家",
-  uri: "https://example.test/kanda-library",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  imageUri: "https://example.test/city.jpg",
+  imageCreator: "さくら",
+  imageLicense: "https://creativecommons.org/licenses/by-sa/3.0/",
+  relatedPages: [
+    { name: "東京バリアフリーマップ", url: "https://example.test/bfm/city" },
+  ],
+  osmElement: { type: "node", id: 1 },
+  wheelchair: "yes",
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
 };
 
-// Optional display fields are intentionally omitted while identity, coordinates,
-// attribution, and the license remain available to the detail page.
-const locationWithoutOptionalFields: KeyLocation = {
-  id: "ogawamachi-hall",
+const locationWithoutOptionalFields: LocationWithArea = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000002",
   name: "小川町ホール",
   lat: 35.695,
   lng: 139.765,
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  area: "神田",
+  relatedPages: [],
+  osmElement: { type: "way", id: 2 },
+  wheelchair: null,
+  osmEditUrl: "https://www.openstreetmap.org/edit?way=2",
 };
 
 type PublicModule = Record<string, unknown>;
@@ -162,7 +163,7 @@ function getGenerateMetadata(): LocationDetailMetadata {
   return generateMetadata as LocationDetailMetadata;
 }
 
-function successDataFor(location: KeyLocation): KeyLocationsDataResult {
+function successDataFor(location: LocationWithArea): LocationPageDataResult {
   return {
     status: "success",
     categories: [
@@ -174,7 +175,7 @@ function successDataFor(location: KeyLocation): KeyLocationsDataResult {
   };
 }
 
-function duplicateDataFor(location: KeyLocation): KeyLocationsDataResult {
+function duplicateDataFor(location: LocationWithArea): LocationPageDataResult {
   return {
     status: "success",
     categories: [
@@ -184,28 +185,28 @@ function duplicateDataFor(location: KeyLocation): KeyLocationsDataResult {
       },
       {
         category: "別カテゴリ",
-        "category:en": "another category",
+        categoryId: "1512",
         locations: [{ ...location, name: "同じIDの別施設" }],
       },
     ],
   };
 }
 
-function malformedRequiredData(): KeyLocationsDataResult {
+function malformedRequiredData(): LocationPageDataResult {
   return {
     status: "success",
     categories: [
       {
         category: detailCategory.category,
-        "category:en": detailCategory["category:en"],
+        categoryId: detailCategory.categoryId,
         // The wire payload intentionally omits required location fields.
         locations: [{ id: completeLocation.id }],
       },
     ],
-  } as unknown as KeyLocationsDataResult;
+  } as unknown as LocationPageDataResult;
 }
 
-function configureSuccessfulLocation(location: KeyLocation): KeyLocationsDataResult {
+function configureSuccessfulLocation(location: LocationWithArea): LocationPageDataResult {
   const data = successDataFor(location);
   mockLoadLocationPageData.mockResolvedValue(data);
   mockResolveLocationDetail.mockReturnValue({
@@ -215,7 +216,7 @@ function configureSuccessfulLocation(location: KeyLocation): KeyLocationsDataRes
   return data;
 }
 
-async function renderLocationDetailPage(location: KeyLocation) {
+async function renderLocationDetailPage(location: LocationWithArea) {
   const loadedData = configureSuccessfulLocation(location);
   const page = getNestedDetailPage();
   const element = await page({
@@ -251,7 +252,7 @@ async function invokeLocationDetailPage(id: string): Promise<PageInvocation> {
 
 function expectLocationBoundaryCalls(
   id: string,
-  data: KeyLocationsDataResult,
+  data: LocationPageDataResult,
 ): void {
   expect(mockLoadLocationPageData).toHaveBeenCalledTimes(1);
   expect(mockLoadLocationPageData).toHaveBeenCalledWith();
@@ -272,7 +273,7 @@ function renderPageInvocation(invocation: PageInvocation): void {
   render(<main id="main-content">{invocation.element}</main>);
 }
 
-function expectedDestinationHref(location: KeyLocation): string {
+function expectedDestinationHref(location: LocationWithArea): string {
   return `/?destination=${encodeURIComponent(
     JSON.stringify({
       lat: location.lat,
@@ -282,13 +283,13 @@ function expectedDestinationHref(location: KeyLocation): string {
   )}`;
 }
 
-function getProvidedInfoList(): HTMLElement {
-  const heading = screen.getByRole("heading", { level: 2, name: "提供" });
-  const list = heading.parentElement?.querySelector("dl");
-  if (!(list instanceof HTMLElement)) {
-    throw new Error("expected the provided-information heading to contain a definition list");
+function getBarrierSection(): HTMLElement {
+  const heading = screen.getByRole("heading", { level: 2, name: "バリアフリー情報" });
+  const section = heading.closest("section");
+  if (!(section instanceof HTMLElement)) {
+    throw new Error("expected barrier heading to be inside a section");
   }
-  return list;
+  return section;
 }
 
 function expectDefinitionListPairs(
@@ -401,24 +402,21 @@ describe("/locations/location-detail/[id] public server page", () => {
       level: 1,
       name: completeLocation.name,
     });
-    const providedHeading = screen.getByRole("heading", {
+    const barrierHeading = screen.getByRole("heading", {
       level: 2,
-      name: "提供",
+      name: "バリアフリー情報",
     });
 
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(heading.tagName).toBe("H1");
-    expect(heading.compareDocumentPosition(providedHeading)).toBe(
+    expect(heading.compareDocumentPosition(barrierHeading)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
 
-    const description = completeLocation.description;
     const area = completeLocation.area;
-    if (typeof description !== "string" || typeof area !== "string") {
-      throw new Error("completeLocation must include description and area for this case");
+    if (typeof area !== "string") {
+      throw new Error("completeLocation must include area for this case");
     }
-    expect(screen.getByText(description)).toBeInTheDocument();
-
     const regionTerm = screen.getByText("地域", { selector: "dt" });
     const regionList = regionTerm.closest("dl");
     if (!(regionList instanceof HTMLElement)) {
@@ -431,28 +429,26 @@ describe("/locations/location-detail/[id] public server page", () => {
     expect(image).toHaveAttribute("alt", "");
     expect(image).not.toHaveAttribute("role");
     expect(container.querySelectorAll("img")).toHaveLength(1);
+    expect(screen.getByText(/さくら/)).toBeInTheDocument();
+    const licenseLink = screen.getByRole("link", { name: /creativecommons.*新しいタブで開きます/ });
+    expect(licenseLink).toHaveAttribute("href", completeLocation.imageLicense);
+    expect(licenseLink).toHaveAttribute("target", "_blank");
+    expect(licenseLink).toHaveAttribute("rel", "noopener noreferrer");
 
-    const websiteLink = screen.getByRole("link", { name: "ウェブサイトを見る" });
-    expect(websiteLink).toHaveAttribute("href", completeLocation.uri);
-    expect(websiteLink).toHaveAttribute("target", "_blank");
-    expect(websiteLink).toHaveAttribute("rel", "noopener noreferrer");
-
-    const infoList = getProvidedInfoList();
-    expectDefinitionListPairs(infoList, [
-      ["座標データ提供", completeLocation.nodeCopyright],
-      ["画像提供", completeLocation.imageCopyright ?? ""],
-      ["説明文提供", completeLocation.descriptionCopyright ?? ""],
-      ["ライセンス", completeLocation.licence],
-    ]);
-    const licenceLink = infoList.querySelector("a");
-    expect(licenceLink).toHaveAttribute("href", completeLocation.licenceUri);
-    expect(licenceLink).toHaveAttribute("target", "_blank");
-    expect(licenceLink).toHaveAttribute("rel", "noopener noreferrer");
+    const barrierSection = getBarrierSection();
+    expect(barrierSection).toHaveTextContent("全面");
+    expect(barrierSection).toHaveTextContent("入口には段がなく、全部の部屋に段がありません。");
+    expect(barrierSection).toHaveTextContent("情報源: OpenStreetMap");
+    const detailLink = screen.getByRole("link", { name: /詳細を見る・編集する.*WheelMapを開きます.*新しいタブで開きます/ });
+    expect(detailLink).toHaveAttribute("href", "https://wheelmap.org/nodes/1");
+    expect(detailLink).toHaveAttribute("target", "_blank");
+    expect(detailLink).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.getByText("東京バリアフリーマップ")).toBeInTheDocument();
 
     const categoryBreadcrumbLink = getCategoryBreadcrumbLink();
     expect(categoryBreadcrumbLink).toHaveAttribute(
       "href",
-      `/locations/${encodeURIComponent(detailCategory["category:en"])}`,
+      `/locations/${encodeURIComponent(detailCategory.categoryId)}`,
     );
     expect(categoryBreadcrumbLink.getAttribute("href")).not.toContain("origin=");
     const breadcrumbNav = screen.getByRole("navigation", { name: "パンくずリスト" });
@@ -499,44 +495,20 @@ describe("/locations/location-detail/[id] public server page", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(container.querySelectorAll("img")).toHaveLength(0);
-    expect(
-      screen.queryByRole("link", { name: "ウェブサイトを見る" }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText("画像提供", { selector: "dt" })).not.toBeInTheDocument();
-    expect(screen.queryByText("説明文提供", { selector: "dt" })).not.toBeInTheDocument();
+    expect(container.querySelector("figcaption")).not.toBeInTheDocument();
 
-    const infoList = getProvidedInfoList();
-    expectDefinitionListPairs(infoList, [
-      ["座標データ提供", locationWithoutOptionalFields.nodeCopyright],
-      ["ライセンス", locationWithoutOptionalFields.licence],
-    ]);
-    for (const field of Array.from(container.querySelectorAll("dt, dd"))) {
-      expect(field.textContent?.trim()).toBeTruthy();
-    }
-    const licenceLink = infoList.querySelector("a");
-    expect(licenceLink).toHaveAttribute(
-      "href",
-      locationWithoutOptionalFields.licenceUri,
-    );
-    expect(licenceLink).toHaveAttribute("target", "_blank");
-    expect(licenceLink).toHaveAttribute("rel", "noopener noreferrer");
-
-    const externalLinks = Array.from(container.querySelectorAll("a")).filter((anchor) =>
-      /^https?:\/\//i.test(anchor.getAttribute("href") ?? ""),
-    );
-    expect(externalLinks).toHaveLength(1);
-    expect(externalLinks[0]).toHaveAccessibleName(locationWithoutOptionalFields.licence);
-    expect(externalLinks[0]).toHaveAttribute(
-      "href",
-      locationWithoutOptionalFields.licenceUri,
-    );
-    expect(externalLinks[0]).toHaveAttribute("target", "_blank");
-    expect(externalLinks[0]).toHaveAttribute("rel", "noopener noreferrer");
+    const barrierSection = getBarrierSection();
+    expect(barrierSection).toHaveTextContent("情報なし");
+    expect(barrierSection).toHaveTextContent("バリアフリー情報がありません。");
+    const addLink = screen.getByRole("link", { name: /詳細を見る・追加する.*WheelMapを開きます.*新しいタブで開きます/ });
+    expect(addLink).toHaveAttribute("href", "https://wheelmap.org/nodes/-2");
+    expect(addLink).toHaveAttribute("target", "_blank");
+    expect(addLink).toHaveAttribute("rel", "noopener noreferrer");
 
     const backLink = getCategoryBreadcrumbLink();
     expect(backLink).toHaveAttribute(
       "href",
-      `/locations/${encodeURIComponent(detailCategory["category:en"])}`,
+      `/locations/${encodeURIComponent(detailCategory.categoryId)}`,
     );
     const destinationLink = screen.getByRole("link", { name: "ここへ行く" });
     expect(destinationLink).toHaveAttribute(
@@ -579,7 +551,7 @@ describe("/locations/location-detail/[id] public server page", () => {
   });
 
   const standardNotFoundCases: ReadonlyArray<
-    readonly [string, string, LocationDetailResult<KeyLocation>]
+    readonly [string, string, LocationDetailResult<LocationWithArea>]
   > = [
     ["unknown location ID", "unknown-location", { status: "not-found" }],
     [
@@ -681,12 +653,12 @@ describe("/locations/location-detail/[id] public server page", () => {
   });
 
   const loaderFailureCases: ReadonlyArray<
-    readonly [string, () => KeyLocationsDataResult]
+    readonly [string, () => LocationPageDataResult]
   > = [
     [
       "HTTP failure",
       () => {
-        const data: KeyLocationsDataResult = {
+        const data: LocationPageDataResult = {
           status: "error",
           error: new Error("HTTP 503"),
         };
@@ -697,7 +669,7 @@ describe("/locations/location-detail/[id] public server page", () => {
     [
       "JSON failure",
       () => {
-        const data: KeyLocationsDataResult = {
+        const data: LocationPageDataResult = {
           status: "error",
           error: new Error("JSON parse failure"),
         };
@@ -730,4 +702,168 @@ describe("/locations/location-detail/[id] public server page", () => {
       expectSafeDataErrorState("場所データを取得できません", /取得に失敗しました/);
     },
   );
+});
+
+describe("location facts basic information", () => {
+  const factsLocation: LocationWithArea = {
+    ...completeLocation,
+    id: "urn:uuid:00000000-0000-4000-8000-000000000101",
+    phone: { display: "03-3264-2111", tel: "tel:0332642111" },
+    websiteUri: "https://www.city.chiyoda.lg.jp/",
+    wikipediaUri: "https://ja.wikipedia.org/wiki/%E5%8D%83%E4%BB%A3%E7%94%B0",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=101",
+    osmElement: { type: "node", id: 101 },
+  };
+
+  const wayLocation: LocationWithArea = {
+    ...completeLocation,
+    id: "urn:uuid:00000000-0000-4000-8000-000000000102",
+    osmElement: { type: "way", id: 102 },
+    osmEditUrl: "https://www.openstreetmap.org/edit?way=102",
+    phone: undefined,
+    websiteUri: undefined,
+    wikipediaUri: undefined,
+  };
+
+  const relationLocation: LocationWithArea = {
+    ...completeLocation,
+    id: "urn:uuid:00000000-0000-4000-8000-000000000103",
+    osmElement: { type: "relation", id: 103 },
+    osmEditUrl: "https://www.openstreetmap.org/edit?relation=103",
+    phone: undefined,
+    websiteUri: undefined,
+    wikipediaUri: undefined,
+  };
+
+  async function renderFactsLocation(location: LocationWithArea) {
+    const data = successDataFor(location);
+    mockLoadLocationPageData.mockResolvedValue(data);
+    mockResolveLocationDetail.mockReturnValue({ status: "success", location });
+    const { element } = await invokeLocationDetailPage(location.id);
+    if (!isValidElement(element)) {
+      throw new Error("facts detail did not render");
+    }
+    return render(<main id="main-content">{element}</main>);
+  }
+
+  it("shows edit link at top with node URL", async () => {
+    await renderFactsLocation(factsLocation);
+    const editLink = screen.getByRole("link", { name: /編集する.*OpenStreetMapを開きます.*新しいタブで開きます/ });
+    expect(editLink).toHaveAttribute("href", "https://www.openstreetmap.org/edit?node=101");
+    expect(editLink).toHaveAttribute("target", "_blank");
+    expect(editLink).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("shows way and relation edit URLs", async () => {
+    await renderFactsLocation(wayLocation);
+    expect(screen.getByRole("link", { name: /^編集する（OpenStreetMapを開きます）/ })).toHaveAttribute("href", "https://www.openstreetmap.org/edit?way=102");
+    await renderFactsLocation(relationLocation);
+    const editLinks = screen.getAllByRole("link", { name: /編集する.*OpenStreetMap.*新しいタブで開きます/ });
+    const factsEdit = editLinks.find((l) => l.getAttribute("href") === "https://www.openstreetmap.org/edit?relation=103");
+    expect(factsEdit).toBeDefined();
+  });
+
+  it("shows phone tel link, website and wikipedia links", async () => {
+    const { container } = await renderFactsLocation(factsLocation);
+    expect(screen.getByRole("link", { name: /03-3264-2111/ })).toHaveAttribute("href", "tel:0332642111");
+    expect(screen.getByRole("link", { name: /ウェブサイトを開く/ })).toHaveAttribute("href", "https://www.city.chiyoda.lg.jp/");
+    expect(screen.getByRole("link", { name: /Wikipedia/ })).toHaveAttribute("href", expect.stringContaining("wikipedia.org"));
+    expect(container.querySelector('a[href^="tel:"]')).not.toBeNull();
+  });
+
+  it("hides missing facts and basic info section when all missing", async () => {
+    const noFacts = { ...wayLocation, phone: undefined, websiteUri: undefined, wikipediaUri: undefined };
+    await renderFactsLocation(noFacts as LocationWithArea);
+    expect(screen.queryByText("基本情報")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /03-/ })).not.toBeInTheDocument();
+  });
+
+  it("shows basic info section when some facts exist", async () => {
+    await renderFactsLocation(factsLocation);
+    expect(screen.getByRole("heading", { level: 2, name: "基本情報" })).toBeInTheDocument();
+  });
+});
+
+describe("location opening hours", () => {
+  const openLocation: LocationWithArea = {
+    ...completeLocation,
+    id: "urn:uuid:00000000-0000-4000-8000-000000000201",
+    openingHours: "Tu-Su 10:00-17:30",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=201",
+    osmElement: { type: "node", id: 201 },
+  };
+
+  const allDayLocation: LocationWithArea = {
+    ...completeLocation,
+    id: "urn:uuid:00000000-0000-4000-8000-000000000202",
+    openingHours: "24/7",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=202",
+    osmElement: { type: "node", id: 202 },
+  };
+
+  const noHoursLocation: LocationWithArea = {
+    ...completeLocation,
+    id: "urn:uuid:00000000-0000-4000-8000-000000000203",
+    openingHours: undefined,
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=203",
+    osmElement: { type: "node", id: 203 },
+  };
+
+  const invalidLocation: LocationWithArea = {
+    ...completeLocation,
+    id: "urn:uuid:00000000-0000-4000-8000-000000000204",
+    openingHours: "not a rule",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=204",
+    osmElement: { type: "node", id: 204 },
+  };
+
+  async function renderHoursLocation(location: LocationWithArea) {
+    const data = successDataFor(location);
+    mockLoadLocationPageData.mockResolvedValue(data);
+    mockResolveLocationDetail.mockReturnValue({ status: "success", location });
+    const { element } = await invokeLocationDetailPage(location.id);
+    if (!isValidElement(element)) {
+      throw new Error("opening hours did not render");
+    }
+    return render(<main id="main-content">{element}</main>);
+  }
+
+  it("shows open/closed status, next change, 7-day plan and always notice", async () => {
+    const { container } = await renderHoursLocation(openLocation);
+    expect(screen.getByText(/営業中|営業時間外/)).toBeInTheDocument();
+    expect(screen.getByText("目安なので、正確な時間は施設に問い合わせてください。")).toBeInTheDocument();
+    const times = container.querySelectorAll("time");
+    expect(times.length).toBeGreaterThanOrEqual(7);
+  });
+
+  it("shows 24-hour operation", async () => {
+    await renderHoursLocation(allDayLocation);
+    expect(screen.getByText("24時間営業")).toBeInTheDocument();
+  });
+
+  it("shows holiday warning only when PH/SH are absent", async () => {
+    await renderHoursLocation(openLocation);
+    expect(screen.getByText("祝日は通常と異なる場合があります。")).toBeInTheDocument();
+    cleanup();
+    const withPh = { ...openLocation, openingHours: "Mo-Fr 09:00-17:00; PH off", id: "urn:uuid:00000000-0000-4000-8000-000000000205" };
+    await renderHoursLocation(withPh as LocationWithArea);
+    expect(screen.queryByText("祝日は通常と異なる場合があります。")).not.toBeInTheDocument();
+  });
+
+  it("shows raw rule when unparsable and hides section when missing", async () => {
+    const { container } = await renderHoursLocation(invalidLocation);
+    expect(screen.getByText("not a rule")).toBeInTheDocument();
+    expect(screen.queryByText(/営業中|営業時間外/)).not.toBeInTheDocument();
+    cleanup();
+    const second = await renderHoursLocation(noHoursLocation);
+    expect(second.container.querySelector("section[aria-labelledby='hours-heading']")).toBeNull();
+    expect(screen.queryByText("営業時間")).not.toBeInTheDocument();
+  });
+
+  it("places hours below image/barrier and above basic info", async () => {
+    const { container } = await renderHoursLocation({ ...openLocation, phone: { display: "03-3264-2111", tel: "tel:0332642111" } });
+    const order = Array.from(container.querySelectorAll("h2")).map((h) => h.textContent);
+    expect(order.indexOf("バリアフリー情報")).toBeLessThan(order.indexOf("営業時間"));
+    expect(order.indexOf("営業時間")).toBeLessThan(order.indexOf("基本情報"));
+  });
 });

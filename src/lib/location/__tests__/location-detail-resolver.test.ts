@@ -1,7 +1,4 @@
-import type {
-  KeyLocation,
-  KeyLocationsDataResult,
-} from "@/utils/addressLoader";
+import type { LocationEntry } from "@/lib/location/location-artifact";
 
 export {};
 
@@ -52,48 +49,40 @@ function getResolver(state: ModuleState): PublicFunction {
   return resolver as PublicFunction;
 }
 
-// The wire fixture intentionally omits optional display metadata while keeping primary fields explicit.
-type KeyLocationFixture =
-  Pick<KeyLocation, "id" | "name" | "lat" | "lng" | "nodeCopyright" | "licence" | "licenceUri"> &
-  Partial<
-    Pick<
-      KeyLocation,
-      "description" | "descriptionCopyright" | "imageUri" | "imageCopylight" | "uri" | "nodeSourceId"
-    >
-  > & {
+type LocationFixture = LocationEntry & {
     area?: string;
   };
 
-type KeyLocationCategoryFixture = {
+type LocationCategoryFixture = {
   category: string;
-  "category:en": string;
-  locations: KeyLocationFixture[];
+  categoryId: string;
+  locations: LocationFixture[];
 };
 
-const primaryLocation: KeyLocationFixture = {
-  id: "kanda-library",
-  name: "神田図書館",
+const primaryLocation: LocationFixture = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000001",
+  name: "千代田区役所",
   lat: 35.694,
-  lng: 139.768,
+  lng: 139.753,
   area: "神田",
-  description: "地域の図書館です",
-  imageUri: "https://example.test/kanda-library.jpg",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  relatedPages: [],
+  osmElement: { type: "node", id: 1 },
+  wheelchair: "yes",
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
 };
 
-const locationWithoutOptionalDisplayFields: KeyLocationFixture = {
-  id: "ogawamachi-hall",
+const locationWithoutOptionalDisplayFields: LocationFixture = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000002",
   name: "小川町ホール",
   lat: 35.695,
   lng: 139.765,
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  relatedPages: [],
+  osmElement: { type: "way", id: 2 },
+  wheelchair: null,
+  osmEditUrl: "https://www.openstreetmap.org/edit?way=2",
 };
 
-function success(categories: KeyLocationCategoryFixture[]) {
+function success(categories: LocationCategoryFixture[]) {
   return { status: "success", categories };
 }
 
@@ -101,14 +90,22 @@ function loadError(message = "場所データを取得できませんでした")
   return { status: "error", error: new Error(message) };
 }
 
+const factsLocation: LocationFixture = {
+  ...primaryLocation,
+  phone: { display: "03-3264-2111", tel: "tel:0332642111" },
+  websiteUri: "https://www.city.chiyoda.lg.jp/",
+  wikipediaUri: "https://ja.wikipedia.org/wiki/%E5%8D%83%E4%BB%A3%E7%94%B0",
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
+};
+
 describe("resolveLocationDetail", () => {
   const moduleState = loadModule("../location-detail-resolver");
 
   it.each([
     success([
       {
-        category: "公共施設",
-        "category:en": "public-facilities",
+        category: "市役所・東京都の区役所",
+        categoryId: "1302",
         locations: [primaryLocation],
       },
     ]),
@@ -129,11 +126,11 @@ describe("resolveLocationDetail", () => {
     const resolve = getResolver(moduleState);
 
     const result = resolve(
-      "ogawamachi-hall",
+      "urn:uuid:00000000-0000-4000-8000-000000000002",
       success([
         {
-          category: "公共施設",
-          "category:en": "public-facilities",
+          category: "市役所・東京都の区役所",
+          categoryId: "1302",
           locations: [primaryLocation, locationWithoutOptionalDisplayFields],
         },
       ]),
@@ -142,7 +139,7 @@ describe("resolveLocationDetail", () => {
     expect(result).toMatchObject({
       status: "success",
       location: {
-        id: "ogawamachi-hall",
+        id: "urn:uuid:00000000-0000-4000-8000-000000000002",
         name: "小川町ホール",
         lat: 35.695,
         lng: 139.765,
@@ -156,16 +153,16 @@ describe("resolveLocationDetail", () => {
       status: "success",
       categories: [
         {
-          category: "公共施設",
-          "category:en": "public-facilities",
-          locations: [{ id: "x" }],
+          category: "市役所・東京都の区役所",
+          categoryId: "1302",
+          locations: [{ id: "urn:uuid:00000000-0000-4000-8000-000000000001" }],
         },
       ],
     };
 
     const result = resolve(
-      "x",
-      malformedWireData as unknown as KeyLocationsDataResult,
+      "urn:uuid:00000000-0000-4000-8000-000000000001",
+      malformedWireData as unknown as any,
     );
 
     expect(result).toMatchObject({
@@ -179,10 +176,10 @@ describe("resolveLocationDetail", () => {
   it("classifies an invalid route identifier separately from invalid location data", () => {
     const resolve = getResolver(moduleState);
 
-    const result = resolve("invalid/id", success([
+    const result = resolve("invalid-id", success([
       {
-        category: "公共施設",
-        "category:en": "public-facilities",
+        category: "市役所・東京都の区役所",
+        categoryId: "1302",
         locations: [primaryLocation],
       },
     ]));
@@ -198,13 +195,13 @@ describe("resolveLocationDetail", () => {
     const resolve = getResolver(moduleState);
     const invalidData = success([
       {
-        category: "公共施設",
-        "category:en": "public-facilities",
-        locations: [{ ...primaryLocation, id: "invalid/id" }],
+        category: "市役所・東京都の区役所",
+        categoryId: "1302",
+        locations: [{ ...primaryLocation, id: "invalid-id" }],
       },
     ]);
 
-    const result = resolve("kanda-library", invalidData);
+    const result = resolve("urn:uuid:00000000-0000-4000-8000-000000000001", invalidData);
 
     expect(result).toMatchObject({
       status: "error",
@@ -222,7 +219,7 @@ describe("resolveLocationDetail", () => {
     let result: unknown = undefined;
 
     expect(() => {
-      result = resolve("kanda-library", data as unknown as KeyLocationsDataResult);
+      result = resolve("urn:uuid:00000000-0000-4000-8000-000000000001", data as unknown as any);
     }).not.toThrow();
 
     expect(result).toMatchObject({
@@ -236,11 +233,11 @@ describe("resolveLocationDetail", () => {
     const resolve = getResolver(moduleState);
 
     const result = resolve(
-      "unknown-location",
+      "urn:uuid:00000000-0000-4000-8000-0000000000ff",
       success([
         {
-          category: "公共施設",
-          "category:en": "public-facilities",
+          category: "市役所・東京都の区役所",
+          categoryId: "1302",
           locations: [primaryLocation],
         },
       ]),
@@ -255,16 +252,16 @@ describe("resolveLocationDetail", () => {
 
     const duplicate = { ...primaryLocation, name: "同じIDの別施設" };
     const result = resolve(
-      "kanda-library",
+      "urn:uuid:00000000-0000-4000-8000-000000000001",
       success([
         {
-          category: "公共施設",
-          "category:en": "public-facilities",
+          category: "市役所・東京都の区役所",
+          categoryId: "1302",
           locations: [primaryLocation],
         },
         {
           category: "別カテゴリ",
-          "category:en": "another-category",
+          categoryId: "1512",
           locations: [duplicate],
         },
       ]),
@@ -277,10 +274,40 @@ describe("resolveLocationDetail", () => {
     expect(result).not.toMatchObject({ status: "success" });
   });
 
+  it("passes facts through to detail and leaves missing facts as undefined", () => {
+    const resolve = getResolver(moduleState);
+    const withFacts = resolve(
+      factsLocation.id,
+      success([
+        { category: "市役所・東京都の区役所", categoryId: "1302", locations: [factsLocation] },
+      ]),
+    ) as any;
+    expect(withFacts).toMatchObject({
+      status: "success",
+      location: {
+        phone: { display: "03-3264-2111", tel: "tel:0332642111" },
+        websiteUri: "https://www.city.chiyoda.lg.jp/",
+        osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
+      },
+    });
+    const withoutFacts = resolve(
+      locationWithoutOptionalDisplayFields.id,
+      success([
+        { category: "市役所・東京都の区役所", categoryId: "1302", locations: [locationWithoutOptionalDisplayFields] },
+      ]),
+    ) as any;
+    expect(withoutFacts).toMatchObject({ status: "success" });
+    if (withoutFacts.status === "success") {
+      expect(withoutFacts.location.phone).toBeUndefined();
+      expect(withoutFacts.location.websiteUri).toBeUndefined();
+      expect(withoutFacts.location.wikipediaUri).toBeUndefined();
+    }
+  });
+
   it("classifies upstream transport failure as data-load-error, not not-found", () => {
     const resolve = getResolver(moduleState);
 
-    const result = resolve("kanda-library", loadError("HTTP 503"));
+    const result = resolve("urn:uuid:00000000-0000-4000-8000-000000000001", loadError("HTTP 503"));
 
     expect(result).toMatchObject({ status: "data-load-error" });
     expect(result).not.toMatchObject({ status: "not-found" });

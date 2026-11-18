@@ -12,7 +12,6 @@ export interface AddressLocation {
 
 export interface AddressCategory {
   category: string;
-  "category:en"?: string;
   locations: AddressLocation[];
 }
 

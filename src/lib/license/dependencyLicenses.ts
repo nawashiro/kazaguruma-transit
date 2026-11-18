@@ -43,6 +43,28 @@ function fromPluginRow(value: unknown): DependencyLicenseEntry | null {
   };
 }
 
+const EXTERNAL_SERVER_DEPENDENCIES: readonly DependencyLicenseEntry[] = [
+  {
+    packageName: "opening_hours",
+    version: "3.16.0",
+    license: "LGPL-3.0-only",
+    author: "Dmitry Marakasov",
+    repository: "https://github.com/opening-hours/opening_hours.js",
+    homepage: "https://github.com/opening-hours/opening_hours.js",
+  },
+];
+
+function mergeDependencyLicenses(
+  primary: DependencyLicenseEntry[],
+  supplemental: readonly DependencyLicenseEntry[],
+): DependencyLicenseEntry[] {
+  const seen = new Set(primary.map((entry) => entry.packageName));
+  return [
+    ...primary,
+    ...supplemental.filter((entry) => !seen.has(entry.packageName)),
+  ].sort((a, b) => a.packageName.localeCompare(b.packageName));
+}
+
 export function parseDependencyLicenses(raw: unknown): DependencyLicenseEntry[] {
   if (Array.isArray(raw)) {
     return raw
@@ -81,11 +103,14 @@ export async function loadDependencyLicenses(
   for (const candidate of candidates) {
     try {
       const raw = await readFile(candidate, "utf8");
-      return parseDependencyLicenses(JSON.parse(raw));
+      return mergeDependencyLicenses(
+        parseDependencyLicenses(JSON.parse(raw)),
+        EXTERNAL_SERVER_DEPENDENCIES,
+      );
     } catch {
       // try next candidate
     }
   }
 
-  return [];
+  return mergeDependencyLicenses([], EXTERNAL_SERVER_DEPENDENCIES);
 }

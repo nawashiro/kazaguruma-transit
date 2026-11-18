@@ -12,7 +12,7 @@
 - 場所一覧のカードには、状態が分かっている場所だけバッジを表示する。色だけで状態を伝えず、アイコンとテキストを併用する。
 - 場所詳細の画像に`schema:image`、関連リンクに`schema:subjectOf`（東京バリアフリーマップ、言葉の道案内）を使う。画像には作者とライセンスを`figcaption`で添える。
 - `keyLocationsUri`、`keyLocations`の検証・型・取得・テストを削除する。旧カテゴリURLと旧場所IDのURLは残さない。
-- **BREAKING**: 「場所をさがす」の掲載が169件から102件へ減る。保育所（24→1）、幼稚園（8→0）、劇場（14→0）は公開JSON-LDにコードがないため一覧から消える。説明文43件も表示できなくなる。カテゴリは16から21へ変わり、URLは`/locations/{gif-poiコード}`と`/locations/location-detail/{urn:uuid}`になる。
+- **BREAKING**: 「場所をさがす」の掲載が169件から102件へ減る。保育所（24→0。唯一の1402 recordがOSM名を持たないため除外）、幼稚園（8→0）、劇場（14→0）は一覧から消える。説明文43件も表示できなくなる。カテゴリは16から20へ変わり、URLは`/locations/{gif-poiコード}`と`/locations/location-detail/{urn:uuid}`になる。
 
 ## Capabilities
 

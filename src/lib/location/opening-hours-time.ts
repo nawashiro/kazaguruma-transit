@@ -1,4 +1,4 @@
-const JST_OFFSET_MINUTES = 540;
+export const JST_OFFSET_MINUTES = 540;
 
 export type TimezoneOffsetFn = (date: Date) => number;
 

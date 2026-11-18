@@ -25,11 +25,13 @@
 
    - 場所102件
    - `wheelchair` のある場所25件（`yes` 17、`limited` 5、`no` 3）
-   - カテゴリ20件（辞書21件のうち場所のない1件を除く）
-   - 画像の作者とライセンス38件（非URI帰属などを除く）
-   - 電話28件、ウェブサイト52件、Wikipediaリンク、編集リンク102件
+   - カテゴリ20件（辞書22件のうち場所のない2件、1306と1402を除く）
+   - 画像の作者とライセンス38件（`schema:license`が「Public domain」などURIでない4件は表示しない）
+   - 電話28件、ウェブサイト50件、Wikipediaリンク48件、編集リンク102件
 
-4. 件数がずれた場合は、公開データセット・OSM・辞書のどれが変わったかを確認します。OSM名を解決できないrecordはそのrecordだけ一覧から外し、ビルドは成功します。`gif-poi`コードがない・複数ある・辞書にないrecordがあるとビルドは失敗します。重複IDがあるとビルドは失敗します。
+4. 場所詳細は `/locations/location-detail/{encodeURIComponent(id)}` を開き、既知IDがHTTP 200で表示されることを確認します。
+
+件数がずれた場合は、公開データセット・OSM・辞書のどれが変わったかを確認します。OSM関連付けまたは空でない`name`がないrecordは、そのrecordだけを一覧から外し、ビルドは成功します。`gif-poi`コードがない・複数ある・辞書にないrecordがあるとビルドは失敗します。重複IDがある場合もビルドは失敗します。1402（保育園）は唯一のrecordがOSM名を持たないため、現在は0件です。
 
 ## OSM・WheelMapでの修正
 
@@ -41,7 +43,7 @@
 
 最新の状態確認と修正は、場所詳細の参照リンクからWheelMapまたはOpenStreetMapへ進み、OSM側でタグを直します。ビルド時のミラーは月次更新のため、直した内容の反映は次回ビルド以降になります。
 
-画像は `schema:image` の `schema:contentUrl`・`schema:creator.schema:name`・`schema:license` を使います。作者またはライセンスがない画像は表示しません。不正な絶対http(s) URIの画像・関連リンクもその項目だけ表示しません。
+画像は `schema:image` の `schema:contentUrl`・`schema:creator.schema:name`・`schema:license` を使います。作者またはライセンスがない画像は一覧・詳細のどちらにも表示しません。ライセンスは`CC BY-SA 4.0`のような名前で表示し、元のURIへリンクします。不正な絶対http(s) URIの画像・関連リンクもその項目だけ表示しません。
 
 ## 電話・ウェブサイト・Wikipediaの解決と警告
 

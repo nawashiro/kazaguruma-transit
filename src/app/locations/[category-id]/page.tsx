@@ -21,6 +21,8 @@ import {
   type LocationPageDataResult,
 } from "@/lib/location/location-page-data";
 import { BarrierBadge } from "@/components/features/BarrierAccessibility";
+import { imageLicenseLabel } from "@/lib/location/image-license";
+import { resolveLocationImage } from "@/lib/location/location-image";
 
 const UUID_URN_PATTERN =
   /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
@@ -30,8 +32,7 @@ function isLocationCategoryWithArea(value: unknown): value is LocationCategoryWi
     return false;
   }
   const record = value as Record<string, unknown>;
-  const categoryId =
-    record["categoryId"] ?? (record as Record<string, unknown>)["category:en"];
+  const categoryId = record["categoryId"];
   if (
     typeof record["category"] !== "string" ||
     typeof categoryId !== "string" ||
@@ -286,32 +287,49 @@ function LocationSummary({
   areaName?: string;
 }) {
   const displayArea = areaName ?? location.displayAreaName ?? location.area;
+  const image = resolveLocationImage(location);
   return (
-    <Link
-      href={`/locations/location-detail/${encodeURIComponent(location.id)}`}
-      className="card w-full min-w-0 cursor-pointer bg-base-100 shadow-sm transition-all hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-    >
-      {location.imageUri && (
-        <figure className="relative w-full overflow-hidden">
-          <img
-            src={location.imageUri}
-            alt=""
-            className="h-48 w-full max-w-full object-cover"
-          />
-        </figure>
-      )}
-      <div className="card-body min-w-0 text-left">
-        <h3 className="card-title inline gap-0 break-words text-xl">
-          {location.name}
-        </h3>
-        <div className="flex items-center justify-between gap-2">
-          <BarrierBadge wheelchair={location.wheelchair} />
-          {displayArea && (
-            <span className="break-words text-base">{displayArea}</span>
-          )}
+    <div className="card w-full min-w-0 bg-base-100 shadow-sm transition-all hover:shadow-lg">
+      <Link
+        href={`/locations/location-detail/${encodeURIComponent(location.id)}`}
+        className="block min-w-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        {image !== null && (
+          <figure className="relative w-full overflow-hidden rounded-t-box">
+            <img
+              src={image.uri}
+              alt=""
+              className="h-48 w-full max-w-full object-cover"
+            />
+          </figure>
+        )}
+        <div className="card-body min-w-0 text-left">
+          <h3 className="card-title inline gap-0 break-words text-xl">
+            {location.name}
+          </h3>
+          <div className="flex items-center justify-between gap-2">
+            <BarrierBadge wheelchair={location.wheelchair} />
+            {displayArea && (
+              <span className="break-words text-base">{displayArea}</span>
+            )}
+          </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+      {image !== null && (
+        <p className="px-4 pb-4 text-base">
+          写真: {image.creator} /{" "}
+          <a
+            href={image.license}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="link"
+          >
+            {imageLicenseLabel(image.license)}
+            <span className="sr-only">（新しいタブで開きます）</span>
+          </a>
+        </p>
+      )}
+    </div>
   );
 }
 

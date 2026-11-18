@@ -4,7 +4,7 @@
 
 `add-location-accessibility`の後、場所詳細は`public/generated/location-data.json`の`sources.locations`を読み、見出し、地域、画像と帰属、バリアフリー情報と関連リンク、提供、経路へのリンクを表示する。各場所は`osmElement`（`node`・`way`・`relation`と数値ID）を持つ。
 
-OSMタグミラーには`phone` 26件、`contact:phone` 2件、`website` 46件、`contact:website` 6件、`wikipedia` 45件、`wikidata` 56件がある。電話番号は`+81-3-32642111`、`+81 3 3264 8537`、`0335811651`、`81358253407`のように表記が揺れている。
+OSMタグミラーには`phone` 26件、`contact:phone` 2件、`website` 46件、`contact:website` 6件（2件は重複、ウェブサイトを持つrecordは50件）、`wikipedia` 45件、`wikidata` 56件がある。電話番号は`+81-3-32642111`、`+81 3 3264 8537`、`0335811651`、`81358253407`のように表記が揺れている。
 
 公開Wikidataミラーは`https://nawashiro.github.io/chiyoda_city_main_facilities/mirrors/wikidata.json`にあり、`{entities, retrievedAt, sourceId}`を持つ。`entities`は56实体で、うち48件が`jawiki`、19件が`enwiki`のsitelinkを持つ。`app-config.json`にはWikidataミラーの取得先がない。
 
@@ -101,7 +101,7 @@ WikidataはCC0、Wikipediaはリンクのみで本文を複製しない。OSMの
 3. artifactの型と検証へ事実項目を追加する。
 4. 詳細ページへ上部の編集リンクと基本情報を追加する。
 5. テスト、文書、ライセンス表示を更新する。
-6. `npm run build`でartifactを生成し、電話28件、ウェブサイト52件、Wikipediaリンク、編集URL102件を確認する。
+6. `npm run build`でartifactを生成し、電話28件、ウェブサイト50件、Wikipediaリンク48件、編集URL102件を確認する。
 7. ロールバックは、artifactの事実項目と詳細ページの表示を削除し、`wikidataMirrorUri`を戻す。
 
 ## Open Questions

@@ -49,6 +49,7 @@ export default async () => {
           "src/app/api/__tests__/transit-production",
           "src/app/__tests__/location-pages-404",
           "src/app/__tests__/location-pages-origin-runtime",
+          "src/app/__tests__/location-pages-detail-runtime",
         ],
       },
       {

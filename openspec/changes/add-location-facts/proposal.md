@@ -2,7 +2,7 @@
 
 ## Why
 
-場所詳細はバリアフリー情報と画像だけで、来訪前に確認できる電話・ウェブサイト・Wikipediaへの導線がない。誤りを見つけても、OSMの要素を直接編集する入口もない。OSMタグミラーには電話28件、ウェブサイト52件、Wikipedia 45件があり、公開Wikidataミラーには56实体（日本語版Wikipediaのsitelink 48件）がある。
+場所詳細はバリアフリー情報と画像だけで、来訪前に確認できる電話・ウェブサイト・Wikipediaへの導線がない。誤りを見つけても、OSMの要素を直接編集する入口もない。OSMタグミラーには電話28件、ウェブサイト50件、Wikipedia 45件があり、公開Wikidataミラーには56件のentity（日本語版Wikipediaのsitelink 48件）がある。
 
 ## What Changes
 

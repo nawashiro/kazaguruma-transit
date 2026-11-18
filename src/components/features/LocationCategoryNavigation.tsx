@@ -11,7 +11,6 @@ import {
 export type LocationCategoryNavigationCategory = {
   category: string;
   categoryId: string;
-  "category:en"?: string;
 };
 
 export type LocationCategoryNavigationProps = {
@@ -82,7 +81,7 @@ export default function LocationCategoryNavigation({
   const searchParams = useOptionalSearchParams();
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const isCategoryPage = categories.some((c) =>
-    isCategoryPath(pathname, c.categoryId ?? (c as unknown as Record<string, string>)["category:en"]),
+    isCategoryPath(pathname, c.categoryId),
   );
   const parsedOrigin = isCategoryPage
     ? parseLocationOrigin(searchParams?.get("origin"))
@@ -130,7 +129,7 @@ export default function LocationCategoryNavigation({
     >
       {categories.map((entry, index) => {
         const category = entry.category;
-        const categoryId = entry.categoryId ?? (entry as unknown as Record<string, string>)["category:en"];
+        const categoryId = entry.categoryId;
         const isCurrent = isCategoryPath(pathname, categoryId);
         return (
           <Link

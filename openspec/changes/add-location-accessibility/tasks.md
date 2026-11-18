@@ -30,6 +30,6 @@
 
 ## 5. 統合検証
 
-- [x] 5.1 `npm run build`を実行し、`public/generated/location-data.json`で場所102件、`wheelchair`のある25件、カテゴリ21件、画像の作者とライセンス42件を確認する。
+- [x] 5.1 `npm run build`を実行し、`public/generated/location-data.json`で場所102件、`wheelchair`のある25件、カテゴリ20件、画像の作者とライセンス38件（非URI帰属4件を除く）を確認する。
 - [x] 5.2 `npm test`、`npm run lint`、`npx tsc --noEmit`を通す。
 - [x] 5.3 開発サーバーで`/locations`と場所詳細を開き、一覧のバッジ、詳細の3状態と情報なし、WheelMapとOSMのリンク、画像の帰属、キーボード操作を確認する。

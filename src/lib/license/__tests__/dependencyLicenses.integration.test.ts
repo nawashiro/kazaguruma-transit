@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "fs/promises";
 import os from "os";
 import path from "path";
 import { describe, expect, it } from "@jest/globals";
@@ -42,6 +42,34 @@ describe("parseDependencyLicenses default ingestion", () => {
 
     const result = await loadDependencyLicenses([firstPath, secondPath]);
     expect(result[0].packageName).toBe("from-next");
+
+    await rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  it("adds the external server parser even when webpack output omits it", async () => {
+    const tmpRoot = await mkdtemp(path.join(os.tmpdir(), "license-loader-"));
+    const reportPath = path.join(tmpRoot, "dependencies.json");
+    await writeFile(
+      reportPath,
+      JSON.stringify([{ name: "react", version: "19.1.0", license: "MIT" }]),
+      "utf8"
+    );
+
+    const result = await loadDependencyLicenses([reportPath]);
+    const openingHours = result.find(
+      (entry) => entry.packageName === "opening_hours"
+    );
+    const packageJson = JSON.parse(
+      await readFile(path.join(process.cwd(), "package.json"), "utf8")
+    ) as { dependencies?: Record<string, string> };
+
+    expect(openingHours).toMatchObject({
+      packageName: "opening_hours",
+      license: "LGPL-3.0-only",
+    });
+    expect(openingHours?.version).toBe(
+      packageJson.dependencies?.["opening_hours"]
+    );
 
     await rm(tmpRoot, { recursive: true, force: true });
   });

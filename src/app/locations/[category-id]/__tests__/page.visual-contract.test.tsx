@@ -520,16 +520,24 @@ describe("category page origin/dev visual contract", () => {
       "gap-4",
     );
 
-    const card = screen.getByRole("link", {
+    const link = screen.getByRole("link", {
       name: new RegExp(LONG_LOCATION_NAME),
     });
+    expect(link.className).toMatch(/focus-visible:/);
+    const card = link.closest(".card");
+    expect(card).not.toBeNull();
     expect(card).toHaveClass("card", "w-full", "hover:shadow-lg");
-    expect(card.className).toMatch(/focus-visible:/);
 
-    const image = card.querySelector("img");
+    const image = card?.querySelector("img");
     expect(image).not.toBeNull();
     expect(image).toHaveClass("object-cover", "h-48", "w-full");
     expect(image?.closest("figure")).toHaveClass("relative");
+    expect(card).toHaveTextContent("写真: さくら / CC BY-SA 4.0");
+    expect(link.querySelector("a")).toBeNull();
+    const attributionLink = screen.getByRole("link", {
+      name: /CC BY-SA 4\.0.*新しいタブで開きます/,
+    });
+    expect(attributionLink.closest(".card")).toBe(card);
   });
 
   it("keeps long location names, area labels, and body copy untruncated at readable text size", async () => {

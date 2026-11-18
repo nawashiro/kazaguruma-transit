@@ -26,6 +26,6 @@
 
 ## 5. 統合検証
 
-- [x] 5.1 `npm run build`を実行し、`public/generated/location-data.json`で電話28件、ウェブサイト52件、Wikipediaリンク、`osmEditUrl`102件を確認する。
+- [x] 5.1 `npm run build`を実行し、`public/generated/location-data.json`で電話28件、ウェブサイト50件、Wikipediaリンク48件、`osmEditUrl`102件を確認する。
 - [x] 5.2 `npm test`、`npm run lint`、`npx tsc --noEmit`を通す。
 - [x] 5.3 開発サーバーで場所詳細を開き、上部の編集リンク、電話の発信リンク、ウェブサイトとWikipediaの遷移、欠落項目の非表示、キーボード操作を確認する。

@@ -250,6 +250,14 @@ async function invokeLocationDetailPage(id: string): Promise<PageInvocation> {
   }
 }
 
+function decodedLocationId(id: string): string {
+  try {
+    return decodeURIComponent(id);
+  } catch {
+    return id;
+  }
+}
+
 function expectLocationBoundaryCalls(
   id: string,
   data: LocationPageDataResult,
@@ -257,7 +265,10 @@ function expectLocationBoundaryCalls(
   expect(mockLoadLocationPageData).toHaveBeenCalledTimes(1);
   expect(mockLoadLocationPageData).toHaveBeenCalledWith();
   expect(mockResolveLocationDetail).toHaveBeenCalledTimes(1);
-  expect(mockResolveLocationDetail).toHaveBeenCalledWith(id, data);
+  expect(mockResolveLocationDetail).toHaveBeenCalledWith(
+    decodedLocationId(id),
+    data,
+  );
 }
 
 function renderPageInvocation(invocation: PageInvocation): void {
@@ -430,7 +441,7 @@ describe("/locations/location-detail/[id] public server page", () => {
     expect(image).not.toHaveAttribute("role");
     expect(container.querySelectorAll("img")).toHaveLength(1);
     expect(screen.getByText(/さくら/)).toBeInTheDocument();
-    const licenseLink = screen.getByRole("link", { name: /creativecommons.*新しいタブで開きます/ });
+    const licenseLink = screen.getByRole("link", { name: /CC BY-SA 3\.0.*新しいタブで開きます/ });
     expect(licenseLink).toHaveAttribute("href", completeLocation.imageLicense);
     expect(licenseLink).toHaveAttribute("target", "_blank");
     expect(licenseLink).toHaveAttribute("rel", "noopener noreferrer");
@@ -521,6 +532,32 @@ describe("/locations/location-detail/[id] public server page", () => {
     expectPageLinksToBeNamedAndSafe(container);
   });
 
+  it("hides an image when the creator or license is missing", async () => {
+    const { container } = await renderLocationDetailPage({
+      ...completeLocation,
+      imageCreator: undefined,
+      imageLicense: undefined,
+    });
+
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("shows the provider section after basic information", async () => {
+    const { container } = await renderLocationDetailPage({
+      ...completeLocation,
+      phone: { display: "03-3264-2111", tel: "tel:0332642111" },
+    });
+
+    const headings = Array.from(container.querySelectorAll("h2")).map(
+      (heading) => heading.textContent,
+    );
+    expect(headings).toContain("提供");
+    expect(headings.indexOf("基本情報")).toBeLessThan(
+      headings.indexOf("提供"),
+    );
+    expect(screen.getByText("OpenStreetMap contributors")).toBeInTheDocument();
+  });
+
   it("uses the safe locations fallback when direct access has no identifiable category context", async () => {
     const loadedData = successDataFor(locationWithoutOptionalFields);
     mockLoadLocationPageData.mockResolvedValue(loadedData);
@@ -548,6 +585,27 @@ describe("/locations/location-detail/[id] public server page", () => {
     expect(
       breadcrumbNav.querySelector('[aria-current="page"]'),
     ).toHaveTextContent(completeLocation.name);
+  });
+
+  it("decodes a percent-encoded urn before resolving the location", async () => {
+    const loadedData = successDataFor(completeLocation);
+    mockLoadLocationPageData.mockResolvedValue(loadedData);
+    mockResolveLocationDetail.mockReturnValue({
+      status: "success",
+      location: completeLocation,
+    });
+
+    renderPageInvocation(
+      await invokeLocationDetailPage(encodeURIComponent(completeLocation.id)),
+    );
+
+    expectLocationBoundaryCalls(completeLocation.id, loadedData);
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: completeLocation.name,
+      }),
+    ).toBeInTheDocument();
   });
 
   const standardNotFoundCases: ReadonlyArray<
@@ -836,9 +894,34 @@ describe("location opening hours", () => {
     expect(times.length).toBeGreaterThanOrEqual(7);
   });
 
-  it("shows 24-hour operation", async () => {
-    await renderHoursLocation(allDayLocation);
+  it("shows 24-hour operation with seven days", async () => {
+    const { container } = await renderHoursLocation(allDayLocation);
     expect(screen.getByText("24時間営業")).toBeInTheDocument();
+    expect(container.querySelectorAll("time").length).toBeGreaterThanOrEqual(7);
+  });
+
+  it("uses Japanese-day boundaries and labels the next opening as 明日", async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-11-18T08:21:00Z"));
+    try {
+      const wardOffice: LocationWithArea = {
+        ...openLocation,
+        id: "urn:uuid:00000000-0000-4000-8000-000000000206",
+        openingHours: "Mo-Fr 08:30-17:00; PH off",
+        osmEditUrl: "https://www.openstreetmap.org/edit?node=206",
+        osmElement: { type: "node", id: 206 },
+      };
+      const { container } = await renderHoursLocation(wardOffice);
+
+      expect(screen.getByText(/営業時間外 明日08:30から/)).toBeInTheDocument();
+      const today = container.querySelector('time[dateTime="2026-11-18"]');
+      expect(today?.closest("div")).toHaveTextContent("08:30-17:00");
+      expect(today?.closest("div")).not.toHaveTextContent("08:30-09:00");
+      const holiday = container.querySelector('time[dateTime="2026-11-23"]');
+      expect(holiday?.closest("div")).toHaveTextContent("休み");
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("shows holiday warning only when PH/SH are absent", async () => {

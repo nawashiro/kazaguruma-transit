@@ -6,7 +6,7 @@
 
 `/locations`のページは`loadLocationPageData`で`keyLocations`を読み、カテゴリページは`category:en`、詳細ページは`KeyLocation`の名前・説明・画像・ウェブサイト・ライセンスを表示する。ルートページは`routeDestinations`だけを読む。
 
-公開JSON-LDは103件の`urn:uuid:` recordを持ち、`schema:geo`、`schema:identifier`の`gif-poi`、`rdfs:seeAlso`のOSM要素、`schema:image`、`schema:subjectOf`を持つ。名前と説明は持たない。OSMタグミラー（version `202611170100`）は102要素を持ち、25要素に`wheelchair`タグがある。内訳は`yes` 17、`limited` 5、`no` 3で、`wheelchair:description`は持たない。カテゴリ名辞書は21コードの日本語名を定義順に持つ。
+公開JSON-LDは103件の`urn:uuid:` recordを持ち、`schema:geo`、`schema:identifier`の`gif-poi`、`rdfs:seeAlso`のOSM要素、`schema:image`、`schema:subjectOf`を持つ。名前と説明は持たない。OSMタグミラー（version `202611170100`）は102要素を持ち、25要素に`wheelchair`タグがある。内訳は`yes` 17、`limited` 5、`no` 3で、`wheelchair:description`は持たない。カテゴリ名辞書は22コードの日本語名を定義順に持つ。
 
 ## Goals / Non-Goals
 
@@ -116,7 +116,7 @@ issueの「WheelMap URLとOSM IDは厳密には一致しない可能性を呑む
 
 `schema:image.schema:contentUrl`を画像に、`schema:subjectOf`の`schema:name`と`schema:url`を関連リンクにする。どちらも絶対http(s) URIでない場合は、その項目だけを表示しない。ID、座標、`gif-poi`コードはデータ契約の根幹なので、従来どおり不正ならビルドを失敗させる。画像と関連リンクは表示の付加情報であり、1件の不正で全件を止めない。
 
-画像には作者とライセンスを`figcaption`で添える。`schema:image`の`schema:creator.schema:name`と`schema:license`をartifactに持ち、ライセンス名はリンクにする。42件すべてが両方を持つため、帰属を落とすとCC BY/CC BY-SAの条件を満たさない。
+画像には作者とライセンスを`figcaption`で添える。`schema:image`の`schema:creator.schema:name`と`schema:license`をartifactに持ち、ライセンス名はリンクにする。42件が画像を持つが、4件は`schema:license`が「Public domain」の文字列で絶対http(s) URIではないため表示しない。残る38件は作者とライセンスを持ち、帰属を落とすとCC BY/CC BY-SAの条件を満たさない。
 
 関連リンクはバリアフリー情報セクションの中に、更新リンクの下へ並べる。東京バリアフリーマップと言葉の道案内はバリアフリーの参照先であり、画像や基本情報に混ぜない。
 
@@ -144,7 +144,7 @@ issueの「WheelMap URLとOSM IDは厳密には一致しない可能性を呑む
 - [WheelMapのURL規則が変わる] → リンクはビルド時に構成し、実行時に取得しない。規則が変わった場合はリンク構成だけを直せるようにする。
 - [OSMタグミラーが月次更新で、状態が古い] → 詳細からWheelMapまたはOSMへ誘導し、最新情報の確認と更新を促す。ビルド時に追加取得はしない。
 - [102件中25件しか状態がない] → 「情報なし」を明示し、更新導線を出す。断定や推測はしない。
-- [画像の作者とライセンスを表示できない] → 42件すべてが`schema:creator`と`schema:license`を持つため、両方をartifactへ持ち、`figcaption`に出す。片方でも欠ける場合はビルドを失敗させ、帰属なしで画像を出さない。
+- [画像の作者とライセンスを表示できない] → 作者と絶対http(s) URIのライセンスが揃う38件だけをartifactへ載せ、`figcaption`に出す。片方でも欠ける画像はartifactへ載せず、その画像だけ表示しない。
 - [カテゴリURLと場所URLが変わり、ブックマークが切れる] → リダイレクトは作らない。サイト内リンクはすべて新URLへ更新する。
 - [辞書のコード追加・削除でビルドが失敗する] → ルートページと同じ扱い。失敗を握りつぶさず、データセットの語彙を直す。
 - [カテゴリページが`force-dynamic`のまま] → 実行時取得はしないため静的化も可能だが、`origin`クエリによる並べ替えがあるため現状を維持する。
@@ -156,7 +156,7 @@ issueの「WheelMap URLとOSM IDは厳密には一致しない可能性を呑む
 3. `location-page-data.ts`と`location-detail-resolver.ts`を`locations`へ切り替え、重複ID・不正ID・欠落の扱いを保つ。
 4. カテゴリページ、詳細ページ、`/locations`のリダイレクトを新URLへ切り替え、バリアフリー表示とバッジを追加する。
 5. `app-config.json`と`.example`から`keyLocationsUri`を削除する。文書とライセンス表示を更新する。
-6. テストを更新し、`npm run build`でartifactを生成して、場所102件、状態あり25件、カテゴリ21件を確認する。
+6. テストを更新し、`npm run build`でartifactを生成して、場所102件、状態あり25件、カテゴリ20件、画像38件を確認する。
 7. ロールバックは、artifact生成・設定・ページ・型を旧`keyLocations`へ戻して再ビルドする。`data/destinations.json`は影響を受けない。
 
 ## Open Questions

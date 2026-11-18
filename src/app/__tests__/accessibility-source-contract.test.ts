@@ -115,8 +115,8 @@ describe("アクセシビリティ実装契約", () => {
     );
     expect(detailSource).toContain("BarrierDetailBlock");
     expect(detailSource).toContain("figcaption");
-    expect(detailSource).toContain("imageCreator");
-    expect(detailSource).toContain("imageLicense");
+    expect(detailSource).toContain("resolveLocationImage");
+    expect(detailSource).toContain("imageLicenseLabel");
     expect(detailSource).toContain("基本情報");
     expect(detailSource).toContain("編集する（OpenStreetMapを開きます）");
     expect(detailSource).toContain("ウェブサイトを開く");

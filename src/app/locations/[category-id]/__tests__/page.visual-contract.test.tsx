@@ -541,7 +541,7 @@ describe("category page origin/dev visual contract", () => {
     ).toBeNull();
   });
 
-  it("keeps photo attribution in the card body as dt/dd without a license link", async () => {
+  it("keeps photo attribution in the card body as one line without a license link", async () => {
     await renderCategoryPageWith(townVisualCategory);
 
     const card = screen.getByRole("link", {
@@ -553,20 +553,39 @@ describe("category page origin/dev visual contract", () => {
       throw new Error("location card has no card-body");
     }
 
-    const attribution = cardBody.querySelector("dl");
-    expect(attribution).not.toBeNull();
-    if (!attribution) {
-      throw new Error("location card has no attribution list");
-    }
-    expect(
-      Array.from(attribution.querySelectorAll("dt")).map((term) => term.textContent),
-    ).toEqual(["写真", "ライセンス"]);
-    expect(
-      Array.from(attribution.querySelectorAll("dd")).map((definition) => definition.textContent),
-    ).toEqual(["さくら", "CC BY-SA 4.0"]);
-    expect(attribution).toHaveClass("gap-x-4", "gap-y-1");
+    const attribution = within(cardBody).getByText(
+      /写真 さくら・CC BY-SA 4\.0/,
+    );
+    expect(attribution.tagName).toBe("P");
+    expect(attribution).toHaveClass("text-base");
+    expect(cardBody.querySelector("dl")).toBeNull();
+    expect(cardBody).not.toHaveTextContent("ライセンス");
     expect(card.textContent).not.toMatch(/写真:|ライセンス:/);
     expect(card.querySelectorAll("a")).toHaveLength(0);
+  });
+
+  it("shows a neutral 情報なし badge for locations without a known state", async () => {
+    await renderCategoryPageWith(townVisualCategory);
+
+    const unknownCard = screen.getByRole("link", {
+      name: /その他の視覚契約施設/,
+    });
+    const unknownBadge = within(unknownCard).getByText("情報なし").closest(".badge");
+    if (!(unknownBadge instanceof HTMLElement)) {
+      throw new Error("expected the unknown state badge");
+    }
+    expect(unknownBadge).toHaveClass("badge-neutral", "whitespace-nowrap");
+
+    const knownCard = screen.getByRole("link", {
+      name: new RegExp(LONG_LOCATION_NAME),
+    });
+    const knownBadge = within(knownCard).getByText("全面").closest(".badge");
+    if (!(knownBadge instanceof HTMLElement)) {
+      throw new Error("expected the known state badge");
+    }
+    expect(knownBadge).toHaveClass("badge-success");
+
+    expect(document.querySelectorAll("a.card .badge")).toHaveLength(4);
   });
 
   it("keeps long location names, area labels, and body copy untruncated at readable text size", async () => {

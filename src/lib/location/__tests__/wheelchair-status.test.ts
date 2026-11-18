@@ -9,7 +9,7 @@ describe("getWheelchairStatus", () => {
       description: "入口には段がなく、全部の部屋に段がありません。",
       isKnown: true,
       referenceUrl: "https://wheelmap.org/nodes/1420770185",
-      linkLabelMain: "詳細を見る・編集する",
+      linkLabelMain: "編集する",
       linkLabelSub: "（WheelMapを開きます）",
     });
   });
@@ -35,13 +35,15 @@ describe("getWheelchairStatus", () => {
     expect(status).toMatchObject({
       state: "情報なし",
       isKnown: false,
-      linkLabelMain: "詳細を見る・追加する",
+      description: "追加してください。",
+      linkLabelMain: "追加する",
     });
   });
 
   it("maps unknown value to 情報なし", () => {
     const status = getWheelchairStatus("bogus", { type: "node", id: 1 });
     expect(status.state).toBe("情報なし");
+    expect(status.description).toBe("追加してください。");
   });
 
   it("uses OpenStreetMap URL and label for relation", () => {
@@ -50,7 +52,7 @@ describe("getWheelchairStatus", () => {
       "https://www.openstreetmap.org/relation/5415394",
     );
     expect(status.linkLabelSub).toBe("（OpenStreetMapを開きます）");
-    expect(status.linkLabelMain).toBe("詳細を見る・編集する");
+    expect(status.linkLabelMain).toBe("編集する");
   });
 
   it("uses OpenStreetMap label for relation even when unknown", () => {

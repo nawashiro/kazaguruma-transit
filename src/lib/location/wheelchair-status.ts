@@ -21,7 +21,7 @@ const DESCRIPTIONS: Record<WheelchairState, string> = {
   全面: "入口には段がなく、全部の部屋に段がありません。",
   一部: "入口には最大7センチの1段の段差があります。ほとんどの部屋には段がありません。",
   非対応: "入口には段が1段から数段あり、部屋は車いす不可。",
-  情報なし: "バリアフリー情報がありません。",
+  情報なし: "追加してください。",
 };
 
 function referenceUrlFor(osmElement: OsmElementRef | undefined): string {
@@ -62,16 +62,14 @@ export function getWheelchairStatus(
 
   const referenceUrl = referenceUrlFor(osmElement);
 
-  const linkLabelMain = isKnown ? "詳細を見る・編集する" : "詳細を見る・追加する";
+  const linkLabelMain = isKnown ? "編集する" : "追加する";
   const linkLabelSub = useWheelMap
     ? "（WheelMapを開きます）"
     : "（OpenStreetMapを開きます）";
 
   // relationはWheelMapの対象外のため、既知・未知にかかわらずOSM文言にする
   const finalSub = useWheelMap ? linkLabelSub : "（OpenStreetMapを開きます）";
-  const finalMain = useWheelMap
-    ? linkLabelMain
-    : "詳細を見る・編集する";
+  const finalMain = useWheelMap ? linkLabelMain : "編集する";
 
   return {
     state,

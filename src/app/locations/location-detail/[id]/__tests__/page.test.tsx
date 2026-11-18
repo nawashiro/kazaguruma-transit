@@ -10,6 +10,8 @@ import type {
   LocationPageDataResult,
 } from "@/lib/location/location-page-data";
 
+const HOURS_NOTICE = "目安なので、正確な時間は施設に問い合わせてください。";
+const HOLIDAY_WARNING = "祝日は通常と異なる場合があります。";
 const NEXT_NOT_FOUND = Symbol("NEXT_NOT_FOUND");
 const NEXT_REDIRECT = Symbol("NEXT_REDIRECT");
 const mockNotFound = jest.fn(() => {
@@ -294,13 +296,34 @@ function expectedDestinationHref(location: LocationWithArea): string {
   )}`;
 }
 
-function getBarrierSection(): HTMLElement {
-  const heading = screen.getByRole("heading", { level: 2, name: "バリアフリー情報" });
+function getSectionByHeading(name: string): HTMLElement {
+  const heading = screen.getByRole("heading", { level: 2, name });
   const section = heading.closest("section");
   if (!(section instanceof HTMLElement)) {
-    throw new Error("expected barrier heading to be inside a section");
+    throw new Error(`expected ${name} heading to be inside a section`);
   }
   return section;
+}
+
+function getWheelchairSection(): HTMLElement {
+  return getSectionByHeading("車いす情報");
+}
+
+function getBarrierInfoSection(): HTMLElement {
+  return getSectionByHeading("バリアフリー情報");
+}
+
+function getBasicInfoSection(): HTMLElement {
+  return getSectionByHeading("基本情報");
+}
+
+function getRow(label: string): HTMLElement {
+  const term = screen.getByText(label, { selector: "dt" });
+  const row = term.closest(".list-row");
+  if (!(row instanceof HTMLElement)) {
+    throw new Error(`expected ${label} to be inside a list row`);
+  }
+  return row;
 }
 
 function expectDefinitionListPairs(
@@ -413,14 +436,21 @@ describe("/locations/location-detail/[id] public server page", () => {
       level: 1,
       name: completeLocation.name,
     });
-    const barrierHeading = screen.getByRole("heading", {
+    const wheelchairHeading = screen.getByRole("heading", {
+      level: 2,
+      name: "車いす情報",
+    });
+    const barrierInfoHeading = screen.getByRole("heading", {
       level: 2,
       name: "バリアフリー情報",
     });
 
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(heading.tagName).toBe("H1");
-    expect(heading.compareDocumentPosition(barrierHeading)).toBe(
+    expect(heading.compareDocumentPosition(wheelchairHeading)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(wheelchairHeading.compareDocumentPosition(barrierInfoHeading)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
 
@@ -446,22 +476,34 @@ describe("/locations/location-detail/[id] public server page", () => {
     expect(licenseLink).toHaveAttribute("target", "_blank");
     expect(licenseLink).toHaveAttribute("rel", "noopener noreferrer");
 
-    const barrierSection = getBarrierSection();
-    expect(barrierSection).toHaveTextContent("全面");
-    expect(barrierSection).toHaveTextContent("入口には段がなく、全部の部屋に段がありません。");
-    expect(barrierSection).not.toHaveTextContent("情報源: OpenStreetMap");
-    const barrierBadge = within(barrierSection).getByText("全面").closest(".badge");
+    const wheelchairSection = getWheelchairSection();
+    expect(wheelchairSection).toHaveTextContent("全面");
+    expect(wheelchairSection).toHaveTextContent("入口には段がなく、全部の部屋に段がありません。");
+    expect(wheelchairSection).not.toHaveTextContent("情報源: OpenStreetMap");
+    expect(wheelchairSection).toHaveTextContent(
+      /© OpenStreetMap contributors.*ODbL-1\.0/,
+    );
+    const barrierBadge = within(wheelchairSection).getByText("全面").closest(".badge");
     if (!(barrierBadge instanceof HTMLElement)) {
       throw new Error("expected the wheelchair state to be inside a badge");
     }
     expect(barrierBadge).toHaveClass("badge-success");
     expect(barrierBadge).not.toHaveClass("badge-outline");
     expect(within(barrierBadge).getByText("車いす")).toHaveClass("sr-only");
-    const detailLink = screen.getByRole("link", { name: /詳細を見る・編集する.*WheelMapを開きます.*新しいタブで開きます/ });
+    const detailLink = screen.getByRole("link", {
+      name: /編集する.*WheelMapを開きます.*新しいタブで開きます/,
+    });
     expect(detailLink).toHaveAttribute("href", "https://wheelmap.org/nodes/1");
     expect(detailLink).toHaveAttribute("target", "_blank");
     expect(detailLink).toHaveAttribute("rel", "noopener noreferrer");
-    expect(screen.getByText("東京バリアフリーマップ")).toBeInTheDocument();
+    const barrierInfoSection = getBarrierInfoSection();
+    expect(
+      within(barrierInfoSection).getByRole("link", {
+        name: /東京バリアフリーマップ/,
+      }),
+    ).toBeInTheDocument();
+    expect(barrierInfoSection.querySelector(".badge")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "提供" })).not.toBeInTheDocument();
 
     const categoryBreadcrumbLink = getCategoryBreadcrumbLink();
     expect(categoryBreadcrumbLink).toHaveAttribute(
@@ -515,10 +557,16 @@ describe("/locations/location-detail/[id] public server page", () => {
     expect(container.querySelectorAll("img")).toHaveLength(0);
     expect(container.querySelector("figcaption")).not.toBeInTheDocument();
 
-    const barrierSection = getBarrierSection();
-    expect(barrierSection).toHaveTextContent("情報なし");
-    expect(barrierSection).toHaveTextContent("バリアフリー情報がありません。");
-    const addLink = screen.getByRole("link", { name: /詳細を見る・追加する.*WheelMapを開きます.*新しいタブで開きます/ });
+    const wheelchairSection = getWheelchairSection();
+    expect(wheelchairSection).toHaveTextContent("情報なし");
+    expect(wheelchairSection).toHaveTextContent("追加してください。");
+    expect(wheelchairSection).not.toHaveTextContent("バリアフリー情報がありません。");
+    expect(
+      screen.queryByRole("heading", { name: "バリアフリー情報" }),
+    ).not.toBeInTheDocument();
+    const addLink = screen.getByRole("link", {
+      name: /追加する.*WheelMapを開きます.*新しいタブで開きます/,
+    });
     expect(addLink).toHaveAttribute("href", "https://wheelmap.org/nodes/-2");
     expect(addLink).toHaveAttribute("target", "_blank");
     expect(addLink).toHaveAttribute("rel", "noopener noreferrer");
@@ -549,50 +597,52 @@ describe("/locations/location-detail/[id] public server page", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 
-  it("shows the provider section after basic information", async () => {
-    const { container } = await renderLocationDetailPage({
-      ...completeLocation,
-      phone: { display: "03-3264-2111", tel: "tel:0332642111" },
-    });
-
-    const headings = Array.from(container.querySelectorAll("h2")).map(
-      (heading) => heading.textContent,
-    );
-    expect(headings).toContain("提供");
-    expect(headings.indexOf("基本情報")).toBeLessThan(
-      headings.indexOf("提供"),
-    );
-    expect(screen.getByText("OpenStreetMap contributors")).toBeInTheDocument();
-  });
-
-  it("shows one OpenStreetMap provider entry without field enumeration or image rows", async () => {
+  it("shows the source at the end of basic information and the edit link after it", async () => {
     await renderLocationDetailPage({
       ...completeLocation,
       phone: { display: "03-3264-2111", tel: "tel:0332642111" },
     });
 
-    const providerHeading = screen.getByRole("heading", { level: 2, name: "提供" });
-    const providerSection = providerHeading.closest("section");
-    if (!(providerSection instanceof HTMLElement)) {
-      throw new Error("expected the provider heading inside a section");
+    const basicInfo = getBasicInfoSection();
+    const source = within(basicInfo)
+      .getByRole("link", { name: /OpenStreetMap contributors/ })
+      .closest("p");
+    if (!(source instanceof HTMLElement)) {
+      throw new Error("expected the source line in basic information");
     }
+    expect(source).toHaveTextContent(/© OpenStreetMap contributors.*ODbL-1\.0/);
 
-    const links = within(providerSection).getAllByRole("link");
-    expect(links).toHaveLength(1);
-    expect(links[0]).toHaveAttribute(
-      "href",
-      "https://www.openstreetmap.org/copyright",
-    );
-    expect(links[0]).toHaveAccessibleName(
-      /OpenStreetMap contributors.*新しいタブで開きます/,
-    );
-    expect(providerSection).toHaveTextContent(
-      "施設情報とバリアフリー情報（wheelchairタグ）",
-    );
-    expect(providerSection).toHaveTextContent("ODbL 1.0");
-    expect(providerSection).not.toHaveTextContent("座標・電話");
-    expect(within(providerSection).queryByText("バリアフリー情報")).not.toBeInTheDocument();
-    expect(within(providerSection).queryByText("画像")).not.toBeInTheDocument();
+    const editLink = within(basicInfo).getByRole("link", {
+      name: /編集する.*OpenStreetMapを開きます/,
+    });
+    expect(
+      source.compareDocumentPosition(editLink) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "提供" })).not.toBeInTheDocument();
+  });
+
+  it("shows the OSM source in wheelchair and basic information without a provider section", async () => {
+    await renderLocationDetailPage({
+      ...completeLocation,
+      phone: { display: "03-3264-2111", tel: "tel:0332642111" },
+    });
+
+    const wheelchair = getWheelchairSection();
+    const basicInfo = getBasicInfoSection();
+    for (const section of [wheelchair, basicInfo]) {
+      expect(
+        within(section).getByRole("link", { name: /OpenStreetMap contributors/ }),
+      ).toHaveAttribute("href", "https://www.openstreetmap.org/copyright");
+    }
+    expect(
+      screen.getAllByRole("link", { name: /OpenStreetMap contributors/ }),
+    ).toHaveLength(2);
+
+    expect(screen.queryByRole("heading", { name: "提供" })).not.toBeInTheDocument();
+    expect(screen.queryByText("座標・電話")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("バリアフリー情報（wheelchairタグ）"),
+    ).not.toBeInTheDocument();
   });
 
   it("uses the safe locations fallback when direct access has no identifiable category context", async () => {
@@ -841,12 +891,25 @@ describe("location facts basic information", () => {
     return render(<main id="main-content">{element}</main>);
   }
 
-  it("shows edit link at top with node URL", async () => {
+  it("shows edit link at the end of basic information with node URL", async () => {
     await renderFactsLocation(factsLocation);
-    const editLink = screen.getByRole("link", { name: /編集する.*OpenStreetMapを開きます.*新しいタブで開きます/ });
+    const basicInfo = getBasicInfoSection();
+    const editLink = within(basicInfo).getByRole("link", {
+      name: /編集する.*OpenStreetMapを開きます.*新しいタブで開きます/,
+    });
     expect(editLink).toHaveAttribute("href", "https://www.openstreetmap.org/edit?node=101");
     expect(editLink).toHaveAttribute("target", "_blank");
     expect(editLink).toHaveAttribute("rel", "noopener noreferrer");
+
+    const source = within(basicInfo)
+      .getByRole("link", { name: /OpenStreetMap contributors/ })
+      .closest("p");
+    if (!(source instanceof HTMLElement)) {
+      throw new Error("expected the source line in basic information");
+    }
+    expect(
+      source.compareDocumentPosition(editLink) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("shows way and relation edit URLs", async () => {
@@ -866,11 +929,32 @@ describe("location facts basic information", () => {
     expect(container.querySelector('a[href^="tel:"]')).not.toBeNull();
   });
 
-  it("hides missing facts and basic info section when all missing", async () => {
+  it("shows basic information with only the edit link when facts and hours are missing", async () => {
     const noFacts = { ...wayLocation, phone: undefined, websiteUri: undefined, wikipediaUri: undefined };
     await renderFactsLocation(noFacts as LocationWithArea);
-    expect(screen.queryByText("基本情報")).not.toBeInTheDocument();
+
+    const basicInfo = getBasicInfoSection();
+    expect(
+      within(basicInfo).getByRole("link", {
+        name: /編集する.*OpenStreetMapを開きます/,
+      }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /03-/ })).not.toBeInTheDocument();
+  });
+
+  it("hides basic information when facts, hours and edit link are missing", async () => {
+    const empty = {
+      ...wayLocation,
+      phone: undefined,
+      websiteUri: undefined,
+      wikipediaUri: undefined,
+      osmEditUrl: "",
+    };
+    await renderFactsLocation(empty as LocationWithArea);
+
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "基本情報" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows basic info section when some facts exist", async () => {
@@ -923,10 +1007,11 @@ describe("location opening hours", () => {
     return render(<main id="main-content">{element}</main>);
   }
 
-  it("shows open/closed status, next change, 7-day plan and always notice", async () => {
+  it("shows open/closed status, next change, 7-day plan and notice in both rows", async () => {
     const { container } = await renderHoursLocation(openLocation);
-    expect(screen.getByText(/営業中|営業時間外/)).toBeInTheDocument();
-    expect(screen.getByText("目安なので、正確な時間は施設に問い合わせてください。")).toBeInTheDocument();
+    const basicInfo = getBasicInfoSection();
+    expect(within(basicInfo).getByText(/営業中|営業時間外/)).toBeInTheDocument();
+    expect(within(basicInfo).getAllByText(HOURS_NOTICE)).toHaveLength(2);
     const times = container.querySelectorAll("time");
     expect(times.length).toBeGreaterThanOrEqual(7);
   });
@@ -950,10 +1035,8 @@ describe("location opening hours", () => {
       };
       const { container } = await renderHoursLocation(wardOffice);
 
-      const hoursSection = screen
-        .getByRole("heading", { level: 2, name: "営業時間" })
-        .closest("section");
-      expect(hoursSection).toHaveTextContent("営業時間外 明日08:30から");
+      const basicInfo = getBasicInfoSection();
+      expect(basicInfo).toHaveTextContent("営業時間外 明日08:30から");
       const today = container.querySelector('time[dateTime="2026-11-18"]');
       expect(today?.closest("div")).toHaveTextContent("08:30-17:00");
       expect(today?.closest("div")).not.toHaveTextContent("08:30-09:00");
@@ -973,14 +1056,17 @@ describe("location opening hours", () => {
     expect(screen.queryByText("祝日は通常と異なる場合があります。")).not.toBeInTheDocument();
   });
 
-  it("shows raw rule when unparsable and hides section when missing", async () => {
-    const { container } = await renderHoursLocation(invalidLocation);
-    expect(screen.getByText("not a rule")).toBeInTheDocument();
-    expect(screen.queryByText(/営業中|営業時間外/)).not.toBeInTheDocument();
+  it("shows raw rule when unparsable and hides rows when missing", async () => {
+    await renderHoursLocation(invalidLocation);
+    const basicInfo = getBasicInfoSection();
+    expect(within(basicInfo).getByText("not a rule")).toBeInTheDocument();
+    expect(within(basicInfo).queryByText(/営業中|営業時間外/)).not.toBeInTheDocument();
+    expect(within(basicInfo).queryByText(HOLIDAY_WARNING)).not.toBeInTheDocument();
+    expect(within(basicInfo).getAllByText(HOURS_NOTICE)).toHaveLength(1);
     cleanup();
-    const second = await renderHoursLocation(noHoursLocation);
-    expect(second.container.querySelector("section[aria-labelledby='hours-heading']")).toBeNull();
-    expect(screen.queryByText("営業時間")).not.toBeInTheDocument();
+    await renderHoursLocation(noHoursLocation);
+    expect(screen.queryByText("営業時間", { selector: "dt" })).not.toBeInTheDocument();
+    expect(screen.queryByText("営業状態", { selector: "dt" })).not.toBeInTheDocument();
   });
 
   it("shows open, 24-hour and closed states as semantic badges", async () => {
@@ -1016,16 +1102,27 @@ describe("location opening hours", () => {
   it("does not render a status badge for an unparsable rule", async () => {
     await renderHoursLocation(invalidLocation);
 
-    const hoursHeading = screen.getByRole("heading", { level: 2, name: "営業時間" });
-    const hoursSection = hoursHeading.closest("section");
-    expect(hoursSection?.querySelector(".badge")).toBeNull();
-    expect(screen.getByText("not a rule")).toBeInTheDocument();
+    const basicInfo = getBasicInfoSection();
+    expect(basicInfo.querySelector(".badge")).toBeNull();
+    expect(within(basicInfo).getByText("not a rule")).toBeInTheDocument();
   });
 
-  it("places hours below image/barrier and above basic info", async () => {
-    const { container } = await renderHoursLocation({ ...openLocation, phone: { display: "03-3264-2111", tel: "tel:0332642111" } });
-    const order = Array.from(container.querySelectorAll("h2")).map((h) => h.textContent);
-    expect(order.indexOf("バリアフリー情報")).toBeLessThan(order.indexOf("営業時間"));
-    expect(order.indexOf("営業時間")).toBeLessThan(order.indexOf("基本情報"));
+  it("places status and hours rows inside basic information", async () => {
+    await renderHoursLocation({
+      ...openLocation,
+      phone: { display: "03-3264-2111", tel: "tel:0332642111" },
+    });
+
+    const basicInfo = getBasicInfoSection();
+    const statusRow = getRow("営業状態");
+    const hoursRow = getRow("営業時間");
+    expect(basicInfo).toContainElement(statusRow);
+    expect(basicInfo).toContainElement(hoursRow);
+    expect(
+      statusRow.compareDocumentPosition(hoursRow) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "営業時間" }),
+    ).not.toBeInTheDocument();
   });
 });

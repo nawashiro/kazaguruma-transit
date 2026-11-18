@@ -13,6 +13,7 @@ import {
   type LocationPageDataResult,
 } from "@/lib/location/location-page-data";
 import { BarrierDetailBlock } from "@/components/features/BarrierAccessibility";
+import { OpenStreetMapAttribution } from "@/components/features/OpenStreetMapAttribution";
 import { imageLicenseLabel } from "@/lib/location/image-license";
 import {
   isAbsoluteHttpUrl,
@@ -34,6 +35,8 @@ const INVALID_DATA_ERROR_MESSAGE =
 const DUPLICATE_ID_ERROR_MESSAGE =
   "場所識別子が重複しています。時間をおいて再試行してください。";
 const CHIYODA_AREA_PREFIX = "東京都千代田区";
+const HOURS_NOTICE = "目安なので、正確な時間は施設に問い合わせてください。";
+const HOLIDAY_WARNING = "祝日は通常と異なる場合があります。";
 
 export const dynamicParams = false;
 export const dynamic = "force-dynamic";
@@ -170,7 +173,7 @@ function EditLocationLink({ location }: { location: LocationWithArea }) {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn btn-secondary h-auto min-h-[44px] w-full gap-0 whitespace-normal rounded-full px-4 py-2 text-base dark:rounded-sm sm:w-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="btn btn-secondary h-auto min-h-[44px] w-full gap-0 whitespace-normal rounded-full px-4 text-base dark:rounded-sm sm:w-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <Pencil aria-hidden="true" className="mr-2 size-4" />
         <span className="text-base">編集する（OpenStreetMapを開きます）</span>
@@ -188,58 +191,152 @@ function BasicInfoSection({ location }: { location: LocationWithArea }) {
   const wikipediaUri = isAbsoluteHttpUrl(location.wikipediaUri)
     ? location.wikipediaUri
     : null;
-  if (phone === undefined && websiteUri === null && wikipediaUri === null) {
+  const rule =
+    typeof location.openingHours === "string" &&
+    location.openingHours.trim().length > 0
+      ? location.openingHours
+      : null;
+  const now = new Date();
+  const evaluation = rule !== null ? evaluateOpeningHours(rule, now) : null;
+  const hasEditLink = isAbsoluteHttpUrl(location.osmEditUrl);
+  const showStatusRow =
+    evaluation !== null && evaluation.state !== "unknown";
+
+  if (
+    phone === undefined &&
+    websiteUri === null &&
+    wikipediaUri === null &&
+    evaluation === null &&
+    !hasEditLink
+  ) {
     return null;
   }
+
+  const statusText =
+    evaluation === null
+      ? undefined
+      : evaluation.state === "open"
+        ? "営業中"
+        : evaluation.state === "closed"
+          ? "営業時間外"
+          : evaluation.state === "all-day"
+            ? "24時間営業"
+            : undefined;
+  const nextText =
+    evaluation !== null &&
+    evaluation.nextChange !== undefined &&
+    evaluation.state === "open"
+      ? `${formatNextChange(evaluation.nextChange, now)}まで`
+      : evaluation !== null &&
+          evaluation.nextChange !== undefined &&
+          evaluation.state === "closed"
+        ? `${formatNextChange(evaluation.nextChange, now)}から`
+        : undefined;
+
   return (
-    <section aria-labelledby="basic-info-heading" className="ruby-text">
-      <h2 id="basic-info-heading" className="mb-4 text-xl font-bold">
+    <section aria-labelledby="basic-info-heading">
+      <h2
+        id="basic-info-heading"
+        className="mb-4 text-xl font-bold ruby-text"
+      >
         基本情報
       </h2>
-      <dl className="list text-base">
-        {phone !== undefined && (
-          <div className="list-row items-center">
-            <dt className="text-base">電話</dt>
-            <dd className="text-base">
-              <a href={phone.tel} className="link min-h-[44px] inline-flex items-center text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-                {phone.display}
-              </a>
-            </dd>
-          </div>
-        )}
-        {websiteUri !== null && (
-          <div className="list-row items-center">
-            <dt className="text-base">ウェブサイト</dt>
-            <dd className="text-base">
-              <a
-                href={websiteUri}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="link min-h-[44px] inline-flex items-center text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                ウェブサイトを開く
-                <span className="sr-only">（新しいタブで開きます）</span>
-              </a>
-            </dd>
-          </div>
-        )}
-        {wikipediaUri !== null && (
-          <div className="list-row items-center">
-            <dt className="text-base">Wikipedia</dt>
-            <dd className="text-base">
-              <a
-                href={wikipediaUri}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="link min-h-[44px] inline-flex items-center text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                Wikipediaを開く
-                <span className="sr-only">（新しいタブで開きます）</span>
-              </a>
-            </dd>
-          </div>
-        )}
-      </dl>
+      {(phone !== undefined ||
+        websiteUri !== null ||
+        wikipediaUri !== null ||
+        evaluation !== null) && (
+        <dl className="list text-base">
+          {phone !== undefined && (
+            <div className="list-row items-center">
+              <dt className="text-base ruby-text">電話</dt>
+              <dd className="text-base">
+                <a
+                  href={phone.tel}
+                  className="link min-h-[44px] inline-flex items-center text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  {phone.display}
+                </a>
+              </dd>
+            </div>
+          )}
+          {websiteUri !== null && (
+            <div className="list-row items-center">
+              <dt className="text-base ruby-text">ウェブサイト</dt>
+              <dd className="text-base">
+                <a
+                  href={websiteUri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link min-h-[44px] inline-flex items-center text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  <span className="ruby-text">ウェブサイトを開く</span>
+                  <span className="sr-only">（新しいタブで開きます）</span>
+                </a>
+              </dd>
+            </div>
+          )}
+          {wikipediaUri !== null && (
+            <div className="list-row items-center">
+              <dt className="text-base ruby-text">Wikipedia</dt>
+              <dd className="text-base">
+                <a
+                  href={wikipediaUri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link min-h-[44px] inline-flex items-center text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  <span className="ruby-text">Wikipediaを開く</span>
+                  <span className="sr-only">（新しいタブで開きます）</span>
+                </a>
+              </dd>
+            </div>
+          )}
+          {showStatusRow && evaluation !== null && statusText !== undefined && (
+            <div className="list-row items-start">
+              <dt className="text-base ruby-text">営業状態</dt>
+              <dd className="text-base">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`badge badge-lg text-xl font-bold whitespace-nowrap ${
+                      evaluation.state === "open" ||
+                      evaluation.state === "all-day"
+                        ? "badge-success"
+                        : "badge-error"
+                    }`}
+                  >
+                    {statusText}
+                  </span>
+                  {nextText !== undefined && (
+                    <>
+                      {" "}
+                      <span className="text-base">{nextText}</span>
+                    </>
+                  )}
+                </div>
+                {evaluation.showHolidayWarning && (
+                  <p className="mt-2 text-base ruby-text">{HOLIDAY_WARNING}</p>
+                )}
+                <p className="mt-2 text-base ruby-text">{HOURS_NOTICE}</p>
+              </dd>
+            </div>
+          )}
+          {evaluation !== null && (
+            <div className="list-row items-start">
+              <dt className="text-base ruby-text">営業時間</dt>
+              <dd className="text-base">
+                {evaluation.state === "unknown" ? (
+                  <code>{evaluation.raw}</code>
+                ) : (
+                  <WeekSchedule week={evaluation.week} />
+                )}
+                <p className="mt-2 text-base ruby-text">{HOURS_NOTICE}</p>
+              </dd>
+            </div>
+          )}
+        </dl>
+      )}
+      <OpenStreetMapAttribution />
+      <EditLocationLink location={location} />
     </section>
   );
 }
@@ -297,12 +394,12 @@ function WeekSchedule({ week }: { week?: OpeningDay[] }) {
   }
   return (
     <dl className="mt-2 space-y-1">
-      {week.map((day) => {
+      {week.map((day, index) => {
         const { text, iso } = formatDateTokyo(day.date);
         return (
           <div key={iso} className="flex gap-2 text-base">
             <dt>
-              <time dateTime={iso}>{text}</time>
+              <time dateTime={iso}>{index === 0 ? "今日" : text}</time>
             </dt>
             <dd>
               {day.closed || day.intervals.length === 0 ? (
@@ -331,102 +428,6 @@ function WeekSchedule({ week }: { week?: OpeningDay[] }) {
   );
 }
 
-function OpeningHoursSection({ location }: { location: LocationWithArea }) {
-  const rule = location.openingHours;
-  if (typeof rule !== "string" || rule.trim().length === 0) {
-    return null;
-  }
-  const now = new Date();
-  const evaluation = evaluateOpeningHours(rule, now);
-  const showWarning = evaluation.showHolidayWarning;
-
-  if (evaluation.state === "unknown") {
-    return (
-      <section aria-labelledby="hours-heading" className="ruby-text">
-        <h2 id="hours-heading" className="mb-4 text-xl font-bold">
-          営業時間
-        </h2>
-        <p className="text-base">
-          <code>{evaluation.raw}</code>
-        </p>
-        <p className="mt-2 text-base">目安なので、正確な時間は施設に問い合わせてください。</p>
-        {showWarning && <p className="mt-2 text-base">祝日は通常と異なる場合があります。</p>}
-      </section>
-    );
-  }
-
-  if (evaluation.state === "all-day") {
-    return (
-      <section aria-labelledby="hours-heading" className="ruby-text">
-        <h2 id="hours-heading" className="mb-4 text-xl font-bold">
-          営業時間
-        </h2>
-        <p className="text-base">
-          <span className="badge badge-lg badge-success text-xl font-bold">24時間営業</span>
-        </p>
-        <WeekSchedule week={evaluation.week} />
-        <p className="mt-2 text-base">目安なので、正確な時間は施設に問い合わせてください。</p>
-        {showWarning && <p className="mt-2 text-base">祝日は通常と異なる場合があります。</p>}
-      </section>
-    );
-  }
-
-  const statusText = evaluation.state === "open" ? "営業中" : "営業時間外";
-  const nextText =
-    evaluation.nextChange !== undefined
-      ? `${formatNextChange(evaluation.nextChange, now)}${evaluation.state === "open" ? "まで" : "から"}`
-      : undefined;
-
-  return (
-    <section aria-labelledby="hours-heading" className="ruby-text">
-      <h2 id="hours-heading" className="mb-4 text-xl font-bold">
-        営業時間
-      </h2>
-      <p className="text-base">
-        <span
-          className={`badge badge-lg text-xl font-bold ${
-            evaluation.state === "open" ? "badge-success" : "badge-error"
-          }`}
-        >
-          {statusText}
-        </span>
-        {nextText !== undefined && (
-          <>
-            {" "}
-            <span className="ml-2">{nextText}</span>
-          </>
-        )}
-      </p>
-      <WeekSchedule week={evaluation.week} />
-      <p className="mt-2 text-base">目安なので、正確な時間は施設に問い合わせてください。</p>
-      {showWarning && <p className="mt-2 text-base">祝日は通常と異なる場合があります。</p>}
-    </section>
-  );
-}
-
-function ProviderSection() {
-  return (
-    <section aria-labelledby="provider-heading" className="ruby-text">
-      <h2 id="provider-heading" className="mb-4 text-xl font-bold">
-        提供
-      </h2>
-      <p className="text-base">
-        施設情報とバリアフリー情報（wheelchairタグ）は、
-        <a
-          href="https://www.openstreetmap.org/copyright"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="link"
-        >
-          OpenStreetMap contributors
-          <span className="sr-only">（新しいタブで開きます）</span>
-        </a>
-        （ODbL 1.0）から提供されています。
-      </p>
-    </section>
-  );
-}
-
 function LocationDetailContent({
   location,
   areaName,
@@ -441,7 +442,6 @@ function LocationDetailContent({
 
   return (
     <div className="space-y-4">
-      <EditLocationLink location={location} />
       {areaName !== null && (
         <dl className="text-base join space-x-2">
           <dt className="font-bold join-item">地域</dt>
@@ -477,11 +477,7 @@ function LocationDetailContent({
         relatedPages={relatedPages}
       />
 
-      <OpeningHoursSection location={location} />
-
       <BasicInfoSection location={location} />
-
-      <ProviderSection />
 
       <div className="mt-4">
         <DestinationLink location={location} />

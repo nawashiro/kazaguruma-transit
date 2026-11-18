@@ -92,7 +92,9 @@ describe("アクセシビリティ実装契約", () => {
     for (const state of ["全面", "一部", "非対応", "情報なし"]) {
       expect(wheelchairSourceForStates).toContain(state);
     }
+    expect(barrierSource).toContain("車いす情報");
     expect(barrierSource).toContain("バリアフリー情報");
+    expect(barrierSource).toContain("whitespace-nowrap");
     expect(barrierSource).not.toContain("情報源: OpenStreetMap");
     expect(barrierSource).toContain('target="_blank"');
     expect(barrierSource).toContain('rel="noopener noreferrer"');
@@ -134,7 +136,9 @@ describe("アクセシビリティ実装契約", () => {
     expect(detailSource).toContain("text-base");
     expect(detailSource).toContain('rel="noopener noreferrer"');
     expect(detailSource).toContain("focus-visible:");
-    expect(detailSource).toContain("OpeningHoursSection");
+    expect(detailSource).toContain("BasicInfoSection");
+    expect(detailSource).toContain("OpenStreetMapAttribution");
+    expect(detailSource).toContain("営業状態");
     expect(detailSource).toContain("営業時間");
     expect(detailSource).toContain("営業中");
     expect(detailSource).toContain("営業時間外");
@@ -142,6 +146,13 @@ describe("アクセシビリティ実装契約", () => {
     expect(detailSource).toContain("目安なので、正確な時間は施設に問い合わせてください。");
     expect(detailSource).toContain("祝日は通常と異なる場合があります。");
     expect(detailSource).toContain("<time");
+
+    const attributionSource = readSource(
+      "src/components/features/OpenStreetMapAttribution.tsx",
+    );
+    expect(attributionSource).toContain("OpenStreetMap contributors");
+    expect(attributionSource).toContain("ODbL-1.0");
+    expect(attributionSource).toContain("www.openstreetmap.org/copyright");
   });
 
   it("auth/detail/rateの公開consumerはnative navigation and form markersを持つ", () => {

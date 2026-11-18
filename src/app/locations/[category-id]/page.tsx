@@ -313,12 +313,9 @@ function LocationSummary({
           )}
         </div>
         {image !== null && (
-          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-base">
-            <dt>写真</dt>
-            <dd>{image.creator}</dd>
-            <dt>ライセンス</dt>
-            <dd>{imageLicenseLabel(image.license)}</dd>
-          </dl>
+          <p className="text-base">
+            写真 {image.creator}・{imageLicenseLabel(image.license)}
+          </p>
         )}
       </div>
     </Link>

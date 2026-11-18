@@ -179,7 +179,7 @@ describe("SidebarLayout", () => {
     });
     const sectionHeadings = within(mainContent).getAllByRole("heading", {
       level: 2,
-      name: "バリアフリー情報",
+      name: "車いす情報",
     });
     const supportFrame = within(mainContent).getByTitle("開発者を支援する（Ko-fi）");
     const cookiePolicyLink = screen.getByRole("link", {

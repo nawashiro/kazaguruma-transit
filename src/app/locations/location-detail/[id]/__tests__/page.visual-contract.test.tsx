@@ -316,7 +316,7 @@ describe("location detail facts visual contract", () => {
   });
 });
 
-describe("location detail provider visual contract", () => {
+describe("location detail source visual contract", () => {
   const providerVisualLocation = {
     ...detailLocation,
     id: "urn:uuid:00000000-0000-4000-8000-000000000091",
@@ -328,29 +328,32 @@ describe("location detail provider visual contract", () => {
     osmElement: { type: "node", id: 91 } as const,
   };
 
-  it("shows a single OSM attribution and does not repeat the image row", async () => {
+  it("shows the source in basic information and puts the edit link after it", async () => {
     await renderDetailPageFor(providerVisualLocation as any);
 
-    const heading = screen.getByRole("heading", { level: 2, name: "提供" });
+    const heading = screen.getByRole("heading", { level: 2, name: "基本情報" });
     const section = heading.closest("section");
     if (!(section instanceof HTMLElement)) {
-      throw new Error("expected the provider heading inside a section");
+      throw new Error("expected the basic info heading inside a section");
     }
 
-    const links = within(section).getAllByRole("link");
-    expect(links).toHaveLength(1);
-    expect(links[0]).toHaveAttribute(
-      "href",
-      "https://www.openstreetmap.org/copyright",
-    );
-    expect(links[0]).toHaveAccessibleName(
-      /OpenStreetMap contributors.*新しいタブで開きます/,
-    );
-    expect(section).toHaveTextContent("施設情報とバリアフリー情報（wheelchairタグ）");
-    expect(section).toHaveTextContent("ODbL 1.0");
+    const source = within(section)
+      .getByRole("link", { name: /OpenStreetMap contributors/ })
+      .closest("p");
+    if (!(source instanceof HTMLElement)) {
+      throw new Error("expected the source line in basic information");
+    }
+    expect(source).toHaveTextContent(/© OpenStreetMap contributors.*ODbL-1\.0/);
+    expect(source.closest(".ruby-text")).toBeNull();
+
+    const editLink = within(section).getByRole("link", {
+      name: /編集する.*OpenStreetMap/,
+    });
+    expect(
+      source.compareDocumentPosition(editLink) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "提供" })).not.toBeInTheDocument();
     expect(section).not.toHaveTextContent("座標・電話");
-    expect(within(section).queryByText("バリアフリー情報")).not.toBeInTheDocument();
-    expect(within(section).queryByText("画像")).not.toBeInTheDocument();
   });
 });
 
@@ -373,7 +376,7 @@ describe("location detail action button visuals", () => {
     expect(editLink).not.toHaveClass("btn-outline");
 
     const barrierLink = screen.getByRole("link", {
-      name: /詳細を見る・編集する.*WheelMapを開きます/,
+      name: /編集する.*WheelMapを開きます/,
     });
     expect(barrierLink).toHaveClass(
       "btn",
@@ -384,6 +387,10 @@ describe("location detail action button visuals", () => {
       "text-base",
     );
     expect(barrierLink).not.toHaveClass("btn-outline");
+    expect(editLink).not.toHaveClass("py-2");
+    expect(barrierLink).not.toHaveClass("py-2");
+    expect(editLink).toHaveClass("h-auto", "min-h-[44px]");
+    expect(barrierLink).toHaveClass("h-auto", "min-h-[44px]");
   });
 });
 
@@ -412,14 +419,33 @@ describe("location detail hours visual contract", () => {
   it("keeps hours status text, readable large text and time elements without color-only meaning", async () => {
     const container = await renderDetailPageFor(hoursVisualLocation as any);
 
-    const hoursHeading = screen.getByRole("heading", { level: 2, name: "営業時間" });
-    expect(hoursHeading).toHaveClass("text-xl");
-    expect(screen.getByText(/営業中|営業時間外/, { selector: ".badge" })).toHaveClass("text-xl", "font-bold");
+    const basicInfo = screen
+      .getByRole("heading", { level: 2, name: "基本情報" })
+      .closest("section");
+    if (!(basicInfo instanceof HTMLElement)) {
+      throw new Error("expected the basic info section");
+    }
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "営業時間" }),
+    ).not.toBeInTheDocument();
+
+    const status = screen.getByText(/営業中|営業時間外/, { selector: ".badge" });
+    expect(status).toHaveClass("text-xl", "font-bold");
+    const statusRow = screen.getByText("営業状態", { selector: "dt" }).closest(".list-row");
+    const hoursRow = screen.getByText("営業時間", { selector: "dt" }).closest(".list-row");
+    expect(statusRow).toHaveClass("items-start");
+    expect(hoursRow).toHaveClass("items-start");
+    expect(statusRow).toHaveTextContent("目安なので、正確な時間は施設に問い合わせてください。");
+    expect(hoursRow).toHaveTextContent("目安なので、正確な時間は施設に問い合わせてください。");
+    const today = screen.getByText("今日", { selector: "time" });
+    expect(today).toHaveAttribute("dateTime");
+    expect(today.closest(".ruby-text")).toBeNull();
+    expect(hoursRow?.querySelector("dl")?.closest(".ruby-text")).toBeNull();
+
     const times = container.querySelectorAll("time");
     expect(times.length).toBeGreaterThanOrEqual(7);
     times.forEach((time) => {
       expect(time).toHaveAttribute("dateTime");
     });
-    expect(screen.getByText("目安なので、正確な時間は施設に問い合わせてください。")).toHaveClass("text-base");
   });
 });

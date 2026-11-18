@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   mkdir,
   readFile,
@@ -13,9 +13,92 @@ import {
   validateDestinationCatalog,
   type DestinationCatalog,
 } from "../src/lib/location/destination-catalog";
+import {
+  LOCATION_IMAGE_DIRECTORY,
+  type LocationImageData,
+  type LocationImageVariant,
+} from "../src/lib/location/location-image";
 
 const LOCATION_PREFIX = "東京都千代田区";
 const INVALID_URI_CHARACTER_PATTERN = /[\u0000-\u0020\u007f-\u009f]/;
+
+const LOCATION_IMAGE_WIDTHS = [480, 960, 1280] as const;
+const LOCATION_IMAGE_MAX_SOURCE_WIDTH = 1280;
+const LOCATION_IMAGE_CONCURRENCY = 2;
+const LOCATION_IMAGE_REQUEST_INTERVAL_MS = 250;
+const LOCATION_IMAGE_RETRY_LIMIT = 3;
+const LOCATION_IMAGE_RETRY_BASE_DELAY_MS = 1000;
+const LOCATION_IMAGE_SOURCE_HOST = "upload.wikimedia.org";
+const LOCATION_IMAGE_COMMONS_PREFIX = "/wikipedia/commons/";
+const USER_AGENT =
+  "KazagurumaTransit/1.0 (+https://github.com/nawashiro/kazaguruma-transit)";
+
+export interface LocationImageFetchResponse {
+  ok: boolean;
+  status: number;
+  retryAfterSeconds?: number | null;
+  bytes: () => Promise<Uint8Array>;
+}
+
+export interface EncodedLocationImageVariant {
+  width: number;
+  height: number;
+  bytes: Uint8Array;
+}
+
+export interface EncodedLocationImage {
+  width: number;
+  height: number;
+  variants: EncodedLocationImageVariant[];
+}
+
+export interface LocationImagePipeline {
+  fetch: (uri: string) => Promise<LocationImageFetchResponse>;
+  encode: (bytes: Uint8Array) => Promise<EncodedLocationImage>;
+  write: (path: string, bytes: Uint8Array) => Promise<void>;
+  clean: () => Promise<void>;
+  warn: (message: string) => void;
+  sleep: (milliseconds: number) => Promise<void>;
+}
+
+export function locationImageSourceUrl(imageUri: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(imageUri);
+  } catch {
+    return null;
+  }
+  if (
+    parsed.protocol !== "https:" ||
+    parsed.hostname !== LOCATION_IMAGE_SOURCE_HOST ||
+    !parsed.pathname.startsWith(LOCATION_IMAGE_COMMONS_PREFIX)
+  ) {
+    return null;
+  }
+  const fileName = parsed.pathname.slice(parsed.pathname.lastIndexOf("/") + 1);
+  if (fileName.length === 0) {
+    return null;
+  }
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${fileName}?width=${LOCATION_IMAGE_MAX_SOURCE_WIDTH}`;
+}
+
+export function plannedImageWidths(originalWidth: number): number[] {
+  if (!Number.isInteger(originalWidth) || originalWidth <= 0) {
+    throw new Error(`画像の幅が不正です: ${originalWidth}`);
+  }
+  const widths = LOCATION_IMAGE_WIDTHS.map((candidate) =>
+    Math.min(candidate, originalWidth),
+  );
+  return [...new Set(widths)].sort((left, right) => left - right);
+}
+
+export function locationImageFileName(
+  bytes: Uint8Array,
+  width: number,
+): string {
+  const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
+  return `${hash}-${width}.webp`;
+}
 
 export interface LocationArtifactSourceUris {
   placesJsonLdUri: string;
@@ -44,6 +127,7 @@ export interface GenerateLocationArtifactOptions {
   destinationCatalog: unknown;
   transport: LocationArtifactTransport;
   writeArtifact: LocationArtifactWriter;
+  images: LocationImagePipeline;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -469,6 +553,7 @@ export interface LocationEntry {
   imageUri?: string;
   imageCreator?: string;
   imageLicense?: string;
+  image?: LocationImageData;
   relatedPages: Array<{ name: string; url: string }>;
   osmElement: { type: "node" | "way" | "relation"; id: number };
   wheelchair: "yes" | "limited" | "no" | null;
@@ -949,6 +1034,136 @@ function deriveRegions(
   return derivedRegions;
 }
 
+function normalizeImageError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+function imageRetryDelay(
+  response: LocationImageFetchResponse,
+  attempt: number,
+): number {
+  const retryAfter = response.retryAfterSeconds;
+  if (
+    typeof retryAfter === "number" &&
+    Number.isFinite(retryAfter) &&
+    retryAfter >= 0
+  ) {
+    return Math.round(retryAfter * 1000);
+  }
+  return LOCATION_IMAGE_RETRY_BASE_DELAY_MS * 2 ** attempt;
+}
+
+async function fetchLocationImageBytes(
+  uri: string,
+  pipeline: LocationImagePipeline,
+): Promise<Uint8Array> {
+  for (let attempt = 0; ; attempt += 1) {
+    let response: LocationImageFetchResponse;
+    try {
+      response = await pipeline.fetch(uri);
+    } catch (error) {
+      throw normalizeImageError(error);
+    }
+    if (response.ok && response.status >= 200 && response.status < 300) {
+      return response.bytes();
+    }
+    const retryable = response.status === 429 || response.status >= 500;
+    if (!retryable || attempt >= LOCATION_IMAGE_RETRY_LIMIT) {
+      throw new Error(`画像の取得に失敗しました: HTTP ${response.status}`);
+    }
+    await pipeline.sleep(imageRetryDelay(response, attempt));
+  }
+}
+
+async function attachLocationImages(
+  locations: LocationCategory[],
+  pipeline: LocationImagePipeline,
+): Promise<void> {
+  const targets: LocationEntry[] = [];
+  for (const category of locations) {
+    for (const location of category.locations) {
+      if (location.imageUri !== undefined) {
+        targets.push(location);
+      }
+    }
+  }
+  if (targets.length === 0) {
+    return;
+  }
+
+  await pipeline.clean();
+  let failed = 0;
+  let nextIndex = 0;
+
+  const processOne = async (location: LocationEntry): Promise<void> => {
+    const sourceUrl =
+      location.imageUri === undefined
+        ? null
+        : locationImageSourceUrl(location.imageUri);
+    if (sourceUrl === null) {
+      failed += 1;
+      return;
+    }
+    try {
+      const bytes = await fetchLocationImageBytes(sourceUrl, pipeline);
+      const encoded = await pipeline.encode(bytes);
+      const encodedVariants = [...encoded.variants].sort(
+        (left, right) => left.width - right.width,
+      );
+      if (
+        !Number.isInteger(encoded.width) ||
+        encoded.width <= 0 ||
+        !Number.isInteger(encoded.height) ||
+        encoded.height <= 0 ||
+        encodedVariants.length === 0
+      ) {
+        failed += 1;
+        return;
+      }
+      const variants: LocationImageVariant[] = [];
+      for (const variant of encodedVariants) {
+        const path = `${LOCATION_IMAGE_DIRECTORY}/${locationImageFileName(variant.bytes, variant.width)}`;
+        await pipeline.write(path, variant.bytes);
+        variants.push({ width: variant.width, path });
+      }
+      location.image = {
+        width: encoded.width,
+        height: encoded.height,
+        variants,
+      };
+    } catch {
+      failed += 1;
+    }
+  };
+
+  const worker = async (): Promise<void> => {
+    let started = false;
+    while (true) {
+      const index = nextIndex;
+      nextIndex += 1;
+      if (index >= targets.length) {
+        return;
+      }
+      if (started) {
+        await pipeline.sleep(LOCATION_IMAGE_REQUEST_INTERVAL_MS);
+      }
+      started = true;
+      await processOne(targets[index]);
+    }
+  };
+
+  await Promise.all(
+    Array.from(
+      { length: Math.min(LOCATION_IMAGE_CONCURRENCY, targets.length) },
+      worker,
+    ),
+  );
+
+  if (failed > 0) {
+    pipeline.warn(`写真を取得できませんでした: ${failed}件`);
+  }
+}
+
 async function fetchJson(
   sourceName: string,
   uri: string,
@@ -980,6 +1195,23 @@ export async function generateLocationArtifact(
   }
   if (typeof options.writeArtifact !== "function") {
     throw new Error("Location artifact generator requires a writer function");
+  }
+  if (!isRecord(options.images)) {
+    throw new Error("Location artifact generator requires an image pipeline");
+  }
+  for (const method of [
+    "fetch",
+    "encode",
+    "write",
+    "clean",
+    "warn",
+    "sleep",
+  ] as const) {
+    if (typeof options.images[method] !== "function") {
+      throw new Error(
+        `Location artifact generator image pipeline requires ${method}`,
+      );
+    }
   }
 
   const sourceUris = validateSourceUris(options.appConfig);
@@ -1018,6 +1250,7 @@ export async function generateLocationArtifact(
   );
   const locations = buildLocations(categoryNames, placesPayload, osmPayload, wikidataPayload);
   const townGeoJson = validateTownGeoJson(townPayload);
+  await attachLocationImages(locations, options.images);
   const artifact: LocationArtifact = {
     status: "validated",
     sourceUris,
@@ -1050,6 +1283,101 @@ async function fetchFromNetwork(
         });
       }
     },
+  };
+}
+
+function parseRetryAfter(value: string | null): number | null {
+  if (value === null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (/^\d+$/u.test(trimmed)) {
+    return Number(trimmed);
+  }
+  const timestamp = Date.parse(trimmed);
+  if (Number.isNaN(timestamp)) {
+    return null;
+  }
+  return Math.max(0, Math.ceil((timestamp - Date.now()) / 1000));
+}
+
+async function fetchImageFromNetwork(
+  uri: string,
+): Promise<LocationImageFetchResponse> {
+  const response = await fetch(uri, {
+    headers: { "user-agent": USER_AGENT },
+    redirect: "follow",
+  });
+  return {
+    ok: response.ok,
+    status: response.status,
+    retryAfterSeconds: parseRetryAfter(response.headers.get("retry-after")),
+    bytes: async () => new Uint8Array(await response.arrayBuffer()),
+  };
+}
+
+async function encodeLocationImage(
+  bytes: Uint8Array,
+): Promise<EncodedLocationImage> {
+  const { default: sharp } = await import("sharp");
+  const rotated = await sharp(bytes).rotate().toBuffer();
+  const metadata = await sharp(rotated).metadata();
+  if (metadata.width === undefined || metadata.height === undefined) {
+    throw new Error("画像の寸法を取得できません");
+  }
+
+  const variants: EncodedLocationImageVariant[] = [];
+  for (const width of plannedImageWidths(metadata.width)) {
+    const encoded = await sharp(rotated)
+      .resize({ width, withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+    const encodedMetadata = await sharp(encoded).metadata();
+    if (
+      encodedMetadata.width === undefined ||
+      encodedMetadata.height === undefined
+    ) {
+      throw new Error("派生画像の寸法を取得できません");
+    }
+    variants.push({
+      width: encodedMetadata.width,
+      height: encodedMetadata.height,
+      bytes: new Uint8Array(encoded),
+    });
+  }
+
+  return {
+    width: metadata.width,
+    height: metadata.height,
+    variants,
+  };
+}
+
+function createDefaultImagePipeline(
+  publicDirectory: string,
+): LocationImagePipeline {
+  const imageDirectory = resolve(
+    publicDirectory,
+    "generated",
+    "location-images",
+  );
+  return {
+    fetch: fetchImageFromNetwork,
+    encode: encodeLocationImage,
+    clean: async () => {
+      await rm(imageDirectory, { recursive: true, force: true });
+      await mkdir(imageDirectory, { recursive: true });
+    },
+    write: async (path, bytes) => {
+      const targetPath = resolve(publicDirectory, path.replace(/^\//u, ""));
+      await mkdir(dirname(targetPath), { recursive: true });
+      await writeFile(targetPath, bytes);
+    },
+    warn: (message) => {
+      process.stderr.write(`${message}\n`);
+    },
+    sleep: (milliseconds) =>
+      new Promise((resolveSleep) => setTimeout(resolveSleep, milliseconds)),
   };
 }
 
@@ -1101,6 +1429,7 @@ async function runCli(): Promise<void> {
       destinationCatalog,
       transport: fetchFromNetwork,
       writeArtifact: (artifact) => writeArtifactAtomically(artifact, artifactPath),
+      images: createDefaultImagePipeline(resolve(projectRoot, "public")),
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);

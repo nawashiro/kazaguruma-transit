@@ -3,6 +3,19 @@ import WebpackLicensePlugin from "webpack-license-plugin";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@prisma/adapter-better-sqlite3", "opening_hours"],
+  async headers() {
+    return [
+      {
+        source: "/generated/location-images/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

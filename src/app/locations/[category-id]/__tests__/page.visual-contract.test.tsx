@@ -51,6 +51,25 @@ jest.mock("@/lib/location/location-page-data", () => {
   };
 });
 
+const derivedImage = {
+  width: 1280,
+  height: 853,
+  variants: [
+    {
+      width: 480,
+      path: "/generated/location-images/0123456789abcdef-480.webp",
+    },
+    {
+      width: 960,
+      path: "/generated/location-images/fedcba9876543210-960.webp",
+    },
+    {
+      width: 1280,
+      path: "/generated/location-images/89abcdef01234567-1280.webp",
+    },
+  ],
+};
+
 const fixtureLocation: LocationWithArea = {
   id: "urn:uuid:00000000-0000-4000-8000-000000000051",
   name: "視覚契約テストの場所",
@@ -64,6 +83,7 @@ const fixtureLocation: LocationWithArea = {
   imageUri: "https://example.test/visual-contract-location.jpg",
   imageCreator: "さくら",
   imageLicense: "https://creativecommons.org/licenses/by-sa/4.0/",
+  image: derivedImage,
 };
 
 const fixtureCategory: LocationCategoryWithArea = {
@@ -96,6 +116,7 @@ const townVisualLocations: LocationWithArea[] = [
     imageUri: "https://example.test/visual-long-location.jpg",
     imageCreator: "さくら",
     imageLicense: "https://creativecommons.org/licenses/by-sa/4.0/",
+    image: derivedImage,
     relatedPages: [],
     osmElement: { type: "node", id: 52 },
     wheelchair: "yes",
@@ -529,6 +550,24 @@ describe("category page origin/dev visual contract", () => {
 
     const image = card.querySelector("img");
     expect(image).not.toBeNull();
+    expect(image).toHaveAttribute("src", derivedImage.variants[2].path);
+    expect(image).toHaveAttribute(
+      "srcset",
+      derivedImage.variants
+        .map((variant) => `${variant.path} ${variant.width}w`)
+        .join(", "),
+    );
+    expect(image).toHaveAttribute(
+      "sizes",
+      "(min-width: 1024px) 277px, (min-width: 768px) calc((100vw - 48px) / 2), calc(100vw - 32px)",
+    );
+    expect(image).toHaveAttribute("loading", "lazy");
+    expect(image).toHaveAttribute("decoding", "async");
+    expect(image).toHaveAttribute("width", "1280");
+    expect(image).toHaveAttribute("height", "853");
+    expect(image).toHaveAttribute("alt", "");
+    expect(image).not.toHaveAttribute("fetchpriority");
+    expect(image?.getAttribute("src")).not.toContain("wikimedia");
     expect(image).toHaveClass("object-cover", "h-48", "w-full");
     expect(image?.className).not.toMatch(/rounded/);
     const figure = image?.closest("figure");

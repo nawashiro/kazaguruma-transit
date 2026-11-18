@@ -72,6 +72,7 @@
     "react-dom": "^19.1.0",
     "react-ga4": "^2.1.0",
     "react-to-print": "^3.0.5",
+    "sharp": "0.35.5",
     "tsx": "^4.19.3",
     "webpack-license-plugin": "^4.5.1"
   },

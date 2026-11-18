@@ -707,6 +707,147 @@ describe("readLocationArtifact runtime artifact boundary", () => {
     });
   });
 
+  describe("derived location images", () => {
+    const locationId = "urn:uuid:00000000-0000-4000-8000-000000000071";
+    const validDerivedImage = {
+      width: 1280,
+      height: 853,
+      variants: [
+        {
+          width: 480,
+          path: "/generated/location-images/0123456789abcdef-480.webp",
+        },
+        {
+          width: 960,
+          path: "/generated/location-images/fedcba9876543210-960.webp",
+        },
+        {
+          width: 1280,
+          path: "/generated/location-images/89abcdef01234567-1280.webp",
+        },
+      ],
+    };
+
+    function artifactWithImage(image: unknown): Record<string, unknown> {
+      return artifactWith({
+        sources: {
+          ...validArtifact.sources,
+          locations: [
+            {
+              category: "市役所・東京都の区役所",
+              categoryId: "1302",
+              locations: [
+                {
+                  id: locationId,
+                  name: "千代田区役所",
+                  lat: 35.694,
+                  lng: 139.753,
+                  imageUri: "https://fixtures.example.test/images/city.jpg",
+                  imageCreator: "さくら",
+                  imageLicense:
+                    "https://creativecommons.org/licenses/by-sa/3.0/",
+                  image,
+                  relatedPages: [],
+                  osmElement: { type: "node", id: 1 },
+                  wheelchair: "yes",
+                  osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
+                },
+              ],
+            },
+          ],
+        },
+        derivedRegions: { [locationId]: "神田和泉町" },
+      } as unknown as Record<string, unknown>);
+    }
+
+    it("reads the derived image width, height and variants", async () => {
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithImage(validDerivedImage)),
+      };
+      const result = await invokeReader(moduleState);
+      expect(result).toEqual({
+        status: "success",
+        artifact: expect.objectContaining({
+          sources: expect.objectContaining({
+            locations: [
+              expect.objectContaining({
+                locations: [
+                  expect.objectContaining({ image: validDerivedImage }),
+                ],
+              }),
+            ],
+          }),
+        }),
+      });
+    });
+
+    it.each([
+      ["a non-object image", "not-an-object"],
+      ["a non-positive width", { ...validDerivedImage, width: 0 }],
+      ["a negative height", { ...validDerivedImage, height: -1 }],
+      ["a fractional width", { ...validDerivedImage, width: 1280.5 }],
+      ["empty variants", { ...validDerivedImage, variants: [] }],
+      [
+        "a zero variant width",
+        {
+          ...validDerivedImage,
+          variants: [{ width: 0, path: validDerivedImage.variants[0].path }],
+        },
+      ],
+      [
+        "a string variant width",
+        {
+          ...validDerivedImage,
+          variants: [
+            { width: "480", path: validDerivedImage.variants[0].path },
+          ],
+        },
+      ],
+      [
+        "an external variant path",
+        {
+          ...validDerivedImage,
+          variants: [
+            {
+              width: 480,
+              path: "https://example.test/generated/location-images/0123456789abcdef-480.webp",
+            },
+          ],
+        },
+      ],
+      [
+        "a traversal variant path",
+        {
+          ...validDerivedImage,
+          variants: [
+            {
+              width: 480,
+              path: "/generated/location-images/../0123456789abcdef-480.webp",
+            },
+          ],
+        },
+      ],
+      [
+        "a variant path outside the generated directory",
+        {
+          ...validDerivedImage,
+          variants: [
+            {
+              width: 480,
+              path: "/generated/other/0123456789abcdef-480.webp",
+            },
+          ],
+        },
+      ],
+    ])("rejects an invalid derived image: %s", async (_label, image) => {
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithImage(image)),
+      };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+  });
+
   describe("location facts", () => {
     const factsLocations = [
       {

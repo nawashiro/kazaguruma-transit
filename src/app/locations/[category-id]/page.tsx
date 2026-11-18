@@ -22,7 +22,13 @@ import {
 } from "@/lib/location/location-page-data";
 import { BarrierBadge } from "@/components/features/BarrierAccessibility";
 import { imageLicenseLabel } from "@/lib/location/image-license";
-import { resolveLocationImage } from "@/lib/location/location-image";
+import {
+  resolveLocationImage,
+  toLocationImageSrcSet,
+} from "@/lib/location/location-image";
+
+const LOCATION_CARD_IMAGE_SIZES =
+  "(min-width: 1024px) 277px, (min-width: 768px) calc((100vw - 48px) / 2), calc(100vw - 32px)";
 
 const UUID_URN_PATTERN =
   /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
@@ -296,7 +302,13 @@ function LocationSummary({
       {image !== null && (
         <figure className="relative w-full overflow-hidden">
           <img
-            src={image.uri}
+            src={image.variants[image.variants.length - 1].path}
+            srcSet={toLocationImageSrcSet(image)}
+            sizes={LOCATION_CARD_IMAGE_SIZES}
+            width={image.width}
+            height={image.height}
+            loading="lazy"
+            decoding="async"
             alt=""
             className="h-48 w-full max-w-full object-cover"
           />
@@ -491,7 +503,12 @@ export default async function CategoryPage({
 
       <div id="location-category-panel" className="space-y-4">
         <Card title="カテゴリを選択">
-          <LocationCategoryNavigation categories={data.categories} />
+          <LocationCategoryNavigation
+            categories={data.categories.map(({ category, categoryId }) => ({
+              category,
+              categoryId,
+            }))}
+          />
         </Card>
 
         <Card title="並べ替え">

@@ -5,6 +5,10 @@ import type {
   RouteDestinationCategory,
   RouteDestinationLocation,
 } from "@/types/route-destinations";
+import {
+  isLocationImageData,
+  type LocationImageData,
+} from "@/lib/location/location-image";
 
 const INVALID_URI_CHARACTER_PATTERN = /[\u0000-\u0020\u007f-\u009f]/;
 
@@ -29,6 +33,7 @@ export interface LocationEntry {
   imageUri?: string;
   imageCreator?: string;
   imageLicense?: string;
+  image?: LocationImageData;
   relatedPages: Array<{ name: string; url: string }>;
   osmElement: { type: "node" | "way" | "relation"; id: number };
   wheelchair: "yes" | "limited" | "no" | null;
@@ -216,6 +221,15 @@ function validateLocationEntry(value: unknown, fieldPath: string): LocationEntry
     imageLicense = requireAbsoluteHttpUri(value["imageLicense"], `${fieldPath}.imageLicense`);
   }
 
+  const hasImage = value["image"] !== undefined && value["image"] !== null;
+  let image: LocationImageData | undefined;
+  if (hasImage) {
+    if (!isLocationImageData(value["image"])) {
+      fail(`${fieldPath}.image は派生画像の形式が不正です`);
+    }
+    image = value["image"];
+  }
+
   const hasPhone = value["phone"] !== undefined && value["phone"] !== null;
   let phone: { display: string; tel: string } | undefined;
   if (hasPhone) {
@@ -266,6 +280,9 @@ function validateLocationEntry(value: unknown, fieldPath: string): LocationEntry
     entry.imageUri = imageUri;
     entry.imageCreator = imageCreator;
     entry.imageLicense = imageLicense;
+  }
+  if (image !== undefined) {
+    entry.image = image;
   }
   if (phone !== undefined) {
     entry.phone = phone;

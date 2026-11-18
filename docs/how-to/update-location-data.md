@@ -1,6 +1,6 @@
 # 場所データの更新
 
-「場所をさがす」はビルド時に場所一覧のartifactを生成します。公開JSON-LDの全recordを母集団にし、OSMタグミラー・カテゴリ名辞書・町字GeoJSON・Wikidataミラーから名前・カテゴリ・地域・画像・バリアフリー情報・電話・ウェブサイト・Wikipediaを解決して `public/generated/location-data.json` へ書き出します。
+「場所をさがす」はビルド時に場所一覧のartifactを生成します。公開JSON-LDの全recordを母集団にし、OSMタグミラー・カテゴリ名辞書・町字GeoJSON・Wikidataミラーから名前・カテゴリ・地域・写真・バリアフリー情報・電話・ウェブサイト・Wikipediaを解決して `public/generated/location-data.json` へ書き出します。写真は同じビルドで取得・変換し、配信用のWebPを `public/generated/location-images/` へ出力します。
 
 ## 取得元
 
@@ -9,6 +9,7 @@
 - 町字GeoJSON: `app-config.json` の `townGeoJsonUri`
 - カテゴリ名辞書: `app-config.json` の `categoryNamesUri`
 - Wikidataミラー: `app-config.json` の `wikidataMirrorUri`
+- 写真: `schema:image` の `schema:contentUrl` からファイル名を取り、`https://commons.wikimedia.org/wiki/Special:FilePath/<ファイル名>?width=1280`
 
 いずれもビルド時に取得し、実行時には取得しません。WheelMapはリンク先としてのみ参照し、ビルド時にも実行時にも取得しません。Wikidataミラーは `entities` の `sitelinks` だけを使い、取得失敗・形式不正はビルド失敗とします。
 
@@ -23,15 +24,49 @@
 
 3. `public/generated/location-data.json` を確認します。目安は次のとおりです。
 
-   - 場所102件
+   - 場所101件
    - `wheelchair` のある場所25件（`yes` 17、`limited` 5、`no` 3）
    - カテゴリ20件（辞書22件のうち場所のない2件、1306と1402を除く）
    - 画像の作者とライセンス38件（`schema:license`が「Public domain」などURIでない4件は表示しない）
+   - 派生画像のある場所38件。幅は480・960・1280pxを上限とし、元画像が小さい場合は元画像の幅
    - 電話28件、ウェブサイト50件、Wikipediaリンク48件、編集リンク102件
+
+   写真と派生画像の件数は、次のコマンドでも確認できます。
+
+   ```bash
+   node -e "const a=require('./public/generated/location-data.json');const l=a.sources.locations.flatMap(c=>c.locations);console.log('写真',l.filter(x=>x.image).length,'派生画像の場所',l.filter(x=>x.image).length)"
+   ls public/generated/location-images/*.webp | wc -l
+   ```
 
 4. 場所詳細は `/locations/location-detail/{encodeURIComponent(id)}` を開き、既知IDがHTTP 200で表示されることを確認します。
 
 件数がずれた場合は、公開データセット・OSM・辞書のどれが変わったかを確認します。OSM関連付けまたは空でない`name`がないrecordは、そのrecordだけを一覧から外し、ビルドは成功します。`gif-poi`コードがない・複数ある・辞書にないrecordがあるとビルドは失敗します。重複IDがある場合もビルドは失敗します。1402（保育園）は唯一のrecordがOSM名を持たないため、現在は0件です。
+
+## 写真の派生画像
+
+- 写真は `Special:FilePath` の1280px以下から取得し、同時2接続、間隔を空けて要求します。429と5xxは `Retry-After` を尊重して最大3回再試行し、User-Agentは `KazagurumaTransit/1.0 (+https://github.com/nawashiro/kazaguruma-transit)` です。
+- `sharp` でEXIFの向きを適用し、480・960・1280pxを候補とし、元画像の幅が候補より小さい場合は元画像の幅でWebP（品質80）を生成します。元画像を拡大しません。
+- 出力名は `<内容ハッシュ16桁>-<幅>.webp` です。ハッシュは出力バイトのSHA-256先頭16桁で、同じ入力なら同じ名前、内容が変われば別の名前になります。
+- artifactの各場所には `image` として元画像の幅・高さと `variants`（幅と `/generated/location-images/<ファイル名>` のパス）が入ります。`imageUri`・`imageCreator`・`imageLicense` は取得元の記録として残り、ページは `imageUri` を表示しません。
+- 取得または変換に失敗した写真は `image` なしになり、一覧・詳細はその写真を表示しません。ビルドは続行し、最後に `写真を取得できませんでした: N件` を警告します。原寸URLへのフォールバックはしません。
+- `upload.wikimedia.org/wikipedia/commons/` 以外の写真は対象外として同じ警告に数えます。
+
+生成の前に `public/generated/location-images/` を空にします。`public/generated/` はgit管理外で、`.dockerignore` にも入れてあるためDockerのビルド文脈には入りません。生成物は次のコマンドで確認できます。
+
+```bash
+ls public/generated/location-images/*.webp | wc -l
+node -e "const a=require('./public/generated/location-data.json');const v=a.sources.locations.flatMap(c=>c.locations).flatMap(x=>x.image?.variants??[]);console.log([...new Set(v.map(x=>x.width))].sort((a,b)=>a-b),v.length)"
+node -e "const sharp=require('sharp'),fs=require('fs');const f=fs.readdirSync('public/generated/location-images')[0];sharp('public/generated/location-images/'+f).metadata().then(m=>console.log(f,m.format,m.width,m.height))"
+```
+
+## 配信キャッシュ
+
+`next.config.ts` の `headers()` が `/generated/location-images/:path*` に `Cache-Control: public, max-age=31536000, immutable` を付けます。`/generated/location-data.json` には付けないため、artifactは長期キャッシュされません。`npm start` のあと、次のコマンドで確認できます。
+
+```bash
+curl -sI "http://127.0.0.1:3000$(node -e "const a=require('./public/generated/location-data.json');process.stdout.write(a.sources.locations.flatMap(c=>c.locations).find(l=>l.image).image.variants[0].path)")" | grep -i cache-control
+curl -sI http://127.0.0.1:3000/generated/location-data.json | grep -i cache-control
+```
 
 ## OSM・WheelMapでの修正
 
@@ -43,7 +78,7 @@
 
 最新の状態確認と修正は、場所詳細の参照リンクからWheelMapまたはOpenStreetMapへ進み、OSM側でタグを直します。ビルド時のミラーは月次更新のため、直した内容の反映は次回ビルド以降になります。
 
-画像は `schema:image` の `schema:contentUrl`・`schema:creator.schema:name`・`schema:license` を使います。作者またはライセンスがない画像は一覧・詳細のどちらにも表示しません。ライセンスは`CC BY-SA 4.0`のような名前で表示します。詳細ページでは元のURIへリンクし、一覧カードでは「写真 作者・ライセンス」の1行でテキスト表示します。不正な絶対http(s) URIの画像・関連リンクもその項目だけ表示しません。
+画像は `schema:image` の `schema:contentUrl`・`schema:creator.schema:name`・`schema:license` を使います。作者またはライセンスがない画像は一覧・詳細のどちらにも表示しません。ライセンスは`CC BY-SA 4.0`のような名前で表示します。一覧と詳細はビルドで生成した派生画像を `srcset` で表示し、原寸のURIへはリンクしません。詳細では画像の下に作者とライセンスを表示し、一覧カードでは「写真 作者・ライセンス」の1行でテキスト表示します。不正な絶対http(s) URIの画像・関連リンクもその項目だけ表示しません。
 
 ## 電話・ウェブサイト・Wikipediaの解決と警告
 

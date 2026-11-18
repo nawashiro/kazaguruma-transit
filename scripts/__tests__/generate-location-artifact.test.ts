@@ -35,6 +35,34 @@ type TransportResponse = {
 type Transport = (uri: string) => Promise<TransportResponse>;
 type ArtifactWriter = (artifact: unknown) => Promise<void>;
 
+type ImageFetchResponse = {
+  ok: boolean;
+  status: number;
+  retryAfterSeconds?: number | null;
+  bytes: () => Promise<Uint8Array>;
+};
+
+type EncodedImageVariant = {
+  width: number;
+  height: number;
+  bytes: Uint8Array;
+};
+
+type EncodedImage = {
+  width: number;
+  height: number;
+  variants: EncodedImageVariant[];
+};
+
+type ImagePipeline = {
+  fetch: jest.Mock;
+  encode: jest.Mock;
+  write: jest.Mock;
+  clean: jest.Mock;
+  warn: jest.Mock;
+  sleep: jest.Mock;
+};
+
 type SourceName =
   | "placesJsonLd"
   | "osmMirror"
@@ -47,6 +75,7 @@ type GeneratorOptions = {
   destinationCatalog: unknown;
   transport: Transport;
   writeArtifact: ArtifactWriter;
+  images: ImagePipeline;
 };
 
 type GeneratorHarness = {
@@ -54,6 +83,7 @@ type GeneratorHarness = {
   transport: jest.MockedFunction<Transport>;
   writeArtifact: jest.MockedFunction<ArtifactWriter>;
   artifactState: { current: unknown };
+  images: ImagePipeline;
 };
 
 const GENERATOR_MODULE_PATH = "../generate-location-artifact";
@@ -322,9 +352,27 @@ function getPublicFunction(
   return implementation as PublicFunction;
 }
 
+function createImagePipeline(
+  overrides: Partial<ImagePipeline> = {},
+): ImagePipeline {
+  return {
+    fetch: jest.fn(),
+    encode: jest.fn(),
+    write: jest.fn(async () => undefined),
+    clean: jest.fn(async () => undefined),
+    warn: jest.fn(),
+    sleep: jest.fn(async () => undefined),
+    ...overrides,
+  };
+}
+
 function createHarness(
   payloadOverrides: Partial<Record<SourceName, unknown>> = {},
-  options: { catalog?: unknown; appConfig?: unknown } = {},
+  options: {
+    catalog?: unknown;
+    appConfig?: unknown;
+    images?: Partial<ImagePipeline>;
+  } = {},
 ): GeneratorHarness {
   const payloadByUri: Record<string, unknown> = {
     [PLACES_URI]: payloadOverrides.placesJsonLd ?? validPayloadBySource.placesJsonLd,
@@ -349,16 +397,20 @@ function createHarness(
     artifactState.current = artifact;
   });
 
+  const images = createImagePipeline(options.images);
+
   return {
     options: {
       appConfig: options.appConfig ?? validAppConfig,
       destinationCatalog: options.catalog ?? validCatalog,
       transport,
       writeArtifact,
+      images,
     },
     transport,
     writeArtifact,
     artifactState,
+    images,
   };
 }
 
@@ -1153,6 +1205,217 @@ describe("generateLocationArtifact build boundary", () => {
       const harness = createHarness({ wikidataMirror: { entities: null } });
       await expect(invokeGenerator(moduleState, harness.options)).rejects.toThrow();
       expectArtifactUnchanged(harness);
+    });
+  });
+
+  describe("location image generation", () => {
+    const COMMONS_CITY =
+      "https://upload.wikimedia.org/wikipedia/commons/3/3d/City.jpg";
+    const COMMONS_LIBRARY =
+      "https://upload.wikimedia.org/wikipedia/commons/a/ab/Library.jpg";
+    const CITY_SOURCE_URL =
+      "https://commons.wikimedia.org/wiki/Special:FilePath/City.jpg?width=1280";
+    const LIBRARY_SOURCE_URL =
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Library.jpg?width=1280";
+
+    function placesWithImages(): { "@graph": Array<Record<string, unknown>> } {
+      const base = structuredClone(validPlacesJsonLd) as {
+        "@graph": Array<Record<string, unknown>>;
+      };
+      const image = (contentUrl: string) => ({
+        "@type": "schema:ImageObject",
+        "schema:contentUrl": contentUrl,
+        "schema:license": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "schema:creator": {
+          "@type": "schema:Person",
+          "schema:name": "さくら",
+        },
+      });
+      base["@graph"][0]["schema:image"] = image(COMMONS_CITY);
+      base["@graph"][1]["schema:image"] = image(COMMONS_LIBRARY);
+      base["@graph"][2]["schema:image"] = image(
+        "https://example.test/images/cinema.jpg",
+      );
+      return base;
+    }
+
+    function encodedImage(
+      width = 1600,
+      height = 1200,
+    ): EncodedImage {
+      return {
+        width,
+        height,
+        variants: [480, 960, 1280].map((variantWidth) => ({
+          width: variantWidth,
+          height: Math.round((height * variantWidth) / width),
+          bytes: new Uint8Array([width, variantWidth]),
+        })),
+      };
+    }
+
+    function artifactLocations(artifact: unknown): Array<Record<string, unknown>> {
+      const categories = (artifact as {
+        sources: { locations: Array<{ locations: Array<Record<string, unknown>> }> };
+      }).sources.locations;
+      return categories.flatMap((category) => category.locations);
+    }
+
+    function pngResponse(bytes: Uint8Array): ImageFetchResponse {
+      return {
+        ok: true,
+        status: 200,
+        bytes: async () => bytes,
+      };
+    }
+
+    it("fetches commons photos from Special:FilePath at 1280px and drops other hosts", async () => {
+      const harness = createHarness(
+        { placesJsonLd: placesWithImages() },
+        {
+          images: {
+            fetch: jest.fn(async (uri) => pngResponse(new Uint8Array([uri.length]))),
+            encode: jest.fn(async () => encodedImage()),
+          },
+        },
+      );
+
+      const artifact = await invokeGenerator(moduleState, harness.options);
+      const locations = artifactLocations(artifact);
+      const city = locations.find((location) => location["id"] === ID.cityOffice);
+      const library = locations.find((location) => location["id"] === ID.library);
+      const cinema = locations.find((location) => location["id"] === ID.cinema);
+
+      const requestedUris = harness.images.fetch.mock.calls.map(([uri]) => uri);
+      expect(requestedUris).toEqual(
+        expect.arrayContaining([CITY_SOURCE_URL, LIBRARY_SOURCE_URL]),
+      );
+      expect(requestedUris).toHaveLength(2);
+      expect(requestedUris).not.toContain(
+        "https://example.test/images/cinema.jpg",
+      );
+
+      expect(harness.images.clean).toHaveBeenCalledTimes(1);
+      const [cleanOrder] = harness.images.clean.mock.invocationCallOrder;
+      const [fetchOrder] = harness.images.fetch.mock.invocationCallOrder;
+      expect(cleanOrder).toBeLessThan(fetchOrder);
+
+      for (const entry of [city, library]) {
+        expect(entry?.["image"]).toMatchObject({
+          width: 1600,
+          height: 1200,
+        });
+        const variants = (entry?.["image"] as {
+          variants: Array<{ width: number; path: string }>;
+        }).variants;
+        expect(variants.map((variant) => variant.width)).toEqual([
+          480, 960, 1280,
+        ]);
+        for (const variant of variants) {
+          expect(variant.path).toMatch(
+            /^\/generated\/location-images\/[0-9a-f]{16}-(480|960|1280)\.webp$/u,
+          );
+        }
+      }
+
+      expect(cinema?.["image"]).toBeUndefined();
+      expect(cinema?.["imageUri"]).toBe("https://example.test/images/cinema.jpg");
+      expect(harness.images.write).toHaveBeenCalledTimes(6);
+      expect(harness.images.warn).toHaveBeenCalledWith(
+        expect.stringMatching(/1件/u),
+      );
+    });
+
+    it("plans widths without enlargement and names files by content hash", () => {
+      const plannedImageWidths = getPublicFunction(
+        moduleState,
+        "plannedImageWidths",
+      );
+      expect(plannedImageWidths(700)).toEqual([480, 700]);
+      expect(plannedImageWidths(1280)).toEqual([480, 960, 1280]);
+      expect(plannedImageWidths(4000)).toEqual([480, 960, 1280]);
+
+      const locationImageFileName = getPublicFunction(
+        moduleState,
+        "locationImageFileName",
+      );
+      const bytes = new Uint8Array([1, 2, 3]);
+      const fileName = locationImageFileName(bytes, 480) as string;
+      expect(fileName).toMatch(/^[0-9a-f]{16}-480\.webp$/u);
+      expect(locationImageFileName(bytes, 480)).toBe(fileName);
+      expect(locationImageFileName(new Uint8Array([3, 2, 1]), 480)).not.toBe(
+        fileName,
+      );
+      expect(locationImageFileName(bytes, 960)).not.toBe(fileName);
+    });
+
+    it("keeps the same generated image paths for the same source bytes", async () => {
+      const generate = async () => {
+        const harness = createHarness(
+          { placesJsonLd: placesWithImages() },
+          {
+            images: {
+              fetch: jest.fn(async () => pngResponse(new Uint8Array([42]))),
+              encode: jest.fn(async () => encodedImage()),
+            },
+          },
+        );
+        const artifact = await invokeGenerator(moduleState, harness.options);
+        return artifactLocations(artifact)
+          .map((location) => location["image"])
+          .filter((image) => image !== undefined);
+      };
+
+      expect(await generate()).toEqual(await generate());
+    });
+
+    it("retries 429 after Retry-After and keeps the failed photo count", async () => {
+      let cityAttempts = 0;
+      const harness = createHarness(
+        { placesJsonLd: placesWithImages() },
+        {
+          images: {
+            fetch: jest.fn(async (uri) => {
+              if (uri === CITY_SOURCE_URL) {
+                cityAttempts += 1;
+                if (cityAttempts === 1) {
+                  return {
+                    ok: false,
+                    status: 429,
+                    retryAfterSeconds: 1,
+                    bytes: async () => new Uint8Array(),
+                  };
+                }
+                return pngResponse(new Uint8Array([7]));
+              }
+              return {
+                ok: false,
+                status: 503,
+                retryAfterSeconds: null,
+                bytes: async () => new Uint8Array(),
+              };
+            }),
+            encode: jest.fn(async () => encodedImage(1280, 853)),
+          },
+        },
+      );
+
+      const artifact = await invokeGenerator(moduleState, harness.options);
+      const locations = artifactLocations(artifact);
+      const city = locations.find((location) => location["id"] === ID.cityOffice);
+      const library = locations.find((location) => location["id"] === ID.library);
+      const libraryAttempts = harness.images.fetch.mock.calls.filter(
+        ([uri]) => uri === LIBRARY_SOURCE_URL,
+      );
+
+      expect(cityAttempts).toBe(2);
+      expect(libraryAttempts).toHaveLength(4);
+      expect(harness.images.sleep).toHaveBeenCalledWith(1000);
+      expect(city?.["image"]).toBeDefined();
+      expect(library?.["image"]).toBeUndefined();
+      expect(harness.images.warn).toHaveBeenCalledWith(
+        expect.stringMatching(/2件/u),
+      );
     });
   });
 

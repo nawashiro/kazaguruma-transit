@@ -76,6 +76,24 @@ const completeLocation: LocationWithArea = {
   imageUri: "https://example.test/city.jpg",
   imageCreator: "さくら",
   imageLicense: "https://creativecommons.org/licenses/by-sa/3.0/",
+  image: {
+    width: 1280,
+    height: 853,
+    variants: [
+      {
+        width: 480,
+        path: "/generated/location-images/0123456789abcdef-480.webp",
+      },
+      {
+        width: 960,
+        path: "/generated/location-images/fedcba9876543210-960.webp",
+      },
+      {
+        width: 1280,
+        path: "/generated/location-images/89abcdef01234567-1280.webp",
+      },
+    ],
+  },
   relatedPages: [
     { name: "東京バリアフリーマップ", url: "https://example.test/bfm/city" },
   ],
@@ -466,9 +484,31 @@ describe("/locations/location-detail/[id] public server page", () => {
     expectDefinitionListPairs(regionList, [["地域", area]]);
 
     const image = container.querySelector("img");
-    expect(image).toHaveAttribute("src", completeLocation.imageUri);
+    const derivedImage = completeLocation.image;
+    if (!derivedImage) {
+      throw new Error("completeLocation must include a derived image");
+    }
+    const imageVariants = derivedImage.variants;
+    expect(image).toHaveAttribute("src", imageVariants[2].path);
+    expect(image).toHaveAttribute(
+      "srcset",
+      imageVariants
+        .map((variant) => `${variant.path} ${variant.width}w`)
+        .join(", "),
+    );
+    expect(image).toHaveAttribute(
+      "sizes",
+      "(min-width: 896px) 864px, calc(100vw - 32px)",
+    );
+    expect(image).toHaveAttribute("width", "1280");
+    expect(image).toHaveAttribute("height", "853");
+    expect(image).toHaveAttribute("loading", "eager");
+    expect(image).toHaveAttribute("fetchpriority", "high");
+    expect(image).toHaveAttribute("decoding", "async");
     expect(image).toHaveAttribute("alt", "");
     expect(image).not.toHaveAttribute("role");
+    expect(image?.getAttribute("srcset")).toContain("1280w");
+    expect(image?.getAttribute("src")).not.toContain("wikimedia");
     expect(container.querySelectorAll("img")).toHaveLength(1);
     expect(screen.getByText(/さくら/)).toBeInTheDocument();
     const licenseLink = screen.getByRole("link", { name: /CC BY-SA 3\.0.*新しいタブで開きます/ });

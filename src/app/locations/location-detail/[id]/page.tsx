@@ -18,6 +18,7 @@ import { imageLicenseLabel } from "@/lib/location/image-license";
 import {
   isAbsoluteHttpUrl,
   resolveLocationImage,
+  toLocationImageSrcSet,
 } from "@/lib/location/location-image";
 import {
   evaluateOpeningHours,
@@ -37,6 +38,8 @@ const DUPLICATE_ID_ERROR_MESSAGE =
 const CHIYODA_AREA_PREFIX = "東京都千代田区";
 const HOURS_NOTICE = "目安なので、正確な時間は施設に問い合わせてください。";
 const HOLIDAY_WARNING = "祝日は通常と異なる場合があります。";
+const LOCATION_DETAIL_IMAGE_SIZES =
+  "(min-width: 896px) 864px, calc(100vw - 32px)";
 
 export const dynamicParams = false;
 export const dynamic = "force-dynamic";
@@ -452,7 +455,14 @@ function LocationDetailContent({
       {image !== null && (
         <figure className="relative w-full overflow-hidden">
           <img
-            src={image.uri}
+            src={image.variants[image.variants.length - 1].path}
+            srcSet={toLocationImageSrcSet(image)}
+            sizes={LOCATION_DETAIL_IMAGE_SIZES}
+            width={image.width}
+            height={image.height}
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
             alt=""
             className="h-full w-full rounded-xl object-cover aspect-[4/3]"
           />

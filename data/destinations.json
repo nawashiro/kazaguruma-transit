@@ -353,6 +353,81 @@
       "id": "urn:uuid:019fdf3b-cf63-71f9-96f3-bb64777f330a",
       "name": "マーチ エキュート 神田万世橋",
       "includeInRouteForm": false
+    },
+    {
+      "id": "urn:uuid:01a1d8cc-5f68-7070-9a8e-bded3ad47398",
+      "name": "CINEMALICE",
+      "includeInRouteForm": false
+    },
+    {
+      "id": "urn:uuid:01a1e8ab-f038-7ce4-b0fb-c9684533e7e3",
+      "name": "千代田区立麹町小学校",
+      "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1e8ab-f07e-7424-8199-f8ce84712814",
+      "name": "千代田区立 九段小学校",
+      "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1e8ab-f0c4-79e3-a1d4-42b3c152ffcf",
+      "name": "千代田区立番町小学校",
+      "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1e8ab-f109-7794-bbe6-d6d05f476328",
+      "name": "千代田区立 富士見小学校",
+      "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1e8ab-f14e-7d43-bf8c-022b06f17c7c",
+      "name": "千代田区立 お茶の水小学校",
+      "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1e8ab-f193-77b8-8c30-c21e337a05e5",
+      "name": "千代田区立 千代田小学校",
+      "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1e8ab-f1d8-7b07-a074-43cb7833f6b0",
+      "name": "千代田区立 昌平小学校",
+      "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1e8ab-f21f-7e46-adb6-24f430ef1f28",
+      "name": "千代田区立 和泉小学校",
+      "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1e8c0-2938-795c-874c-ce0091270aaf",
+      "name": "九段坂病院",
+      "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1e8c0-297e-7d68-96c0-61e2a611646b",
+      "name": "東京都教職員互助会三楽病院",
+      "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1e8c0-29c3-7ace-8777-a8a2b17edcda",
+      "name": "日本大学病院",
+      "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1e8c0-2a08-7672-b846-34526c4e12ba",
+      "name": "三井記念病院",
+      "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1e8c0-2a4c-74d9-b466-4a915c81991a",
+      "name": "東京逓信病院",
+      "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1e8c7-83fd-76ea-a425-b3fec7d992f8",
+      "name": "佐々木研究所附属杏雲堂病院",
+      "includeInRouteForm": true
     }
   ]
 }

@@ -305,9 +305,7 @@ function LocationSummary({
           {location.name}
         </h3>
         <div className="flex items-center justify-between gap-2">
-          <span>
-            <BarrierBadge wheelchair={location.wheelchair} />
-          </span>
+          <BarrierBadge wheelchair={location.wheelchair} />
           {displayArea && (
             <span className="break-words text-base">{displayArea}</span>
           )}

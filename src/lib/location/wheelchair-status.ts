@@ -12,8 +12,6 @@ export interface WheelchairStatus {
   label: WheelchairState;
   description: string;
   isKnown: boolean;
-  borderClass: string;
-  iconClass: string;
   referenceUrl: string;
   linkLabelMain: string;
   linkLabelSub: string;
@@ -62,24 +60,6 @@ export function getWheelchairStatus(
   const isKnown = state !== "情報なし";
   const useWheelMap = isWheelMapTarget(osmElement);
 
-  const borderClass =
-    state === "全面"
-      ? "border-success"
-      : state === "一部"
-        ? "border-warning"
-        : state === "非対応"
-          ? "border-error"
-          : "border-base-300";
-
-  const iconClass =
-    state === "全面"
-      ? "text-success"
-      : state === "一部"
-        ? "text-warning"
-        : state === "非対応"
-          ? "text-error"
-          : "text-base-content/60";
-
   const referenceUrl = referenceUrlFor(osmElement);
 
   const linkLabelMain = isKnown ? "詳細を見る・編集する" : "詳細を見る・追加する";
@@ -98,8 +78,6 @@ export function getWheelchairStatus(
     label: state,
     description: DESCRIPTIONS[state],
     isKnown,
-    borderClass,
-    iconClass,
     referenceUrl,
     linkLabelMain: finalMain,
     linkLabelSub: finalSub,

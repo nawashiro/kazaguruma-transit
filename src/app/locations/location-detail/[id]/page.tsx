@@ -163,10 +163,10 @@ function EditLocationLink({ location }: { location: LocationWithArea }) {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn btn-outline h-auto min-h-[44px] gap-2 whitespace-normal text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="btn btn-outline h-auto min-h-[44px] gap-0 whitespace-normal text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
-        <Pencil aria-hidden="true" className="size-4" />
-        <span>編集する（OpenStreetMapを開きます）</span>
+        <Pencil aria-hidden="true" className="mr-2 size-4" />
+        <span className="text-base">編集する（OpenStreetMapを開きます）</span>
         <span className="sr-only">（新しいタブで開きます）</span>
       </a>
     </p>

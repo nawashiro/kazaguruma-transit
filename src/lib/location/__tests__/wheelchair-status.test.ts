@@ -12,7 +12,6 @@ describe("getWheelchairStatus", () => {
       linkLabelMain: "詳細を見る・編集する",
       linkLabelSub: "（WheelMapを開きます）",
     });
-    expect(status.borderClass).toMatch(/success/);
   });
 
   it("maps limited to 一部 with negative way URL", () => {
@@ -23,14 +22,12 @@ describe("getWheelchairStatus", () => {
       linkLabelSub: "（WheelMapを開きます）",
     });
     expect(status.description).toMatch(/7センチ/);
-    expect(status.borderClass).toMatch(/warning/);
   });
 
   it("maps no to 非対応", () => {
     const status = getWheelchairStatus("no", { type: "node", id: 1 });
     expect(status.state).toBe("非対応");
     expect(status.description).toMatch(/車いす不可/);
-    expect(status.borderClass).toMatch(/error/);
   });
 
   it("maps missing to 情報なし with add link", () => {

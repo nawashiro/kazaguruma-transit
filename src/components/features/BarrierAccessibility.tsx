@@ -15,6 +15,22 @@ export function BarrierDetailBlock({
   relatedPages?: Array<{ name: string; url: string }>;
 }) {
   const status = getWheelchairStatus(wheelchair, osmElement);
+  const borderClassName =
+    status.state === "全面"
+      ? "border-success"
+      : status.state === "一部"
+        ? "border-warning"
+        : status.state === "非対応"
+          ? "border-error"
+          : "border-base-300";
+  const iconClassName =
+    status.state === "全面"
+      ? "text-success"
+      : status.state === "一部"
+        ? "text-warning"
+        : status.state === "非対応"
+          ? "text-error"
+          : "text-base-content";
 
   return (
     <section
@@ -25,11 +41,11 @@ export function BarrierDetailBlock({
         バリアフリー情報
       </h2>
       <div
-        className={`rounded-box border-l-4 bg-base-200 p-4 ${status.borderClass}`}
+        className={`rounded-box border-l-4 bg-base-200 p-4 ${borderClassName}`}
       >
         <p className="flex items-center gap-2 text-xl font-bold text-base-content">
-          <Accessibility aria-hidden="true" className={`size-4 ${status.iconClass}`} />
-          <span>{status.label}</span>
+          <Accessibility aria-hidden="true" className={`size-4 ${iconClassName}`} />
+          <span className="text-xl font-bold">{status.label}</span>
         </p>
         <p className="mt-2 text-base text-base-content">{status.description}</p>
         <p className="mt-2 text-base text-base-content">情報源: OpenStreetMap</p>
@@ -38,10 +54,10 @@ export function BarrierDetailBlock({
             href={status.referenceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn-outline h-auto min-h-[44px] flex-col gap-0 py-2 whitespace-normal text-center"
+            className="btn btn-outline h-auto min-h-[44px] flex-col gap-0 py-2 whitespace-normal text-center text-base"
           >
-            <span>{status.linkLabelMain}</span>
-            <span>{status.linkLabelSub}</span>
+            <span className="text-base">{status.linkLabelMain}</span>
+            <span className="text-base">{status.linkLabelSub}</span>
             <span className="sr-only">（新しいタブで開きます）</span>
           </a>
         </p>
@@ -82,9 +98,9 @@ export function BarrierBadge({
   const label =
     normalized === "yes" ? "全面" : normalized === "limited" ? "一部" : "非対応";
   return (
-    <span className="badge badge-lg badge-outline">
+    <span className="badge badge-lg badge-outline text-base">
       <Accessibility aria-hidden="true" className="size-4" />
-      <span>{label}</span>
+      <span className="text-base">{label}</span>
     </span>
   );
 }

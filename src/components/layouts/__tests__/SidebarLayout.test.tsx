@@ -147,7 +147,7 @@ describe("SidebarLayout", () => {
       categories: [
         {
           category: "公共施設",
-          "category:en": "public-facilities",
+          categoryId: "public-facilities",
           locations: [locationDetailFixture],
         },
       ],
@@ -177,9 +177,9 @@ describe("SidebarLayout", () => {
       level: 1,
       name: locationDetailFixture.name,
     });
-    const providedHeadings = within(mainContent).getAllByRole("heading", {
+    const sectionHeadings = within(mainContent).getAllByRole("heading", {
       level: 2,
-      name: "提供",
+      name: "バリアフリー情報",
     });
     const supportFrame = within(mainContent).getByTitle("開発者を支援する（Ko-fi）");
     const cookiePolicyLink = screen.getByRole("link", {
@@ -189,7 +189,7 @@ describe("SidebarLayout", () => {
     expect(mainContent).toHaveAttribute("id", "main-content");
     expect(mainContent).toHaveAttribute("tabindex", "-1");
     expect(within(mainContent).getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(providedHeadings).toHaveLength(1);
+    expect(sectionHeadings).toHaveLength(1);
     expect(locationHeading.closest("header")).not.toBeNull();
 
     expect(mainContent).toContainElement(supportFrame);

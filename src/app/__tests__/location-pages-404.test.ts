@@ -5,7 +5,7 @@ import { get } from "node:http";
 const BASE_URL =
   process.env.LOCATION_PAGES_404_BASE_URL ?? "http://127.0.0.1:3100";
 const STANDARD_NOT_FOUND_TEXT = "404: This page could not be found.";
-const KNOWN_CATEGORY_PATH = "/locations/hospital";
+const KNOWN_CATEGORY_PATH = "/locations/1601";
 
 type HttpResponse = {
   statusCode: number;

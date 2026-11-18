@@ -4,7 +4,7 @@ import { get } from "node:http";
 
 const BASE_URL =
   process.env.LOCATION_PAGES_ORIGIN_BASE_URL ?? "http://127.0.0.1:3100";
-const CATEGORY_PATH = "/locations/hospital";
+const CATEGORY_PATH = "/locations/1601";
 const OUT_OF_AREA_ORIGIN = "51.5074,-0.1278";
 const DISTANCE_MODE_TEXT = "距離の近い順で表示しています。";
 const TOWN_MODE_TEXT = "町字ごとに表示しています。";

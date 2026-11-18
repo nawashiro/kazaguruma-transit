@@ -47,12 +47,12 @@
 
 ### Requirement: バリアフリー情報の出典表示
 
-車いす情報の出典行に、OpenStreetMapの出典と、WheelMapまたはOpenStreetMapで最新情報を確認・更新できることを表示しなければならない（MUST）。独立した提供元セクションに依存してはならない（MUST NOT）。
+車いす情報の参照リンクの後に、OpenStreetMapの出典と、WheelMapまたはOpenStreetMapで最新情報を確認・更新できることを表示しなければならない（MUST）。独立した提供元セクションに依存してはならない（MUST NOT）。
 
 #### Scenario: 出典を表示する
 
 - **WHEN** 車いす情報を表示する
-- **THEN** 出典行にOpenStreetMapの出典が表示され、WheelMapまたはOpenStreetMapの参照リンクが続く
+- **THEN** WheelMapまたはOpenStreetMapの参照リンクの後に、OpenStreetMapの出典行が表示される
 
 #### Scenario: 提供元セクションに依存しない
 

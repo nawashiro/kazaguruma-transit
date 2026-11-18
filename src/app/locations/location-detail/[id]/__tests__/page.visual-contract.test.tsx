@@ -205,6 +205,10 @@ describe("location detail visual contract", () => {
       `/locations/${encodeURIComponent(detailCategory.categoryId)}`,
     );
 
+    const wheelchairSection = screen
+      .getByRole("heading", { name: "車いす情報" })
+      .closest("section");
+    expect(wheelchairSection?.parentElement).toHaveClass("space-y-8");
     expect(
       screen.queryByRole("navigation", { name: "場所カテゴリ" }),
     ).not.toBeInTheDocument();
@@ -328,7 +332,7 @@ describe("location detail source visual contract", () => {
     osmElement: { type: "node", id: 91 } as const,
   };
 
-  it("shows the source in basic information and puts the edit link after it", async () => {
+  it("shows the source in basic information after the edit link", async () => {
     await renderDetailPageFor(providerVisualLocation as any);
 
     const heading = screen.getByRole("heading", { level: 2, name: "基本情報" });
@@ -349,8 +353,9 @@ describe("location detail source visual contract", () => {
     const editLink = within(section).getByRole("link", {
       name: /編集する.*OpenStreetMap/,
     });
+    expect(editLink.closest("p")).not.toHaveClass("justify-end");
     expect(
-      source.compareDocumentPosition(editLink) & Node.DOCUMENT_POSITION_FOLLOWING,
+      editLink.compareDocumentPosition(source) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "提供" })).not.toBeInTheDocument();
     expect(section).not.toHaveTextContent("座標・電話");

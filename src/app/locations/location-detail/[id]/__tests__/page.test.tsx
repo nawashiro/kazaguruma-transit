@@ -597,7 +597,7 @@ describe("/locations/location-detail/[id] public server page", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 
-  it("shows the source at the end of basic information and the edit link after it", async () => {
+  it("shows the edit link before the source at the end of basic information", async () => {
     await renderLocationDetailPage({
       ...completeLocation,
       phone: { display: "03-3264-2111", tel: "tel:0332642111" },
@@ -615,8 +615,9 @@ describe("/locations/location-detail/[id] public server page", () => {
     const editLink = within(basicInfo).getByRole("link", {
       name: /編集する.*OpenStreetMapを開きます/,
     });
+    expect(editLink.closest("p")).not.toHaveClass("justify-end");
     expect(
-      source.compareDocumentPosition(editLink) & Node.DOCUMENT_POSITION_FOLLOWING,
+      editLink.compareDocumentPosition(source) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "提供" })).not.toBeInTheDocument();
   });
@@ -908,7 +909,7 @@ describe("location facts basic information", () => {
       throw new Error("expected the source line in basic information");
     }
     expect(
-      source.compareDocumentPosition(editLink) & Node.DOCUMENT_POSITION_FOLLOWING,
+      editLink.compareDocumentPosition(source) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 
@@ -1047,13 +1048,36 @@ describe("location opening hours", () => {
     }
   });
 
-  it("shows holiday warning only when PH/SH are absent", async () => {
-    await renderHoursLocation(openLocation);
-    expect(screen.getByText("祝日は通常と異なる場合があります。")).toBeInTheDocument();
-    cleanup();
-    const withPh = { ...openLocation, openingHours: "Mo-Fr 09:00-17:00; PH off", id: "urn:uuid:00000000-0000-4000-8000-000000000205" };
-    await renderHoursLocation(withPh as LocationWithArea);
-    expect(screen.queryByText("祝日は通常と異なる場合があります。")).not.toBeInTheDocument();
+  it("shows holiday warning only on a Japanese holiday without PH/SH", async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-11-23T03:00:00Z"));
+    try {
+      await renderHoursLocation(openLocation);
+      expect(screen.getByText(HOLIDAY_WARNING)).toBeInTheDocument();
+      cleanup();
+    } finally {
+      jest.useRealTimers();
+    }
+
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-11-18T03:00:00Z"));
+    try {
+      await renderHoursLocation(openLocation);
+      expect(screen.queryByText(HOLIDAY_WARNING)).not.toBeInTheDocument();
+      cleanup();
+    } finally {
+      jest.useRealTimers();
+    }
+
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-11-23T03:00:00Z"));
+    try {
+      const withPh = { ...openLocation, openingHours: "Mo-Fr 09:00-17:00; PH off", id: "urn:uuid:00000000-0000-4000-8000-000000000205" };
+      await renderHoursLocation(withPh as LocationWithArea);
+      expect(screen.queryByText(HOLIDAY_WARNING)).not.toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("shows raw rule when unparsable and hides rows when missing", async () => {

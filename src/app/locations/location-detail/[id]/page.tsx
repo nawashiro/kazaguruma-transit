@@ -168,7 +168,7 @@ function EditLocationLink({ location }: { location: LocationWithArea }) {
     return null;
   }
   return (
-    <p className="mt-4 flex justify-end">
+    <p className="mt-4">
       <a
         href={href}
         target="_blank"
@@ -335,8 +335,8 @@ function BasicInfoSection({ location }: { location: LocationWithArea }) {
           )}
         </dl>
       )}
-      <OpenStreetMapAttribution />
       <EditLocationLink location={location} />
+      <OpenStreetMapAttribution />
     </section>
   );
 }
@@ -441,7 +441,7 @@ function LocationDetailContent({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       {areaName !== null && (
         <dl className="text-base join space-x-2">
           <dt className="font-bold join-item">地域</dt>

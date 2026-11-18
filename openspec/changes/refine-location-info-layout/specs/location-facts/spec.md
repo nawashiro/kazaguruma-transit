@@ -18,7 +18,7 @@
 
 ### Requirement: 基本情報末尾のOSM編集リンク
 
-場所詳細の基本情報の最後に、`https://www.openstreetmap.org/edit?{type}={id}`へのリンクを表示する（MUST）。`type`は`node`・`way`・`relation`のいずれかとする（MUST）。可視文言は「編集する（OpenStreetMapを開きます）」とし、新しいタブで開くことを支援技術へ伝える（MUST）。`aria-label`で可視文言を上書きしてはならない（MUST NOT）。
+場所詳細の基本情報の情報行の後、出典の前に、`https://www.openstreetmap.org/edit?{type}={id}`へのリンクを表示する（MUST）。`type`は`node`・`way`・`relation`のいずれかとする（MUST）。可視文言は「編集する（OpenStreetMapを開きます）」とし、新しいタブで開くことを支援技術へ伝える（MUST）。`aria-label`で可視文言を上書きしてはならない（MUST NOT）。
 
 #### Scenario: nodeの編集リンク
 
@@ -33,7 +33,7 @@
 #### Scenario: 基本情報の最後に表示する
 
 - **WHEN** 場所詳細を表示する
-- **THEN** 編集リンクは基本情報の情報行と出典の後に表示される
+- **THEN** 編集リンクは情報行の後、出典の前に表示され、左寄せになる
 
 #### Scenario: 新しいタブを伝える
 

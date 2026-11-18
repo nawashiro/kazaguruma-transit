@@ -168,7 +168,7 @@ describe("BarrierDetailBlock", () => {
     ).not.toBeNull();
   });
 
-  it("状態と説明の直後に出典を置き、その後に参照リンクを置く", () => {
+  it("状態・説明・参照リンクの後に出典を置く", () => {
     render(
       <BarrierDetailBlock
         wheelchair="limited"
@@ -192,10 +192,10 @@ describe("BarrierDetailBlock", () => {
       name: /編集する（WheelMapを開きます）/,
     });
     expect(
-      description.compareDocumentPosition(source) & Node.DOCUMENT_POSITION_FOLLOWING,
+      description.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      source.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING,
+      link.compareDocumentPosition(source) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 

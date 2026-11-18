@@ -193,17 +193,17 @@
 
 ### Requirement: データの出典表示
 
-場所詳細は、車いす情報と基本情報のデータ表示の直後に、「© OpenStreetMap contributors ODbL-1.0」の出典を表示しなければならない（MUST）。独立した提供元セクションを表示してはならない（MUST NOT）。
+場所詳細は、車いす情報と基本情報の操作ボタンの後に、「© OpenStreetMap contributors ODbL-1.0」の出典を表示しなければならない（MUST）。独立した提供元セクションを表示してはならない（MUST NOT）。
 
 #### Scenario: 車いす情報の直後に出典を置く
 
 - **WHEN** 車いす情報を表示する
-- **THEN** 状態と説明の直後に「© OpenStreetMap contributors ODbL-1.0」が表示され、参照リンクはその後にある
+- **THEN** 状態・説明・参照リンクの後に「© OpenStreetMap contributors ODbL-1.0」が表示される
 
 #### Scenario: 基本情報の直後に出典を置く
 
 - **WHEN** 基本情報を表示する
-- **THEN** 情報の行の直後に「© OpenStreetMap contributors ODbL-1.0」が表示され、編集リンクはその後にある
+- **THEN** 情報の行と編集リンクの後に「© OpenStreetMap contributors ODbL-1.0」が表示される
 
 #### Scenario: 提供元セクションを置かない
 

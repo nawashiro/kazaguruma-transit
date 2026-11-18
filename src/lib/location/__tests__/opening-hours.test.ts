@@ -26,6 +26,27 @@ describe("evaluateOpeningHours", () => {
     expect(result.state).toBe("closed");
   });
 
+  it("shows the holiday warning only on a Japanese holiday without PH/SH", () => {
+    const holidayNoonUtc = new Date(Date.UTC(2026, 10, 23, 3, 0, 0));
+    const normalNoonUtc = new Date(Date.UTC(2026, 10, 18, 3, 0, 0));
+
+    expect(
+      evaluateOpeningHours("Mo-Fr 09:00-17:00", holidayNoonUtc)
+        .showHolidayWarning,
+    ).toBe(true);
+    expect(
+      evaluateOpeningHours("Mo-Fr 09:00-17:00", normalNoonUtc)
+        .showHolidayWarning,
+    ).toBe(false);
+    expect(
+      evaluateOpeningHours("Mo-Fr 09:00-17:00; PH off", holidayNoonUtc)
+        .showHolidayWarning,
+    ).toBe(false);
+    expect(
+      evaluateOpeningHours("not a rule", holidayNoonUtc).showHolidayWarning,
+    ).toBe(false);
+  });
+
   it("treats Sa[1] off as closed on the first Saturday", () => {
     const firstSatNoonUtc = new Date(Date.UTC(2026, 10, 7, 3, 0, 0));
     const result = evaluateOpeningHours("Mo-Sa 09:00-17:00; Sa[1] off", firstSatNoonUtc);

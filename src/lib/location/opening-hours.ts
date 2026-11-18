@@ -31,6 +31,12 @@ export interface OpeningHoursEvaluation {
 }
 
 const TOKYO_STATE = { country_code: "jp", state: "東京都" } as const;
+const TOKYO_LOCATION = {
+  lat: "35.694",
+  lon: "139.753",
+  address: TOKYO_STATE,
+};
+const TOKYO_HOLIDAY_PARSER = new opening_hours("PH", TOKYO_LOCATION);
 
 function hasPhOrSh(rule: string): boolean {
   return /\b(PH|SH)\b/.test(rule);
@@ -38,13 +44,17 @@ function hasPhOrSh(rule: string): boolean {
 
 function tryParse(rule: string): opening_hours | null {
   try {
-    return new opening_hours(rule, {
-      lat: "35.694",
-      lon: "139.753",
-      address: TOKYO_STATE,
-    });
+    return new opening_hours(rule, TOKYO_LOCATION);
   } catch {
     return null;
+  }
+}
+
+function isTokyoHoliday(date: Date): boolean {
+  try {
+    return TOKYO_HOLIDAY_PARSER.getState(toLibraryDate(date));
+  } catch {
+    return false;
   }
 }
 
@@ -109,27 +119,27 @@ export function evaluateOpeningHours(
   rule: string,
   now: Date,
 ): OpeningHoursEvaluation {
-  const showHolidayWarning = !hasPhOrSh(rule);
+  const holidayWarning = !hasPhOrSh(rule) && isTokyoHoliday(now);
 
   if (rule.trim() === "24/7") {
     return {
       state: "all-day",
       raw: rule,
       week: buildAllDayWeek(now),
-      showHolidayWarning,
+      showHolidayWarning: holidayWarning,
     };
   }
 
   const parsed = tryParse(rule);
   if (parsed === null) {
-    return { state: "unknown", raw: rule, showHolidayWarning };
+    return { state: "unknown", raw: rule, showHolidayWarning: false };
   }
 
   let isOpen: boolean;
   try {
     isOpen = parsed.getState(toLibraryDate(now));
   } catch {
-    return { state: "unknown", raw: rule, showHolidayWarning };
+    return { state: "unknown", raw: rule, showHolidayWarning: false };
   }
 
   let nextChange: Date | undefined;
@@ -147,6 +157,6 @@ export function evaluateOpeningHours(
     raw: rule,
     nextChange,
     week: buildWeek(parsed, now),
-    showHolidayWarning,
+    showHolidayWarning: holidayWarning,
   };
 }

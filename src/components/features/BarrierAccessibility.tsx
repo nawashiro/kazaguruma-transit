@@ -45,7 +45,6 @@ export function WheelchairInfoBlock({
         <WheelchairStatusBadge state={status.state} />
         <p className="text-base ruby-text">{status.description}</p>
       </div>
-      <OpenStreetMapAttribution />
       <p className="mt-2">
         <a
           href={status.referenceUrl}
@@ -60,6 +59,7 @@ export function WheelchairInfoBlock({
           <span className="sr-only">（新しいタブで開きます）</span>
         </a>
       </p>
+      <OpenStreetMapAttribution />
     </section>
   );
 }

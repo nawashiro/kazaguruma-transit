@@ -289,47 +289,39 @@ function LocationSummary({
   const displayArea = areaName ?? location.displayAreaName ?? location.area;
   const image = resolveLocationImage(location);
   return (
-    <div className="card w-full min-w-0 bg-base-100 shadow-sm transition-all hover:shadow-lg">
-      <Link
-        href={`/locations/location-detail/${encodeURIComponent(location.id)}`}
-        className="block min-w-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-      >
-        {image !== null && (
-          <figure className="relative w-full overflow-hidden rounded-t-box">
-            <img
-              src={image.uri}
-              alt=""
-              className="h-48 w-full max-w-full object-cover"
-            />
-          </figure>
-        )}
-        <div className="card-body min-w-0 text-left">
-          <h3 className="card-title inline gap-0 break-words text-xl">
-            {location.name}
-          </h3>
-          <div className="flex items-center justify-between gap-2">
-            <BarrierBadge wheelchair={location.wheelchair} />
-            {displayArea && (
-              <span className="break-words text-base">{displayArea}</span>
-            )}
-          </div>
-        </div>
-      </Link>
+    <Link
+      href={`/locations/location-detail/${encodeURIComponent(location.id)}`}
+      className="card w-full min-w-0 bg-base-100 shadow-sm transition-all hover:shadow-lg cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    >
       {image !== null && (
-        <p className="px-4 pb-4 text-base">
-          写真: {image.creator} /{" "}
-          <a
-            href={image.license}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="link"
-          >
-            {imageLicenseLabel(image.license)}
-            <span className="sr-only">（新しいタブで開きます）</span>
-          </a>
-        </p>
+        <figure className="relative w-full overflow-hidden">
+          <img
+            src={image.uri}
+            alt=""
+            className="h-48 w-full max-w-full object-cover"
+          />
+        </figure>
       )}
-    </div>
+      <div className="card-body min-w-0 text-left">
+        <h3 className="card-title inline gap-0 break-words text-xl">
+          {location.name}
+        </h3>
+        <div className="flex items-center justify-between gap-2">
+          <BarrierBadge wheelchair={location.wheelchair} />
+          {displayArea && (
+            <span className="break-words text-base">{displayArea}</span>
+          )}
+        </div>
+        {image !== null && (
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-base">
+            <dt>写真</dt>
+            <dd>{image.creator}</dd>
+            <dt>ライセンス</dt>
+            <dd>{imageLicenseLabel(image.license)}</dd>
+          </dl>
+        )}
+      </div>
+    </Link>
   );
 }
 

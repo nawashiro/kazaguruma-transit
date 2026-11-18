@@ -1,5 +1,5 @@
 import React, { isValidElement, type ReactNode } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type { LocationDetailResult } from "@/types/access-route-pages";
 import type {
@@ -294,6 +294,97 @@ describe("location detail facts visual contract", () => {
     expect(websiteLink).toHaveAttribute("rel", "noopener noreferrer");
     expect(websiteLink.className).toMatch(/focus-visible:/);
   });
+
+  it("centers each basic info row and keeps dt and dd at the same text size", async () => {
+    await renderDetailPageFor(factsVisualLocation as any);
+
+    const basicHeading = screen.getByRole("heading", { level: 2, name: "基本情報" });
+    const list = basicHeading.parentElement?.querySelector("dl");
+    if (!(list instanceof HTMLElement)) {
+      throw new Error("expected the basic info heading to own a definition list");
+    }
+    const rows = Array.from(list.querySelectorAll<HTMLElement>(".list-row"));
+    expect(rows).toHaveLength(3);
+
+    for (const row of rows) {
+      expect(row).toHaveClass("items-center");
+      const term = row.querySelector("dt");
+      const definition = row.querySelector("dd");
+      expect(term).toHaveClass("text-base");
+      expect(definition).toHaveClass("text-base");
+    }
+  });
+});
+
+describe("location detail provider visual contract", () => {
+  const providerVisualLocation = {
+    ...detailLocation,
+    id: "urn:uuid:00000000-0000-4000-8000-000000000091",
+    phone: { display: "03-3264-2111", tel: "tel:0332642111" },
+    imageUri: "https://example.test/provider-location.jpg",
+    imageCreator: "さくら",
+    imageLicense: "https://creativecommons.org/licenses/by-sa/4.0/",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=91",
+    osmElement: { type: "node", id: 91 } as const,
+  };
+
+  it("shows a single OSM attribution and does not repeat the image row", async () => {
+    await renderDetailPageFor(providerVisualLocation as any);
+
+    const heading = screen.getByRole("heading", { level: 2, name: "提供" });
+    const section = heading.closest("section");
+    if (!(section instanceof HTMLElement)) {
+      throw new Error("expected the provider heading inside a section");
+    }
+
+    const links = within(section).getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute(
+      "href",
+      "https://www.openstreetmap.org/copyright",
+    );
+    expect(links[0]).toHaveAccessibleName(
+      /OpenStreetMap contributors.*新しいタブで開きます/,
+    );
+    expect(section).toHaveTextContent("施設情報とバリアフリー情報（wheelchairタグ）");
+    expect(section).toHaveTextContent("ODbL 1.0");
+    expect(section).not.toHaveTextContent("座標・電話");
+    expect(within(section).queryByText("バリアフリー情報")).not.toBeInTheDocument();
+    expect(within(section).queryByText("画像")).not.toBeInTheDocument();
+  });
+});
+
+describe("location detail action button visuals", () => {
+  it("renders the edit and WheelMap links as secondary buttons with the shared shape", async () => {
+    await renderDetailPageFor(detailLocation as any);
+
+    const destination = screen.getByRole("link", { name: "ここへ行く" });
+    expect(destination).toHaveClass("rounded-full", "dark:rounded-sm");
+
+    const editLink = screen.getByRole("link", { name: /編集する.*OpenStreetMap/ });
+    expect(editLink).toHaveClass(
+      "btn",
+      "btn-secondary",
+      "rounded-full",
+      "dark:rounded-sm",
+      "min-h-[44px]",
+      "text-base",
+    );
+    expect(editLink).not.toHaveClass("btn-outline");
+
+    const barrierLink = screen.getByRole("link", {
+      name: /詳細を見る・編集する.*WheelMapを開きます/,
+    });
+    expect(barrierLink).toHaveClass(
+      "btn",
+      "btn-secondary",
+      "rounded-full",
+      "dark:rounded-sm",
+      "min-h-[44px]",
+      "text-base",
+    );
+    expect(barrierLink).not.toHaveClass("btn-outline");
+  });
 });
 
 describe("location detail hours visual contract", () => {
@@ -305,12 +396,25 @@ describe("location detail hours visual contract", () => {
     osmElement: { type: "node", id: 81 } as const,
   };
 
-  it("keeps hours status text, 16px text and time elements without color-only meaning", async () => {
+  it("shows the hours state as a semantic badge", async () => {
+    await renderDetailPageFor(hoursVisualLocation as any);
+
+    const status = screen.getByText(/営業中|営業時間外/, { selector: ".badge" });
+    expect(status).toHaveClass("text-xl", "font-bold");
+    const badge = status.closest(".badge");
+    if (!(badge instanceof HTMLElement)) {
+      throw new Error("expected the hours status inside a badge");
+    }
+    expect(badge.className).toMatch(/badge-(success|error)/);
+    expect(badge).not.toHaveClass("badge-outline");
+  });
+
+  it("keeps hours status text, readable large text and time elements without color-only meaning", async () => {
     const container = await renderDetailPageFor(hoursVisualLocation as any);
 
     const hoursHeading = screen.getByRole("heading", { level: 2, name: "営業時間" });
     expect(hoursHeading).toHaveClass("text-xl");
-    expect(screen.getByText(/営業中|営業時間外/)).toHaveClass("text-base");
+    expect(screen.getByText(/営業中|営業時間外/, { selector: ".badge" })).toHaveClass("text-xl", "font-bold");
     const times = container.querySelectorAll("time");
     expect(times.length).toBeGreaterThanOrEqual(7);
     times.forEach((time) => {

@@ -93,15 +93,24 @@ describe("アクセシビリティ実装契約", () => {
       expect(wheelchairSourceForStates).toContain(state);
     }
     expect(barrierSource).toContain("バリアフリー情報");
-    expect(barrierSource).toContain("情報源: OpenStreetMap");
+    expect(barrierSource).not.toContain("情報源: OpenStreetMap");
     expect(barrierSource).toContain('target="_blank"');
     expect(barrierSource).toContain('rel="noopener noreferrer"');
     expect(barrierSource).toContain("sr-only");
+    expect(barrierSource).toContain("車いす");
     expect(barrierSource).toContain("（新しいタブで開きます）");
     expect(barrierSource).not.toMatch(/aria-label\s*=/);
     expect(barrierSource).toContain("text-base");
     expect(barrierSource).toContain("text-xl");
     expect(barrierSource).toContain("badge");
+    expect(barrierSource).toContain("badge-success");
+    expect(barrierSource).toContain("badge-warning");
+    expect(barrierSource).toContain("badge-error");
+    expect(barrierSource).toContain("badge-neutral");
+    expect(barrierSource).not.toContain("badge-outline");
+    expect(barrierSource).not.toContain("border-l-4");
+    expect(barrierSource).toContain("btn-secondary");
+    expect(barrierSource).toContain("size-6");
 
     const wheelchairSource = readSource("src/lib/location/wheelchair-status.ts");
     expect(wheelchairSource).toContain("入口には段がなく");

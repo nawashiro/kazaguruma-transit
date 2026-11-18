@@ -520,24 +520,53 @@ describe("category page origin/dev visual contract", () => {
       "gap-4",
     );
 
-    const link = screen.getByRole("link", {
+    const card = screen.getByRole("link", {
       name: new RegExp(LONG_LOCATION_NAME),
     });
-    expect(link.className).toMatch(/focus-visible:/);
-    const card = link.closest(".card");
-    expect(card).not.toBeNull();
+    expect(card.tagName).toBe("A");
+    expect(card.className).toMatch(/focus-visible:/);
     expect(card).toHaveClass("card", "w-full", "hover:shadow-lg");
 
-    const image = card?.querySelector("img");
+    const image = card.querySelector("img");
     expect(image).not.toBeNull();
     expect(image).toHaveClass("object-cover", "h-48", "w-full");
-    expect(image?.closest("figure")).toHaveClass("relative");
-    expect(card).toHaveTextContent("写真: さくら / CC BY-SA 4.0");
-    expect(link.querySelector("a")).toBeNull();
-    const attributionLink = screen.getByRole("link", {
-      name: /CC BY-SA 4\.0.*新しいタブで開きます/,
+    expect(image?.className).not.toMatch(/rounded/);
+    const figure = image?.closest("figure");
+    expect(figure).toHaveClass("relative");
+    expect(card.firstElementChild).toBe(figure);
+    expect(card.querySelector("a")).toBeNull();
+    expect(card).not.toHaveTextContent("写真:");
+    expect(
+      within(card).queryByRole("link", { name: /CC BY-SA 4\.0/ }),
+    ).toBeNull();
+  });
+
+  it("keeps photo attribution in the card body as dt/dd without a license link", async () => {
+    await renderCategoryPageWith(townVisualCategory);
+
+    const card = screen.getByRole("link", {
+      name: new RegExp(LONG_LOCATION_NAME),
     });
-    expect(attributionLink.closest(".card")).toBe(card);
+    const cardBody = card.querySelector<HTMLElement>(":scope > .card-body");
+    expect(cardBody).not.toBeNull();
+    if (!cardBody) {
+      throw new Error("location card has no card-body");
+    }
+
+    const attribution = cardBody.querySelector("dl");
+    expect(attribution).not.toBeNull();
+    if (!attribution) {
+      throw new Error("location card has no attribution list");
+    }
+    expect(
+      Array.from(attribution.querySelectorAll("dt")).map((term) => term.textContent),
+    ).toEqual(["写真", "ライセンス"]);
+    expect(
+      Array.from(attribution.querySelectorAll("dd")).map((definition) => definition.textContent),
+    ).toEqual(["さくら", "CC BY-SA 4.0"]);
+    expect(attribution).toHaveClass("gap-x-4", "gap-y-1");
+    expect(card.textContent).not.toMatch(/写真:|ライセンス:/);
+    expect(card.querySelectorAll("a")).toHaveLength(0);
   });
 
   it("keeps long location names, area labels, and body copy untruncated at readable text size", async () => {

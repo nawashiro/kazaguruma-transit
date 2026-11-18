@@ -170,7 +170,7 @@ function EditLocationLink({ location }: { location: LocationWithArea }) {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn btn-outline h-auto min-h-[44px] w-full gap-0 whitespace-normal text-base sm:w-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="btn btn-secondary h-auto min-h-[44px] w-full gap-0 whitespace-normal rounded-full px-4 py-2 text-base dark:rounded-sm sm:w-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <Pencil aria-hidden="true" className="mr-2 size-4" />
         <span className="text-base">編集する（OpenStreetMapを開きます）</span>
@@ -198,9 +198,9 @@ function BasicInfoSection({ location }: { location: LocationWithArea }) {
       </h2>
       <dl className="list text-base">
         {phone !== undefined && (
-          <div className="list-row">
-            <dt>電話</dt>
-            <dd>
+          <div className="list-row items-center">
+            <dt className="text-base">電話</dt>
+            <dd className="text-base">
               <a href={phone.tel} className="link min-h-[44px] inline-flex items-center text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
                 {phone.display}
               </a>
@@ -208,9 +208,9 @@ function BasicInfoSection({ location }: { location: LocationWithArea }) {
           </div>
         )}
         {websiteUri !== null && (
-          <div className="list-row">
-            <dt>ウェブサイト</dt>
-            <dd>
+          <div className="list-row items-center">
+            <dt className="text-base">ウェブサイト</dt>
+            <dd className="text-base">
               <a
                 href={websiteUri}
                 target="_blank"
@@ -224,9 +224,9 @@ function BasicInfoSection({ location }: { location: LocationWithArea }) {
           </div>
         )}
         {wikipediaUri !== null && (
-          <div className="list-row">
-            <dt>Wikipedia</dt>
-            <dd>
+          <div className="list-row items-center">
+            <dt className="text-base">Wikipedia</dt>
+            <dd className="text-base">
               <a
                 href={wikipediaUri}
                 target="_blank"
@@ -361,7 +361,9 @@ function OpeningHoursSection({ location }: { location: LocationWithArea }) {
         <h2 id="hours-heading" className="mb-4 text-xl font-bold">
           営業時間
         </h2>
-        <p className="text-base">24時間営業</p>
+        <p className="text-base">
+          <span className="badge badge-lg badge-success text-xl font-bold">24時間営業</span>
+        </p>
         <WeekSchedule week={evaluation.week} />
         <p className="mt-2 text-base">目安なので、正確な時間は施設に問い合わせてください。</p>
         {showWarning && <p className="mt-2 text-base">祝日は通常と異なる場合があります。</p>}
@@ -381,8 +383,19 @@ function OpeningHoursSection({ location }: { location: LocationWithArea }) {
         営業時間
       </h2>
       <p className="text-base">
-        {statusText}
-        {nextText !== undefined && ` ${nextText}`}
+        <span
+          className={`badge badge-lg text-xl font-bold ${
+            evaluation.state === "open" ? "badge-success" : "badge-error"
+          }`}
+        >
+          {statusText}
+        </span>
+        {nextText !== undefined && (
+          <>
+            {" "}
+            <span className="ml-2">{nextText}</span>
+          </>
+        )}
       </p>
       <WeekSchedule week={evaluation.week} />
       <p className="mt-2 text-base">目安なので、正確な時間は施設に問い合わせてください。</p>
@@ -391,39 +404,25 @@ function OpeningHoursSection({ location }: { location: LocationWithArea }) {
   );
 }
 
-function ProviderSection({ hasImage }: { hasImage: boolean }) {
+function ProviderSection() {
   return (
     <section aria-labelledby="provider-heading" className="ruby-text">
       <h2 id="provider-heading" className="mb-4 text-xl font-bold">
         提供
       </h2>
-      <dl className="space-y-2 text-base">
-        <div>
-          <dt className="font-bold">座標・電話・ウェブサイト・営業時間</dt>
-          <dd>
-            <a
-              href="https://www.openstreetmap.org/copyright"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link"
-            >
-              OpenStreetMap contributors
-              <span className="sr-only">（新しいタブで開きます）</span>
-            </a>
-            （ODbL 1.0）
-          </dd>
-        </div>
-        <div>
-          <dt className="font-bold">バリアフリー情報</dt>
-          <dd>OpenStreetMapのwheelchairタグ</dd>
-        </div>
-        {hasImage && (
-          <div>
-            <dt className="font-bold">画像</dt>
-            <dd>各画像の作者とライセンス（画像の下に表示）</dd>
-          </div>
-        )}
-      </dl>
+      <p className="text-base">
+        施設情報とバリアフリー情報（wheelchairタグ）は、
+        <a
+          href="https://www.openstreetmap.org/copyright"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="link"
+        >
+          OpenStreetMap contributors
+          <span className="sr-only">（新しいタブで開きます）</span>
+        </a>
+        （ODbL 1.0）から提供されています。
+      </p>
     </section>
   );
 }
@@ -482,7 +481,7 @@ function LocationDetailContent({
 
       <BasicInfoSection location={location} />
 
-      <ProviderSection hasImage={image !== null} />
+      <ProviderSection />
 
       <div className="mt-4">
         <DestinationLink location={location} />

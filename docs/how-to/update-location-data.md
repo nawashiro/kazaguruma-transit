@@ -43,7 +43,7 @@
 
 最新の状態確認と修正は、場所詳細の参照リンクからWheelMapまたはOpenStreetMapへ進み、OSM側でタグを直します。ビルド時のミラーは月次更新のため、直した内容の反映は次回ビルド以降になります。
 
-画像は `schema:image` の `schema:contentUrl`・`schema:creator.schema:name`・`schema:license` を使います。作者またはライセンスがない画像は一覧・詳細のどちらにも表示しません。ライセンスは`CC BY-SA 4.0`のような名前で表示し、元のURIへリンクします。不正な絶対http(s) URIの画像・関連リンクもその項目だけ表示しません。
+画像は `schema:image` の `schema:contentUrl`・`schema:creator.schema:name`・`schema:license` を使います。作者またはライセンスがない画像は一覧・詳細のどちらにも表示しません。ライセンスは`CC BY-SA 4.0`のような名前で表示します。詳細ページでは元のURIへリンクし、一覧カードでは作者とライセンスをテキストで示します。不正な絶対http(s) URIの画像・関連リンクもその項目だけ表示しません。
 
 ## 電話・ウェブサイト・Wikipediaの解決と警告
 

@@ -1,6 +1,6 @@
 # 目的地目録の更新
 
-`data/destinations.json` は、ルートページに表示する施設の候補と掲載選択を持つ目録です。公開JSON-LDの`urn:uuid:`をIDとして参照します。目録を更新するときは、次の手順を実行してください。
+`data/destinations.json` は、ルートページに表示する施設の候補と掲載選択、および場所一覧の母集団を持つ目録です。公開JSON-LDの`urn:uuid:`をIDとして参照します。目録を更新するときは、次の手順を実行してください。
 
 ## 前提
 
@@ -49,4 +49,4 @@
 - カテゴリ名辞書を取得できない、または形式が不正である。
 - 目録の`source`が`app-config.json`の取得先と一致しない。
 
-OSM関連付けまたはOSMの名前がない掲載entryは、ビルドを失敗させず、そのentryだけをartifactから外します。掲載件数と表示件数がずれるため、ビルド後の`public/generated/location-data.json`で表示件数を確認してください。
+OSM関連付けまたはOSMの名前がない掲載entryは、ビルドを失敗させず、そのentryだけをartifactから外します。目録にないrecordは場所一覧にも入りません。掲載件数と表示件数がずれるため、ビルド後の`public/generated/location-data.json`で表示件数を確認してください。

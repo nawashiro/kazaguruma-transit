@@ -15,6 +15,10 @@ type HttpResponse = {
 const unknownLocationPageCases = [
   ["unknown category", "/locations/does-not-exist"],
   ["unknown detail", "/locations/location-detail/does-not-exist"],
+  [
+    "valid location ID that the destination catalog did not admit",
+    "/locations/location-detail/urn:uuid:00000000-0000-4000-8000-0000000000ff",
+  ],
 ] as const;
 
 /**

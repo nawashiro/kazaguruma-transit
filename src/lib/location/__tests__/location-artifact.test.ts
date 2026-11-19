@@ -374,6 +374,38 @@ describe("readLocationArtifact runtime artifact boundary", () => {
     expect(artifact.derivedRegions["urn:uuid:00000000-0000-4000-8000-000000000001"]).not.toContain("東京都千代田区");
   });
 
+  it("keeps derived regions limited to the IDs listed in sources.locations", async () => {
+    const listedId = validLocationsFixture[0].locations[0].id;
+    const outOfCatalogId = "urn:uuid:00000000-0000-4000-8000-000000000099";
+    artifactReadFixture = {
+      raw: JSON.stringify(
+        artifactWith({
+          derivedRegions: {
+            [listedId]: "神田和泉町",
+            [outOfCatalogId]: "目録外の地域",
+          },
+        }),
+      ),
+    };
+
+    const result = await invokeReader(moduleState);
+
+    expect(result).toEqual({
+      status: "success",
+      artifact: expect.objectContaining({
+        sources: expect.objectContaining({ locations: validLocationsFixture }),
+      }),
+    });
+    expectArtifactReadAttempt(readFileSyncSpy, readFileSpy);
+
+    const artifact = (result as { status: "success"; artifact: typeof validArtifact }).artifact;
+    const listedIds = artifact.sources.locations
+      .flatMap((category) => category.locations.map((location) => location.id))
+      .sort();
+    expect(Object.keys(artifact.derivedRegions).sort()).toEqual(listedIds);
+    expect(artifact.derivedRegions).not.toHaveProperty(outOfCatalogId);
+  });
+
   it("reads an artifact with explicit null optional metadata and preserves every null value", async () => {
     const artifactWithNullOptionals = artifactWith({
       sources: {

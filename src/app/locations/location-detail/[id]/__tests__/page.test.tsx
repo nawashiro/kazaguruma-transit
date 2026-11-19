@@ -804,6 +804,24 @@ describe("/locations/location-detail/[id] public server page", () => {
     },
   );
 
+  it("uses the Next standard notFound boundary for a location ID excluded from the catalog artifact", async () => {
+    const loadedData = successDataFor(completeLocation);
+    mockLoadLocationPageData.mockResolvedValue(loadedData);
+    const realResolver = jest.requireActual(
+      "@/lib/location/location-detail-resolver",
+    ) as typeof import("@/lib/location/location-detail-resolver");
+    mockResolveLocationDetail.mockImplementation(realResolver.resolveLocationDetail);
+    const excludedId = "urn:uuid:00000000-0000-4000-8000-0000000000aa";
+
+    const invocation = await invokeLocationDetailPage(excludedId);
+
+    expectLocationBoundaryCalls(excludedId, loadedData);
+    expect(invocation.error).toBe(NEXT_NOT_FOUND);
+    expect(invocation.element).toBeNull();
+    expect(mockNotFound).toHaveBeenCalledTimes(1);
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
   it("renders a Japanese data-error for duplicate IDs across categories without selecting either location", async () => {
     const loadedData = duplicateDataFor(completeLocation);
     mockLoadLocationPageData.mockResolvedValue(loadedData);

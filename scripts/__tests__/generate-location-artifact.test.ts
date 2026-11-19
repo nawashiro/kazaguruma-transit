@@ -120,6 +120,7 @@ const ID = {
   cityOffice: "urn:uuid:00000000-0000-4000-8000-000000000001",
   library: "urn:uuid:00000000-0000-4000-8000-000000000002",
   cinema: "urn:uuid:00000000-0000-4000-8000-000000000003",
+  outsideCatalog: "urn:uuid:00000000-0000-4000-8000-000000000004",
   missing: "urn:uuid:00000000-0000-4000-8000-0000000000ff",
 };
 
@@ -1010,6 +1011,12 @@ describe("generateLocationArtifact build boundary", () => {
           "schema:url": "not-a-uri",
         },
       ];
+      base["@graph"].push(
+        placeRecord(ID.outsideCatalog, {
+          codes: ["1304"],
+          seeAlso: ["https://www.openstreetmap.org/node/4"],
+        }),
+      );
       return base;
     }
 
@@ -1020,11 +1027,12 @@ describe("generateLocationArtifact build boundary", () => {
           { type: "node", id: 1, lat: LAT, lon: LNG, tags: { name: "千代田区役所", wheelchair: "yes" } },
           { type: "way", id: 2, lat: LIBRARY_LAT, lon: LIBRARY_LNG, tags: { name: "千代田区立千代田図書館", wheelchair: "limited" } },
           { type: "node", id: 3, lat: LAT, lng: LNG, tags: { name: "神保町シアター", wheelchair: "no" } },
+          { type: "node", id: 4, lat: LAT, lon: LNG, tags: { name: "目録外の施設", wheelchair: "yes" } },
         ],
       };
     }
 
-    it("projects all records with OSM names into dictionary-ordered locations", async () => {
+    it("projects only catalog records with OSM names into dictionary-ordered locations", async () => {
       const harness = createHarness({
         placesJsonLd: accessiblePlaces(),
         osmMirror: accessibleOsm(),
@@ -1035,6 +1043,9 @@ describe("generateLocationArtifact build boundary", () => {
       };
       expect(artifact.sources.locations).toBeDefined();
       expect(artifact.sources.locations.map((c) => c.categoryId)).toEqual(["1512", "1302", "1011"]);
+      expect(
+        artifact.sources.locations.flatMap((c) => c.locations).map((l) => l["id"]),
+      ).toEqual([ID.library, ID.cityOffice, ID.cinema]);
       const cityEntry = artifact.sources.locations
         .flatMap((c) => c.locations)
         .find((l) => l["id"] === ID.cityOffice);
@@ -1085,6 +1096,66 @@ describe("generateLocationArtifact build boundary", () => {
       expect(all.find((l) => l["id"] === ID.cityOffice)?.["wheelchair"]).toBeNull();
       expect(all.find((l) => l["id"] === ID.library)?.["wheelchair"]).toBeNull();
       expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
+    });
+
+    it("drops records outside the destination catalog before reading their coordinates or category code", async () => {
+      const places = accessiblePlaces() as { "@graph": Array<Record<string, unknown>> };
+      const outside = places["@graph"][3] as Record<string, unknown>;
+      delete outside["schema:geo"];
+      delete outside["schema:identifier"];
+      delete outside["rdfs:seeAlso"];
+      const harness = createHarness({
+        placesJsonLd: places,
+        osmMirror: accessibleOsm(),
+      });
+
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { locations: Array<{ locations: Array<Record<string, unknown>> }> };
+      };
+
+      const all = artifact.sources.locations.flatMap((c) => c.locations);
+      expect(all.map((l) => l["id"])).toEqual([
+        ID.library,
+        ID.cityOffice,
+        ID.cinema,
+      ]);
+      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps catalog entries without an OSM name out of the location list and still succeeds", async () => {
+      const catalog = catalogWith({}, [
+        ...validCatalog.places,
+        { id: ID.missing, name: "目録だけの施設", includeInRouteForm: false },
+      ]);
+      const harness = createHarness(
+        {
+          placesJsonLd: accessiblePlaces(),
+          osmMirror: accessibleOsm(),
+        },
+        { catalog },
+      );
+
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { locations: Array<{ locations: Array<Record<string, unknown>> }> };
+      };
+
+      const all = artifact.sources.locations.flatMap((c) => c.locations);
+      expect(all.find((l) => l["id"] === ID.missing)).toBeUndefined();
+      expect(all).toHaveLength(3);
+      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps route destinations unchanged by the location catalog filter", async () => {
+      const harness = createHarness({
+        placesJsonLd: accessiblePlaces(),
+        osmMirror: accessibleOsm(),
+      });
+
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { routeDestinations: unknown };
+      };
+
+      expect(artifact.sources.routeDestinations).toEqual(expectedRouteDestinations);
     });
 
     it("skips images without attribution and keeps other locations", async () => {

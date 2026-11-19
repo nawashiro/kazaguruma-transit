@@ -38,8 +38,8 @@
 
 - [x] 6.1 `npm run build` を実行し、写真38件の成功件数・警告・生成されたWebPの幅（480・960・1280pxを上限）と形式を確認する。
 - [x] 6.2 一覧と詳細のHTMLに `upload.wikimedia.org` が含まれず、一覧1ページの写真の合計が数百KB以下であることを、生成ファイルの合計またはブラウザのNetworkパネルで確認する。
-- [ ] 6.3 `npm run lint`、`npx tsc --noEmit`、`npm run test` を通す。
-- [ ] 6.4 `npm run accessibility:ci` を実行し、写真の属性変更で新しい違反が出ないことを確認する。
+- [x] 6.3 `npm run lint`、`npx tsc --noEmit`、`npm run test` を通す。
+- [x] 6.4 `npm run accessibility:ci` を実行し、写真の属性変更で新しい違反が出ないことを確認する。
 
 ## Workflow follow-up
 

@@ -195,6 +195,25 @@ function getCategoryPage(): CategoryPage {
   return page as CategoryPage;
 }
 
+type GenerateStaticParams = () => Promise<Array<{ "category-id": string }>>;
+
+function getGenerateStaticParams(): GenerateStaticParams {
+  if (pageModule.error || !pageModule.exports) {
+    throw new Error(
+      "/locations/[category-id] page is not implemented: public module ../page could not be loaded",
+    );
+  }
+
+  const generateStaticParams = pageModule.exports.generateStaticParams;
+  if (typeof generateStaticParams !== "function") {
+    throw new Error(
+      "/locations/[category-id] page is not implemented: public module ../page does not export generateStaticParams",
+    );
+  }
+
+  return generateStaticParams as GenerateStaticParams;
+}
+
 async function invokePage(
   page: CategoryPage,
   categoryId: string,
@@ -257,6 +276,18 @@ beforeEach(() => {
 });
 
 describe("server category page", () => {
+  it("generates static params only for the category IDs present in the artifact", async () => {
+    const generateStaticParams = getGenerateStaticParams();
+
+    const params = await generateStaticParams();
+
+    expect(params).toEqual([
+      { "category-id": "1302" },
+      { "category-id": "1512" },
+    ]);
+    expect(mockLoadLocationPageData).toHaveBeenCalledTimes(1);
+  });
+
   it("decodes a category code ID and uniquely renders only that category", async () => {
     const page = getCategoryPage();
 

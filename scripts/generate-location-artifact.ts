@@ -571,6 +571,7 @@ export interface LocationCategory {
 }
 
 function buildLocations(
+  catalogIds: ReadonlySet<string>,
   categoryNames: CategoryName[],
   placesPayload: unknown,
   osmPayload: unknown,
@@ -583,6 +584,10 @@ function buildLocations(
   const locationsByCode = new Map<string, LocationEntry[]>();
 
   for (const { id, record } of entries) {
+    if (!catalogIds.has(id)) {
+      continue;
+    }
+
     const coordinates = readRouteDestinationCoordinates(record, id);
     const code = readGifPoiCode(record, id);
     if (!knownCodes.has(code)) {
@@ -1248,7 +1253,14 @@ export async function generateLocationArtifact(
     placesPayload,
     osmPayload,
   );
-  const locations = buildLocations(categoryNames, placesPayload, osmPayload, wikidataPayload);
+  const catalogIds = new Set(catalog.places.map((entry) => entry.id));
+  const locations = buildLocations(
+    catalogIds,
+    categoryNames,
+    placesPayload,
+    osmPayload,
+    wikidataPayload,
+  );
   const townGeoJson = validateTownGeoJson(townPayload);
   await attachLocationImages(locations, options.images);
   const artifact: LocationArtifact = {

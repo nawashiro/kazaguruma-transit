@@ -20,19 +20,34 @@
 - **WHEN** 同じIDを持つrecordが2つある
 - **THEN** ビルドは失敗する
 
-### Requirement: 公開JSON-LDの全recordの一覧化
+### Requirement: 目的地目録の候補の一覧化
 
-ビルドは公開JSON-LDの`urn:uuid:`を持つ全recordを場所として一覧化しなければならない（MUST）。`rdfs:seeAlso`にOSM要素があり、その要素に空でない`name`があるrecordだけを一覧に含める（MUST）。それ以外のrecordはそのrecordだけを除外し、残りで出力する（MUST）。
+ビルドは場所一覧を、目的地目録（`data/destinations.json`）の候補に含まれるrecordだけから作らなければならない（MUST）。目録にないrecordは、そのrecordだけを除外し、残りで出力する（MUST）。候補のうち`rdfs:seeAlso`のOSM要素に空でない`name`があるrecordだけを一覧に含める（MUST）。母集団を絞るために、ビルドで距離計算や停留所の取得をしてはならない（MUST NOT）。徒歩圏の判定は目録の更新の責務とし、その定義は`destination-catalog`に従う。
 
-#### Scenario: OSMの名前を表示する
+#### Scenario: 目録にあるrecordを一覧にする
 
-- **WHEN** recordのOSM要素に`name`がある
-- **THEN** そのrecordは一覧に入り、名前はOSMの`name`になる
+- **WHEN** recordが目録の候補にあり、OSM要素に空でない`name`がある
+- **THEN** そのrecordは一覧に入る
 
-#### Scenario: OSM名がないrecordを出さない
+#### Scenario: 目録にないrecordを一覧にしない
 
-- **WHEN** recordにOSM関連付けまたは空でない`name`がない
+- **WHEN** recordが目録の候補にない
+- **THEN** そのrecordは一覧に入らず、ビルドは残りで成功する
+
+#### Scenario: 目録にだけあるrecordを一覧にしない
+
+- **WHEN** recordが目録の候補にあり、OSM要素の`name`が空またはOSM関連付けがない
 - **THEN** そのrecordは一覧に入らず、ビルドは成功する
+
+#### Scenario: ビルドで徒歩圏を再計算しない
+
+- **WHEN** ビルドが一覧を作る
+- **THEN** 停留所を読み込まず、目録のID集合だけで母集団を決める
+
+#### Scenario: 目録にない場所の詳細を返さない
+
+- **WHEN** 目録の候補にない場所のIDを詳細URLで要求する
+- **THEN** artifactに存在しないため404を返す
 
 ### Requirement: gif-poiコードと辞書によるカテゴリ
 
@@ -55,7 +70,7 @@
 
 ### Requirement: 場所詳細の内容解決
 
-場所詳細は、ID、OSM名、座標、カテゴリ名、導出地域を持つ（MUST）。`schema:image`の`schema:contentUrl`を画像に、`schema:subjectOf`の`schema:url`と`schema:name`を関連リンクに使う（MUST）。画像には`schema:creator.schema:name`の作者と`schema:license`のライセンスを添え、ライセンス名をリンクにする（MUST）。作者またはライセンスがない画像は表示しない（MUST NOT）。画像またはリンクが絶対http(s) URIでない場合は、その項目だけを表示しない（MUST）。
+場所詳細は、ID、OSM名、座標、カテゴリ名、導出地域を持つ（MUST）。`schema:image`の`schema:contentUrl`を写真の取得元に、`schema:subjectOf`の`schema:url`と`schema:name`を関連リンクに使う（MUST）。画像には`schema:creator.schema:name`の作者と`schema:license`のライセンスを添え、ライセンス名をリンクにする（MUST）。作者またはライセンスがない画像は表示しない（MUST NOT）。派生画像を生成できなかった写真も表示しない（MUST NOT）。画像またはリンクが絶対http(s) URIでない場合は、その項目だけを表示しない（MUST）。
 
 #### Scenario: 画像と関連リンクを表示する
 
@@ -76,6 +91,11 @@
 
 - **WHEN** `schema:image`の`schema:contentUrl`が絶対http(s) URIでない
 - **THEN** 詳細は画像を表示せず、他の項目を表示する
+
+#### Scenario: 派生画像のない写真を出さない
+
+- **WHEN** 写真の取得または変換に失敗した
+- **THEN** 詳細はその写真を表示せず、他の項目を表示する
 
 ### Requirement: 町字による地域の導出
 
@@ -112,12 +132,17 @@
 
 ### Requirement: 実行時の外部取得をしない
 
-場所ページはビルドartifactだけを読み、実行時に公開JSON-LD、OSMタグミラー、カテゴリ名辞書、WheelMapを取得してはならない（MUST NOT）。artifactが欠落または不正な場合は、外部へフォールバックせずデータエラーを表示する（MUST）。
+場所ページはビルドartifactだけを読み、実行時に公開JSON-LD、OSMタグミラー、カテゴリ名辞書、WheelMap、Wikimediaを取得してはならない（MUST NOT）。写真はビルドで生成した派生画像だけを参照し、WikimediaのURLを出力してはならない（MUST NOT）。artifactが欠落または不正な場合は、外部へフォールバックせずデータエラーを表示する（MUST）。
 
 #### Scenario: artifactだけで表示する
 
 - **WHEN** 場所ページを表示する
 - **THEN** ページはartifactの場所だけを使う
+
+#### Scenario: 写真を外部から取得しない
+
+- **WHEN** 場所ページを表示する
+- **THEN** 写真の取得先はビルドで生成した派生画像だけである
 
 #### Scenario: artifactが欠落している
 

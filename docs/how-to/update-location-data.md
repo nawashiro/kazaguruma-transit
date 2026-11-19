@@ -1,9 +1,14 @@
 # 場所データの更新
 
-「場所をさがす」はビルド時に場所一覧のartifactを生成します。公開JSON-LDの全recordを母集団にし、OSMタグミラー・カテゴリ名辞書・町字GeoJSON・Wikidataミラーから名前・カテゴリ・地域・写真・バリアフリー情報・電話・ウェブサイト・Wikipediaを解決して `public/generated/location-data.json` へ書き出します。写真は同じビルドで取得・変換し、配信用のWebPを `public/generated/location-images/` へ出力します。
+「場所をさがす」はビルド時に場所一覧のartifactを生成します。母集団は目的地目録（`data/destinations.json`）の候補に含まれるrecordだけで、公開JSON-LDの全recordではありません。公開JSON-LD・OSMタグミラー・カテゴリ名辞書・町字GeoJSON・Wikidataミラーから名前・カテゴリ・地域・写真・バリアフリー情報・電話・ウェブサイト・Wikipediaを解決して `public/generated/location-data.json` へ書き出します。写真は同じビルドで取得・変換し、配信用のWebPを `public/generated/location-images/` へ出力します。
+
+## 母集団
+
+場所一覧は、目的地目録（`data/destinations.json`）の候補に含まれるrecordだけを対象にします。`npm run update-destinations` が経路検索と同じ徒歩圏の判定で目録を更新します。公開JSON-LDにrecordが増えても、目録を更新するまで場所一覧には出ません。目録の候補のうち、OSM要素に空でない`name`がないrecordは表示しません。ビルドは距離を再計算せず、目録のID集合だけで母集団を決めます。
 
 ## 取得元
 
+- 目的地目録: `data/destinations.json`
 - 公開JSON-LD: `app-config.json` の `placesJsonLdUri`
 - OSMタグミラー: `app-config.json` の `osmMirrorUri`
 - 町字GeoJSON: `app-config.json` の `townGeoJsonUri`
@@ -11,7 +16,7 @@
 - Wikidataミラー: `app-config.json` の `wikidataMirrorUri`
 - 写真: `schema:image` の `schema:contentUrl` からファイル名を取り、`https://commons.wikimedia.org/wiki/Special:FilePath/<ファイル名>?width=1280`
 
-いずれもビルド時に取得し、実行時には取得しません。WheelMapはリンク先としてのみ参照し、ビルド時にも実行時にも取得しません。Wikidataミラーは `entities` の `sitelinks` だけを使い、取得失敗・形式不正はビルド失敗とします。
+外部の取得元はいずれもビルド時に取得し、実行時には取得しません。目的地目録はリポジトリ内の `data/destinations.json` を読みます。WheelMapはリンク先としてのみ参照し、ビルド時にも実行時にも取得しません。Wikidataミラーは `entities` の `sitelinks` だけを使い、取得失敗・形式不正はビルド失敗とします。
 
 ## ビルドと件数確認
 
@@ -24,12 +29,12 @@
 
 3. `public/generated/location-data.json` を確認します。目安は次のとおりです。
 
-   - 場所101件
-   - `wheelchair` のある場所25件（`yes` 17、`limited` 5、`no` 3）
-   - カテゴリ20件（辞書22件のうち場所のない2件、1306と1402を除く）
-   - 画像の作者とライセンス38件（`schema:license`が「Public domain」などURIでない4件は表示しない）
-   - 派生画像のある場所38件。幅は480・960・1280pxを上限とし、元画像が小さい場合は元画像の幅
-   - 電話28件、ウェブサイト50件、Wikipediaリンク48件、編集リンク102件
+   - 場所83件
+   - `wheelchair` のある場所14件（`yes` 9、`limited` 3、`no` 2）
+   - カテゴリ18件（辞書22件のうち、recordがないカテゴリと、目録の候補にない・OSM名がないrecordだけのカテゴリを除く）
+   - 画像の作者とライセンス27件（`schema:license`が「Public domain」などURIでない画像は表示しない）
+   - 派生画像のある場所27件。幅は480・960・1280pxを上限とし、元画像が小さい場合は元画像の幅
+   - 電話25件、ウェブサイト38件、Wikipediaリンク34件、編集リンク83件
 
    写真と派生画像の件数は、次のコマンドでも確認できます。
 
@@ -38,9 +43,9 @@
    ls public/generated/location-images/*.webp | wc -l
    ```
 
-4. 場所詳細は `/locations/location-detail/{encodeURIComponent(id)}` を開き、既知IDがHTTP 200で表示されることを確認します。
+4. 場所詳細は `/locations/location-detail/{encodeURIComponent(id)}` を開き、既知IDがHTTP 200で表示されることを確認します。目録の候補にないIDは404になります。
 
-件数がずれた場合は、公開データセット・OSM・辞書のどれが変わったかを確認します。OSM関連付けまたは空でない`name`がないrecordは、そのrecordだけを一覧から外し、ビルドは成功します。`gif-poi`コードがない・複数ある・辞書にないrecordがあるとビルドは失敗します。重複IDがある場合もビルドは失敗します。1402（保育園）は唯一のrecordがOSM名を持たないため、現在は0件です。
+件数がずれた場合は、公開データセット・OSM・辞書・目的地目録のどれが変わったかを確認します。目録の候補にないrecordは、そのrecordだけを一覧から外し、ビルドは成功します。OSM関連付けまたは空でない`name`がないrecordも同様です。`gif-poi`コードがない・複数ある・辞書にないrecordがあるとビルドは失敗します。重複IDがある場合もビルドは失敗します。1402（保育園）と1219（職業安定所）は目録の候補にあるもののOSM名を持たないため0件、1004（庭園）は目録の候補にないため0件です。
 
 ## 写真の派生画像
 

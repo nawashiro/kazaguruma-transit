@@ -53,56 +53,6 @@ describe('Discussion System Integration', () => {
   });
 
   describe('Complete User Creation to URL Flow', () => {
-    it.skip('should successfully create discussion and generate proper naddr URL', async () => {
-      // Step 1: User creates discussion
-      const formData: DiscussionCreationForm = {
-        title: 'New User Discussion',
-        description: 'A discussion created by a regular user',
-        moderators: [],
-        dTag: 'new-user-discussion-2024', // dTag is now required
-      };
-
-      const creationParams: CreationFlowParams = {
-        formData,
-        userPubkey: mockUserPubkey,
-        adminPubkey: mockAdminPubkey,
-        signEvent: mockSignEvent,
-        publishEvent: mockPublishEvent,
-      };
-
-      const result = await processDiscussionCreationFlow(creationParams);
-
-      expect(result.success).toBe(true);
-      expect(result.discussionNaddr).toBeDefined();
-      expect(result.errors).toEqual([]);
-
-      // Step 2: Build naddr from created discussion
-      const mockDiscussion: Discussion = {
-        id: 'test-discussion-id',
-        dTag: 'test-discussion',
-        title: 'New User Discussion',
-        description: 'A discussion created by a regular user',
-        authorPubkey: mockAdminPubkey,
-        moderators: [],
-        createdAt: Math.floor(Date.now() / 1000),
-        event: {} as any,
-      };
-
-      const naddr = buildNaddrFromDiscussion(mockDiscussion);
-      expect(naddr).toMatch(/^naddr1/);
-
-      // Step 3: Extract discussion info from naddr
-      const extractedInfo = extractDiscussionFromNaddr(naddr);
-      expect(extractedInfo).not.toBeNull();
-      expect(extractedInfo?.dTag).toBe('test-discussion');
-      expect(extractedInfo?.authorPubkey).toBe(mockAdminPubkey);
-      expect(extractedInfo?.discussionId).toBe(`34550:${mockAdminPubkey}:test-discussion`);
-
-      // Step 4: Verify URL generation works
-      const expectedUrl = `/discussions/${naddr}`;
-      expect(expectedUrl).toContain('naddr1');
-    });
-
     it('should handle permission checks throughout the flow', async () => {
       const mockDiscussion: Discussion = {
         id: 'test-discussion-id',

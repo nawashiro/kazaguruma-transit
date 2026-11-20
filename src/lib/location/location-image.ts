@@ -80,7 +80,8 @@ export function resolveLocationImage(location: {
     !isLocationImageData(image) ||
     typeof imageCreator !== "string" ||
     imageCreator.trim().length === 0 ||
-    !isAbsoluteHttpUrl(imageLicense)
+    typeof imageLicense !== "string" ||
+    imageLicense.trim().length === 0
   ) {
     return null;
   }

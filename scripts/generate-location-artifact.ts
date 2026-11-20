@@ -341,13 +341,13 @@ function parseLocationImage(record: JsonRecord): { imageUri: string; imageCreato
   const license = candidate["schema:license"];
   const creator = candidate["schema:creator"];
   const creatorName = isRecord(creator) ? creator["schema:name"] : undefined;
-  if (!isAbsoluteHttpUri(contentUrl) || !isAbsoluteHttpUri(license) || !isNonEmptyString(creatorName)) {
+  if (!isAbsoluteHttpUri(contentUrl) || !isNonEmptyString(license) || !isNonEmptyString(creatorName)) {
     return null;
   }
   return {
     imageUri: contentUrl as string,
     imageCreator: (creatorName as string).trim(),
-    imageLicense: license as string,
+    imageLicense: (license as string).trim(),
   };
 }
 

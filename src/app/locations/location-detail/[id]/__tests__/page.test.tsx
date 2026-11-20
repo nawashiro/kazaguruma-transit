@@ -637,6 +637,29 @@ describe("/locations/location-detail/[id] public server page", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 
+  it("shows a non-URI license as text without a link", async () => {
+    const { container } = await renderLocationDetailPage({
+      ...completeLocation,
+      imageLicense: "Public domain",
+    });
+
+    expect(container.querySelector("img")).not.toBeNull();
+    expect(screen.getByText(/さくら/)).toBeInTheDocument();
+    const figcaption = container.querySelector("figcaption");
+    expect(figcaption).toHaveTextContent("さくら・Public domain");
+    expect(figcaption?.querySelector("a")).toBeNull();
+    expect(screen.queryByRole("link", { name: /Public domain/ })).toBeNull();
+  });
+
+  it("keeps linking an absolute license URI", async () => {
+    await renderLocationDetailPage(completeLocation);
+
+    const licenseLink = screen.getByRole("link", {
+      name: /CC BY-SA 3\.0/,
+    });
+    expect(licenseLink).toHaveAttribute("href", completeLocation.imageLicense);
+  });
+
   it("shows the edit link before the source at the end of basic information", async () => {
     await renderLocationDetailPage({
       ...completeLocation,

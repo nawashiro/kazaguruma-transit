@@ -343,6 +343,36 @@ describe("server category page", () => {
     expect(detailLinks[1]).toHaveTextContent(farLocation.name);
   });
 
+  it("shows a non-URI license as text on the card", async () => {
+    const location: LocationWithArea = {
+      ...farLocation,
+      id: "urn:uuid:00000000-0000-4000-8000-000000000099",
+      imageLicense: "Public domain",
+      image: {
+        width: 1280,
+        height: 853,
+        variants: [
+          { width: 480, path: "/generated/location-images/0123456789abcdef-480.webp" },
+          { width: 960, path: "/generated/location-images/fedcba9876543210-960.webp" },
+          { width: 1280, path: "/generated/location-images/89abcdef01234567-1280.webp" },
+        ],
+      },
+    };
+    mockLoadLocationPageData.mockResolvedValue(successData([
+      { category: "公園", categoryId: "1302", locations: [location] },
+    ]));
+    const page = getCategoryPage();
+
+    const invocation = await invokePage(page, encodeURIComponent("1302"));
+    if (!renderSuccessfulPage(invocation)) {
+      return;
+    }
+
+    const attribution = screen.getByText("写真 さくら・Public domain");
+    expect(attribution.tagName).toBe("P");
+    expect(attribution.querySelector("a")).toBeNull();
+  });
+
   it.each([
     ["unknown", "does-not-exist"],
     ["empty", ""],

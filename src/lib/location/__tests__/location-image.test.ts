@@ -60,11 +60,37 @@ describe("resolveLocationImage", () => {
         imageLicense: "https://creativecommons.org/licenses/by-sa/4.0/",
       }),
     ).toBeNull();
+  });
+
+  it("keeps a non-URI license as recorded", () => {
     expect(
       resolveLocationImage({
         image: derivedImage,
         imageCreator: "さくら",
-        imageLicense: "not-a-url",
+        imageLicense: "Public domain",
+      }),
+    ).toEqual({
+      creator: "さくら",
+      license: "Public domain",
+      width: 1280,
+      height: 853,
+      variants: derivedImage.variants,
+    });
+  });
+
+  it("hides an image whose license is blank", () => {
+    expect(
+      resolveLocationImage({
+        image: derivedImage,
+        imageCreator: "さくら",
+        imageLicense: "   ",
+      }),
+    ).toBeNull();
+    expect(
+      resolveLocationImage({
+        image: derivedImage,
+        imageCreator: "さくら",
+        imageLicense: "",
       }),
     ).toBeNull();
   });

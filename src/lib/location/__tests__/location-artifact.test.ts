@@ -655,6 +655,53 @@ describe("readLocationArtifact runtime artifact boundary", () => {
       });
     });
 
+    it("accepts a non-URI image license", async () => {
+      const locations = structuredClone(validLocations) as Array<Record<string, unknown>>;
+      (locations[0] as Record<string, unknown>)["locations"] = [
+        {
+          ...(validLocations[0].locations[0] as object),
+          imageLicense: "Public domain",
+        },
+      ];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithLocations({
+          sources: { ...validArtifact.sources, locations },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expect(result).toEqual({
+        status: "success",
+        artifact: expect.objectContaining({
+          sources: expect.objectContaining({
+            locations: [
+              expect.objectContaining({
+                locations: [
+                  expect.objectContaining({ imageLicense: "Public domain" }),
+                ],
+              }),
+            ],
+          }),
+        }),
+      });
+    });
+
+    it("rejects a blank image license", async () => {
+      const locations = structuredClone(validLocations) as Array<Record<string, unknown>>;
+      (locations[0] as Record<string, unknown>)["locations"] = [
+        {
+          ...(validLocations[0].locations[0] as object),
+          imageLicense: "",
+        },
+      ];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithLocations({
+          sources: { ...validArtifact.sources, locations },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+
     it("rejects missing locations", async () => {
       const withoutLocations = {
         ...validArtifact,

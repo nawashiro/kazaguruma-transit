@@ -29,12 +29,12 @@
 
 3. `public/generated/location-data.json` を確認します。目安は次のとおりです。
 
-   - 場所83件
-   - `wheelchair` のある場所14件（`yes` 9、`limited` 3、`no` 2）
+   - 場所79件
+   - `wheelchair` のある場所13件（`yes` 8、`limited` 3、`no` 2）
    - カテゴリ18件（辞書22件のうち、recordがないカテゴリと、目録の候補にない・OSM名がないrecordだけのカテゴリを除く）
-   - 画像の作者とライセンス27件（`schema:license`が「Public domain」などURIでない画像は表示しない）
-   - 派生画像のある場所27件。幅は480・960・1280pxを上限とし、元画像が小さい場合は元画像の幅
-   - 電話25件、ウェブサイト38件、Wikipediaリンク34件、編集リンク83件
+   - 画像の作者とライセンス29件（`schema:license`は非空の文字列なら表示し、絶対http(s) URIのときだけリンクにする）
+   - 派生画像のある場所29件。幅は480・960・1280pxを上限とし、元画像が小さい場合は元画像の幅
+   - 電話24件、ウェブサイト37件、Wikipediaリンク33件、編集リンク79件
 
    写真と派生画像の件数は、次のコマンドでも確認できます。
 
@@ -52,7 +52,7 @@
 - 写真は `Special:FilePath` の1280px以下から取得し、同時2接続、間隔を空けて要求します。429と5xxは `Retry-After` を尊重して最大3回再試行し、User-Agentは `KazagurumaTransit/1.0 (+https://github.com/nawashiro/kazaguruma-transit)` です。
 - `sharp` でEXIFの向きを適用し、480・960・1280pxを候補とし、元画像の幅が候補より小さい場合は元画像の幅でWebP（品質80）を生成します。元画像を拡大しません。
 - 出力名は `<内容ハッシュ16桁>-<幅>.webp` です。ハッシュは出力バイトのSHA-256先頭16桁で、同じ入力なら同じ名前、内容が変われば別の名前になります。
-- artifactの各場所には `image` として元画像の幅・高さと `variants`（幅と `/generated/location-images/<ファイル名>` のパス）が入ります。`imageUri`・`imageCreator`・`imageLicense` は取得元の記録として残り、ページは `imageUri` を表示しません。
+- artifactの各場所には `image` として元画像の幅・高さと `variants`（幅と `/generated/location-images/<ファイル名>` のパス）が入ります。`imageUri`・`imageCreator`・`imageLicense` は取得元の記録として残り、ページは `imageUri` を表示しません。`imageLicense` は絶対http(s) URIのときだけ詳細ページでリンクにし、それ以外は記録された文字列のままテキストで示します。「Public domain」のような非URIのライセンスも、作者名があれば表示します。
 - 取得または変換に失敗した写真は `image` なしになり、一覧・詳細はその写真を表示しません。ビルドは続行し、最後に `写真を取得できませんでした: N件` を警告します。原寸URLへのフォールバックはしません。
 - `upload.wikimedia.org/wikipedia/commons/` 以外の写真は対象外として同じ警告に数えます。
 

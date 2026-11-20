@@ -468,15 +468,19 @@ function LocationDetailContent({
           />
           <figcaption className="mt-2 text-base">
             {image.creator}・
-            <a
-              href={image.license}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link"
-            >
-              {imageLicenseLabel(image.license)}
-              <span className="sr-only">（新しいタブで開きます）</span>
-            </a>
+            {isAbsoluteHttpUrl(image.license) ? (
+              <a
+                href={image.license}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link"
+              >
+                {imageLicenseLabel(image.license)}
+                <span className="sr-only">（新しいタブで開きます）</span>
+              </a>
+            ) : (
+              imageLicenseLabel(image.license)
+            )}
           </figcaption>
         </figure>
       )}

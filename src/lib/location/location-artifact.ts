@@ -218,7 +218,7 @@ function validateLocationEntry(value: unknown, fieldPath: string): LocationEntry
   if (hasAnyImage) {
     imageUri = requireAbsoluteHttpUri(value["imageUri"], `${fieldPath}.imageUri`);
     imageCreator = requireNonEmptyString(value["imageCreator"], `${fieldPath}.imageCreator`);
-    imageLicense = requireAbsoluteHttpUri(value["imageLicense"], `${fieldPath}.imageLicense`);
+    imageLicense = requireNonEmptyString(value["imageLicense"], `${fieldPath}.imageLicense`);
   }
 
   const hasImage = value["image"] !== undefined && value["image"] !== null;

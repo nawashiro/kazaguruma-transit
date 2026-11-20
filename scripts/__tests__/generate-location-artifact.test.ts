@@ -1175,6 +1175,57 @@ describe("generateLocationArtifact build boundary", () => {
       expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
     });
 
+    it("keeps an image whose license is recorded as text", async () => {
+      const places = accessiblePlaces() as { "@graph": Array<Record<string, unknown>> };
+      (places["@graph"][0] as Record<string, unknown>)["schema:image"] = {
+        "@type": "schema:ImageObject",
+        "schema:contentUrl": "https://fixtures.example.test/images/city.jpg",
+        "schema:license": "Public domain",
+        "schema:creator": {
+          "@type": "schema:Person",
+          "schema:name": "さくら",
+        },
+      };
+      const harness = createHarness({ placesJsonLd: places, osmMirror: accessibleOsm() });
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { locations: Array<{ locations: Array<Record<string, unknown>> }> };
+      };
+      const cityEntry = artifact.sources.locations
+        .flatMap((c) => c.locations)
+        .find((l) => l["id"] === ID.cityOffice);
+      expect(cityEntry).toMatchObject({
+        imageUri: "https://fixtures.example.test/images/city.jpg",
+        imageCreator: "さくら",
+        imageLicense: "Public domain",
+      });
+    });
+
+    it.each([
+      ["empty", ""],
+      ["whitespace", "   "],
+    ])("skips an image whose license is %s", async (_caseName, license) => {
+      const places = accessiblePlaces() as { "@graph": Array<Record<string, unknown>> };
+      (places["@graph"][0] as Record<string, unknown>)["schema:image"] = {
+        "@type": "schema:ImageObject",
+        "schema:contentUrl": "https://fixtures.example.test/images/city.jpg",
+        "schema:license": license,
+        "schema:creator": {
+          "@type": "schema:Person",
+          "schema:name": "さくら",
+        },
+      };
+      const harness = createHarness({ placesJsonLd: places, osmMirror: accessibleOsm() });
+      const artifact = (await invokeGenerator(moduleState, harness.options)) as {
+        sources: { locations: Array<{ locations: Array<Record<string, unknown>> }> };
+      };
+      const cityEntry = artifact.sources.locations
+        .flatMap((c) => c.locations)
+        .find((l) => l["id"] === ID.cityOffice);
+      expect(cityEntry?.["imageUri"]).toBeUndefined();
+      expect(cityEntry?.["imageLicense"]).toBeUndefined();
+      expect(harness.writeArtifact).toHaveBeenCalledTimes(1);
+    });
+
     it("fails when the same urn:uuid appears twice", async () => {
       const places = accessiblePlaces() as { "@graph": Array<Record<string, unknown>> };
       places["@graph"].push(structuredClone(places["@graph"][0]));

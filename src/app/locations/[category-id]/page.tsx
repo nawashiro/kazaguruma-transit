@@ -395,9 +395,9 @@ function DistanceLocationList({ bands }: { bands: readonly DistanceBand[] }) {
 function DataProviderCard() {
   return (
     <Card title="データ提供元" className="ruby-text">
-      <p>千代田区の主要施設を表示しています。</p>
+      <p>データは毎月いちど<a href="https://github.com/nawashiro/chiyoda_city_main_facilities" className="link">千代田区区民施設向けデータ</a>に取り込んでいます。</p>
       <p>
-        バリアフリー情報はOpenStreetMapのwheelchairタグに基づきます。電話・ウェブサイトもOpenStreetMap由来です。最新情報はWheelMapまたはOpenStreetMapで確認でき、OSMで修正できます。
+        最新情報は<a href="https://wheelmap.org" className="link">WheelMap</a>または<a href="https://openstreetmap.org" className="link">OpenStreetMap</a>から修正できます。
       </p>
       <p>
         誤りがあるときは、OpenStreetMapまたはWheelMapで修正するか、

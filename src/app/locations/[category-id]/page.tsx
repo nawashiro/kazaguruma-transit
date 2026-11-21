@@ -326,7 +326,8 @@ function LocationSummary({
         </div>
         {image !== null && (
           <p className="text-base">
-            写真 {image.creator}・{imageLicenseLabel(image.license)}
+            写真 {image.creator !== undefined ? image.creator : "作者不明"}・
+            {imageLicenseLabel(image.license)}
           </p>
         )}
       </div>

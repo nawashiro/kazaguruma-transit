@@ -58,19 +58,19 @@ function readSourceUris(appConfig: unknown): DestinationCatalogSourceUris {
   if (!isRecord(appConfig)) {
     throw new Error("app-config.jsonの形式が不正です");
   }
-  const placesUri = appConfig.placesJsonLdUri;
+  const datasetJsonLdUri = appConfig.datasetJsonLdUri;
   const osmMirrorUri = appConfig.osmMirrorUri;
   if (
-    typeof placesUri !== "string" ||
+    typeof datasetJsonLdUri !== "string" ||
     typeof osmMirrorUri !== "string" ||
-    !isAbsoluteHttpUri(placesUri) ||
+    !isAbsoluteHttpUri(datasetJsonLdUri) ||
     !isAbsoluteHttpUri(osmMirrorUri)
   ) {
     throw new Error(
-      "app-config.jsonのplacesJsonLdUriとosmMirrorUriは絶対 http(s) URI である必要があります",
+      "app-config.jsonのdatasetJsonLdUriとosmMirrorUriは絶対 http(s) URI である必要があります",
     );
   }
-  return { placesUri, osmMirrorUri };
+  return { datasetJsonLdUri, osmMirrorUri };
 }
 
 async function fetchJson(
@@ -88,13 +88,19 @@ async function fetchJson(
   return response.json();
 }
 
+function hasSchemaType(record: JsonRecord, type: string): boolean {
+  const raw = record["@type"];
+  return raw === type || (Array.isArray(raw) && raw.includes(type));
+}
+
 function readPlaceRecords(payload: unknown): JsonRecord[] {
   if (!isRecord(payload) || !Array.isArray(payload["@graph"])) {
-    throw new Error("公開JSON-LDの形式が不正です");
+    throw new Error("公開グラフの形式が不正です");
   }
   return payload["@graph"].filter(
     (record): record is JsonRecord =>
       isRecord(record) &&
+      hasSchemaType(record, "schema:Place") &&
       typeof record["@id"] === "string" &&
       record["@id"].startsWith("urn:uuid:"),
   );
@@ -227,7 +233,7 @@ function applySelection(
 }
 
 /**
- * 公開JSON-LDとOSMタグミラーから候補を抽出し、既存の掲載選択を引き継いだ
+ * 公開グラフとOSMタグミラーから候補を抽出し、既存の掲載選択を引き継いだ
  * 目的地目録を返す。writer は全文を検証した後に一度だけ呼ぶ。
  */
 export async function updateDestinationCatalog(
@@ -252,7 +258,7 @@ export async function updateDestinationCatalog(
   const source = readSourceUris(options.appConfig);
 
   const [placesPayload, osmPayload, stops, existingCatalog] = await Promise.all([
-    fetchJson("公開JSON-LD", source.placesUri, options.transport),
+    fetchJson("公開グラフ", source.datasetJsonLdUri, options.transport),
     fetchJson("OSMタグミラー", source.osmMirrorUri, options.transport),
     options.loadStops(),
     options.readExistingCatalog(),

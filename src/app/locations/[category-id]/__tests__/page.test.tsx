@@ -373,6 +373,36 @@ describe("server category page", () => {
     expect(attribution.querySelector("a")).toBeNull();
   });
 
+  it("shows 作者不明 on a card when the image has no creator", async () => {
+    const location: LocationWithArea = {
+      ...farLocation,
+      id: "urn:uuid:00000000-0000-4000-8000-000000000098",
+      imageCreator: undefined,
+      imageLicense: "https://creativecommons.org/licenses/by/4.0/",
+      image: {
+        width: 1280,
+        height: 853,
+        variants: [
+          { width: 480, path: "/generated/location-images/0123456789abcdef-480.webp" },
+          { width: 960, path: "/generated/location-images/fedcba9876543210-960.webp" },
+          { width: 1280, path: "/generated/location-images/89abcdef01234567-1280.webp" },
+        ],
+      },
+    };
+    mockLoadLocationPageData.mockResolvedValue(successData([
+      { category: "公園", categoryId: "1302", locations: [location] },
+    ]));
+    const page = getCategoryPage();
+
+    const invocation = await invokePage(page, encodeURIComponent("1302"));
+    if (!renderSuccessfulPage(invocation)) {
+      return;
+    }
+
+    const attribution = screen.getByText("写真 作者不明・CC BY 4.0");
+    expect(attribution.tagName).toBe("P");
+  });
+
   it.each([
     ["unknown", "does-not-exist"],
     ["empty", ""],

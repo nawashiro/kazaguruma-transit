@@ -48,17 +48,36 @@ describe("resolveLocationImage", () => {
     ).toBeNull();
   });
 
-  it("hides an image that lacks attribution", () => {
-    expect(resolveLocationImage({ image: derivedImage })).toBeNull();
+  it("keeps an image with a license when the creator is absent", () => {
     expect(
-      resolveLocationImage({ image: derivedImage, imageCreator: "さくら" }),
-    ).toBeNull();
+      resolveLocationImage({
+        image: derivedImage,
+        imageLicense: "https://creativecommons.org/licenses/by-sa/4.0/",
+      }),
+    ).toEqual({
+      license: "https://creativecommons.org/licenses/by-sa/4.0/",
+      width: 1280,
+      height: 853,
+      variants: derivedImage.variants,
+    });
     expect(
       resolveLocationImage({
         image: derivedImage,
         imageCreator: "   ",
         imageLicense: "https://creativecommons.org/licenses/by-sa/4.0/",
       }),
+    ).toEqual({
+      license: "https://creativecommons.org/licenses/by-sa/4.0/",
+      width: 1280,
+      height: 853,
+      variants: derivedImage.variants,
+    });
+  });
+
+  it("hides an image without a license", () => {
+    expect(resolveLocationImage({ image: derivedImage })).toBeNull();
+    expect(
+      resolveLocationImage({ image: derivedImage, imageCreator: "さくら" }),
     ).toBeNull();
   });
 

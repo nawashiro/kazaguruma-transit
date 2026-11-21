@@ -101,10 +101,9 @@ export function locationImageFileName(
 }
 
 export interface LocationArtifactSourceUris {
-  placesJsonLdUri: string;
+  datasetJsonLdUri: string;
   osmMirrorUri: string;
   townGeoJsonUri: string;
-  categoryNamesUri: string;
   wikidataMirrorUri: string;
 }
 
@@ -144,73 +143,245 @@ export interface RouteDestinationCategory {
   locations: RouteDestinationLocation[];
 }
 
-interface CategoryName {
+interface CategoryTerm {
+  id: string;
   code: string;
   name: string;
 }
 
-const CATEGORY_CODE_PATTERN = /^[0-9]{4}$/u;
-
-function parseCategoryNames(value: unknown): CategoryName[] {
-  if (!isRecord(value) || value["@type"] !== "schema:DefinedTermSet") {
-    fail("カテゴリ名辞書は schema:DefinedTermSet である必要があります");
-  }
-
-  const terms = value["schema:hasDefinedTerm"];
-  if (!Array.isArray(terms) || terms.length === 0) {
-    fail("カテゴリ名辞書の schema:hasDefinedTerm は空でない配列である必要があります");
-  }
-
-  const categories: CategoryName[] = [];
-  const codes = new Set<string>();
-  terms.forEach((term, index) => {
-    const termPath = `カテゴリ名辞書の schema:hasDefinedTerm[${index}]`;
-    if (!isRecord(term)) {
-      fail(`${termPath} はオブジェクトである必要があります`);
-    }
-
-    const id = term["@id"];
-    if (typeof id !== "string") {
-      fail(`${termPath}.@id は文字列である必要があります`);
-    }
-    const fragmentIndex = id.lastIndexOf("#");
-    const code =
-      fragmentIndex === -1 ? "" : id.slice(fragmentIndex + 1);
-    if (!CATEGORY_CODE_PATTERN.test(code)) {
-      fail(`${termPath}.@id のfragmentは4桁コードである必要があります`);
-    }
-    if (codes.has(code)) {
-      fail(`カテゴリ名辞書に重複したコードがあります: ${code}`);
-    }
-    codes.add(code);
-
-    const name = term["schema:name"];
-    if (!isNonEmptyString(name)) {
-      fail(`${termPath}.schema:name は空でない文字列である必要があります`);
-    }
-
-    categories.push({ code, name });
-  });
-
-  return categories;
+interface DatasetGraph {
+  places: Array<{ id: string; record: JsonRecord }>;
+  placesById: Map<string, JsonRecord>;
+  terms: CategoryTerm[];
+  codeById: Map<string, string>;
 }
 
-function parsePlacesJsonLd(value: unknown): Map<string, JsonRecord> {
-  if (!isRecord(value) || !Array.isArray(value["@graph"])) {
-    fail("places JSON-LD must contain an @graph array");
-  }
+const CATEGORY_CODE_PATTERN = /^[0-9]{4}$/u;
+const UUID_URN_PATTERN =
+  /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
-  const records = new Map<string, JsonRecord>();
-  for (const record of value["@graph"]) {
-    if (!isRecord(record)) {
+function hasSchemaType(value: unknown, type: string): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+  const raw = value["@type"];
+  return raw === type || (Array.isArray(raw) && raw.includes(type));
+}
+
+function toNodeArray(value: unknown): unknown[] {
+  if (value === undefined || value === null) {
+    return [];
+  }
+  return Array.isArray(value) ? value : [value];
+}
+
+function shapePathId(property: unknown): string | null {
+  if (!isRecord(property)) {
+    return null;
+  }
+  const path = property["sh:path"];
+  if (isRecord(path) && typeof path["@id"] === "string") {
+    return path["@id"];
+  }
+  return typeof path === "string" ? path : null;
+}
+
+function shapeTargetClass(shape: JsonRecord): string | null {
+  const target = shape["sh:targetClass"];
+  if (isRecord(target) && typeof target["@id"] === "string") {
+    return target["@id"];
+  }
+  return typeof target === "string" ? target : null;
+}
+
+function shapeProperty(shape: JsonRecord, path: string): JsonRecord | null {
+  for (const property of toNodeArray(shape["sh:property"])) {
+    if (!isRecord(property) || shapePathId(property) !== path) {
       continue;
     }
-    const id = record["@id"];
-    if (typeof id === "string" && id.startsWith("urn:uuid:")) {
-      records.set(id, record);
+    return property;
+  }
+  return null;
+}
+
+function assertDatasetShape(graphNodes: unknown[]): void {
+  const shapes = graphNodes.filter(
+    (node): node is JsonRecord =>
+      isRecord(node) && hasSchemaType(node, "sh:NodeShape"),
+  );
+  const placeShape = shapes.find(
+    (shape) => shapeTargetClass(shape) === "schema:Place",
+  );
+  if (placeShape === undefined) {
+    fail("公開グラフに schema:Place の sh:NodeShape がありません");
+  }
+  for (const required of [
+    "schema:geo",
+    "schema:image",
+    "schema:keywords",
+    "rdfs:seeAlso",
+  ]) {
+    if (shapeProperty(placeShape, required) === null) {
+      fail(`公開グラフのPlace形状が ${required} を宣言していません`);
     }
   }
-  return records;
+
+  const termShape = shapes.find(
+    (shape) => shapeTargetClass(shape) === "schema:DefinedTerm",
+  );
+  if (termShape === undefined) {
+    fail("公開グラフに schema:DefinedTerm の sh:NodeShape がありません");
+  }
+  if (shapeProperty(termShape, "schema:name") === null) {
+    fail("公開グラフのDefinedTerm形状が schema:name を宣言していません");
+  }
+  const identifierProperty = shapeProperty(termShape, "schema:identifier");
+  if (identifierProperty === null) {
+    fail("公開グラフのDefinedTerm形状が schema:identifier を宣言していません");
+  }
+  const identifierNode = identifierProperty["sh:node"];
+  const identifierProperties = isRecord(identifierNode)
+    ? toNodeArray(identifierNode["sh:property"])
+    : [];
+  const hasGifPoi = identifierProperties.some((property) => {
+    if (!isRecord(property) || shapePathId(property) !== "schema:propertyID") {
+      return false;
+    }
+    return property["sh:hasValue"] === "gif-poi";
+  });
+  if (!hasGifPoi) {
+    fail("公開グラフのDefinedTerm形状が gif-poi 識別子を宣言していません");
+  }
+}
+
+function parseCategoryTerm(
+  raw: unknown,
+  id: string,
+  fieldPath: string,
+): CategoryTerm {
+  if (!isRecord(raw)) {
+    fail(`${fieldPath} はオブジェクトである必要があります`);
+  }
+  if (!hasSchemaType(raw, "schema:DefinedTerm")) {
+    fail(`${fieldPath} は schema:DefinedTerm である必要があります`);
+  }
+  if (!UUID_URN_PATTERN.test(id)) {
+    fail(`${fieldPath}.@id は urn:uuid 形式である必要があります`);
+  }
+  const name = raw["schema:name"];
+  if (!isNonEmptyString(name)) {
+    fail(`${fieldPath}.schema:name は空でない文字列である必要があります`);
+  }
+
+  const identifiers = toNodeArray(raw["schema:identifier"]).filter(
+    (identifier): identifier is JsonRecord =>
+      isRecord(identifier) && identifier["schema:propertyID"] === "gif-poi",
+  );
+  if (identifiers.length !== 1) {
+    fail(`${fieldPath}.schema:identifier の gif-poi は1件である必要があります`);
+  }
+  const code = identifiers[0]["schema:value"];
+  if (typeof code !== "string" || !CATEGORY_CODE_PATTERN.test(code)) {
+    fail(`${fieldPath} の gif-poi コードは4桁である必要があります`);
+  }
+
+  return { id, code, name: name.trim() };
+}
+
+function parseDatasetGraph(value: unknown): DatasetGraph {
+  if (!isRecord(value) || !Array.isArray(value["@graph"])) {
+    fail("公開グラフは @graph 配列を持つ必要があります");
+  }
+  const graphNodes = value["@graph"];
+  assertDatasetShape(graphNodes);
+
+  const rawTerms = new Map<string, JsonRecord>();
+  for (const node of graphNodes) {
+    if (!isRecord(node) || !hasSchemaType(node, "schema:DefinedTerm")) {
+      continue;
+    }
+    const id = node["@id"];
+    if (typeof id !== "string") {
+      fail("DefinedTerm の @id は文字列である必要があります");
+    }
+    if (rawTerms.has(id)) {
+      fail(`DefinedTerm の @id が重複しています: ${id}`);
+    }
+    rawTerms.set(id, node);
+  }
+
+  const termSets = graphNodes.filter(
+    (node): node is JsonRecord =>
+      isRecord(node) && hasSchemaType(node, "schema:DefinedTermSet"),
+  );
+  if (termSets.length !== 1) {
+    fail("公開グラフの schema:DefinedTermSet は1件である必要があります");
+  }
+  const termRefs = termSets[0]["schema:hasDefinedTerm"];
+  if (!Array.isArray(termRefs) || termRefs.length === 0) {
+    fail("schema:hasDefinedTerm は空でない配列である必要があります");
+  }
+
+  const terms: CategoryTerm[] = [];
+  const codeById = new Map<string, string>();
+  const seenCodes = new Set<string>();
+  termRefs.forEach((ref, index) => {
+    const refPath = `schema:hasDefinedTerm[${index}]`;
+    const id = isRecord(ref) ? ref["@id"] : undefined;
+    if (typeof id !== "string") {
+      fail(`${refPath} の @id は文字列である必要があります`);
+    }
+    const rawTerm = rawTerms.get(id);
+    if (rawTerm === undefined) {
+      fail(`${refPath} が参照する DefinedTerm がありません: ${id}`);
+    }
+    const term = parseCategoryTerm(rawTerm, id, `DefinedTerm ${id}`);
+    if (seenCodes.has(term.code)) {
+      fail(`カテゴリコードが重複しています: ${term.code}`);
+    }
+    seenCodes.add(term.code);
+    terms.push(term);
+    codeById.set(term.id, term.code);
+  });
+
+  const places: Array<{ id: string; record: JsonRecord }> = [];
+  const placesById = new Map<string, JsonRecord>();
+  for (const node of graphNodes) {
+    if (!isRecord(node) || !hasSchemaType(node, "schema:Place")) {
+      continue;
+    }
+    const id = node["@id"];
+    if (typeof id !== "string" || !UUID_URN_PATTERN.test(id)) {
+      fail("Place の @id は urn:uuid 形式である必要があります");
+    }
+    if (placesById.has(id)) {
+      fail(`公開グラフに重複した場所IDがあります: ${id}`);
+    }
+    places.push({ id, record: node });
+    placesById.set(id, node);
+  }
+
+  return { places, placesById, terms, codeById };
+}
+
+function readCategoryCodes(record: JsonRecord, dataset: DatasetGraph): string[] {
+  const raw = record["schema:keywords"];
+  const values = toNodeArray(raw);
+  const codes: string[] = [];
+  for (const value of values) {
+    const id = isRecord(value) ? value["@id"] : undefined;
+    if (typeof id !== "string") {
+      fail("schema:keywords の値は @id を持つ必要があります");
+    }
+    const code = dataset.codeById.get(id);
+    if (code === undefined) {
+      fail(`schema:keywords の参照先termがありません: ${id}`);
+    }
+    if (!codes.includes(code)) {
+      codes.push(code);
+    }
+  }
+  return codes;
 }
 
 function parseOsmNames(value: unknown): Map<string, string | null> {
@@ -285,29 +456,6 @@ function parseOsmDetails(value: unknown): Map<string, OsmElementDetail> {
   return details;
 }
 
-function parsePlacesList(value: unknown): Array<{ id: string; record: JsonRecord }> {
-  if (!isRecord(value) || !Array.isArray(value["@graph"])) {
-    fail("places JSON-LD must contain an @graph array");
-  }
-  const seen = new Set<string>();
-  const list: Array<{ id: string; record: JsonRecord }> = [];
-  for (const record of value["@graph"]) {
-    if (!isRecord(record)) {
-      continue;
-    }
-    const id = record["@id"];
-    if (typeof id !== "string" || !id.startsWith("urn:uuid:")) {
-      continue;
-    }
-    if (seen.has(id)) {
-      fail(`公開JSON-LDに重複したIDがあります: ${id}`);
-    }
-    seen.add(id);
-    list.push({ id, record });
-  }
-  return list;
-}
-
 function parseOsmElementRef(key: string): { type: "node" | "way" | "relation"; id: number } | null {
   const slash = key.indexOf("/");
   if (slash === -1) {
@@ -328,7 +476,13 @@ function mapWheelchair(raw: string | null): "yes" | "limited" | "no" | null {
   return null;
 }
 
-function parseLocationImage(record: JsonRecord): { imageUri: string; imageCreator: string; imageLicense: string } | null {
+interface LocationImageAttribution {
+  imageUri: string;
+  imageCreator?: string;
+  imageLicense: string;
+}
+
+function parseLocationImage(record: JsonRecord): LocationImageAttribution | null {
   const rawImage = record["schema:image"];
   if (rawImage === undefined || rawImage === null) {
     return null;
@@ -341,14 +495,17 @@ function parseLocationImage(record: JsonRecord): { imageUri: string; imageCreato
   const license = candidate["schema:license"];
   const creator = candidate["schema:creator"];
   const creatorName = isRecord(creator) ? creator["schema:name"] : undefined;
-  if (!isAbsoluteHttpUri(contentUrl) || !isNonEmptyString(license) || !isNonEmptyString(creatorName)) {
+  if (!isAbsoluteHttpUri(contentUrl) || !isNonEmptyString(license)) {
     return null;
   }
-  return {
-    imageUri: contentUrl as string,
-    imageCreator: (creatorName as string).trim(),
-    imageLicense: (license as string).trim(),
+  const attribution: LocationImageAttribution = {
+    imageUri: contentUrl,
+    imageLicense: license.trim(),
   };
+  if (isNonEmptyString(creatorName)) {
+    attribution.imageCreator = creatorName.trim();
+  }
+  return attribution;
 }
 
 function parseRelatedPages(record: JsonRecord): Array<{ name: string; url: string }> {
@@ -527,24 +684,6 @@ function readRouteDestinationCoordinates(
   return { lat, lng };
 }
 
-function readGifPoiCode(record: JsonRecord, id: string): string {
-  const identifiers = record["schema:identifier"];
-  const codes = Array.isArray(identifiers)
-    ? identifiers
-        .filter(isRecord)
-        .filter((identifier) => identifier["schema:propertyID"] === "gif-poi")
-        .map((identifier) => identifier["schema:value"])
-        .filter((value): value is string => isNonEmptyString(value))
-    : [];
-
-  if (codes.length !== 1) {
-    fail(
-      `掲載recordのgif-poi分類コードは1件である必要があります: ${id} (${codes.length}件)`,
-    );
-  }
-  return codes[0];
-}
-
 export interface LocationEntry {
   id: string;
   name: string;
@@ -572,28 +711,21 @@ export interface LocationCategory {
 
 function buildLocations(
   catalogIds: ReadonlySet<string>,
-  categoryNames: CategoryName[],
-  placesPayload: unknown,
+  dataset: DatasetGraph,
   osmPayload: unknown,
   wikidataPayload: unknown,
 ): LocationCategory[] {
-  const entries = parsePlacesList(placesPayload);
   const osmDetails = parseOsmDetails(osmPayload);
   const wikidata = parseWikidataMirror(wikidataPayload);
-  const knownCodes = new Set(categoryNames.map((category) => category.code));
   const locationsByCode = new Map<string, LocationEntry[]>();
+  let excludedWithoutCategory = 0;
 
-  for (const { id, record } of entries) {
+  for (const { id, record } of dataset.places) {
     if (!catalogIds.has(id)) {
       continue;
     }
 
     const coordinates = readRouteDestinationCoordinates(record, id);
-    const code = readGifPoiCode(record, id);
-    if (!knownCodes.has(code)) {
-      fail(`gif-poiコードがカテゴリ名辞書にありません: ${code} (${id})`);
-    }
-
     const osmElementKey = findOsmElementKey(record["rdfs:seeAlso"]);
     if (osmElementKey === null) {
       continue;
@@ -604,6 +736,12 @@ function buildLocations(
     }
     const osmElement = parseOsmElementRef(osmElementKey);
     if (osmElement === null) {
+      continue;
+    }
+
+    const codes = readCategoryCodes(record, dataset);
+    if (codes.length === 0) {
+      excludedWithoutCategory += 1;
       continue;
     }
 
@@ -621,7 +759,9 @@ function buildLocations(
     };
     if (image !== null) {
       entry.imageUri = image.imageUri;
-      entry.imageCreator = image.imageCreator;
+      if (image.imageCreator !== undefined) {
+        entry.imageCreator = image.imageCreator;
+      }
       entry.imageLicense = image.imageLicense;
     }
     const phone = normalizePhone(detail.phone ?? detail.contactPhone);
@@ -645,49 +785,51 @@ function buildLocations(
     if (typeof detail.openingHours === "string" && detail.openingHours.trim().length > 0) {
       entry.openingHours = detail.openingHours as string;
     }
-    const bucket = locationsByCode.get(code) ?? [];
-    bucket.push(entry);
-    locationsByCode.set(code, bucket);
+    for (const code of codes) {
+      const bucket = locationsByCode.get(code) ?? [];
+      bucket.push(entry);
+      locationsByCode.set(code, bucket);
+    }
   }
 
-  return categoryNames.flatMap((category): LocationCategory[] => {
-    const locations = locationsByCode.get(category.code);
+  if (excludedWithoutCategory > 0) {
+    try {
+      process.stderr.write(
+        `カテゴリのない場所を除外しました: ${excludedWithoutCategory}件\n`,
+      );
+    } catch {
+      // ignore logging failure
+    }
+  }
+
+  return dataset.terms.flatMap((term): LocationCategory[] => {
+    const locations = locationsByCode.get(term.code);
     if (locations === undefined || locations.length === 0) {
       return [];
     }
-    return [{ category: category.name, categoryId: category.code, locations }];
+    return [{ category: term.name, categoryId: term.code, locations }];
   });
 }
 
 function buildRouteDestinations(
   catalog: DestinationCatalog,
-  categoryNames: CategoryName[],
-  placesPayload: unknown,
+  dataset: DatasetGraph,
   osmPayload: unknown,
 ): RouteDestinationCategory[] {
-  const records = parsePlacesJsonLd(placesPayload);
   const osmNames = parseOsmNames(osmPayload);
-  const knownCodes = new Set(categoryNames.map((category) => category.code));
   const locationsByCode = new Map<string, RouteDestinationLocation[]>();
 
-  for (const entry of catalog.places) {
-    if (!entry.includeInRouteForm) {
+  for (const item of catalog.places) {
+    if (!item.includeInRouteForm) {
       continue;
     }
 
-    const record = records.get(entry.id);
+    const record = dataset.placesById.get(item.id);
     if (record === undefined) {
-      fail(`公開JSON-LDに掲載IDがありません: ${entry.id}`);
+      fail(`公開グラフに掲載IDがありません: ${item.id}`);
     }
 
-    const coordinates = readRouteDestinationCoordinates(record, entry.id);
-    const code = readGifPoiCode(record, entry.id);
-    if (!knownCodes.has(code)) {
-      fail(
-        `gif-poiコードがカテゴリ名辞書にありません: ${code} (${entry.id})`,
-      );
-    }
-
+    const coordinates = readRouteDestinationCoordinates(record, item.id);
     const osmElementKey = findOsmElementKey(record["rdfs:seeAlso"]);
     const name =
       osmElementKey === null ? undefined : osmNames.get(osmElementKey);
@@ -695,20 +837,23 @@ function buildRouteDestinations(
       continue;
     }
 
-    const locations = locationsByCode.get(code) ?? [];
-    locations.push({ name, lat: coordinates.lat, lng: coordinates.lng });
-    locationsByCode.set(code, locations);
+    const codes = readCategoryCodes(record, dataset);
+    for (const code of codes) {
+      const locations = locationsByCode.get(code) ?? [];
+      locations.push({ name, lat: coordinates.lat, lng: coordinates.lng });
+      locationsByCode.set(code, locations);
+    }
   }
 
-  return categoryNames.flatMap((category): RouteDestinationCategory[] => {
-    const locations = locationsByCode.get(category.code);
+  return dataset.terms.flatMap((term): RouteDestinationCategory[] => {
+    const locations = locationsByCode.get(term.code);
     if (locations === undefined || locations.length === 0) {
       return [];
     }
     return [
       {
-        category: category.name,
-        categoryId: category.code,
+        category: term.name,
+        categoryId: term.code,
         locations,
       },
     ];
@@ -919,9 +1064,9 @@ function validateSourceUris(value: unknown): LocationArtifactSourceUris {
   }
 
   return {
-    placesJsonLdUri: requireAbsoluteHttpUri(
-      value.placesJsonLdUri,
-      "appConfig.placesJsonLdUri",
+    datasetJsonLdUri: requireAbsoluteHttpUri(
+      value.datasetJsonLdUri,
+      "appConfig.datasetJsonLdUri",
     ),
     osmMirrorUri: requireAbsoluteHttpUri(
       value.osmMirrorUri,
@@ -930,10 +1075,6 @@ function validateSourceUris(value: unknown): LocationArtifactSourceUris {
     townGeoJsonUri: requireAbsoluteHttpUri(
       value.townGeoJsonUri,
       "appConfig.townGeoJsonUri",
-    ),
-    categoryNamesUri: requireAbsoluteHttpUri(
-      value.categoryNamesUri,
-      "appConfig.categoryNamesUri",
     ),
     wikidataMirrorUri: requireAbsoluteHttpUri(
       value.wikidataMirrorUri,
@@ -1085,11 +1226,14 @@ async function attachLocationImages(
   pipeline: LocationImagePipeline,
 ): Promise<void> {
   const targets: LocationEntry[] = [];
+  const seenIds = new Set<string>();
   for (const category of locations) {
     for (const location of category.locations) {
-      if (location.imageUri !== undefined) {
-        targets.push(location);
+      if (location.imageUri === undefined || seenIds.has(location.id)) {
+        continue;
       }
+      seenIds.add(location.id);
+      targets.push(location);
     }
   }
   if (targets.length === 0) {
@@ -1221,9 +1365,9 @@ export async function generateLocationArtifact(
 
   const sourceUris = validateSourceUris(options.appConfig);
   const catalog = validateDestinationCatalog(options.destinationCatalog);
-  if (catalog.source.placesUri !== sourceUris.placesJsonLdUri) {
+  if (catalog.source.datasetJsonLdUri !== sourceUris.datasetJsonLdUri) {
     fail(
-      "目録のsource.placesUriとappConfig.placesJsonLdUriが一致しません。目録を再生成してください",
+      "目録のsource.datasetJsonLdUriとappConfig.datasetJsonLdUriが一致しません。目録を再生成してください",
     );
   }
   if (catalog.source.osmMirrorUri !== sourceUris.osmMirrorUri) {
@@ -1232,32 +1376,20 @@ export async function generateLocationArtifact(
     );
   }
 
-  const [
-    placesPayload,
-    osmPayload,
-    townPayload,
-    categoryNamesPayload,
-    wikidataPayload,
-  ] = await Promise.all([
-    fetchJson("placesJsonLd", sourceUris.placesJsonLdUri, options.transport),
-    fetchJson("osmMirror", sourceUris.osmMirrorUri, options.transport),
-    fetchJson("townGeoJson", sourceUris.townGeoJsonUri, options.transport),
-    fetchJson("categoryNames", sourceUris.categoryNamesUri, options.transport),
-    fetchJson("wikidataMirror", sourceUris.wikidataMirrorUri, options.transport),
-  ]);
+  const [datasetPayload, osmPayload, townPayload, wikidataPayload] =
+    await Promise.all([
+      fetchJson("datasetJsonLd", sourceUris.datasetJsonLdUri, options.transport),
+      fetchJson("osmMirror", sourceUris.osmMirrorUri, options.transport),
+      fetchJson("townGeoJson", sourceUris.townGeoJsonUri, options.transport),
+      fetchJson("wikidataMirror", sourceUris.wikidataMirrorUri, options.transport),
+    ]);
 
-  const categoryNames = parseCategoryNames(categoryNamesPayload);
-  const routeDestinations = buildRouteDestinations(
-    catalog,
-    categoryNames,
-    placesPayload,
-    osmPayload,
-  );
+  const dataset = parseDatasetGraph(datasetPayload);
+  const routeDestinations = buildRouteDestinations(catalog, dataset, osmPayload);
   const catalogIds = new Set(catalog.places.map((entry) => entry.id));
   const locations = buildLocations(
     catalogIds,
-    categoryNames,
-    placesPayload,
+    dataset,
     osmPayload,
     wikidataPayload,
   );

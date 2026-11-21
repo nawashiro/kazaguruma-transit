@@ -10,7 +10,7 @@ export interface LocationImageData {
 }
 
 export interface LocationImage extends LocationImageData {
-  creator: string;
+  creator?: string;
   license: string;
 }
 
@@ -78,20 +78,21 @@ export function resolveLocationImage(location: {
   const { image, imageCreator, imageLicense } = location;
   if (
     !isLocationImageData(image) ||
-    typeof imageCreator !== "string" ||
-    imageCreator.trim().length === 0 ||
     typeof imageLicense !== "string" ||
     imageLicense.trim().length === 0
   ) {
     return null;
   }
-  return {
-    creator: imageCreator.trim(),
+  const resolved: LocationImage = {
     license: imageLicense,
     width: image.width,
     height: image.height,
     variants: sortVariants(image.variants),
   };
+  if (typeof imageCreator === "string" && imageCreator.trim().length > 0) {
+    resolved.creator = imageCreator.trim();
+  }
+  return resolved;
 }
 
 export function toLocationImageSrcSet(image: LocationImageData): string {

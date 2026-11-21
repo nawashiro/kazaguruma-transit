@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import PageHeader from "@/components/layouts/PageHeader";
 import type { BreadcrumbItem } from "@/components/layouts/Breadcrumbs";
@@ -50,9 +51,13 @@ export async function generateStaticParams(): Promise<Array<{ id: string }>> {
     return [];
   }
 
-  return data.categories.flatMap((category) =>
-    category.locations.map((location) => ({ id: location.id })),
-  );
+  const ids = new Set<string>();
+  for (const category of data.categories) {
+    for (const location of category.locations) {
+      ids.add(location.id);
+    }
+  }
+  return [...ids].map((id) => ({ id }));
 }
 
 type LocationDetailPageProps = {
@@ -115,25 +120,24 @@ function resolveAreaName(location: LocationWithArea): string | null {
   return null;
 }
 
-function findLocationCategory(
+function findLocationCategories(
   data: LocationPageDataResult,
   location: LocationWithArea,
-): LocationCategoryWithArea | null {
+): LocationCategoryWithArea[] {
   if (data.status !== "success" || !Array.isArray(data.categories)) {
-    return null;
+    return [];
   }
 
-  return (
-    data.categories.find((category) =>
-      category.locations.some((candidate) => candidate.id === location.id),
-    ) ?? null
+  return data.categories.filter((category) =>
+    category.locations.some((candidate) => candidate.id === location.id),
   );
 }
 
 function locationBreadcrumbs(
-  category: LocationCategoryWithArea | null,
+  categories: LocationCategoryWithArea[],
   title: string,
 ): BreadcrumbItem[] {
+  const category = categories[0] ?? null;
   if (category === null) {
     return [{ label: "場所一覧", href: "/locations" }, { label: title }];
   }
@@ -146,6 +150,33 @@ function locationBreadcrumbs(
     },
     { label: title },
   ];
+}
+
+function LocationCategoryLinks({
+  categories,
+}: {
+  categories: LocationCategoryWithArea[];
+}) {
+  if (categories.length <= 1) {
+    return null;
+  }
+
+  return (
+    <nav aria-label="カテゴリ" className="mt-2">
+      <ul className="flex flex-wrap gap-x-4 gap-y-2 text-base">
+        {categories.map((category) => (
+          <li key={category.categoryId}>
+            <Link
+              href={`/locations/${encodeURIComponent(category.categoryId)}`}
+              className="link inline-flex min-h-[44px] items-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              {category.category}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
 }
 
 function DestinationLink({ location }: { location: LocationWithArea }) {
@@ -467,7 +498,7 @@ function LocationDetailContent({
             className="h-full w-full rounded-xl object-cover aspect-[4/3]"
           />
           <figcaption className="mt-2 text-base">
-            {image.creator}・
+            {image.creator !== undefined ? `${image.creator}・` : "作者不明・"}
             {isAbsoluteHttpUrl(image.license) ? (
               <a
                 href={image.license}
@@ -570,15 +601,16 @@ export default async function LocationDetailPage({
     );
   }
 
-  const category = findLocationCategory(data, result.location);
+  const categories = findLocationCategories(data, result.location);
   const areaName = resolveAreaName(result.location);
 
   return (
     <div className="py-8">
       <PageHeader
         title={result.location.name}
-        breadcrumbs={locationBreadcrumbs(category, result.location.name)}
+        breadcrumbs={locationBreadcrumbs(categories, result.location.name)}
       />
+      <LocationCategoryLinks categories={categories} />
       <LocationDetailContent location={result.location} areaName={areaName} />
     </div>
   );

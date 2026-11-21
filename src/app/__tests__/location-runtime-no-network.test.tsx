@@ -127,10 +127,9 @@ jest.mock("@/components/features/HomeRouteForm", () => ({
 const validArtifact: LocationArtifact = {
   status: "validated",
   sourceUris: {
-    placesJsonLdUri: "https://fixtures.example.test/places.jsonld",
+    datasetJsonLdUri: "https://fixtures.example.test/dataset.jsonld",
     osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
     townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
-    categoryNamesUri: "https://fixtures.example.test/category-names.jsonld",
   },
   sources: {
     routeDestinations: [

@@ -44,21 +44,6 @@ function normalizeError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
-function hasDuplicateLocationIds(categories: LocationCategoryWithArea[]): boolean {
-  const locationIds = new Set<string>();
-
-  for (const category of categories) {
-    for (const location of category.locations) {
-      if (locationIds.has(location.id)) {
-        return true;
-      }
-      locationIds.add(location.id);
-    }
-  }
-
-  return false;
-}
-
 function dataError(message: string): LocationPageDataResult {
   return { status: "error", error: new Error(message) };
 }
@@ -115,10 +100,6 @@ export function loadLocationPageData(): LocationPageDataResult {
     );
     if (categories === null) {
       return dataError("場所データの形式が不正です");
-    }
-
-    if (hasDuplicateLocationIds(categories)) {
-      return dataError("場所データに重複したIDがあります");
     }
 
     return { status: "success", categories };

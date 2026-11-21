@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from "node:util";
+
 import type {
   LocationDetailErrorReason,
   LocationDetailResult,
@@ -73,8 +75,7 @@ function collectLocations(
       error: Error;
       reason: LocationDetailErrorReason;
     } {
-  const locations: LocationWithArea[] = [];
-  const seenIds = new Set<string>();
+  const locations = new Map<string, LocationWithArea>();
 
   if (!Array.isArray(categories)) {
     return {
@@ -118,20 +119,23 @@ function collectLocations(
         };
       }
 
-      if (seenIds.has(location.id as string)) {
-        return {
-          status: "error",
-          reason: "duplicate-id",
-          error: new Error("場所識別子が重複しています"),
-        };
+      const existing = locations.get(location.id as string);
+      if (existing !== undefined) {
+        if (!isDeepStrictEqual(existing, location)) {
+          return {
+            status: "error",
+            reason: "duplicate-id",
+            error: new Error("場所識別子が重複しています"),
+          };
+        }
+        continue;
       }
 
-      seenIds.add(location.id as string);
-      locations.push(location as unknown as LocationWithArea);
+      locations.set(location.id as string, location as unknown as LocationWithArea);
     }
   }
 
-  return { status: "success", locations };
+  return { status: "success", locations: [...locations.values()] };
 }
 
 /** Resolves one location ID while preserving transport and identity failures. */

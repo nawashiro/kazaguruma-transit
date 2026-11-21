@@ -5,7 +5,7 @@ const OSM_ELEMENT_URI_PATTERN =
   /^https?:\/\/(?:www\.)?openstreetmap\.org\/(node|way|relation)\/(\d+)(?:[/?#].*)?$/u;
 
 export interface DestinationCatalogSourceUris {
-  placesUri: string;
+  datasetJsonLdUri: string;
   osmMirrorUri: string;
 }
 
@@ -88,7 +88,10 @@ function validateSource(value: unknown): DestinationCatalogSourceUris {
     fail("source はオブジェクトである必要があります");
   }
   return {
-    placesUri: requireAbsoluteHttpUri(value.placesUri, "source.placesUri"),
+    datasetJsonLdUri: requireAbsoluteHttpUri(
+      value.datasetJsonLdUri,
+      "source.datasetJsonLdUri",
+    ),
     osmMirrorUri: requireAbsoluteHttpUri(
       value.osmMirrorUri,
       "source.osmMirrorUri",

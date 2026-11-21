@@ -183,6 +183,20 @@ function getGenerateMetadata(): LocationDetailMetadata {
   return generateMetadata as LocationDetailMetadata;
 }
 
+function multiCategoryDataFor(location: LocationWithArea): LocationPageDataResult {
+  return {
+    status: "success",
+    categories: [
+      { ...detailCategory, locations: [location] },
+      {
+        category: "図書館",
+        categoryId: "1512",
+        locations: [{ ...location }],
+      },
+    ],
+  };
+}
+
 function successDataFor(location: LocationWithArea): LocationPageDataResult {
   return {
     status: "success",
@@ -627,10 +641,21 @@ describe("/locations/location-detail/[id] public server page", () => {
     expectPageLinksToBeNamedAndSafe(container);
   });
 
-  it("hides an image when the creator or license is missing", async () => {
+  it("shows an authorless image as 作者不明", async () => {
     const { container } = await renderLocationDetailPage({
       ...completeLocation,
       imageCreator: undefined,
+    });
+
+    expect(container.querySelector("img")).not.toBeNull();
+    const figcaption = container.querySelector("figcaption");
+    expect(figcaption).toHaveTextContent("作者不明・CC BY-SA 3.0");
+    expect(screen.queryByText(/さくら/)).not.toBeInTheDocument();
+  });
+
+  it("hides an image when the license is missing", async () => {
+    const { container } = await renderLocationDetailPage({
+      ...completeLocation,
       imageLicense: undefined,
     });
 
@@ -707,6 +732,55 @@ describe("/locations/location-detail/[id] public server page", () => {
     expect(
       screen.queryByText("バリアフリー情報（wheelchairタグ）"),
     ).not.toBeInTheDocument();
+  });
+
+  it("links every category for a location in multiple categories", async () => {
+    const loadedData = multiCategoryDataFor(completeLocation);
+    mockLoadLocationPageData.mockResolvedValue(loadedData);
+    mockResolveLocationDetail.mockReturnValue({
+      status: "success",
+      location: completeLocation,
+    });
+
+    renderPageInvocation(await invokeLocationDetailPage(completeLocation.id));
+
+    const categoryNav = screen.getByRole("navigation", { name: "カテゴリ" });
+    const categoryLinks = within(categoryNav)
+      .getAllByRole("link")
+      .map((link) => ({
+        name: link.textContent,
+        href: link.getAttribute("href"),
+      }));
+    expect(categoryLinks).toEqual([
+      {
+        name: detailCategory.category,
+        href: `/locations/${encodeURIComponent(detailCategory.categoryId)}`,
+      },
+      {
+        name: "図書館",
+        href: `/locations/${encodeURIComponent("1512")}`,
+      },
+    ]);
+    expect(getCategoryBreadcrumbLink()).toHaveAttribute(
+      "href",
+      `/locations/${encodeURIComponent(detailCategory.categoryId)}`,
+    );
+  });
+
+  it("deduplicates static params across categories", async () => {
+    mockLoadLocationPageData.mockResolvedValue(
+      multiCategoryDataFor(completeLocation),
+    );
+
+    const generateStaticParams = getNestedDetailPageModule()
+      .generateStaticParams as (() => Promise<Array<{ id: string }>>) | undefined;
+    if (typeof generateStaticParams !== "function") {
+      throw new Error("generateStaticParams is not implemented");
+    }
+
+    await expect(generateStaticParams()).resolves.toEqual([
+      { id: completeLocation.id },
+    ]);
   });
 
   it("uses the safe locations fallback when direct access has no identifiable category context", async () => {

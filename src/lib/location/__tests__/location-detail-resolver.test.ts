@@ -274,6 +274,31 @@ describe("resolveLocationDetail", () => {
     expect(result).not.toMatchObject({ status: "success" });
   });
 
+  it("resolves the same location in two categories as one detail", () => {
+    const resolve = getResolver(moduleState);
+
+    const result = resolve(
+      "urn:uuid:00000000-0000-4000-8000-000000000001",
+      success([
+        {
+          category: "市役所・東京都の区役所",
+          categoryId: "1302",
+          locations: [primaryLocation],
+        },
+        {
+          category: "図書館",
+          categoryId: "1512",
+          locations: [{ ...primaryLocation }],
+        },
+      ]),
+    );
+
+    expect(result).toMatchObject({
+      status: "success",
+      location: { id: primaryLocation.id },
+    });
+  });
+
   it("passes facts through to detail and leaves missing facts as undefined", () => {
     const resolve = getResolver(moduleState);
     const withFacts = resolve(

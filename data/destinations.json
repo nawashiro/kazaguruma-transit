@@ -1,6 +1,6 @@
 {
   "source": {
-    "placesUri": "https://nawashiro.github.io/chiyoda_city_main_facilities/places.jsonld",
+    "datasetJsonLdUri": "https://nawashiro.github.io/chiyoda_city_main_facilities/dataset.jsonld",
     "osmMirrorUri": "https://nawashiro.github.io/chiyoda_city_main_facilities/mirrors/osm.json"
   },
   "places": [
@@ -56,7 +56,7 @@
     },
     {
       "id": "urn:uuid:019fa880-5cd5-701b-90d2-e3073a1c337b",
-      "name": "東京都産業労働局労働相談情報センター",
+      "name": "東京しごとセンター",
       "includeInRouteForm": false
     },
     {
@@ -76,7 +76,7 @@
     },
     {
       "id": "urn:uuid:019fa880-5cd5-7241-a976-801eef6324a9",
-      "name": "神田児童館",
+      "name": "昌平童夢館",
       "includeInRouteForm": true
     },
     {
@@ -156,7 +156,7 @@
     },
     {
       "id": "urn:uuid:019fa880-5cd5-7b6f-882e-4d07aad02219",
-      "name": "子育てひろば「あい・ぽーと」麹町",
+      "name": "子育てひろば あい・ぽーと麹町",
       "includeInRouteForm": true
     },
     {
@@ -176,7 +176,7 @@
     },
     {
       "id": "urn:uuid:019fa880-5cd5-7d11-8560-3ac4e0486633",
-      "name": "千代田区立一番町高齢者在宅介護支援センター",
+      "name": "いきいきプラザ一番町",
       "includeInRouteForm": true
     },
     {
@@ -428,6 +428,16 @@
       "id": "urn:uuid:01a1e8c7-83fd-76ea-a425-b3fec7d992f8",
       "name": "佐々木研究所附属杏雲堂病院",
       "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1f74a-7ced-7363-a7e6-08976d268c4d",
+      "name": "神田児童館",
+      "includeInRouteForm": false
+    },
+    {
+      "id": "urn:uuid:01a1f74a-a0c2-74dc-b23b-01397190d364",
+      "name": "いずみこどもプラザ",
+      "includeInRouteForm": false
     }
   ]
 }

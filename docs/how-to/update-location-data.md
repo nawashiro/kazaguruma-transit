@@ -1,20 +1,21 @@
 # 場所データの更新
 
-「場所をさがす」はビルド時に場所一覧のartifactを生成します。母集団は目的地目録（`data/destinations.json`）の候補に含まれるrecordだけで、公開JSON-LDの全recordではありません。公開JSON-LD・OSMタグミラー・カテゴリ名辞書・町字GeoJSON・Wikidataミラーから名前・カテゴリ・地域・写真・バリアフリー情報・電話・ウェブサイト・Wikipediaを解決して `public/generated/location-data.json` へ書き出します。写真は同じビルドで取得・変換し、配信用のWebPを `public/generated/location-images/` へ出力します。
+「場所をさがす」はビルド時に場所一覧のartifactを生成します。母集団は目的地目録（`data/destinations.json`）の候補に含まれるrecordだけで、公開グラフの全recordではありません。公開グラフ（`dataset.jsonld`）・OSMタグミラー・町字GeoJSON・Wikidataミラーから名前・カテゴリ・地域・写真・バリアフリー情報・電話・ウェブサイト・Wikipediaを解決して `public/generated/location-data.json` へ書き出します。写真は同じビルドで取得・変換し、配信用のWebPを `public/generated/location-images/` へ出力します。
 
 ## 母集団
 
-場所一覧は、目的地目録（`data/destinations.json`）の候補に含まれるrecordだけを対象にします。`npm run update-destinations` が経路検索と同じ徒歩圏の判定で目録を更新します。公開JSON-LDにrecordが増えても、目録を更新するまで場所一覧には出ません。目録の候補のうち、OSM要素に空でない`name`がないrecordは表示しません。ビルドは距離を再計算せず、目録のID集合だけで母集団を決めます。
+場所一覧は、目的地目録（`data/destinations.json`）の候補に含まれるrecordだけを対象にします。`npm run update-destinations` が経路検索と同じ徒歩圏の判定で目録を更新します。公開グラフにrecordが増えても、目録を更新するまで場所一覧には出ません。目録の候補のうち、OSM要素に空でない`name`がなく、カテゴリtermを1つも参照しないrecordは表示しません。ビルドは距離を再計算せず、目録のID集合だけで母集団を決めます。
 
 ## 取得元
 
 - 目的地目録: `data/destinations.json`
-- 公開JSON-LD: `app-config.json` の `placesJsonLdUri`
+- 公開グラフ: `app-config.json` の `datasetJsonLdUri`
 - OSMタグミラー: `app-config.json` の `osmMirrorUri`
 - 町字GeoJSON: `app-config.json` の `townGeoJsonUri`
-- カテゴリ名辞書: `app-config.json` の `categoryNamesUri`
 - Wikidataミラー: `app-config.json` の `wikidataMirrorUri`
 - 写真: `schema:image` の `schema:contentUrl` からファイル名を取り、`https://commons.wikimedia.org/wiki/Special:FilePath/<ファイル名>?width=1280`
+
+公開グラフは、`schema:Place`のrecord、カテゴリ語彙の`schema:DefinedTermSet`と`schema:DefinedTerm`、record形状の`sh:NodeShape`を同じ`@graph`に含みます。カテゴリはPlaceの`schema:keywords`が参照するtermの`schema:identifier`から`gif-poi`コードを、`schema:name`から表示名を読みます。語彙の順序は`schema:hasDefinedTerm`に従います。
 
 外部の取得元はいずれもビルド時に取得し、実行時には取得しません。目的地目録はリポジトリ内の `data/destinations.json` を読みます。WheelMapはリンク先としてのみ参照し、ビルド時にも実行時にも取得しません。Wikidataミラーは `entities` の `sitelinks` だけを使い、取得失敗・形式不正はビルド失敗とします。
 
@@ -29,30 +30,31 @@
 
 3. `public/generated/location-data.json` を確認します。目安は次のとおりです。
 
-   - 場所79件
-   - `wheelchair` のある場所13件（`yes` 8、`limited` 3、`no` 2）
-   - カテゴリ18件（辞書22件のうち、recordがないカテゴリと、目録の候補にない・OSM名がないrecordだけのカテゴリを除く）
-   - 画像の作者とライセンス29件（`schema:license`は非空の文字列なら表示し、絶対http(s) URIのときだけリンクにする）
-   - 派生画像のある場所29件。幅は480・960・1280pxを上限とし、元画像が小さい場合は元画像の幅
-   - 電話24件、ウェブサイト37件、Wikipediaリンク33件、編集リンク79件
+   - 場所86件
+   - `wheelchair` のある場所14件（`yes` 9、`limited` 3、`no` 2）
+   - カテゴリ20件（語彙22件のうち、場所がないカテゴリを除く）
+   - 画像の作者とライセンス48件、作者不明の画像2件（`schema:license`は非空の文字列なら表示し、絶対http(s) URIのときだけリンクにする）
+   - 派生画像のある場所50件。幅は480・960・1280pxを上限とし、元画像が小さい場合は元画像の幅
+   - 電話28件、ウェブサイト40件、Wikipediaリンク34件、編集リンク86件
+   - 経路フォームに掲載する目的地35件、カテゴリ9件
 
-   写真と派生画像の件数は、次のコマンドでも確認できます。
+   件数は、次のコマンドでも確認できます。
 
    ```bash
-   node -e "const a=require('./public/generated/location-data.json');const l=a.sources.locations.flatMap(c=>c.locations);console.log('写真',l.filter(x=>x.image).length,'派生画像の場所',l.filter(x=>x.image).length)"
+   node -e "const a=require('./public/generated/location-data.json');const l=a.sources.locations.flatMap(c=>c.locations);console.log('場所',l.length,'カテゴリ',a.sources.locations.length,'車いす',l.filter(x=>x.wheelchair).length,'写真',l.filter(x=>x.imageUri).length,'作者不明',l.filter(x=>x.imageUri&&!x.imageCreator).length,'派生画像',l.filter(x=>x.image).length)"
    ls public/generated/location-images/*.webp | wc -l
    ```
 
 4. 場所詳細は `/locations/location-detail/{encodeURIComponent(id)}` を開き、既知IDがHTTP 200で表示されることを確認します。目録の候補にないIDは404になります。
 
-件数がずれた場合は、公開データセット・OSM・辞書・目的地目録のどれが変わったかを確認します。目録の候補にないrecordは、そのrecordだけを一覧から外し、ビルドは成功します。OSM関連付けまたは空でない`name`がないrecordも同様です。`gif-poi`コードがない・複数ある・辞書にないrecordがあるとビルドは失敗します。重複IDがある場合もビルドは失敗します。1402（保育園）と1219（職業安定所）は目録の候補にあるもののOSM名を持たないため0件、1004（庭園）は目録の候補にないため0件です。
+件数がずれた場合は、公開データセット・OSM・目的地目録のどれが変わったかを確認します。目録の候補にないrecordは、そのrecordだけを一覧から外し、ビルドは成功します。OSM関連付けまたは空でない`name`がないrecordも同様です。カテゴリtermを1つも参照しないrecordは、その件数を警告に出して一覧と経路フォームから除外し、ビルドは成功します。参照先termがない、termの`gif-poi`コードが4桁でない、コードが重複する、名前が空の場合はビルドが失敗します。同じ場所IDが複数カテゴリに現れる場合は、内容が同一なら掲載し、内容が異なればビルドが失敗します。1004（庭園）と1306（産業支援施設）は語彙にあるものの場所がないため0件です。
 
 ## 写真の派生画像
 
 - 写真は `Special:FilePath` の1280px以下から取得し、同時2接続、間隔を空けて要求します。429と5xxは `Retry-After` を尊重して最大3回再試行し、User-Agentは `KazagurumaTransit/1.0 (+https://github.com/nawashiro/kazaguruma-transit)` です。
 - `sharp` でEXIFの向きを適用し、480・960・1280pxを候補とし、元画像の幅が候補より小さい場合は元画像の幅でWebP（品質80）を生成します。元画像を拡大しません。
 - 出力名は `<内容ハッシュ16桁>-<幅>.webp` です。ハッシュは出力バイトのSHA-256先頭16桁で、同じ入力なら同じ名前、内容が変われば別の名前になります。
-- artifactの各場所には `image` として元画像の幅・高さと `variants`（幅と `/generated/location-images/<ファイル名>` のパス）が入ります。`imageUri`・`imageCreator`・`imageLicense` は取得元の記録として残り、ページは `imageUri` を表示しません。`imageLicense` は絶対http(s) URIのときだけ詳細ページでリンクにし、それ以外は記録された文字列のままテキストで示します。「Public domain」のような非URIのライセンスも、作者名があれば表示します。
+- artifactの各場所には `image` として元画像の幅・高さと `variants`（幅と `/generated/location-images/<ファイル名>` のパス）が入ります。`imageUri`・`imageCreator`・`imageLicense` は取得元の記録として残り、ページは `imageUri` を表示しません。`imageCreator` は作者が分かるときだけ入り、`imageLicense` は必須です。`imageLicense` は絶対http(s) URIのときだけ詳細ページでリンクにし、それ以外は記録された文字列のままテキストで示します。「Public domain」のような非URIのライセンスも、作者名があれば表示します。
 - 取得または変換に失敗した写真は `image` なしになり、一覧・詳細はその写真を表示しません。ビルドは続行し、最後に `写真を取得できませんでした: N件` を警告します。原寸URLへのフォールバックはしません。
 - `upload.wikimedia.org/wikipedia/commons/` 以外の写真は対象外として同じ警告に数えます。
 
@@ -83,7 +85,7 @@ curl -sI http://127.0.0.1:3000/generated/location-data.json | grep -i cache-cont
 
 最新の状態確認と修正は、場所詳細の参照リンクからWheelMapまたはOpenStreetMapへ進み、OSM側でタグを直します。ビルド時のミラーは月次更新のため、直した内容の反映は次回ビルド以降になります。
 
-画像は `schema:image` の `schema:contentUrl`・`schema:creator.schema:name`・`schema:license` を使います。作者またはライセンスがない画像は一覧・詳細のどちらにも表示しません。ライセンスは`CC BY-SA 4.0`のような名前で表示します。一覧と詳細はビルドで生成した派生画像を `srcset` で表示し、原寸のURIへはリンクしません。詳細では画像の下に作者とライセンスを表示し、一覧カードでは「写真 作者・ライセンス」の1行でテキスト表示します。不正な絶対http(s) URIの画像・関連リンクもその項目だけ表示しません。
+画像は `schema:image` の `schema:contentUrl`・`schema:creator.schema:name`・`schema:license` を使います。ライセンスがない画像は一覧・詳細のどちらにも表示しません。作者がない画像は、上流が公開した判断を尊重して表示し、作者の代わりに「作者不明」と示します。ライセンスは`CC BY-SA 4.0`のような名前で表示します。一覧と詳細はビルドで生成した派生画像を `srcset` で表示し、原寸のURIへはリンクしません。詳細では画像の下に作者とライセンスを表示し、一覧カードでは「写真 作者・ライセンス」または「写真 作者不明・ライセンス」の1行でテキスト表示します。不正な絶対http(s) URIの画像・関連リンクもその項目だけ表示しません。作者不明の画像の帰属は上流のCommonsメタデータに依存し、完全な帰属を保証しません。
 
 ## 電話・ウェブサイト・Wikipediaの解決と警告
 
@@ -105,4 +107,4 @@ curl -sI http://127.0.0.1:3000/generated/location-data.json | grep -i cache-cont
 
 ## 公開データセットでの修正
 
-掲載が減る・説明が出ないなどの欠落は、アプリ側で旧データを残さず、公開データセットの `inputs/facilities.json` へ施設を追加して戻します。カテゴリ名辞書のコード追加・削除はビルドを失敗させるため、データセット側の語彙を直します。
+掲載が減る・説明が出ないなどの欠落は、アプリ側で旧データを残さず、公開データセットの `inputs/facilities.json` へ施設を追加して戻します。カテゴリ語彙のコード追加・削除はビルドを失敗させるため、データセット側の`schema:DefinedTerm`を直します。

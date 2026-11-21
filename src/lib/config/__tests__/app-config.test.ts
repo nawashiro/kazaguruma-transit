@@ -65,7 +65,7 @@ describe("app-config public module", () => {
       expect.objectContaining({
         appUrl: expect.any(String),
         gaMeasurementId: expect.any(String),
-        placesJsonLdUri: expect.stringMatching(/^https?:\/\//u),
+        datasetJsonLdUri: expect.stringMatching(/^https?:\/\//u),
         osmMirrorUri: expect.stringMatching(/^https?:\/\//u),
         discussion: expect.objectContaining({
           enabled: expect.any(Boolean),

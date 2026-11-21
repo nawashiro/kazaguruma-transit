@@ -123,10 +123,9 @@ const serverGeoJson = {
 const validArtifact: LocationArtifact = {
   status: "validated",
   sourceUris: {
-    placesJsonLdUri: "https://fixtures.example.test/places.jsonld",
+    datasetJsonLdUri: "https://fixtures.example.test/dataset.jsonld",
     osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
     townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
-    categoryNamesUri: "https://fixtures.example.test/category-names.jsonld",
   },
   sources: {
     routeDestinations: [
@@ -270,25 +269,37 @@ describe("location-page-data server boundary", () => {
     expect(result).not.toHaveProperty("categories");
   });
 
-  it("rejects duplicate location IDs across the complete artifact dataset instead of selecting one", async () => {
+  it("keeps the same location in multiple categories for the detail resolver", async () => {
     const load = getPublicFunction(moduleState, "loadLocationPageData");
     const duplicateCategories: ArtifactLocationCategory[] = [
       successCategories[0],
       {
         category: "別カテゴリ",
         categoryId: "1512",
-        locations: [{ ...primaryLocation, name: "同じIDの別施設" }],
+        locations: [{ ...primaryLocation }],
       },
     ];
     mockReadLocationArtifact.mockReturnValue(artifactResult(duplicateCategories));
 
-    const result = await load();
+    const result = (await load()) as {
+      status: string;
+      categories?: Array<{
+        categoryId: string;
+        locations: Array<{ id: string }>;
+      }>;
+    };
 
-    expect(result).toEqual(expect.objectContaining({
-      status: "error",
-      error: expect.any(Error),
-    }));
-    expect(result).not.toHaveProperty("categories");
+    expect(result.status).toBe("success");
+    const categories = result.categories ?? [];
+    expect(categories.map((category) => category.categoryId)).toEqual([
+      "1302",
+      "1512",
+    ]);
+    expect(
+      categories
+        .flatMap((category) => category.locations)
+        .filter((location) => location.id === primaryLocation.id),
+    ).toHaveLength(2);
   });
 
   it("passes facts through to detail and leaves missing facts as undefined", async () => {

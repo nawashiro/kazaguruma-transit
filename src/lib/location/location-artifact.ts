@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 
 import type {
   RouteDestinationCategory,
@@ -13,10 +14,9 @@ import {
 const INVALID_URI_CHARACTER_PATTERN = /[\u0000-\u0020\u007f-\u009f]/;
 
 export interface LocationArtifactSourceUris {
-  placesJsonLdUri: string;
+  datasetJsonLdUri: string;
   osmMirrorUri: string;
   townGeoJsonUri: string;
-  categoryNamesUri: string;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -217,8 +217,10 @@ function validateLocationEntry(value: unknown, fieldPath: string): LocationEntry
   let imageLicense: string | undefined;
   if (hasAnyImage) {
     imageUri = requireAbsoluteHttpUri(value["imageUri"], `${fieldPath}.imageUri`);
-    imageCreator = requireNonEmptyString(value["imageCreator"], `${fieldPath}.imageCreator`);
     imageLicense = requireNonEmptyString(value["imageLicense"], `${fieldPath}.imageLicense`);
+    if (hasImageCreator) {
+      imageCreator = requireNonEmptyString(value["imageCreator"], `${fieldPath}.imageCreator`);
+    }
   }
 
   const hasImage = value["image"] !== undefined && value["image"] !== null;
@@ -276,10 +278,12 @@ function validateLocationEntry(value: unknown, fieldPath: string): LocationEntry
     wheelchair,
     osmEditUrl,
   };
-  if (imageUri !== undefined && imageCreator !== undefined && imageLicense !== undefined) {
+  if (imageUri !== undefined && imageLicense !== undefined) {
     entry.imageUri = imageUri;
-    entry.imageCreator = imageCreator;
     entry.imageLicense = imageLicense;
+    if (imageCreator !== undefined) {
+      entry.imageCreator = imageCreator;
+    }
   }
   if (image !== undefined) {
     entry.image = image;
@@ -304,7 +308,7 @@ function validateLocations(value: unknown): LocationCategory[] {
     fail("sources.locations は空でないカテゴリ配列である必要があります");
   }
   const categoryIds = new Set<string>();
-  const locationIds = new Set<string>();
+  const entriesById = new Map<string, LocationEntry>();
   return value.map((rawCategory, categoryIndex) => {
     const categoryPath = `sources.locations[${categoryIndex}]`;
     if (!isRecord(rawCategory)) {
@@ -324,10 +328,14 @@ function validateLocations(value: unknown): LocationCategory[] {
     }
     const locations = (rawCategory["locations"] as unknown[]).map((loc, locIndex) => {
       const validated = validateLocationEntry(loc, `${categoryPath}.locations[${locIndex}]`);
-      if (locationIds.has(validated.id)) {
-        fail(`sources.locations に重複場所識別子があります: ${validated.id}`);
+      const existing = entriesById.get(validated.id);
+      if (existing !== undefined) {
+        if (!isDeepStrictEqual(existing, validated)) {
+          fail(`sources.locations に内容の異なる重複場所識別子があります: ${validated.id}`);
+        }
+        return existing;
       }
-      locationIds.add(validated.id);
+      entriesById.set(validated.id, validated);
       return validated;
     });
     return {
@@ -491,9 +499,9 @@ function validateSourceUris(value: unknown): LocationArtifactSourceUris {
     fail("sourceUris はオブジェクトである必要があります");
   }
   return {
-    placesJsonLdUri: requireAbsoluteHttpUri(
-      value.placesJsonLdUri,
-      "sourceUris.placesJsonLdUri",
+    datasetJsonLdUri: requireAbsoluteHttpUri(
+      value.datasetJsonLdUri,
+      "sourceUris.datasetJsonLdUri",
     ),
     osmMirrorUri: requireAbsoluteHttpUri(
       value.osmMirrorUri,
@@ -502,10 +510,6 @@ function validateSourceUris(value: unknown): LocationArtifactSourceUris {
     townGeoJsonUri: requireAbsoluteHttpUri(
       value.townGeoJsonUri,
       "sourceUris.townGeoJsonUri",
-    ),
-    categoryNamesUri: requireAbsoluteHttpUri(
-      value.categoryNamesUri,
-      "sourceUris.categoryNamesUri",
     ),
   };
 }

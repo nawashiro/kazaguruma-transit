@@ -22,11 +22,11 @@ type UpdateOptions = {
 };
 
 type UpdateCatalog = (options: UpdateOptions) => Promise<{
-  source: { placesUri: string; osmMirrorUri: string };
+  source: { datasetJsonLdUri: string; osmMirrorUri: string };
   places: Array<{ id: string; name: string; includeInRouteForm: boolean }>;
 }>;
 
-const PLACES_URI = "https://fixtures.example.test/places.jsonld";
+const PLACES_URI = "https://fixtures.example.test/dataset.jsonld";
 const OSM_MIRROR_URI = "https://fixtures.example.test/mirrors/osm.json";
 const ORIGIN = { lat: 35.69, lng: 139.75 };
 const KM_PER_LAT_DEGREE = 111.195;
@@ -42,7 +42,7 @@ const ID = {
 };
 
 const appConfig = {
-  placesJsonLdUri: PLACES_URI,
+  datasetJsonLdUri: PLACES_URI,
   osmMirrorUri: OSM_MIRROR_URI,
   townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
 };
@@ -146,7 +146,7 @@ const stops: StopPosition[] = [
 ];
 
 const existingCatalog = {
-  source: { placesUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI },
+  source: { datasetJsonLdUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI },
   places: [
     {
       id: ID.cityOffice,
@@ -242,7 +242,7 @@ function jsonResponse(payload: unknown, status = 200): TransportResponse {
 }
 
 describe("updateDestinationCatalog", () => {
-  it("公開JSON-LDのIDを取り、500m以内の候補を書いてOSM名のない新規recordを除く", async () => {
+  it("公開グラフのIDを取り、500m以内の候補を書いてOSM名のない新規recordを除く", async () => {
     const harness = createHarness();
 
     const catalog = await getUpdater()(harness.options);
@@ -251,10 +251,41 @@ describe("updateDestinationCatalog", () => {
       PLACES_URI,
       OSM_MIRROR_URI,
     ]);
-    expect(catalog.source).toEqual({ placesUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI });
+    expect(catalog.source).toEqual({ datasetJsonLdUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI });
     expect(catalog.places.map((place) => place.id)).toEqual([ID.cityOffice, ID.library]);
     expect(harness.writeCatalog).toHaveBeenCalledTimes(1);
     expect(harness.writeCatalog).toHaveBeenCalledWith(catalog);
+  });
+
+  it("DefinedTerm と NodeShape を場所として拾わない", async () => {
+    const termId = "urn:uuid:00000000-0000-4000-8000-000000000099";
+    const term = {
+      "@id": termId,
+      "@type": ["schema:DefinedTerm"],
+      "schema:geo": {
+        "@type": "schema:GeoCoordinates",
+        "schema:latitude": within,
+        "schema:longitude": ORIGIN.lng,
+      },
+      "rdfs:seeAlso": ["https://www.openstreetmap.org/node/1001"],
+    };
+    const shape = {
+      "@id": "urn:uuid:00000000-0000-4000-8000-000000000098",
+      "@type": ["sh:NodeShape"],
+    };
+    const places = {
+      ...placesJsonLd,
+      "@graph": [...placesJsonLd["@graph"], term, shape],
+    };
+    const harness = createHarness({ places });
+
+    const catalog = await getUpdater()(harness.options);
+
+    expect(catalog.places.map((place) => place.id)).toEqual([
+      ID.cityOffice,
+      ID.library,
+    ]);
+    expect(catalog.places.map((place) => place.id)).not.toContain(termId);
   });
 
   it("表示名はOSMタグミラーのnameをコメントに使い、目録の古い名前を置き換える", async () => {
@@ -275,7 +306,7 @@ describe("updateDestinationCatalog", () => {
   it("新規候補はincludeInRouteForm: falseで追加する", async () => {
     const harness = createHarness({
       existingCatalog: {
-        source: { placesUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI },
+        source: { datasetJsonLdUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI },
         places: [{ id: ID.cityOffice, name: "千代田区役所", includeInRouteForm: true }],
       },
     });
@@ -350,7 +381,7 @@ describe("updateDestinationCatalog", () => {
   it("掲載entryがOSM不完全になっても、既存の名前と掲載選択を保持する", async () => {
     const harness = createHarness({
       existingCatalog: {
-        source: { placesUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI },
+        source: { datasetJsonLdUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI },
         places: [{ id: ID.noOsmLink, name: "OSMなし", includeInRouteForm: true }],
       },
     });
@@ -367,7 +398,7 @@ describe("updateDestinationCatalog", () => {
     );
   });
 
-  it("公開JSON-LDから消えたentryのIDを報告して目録から除く", async () => {
+  it("公開グラフから消えたentryのIDを報告して目録から除く", async () => {
     const harness = createHarness();
 
     const catalog = await getUpdater()(harness.options);

@@ -23,10 +23,9 @@ type ModuleState = {
 };
 
 type SourceUris = {
-  placesJsonLdUri: string;
+  datasetJsonLdUri: string;
   osmMirrorUri: string;
   townGeoJsonUri: string;
-  categoryNamesUri: string;
 };
 
 type ReaderErrorResult = {
@@ -49,10 +48,9 @@ const originalReadFileSync = fs.readFileSync.bind(fs);
 const originalReadFile = fs.promises.readFile.bind(fs.promises);
 
 const sourceUris: SourceUris = {
-  placesJsonLdUri: "https://fixtures.example.test/places.jsonld",
+  datasetJsonLdUri: "https://fixtures.example.test/dataset.jsonld",
   osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
   townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
-  categoryNamesUri: "https://fixtures.example.test/category-names.jsonld",
 };
 
 const routeDestinations = [
@@ -593,6 +591,40 @@ describe("readLocationArtifact runtime artifact boundary", () => {
     expect(geoJsonProviderSpy).not.toHaveBeenCalled();
   });
 
+  it("allows the same location in two categories when the entries are identical", async () => {
+    const entry = validLocationsFixture[0].locations[0];
+    artifactReadFixture = {
+      raw: JSON.stringify(artifactWith({
+        sources: {
+          ...validArtifact.sources,
+          locations: [
+            validLocationsFixture[0],
+            {
+              category: "図書館",
+              categoryId: "1512",
+              locations: [{ ...entry }],
+            },
+          ],
+        },
+      })),
+    };
+
+    const result = await invokeReader(moduleState);
+
+    expect(result).toEqual({
+      status: "success",
+      artifact: expect.objectContaining({
+        sources: expect.objectContaining({
+          locations: expect.arrayContaining([
+            expect.objectContaining({ categoryId: "1302" }),
+            expect.objectContaining({ categoryId: "1512" }),
+          ]),
+        }),
+      }),
+    });
+    expectArtifactReadAttempt(readFileSyncSpy, readFileSpy);
+  });
+
   describe("locations projection for accessibility", () => {
     const validLocations = [
       {
@@ -720,7 +752,12 @@ describe("readLocationArtifact runtime artifact boundary", () => {
       dup.push({
         category: "図書館",
         categoryId: "1512",
-        locations: [{ ...(dup[0].locations[0] as object), category: undefined } as never],
+        locations: [
+          {
+            ...(dup[0].locations[0] as object),
+            name: "同じIDの別施設",
+          } as never,
+        ],
       });
       artifactReadFixture = {
         raw: JSON.stringify(artifactWithLocations({
@@ -768,6 +805,25 @@ describe("readLocationArtifact runtime artifact boundary", () => {
       };
       const result = await invokeReader(moduleState);
       expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+
+    it("accepts image without author when a license exists", async () => {
+      const bad = structuredClone(validLocations) as Array<Record<string, unknown>>;
+      const loc = { ...(validLocations[0].locations[0] as object) } as Record<string, unknown>;
+      delete loc["imageCreator"];
+      (bad[0] as Record<string, unknown>)["locations"] = [loc];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithLocations({
+          sources: { ...validArtifact.sources, locations: bad },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expect(result).toEqual({
+        status: "success",
+        artifact: expect.objectContaining({
+          sources: expect.objectContaining({ locations: bad }),
+        }),
+      });
     });
 
     it("rejects image without author and license", async () => {

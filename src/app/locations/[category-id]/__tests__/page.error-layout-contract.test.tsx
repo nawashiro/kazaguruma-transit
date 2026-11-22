@@ -2,10 +2,10 @@ import React from "react";
 import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type {
-  KeyLocation,
-  KeyLocationCategory,
-  KeyLocationsDataResult,
-} from "../../../../utils/addressLoader";
+  LocationWithArea,
+  LocationCategoryWithArea,
+  LocationPageDataResult,
+} from "@/lib/location/location-page-data";
 
 type CategoryPageProps = {
   params: Promise<{ "category-id": string }>;
@@ -16,7 +16,7 @@ type CategoryPage = (
   props: CategoryPageProps,
 ) => React.ReactNode | Promise<React.ReactNode>;
 
-const CATEGORY_ID = "error-layout contract category";
+const CATEGORY_ID = "1302";
 const CATEGORY_PATH = `/locations/${encodeURIComponent(CATEGORY_ID)}`;
 const MALFORMED_ORIGIN = "not-a-coordinate";
 const INVALID_ORIGIN_DESCRIPTION =
@@ -30,7 +30,7 @@ const mockUseSearchParams = jest.fn(() => new URLSearchParams());
 const mockRouterReplace = jest.fn<void, [string]>();
 const mockUseRouter = jest.fn(() => ({ replace: mockRouterReplace }));
 const mockLoadLocationPageData = jest.fn<
-  Promise<KeyLocationsDataResult>,
+  Promise<LocationPageDataResult>,
   []
 >();
 
@@ -49,22 +49,21 @@ jest.mock("@/lib/location/location-page-data", () => {
   };
 });
 
-const fixtureLocation: KeyLocation = {
-  id: "error-layout-contract-location",
+const fixtureLocation: LocationWithArea = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000031",
   name: "エラー表示後も確認できる場所",
   lat: 35.681,
   lng: 139.761,
   area: "東京都千代田区神田",
-  description: "無効originでも一覧を利用できる場所です",
-  uri: "https://example.test/error-layout-contract-location",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  relatedPages: [],
+  osmElement: { type: "node", id: 31 },
+  wheelchair: "yes",
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=31",
 };
 
-const fixtureCategory: KeyLocationCategory = {
+const fixtureCategory: LocationCategoryWithArea = {
   category: "エラーレイアウト契約カテゴリ",
-  "category:en": CATEGORY_ID,
+  categoryId: CATEGORY_ID,
   locations: [fixtureLocation],
 };
 

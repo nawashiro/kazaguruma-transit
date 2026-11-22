@@ -9,14 +9,14 @@ import Button from "@/components/ui/Button";
 import PageHeader from "@/components/layouts/PageHeader";
 import Announcement from "@/components/features/Announcement";
 import type { Location } from "@/types/core";
-import type { AddressCategory } from "@/utils/addressLoader";
+import type { RouteDestinationCategory } from "@/types/route-destinations";
 import { logger } from "@/utils/logger";
 
 interface HomeRouteFormProps {
-  popularCategories: AddressCategory[];
+  routeDestinations: RouteDestinationCategory[];
 }
 
-export default function HomeRouteForm({ popularCategories }: HomeRouteFormProps) {
+export default function HomeRouteForm({ routeDestinations }: HomeRouteFormProps) {
   const [selectedOrigin, setSelectedOrigin] = useState<Location | null>(null);
   const [selectedDestination, setSelectedDestination] = useState<Location | null>(null);
   const [prioritizeSpeed, setPrioritizeSpeed] = useState(false);
@@ -65,7 +65,7 @@ export default function HomeRouteForm({ popularCategories }: HomeRouteFormProps)
       <PageHeader title={<><ruby>風<rt>かざ</rt></ruby>ぐるま乗換案内</>} description="千代田区地域福祉交通「風ぐるま」の自動案内サイト" />
       <div className="mb-6"><Announcement /></div>
       <div ref={locationInputs} className="space-y-4 min-w-0">
-        <DestinationSelector categories={popularCategories} selectedLocation={selectedDestination}
+        <DestinationSelector categories={routeDestinations} selectedLocation={selectedDestination}
           onDestinationSelected={setSelectedDestination} onEdit={() => setSelectedDestination(null)}
           validationError={validateLocations && !selectedDestination ? "目的地を確定してください" : undefined} />
         <OriginSelector selectedLocation={selectedOrigin} onOriginSelected={setSelectedOrigin} onEdit={() => setSelectedOrigin(null)}
@@ -88,7 +88,7 @@ export default function HomeRouteForm({ popularCategories }: HomeRouteFormProps)
         <div className="ruby-text text-base">
           <p>※このサービスは非公式のもので、千代田区とは関係ありません</p>
           <p>※予定は変動し、実際の運行情報とは異なる場合があります</p>
-          <p><a href="https://lin.ee/CgIBOSd" target="_blank" rel="noopener noreferrer" className="link">千代田区公式LINE</a>で最新の運行情報を確認できます</p>
+          <p><a href="https://kazaguruma.bus-go.com/sp/sp-busgo.php" target="_blank" rel="noopener noreferrer" className="link">最新の運行情報はこちら【千代田区公式】</a></p>
         </div>
       </div>
     </div>

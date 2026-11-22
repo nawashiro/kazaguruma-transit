@@ -1,16 +1,19 @@
+import { isDeepStrictEqual } from "node:util";
+
 import type {
   LocationDetailErrorReason,
   LocationDetailResult,
 } from "@/types/access-route-pages";
-import { isKeyLocationCategory } from "@/utils/addressLoader";
 import type {
-  KeyLocation,
-  KeyLocationsDataResult,
-} from "@/utils/addressLoader";
+  LocationCategoryWithArea,
+  LocationPageDataResult,
+  LocationWithArea,
+} from "@/lib/location/location-page-data";
 
-const INVALID_LOCATION_ID_PATTERN = /[\\/?#\u0000-\u001f\u007f-\u009f]/;
+const UUID_URN_PATTERN =
+  /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
-type ResolvedLocationDetail = LocationDetailResult<KeyLocation>;
+type ResolvedLocationDetail = LocationDetailResult<LocationWithArea>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -20,7 +23,7 @@ function createMalformedDataError(): Error {
   return new Error("場所データの形式が不正です");
 }
 
-function isKeyLocationsDataResult(value: unknown): value is KeyLocationsDataResult {
+function isLocationsDataResult(value: unknown): value is LocationPageDataResult {
   if (!isRecord(value)) {
     return false;
   }
@@ -32,17 +35,19 @@ function isKeyLocationsDataResult(value: unknown): value is KeyLocationsDataResu
   return (
     value.status === "success" &&
     Array.isArray(value.categories) &&
-    value.categories.every(isKeyLocationCategory)
+    value.categories.every(
+      (category) =>
+        isRecord(category) &&
+        typeof category.category === "string" &&
+        typeof category.categoryId === "string" &&
+        Array.isArray(category.locations) &&
+        category.locations.length > 0,
+    )
   );
 }
 
 function isValidLocationId(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    value.length > 0 &&
-    value.trim() === value &&
-    !INVALID_LOCATION_ID_PATTERN.test(value)
-  );
+  return typeof value === "string" && UUID_URN_PATTERN.test(value);
 }
 
 function hasInvalidLoadedLocationId(value: unknown): boolean {
@@ -50,28 +55,27 @@ function hasInvalidLoadedLocationId(value: unknown): boolean {
     return false;
   }
 
-  return value.categories.some((category) => {
+  return (value.categories as unknown[]).some((category) => {
     if (!isRecord(category) || !Array.isArray(category.locations)) {
       return false;
     }
 
-    return category.locations.some(
+    return (category.locations as unknown[]).some(
       (location) => isRecord(location) && !isValidLocationId(location.id),
     );
   });
 }
 
 function collectLocations(
-  categories: Extract<KeyLocationsDataResult, { status: "success" }>["categories"],
+  categories: Extract<LocationPageDataResult, { status: "success" }>["categories"],
 ):
-  | { status: "success"; locations: KeyLocation[] }
+  | { status: "success"; locations: LocationWithArea[] }
   | {
       status: "error";
       error: Error;
       reason: LocationDetailErrorReason;
     } {
-  const locations: KeyLocation[] = [];
-  const seenIds = new Set<string>();
+  const locations = new Map<string, LocationWithArea>();
 
   if (!Array.isArray(categories)) {
     return {
@@ -82,7 +86,12 @@ function collectLocations(
   }
 
   for (const category of categories) {
-    if (!isKeyLocationCategory(category)) {
+    if (
+      !isRecord(category) ||
+      typeof category.category !== "string" ||
+      typeof category.categoryId !== "string" ||
+      !Array.isArray(category.locations)
+    ) {
       return {
         status: "error",
         reason: "invalid-data",
@@ -90,11 +99,18 @@ function collectLocations(
       };
     }
 
-    for (const location of category.locations) {
+    for (const location of category.locations as unknown[]) {
       if (
         typeof location !== "object" ||
         location === null ||
-        !isValidLocationId(location.id)
+        !isRecord(location) ||
+        !isValidLocationId(location.id) ||
+        typeof location.name !== "string" ||
+        location.name.trim().length === 0 ||
+        typeof location.lat !== "number" ||
+        !Number.isFinite(location.lat) ||
+        typeof location.lng !== "number" ||
+        !Number.isFinite(location.lng)
       ) {
         return {
           status: "error",
@@ -103,26 +119,29 @@ function collectLocations(
         };
       }
 
-      if (seenIds.has(location.id)) {
-        return {
-          status: "error",
-          reason: "duplicate-id",
-          error: new Error("場所識別子が重複しています"),
-        };
+      const existing = locations.get(location.id as string);
+      if (existing !== undefined) {
+        if (!isDeepStrictEqual(existing, location)) {
+          return {
+            status: "error",
+            reason: "duplicate-id",
+            error: new Error("場所識別子が重複しています"),
+          };
+        }
+        continue;
       }
 
-      seenIds.add(location.id);
-      locations.push(location);
+      locations.set(location.id as string, location as unknown as LocationWithArea);
     }
   }
 
-  return { status: "success", locations };
+  return { status: "success", locations: [...locations.values()] };
 }
 
 /** Resolves one location ID while preserving transport and identity failures. */
 export function resolveLocationDetail(
   id: unknown,
-  data: KeyLocationsDataResult,
+  data: LocationPageDataResult,
 ): ResolvedLocationDetail {
   if (!isValidLocationId(id)) {
     return {
@@ -132,7 +151,7 @@ export function resolveLocationDetail(
     };
   }
 
-  if (!isKeyLocationsDataResult(data)) {
+  if (!isLocationsDataResult(data)) {
     if (hasInvalidLoadedLocationId(data)) {
       return {
         status: "error",
@@ -155,7 +174,7 @@ export function resolveLocationDetail(
     };
   }
 
-  const collected = collectLocations(data.categories);
+  const collected = collectLocations(data.categories as LocationCategoryWithArea[]);
   if (collected.status === "error") {
     return collected;
   }

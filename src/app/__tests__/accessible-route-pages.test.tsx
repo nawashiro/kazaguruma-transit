@@ -8,10 +8,10 @@ import LocationDetailPage, {
   generateMetadata as locationDetailGenerateMetadata,
 } from "@/app/locations/location-detail/[id]/page";
 import type {
-  KeyLocation,
-  KeyLocationCategory,
-  KeyLocationsDataResult,
-} from "@/utils/addressLoader";
+  LocationWithArea,
+  LocationCategoryWithArea,
+  LocationPageDataResult,
+} from "@/lib/location/location-page-data";
 
 const mockUseAuth = jest.fn();
 const mockRouterPush = jest.fn();
@@ -21,7 +21,7 @@ const mockNotFound = jest.fn(() => {
   throw NEXT_NOT_FOUND;
 });
 const mockLoadLocationPageData = jest.fn<
-  Promise<KeyLocationsDataResult>,
+  Promise<LocationPageDataResult>,
   []
 >();
 let mockSearchParams = new URLSearchParams();
@@ -43,24 +43,25 @@ jest.mock("@/lib/location/location-page-data", () => ({
   loadLocationPageData: () => mockLoadLocationPageData(),
 }));
 
-const primaryLocation: KeyLocation = {
-  id: "kanda-library-日本",
-  name: "神田図書館",
+const primaryLocation: LocationWithArea = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000071",
+  name: "千代田区役所",
   lat: 35.694,
-  lng: 139.768,
+  lng: 139.753,
   area: "神田",
-  description: "地域の図書館です",
-  imageUri: "https://example.test/kanda-library.jpg",
-  uri: "https://example.test/kanda-library",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  relatedPages: [],
+  osmElement: { type: "node", id: 71 },
+  wheelchair: "yes",
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=71",
+  imageUri: "https://example.test/city.jpg",
+  imageCreator: "さくら",
+  imageLicense: "https://creativecommons.org/licenses/by-sa/4.0/",
 };
 
-const locationCategories: KeyLocationCategory[] = [
+const locationCategories: LocationCategoryWithArea[] = [
   {
-    category: "公共施設",
-    "category:en": "public-facilities",
+    category: "市役所・東京都の区役所",
+    categoryId: "1302",
     locations: [primaryLocation],
   },
 ];

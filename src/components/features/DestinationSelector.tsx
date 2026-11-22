@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import type { Location } from "@/types/core";
-import type { AddressCategory } from "@/utils/addressLoader";
+import type { RouteDestinationCategory } from "@/types/route-destinations";
 import LocationSuggestions from "./LocationSuggestions";
 import InputField from "@/components/ui/InputField";
 import SearchButton from "@/components/ui/SearchButton";
@@ -11,7 +11,7 @@ import { useGeocodingSearch } from "./useGeocodingSearch";
 
 interface DestinationSelectorProps extends LocationSelectionProps {
   onDestinationSelected: (location: Location) => void;
-  categories?: AddressCategory[];
+  categories?: RouteDestinationCategory[];
 }
 
 export default function DestinationSelector({

@@ -31,6 +31,7 @@
 | Jest監視   | `npm run test:watch`                                                         | Jestを監視モードで実行する。                     |
 | 厳格な監査 | `npm run accessibility:strict`                                               | 監査違反を失敗として扱う。                       |
 | CI監査     | `npm run accessibility:ci`                                                   | 開発サーバーを起動して厳格な監査を実行する。     |
+| スキップリンク | `npm run test:skip-link`                                                  | ビルド済みのアプリを3000ポートで起動し、キーボード操作のスキップリンクを実ブラウザで検証する。`npm run build`が前提。 |
 | Prisma     | `npm run prisma:generate`、`npm run prisma:migrate`、`npm run prisma:studio` | Client生成、マイグレーション、Studioを実行する。 |
 | GTFS取込   | `npm run import-gtfs`                                                        | 停止中の交通DBを破棄し、スキーマ作成・GTFS取込・検証を実行する。             |
 
@@ -42,4 +43,4 @@
 
 ## Quality Gate
 
-`.github/workflows/quality-gate.yml`は`master`へのpush、`master`を対象とするPull Request、手動実行で動く。
+`.github/workflows/quality-gate.yml`は`master`へのpush、`master`を対象とするPull Request、手動実行で動く。本番ビルド、ESLint、型検査、Jest、スキップリンクのブラウザ検証を順に実行する。

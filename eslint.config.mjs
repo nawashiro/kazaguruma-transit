@@ -30,7 +30,7 @@ const eslintConfig = [
       "**/__mocks__/**/*.tsx",
     ],
     rules: {
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 ];

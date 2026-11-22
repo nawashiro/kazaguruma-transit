@@ -28,7 +28,7 @@ function getFirstCategoryId(result: LocationPageData): string | null {
     return null;
   }
 
-  const categoryId = result.categories[0]?.["category:en"];
+  const categoryId = result.categories[0]?.categoryId;
   return typeof categoryId === "string" && categoryId.trim().length > 0
     ? categoryId
     : null;

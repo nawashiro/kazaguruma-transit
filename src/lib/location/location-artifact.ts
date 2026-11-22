@@ -1,30 +1,54 @@
 import fs from "node:fs";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 
-const INVALID_LOCATION_ID_PATTERN = /[\\/?#\u0000-\u001f\u007f-\u009f]/;
+import type {
+  RouteDestinationCategory,
+  RouteDestinationLocation,
+} from "@/types/route-destinations";
+import {
+  isLocationImageData,
+  type LocationImageData,
+} from "@/lib/location/location-image";
+
 const INVALID_URI_CHARACTER_PATTERN = /[\u0000-\u0020\u007f-\u009f]/;
 
 export interface LocationArtifactSourceUris {
-  mainFacilitiesUri: string;
-  keyLocationsUri: string;
+  datasetJsonLdUri: string;
+  osmMirrorUri: string;
   townGeoJsonUri: string;
 }
 
 type JsonRecord = Record<string, unknown>;
-type LocationRecord = JsonRecord & { lat: number; lng: number };
-type MainFacilityCategory = JsonRecord & {
-  category: string;
-  "category:en": string;
-  locations: LocationRecord[];
-};
-type KeyLocation = LocationRecord & {
+
+const UUID_URN_PATTERN =
+  /^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+const CATEGORY_CODE_PATTERN = /^[0-9]{4}$/u;
+
+export interface LocationEntry {
   id: string;
-};
-type KeyLocationCategory = JsonRecord & {
+  name: string;
+  lat: number;
+  lng: number;
+  imageUri?: string;
+  imageCreator?: string;
+  imageLicense?: string;
+  image?: LocationImageData;
+  relatedPages: Array<{ name: string; url: string }>;
+  osmElement: { type: "node" | "way" | "relation"; id: number };
+  wheelchair: "yes" | "limited" | "no" | null;
+  phone?: { display: string; tel: string };
+  websiteUri?: string;
+  wikipediaUri?: string;
+  osmEditUrl: string;
+  openingHours?: string;
+}
+
+export interface LocationCategory {
   category: string;
-  "category:en": string;
-  locations: KeyLocation[];
-};
+  categoryId: string;
+  locations: LocationEntry[];
+}
 type PolygonCoordinates = number[][][];
 type MultiPolygonCoordinates = number[][][][];
 type GeoJsonFeature = JsonRecord & {
@@ -44,8 +68,8 @@ export interface LocationArtifact {
   status: "validated";
   sourceUris: LocationArtifactSourceUris;
   sources: {
-    mainFacilities: MainFacilityCategory[];
-    keyLocations: KeyLocationCategory[];
+    routeDestinations: RouteDestinationCategory[];
+    locations: LocationCategory[];
     townGeoJson: TownGeoJson;
   };
   derivedRegions: Record<string, string>;
@@ -109,23 +133,6 @@ function requireFiniteNumber(value: unknown, fieldPath: string): number {
   return value;
 }
 
-function validateOptionalString(
-  record: JsonRecord,
-  fieldName: string,
-  fieldPath: string,
-): void {
-  if (
-    !(fieldName in record) ||
-    record[fieldName] === undefined ||
-    record[fieldName] === null
-  ) {
-    return;
-  }
-  if (typeof record[fieldName] !== "string") {
-    fail(`${fieldPath} は存在する場合に文字列である必要があります`);
-  }
-}
-
 function validateOptionalUri(
   record: JsonRecord,
   fieldName: string,
@@ -141,111 +148,223 @@ function validateOptionalUri(
   requireAbsoluteHttpUri(record[fieldName], fieldPath);
 }
 
-function validateOptionalFiniteNumber(
-  record: JsonRecord,
-  fieldName: string,
-  fieldPath: string,
-): void {
-  if (
-    !(fieldName in record) ||
-    record[fieldName] === undefined ||
-    record[fieldName] === null
-  ) {
-    return;
-  }
-  requireFiniteNumber(record[fieldName], fieldPath);
-}
-
-function isValidLocationId(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    value.length > 0 &&
-    value.trim() === value &&
-    !INVALID_LOCATION_ID_PATTERN.test(value)
-  );
-}
-
-function requireLocationId(value: unknown, fieldPath: string): string {
-  if (!isValidLocationId(value)) {
-    fail(`${fieldPath} は有効な場所識別子である必要があります`);
+function requireUuidUrn(value: unknown, fieldPath: string): string {
+  if (typeof value !== "string" || !UUID_URN_PATTERN.test(value)) {
+    fail(`${fieldPath} は urn:uuid 形式である必要があります`);
   }
   return value;
 }
 
-function validateLocationFields(
-  value: unknown,
-  fieldPath: string,
-  requireKeyFields: boolean,
-): LocationRecord {
+function validateOsmElement(value: unknown, fieldPath: string): LocationEntry["osmElement"] {
   if (!isRecord(value)) {
     fail(`${fieldPath} はオブジェクトである必要があります`);
   }
-
-  const location = value as LocationRecord;
-  if (requireKeyFields) {
-    requireLocationId(location.id, `${fieldPath}.id`);
-    requireNonEmptyString(location.nodeCopyright, `${fieldPath}.nodeCopyright`);
-  } else {
-    requireNonEmptyString(location.copyright, `${fieldPath}.copyright`);
+  const type = value["type"];
+  if (type !== "node" && type !== "way" && type !== "relation") {
+    fail(`${fieldPath}.type は node/way/relation である必要があります`);
   }
-  requireNonEmptyString(location.name, `${fieldPath}.name`);
-  requireFiniteNumber(location.lat, `${fieldPath}.lat`);
-  requireFiniteNumber(location.lng, `${fieldPath}.lng`);
-  requireNonEmptyString(location.licence, `${fieldPath}.licence`);
-  requireAbsoluteHttpUri(location.licenceUri, `${fieldPath}.licenceUri`);
-
-  validateOptionalString(location, "description", `${fieldPath}.description`);
-  validateOptionalUri(location, "imageUri", `${fieldPath}.imageUri`);
-  validateOptionalString(
-    location,
-    "imageCopyright",
-    `${fieldPath}.imageCopyright`,
-  );
-  validateOptionalUri(location, "uri", `${fieldPath}.uri`);
-  if (requireKeyFields) {
-    validateOptionalString(
-      location,
-      "descriptionCopyright",
-      `${fieldPath}.descriptionCopyright`,
-    );
-    validateOptionalString(
-      location,
-      "imageCopylight",
-      `${fieldPath}.imageCopylight`,
-    );
-    validateOptionalFiniteNumber(
-      location,
-      "nodeSourceId",
-      `${fieldPath}.nodeSourceId`,
-    );
+  const id = value["id"];
+  if (typeof id !== "number" || !Number.isInteger(id)) {
+    fail(`${fieldPath}.id は整数である必要があります`);
   }
-
-  return location;
+  return { type, id } as LocationEntry["osmElement"];
 }
 
-function validateCategories(
-  value: unknown,
-  sourceName: string,
-  requireKeyFields: boolean,
-): MainFacilityCategory[] | KeyLocationCategory[] {
+function validateWheelchair(value: unknown, fieldPath: string): LocationEntry["wheelchair"] {
+  if (value === null) {
+    return null;
+  }
+  if (value === "yes" || value === "limited" || value === "no") {
+    return value;
+  }
+  fail(`${fieldPath} は yes/limited/no/null である必要があります`);
+}
+
+function validateRelatedPages(value: unknown, fieldPath: string): LocationEntry["relatedPages"] {
+  if (!Array.isArray(value)) {
+    fail(`${fieldPath} は配列である必要があります`);
+  }
+  return value.map((raw, index) => {
+    const pagePath = `${fieldPath}[${index}]`;
+    if (!isRecord(raw)) {
+      fail(`${pagePath} はオブジェクトである必要があります`);
+    }
+    return {
+      name: requireNonEmptyString(raw["name"], `${pagePath}.name`),
+      url: requireAbsoluteHttpUri(raw["url"], `${pagePath}.url`),
+    };
+  });
+}
+
+function validateLocationEntry(value: unknown, fieldPath: string): LocationEntry {
+  if (!isRecord(value)) {
+    fail(`${fieldPath} はオブジェクトである必要があります`);
+  }
+  const id = requireUuidUrn(value["id"], `${fieldPath}.id`);
+  const name = requireNonEmptyString(value["name"], `${fieldPath}.name`);
+  const lat = requireFiniteNumber(value["lat"], `${fieldPath}.lat`);
+  const lng = requireFiniteNumber(value["lng"], `${fieldPath}.lng`);
+  const osmElement = validateOsmElement(value["osmElement"], `${fieldPath}.osmElement`);
+  const wheelchair = validateWheelchair(value["wheelchair"], `${fieldPath}.wheelchair`);
+  const relatedPages = validateRelatedPages(value["relatedPages"], `${fieldPath}.relatedPages`);
+
+  const hasImageUri = value["imageUri"] !== undefined && value["imageUri"] !== null;
+  const hasImageCreator = value["imageCreator"] !== undefined && value["imageCreator"] !== null;
+  const hasImageLicense = value["imageLicense"] !== undefined && value["imageLicense"] !== null;
+  const hasAnyImage = hasImageUri || hasImageCreator || hasImageLicense;
+  let imageUri: string | undefined;
+  let imageCreator: string | undefined;
+  let imageLicense: string | undefined;
+  if (hasAnyImage) {
+    imageUri = requireAbsoluteHttpUri(value["imageUri"], `${fieldPath}.imageUri`);
+    imageLicense = requireNonEmptyString(value["imageLicense"], `${fieldPath}.imageLicense`);
+    if (hasImageCreator) {
+      imageCreator = requireNonEmptyString(value["imageCreator"], `${fieldPath}.imageCreator`);
+    }
+  }
+
+  const hasImage = value["image"] !== undefined && value["image"] !== null;
+  let image: LocationImageData | undefined;
+  if (hasImage) {
+    if (!isLocationImageData(value["image"])) {
+      fail(`${fieldPath}.image は派生画像の形式が不正です`);
+    }
+    image = value["image"];
+  }
+
+  const hasPhone = value["phone"] !== undefined && value["phone"] !== null;
+  let phone: { display: string; tel: string } | undefined;
+  if (hasPhone) {
+    const rawPhone = value["phone"];
+    if (!isRecord(rawPhone)) {
+      fail(`${fieldPath}.phone はオブジェクトである必要があります`);
+    }
+    phone = {
+      display: requireNonEmptyString(rawPhone["display"], `${fieldPath}.phone.display`),
+      tel: requireNonEmptyString(rawPhone["tel"], `${fieldPath}.phone.tel`),
+    };
+    if (!phone.tel.startsWith("tel:")) {
+      fail(`${fieldPath}.phone.tel は tel: で始まる必要があります`);
+    }
+  }
+
+  const hasWebsite = value["websiteUri"] !== undefined && value["websiteUri"] !== null;
+  let websiteUri: string | undefined;
+  if (hasWebsite) {
+    websiteUri = requireAbsoluteHttpUri(value["websiteUri"], `${fieldPath}.websiteUri`);
+  }
+
+  const hasWikipedia = value["wikipediaUri"] !== undefined && value["wikipediaUri"] !== null;
+  let wikipediaUri: string | undefined;
+  if (hasWikipedia) {
+    wikipediaUri = requireAbsoluteHttpUri(value["wikipediaUri"], `${fieldPath}.wikipediaUri`);
+  }
+
+  const osmEditUrl = requireAbsoluteHttpUri(value["osmEditUrl"], `${fieldPath}.osmEditUrl`);
+
+  const hasOpeningHours = value["openingHours"] !== undefined && value["openingHours"] !== null;
+  let openingHours: string | undefined;
+  if (hasOpeningHours) {
+    openingHours = requireNonEmptyString(value["openingHours"], `${fieldPath}.openingHours`);
+  }
+
+  const entry: LocationEntry = {
+    id,
+    name,
+    lat,
+    lng,
+    relatedPages,
+    osmElement,
+    wheelchair,
+    osmEditUrl,
+  };
+  if (imageUri !== undefined && imageLicense !== undefined) {
+    entry.imageUri = imageUri;
+    entry.imageLicense = imageLicense;
+    if (imageCreator !== undefined) {
+      entry.imageCreator = imageCreator;
+    }
+  }
+  if (image !== undefined) {
+    entry.image = image;
+  }
+  if (phone !== undefined) {
+    entry.phone = phone;
+  }
+  if (websiteUri !== undefined) {
+    entry.websiteUri = websiteUri;
+  }
+  if (wikipediaUri !== undefined) {
+    entry.wikipediaUri = wikipediaUri;
+  }
+  if (openingHours !== undefined) {
+    entry.openingHours = openingHours;
+  }
+  return entry;
+}
+
+function validateLocations(value: unknown): LocationCategory[] {
   if (!Array.isArray(value) || value.length === 0) {
-    fail(`${sourceName} は空でないカテゴリ配列である必要があります`);
+    fail("sources.locations は空でないカテゴリ配列である必要があります");
+  }
+  const categoryIds = new Set<string>();
+  const entriesById = new Map<string, LocationEntry>();
+  return value.map((rawCategory, categoryIndex) => {
+    const categoryPath = `sources.locations[${categoryIndex}]`;
+    if (!isRecord(rawCategory)) {
+      fail(`${categoryPath} はオブジェクトである必要があります`);
+    }
+    const categoryId = requireNonEmptyString(rawCategory["categoryId"], `${categoryPath}.categoryId`);
+    if (!CATEGORY_CODE_PATTERN.test(categoryId)) {
+      fail(`${categoryPath}.categoryId は4桁コードである必要があります`);
+    }
+    requireNonEmptyString(rawCategory["category"], `${categoryPath}.category`);
+    if (categoryIds.has(categoryId)) {
+      fail(`sources.locations に重複カテゴリ識別子があります: ${categoryId}`);
+    }
+    categoryIds.add(categoryId);
+    if (!Array.isArray(rawCategory["locations"]) || (rawCategory["locations"] as unknown[]).length === 0) {
+      fail(`${categoryPath}.locations は空でない配列である必要があります`);
+    }
+    const locations = (rawCategory["locations"] as unknown[]).map((loc, locIndex) => {
+      const validated = validateLocationEntry(loc, `${categoryPath}.locations[${locIndex}]`);
+      const existing = entriesById.get(validated.id);
+      if (existing !== undefined) {
+        if (!isDeepStrictEqual(existing, validated)) {
+          fail(`sources.locations に内容の異なる重複場所識別子があります: ${validated.id}`);
+        }
+        return existing;
+      }
+      entriesById.set(validated.id, validated);
+      return validated;
+    });
+    return {
+      category: rawCategory["category"] as string,
+      categoryId,
+      locations,
+    } as LocationCategory;
+  });
+}
+
+function validateRouteDestinations(value: unknown): RouteDestinationCategory[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    fail("sources.routeDestinations は空でないカテゴリ配列である必要があります");
   }
 
   const categoryIds = new Set<string>();
-  const categories = value.map((rawCategory, categoryIndex) => {
-    const categoryPath = `${sourceName}[${categoryIndex}]`;
+  return value.map((rawCategory, categoryIndex) => {
+    const categoryPath = `sources.routeDestinations[${categoryIndex}]`;
     if (!isRecord(rawCategory)) {
       fail(`${categoryPath} はオブジェクトである必要があります`);
     }
 
     const categoryId = requireNonEmptyString(
-      rawCategory["category:en"],
-      `${categoryPath}.category:en`,
+      rawCategory.categoryId,
+      `${categoryPath}.categoryId`,
     );
     requireNonEmptyString(rawCategory.category, `${categoryPath}.category`);
     if (categoryIds.has(categoryId)) {
-      fail(`${sourceName} に重複カテゴリ識別子があります: ${categoryId}`);
+      fail(`sources.routeDestinations に重複カテゴリ識別子があります: ${categoryId}`);
     }
     categoryIds.add(categoryId);
 
@@ -253,48 +372,23 @@ function validateCategories(
       fail(`${categoryPath}.locations は空でない配列である必要があります`);
     }
 
-    const locations = rawCategory.locations.map((location, locationIndex) =>
-      validateLocationFields(
-        location,
-        `${categoryPath}.locations[${locationIndex}]`,
-        requireKeyFields,
-      ),
-    );
+    const locations = rawCategory.locations.map((location, locationIndex) => {
+      const locationPath = `${categoryPath}.locations[${locationIndex}]`;
+      if (!isRecord(location)) {
+        fail(`${locationPath} はオブジェクトである必要があります`);
+      }
+      return {
+        name: requireNonEmptyString(location.name, `${locationPath}.name`),
+        lat: requireFiniteNumber(location.lat, `${locationPath}.lat`),
+        lng: requireFiniteNumber(location.lng, `${locationPath}.lng`),
+      } satisfies RouteDestinationLocation;
+    });
+
     return {
       ...rawCategory,
       locations,
-    } as MainFacilityCategory | KeyLocationCategory;
+    } as RouteDestinationCategory;
   });
-
-  return categories as MainFacilityCategory[] | KeyLocationCategory[];
-}
-
-function validateMainFacilities(value: unknown): MainFacilityCategory[] {
-  return validateCategories(value, "sources.mainFacilities", false) as MainFacilityCategory[];
-}
-
-function validateKeyLocations(value: unknown): KeyLocationCategory[] {
-  const categories = validateCategories(
-    value,
-    "sources.keyLocations",
-    true,
-  ) as KeyLocationCategory[];
-  const locationIds = new Set<string>();
-
-  for (const [categoryIndex, category] of categories.entries()) {
-    for (const [locationIndex, location] of category.locations.entries()) {
-      const locationId = requireLocationId(
-        location.id,
-        `sources.keyLocations[${categoryIndex}].locations[${locationIndex}].id`,
-      );
-      if (locationIds.has(locationId)) {
-        fail(`sources.keyLocations に重複場所識別子があります: ${locationId}`);
-      }
-      locationIds.add(locationId);
-    }
-  }
-
-  return categories;
 }
 
 function validatePosition(value: unknown, fieldPath: string): number[] {
@@ -405,13 +499,13 @@ function validateSourceUris(value: unknown): LocationArtifactSourceUris {
     fail("sourceUris はオブジェクトである必要があります");
   }
   return {
-    mainFacilitiesUri: requireAbsoluteHttpUri(
-      value.mainFacilitiesUri,
-      "sourceUris.mainFacilitiesUri",
+    datasetJsonLdUri: requireAbsoluteHttpUri(
+      value.datasetJsonLdUri,
+      "sourceUris.datasetJsonLdUri",
     ),
-    keyLocationsUri: requireAbsoluteHttpUri(
-      value.keyLocationsUri,
-      "sourceUris.keyLocationsUri",
+    osmMirrorUri: requireAbsoluteHttpUri(
+      value.osmMirrorUri,
+      "sourceUris.osmMirrorUri",
     ),
     townGeoJsonUri: requireAbsoluteHttpUri(
       value.townGeoJsonUri,
@@ -422,23 +516,26 @@ function validateSourceUris(value: unknown): LocationArtifactSourceUris {
 
 function validateDerivedRegions(
   value: unknown,
-  keyLocations: KeyLocationCategory[],
+  locations: LocationCategory[],
 ): Record<string, string> {
   if (!isRecord(value)) {
     fail("derivedRegions はオブジェクトである必要があります");
   }
 
   const derivedRegions: Record<string, string> = {};
-  for (const category of keyLocations) {
+  const requireRegion = (id: string) => {
+    if (!Object.prototype.hasOwnProperty.call(value, id)) {
+      fail(`場所 ${id} の導出地域がありません`);
+    }
+    const region = (value as Record<string, unknown>)[id];
+    if (typeof region !== "string") {
+      fail(`場所 ${id} の導出地域は文字列である必要があります`);
+    }
+    derivedRegions[id] = region;
+  };
+  for (const category of locations) {
     for (const location of category.locations) {
-      if (!Object.prototype.hasOwnProperty.call(value, location.id)) {
-        fail(`場所 ${location.id} の導出地域がありません`);
-      }
-      const region = value[location.id];
-      if (typeof region !== "string") {
-        fail(`場所 ${location.id} の導出地域は文字列である必要があります`);
-      }
-      derivedRegions[location.id] = region;
+      requireRegion(location.id);
     }
   }
   return derivedRegions;
@@ -452,18 +549,20 @@ function validateArtifact(value: unknown): LocationArtifact {
     fail("sources はオブジェクトである必要があります");
   }
 
-  const mainFacilities = validateMainFacilities(value.sources.mainFacilities);
-  const keyLocations = validateKeyLocations(value.sources.keyLocations);
+  const routeDestinations = validateRouteDestinations(
+    value.sources.routeDestinations,
+  );
+  const locations = validateLocations(value.sources.locations);
   const townGeoJson = validateTownGeoJson(value.sources.townGeoJson);
   const sourceUris = validateSourceUris(value.sourceUris);
-  const derivedRegions = validateDerivedRegions(value.derivedRegions, keyLocations);
+  const derivedRegions = validateDerivedRegions(value.derivedRegions, locations);
 
   return {
     status: "validated",
     sourceUris,
     sources: {
-      mainFacilities,
-      keyLocations,
+      routeDestinations,
+      locations,
       townGeoJson,
     },
     derivedRegions,

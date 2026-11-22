@@ -23,7 +23,6 @@ function makeAppConfig(overrides: DiscussionOverrides = {}) {
   return {
     appUrl: "http://localhost:3000",
     gaMeasurementId: "",
-    locationsDataVersion: "1.0.0",
     discussion: {
       enabled: overrides.enabled ?? false,
       adminPubkey: overrides.adminPubkey ?? "",

@@ -6,7 +6,7 @@ export {};
 
 type LocationCategory = {
   category: string;
-  "category:en": string;
+  categoryId: string;
 };
 
 type LocationCategoryNavigationProps = {
@@ -20,10 +20,10 @@ type ModuleState = {
   error: unknown | null;
 };
 
-const usePathname = jest.fn(() => "/locations/city_office_and_branch_offices");
+const usePathname = jest.fn(() => "/locations/1302");
 const useSearchParams = jest.fn(() => new URLSearchParams());
 const mockLoadLocationCategories = jest.fn();
-const mockLoadKeyLocationsData = jest.fn();
+const mockLoadLocationPageData = jest.fn();
 
 jest.mock("next/navigation", () => ({
   usePathname: () => usePathname(),
@@ -43,8 +43,8 @@ jest.mock("@/utils/addressLoader", () => {
   const actual = jest.requireActual("@/utils/addressLoader");
   return {
     ...actual,
-    loadKeyLocationsData: (...args: unknown[]) =>
-      mockLoadKeyLocationsData(...args),
+    loadLocationPageData: (...args: unknown[]) =>
+      mockLoadLocationPageData(...args),
   };
 });
 
@@ -112,19 +112,19 @@ function getLocationCategoryNavigation(): React.ComponentType<LocationCategoryNa
 const categories: readonly LocationCategory[] = [
   {
     category: "区役所・出張所",
-    "category:en": "city_office_and_branch_offices",
+    categoryId: "1302",
   },
   {
     category: "自然環境公園",
-    "category:en": "natural environment park",
+    categoryId: "1003",
   },
   {
     category: "図書館",
-    "category:en": "libraries",
+    categoryId: "1512",
   },
   {
     category: "区内の公園・緑地・自然環境に関する長いカテゴリ名",
-    "category:en": "long-natural-environment-category",
+    categoryId: "9999",
   },
 ];
 
@@ -133,7 +133,7 @@ const LOCATION_CATEGORY_PANEL_ID = "location-category-panel";
 const BASE_URL = "https://kazaguruma.invalid";
 
 function renderNavigation(
-  pathname = "/locations/city_office_and_branch_offices",
+  pathname = "/locations/1302",
   searchParams = new URLSearchParams(),
 ) {
   usePathname.mockReturnValue(pathname);
@@ -151,19 +151,19 @@ function getCategoryLinks(): HTMLElement[] {
 
 function expectNoLegacyLocationLoaderCalls(): void {
   expect(mockLoadLocationCategories).not.toHaveBeenCalled();
-  expect(mockLoadKeyLocationsData).not.toHaveBeenCalled();
+  expect(mockLoadLocationPageData).not.toHaveBeenCalled();
 }
 
 describe("LocationCategoryNavigation", () => {
   beforeEach(() => {
     usePathname.mockReset();
-    usePathname.mockReturnValue("/locations/city_office_and_branch_offices");
+    usePathname.mockReturnValue("/locations/1302");
     useSearchParams.mockReset();
     useSearchParams.mockReturnValue(new URLSearchParams());
     mockLoadLocationCategories.mockReset();
     mockLoadLocationCategories.mockResolvedValue(categories);
-    mockLoadKeyLocationsData.mockReset();
-    mockLoadKeyLocationsData.mockResolvedValue(categories);
+    mockLoadLocationPageData.mockReset();
+    mockLoadLocationPageData.mockResolvedValue(categories);
   });
 
   it("renders a semantic tablist with every category as a native link", () => {
@@ -179,7 +179,7 @@ describe("LocationCategoryNavigation", () => {
       categories.map(({ category }) => category),
     );
 
-    categories.forEach(({ category, "category:en": categoryId }) => {
+    categories.forEach(({ category, categoryId }) => {
       const tab = screen.getByRole("tab", { name: category });
       expect(tab.tagName).toBe("A");
       expect(tab).toHaveAttribute(
@@ -197,7 +197,7 @@ describe("LocationCategoryNavigation", () => {
   });
 
   it("derives the current category from pathname and exposes aria-current page", () => {
-    renderNavigation("/locations/natural%20environment%20park");
+    renderNavigation("/locations/1003");
 
     const currentTab = screen.getByRole("tab", { name: "自然環境公園" });
     expect(currentTab).toHaveAttribute("aria-current", "page");
@@ -224,12 +224,12 @@ describe("LocationCategoryNavigation", () => {
 
   it("preserves a valid origin only on category-to-category links", () => {
     renderNavigation(
-      "/locations/city_office_and_branch_offices",
+      "/locations/1302",
       new URLSearchParams("origin=51.5074%2C-0.1278"),
     );
 
     getCategoryLinks();
-    categories.forEach(({ category, "category:en": categoryId }) => {
+    categories.forEach(({ category, categoryId }) => {
       const tab = screen.getByRole("tab", { name: category });
       expect(tab).toHaveAttribute(
         "href",
@@ -245,7 +245,7 @@ describe("LocationCategoryNavigation", () => {
     "does not preserve an %s origin on category links",
     (_state, searchParams) => {
       renderNavigation(
-        "/locations/city_office_and_branch_offices",
+        "/locations/1302",
         searchParams,
       );
 
@@ -293,7 +293,7 @@ describe("LocationCategoryNavigation", () => {
       expect(tab).toHaveAttribute("role", "tab");
       expect(tab).toHaveAttribute(
         "href",
-        `/locations/${encodeURIComponent(category?.["category:en"] ?? "")}`,
+        `/locations/${encodeURIComponent(category?.categoryId ?? "")}`,
       );
       expect(tab).toHaveAttribute(
         "aria-selected",

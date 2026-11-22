@@ -1,0 +1,83 @@
+export type WheelchairTag = "yes" | "limited" | "no" | null;
+
+export type WheelchairState = "全面" | "一部" | "非対応" | "情報なし";
+
+export interface OsmElementRef {
+  type: "node" | "way" | "relation";
+  id: number;
+}
+
+export interface WheelchairStatus {
+  state: WheelchairState;
+  label: WheelchairState;
+  description: string;
+  isKnown: boolean;
+  referenceUrl: string;
+  linkLabelMain: string;
+  linkLabelSub: string;
+}
+
+const DESCRIPTIONS: Record<WheelchairState, string> = {
+  全面: "入口には段がなく、全部の部屋に段がありません。",
+  一部: "入口には最大7センチの1段の段差があります。ほとんどの部屋には段がありません。",
+  非対応: "入口には段が1段から数段あり、部屋は車いす不可。",
+  情報なし: "追加してください。",
+};
+
+function referenceUrlFor(osmElement: OsmElementRef | undefined): string {
+  if (osmElement === undefined) {
+    return "https://www.openstreetmap.org/";
+  }
+  if (osmElement.type === "node") {
+    return `https://wheelmap.org/nodes/${osmElement.id}`;
+  }
+  if (osmElement.type === "way") {
+    return `https://wheelmap.org/nodes/-${osmElement.id}`;
+  }
+  return `https://www.openstreetmap.org/relation/${osmElement.id}`;
+}
+
+function isWheelMapTarget(osmElement: OsmElementRef | undefined): boolean {
+  return osmElement?.type === "node" || osmElement?.type === "way";
+}
+
+export function getWheelchairStatus(
+  tag: WheelchairTag | string | undefined,
+  osmElement: OsmElementRef | undefined,
+): WheelchairStatus {
+  const normalized: WheelchairTag =
+    tag === "yes" || tag === "limited" || tag === "no" ? tag : null;
+
+  const state: WheelchairState =
+    normalized === "yes"
+      ? "全面"
+      : normalized === "limited"
+        ? "一部"
+        : normalized === "no"
+          ? "非対応"
+          : "情報なし";
+
+  const isKnown = state !== "情報なし";
+  const useWheelMap = isWheelMapTarget(osmElement);
+
+  const referenceUrl = referenceUrlFor(osmElement);
+
+  const linkLabelMain = isKnown ? "編集する" : "追加する";
+  const linkLabelSub = useWheelMap
+    ? "（WheelMapを開きます）"
+    : "（OpenStreetMapを開きます）";
+
+  // relationはWheelMapの対象外のため、既知・未知にかかわらずOSM文言にする
+  const finalSub = useWheelMap ? linkLabelSub : "（OpenStreetMapを開きます）";
+  const finalMain = useWheelMap ? linkLabelMain : "編集する";
+
+  return {
+    state,
+    label: state,
+    description: DESCRIPTIONS[state],
+    isKnown,
+    referenceUrl,
+    linkLabelMain: finalMain,
+    linkLabelSub: finalSub,
+  };
+}

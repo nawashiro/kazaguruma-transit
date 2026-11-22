@@ -10,7 +10,7 @@ jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockRouterPush }
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 const location: Location = { lat: 35.694, lng: 139.753, address: "千代田区役所" };
-const categories = [{ category: "公共施設", "category:en": "public", locations: [{ name: location.address!, lat: location.lat, lng: location.lng }] }];
+const categories = [{ category: "公共施設", categoryId: "1302", locations: [{ name: location.address!, lat: location.lat, lng: location.lng }] }];
 
 function Selector({ validationError }: { validationError?: string }) {
   const [selected, setSelected] = useState<Location | null>(null);

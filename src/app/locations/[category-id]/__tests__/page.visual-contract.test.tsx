@@ -2,10 +2,10 @@ import React from "react";
 import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type {
-  KeyLocation,
-  KeyLocationCategory,
-  KeyLocationsDataResult,
-} from "../../../../utils/addressLoader";
+  LocationWithArea,
+  LocationCategoryWithArea,
+  LocationPageDataResult,
+} from "@/lib/location/location-page-data";
 
 type CategoryPageProps = {
   params: Promise<{ "category-id": string }>;
@@ -28,11 +28,11 @@ const AUXILIARY_CAROUSEL_TITLES = [
 const mockNotFound = jest.fn(() => {
   throw new Error("unexpected category notFound() in visual-contract fixture");
 });
-const mockUsePathname = jest.fn(() => "/locations/visual%20contract%20category");
+const mockUsePathname = jest.fn(() => "/locations/1302");
 const mockUseSearchParams = jest.fn(() => new URLSearchParams());
 const mockUseRouter = jest.fn(() => ({ replace: jest.fn() }));
 const mockLoadLocationPageData = jest.fn<
-  Promise<KeyLocationsDataResult>,
+  Promise<LocationPageDataResult>,
   []
 >();
 
@@ -51,22 +51,44 @@ jest.mock("@/lib/location/location-page-data", () => {
   };
 });
 
-const fixtureLocation: KeyLocation = {
-  id: "visual-contract-location",
+const derivedImage = {
+  width: 1280,
+  height: 853,
+  variants: [
+    {
+      width: 480,
+      path: "/generated/location-images/0123456789abcdef-480.webp",
+    },
+    {
+      width: 960,
+      path: "/generated/location-images/fedcba9876543210-960.webp",
+    },
+    {
+      width: 1280,
+      path: "/generated/location-images/89abcdef01234567-1280.webp",
+    },
+  ],
+};
+
+const fixtureLocation: LocationWithArea = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000051",
   name: "視覚契約テストの場所",
   lat: 35.681,
   lng: 139.761,
   area: "東京都千代田区神田和泉町",
-  description: "視覚契約を確認するための場所です",
-  uri: "https://example.test/visual-contract-location",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  relatedPages: [],
+  osmElement: { type: "node", id: 51 },
+  wheelchair: "yes",
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=51",
+  imageUri: "https://example.test/visual-contract-location.jpg",
+  imageCreator: "さくら",
+  imageLicense: "https://creativecommons.org/licenses/by-sa/4.0/",
+  image: derivedImage,
 };
 
-const fixtureCategory: KeyLocationCategory = {
+const fixtureCategory: LocationCategoryWithArea = {
   category: "視覚契約カテゴリ",
-  "category:en": "visual contract category",
+  categoryId: "1302",
   locations: [fixtureLocation],
 };
 
@@ -77,136 +99,135 @@ const LONG_AREA_NAME = "神田和泉町";
 const OTHER_AREA_NAME = "その他";
 const DATA_PROVIDER_SOURCE_HREF =
   "https://github.com/nawashiro/chiyoda_city_main_facilities";
+const DATA_PROVIDER_WHEELMAP_HREF = "https://wheelmap.org";
+const DATA_PROVIDER_OSM_HREF = "https://openstreetmap.org";
 const DATA_PROVIDER_FORM_HREF =
   "https://docs.google.com/forms/d/e/1FAIpQLSeZ1eufe_2aZkRWQwr-RuCceUYUMJ7WmSfUr1ZsX5QTDRqFKQ/viewform?usp=header";
-const DATA_PROVIDER_SOURCE_DESCRIPTION =
-  "この場所データは、ボランティアがつくった千代田区主要施設座標データによる「風かざぐるまの停留所から徒歩圏内（600m以内）であることがわかっている場所」を使用しています。";
-const DATA_PROVIDER_CORRECTION_DESCRIPTION =
-  "誤りが含まれていたり、古いデータが残っていたり、新たに加えてほしい場所があるときは、直接プルリクエストを送るか、こちらのフォームからお知らせください。";
 
-const townVisualLocations: KeyLocation[] = [
+const townVisualLocations: LocationWithArea[] = [
   {
-    id: "visual-long-location",
+    id: "urn:uuid:00000000-0000-4000-8000-000000000052",
     name: LONG_LOCATION_NAME,
     lat: 35.681,
     lng: 139.761,
     area: LONG_AREA_SOURCE_NAME,
-    description: "長い場所名と地域名が切断されないかを確認する説明文です",
     imageUri: "https://example.test/visual-long-location.jpg",
-    uri: "https://example.test/visual-long-location",
-    nodeCopyright: "千代田区",
-    licence: "CC BY 4.0",
-    licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+    imageCreator: "さくら",
+    imageLicense: "https://creativecommons.org/licenses/by-sa/4.0/",
+    image: derivedImage,
+    relatedPages: [],
+    osmElement: { type: "node", id: 52 },
+    wheelchair: "yes",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=52",
   },
   {
-    id: "visual-kanda-location",
+    id: "urn:uuid:00000000-0000-4000-8000-000000000053",
     name: "神田の視覚契約施設",
     lat: 35.682,
     lng: 139.762,
     area: "神田",
-    description: "神田地域の施設です",
-    nodeCopyright: "千代田区",
-    licence: "CC BY 4.0",
-    licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+    relatedPages: [],
+    osmElement: { type: "node", id: 53 },
+    wheelchair: "yes",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=53",
   },
   {
-    id: "visual-kudan-location",
+    id: "urn:uuid:00000000-0000-4000-8000-000000000054",
     name: "九段南の視覚契約施設",
     lat: 35.683,
     lng: 139.763,
     area: "九段南",
-    description: "九段南地域の施設です",
-    nodeCopyright: "千代田区",
-    licence: "CC BY 4.0",
-    licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+    relatedPages: [],
+    osmElement: { type: "node", id: 54 },
+    wheelchair: "yes",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=54",
   },
   {
-    id: "visual-other-location",
+    id: "urn:uuid:00000000-0000-4000-8000-000000000055",
     name: "その他の視覚契約施設",
     lat: 35.684,
     lng: 139.764,
     area: OTHER_AREA_NAME,
-    description: "その他地域の施設です",
-    nodeCopyright: "千代田区",
-    licence: "CC BY 4.0",
-    licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+    relatedPages: [],
+    osmElement: { type: "node", id: 55 },
+    wheelchair: null,
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=55",
   },
 ];
 
-const townVisualCategory: KeyLocationCategory = {
+const townVisualCategory: LocationCategoryWithArea = {
   category: "視覚契約カテゴリ",
-  "category:en": "visual contract category",
+  categoryId: "1302",
   locations: townVisualLocations,
 };
 
-const distanceVisualLocations: KeyLocation[] = [
+const distanceVisualLocations: LocationWithArea[] = [
   {
-    id: "visual-distance-zero",
+    id: "urn:uuid:00000000-0000-4000-8000-000000000056",
     name: "距離帯0キロの施設",
     lat: 35.6815,
     lng: 139.7615,
     area: LONG_AREA_SOURCE_NAME,
-    description: "四捨五入で0キロになる施設です",
-    nodeCopyright: "千代田区",
-    licence: "CC BY 4.0",
-    licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+    relatedPages: [],
+    osmElement: { type: "node", id: 56 },
+    wheelchair: "yes",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=56",
   },
   {
-    id: "visual-distance-one",
+    id: "urn:uuid:00000000-0000-4000-8000-000000000057",
     name: "距離帯1キロの施設",
     lat: 35.69,
     lng: 139.761,
     area: "神田",
-    description: "四捨五入で1キロになる施設です",
-    nodeCopyright: "千代田区",
-    licence: "CC BY 4.0",
-    licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+    relatedPages: [],
+    osmElement: { type: "node", id: 57 },
+    wheelchair: "yes",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=57",
   },
   {
-    id: "visual-distance-one-tie-first",
+    id: "urn:uuid:00000000-0000-4000-8000-000000000058",
     name: "距離帯1キロ同距離先の施設",
     lat: 35.69,
     lng: 139.761,
     area: "神田",
-    description: "距離帯1キロで元データ順を確認する施設です",
-    nodeCopyright: "千代田区",
-    licence: "CC BY 4.0",
-    licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+    relatedPages: [],
+    osmElement: { type: "node", id: 58 },
+    wheelchair: "yes",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=58",
   },
   {
-    id: "visual-distance-one-tie-second",
+    id: "urn:uuid:00000000-0000-4000-8000-000000000059",
     name: "距離帯1キロ同距離後の施設",
     lat: 35.69,
     lng: 139.761,
     area: "神田",
-    description: "距離帯1キロで元データ順を確認する別施設です",
-    nodeCopyright: "千代田区",
-    licence: "CC BY 4.0",
-    licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+    relatedPages: [],
+    osmElement: { type: "node", id: 59 },
+    wheelchair: "yes",
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=59",
   },
   {
-    id: "visual-distance-three",
+    id: "urn:uuid:00000000-0000-4000-8000-000000000060",
     name: "距離帯3キロの施設",
     lat: 35.704,
     lng: 139.761,
     area: OTHER_AREA_NAME,
-    description: "四捨五入で3キロになる施設です",
-    uri: "https://example.test/visual-distance-three",
-    nodeCopyright: "千代田区",
-    licence: "CC BY 4.0",
-    licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+    relatedPages: [],
+    osmElement: { type: "node", id: 60 },
+    wheelchair: null,
+    osmEditUrl: "https://www.openstreetmap.org/edit?node=60",
   },
 ];
 
-const distanceVisualCategory: KeyLocationCategory = {
+const distanceVisualCategory: LocationCategoryWithArea = {
   category: "視覚契約カテゴリ",
-  "category:en": "visual contract category",
+  categoryId: "1302",
   locations: distanceVisualLocations,
 };
 
 const DISTANCE_ORIGIN = "35.681000,139.761000";
 
-function successfulLocationData(): KeyLocationsDataResult {
+function successfulLocationData(): LocationPageDataResult {
   return {
     status: "success",
     categories: [fixtureCategory],
@@ -247,11 +268,11 @@ function getCategoryLayout(): LocationsLayout {
 }
 
 function configureNavigationFixture(
-  category: KeyLocationCategory,
+  category: LocationCategoryWithArea,
   searchParams: Record<string, string | string[] | undefined>,
 ): void {
   mockUsePathname.mockReturnValue(
-    `/locations/${encodeURIComponent(category["category:en"])}`,
+    `/locations/${encodeURIComponent(category.categoryId)}`,
   );
 
   const nextSearchParams = new URLSearchParams();
@@ -267,7 +288,7 @@ async function renderCategoryPage(): Promise<void> {
     <main>
       {await page({
         params: Promise.resolve({
-          "category-id": encodeURIComponent(fixtureCategory["category:en"]),
+          "category-id": encodeURIComponent(fixtureCategory.categoryId),
         }),
         searchParams: Promise.resolve({}),
       })}
@@ -276,7 +297,7 @@ async function renderCategoryPage(): Promise<void> {
 }
 
 async function renderCategoryPageWith(
-  category: KeyLocationCategory,
+  category: LocationCategoryWithArea,
   searchParams: Record<string, string | string[] | undefined> = {},
 ): Promise<void> {
   mockLoadLocationPageData.mockResolvedValueOnce({
@@ -289,7 +310,7 @@ async function renderCategoryPageWith(
     <main>
       {await page({
         params: Promise.resolve({
-          "category-id": encodeURIComponent(category["category:en"]),
+          "category-id": encodeURIComponent(category.categoryId),
         }),
         searchParams: Promise.resolve(searchParams),
       })}
@@ -298,7 +319,7 @@ async function renderCategoryPageWith(
 }
 
 async function renderCategoryRouteWith(
-  category: KeyLocationCategory,
+  category: LocationCategoryWithArea,
   searchParams: Record<string, string | string[] | undefined> = {},
 ): Promise<void> {
   mockLoadLocationPageData.mockResolvedValue({
@@ -310,7 +331,7 @@ async function renderCategoryRouteWith(
   const page = getCategoryPage();
   const pageElement = await page({
     params: Promise.resolve({
-      "category-id": encodeURIComponent(category["category:en"]),
+      "category-id": encodeURIComponent(category.categoryId),
     }),
     searchParams: Promise.resolve(searchParams),
   });
@@ -362,7 +383,7 @@ beforeEach(() => {
   mockNotFound.mockClear();
   mockUsePathname.mockReset();
   mockUsePathname.mockReturnValue(
-    `/locations/${encodeURIComponent(fixtureCategory["category:en"])}`,
+    `/locations/${encodeURIComponent(fixtureCategory.categoryId)}`,
   );
   mockUseSearchParams.mockReset();
   mockUseSearchParams.mockReturnValue(new URLSearchParams());
@@ -521,14 +542,87 @@ describe("category page origin/dev visual contract", () => {
     const card = screen.getByRole("link", {
       name: new RegExp(LONG_LOCATION_NAME),
     });
-    expect(card).toHaveClass("card", "w-full", "hover:shadow-lg");
+    expect(card.tagName).toBe("A");
     expect(card.className).toMatch(/focus-visible:/);
+    expect(card).toHaveClass("card", "w-full", "hover:shadow-lg");
 
-    const image = within(card).getByRole("img", {
-      name: LONG_LOCATION_NAME,
-    });
+    const image = card.querySelector("img");
+    expect(image).not.toBeNull();
+    expect(image).toHaveAttribute("src", derivedImage.variants[2].path);
+    expect(image).toHaveAttribute(
+      "srcset",
+      derivedImage.variants
+        .map((variant) => `${variant.path} ${variant.width}w`)
+        .join(", "),
+    );
+    expect(image).toHaveAttribute(
+      "sizes",
+      "(min-width: 1024px) 277px, (min-width: 768px) calc((100vw - 48px) / 2), calc(100vw - 32px)",
+    );
+    expect(image).toHaveAttribute("loading", "lazy");
+    expect(image).toHaveAttribute("decoding", "async");
+    expect(image).toHaveAttribute("width", "1280");
+    expect(image).toHaveAttribute("height", "853");
+    expect(image).toHaveAttribute("alt", "");
+    expect(image).not.toHaveAttribute("fetchpriority");
+    expect(image?.getAttribute("src")).not.toContain("wikimedia");
     expect(image).toHaveClass("object-cover", "h-48", "w-full");
-    expect(image.closest("figure")).toHaveClass("relative");
+    expect(image?.className).not.toMatch(/rounded/);
+    const figure = image?.closest("figure");
+    expect(figure).toHaveClass("relative");
+    expect(card.firstElementChild).toBe(figure);
+    expect(card.querySelector("a")).toBeNull();
+    expect(card).not.toHaveTextContent("写真:");
+    expect(
+      within(card).queryByRole("link", { name: /CC BY-SA 4\.0/ }),
+    ).toBeNull();
+  });
+
+  it("keeps photo attribution in the card body as one line without a license link", async () => {
+    await renderCategoryPageWith(townVisualCategory);
+
+    const card = screen.getByRole("link", {
+      name: new RegExp(LONG_LOCATION_NAME),
+    });
+    const cardBody = card.querySelector<HTMLElement>(":scope > .card-body");
+    expect(cardBody).not.toBeNull();
+    if (!cardBody) {
+      throw new Error("location card has no card-body");
+    }
+
+    const attribution = within(cardBody).getByText(
+      /写真 さくら・CC BY-SA 4\.0/,
+    );
+    expect(attribution.tagName).toBe("P");
+    expect(attribution).toHaveClass("text-base");
+    expect(cardBody.querySelector("dl")).toBeNull();
+    expect(cardBody).not.toHaveTextContent("ライセンス");
+    expect(card.textContent).not.toMatch(/写真:|ライセンス:/);
+    expect(card.querySelectorAll("a")).toHaveLength(0);
+  });
+
+  it("shows a neutral 情報なし badge for locations without a known state", async () => {
+    await renderCategoryPageWith(townVisualCategory);
+
+    const unknownCard = screen.getByRole("link", {
+      name: /その他の視覚契約施設/,
+    });
+    const unknownBadge = within(unknownCard).getByText("情報なし").closest(".badge");
+    if (!(unknownBadge instanceof HTMLElement)) {
+      throw new Error("expected the unknown state badge");
+    }
+    expect(unknownBadge).toHaveClass("badge-neutral", "whitespace-nowrap");
+
+    const knownCard = screen.getByRole("link", {
+      name: new RegExp(LONG_LOCATION_NAME),
+    });
+    const knownBadge = within(knownCard).getByText("全面").closest(".badge");
+    if (!(knownBadge instanceof HTMLElement)) {
+      throw new Error("expected the known state badge");
+    }
+    expect(knownBadge).toHaveClass("badge-success");
+
+    expect(document.querySelectorAll("a.card .badge")).toHaveLength(4);
   });
 
   it("keeps long location names, area labels, and body copy untruncated at readable text size", async () => {
@@ -546,16 +640,8 @@ describe("category page origin/dev visual contract", () => {
     );
 
     const areaLabel = within(card).getByText(LONG_AREA_NAME, { exact: true });
-    const description = within(card).getByText(
-      "長い場所名と地域名が切断されないかを確認する説明文です",
-      { exact: true },
-    );
     expect(areaLabel).toHaveClass("text-base");
-    expect(description).toHaveClass("text-base");
     expect(areaLabel.className).not.toMatch(
-      /truncate|line-clamp|text-ellipsis|whitespace-nowrap/,
-    );
-    expect(description.className).not.toMatch(
       /truncate|line-clamp|text-ellipsis|whitespace-nowrap/,
     );
     expect(
@@ -713,36 +799,28 @@ describe("category page origin/dev visual contract", () => {
     }
     expectCardStructure(providerCard, "データ提供元");
 
-    const sourceDescription = within(providerCard).getByText(/この場所データは/);
-    expect(sourceDescription.tagName).toBe("P");
-    expect(sourceDescription).toHaveTextContent(DATA_PROVIDER_SOURCE_DESCRIPTION);
+    expect(
+      within(providerCard).getByText(/このデータは誰でも使うことができます。/),
+    ).toBeInTheDocument();
+    expect(within(providerCard).getByText(/誤りがあれば/)).toBeInTheDocument();
+    expect(
+      within(providerCard).getByText(/よくわからなかったら、/),
+    ).toBeInTheDocument();
     const providerLinks = within(providerCard).getAllByRole("link");
-    expect(providerLinks).toHaveLength(2);
+    expect(providerLinks.map((link) => link.textContent)).toEqual([
+      "千代田区区民施設向けデータ",
+      "WheelMap",
+      "OpenStreetMap",
+      "こちらのフォーム",
+    ]);
     expect(providerLinks.map((link) => link.getAttribute("href"))).toEqual([
       DATA_PROVIDER_SOURCE_HREF,
+      DATA_PROVIDER_WHEELMAP_HREF,
+      DATA_PROVIDER_OSM_HREF,
       DATA_PROVIDER_FORM_HREF,
     ]);
     expect(
-      within(providerCard).getByRole("link", {
-        name: "千代田区主要施設座標データ",
-      }),
-    ).toHaveAttribute("href", DATA_PROVIDER_SOURCE_HREF);
-
-    const correctionDescription = within(providerCard).getByText(
-      /誤りが含まれていたり、古いデータが残っていたり/,
-    );
-    expect(correctionDescription.tagName).toBe("P");
-    expect(correctionDescription).toHaveTextContent(
-      DATA_PROVIDER_CORRECTION_DESCRIPTION,
-    );
-    expect(
       within(providerCard).getByRole("link", { name: "こちらのフォーム" }),
-    ).toHaveAttribute("href", DATA_PROVIDER_FORM_HREF);
-
-    expect(
-      within(providerCard).getByText("写真のご提供も歓迎しています。", {
-        exact: true,
-      }),
-    ).toBeInTheDocument();
+    ).toHaveAttribute("target", "_blank");
   });
 });

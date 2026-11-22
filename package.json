@@ -1,6 +1,6 @@
 {
   "name": "kazaguruma-transit",
-  "version": "1.7.1",
+  "version": "2.0.0",
   "author": {
     "name": "Nawashiro"
   },
@@ -27,8 +27,13 @@
     "start": "prisma generate && npm run import-gtfs && next start",
     "lint": "next lint",
     "pretest": "node scripts/ensure-app-config.mjs",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "NODE_ENV=test jest --selectProjects unit --selectProjects server",
+    "test:watch": "NODE_ENV=test jest --selectProjects unit --selectProjects server --watch",
+    "test:unit": "NODE_ENV=test jest --selectProjects unit",
+    "test:server": "NODE_ENV=test jest --selectProjects server --runInBand",
+    "test:unit:ci": "NODE_ENV=test jest --selectProjects unit --ci",
+    "test:server:ci": "NODE_ENV=test jest --selectProjects server --runInBand --ci",
+    "test:skip-link": "start-server-and-test \"next start\" http://127.0.0.1:3000 \"node --test scripts/__tests__/skip-link-targets.test.mjs\"",
     "a11y": "npm run accessibility",
     "accessibility": "tsx scripts/accessibility-audit.ts",
     "accessibility:strict": "tsx scripts/accessibility-audit.ts --strict",
@@ -38,6 +43,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "import-gtfs": "tsx scripts/import-gtfs.ts",
+    "update-destinations": "tsx scripts/update-destinations.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -59,6 +65,7 @@
     "ml-pca": "^4.1.1",
     "next": "^15.5.28",
     "nosskey-sdk": "^0.0.2",
+    "opening_hours": "3.16.0",
     "pdf-lib": "^1.17.1",
     "prisma": "7.10.1",
     "puppeteer": "^25.16.0",
@@ -66,6 +73,7 @@
     "react-dom": "^19.1.0",
     "react-ga4": "^2.1.0",
     "react-to-print": "^3.0.5",
+    "sharp": "0.35.5",
     "tsx": "^4.19.3",
     "webpack-license-plugin": "^4.5.1"
   },

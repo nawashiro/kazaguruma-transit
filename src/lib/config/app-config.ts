@@ -35,7 +35,6 @@ export interface AnnouncementAppConfig {
 export interface AppConfig {
   appUrl: string;
   gaMeasurementId: string;
-  locationsDataVersion: string;
   discussion: DiscussionAppConfig;
   support: SupportAppConfig;
   announcement: AnnouncementAppConfig;
@@ -85,7 +84,6 @@ export function parseAppConfig(value: unknown): AppConfig {
   if (
     typeof value.appUrl !== "string" ||
     typeof value.gaMeasurementId !== "string" ||
-    !isNonEmptyString(value.locationsDataVersion) ||
     typeof discussion.enabled !== "boolean" ||
     typeof discussion.adminPubkey !== "string" ||
     typeof discussion.busStopDiscussionId !== "string" ||
@@ -108,7 +106,6 @@ export function parseAppConfig(value: unknown): AppConfig {
   return {
     appUrl: value.appUrl,
     gaMeasurementId: value.gaMeasurementId,
-    locationsDataVersion: value.locationsDataVersion,
     discussion: {
       enabled: discussion.enabled,
       adminPubkey: discussion.adminPubkey,

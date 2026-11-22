@@ -32,7 +32,6 @@ function readAppConfigExample(): unknown {
 const validConfig = {
   appUrl: "http://localhost:3000",
   gaMeasurementId: "",
-  locationsDataVersion: "1.0.0",
   discussion: {
     enabled: false,
     adminPubkey: "",
@@ -66,7 +65,8 @@ describe("app-config public module", () => {
       expect.objectContaining({
         appUrl: expect.any(String),
         gaMeasurementId: expect.any(String),
-        locationsDataVersion: expect.any(String),
+        datasetJsonLdUri: expect.stringMatching(/^https?:\/\//u),
+        osmMirrorUri: expect.stringMatching(/^https?:\/\//u),
         discussion: expect.objectContaining({
           enabled: expect.any(Boolean),
           adminPubkey: expect.any(String),

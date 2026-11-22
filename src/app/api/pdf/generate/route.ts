@@ -9,7 +9,6 @@ import {
   TravelMode,
   Language,
 } from "@googlemaps/google-maps-services-js";
-import { appConfig } from "@/lib/config/app-config";
 
 // NextRouteを拡張するための型定義
 interface NextRouteInfo {
@@ -316,33 +315,6 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
     return "";
   };
 
-  // ベースURLの設定 - PDFレンダリング時に使用される公開URL
-  const baseUrl = appConfig.appUrl || "http://localhost:3000";
-  const qrCodeUrl = `${baseUrl}/images/chiyoda_line_qr.png`;
-  const mapPlaceholderUrl = `${baseUrl}/images/map_placeholder.png`;
-
-  // 画像の存在確認関数
-  const checkImageExists = async (url: string): Promise<boolean> => {
-    try {
-      const response = await fetch(url, { method: "HEAD" });
-      return response.ok;
-    } catch {
-      return false;
-    }
-  };
-
-  // 画像URLを取得する関数
-  const getImageUrl = async (
-    url: string,
-    fallbackUrl: string
-  ): Promise<string> => {
-    const exists = await checkImageExists(url);
-    return exists ? url : fallbackUrl;
-  };
-
-  // 画像URLを取得
-  const finalQrCodeUrl = await getImageUrl(qrCodeUrl, mapPlaceholderUrl);
-
   // ルートがない場合の表示
   if (data.type === "none") {
     return `
@@ -376,9 +348,7 @@ async function generateRouteHTML(data: GeneratePdfRequest): Promise<string> {
               <p>別の交通手段をご検討ください</p>
             </div>
             <div class="text-center text-xs space-y-2">
-              <img src="${finalQrCodeUrl}" alt="千代田区公式LINE" class="w-24 mx-auto"
-                onerror="this.onerror=null; this.src='${mapPlaceholderUrl}';">
-              <p>千代田区公式LINEで最新の運行情報を確認できます</p>
+              <p><a href="https://kazaguruma.bus-go.com/sp/sp-busgo.php">最新の運行情報はこちら【千代田区公式】</a></p>
             </div>
           </div>
         </body>

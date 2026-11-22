@@ -2,10 +2,10 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type {
-  KeyLocation,
-  KeyLocationCategory,
-  KeyLocationsDataResult,
-} from "../../../../utils/addressLoader";
+  LocationWithArea,
+  LocationCategoryWithArea,
+  LocationPageDataResult,
+} from "@/lib/location/location-page-data";
 
 export {};
 
@@ -35,11 +35,10 @@ const mockNotFound = jest.fn(() => {
   throw NEXT_NOT_FOUND;
 });
 const mockLoadLocationPageData = jest.fn<
-  Promise<KeyLocationsDataResult>,
+  Promise<LocationPageDataResult>,
   []
 >();
 const mockLoadLocationCategories = jest.fn();
-const mockLoadKeyLocationsData = jest.fn();
 
 jest.mock("next/navigation", () => ({
   notFound: mockNotFound,
@@ -62,99 +61,90 @@ jest.mock("@/lib/location/location-list-state", () => {
   };
 });
 
-jest.mock("@/utils/addressLoader", () => {
-  const actual = jest.requireActual("@/utils/addressLoader");
-  return {
-    ...actual,
-    loadKeyLocationsData: (...args: unknown[]) =>
-      mockLoadKeyLocationsData(...args),
-  };
-});
-
-const farLocation: KeyLocation = {
-  id: "park-far-日本",
-  name: "皇居外苑入口",
+const farLocation: LocationWithArea = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000001",
+  name: "皇居外苑",
   lat: 35.704,
   lng: 139.778,
   area: "神田",
-  description: "自然環境公園の入口です",
-  uri: "https://example.test/park-far",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  relatedPages: [],
+  osmElement: { type: "node", id: 1 },
+  wheelchair: "yes",
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
+  imageUri: "https://example.test/park-far.jpg",
+  imageCreator: "さくら",
+  imageLicense: "https://creativecommons.org/licenses/by-sa/4.0/",
 };
 
-const nearLocation: KeyLocation = {
-  id: "park-near",
-  name: "日比谷公園入口",
+const nearLocation: LocationWithArea = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000002",
+  name: "日比谷公園",
   lat: 35.681,
   lng: 139.761,
   area: "九段南",
-  description: "近い自然環境公園です",
-  uri: "https://example.test/park-near",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  relatedPages: [{ name: "東京バリアフリーマップ", url: "https://example.test/bfm/park" }],
+  osmElement: { type: "way", id: 2 },
+  wheelchair: "limited",
+  osmEditUrl: "https://www.openstreetmap.org/edit?way=2",
 };
 
-const unrelatedLocation: KeyLocation = {
-  id: "library-unrelated",
-  name: "カテゴリ外図書館",
+const unrelatedLocation: LocationWithArea = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000003",
+  name: "千代田図書館",
   lat: 35.695,
   lng: 139.765,
   area: "富士見",
-  description: "別カテゴリの場所です",
-  uri: "https://example.test/library-unrelated",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  relatedPages: [],
+  osmElement: { type: "relation", id: 3 },
+  wheelchair: null,
+  osmEditUrl: "https://www.openstreetmap.org/edit?relation=3",
 };
 
-const locationCategories: KeyLocationCategory[] = [
+const locationCategories: LocationCategoryWithArea[] = [
   {
-    category: "自然環境公園",
-    "category:en": "natural environment park",
+    category: "公園",
+    categoryId: "1302",
     // Deliberately keep the source order different from distance order.
     locations: [farLocation, nearLocation],
   },
   {
-    category: "公共施設",
-    "category:en": "public facilities",
+    category: "図書館",
+    categoryId: "1512",
     locations: [unrelatedLocation],
   },
 ];
 
 function successData(
-  categories: KeyLocationCategory[] = locationCategories,
-): KeyLocationsDataResult {
+  categories: LocationCategoryWithArea[] = locationCategories,
+): LocationPageDataResult {
   return { status: "success", categories };
 }
 
 const emptyData = {
   status: "success",
   categories: [],
-} as unknown as KeyLocationsDataResult;
+} as unknown as LocationPageDataResult;
 
 const malformedData = {
   status: "success",
   categories: [
     {
-      category: "自然環境公園",
-      "category:en": "natural environment park",
-      locations: [{ id: "missing-required-fields" }],
+      category: "公園",
+      categoryId: "1302",
+      locations: [{ id: "urn:uuid:00000000-0000-4000-8000-000000000001" }],
     },
   ],
-} as unknown as KeyLocationsDataResult;
+} as unknown as LocationPageDataResult;
 
 const duplicateData = successData([
   {
-    category: "自然環境公園",
-    "category:en": "natural environment park",
+    category: "公園",
+    categoryId: "1302",
     locations: [farLocation],
   },
   {
-    category: "公共施設",
-    "category:en": "public facilities",
+    category: "図書館",
+    categoryId: "1512",
     locations: [{ ...farLocation, name: "重複IDの施設" }],
   },
 ]);
@@ -203,6 +193,25 @@ function getCategoryPage(): CategoryPage {
   }
 
   return page as CategoryPage;
+}
+
+type GenerateStaticParams = () => Promise<Array<{ "category-id": string }>>;
+
+function getGenerateStaticParams(): GenerateStaticParams {
+  if (pageModule.error || !pageModule.exports) {
+    throw new Error(
+      "/locations/[category-id] page is not implemented: public module ../page could not be loaded",
+    );
+  }
+
+  const generateStaticParams = pageModule.exports.generateStaticParams;
+  if (typeof generateStaticParams !== "function") {
+    throw new Error(
+      "/locations/[category-id] page is not implemented: public module ../page does not export generateStaticParams",
+    );
+  }
+
+  return generateStaticParams as GenerateStaticParams;
 }
 
 async function invokePage(
@@ -256,7 +265,6 @@ function expectAreaHeadingOrder(firstName: string, secondName: string): void {
 
 function expectNoLegacyLocationLoaderCalls(): void {
   expect(mockLoadLocationCategories).not.toHaveBeenCalled();
-  expect(mockLoadKeyLocationsData).not.toHaveBeenCalled();
 }
 
 beforeEach(() => {
@@ -265,15 +273,25 @@ beforeEach(() => {
   mockLoadLocationPageData.mockResolvedValue(successData());
   mockLoadLocationCategories.mockReset();
   mockLoadLocationCategories.mockResolvedValue(locationCategories);
-  mockLoadKeyLocationsData.mockReset();
-  mockLoadKeyLocationsData.mockResolvedValue(locationCategories);
 });
 
 describe("server category page", () => {
-  it("decodes a space-containing category:en ID and uniquely renders only that category", async () => {
+  it("generates static params only for the category IDs present in the artifact", async () => {
+    const generateStaticParams = getGenerateStaticParams();
+
+    const params = await generateStaticParams();
+
+    expect(params).toEqual([
+      { "category-id": "1302" },
+      { "category-id": "1512" },
+    ]);
+    expect(mockLoadLocationPageData).toHaveBeenCalledTimes(1);
+  });
+
+  it("decodes a category code ID and uniquely renders only that category", async () => {
     const page = getCategoryPage();
 
-    const encodedCategoryId = encodeURIComponent("natural environment park");
+    const encodedCategoryId = encodeURIComponent("1302");
     const invocation = await invokePage(page, encodedCategoryId);
     if (!renderSuccessfulPage(invocation)) {
       return;
@@ -299,7 +317,7 @@ describe("server category page", () => {
 
     const invocation = await invokePage(
       page,
-      encodeURIComponent("natural environment park"),
+      encodeURIComponent("1302"),
     );
 
     expect(invocation.error).toBeNull();
@@ -313,7 +331,7 @@ describe("server category page", () => {
 
     const invocation = await invokePage(
       page,
-      encodeURIComponent("natural environment park"),
+      encodeURIComponent("1302"),
     );
     if (!renderSuccessfulPage(invocation)) {
       return;
@@ -323,6 +341,66 @@ describe("server category page", () => {
     const detailLinks = getNativeDetailLinks();
     expect(detailLinks[0]).toHaveTextContent(nearLocation.name);
     expect(detailLinks[1]).toHaveTextContent(farLocation.name);
+  });
+
+  it("shows a non-URI license as text on the card", async () => {
+    const location: LocationWithArea = {
+      ...farLocation,
+      id: "urn:uuid:00000000-0000-4000-8000-000000000099",
+      imageLicense: "Public domain",
+      image: {
+        width: 1280,
+        height: 853,
+        variants: [
+          { width: 480, path: "/generated/location-images/0123456789abcdef-480.webp" },
+          { width: 960, path: "/generated/location-images/fedcba9876543210-960.webp" },
+          { width: 1280, path: "/generated/location-images/89abcdef01234567-1280.webp" },
+        ],
+      },
+    };
+    mockLoadLocationPageData.mockResolvedValue(successData([
+      { category: "公園", categoryId: "1302", locations: [location] },
+    ]));
+    const page = getCategoryPage();
+
+    const invocation = await invokePage(page, encodeURIComponent("1302"));
+    if (!renderSuccessfulPage(invocation)) {
+      return;
+    }
+
+    const attribution = screen.getByText("写真 さくら・Public domain");
+    expect(attribution.tagName).toBe("P");
+    expect(attribution.querySelector("a")).toBeNull();
+  });
+
+  it("shows 作者不明 on a card when the image has no creator", async () => {
+    const location: LocationWithArea = {
+      ...farLocation,
+      id: "urn:uuid:00000000-0000-4000-8000-000000000098",
+      imageCreator: undefined,
+      imageLicense: "https://creativecommons.org/licenses/by/4.0/",
+      image: {
+        width: 1280,
+        height: 853,
+        variants: [
+          { width: 480, path: "/generated/location-images/0123456789abcdef-480.webp" },
+          { width: 960, path: "/generated/location-images/fedcba9876543210-960.webp" },
+          { width: 1280, path: "/generated/location-images/89abcdef01234567-1280.webp" },
+        ],
+      },
+    };
+    mockLoadLocationPageData.mockResolvedValue(successData([
+      { category: "公園", categoryId: "1302", locations: [location] },
+    ]));
+    const page = getCategoryPage();
+
+    const invocation = await invokePage(page, encodeURIComponent("1302"));
+    if (!renderSuccessfulPage(invocation)) {
+      return;
+    }
+
+    const attribution = screen.getByText("写真 作者不明・CC BY 4.0");
+    expect(attribution.tagName).toBe("P");
   });
 
   it.each([
@@ -343,7 +421,7 @@ describe("server category page", () => {
   );
 
   const pageDataFailureCases: ReadonlyArray<
-    readonly [string, KeyLocationsDataResult]
+    readonly [string, LocationPageDataResult]
   > = [
     ["loader failure", { status: "error", error: new Error("CDN unavailable") }],
     ["malformed data", malformedData],
@@ -359,7 +437,7 @@ describe("server category page", () => {
       mockLoadLocationPageData.mockResolvedValueOnce(result);
       const invocation = await invokePage(
         page,
-        encodeURIComponent("natural environment park"),
+        encodeURIComponent("1302"),
       );
       if (!renderSuccessfulPage(invocation)) {
         return;
@@ -378,7 +456,7 @@ describe("server category page", () => {
 
     const invocation = await invokePage(
       page,
-      encodeURIComponent("natural environment park"),
+      encodeURIComponent("1302"),
     );
     if (!renderSuccessfulPage(invocation)) {
       return;
@@ -394,7 +472,7 @@ describe("server category page", () => {
 
     const invocation = await invokePage(
       page,
-      encodeURIComponent("natural environment park"),
+      encodeURIComponent("1302"),
       "35.680000,139.760000",
     );
     if (!renderSuccessfulPage(invocation)) {
@@ -415,7 +493,7 @@ describe("server category page", () => {
 
     const invocation = await invokePage(
       page,
-      encodeURIComponent("natural environment park"),
+      encodeURIComponent("1302"),
       "NaN,not-a-coordinate",
     );
     if (!renderSuccessfulPage(invocation)) {

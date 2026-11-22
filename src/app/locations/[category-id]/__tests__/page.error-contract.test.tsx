@@ -2,10 +2,10 @@ import React from "react";
 import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import type {
-  KeyLocation,
-  KeyLocationCategory,
-  KeyLocationsDataResult,
-} from "../../../../utils/addressLoader";
+  LocationWithArea,
+  LocationCategoryWithArea,
+  LocationPageDataResult,
+} from "@/lib/location/location-page-data";
 
 type CategoryPageProps = {
   params: Promise<{ "category-id": string }>;
@@ -16,7 +16,7 @@ type CategoryPage = (
   props: CategoryPageProps,
 ) => React.ReactNode | Promise<React.ReactNode>;
 
-const CATEGORY_ID = "error-contract category";
+const CATEGORY_ID = "1302";
 const CATEGORY_PATH = `/locations/${encodeURIComponent(CATEGORY_ID)}`;
 const MALFORMED_ORIGIN = "not-a-coordinate";
 const DATA_ERROR_DESCRIPTION =
@@ -32,7 +32,7 @@ const mockUseSearchParams = jest.fn(() => new URLSearchParams());
 const mockRouterReplace = jest.fn<void, [string]>();
 const mockUseRouter = jest.fn(() => ({ replace: mockRouterReplace }));
 const mockLoadLocationPageData = jest.fn<
-  Promise<KeyLocationsDataResult>,
+  Promise<LocationPageDataResult>,
   []
 >();
 
@@ -51,22 +51,21 @@ jest.mock("@/lib/location/location-page-data", () => {
   };
 });
 
-const fixtureLocation: KeyLocation = {
-  id: "error-contract-location",
+const fixtureLocation: LocationWithArea = {
+  id: "urn:uuid:00000000-0000-4000-8000-000000000021",
   name: "エラー契約テストの場所",
   lat: 35.681,
   lng: 139.761,
   area: "東京都千代田区神田",
-  description: "エラー表示後も確認できる場所です",
-  uri: "https://example.test/error-contract-location",
-  nodeCopyright: "千代田区",
-  licence: "CC BY 4.0",
-  licenceUri: "https://creativecommons.org/licenses/by/4.0/",
+  relatedPages: [],
+  osmElement: { type: "node", id: 21 },
+  wheelchair: "yes",
+  osmEditUrl: "https://www.openstreetmap.org/edit?node=21",
 };
 
-const fixtureCategory: KeyLocationCategory = {
+const fixtureCategory: LocationCategoryWithArea = {
   category: "エラー契約カテゴリ",
-  "category:en": CATEGORY_ID,
+  categoryId: CATEGORY_ID,
   locations: [fixtureLocation],
 };
 
@@ -80,7 +79,7 @@ function getCategoryPage(): CategoryPage {
 }
 
 async function renderCategoryPage(
-  result: KeyLocationsDataResult,
+  result: LocationPageDataResult,
   searchParams: Record<string, string | string[] | undefined> = {},
 ): Promise<void> {
   mockLoadLocationPageData.mockResolvedValueOnce(result);

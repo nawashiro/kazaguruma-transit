@@ -24,6 +24,10 @@ import {
   calculateRouteSearchTime,
   parseGtfsTime,
 } from "./walking";
+import {
+  calculateHaversineDistanceKm,
+  selectNearbyStops,
+} from "./stop-selection";
 import { selectBestRouteCandidate } from "./route-result-ranking";
 
 interface StopLocation {
@@ -230,7 +234,7 @@ export class TransitService {
     });
 
     const stopsWithDistance = stops.map((stop) => {
-      const distance = this.calculateDistance(
+      const distance = calculateHaversineDistanceKm(
         location.lat,
         location.lng,
         stop.lat,
@@ -427,7 +431,7 @@ export class TransitService {
     targetLng: number
   ) {
     const stopsWithDistance = stops.map((stop) => {
-      const distance = this.calculateDistance(
+      const distance = calculateHaversineDistanceKm(
         targetLat,
         targetLng,
         stop.lat,
@@ -699,7 +703,7 @@ export class TransitService {
     try {
       // 出発地点から最初のバス停までの徒歩距離を計算
       const walkToFirstStop = calculateGridWalkingDistanceKm(
-        this.calculateDistance(origin.lat, origin.lng, from.lat, from.lng)
+        calculateHaversineDistanceKm(origin.lat, origin.lng, from.lat, from.lng)
       );
 
       // 徒歩時間（分）を計算
@@ -707,7 +711,7 @@ export class TransitService {
         walkToFirstStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
 
       const walkFromLastStop = calculateGridWalkingDistanceKm(
-        this.calculateDistance(
+        calculateHaversineDistanceKm(
           to.lat,
           to.lng,
           destination.lat,
@@ -775,7 +779,7 @@ export class TransitService {
         {
           id: from.stopId,
           name: from.stopName,
-          distance: this.calculateDistance(
+          distance: calculateHaversineDistanceKm(
             origin.lat,
             origin.lng,
             from.lat,
@@ -788,7 +792,7 @@ export class TransitService {
         {
           id: to.stopId,
           name: to.stopName,
-          distance: this.calculateDistance(
+          distance: calculateHaversineDistanceKm(
             to.lat,
             to.lng,
             destination.lat,
@@ -929,7 +933,7 @@ export class TransitService {
         }
 
         const walkToFirstStop = calculateGridWalkingDistanceKm(
-          this.calculateDistance(
+          calculateHaversineDistanceKm(
             origin.lat,
             origin.lng,
             originStop.lat,
@@ -960,7 +964,7 @@ export class TransitService {
             };
 
             const walkFromLastStop = calculateGridWalkingDistanceKm(
-              this.calculateDistance(
+              calculateHaversineDistanceKm(
                 destStop.lat,
                 destStop.lng,
                 destination.lat,
@@ -1342,22 +1346,7 @@ export class TransitService {
         return [];
       }
 
-      // JavaScript側で距離計算と半径でのフィルタリングを行う
-      const nearbyStops = stops
-        .map((stop) => {
-          // ハバーサイン公式で距離を計算
-          const distance = this.calculateDistance(lat, lng, stop.lat, stop.lon);
-
-          return {
-            id: stop.id,
-            name: stop.name,
-            lat: stop.lat,
-            lng: stop.lon,
-            distance,
-          };
-        })
-        .filter((stop) => calculateGridWalkingDistanceKm(stop.distance) <= radiusKm) // 半径内のバス停だけをフィルタリング
-        .sort((firstStop, secondStop) => firstStop.distance - secondStop.distance);
+      const nearbyStops = selectNearbyStops(stops, lat, lng, radiusKm);
 
       logger.log(
         `[findNearbyStops] ${nearbyStops.length}件のバス停が半径${radiusKm}km内に見つかりました`
@@ -1367,50 +1356,6 @@ export class TransitService {
       logger.error("[TransitService] 周辺バス停検索エラー:", error);
       return [];
     }
-  }
-
-  /**
-   * 2点間の距離をキロメートル単位で計算（ハバーサイン公式）
-   */
-  private calculateDistance(
-    firstLatitude: number,
-    firstLongitude: number,
-    secondLatitude: number,
-    secondLongitude: number
-  ): number {
-    const EARTH_RADIUS_KM = 6371;
-    const firstLatitudeRad = this.toRadians(firstLatitude);
-    const firstLongitudeRad = this.toRadians(firstLongitude);
-    const secondLatitudeRad = this.toRadians(secondLatitude);
-    const secondLongitudeRad = this.toRadians(secondLongitude);
-
-    const latitudeDifference = secondLatitudeRad - firstLatitudeRad;
-    const longitudeDifference = secondLongitudeRad - firstLongitudeRad;
-
-    const haversineValue =
-      Math.sin(latitudeDifference / 2) * Math.sin(latitudeDifference / 2) +
-      Math.cos(firstLatitudeRad) *
-        Math.cos(secondLatitudeRad) *
-        Math.sin(longitudeDifference / 2) *
-        Math.sin(longitudeDifference / 2);
-    const centralAngle = 2 * Math.atan2(Math.sqrt(haversineValue), Math.sqrt(1 - haversineValue));
-    const distance = EARTH_RADIUS_KM * centralAngle;
-
-    // ロギングして結果を確認
-    logger.log(
-      `[calculateDistance] 距離計算: (${firstLatitude}, ${firstLongitude}) → (${secondLatitude}, ${secondLongitude}) = ${distance.toFixed(
-        3
-      )}km`
-    );
-
-    return distance;
-  }
-
-  /**
-   * 角度をラジアンに変換
-   */
-  private toRadians(degrees: number): number {
-    return degrees * (Math.PI / 180);
   }
 
   /**

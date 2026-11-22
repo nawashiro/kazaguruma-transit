@@ -10,6 +10,7 @@ npm-debug.log
 *.md
 *.log
 coverage/
+public/generated/
 transit-config.json
 Dockerfile*
 .dockerignore

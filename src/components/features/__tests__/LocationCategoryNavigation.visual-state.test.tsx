@@ -5,10 +5,10 @@ import LocationCategoryNavigation from "../LocationCategoryNavigation";
 
 type LocationCategory = {
   category: string;
-  "category:en": string;
+  categoryId: string;
 };
 
-const usePathname = jest.fn(() => "/locations/city_office_and_branch_offices");
+const usePathname = jest.fn(() => "/locations/1302");
 const useSearchParams = jest.fn(() => new URLSearchParams());
 
 jest.mock("next/navigation", () => ({
@@ -38,26 +38,26 @@ jest.mock("next/link", () => {
 const categories: readonly LocationCategory[] = [
   {
     category: "区役所・出張所",
-    "category:en": "city_office_and_branch_offices",
+    categoryId: "1302",
   },
   {
     category: "自然環境公園",
-    "category:en": "natural environment park",
+    categoryId: "1304",
   },
   {
     category: "図書館",
-    "category:en": "libraries",
+    categoryId: "1512",
   },
   {
     category: "区内の公園・緑地・自然環境に関する長いカテゴリ名",
-    "category:en": "long-natural-environment-category",
+    categoryId: "1011",
   },
 ];
 
 const LOCATION_CATEGORY_PANEL_ID = "location-category-panel";
 
 function renderNavigation(
-  pathname = "/locations/city_office_and_branch_offices",
+  pathname = "/locations/1302",
   searchParams = new URLSearchParams(),
 ) {
   usePathname.mockReturnValue(pathname);
@@ -69,13 +69,13 @@ function renderNavigation(
 describe("LocationCategoryNavigation visual active state", () => {
   beforeEach(() => {
     usePathname.mockReset();
-    usePathname.mockReturnValue("/locations/city_office_and_branch_offices");
+    usePathname.mockReturnValue("/locations/1302");
     useSearchParams.mockReset();
     useSearchParams.mockReturnValue(new URLSearchParams());
   });
 
   it("applies the active background only to the current category tab", () => {
-    renderNavigation("/locations/natural%20environment%20park");
+    renderNavigation("/locations/1304");
 
     const tabs = screen.getAllByRole("tab");
     expect(tabs).toHaveLength(categories.length);
@@ -107,7 +107,7 @@ describe("LocationCategoryNavigation visual active state", () => {
   });
 
   it("exposes discussion-style tab semantics while keeping native category Links", () => {
-    renderNavigation("/locations/natural%20environment%20park");
+    renderNavigation("/locations/1304");
 
     const tablist = screen.getByRole("tablist", { name: "場所カテゴリ" });
     expect(tablist.tagName).toBe("NAV");
@@ -131,7 +131,7 @@ describe("LocationCategoryNavigation visual active state", () => {
       expect(tab).toHaveAttribute("role", "tab");
       expect(tab).toHaveAttribute(
         "href",
-        `/locations/${encodeURIComponent(category?.["category:en"] ?? "")}`,
+        `/locations/${encodeURIComponent(category?.categoryId ?? "")}`,
       );
       expect(tab).toHaveAttribute(
         "aria-selected",

@@ -6,15 +6,6 @@ import { resolveLocationDetail } from "../location-detail-resolver";
 
 export {};
 
-jest.mock("@/utils/addressLoader", () => {
-  const actual = jest.requireActual("@/utils/addressLoader");
-  return {
-    ...actual,
-    loadAddressDataResult: jest.fn(),
-    loadKeyLocationsDataResult: jest.fn(),
-  };
-});
-
 jest.mock("@/utils/geoUtils", () => {
   const actual = jest.requireActual("@/utils/geoUtils");
   return {
@@ -32,8 +23,8 @@ type ModuleState = {
 };
 
 type SourceUris = {
-  mainFacilitiesUri: string;
-  keyLocationsUri: string;
+  datasetJsonLdUri: string;
+  osmMirrorUri: string;
   townGeoJsonUri: string;
 };
 
@@ -57,46 +48,20 @@ const originalReadFileSync = fs.readFileSync.bind(fs);
 const originalReadFile = fs.promises.readFile.bind(fs.promises);
 
 const sourceUris: SourceUris = {
-  mainFacilitiesUri: "https://fixtures.example.test/v2/main_facilities.json",
-  keyLocationsUri: "https://fixtures.example.test/v2/key_locations.json",
-  townGeoJsonUri: "https://fixtures.example.test/v2/chiyoda-towns.geojson",
+  datasetJsonLdUri: "https://fixtures.example.test/dataset.jsonld",
+  osmMirrorUri: "https://fixtures.example.test/mirrors/osm.json",
+  townGeoJsonUri: "https://fixtures.example.test/chiyoda-towns.geojson",
 };
 
-const mainFacilities = [
+const routeDestinations = [
   {
-    category: "区役所・出張所",
-    "category:en": "city-office-and-branch-offices",
+    category: "行政・相談",
+    categoryId: "1302",
     locations: [
       {
         name: "千代田区役所",
         lat: 35.694,
         lng: 139.753,
-        copyright: "© OpenStreetMap contributors",
-        licence: "Open Database License (ODbL) 1.0",
-        licenceUri: "https://opendatacommons.org/licenses/odbl/",
-        description: "千代田区の行政窓口",
-      },
-    ],
-  },
-];
-
-const keyLocations = [
-  {
-    category: "公共施設",
-    "category:en": "public-facilities",
-    locations: [
-      {
-        id: "kanda-library",
-        name: "神田図書館",
-        lat: 35.694,
-        lng: 139.768,
-        nodeCopyright: "千代田区",
-        licence: "CC BY 4.0",
-        licenceUri: "https://creativecommons.org/licenses/by/4.0/",
-        description: "地域の図書館です",
-        imageUri: "https://fixtures.example.test/images/library.jpg",
-        imageCopyright: "© Example",
-        uri: "https://fixtures.example.test/library",
       },
     ],
   },
@@ -127,21 +92,44 @@ const townGeoJson = {
   ],
 };
 
+const validLocationsFixture = [
+  {
+    category: "市役所・東京都の区役所",
+    categoryId: "1302",
+    locations: [
+      {
+        id: "urn:uuid:00000000-0000-4000-8000-000000000001",
+        name: "千代田区役所",
+        lat: 35.694,
+        lng: 139.753,
+        imageUri: "https://fixtures.example.test/images/city.jpg",
+        imageCreator: "さくら",
+        imageLicense: "https://creativecommons.org/licenses/by-sa/3.0/",
+        relatedPages: [
+          { name: "東京バリアフリーマップ", url: "https://fixtures.example.test/bfm/city" },
+        ],
+        osmElement: { type: "node", id: 1 },
+        wheelchair: "yes",
+        osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
+      },
+    ],
+  },
+];
+
 const validArtifact = {
   status: "validated",
   sourceUris,
   sources: {
-    // mainFacilities is the home "よく利用される施設" data.
-    mainFacilities,
-    // keyLocations is the category and detail data. It deliberately has no area.
-    keyLocations,
+    // routeDestinations is the home "よく利用される施設" data.
+    routeDestinations,
+    locations: validLocationsFixture,
     // townGeoJson is the build-time source used to derive display regions.
     townGeoJson,
   },
   // The source location deliberately has no `area` field. The display value is
   // derived from GeoJSON and normalized only in this artifact projection.
   derivedRegions: {
-    "kanda-library": "神田和泉町",
+    "urn:uuid:00000000-0000-4000-8000-000000000001": "神田和泉町",
   },
 };
 
@@ -274,7 +262,7 @@ function expectReaderError(
   // The existing resolver turns this stable Error contract into
   // `data-load-error`, which is the route boundary that renders Japanese data
   // error copy rather than a 404 or an empty success state.
-  const downstreamState = resolveLocationDetail("kanda-library", {
+  const downstreamState = resolveLocationDetail("urn:uuid:00000000-0000-4000-8000-000000000001", {
     status: "error",
     error,
   });
@@ -294,8 +282,6 @@ const originalFetch = global.fetch;
 describe("readLocationArtifact runtime artifact boundary", () => {
   let readFileSyncSpy: jest.SpyInstance;
   let readFileSpy: jest.SpyInstance;
-  let legacyMainFacilitiesSpy: jest.SpyInstance;
-  let legacyKeyLocationsSpy: jest.SpyInstance;
   let geoJsonProviderSpy: jest.SpyInstance;
 
   const hasPublicReader =
@@ -334,27 +320,14 @@ describe("readLocationArtifact runtime artifact boundary", () => {
       }) as typeof fs.promises.readFile,
     );
 
-    // These are the forbidden pre-Q21 sources. Make an accidental call fail
+    // This is a forbidden runtime source. Make an accidental call fail
     // immediately and retain a direct interaction assertion below.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- access the mocked forbidden-source boundary
-    const legacySources = require("@/utils/addressLoader") as {
-      loadAddressDataResult: jest.MockedFunction<() => Promise<unknown>>;
-      loadKeyLocationsDataResult: jest.MockedFunction<() => Promise<unknown>>;
-    };
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- access the mocked forbidden-source boundary
     const geoJsonSources = require("@/utils/geoUtils") as {
       loadGeoJSON: jest.MockedFunction<() => Promise<unknown>>;
     };
 
-    legacyMainFacilitiesSpy = legacySources.loadAddressDataResult;
-    legacyKeyLocationsSpy = legacySources.loadKeyLocationsDataResult;
     geoJsonProviderSpy = geoJsonSources.loadGeoJSON;
-    legacyMainFacilitiesSpy.mockReset().mockRejectedValue(
-      new Error("legacy main-facilities source was called"),
-    );
-    legacyKeyLocationsSpy.mockReset().mockRejectedValue(
-      new Error("legacy key-locations source was called"),
-    );
     geoJsonProviderSpy.mockReset().mockRejectedValue(
       new Error("GeoJSON provider was called"),
     );
@@ -379,57 +352,62 @@ describe("readLocationArtifact runtime artifact boundary", () => {
         status: "validated",
         sourceUris,
         sources: expect.objectContaining({
-          mainFacilities,
-          keyLocations,
+          routeDestinations,
           townGeoJson,
         }),
         derivedRegions: {
-          "kanda-library": "神田和泉町",
+          "urn:uuid:00000000-0000-4000-8000-000000000001": "神田和泉町",
         },
       }),
     });
     expectArtifactReadAttempt(readFileSyncSpy, readFileSpy);
     expect(global.fetch).not.toHaveBeenCalled();
-    expect(legacyMainFacilitiesSpy).not.toHaveBeenCalled();
-    expect(legacyKeyLocationsSpy).not.toHaveBeenCalled();
     expect(geoJsonProviderSpy).not.toHaveBeenCalled();
 
     const artifact = (result as { status: "success"; artifact: typeof validArtifact }).artifact;
-    expect(artifact.sources.mainFacilities).toEqual(mainFacilities);
-    expect(artifact.sources.keyLocations).toEqual(keyLocations);
+    expect(artifact.sources.routeDestinations).toEqual(routeDestinations);
     expect(artifact.sources.townGeoJson).toEqual(townGeoJson);
-    expect(artifact.sources.keyLocations[0].locations[0]).not.toHaveProperty("area");
-    expect(artifact.derivedRegions["kanda-library"]).toBe("神田和泉町");
-    expect(artifact.derivedRegions["kanda-library"]).not.toContain("東京都千代田区");
+    expect(artifact.sources.locations[0].locations[0]).not.toHaveProperty("area");
+    expect(artifact.derivedRegions["urn:uuid:00000000-0000-4000-8000-000000000001"]).toBe("神田和泉町");
+    expect(artifact.derivedRegions["urn:uuid:00000000-0000-4000-8000-000000000001"]).not.toContain("東京都千代田区");
+  });
+
+  it("keeps derived regions limited to the IDs listed in sources.locations", async () => {
+    const listedId = validLocationsFixture[0].locations[0].id;
+    const outOfCatalogId = "urn:uuid:00000000-0000-4000-8000-000000000099";
+    artifactReadFixture = {
+      raw: JSON.stringify(
+        artifactWith({
+          derivedRegions: {
+            [listedId]: "神田和泉町",
+            [outOfCatalogId]: "目録外の地域",
+          },
+        }),
+      ),
+    };
+
+    const result = await invokeReader(moduleState);
+
+    expect(result).toEqual({
+      status: "success",
+      artifact: expect.objectContaining({
+        sources: expect.objectContaining({ locations: validLocationsFixture }),
+      }),
+    });
+    expectArtifactReadAttempt(readFileSyncSpy, readFileSpy);
+
+    const artifact = (result as { status: "success"; artifact: typeof validArtifact }).artifact;
+    const listedIds = artifact.sources.locations
+      .flatMap((category) => category.locations.map((location) => location.id))
+      .sort();
+    expect(Object.keys(artifact.derivedRegions).sort()).toEqual(listedIds);
+    expect(artifact.derivedRegions).not.toHaveProperty(outOfCatalogId);
   });
 
   it("reads an artifact with explicit null optional metadata and preserves every null value", async () => {
     const artifactWithNullOptionals = artifactWith({
       sources: {
         ...validArtifact.sources,
-        mainFacilities: [{
-          ...mainFacilities[0],
-          locations: [{
-            ...mainFacilities[0].locations[0],
-            description: null,
-            imageUri: null,
-            imageCopyright: null,
-            uri: null,
-          }],
-        }],
-        keyLocations: [{
-          ...keyLocations[0],
-          locations: [{
-            ...keyLocations[0].locations[0],
-            description: null,
-            descriptionCopyright: null,
-            imageUri: null,
-            imageCopyright: null,
-            imageCopylight: null,
-            uri: null,
-            nodeSourceId: null,
-          }],
-        }],
         townGeoJson: {
           ...townGeoJson,
           features: [{
@@ -452,8 +430,6 @@ describe("readLocationArtifact runtime artifact boundary", () => {
     });
     expectArtifactReadAttempt(readFileSyncSpy, readFileSpy);
     expect(global.fetch).not.toHaveBeenCalled();
-    expect(legacyMainFacilitiesSpy).not.toHaveBeenCalled();
-    expect(legacyKeyLocationsSpy).not.toHaveBeenCalled();
     expect(geoJsonProviderSpy).not.toHaveBeenCalled();
   });
 
@@ -477,8 +453,6 @@ describe("readLocationArtifact runtime artifact boundary", () => {
 
       expectReaderError(result, readFileSyncSpy, readFileSpy);
       expect(global.fetch).not.toHaveBeenCalled();
-      expect(legacyMainFacilitiesSpy).not.toHaveBeenCalled();
-      expect(legacyKeyLocationsSpy).not.toHaveBeenCalled();
       expect(geoJsonProviderSpy).not.toHaveBeenCalled();
     },
   );
@@ -489,17 +463,35 @@ describe("readLocationArtifact runtime artifact boundary", () => {
     ["malformed source URI", artifactWith({
       sourceUris: { ...sourceUris, townGeoJsonUri: "not-an-absolute-uri" },
     })],
-    ["missing main facilities", artifactWith({
-      sources: { ...validArtifact.sources, mainFacilities: undefined },
+    ["missing route destinations", artifactWith({
+      sources: { ...validArtifact.sources, routeDestinations: undefined },
     })],
-    ["empty home categories", artifactWith({
-      sources: { ...validArtifact.sources, mainFacilities: [] },
+    ["empty route destination categories", artifactWith({
+      sources: { ...validArtifact.sources, routeDestinations: [] },
     })],
-    ["missing key locations", artifactWith({
-      sources: { ...validArtifact.sources, keyLocations: undefined },
+    ["invalid route destination location", artifactWith({
+      sources: {
+        ...validArtifact.sources,
+        routeDestinations: [{
+          ...routeDestinations[0],
+          locations: [{ ...routeDestinations[0].locations[0], name: "" }],
+        }],
+      },
     })],
-    ["empty category data", artifactWith({
-      sources: { ...validArtifact.sources, keyLocations: [] },
+    ["missing route destination category ID", artifactWith({
+      sources: {
+        ...validArtifact.sources,
+        routeDestinations: [{
+          category: routeDestinations[0].category,
+          locations: routeDestinations[0].locations,
+        }],
+      },
+    })],
+    ["missing locations", artifactWith({
+      sources: { routeDestinations: validArtifact.sources.routeDestinations, townGeoJson: validArtifact.sources.townGeoJson },
+    })],
+    ["empty locations", artifactWith({
+      sources: { ...validArtifact.sources, locations: [] },
     })],
     ["missing town GeoJSON", artifactWith({
       sources: { ...validArtifact.sources, townGeoJson: undefined },
@@ -509,9 +501,9 @@ describe("readLocationArtifact runtime artifact boundary", () => {
     ["invalid required detail data", artifactWith({
       sources: {
         ...validArtifact.sources,
-        keyLocations: [{
-          ...keyLocations[0],
-          locations: [{ ...keyLocations[0].locations[0], id: "" }],
+        locations: [{
+          ...validLocationsFixture[0],
+          locations: [{ ...validLocationsFixture[0].locations[0], id: "" }],
         }],
       },
     })],
@@ -542,8 +534,6 @@ describe("readLocationArtifact runtime artifact boundary", () => {
 
       expectReaderError(result, readFileSyncSpy, readFileSpy);
       expect(global.fetch).not.toHaveBeenCalled();
-      expect(legacyMainFacilitiesSpy).not.toHaveBeenCalled();
-      expect(legacyKeyLocationsSpy).not.toHaveBeenCalled();
       expect(geoJsonProviderSpy).not.toHaveBeenCalled();
     },
   );
@@ -553,18 +543,18 @@ describe("readLocationArtifact runtime artifact boundary", () => {
       raw: JSON.stringify(artifactWith({
         sources: {
           ...validArtifact.sources,
-          keyLocations: [
-            keyLocations[0],
+          locations: [
+            validLocationsFixture[0],
             {
-              ...keyLocations[0],
+              ...validLocationsFixture[0],
               category: "別カテゴリ",
-              locations: [{ ...keyLocations[0].locations[0], id: "another-location" }],
+              locations: [{ ...validLocationsFixture[0].locations[0], id: "urn:uuid:00000000-0000-4000-8000-000000000002" }],
             },
           ],
         },
         derivedRegions: {
-          "kanda-library": "神田和泉町",
-          "another-location": "神田和泉町",
+          "urn:uuid:00000000-0000-4000-8000-000000000001": "神田和泉町",
+          "urn:uuid:00000000-0000-4000-8000-000000000002": "神田和泉町",
         },
       })),
     };
@@ -573,7 +563,6 @@ describe("readLocationArtifact runtime artifact boundary", () => {
 
     expectReaderError(result, readFileSyncSpy, readFileSpy);
     expect(global.fetch).not.toHaveBeenCalled();
-    expect(legacyKeyLocationsSpy).not.toHaveBeenCalled();
     expect(geoJsonProviderSpy).not.toHaveBeenCalled();
   });
 
@@ -582,13 +571,13 @@ describe("readLocationArtifact runtime artifact boundary", () => {
       raw: JSON.stringify(artifactWith({
         sources: {
           ...validArtifact.sources,
-          keyLocations: [
-            keyLocations[0],
+          locations: [
+            validLocationsFixture[0],
             {
-              ...keyLocations[0],
+              ...validLocationsFixture[0],
               category: "別カテゴリ",
-              "category:en": "another-category",
-              locations: [{ ...keyLocations[0].locations[0], name: "同じIDの別施設" }],
+              categoryId: "1512",
+              locations: [{ ...validLocationsFixture[0].locations[0], name: "同じIDの別施設" }],
             },
           ],
         },
@@ -599,7 +588,500 @@ describe("readLocationArtifact runtime artifact boundary", () => {
 
     expectReaderError(result, readFileSyncSpy, readFileSpy);
     expect(global.fetch).not.toHaveBeenCalled();
-    expect(legacyKeyLocationsSpy).not.toHaveBeenCalled();
     expect(geoJsonProviderSpy).not.toHaveBeenCalled();
+  });
+
+  it("allows the same location in two categories when the entries are identical", async () => {
+    const entry = validLocationsFixture[0].locations[0];
+    artifactReadFixture = {
+      raw: JSON.stringify(artifactWith({
+        sources: {
+          ...validArtifact.sources,
+          locations: [
+            validLocationsFixture[0],
+            {
+              category: "図書館",
+              categoryId: "1512",
+              locations: [{ ...entry }],
+            },
+          ],
+        },
+      })),
+    };
+
+    const result = await invokeReader(moduleState);
+
+    expect(result).toEqual({
+      status: "success",
+      artifact: expect.objectContaining({
+        sources: expect.objectContaining({
+          locations: expect.arrayContaining([
+            expect.objectContaining({ categoryId: "1302" }),
+            expect.objectContaining({ categoryId: "1512" }),
+          ]),
+        }),
+      }),
+    });
+    expectArtifactReadAttempt(readFileSyncSpy, readFileSpy);
+  });
+
+  describe("locations projection for accessibility", () => {
+    const validLocations = [
+      {
+        category: "市役所・東京都の区役所",
+        categoryId: "1302",
+        locations: [
+          {
+            id: "urn:uuid:00000000-0000-4000-8000-000000000001",
+            name: "千代田区役所",
+            lat: 35.694,
+            lng: 139.753,
+            imageUri: "https://fixtures.example.test/images/city.jpg",
+            imageCreator: "さくら",
+            imageLicense: "https://creativecommons.org/licenses/by-sa/3.0/",
+            relatedPages: [
+              { name: "東京バリアフリーマップ", url: "https://fixtures.example.test/bfm/city" },
+            ],
+            osmElement: { type: "node", id: 1 },
+            wheelchair: "yes",
+            osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
+          },
+          {
+            id: "urn:uuid:00000000-0000-4000-8000-000000000002",
+            name: "千代田区立千代田図書館",
+            lat: 35.695,
+            lng: 139.754,
+            relatedPages: [],
+            osmElement: { type: "way", id: 2 },
+            wheelchair: null,
+            osmEditUrl: "https://www.openstreetmap.org/edit?way=2",
+          },
+        ],
+      },
+    ];
+
+    const artifactWithLocations = (overrides: Record<string, unknown> = {}) => artifactWith({
+      sources: {
+        ...validArtifact.sources,
+        locations: validLocations,
+        ...((overrides["sources"] as Record<string, unknown>) ?? {}),
+      },
+      derivedRegions: {
+                "urn:uuid:00000000-0000-4000-8000-000000000001": "神田和泉町",
+        "urn:uuid:00000000-0000-4000-8000-000000000002": "神田和泉町",
+        ...(overrides["derivedRegions"] as Record<string, string> ?? {}),
+      },
+      ...overrides,
+    });
+
+    it("reads locations with wheelchair, osmElement, image attribution and relatedPages", async () => {
+      artifactReadFixture = { raw: JSON.stringify(artifactWithLocations()) };
+      const result = await invokeReader(moduleState);
+      expect(result).toEqual({
+        status: "success",
+        artifact: expect.objectContaining({
+          sources: expect.objectContaining({
+            locations: validLocations,
+          }),
+        }),
+      });
+    });
+
+    it("accepts a non-URI image license", async () => {
+      const locations = structuredClone(validLocations) as Array<Record<string, unknown>>;
+      (locations[0] as Record<string, unknown>)["locations"] = [
+        {
+          ...(validLocations[0].locations[0] as object),
+          imageLicense: "Public domain",
+        },
+      ];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithLocations({
+          sources: { ...validArtifact.sources, locations },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expect(result).toEqual({
+        status: "success",
+        artifact: expect.objectContaining({
+          sources: expect.objectContaining({
+            locations: [
+              expect.objectContaining({
+                locations: [
+                  expect.objectContaining({ imageLicense: "Public domain" }),
+                ],
+              }),
+            ],
+          }),
+        }),
+      });
+    });
+
+    it("rejects a blank image license", async () => {
+      const locations = structuredClone(validLocations) as Array<Record<string, unknown>>;
+      (locations[0] as Record<string, unknown>)["locations"] = [
+        {
+          ...(validLocations[0].locations[0] as object),
+          imageLicense: "",
+        },
+      ];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithLocations({
+          sources: { ...validArtifact.sources, locations },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+
+    it("rejects missing locations", async () => {
+      const withoutLocations = {
+        ...validArtifact,
+        sources: {
+          routeDestinations: validArtifact.sources.routeDestinations,
+          townGeoJson: validArtifact.sources.townGeoJson,
+        },
+      };
+      artifactReadFixture = { raw: JSON.stringify(withoutLocations) };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+
+    it("rejects duplicate location IDs across categories", async () => {
+      const dup = structuredClone(validLocations) as typeof validLocations;
+      dup.push({
+        category: "図書館",
+        categoryId: "1512",
+        locations: [
+          {
+            ...(dup[0].locations[0] as object),
+            name: "同じIDの別施設",
+          } as never,
+        ],
+      });
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithLocations({
+          sources: { ...validArtifact.sources, locations: dup },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+
+    it("rejects invalid wheelchair values", async () => {
+      const bad = structuredClone(validLocations) as Array<Record<string, unknown>>;
+      (bad[0] as Record<string, unknown>)["locations"] = [
+        { ...(validLocations[0].locations[0] as object), wheelchair: "bogus" },
+      ];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithLocations({
+          sources: { ...validArtifact.sources, locations: bad },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+
+    it("rejects invalid osmElement", async () => {
+      const bad = structuredClone(validLocations) as Array<Record<string, unknown>>;
+      (bad[0] as Record<string, unknown>)["locations"] = [
+        { ...(validLocations[0].locations[0] as object), osmElement: { type: "node", id: "x" } },
+      ];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithLocations({
+          sources: { ...validArtifact.sources, locations: bad },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+
+    it("rejects duplicate categoryIds", async () => {
+      const dup = [...validLocations, { ...validLocations[0] }];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithLocations({
+          sources: { ...validArtifact.sources, locations: dup },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+
+    it("accepts image without author when a license exists", async () => {
+      const bad = structuredClone(validLocations) as Array<Record<string, unknown>>;
+      const loc = { ...(validLocations[0].locations[0] as object) } as Record<string, unknown>;
+      delete loc["imageCreator"];
+      (bad[0] as Record<string, unknown>)["locations"] = [loc];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithLocations({
+          sources: { ...validArtifact.sources, locations: bad },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expect(result).toEqual({
+        status: "success",
+        artifact: expect.objectContaining({
+          sources: expect.objectContaining({ locations: bad }),
+        }),
+      });
+    });
+
+    it("rejects image without author and license", async () => {
+      const bad = structuredClone(validLocations) as Array<Record<string, unknown>>;
+      const loc = { ...(validLocations[0].locations[0] as object) } as Record<string, unknown>;
+      delete loc["imageCreator"];
+      delete loc["imageLicense"];
+      (bad[0] as Record<string, unknown>)["locations"] = [loc];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithLocations({
+          sources: { ...validArtifact.sources, locations: bad },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+  });
+
+  describe("derived location images", () => {
+    const locationId = "urn:uuid:00000000-0000-4000-8000-000000000071";
+    const validDerivedImage = {
+      width: 1280,
+      height: 853,
+      variants: [
+        {
+          width: 480,
+          path: "/generated/location-images/0123456789abcdef-480.webp",
+        },
+        {
+          width: 960,
+          path: "/generated/location-images/fedcba9876543210-960.webp",
+        },
+        {
+          width: 1280,
+          path: "/generated/location-images/89abcdef01234567-1280.webp",
+        },
+      ],
+    };
+
+    function artifactWithImage(image: unknown): Record<string, unknown> {
+      return artifactWith({
+        sources: {
+          ...validArtifact.sources,
+          locations: [
+            {
+              category: "市役所・東京都の区役所",
+              categoryId: "1302",
+              locations: [
+                {
+                  id: locationId,
+                  name: "千代田区役所",
+                  lat: 35.694,
+                  lng: 139.753,
+                  imageUri: "https://fixtures.example.test/images/city.jpg",
+                  imageCreator: "さくら",
+                  imageLicense:
+                    "https://creativecommons.org/licenses/by-sa/3.0/",
+                  image,
+                  relatedPages: [],
+                  osmElement: { type: "node", id: 1 },
+                  wheelchair: "yes",
+                  osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
+                },
+              ],
+            },
+          ],
+        },
+        derivedRegions: { [locationId]: "神田和泉町" },
+      } as unknown as Record<string, unknown>);
+    }
+
+    it("reads the derived image width, height and variants", async () => {
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithImage(validDerivedImage)),
+      };
+      const result = await invokeReader(moduleState);
+      expect(result).toEqual({
+        status: "success",
+        artifact: expect.objectContaining({
+          sources: expect.objectContaining({
+            locations: [
+              expect.objectContaining({
+                locations: [
+                  expect.objectContaining({ image: validDerivedImage }),
+                ],
+              }),
+            ],
+          }),
+        }),
+      });
+    });
+
+    it.each([
+      ["a non-object image", "not-an-object"],
+      ["a non-positive width", { ...validDerivedImage, width: 0 }],
+      ["a negative height", { ...validDerivedImage, height: -1 }],
+      ["a fractional width", { ...validDerivedImage, width: 1280.5 }],
+      ["empty variants", { ...validDerivedImage, variants: [] }],
+      [
+        "a zero variant width",
+        {
+          ...validDerivedImage,
+          variants: [{ width: 0, path: validDerivedImage.variants[0].path }],
+        },
+      ],
+      [
+        "a string variant width",
+        {
+          ...validDerivedImage,
+          variants: [
+            { width: "480", path: validDerivedImage.variants[0].path },
+          ],
+        },
+      ],
+      [
+        "an external variant path",
+        {
+          ...validDerivedImage,
+          variants: [
+            {
+              width: 480,
+              path: "https://example.test/generated/location-images/0123456789abcdef-480.webp",
+            },
+          ],
+        },
+      ],
+      [
+        "a traversal variant path",
+        {
+          ...validDerivedImage,
+          variants: [
+            {
+              width: 480,
+              path: "/generated/location-images/../0123456789abcdef-480.webp",
+            },
+          ],
+        },
+      ],
+      [
+        "a variant path outside the generated directory",
+        {
+          ...validDerivedImage,
+          variants: [
+            {
+              width: 480,
+              path: "/generated/other/0123456789abcdef-480.webp",
+            },
+          ],
+        },
+      ],
+    ])("rejects an invalid derived image: %s", async (_label, image) => {
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWithImage(image)),
+      };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+  });
+
+  describe("location facts", () => {
+    const factsLocations = [
+      {
+        category: "市役所・東京都の区役所",
+        categoryId: "1302",
+        locations: [
+          {
+            id: "urn:uuid:00000000-0000-4000-8000-000000000001",
+            name: "千代田区役所",
+            lat: 35.694,
+            lng: 139.753,
+            relatedPages: [],
+            osmElement: { type: "node", id: 1 },
+            wheelchair: "yes",
+            phone: { display: "03-3264-2111", tel: "tel:0332642111" },
+            websiteUri: "https://www.city.chiyoda.lg.jp/",
+            wikipediaUri: "https://ja.wikipedia.org/wiki/%E5%8D%83%E4%BB%A3%E7%94%B0%E5%8C%BA%E5%BD%B9%E6%89%80",
+            osmEditUrl: "https://www.openstreetmap.org/edit?node=1",
+          },
+        ],
+      },
+    ];
+
+    it("reads phone, website, wikipedia and edit URL", async () => {
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWith({
+          sources: { ...validArtifact.sources, locations: factsLocations },
+          derivedRegions: {
+            "kanda-library": "神田和泉町",
+            "urn:uuid:00000000-0000-4000-8000-000000000001": "神田和泉町",
+            "urn:uuid:00000000-0000-4000-8000-000000000002": "神田和泉町",
+          },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expect(result).toEqual({
+        status: "success",
+        artifact: expect.objectContaining({
+          sources: expect.objectContaining({
+            locations: factsLocations,
+          }),
+        }),
+      });
+    });
+
+    it("rejects invalid phone", async () => {
+      const bad = structuredClone(factsLocations) as Array<Record<string, unknown>>;
+      (bad[0] as Record<string, unknown>)["locations"] = [
+        { ...(factsLocations[0].locations[0] as object), phone: { display: "", tel: "tel:x" } },
+      ];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWith({
+          sources: { ...validArtifact.sources, locations: bad },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+
+    it("rejects invalid websiteUri", async () => {
+      const bad = structuredClone(factsLocations) as Array<Record<string, unknown>>;
+      (bad[0] as Record<string, unknown>)["locations"] = [
+        { ...(factsLocations[0].locations[0] as object), websiteUri: "not-a-uri" },
+      ];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWith({
+          sources: { ...validArtifact.sources, locations: bad },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+
+    it("rejects invalid wikipediaUri", async () => {
+      const bad = structuredClone(factsLocations) as Array<Record<string, unknown>>;
+      (bad[0] as Record<string, unknown>)["locations"] = [
+        { ...(factsLocations[0].locations[0] as object), wikipediaUri: "not-a-uri" },
+      ];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWith({
+          sources: { ...validArtifact.sources, locations: bad },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
+
+    it("rejects missing osmEditUrl", async () => {
+      const bad = structuredClone(factsLocations) as Array<Record<string, unknown>>;
+      const loc = { ...(factsLocations[0].locations[0] as object) } as Record<string, unknown>;
+      delete loc["osmEditUrl"];
+      (bad[0] as Record<string, unknown>)["locations"] = [loc];
+      artifactReadFixture = {
+        raw: JSON.stringify(artifactWith({
+          sources: { ...validArtifact.sources, locations: bad },
+        } as unknown as Record<string, unknown>)),
+      };
+      const result = await invokeReader(moduleState);
+      expectReaderError(result, readFileSyncSpy, readFileSpy);
+    });
   });
 });

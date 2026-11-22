@@ -10,7 +10,7 @@
 
 共通metadataの正本は`src/app/layout.tsx`です。title、description、keywords、authors、canonicalの値を確認します。
 
-canonicalとsitemapの基底値は`app-config.json`の`appUrl`から読みます。配布先の値を使い、文書へ未確定の公開URLを書きません。
+canonicalとsitemapの基底値は選択された設定ファイルの`appUrl`から読みます。本番は`app-config.json`、開発は`app-config.local.json`です。配布先の値を使い、文書へ未確定の公開URLを書きません。
 
 ページ固有のmetadataは各routeの`layout.tsx`で定義します。
 

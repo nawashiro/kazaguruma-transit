@@ -70,7 +70,7 @@ Nostrの仕様は説明しません。NIP文書をご覧ください。
 
 ## 設定
 
-- アプリはルートのデプロイ用`app-config.json`を読み込みます。入力例は[`app-config.json.example`](../../app-config.json.example)です。
+- アプリは環境に応じた設定ファイルを読み込みます。本番は`app-config.json`、開発は`app-config.local.json`です。入力例は[`app-config.json.example`](../../app-config.json.example)です。
 - `isDiscussionsEnabled()`は`discussion.enabled`と掲載一覧naddrの両方を確認します。
 - リレー設定は読み書き両方に使います。
-- app-config.json`の不備は設定検証エラーになります。必須設定が欠ける場合、意見交換を有効化しません。
+- 設定ファイルの不備は設定検証エラーになります。必須設定が欠ける場合、意見交換を有効化しません。

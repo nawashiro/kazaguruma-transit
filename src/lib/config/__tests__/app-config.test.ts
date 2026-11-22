@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const projectRoot = path.resolve(__dirname, "../../../../");
-const appConfigExamplePath = path.join(projectRoot, "app-config.json.example");
+const appConfigTemplateName = "app-config.json.example";
 
 type AppConfigModule = {
   parseAppConfig?: (value: unknown) => unknown;
@@ -20,13 +20,12 @@ function requireAppConfigModule(): AppConfigModule {
   }
 }
 
-function readAppConfigExample(): unknown {
-  if (!existsSync(appConfigExamplePath)) {
-    throw new Error(
-      `app-config.json.example is not implemented: ${appConfigExamplePath}`,
-    );
+function readAppConfigTemplate(fileName: string): unknown {
+  const templatePath = path.join(projectRoot, fileName);
+  if (!existsSync(templatePath)) {
+    throw new Error(`app config template is missing: ${templatePath}`);
   }
-  return JSON.parse(readFileSync(appConfigExamplePath, "utf8")) as unknown;
+  return JSON.parse(readFileSync(templatePath, "utf8")) as unknown;
 }
 
 const validConfig = {
@@ -57,9 +56,59 @@ const validConfig = {
   },
 };
 
+describe("app-config environment selection", () => {
+  const configFiles = {
+    local: "app-config.local.json",
+    production: "app-config.json",
+  } as const;
+
+  function readConfigFile(
+    environment: keyof typeof configFiles,
+  ): unknown {
+    return JSON.parse(
+      readFileSync(path.join(projectRoot, configFiles[environment]), "utf8"),
+    ) as unknown;
+  }
+
+  function loadAppConfigModule() {
+    return jest.requireActual("../app-config") as {
+      appConfig: unknown;
+      parseAppConfig: (value: unknown) => unknown;
+    };
+  }
+
+  afterEach(() => {
+    delete process.env.APP_CONFIG_ENV;
+  });
+
+  it("loads the local configuration when APP_CONFIG_ENV is absent", () => {
+    delete process.env.APP_CONFIG_ENV;
+
+    jest.isolateModules(() => {
+      const appConfigModule = loadAppConfigModule();
+
+      expect(appConfigModule.appConfig).toEqual(
+        appConfigModule.parseAppConfig(readConfigFile("local")),
+      );
+    });
+  });
+
+  it("loads the production configuration when APP_CONFIG_ENV is production", () => {
+    process.env.APP_CONFIG_ENV = "production";
+
+    jest.isolateModules(() => {
+      const appConfigModule = loadAppConfigModule();
+
+      expect(appConfigModule.appConfig).toEqual(
+        appConfigModule.parseAppConfig(readConfigFile("production")),
+      );
+    });
+  });
+});
+
 describe("app-config public module", () => {
-  it("provides the tracked public template with the required sections", () => {
-    const config = readAppConfigExample();
+  it("provides the required sections", () => {
+    const config = readAppConfigTemplate(appConfigTemplateName);
 
     expect(config).toEqual(
       expect.objectContaining({
@@ -94,6 +143,14 @@ describe("app-config public module", () => {
     );
   });
 
+  it("keeps the tracked template on the development URL", () => {
+    const template = readAppConfigTemplate(appConfigTemplateName) as {
+      appUrl: string;
+    };
+
+    expect(template.appUrl).toBe("http://localhost:3000");
+  });
+
   it("exports a parser that accepts the documented shape", () => {
     const appConfigModule = requireAppConfigModule();
     expect(appConfigModule.parseAppConfig).toEqual(expect.any(Function));
@@ -121,7 +178,7 @@ describe("app-config public module", () => {
     const appConfigModule = requireAppConfigModule();
     expect(appConfigModule.parseAppConfig).toEqual(expect.any(Function));
     expect(() => appConfigModule.parseAppConfig?.(config)).toThrow(
-      "app-config.jsonの形式が不正です",
+      "公開アプリ設定の形式が不正です",
     );
   });
 });

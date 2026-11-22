@@ -1,3 +1,8 @@
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import type { StopPosition } from "@/lib/transit/stop-selection";
 
 export {};
@@ -421,5 +426,70 @@ describe("updateDestinationCatalog", () => {
 
     await expect(getUpdater()(harness.options)).rejects.toThrow(/network unreachable/u);
     expect(harness.writeCatalog).not.toHaveBeenCalled();
+  });
+});
+
+describe("update-destinations CLI configuration selection", () => {
+  const repositoryRoot = process.cwd();
+  const cliPath = path.resolve(repositoryRoot, "scripts/update-destinations.ts");
+  const tsxCliPath = path.resolve(
+    repositoryRoot,
+    "node_modules/tsx/dist/cli.mjs",
+  );
+  const temporaryDirectories: string[] = [];
+
+  function createProjectDirectory(): string {
+    const directory = mkdtempSync(path.join(tmpdir(), "update-destinations-"));
+    temporaryDirectories.push(directory);
+    return directory;
+  }
+
+  function runCli(cwd: string, overrides: Record<string, string>) {
+    const { APP_CONFIG_ENV: _appConfigEnv, ...baseEnv } = process.env;
+
+    return spawnSync(process.execPath, [tsxCliPath, cliPath], {
+      cwd,
+      encoding: "utf8",
+      env: { ...baseEnv, ...overrides },
+      timeout: 30_000,
+    });
+  }
+
+  afterEach(() => {
+    for (const directory of temporaryDirectories) {
+      rmSync(directory, { force: true, recursive: true });
+    }
+    temporaryDirectories.length = 0;
+  });
+
+  it("reads app-config.local.json when APP_CONFIG_ENV is absent", () => {
+    const cwd = createProjectDirectory();
+    writeFileSync(path.join(cwd, "app-config.json"), "{}\n");
+
+    const result = runCli(cwd, {});
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("app-config.local.json");
+  });
+
+  it("reads app-config.json when APP_CONFIG_ENV is production", () => {
+    const cwd = createProjectDirectory();
+    writeFileSync(path.join(cwd, "app-config.json"), "{}\n");
+
+    const result = runCli(cwd, { APP_CONFIG_ENV: "production" });
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("datasetJsonLdUriとosmMirrorUri");
+    expect(result.stderr).not.toContain("ENOENT");
+  });
+
+  it("rejects an unknown APP_CONFIG_ENV", () => {
+    const cwd = createProjectDirectory();
+    writeFileSync(path.join(cwd, "app-config.json"), "{}\n");
+
+    const result = runCli(cwd, { APP_CONFIG_ENV: "staging" });
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("APP_CONFIG_ENV");
   });
 });

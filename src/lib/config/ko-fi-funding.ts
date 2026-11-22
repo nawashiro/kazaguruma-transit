@@ -2,7 +2,7 @@ import type { KoFiContent } from "@/types/ko-fi";
 import { appConfig } from "./app-config";
 
 /**
- * 公開app-config.jsonからKo-fiの支援先を読み込む。
+ * 公開アプリ設定からKo-fiの支援先を読み込む。
  */
 export function loadKoFiUsername(): string | null {
   const username = appConfig.support.koFiUsername.trim();
@@ -10,7 +10,7 @@ export function loadKoFiUsername(): string | null {
 }
 
 /**
- * 公開app-config.jsonからKo-fi支援欄の文言を読み込む。
+ * 公開アプリ設定からKo-fi支援欄の文言を読み込む。
  */
 export function loadKoFiContent(): KoFiContent {
   return {

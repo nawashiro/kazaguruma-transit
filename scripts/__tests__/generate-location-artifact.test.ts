@@ -107,6 +107,13 @@ const validAppConfig = {
   wikidataMirrorUri: WIKIDATA_MIRROR_URI,
 };
 
+const UNAVAILABLE_APP_CONFIG = {
+  datasetJsonLdUri: "http://127.0.0.1:1/dataset.jsonld",
+  osmMirrorUri: "http://127.0.0.1:1/mirrors/osm.json",
+  townGeoJsonUri: "http://127.0.0.1:1/chiyoda-towns.geojson",
+  wikidataMirrorUri: "http://127.0.0.1:1/mirrors/wikidata.json",
+};
+
 const LAT = 35.694;
 const LNG = 139.753;
 const LIBRARY_LAT = 35.695;
@@ -1920,6 +1927,8 @@ type PublicBuildRun = {
 async function runPublicGeneratorCli(options: {
   catalog?: unknown;
   appConfig?: Record<string, unknown>;
+  unavailableEnvironment?: "local" | "production";
+  env?: Record<string, string>;
 } = {}): Promise<PublicBuildRun> {
   if (!existsSync(GENERATOR_CLI_PATH) || !existsSync(TSX_CLI_PATH)) {
     throw new Error(`generate-location-artifact public CLI is not implemented: ${GENERATOR_CLI_PATH}`);
@@ -1951,7 +1960,20 @@ async function runPublicGeneratorCli(options: {
 
     await writeFile(
       join(temporaryRoot, "app-config.json"),
-      JSON.stringify(appConfig),
+      JSON.stringify(
+        options.unavailableEnvironment === "production"
+          ? UNAVAILABLE_APP_CONFIG
+          : appConfig,
+      ),
+      "utf8",
+    );
+    await writeFile(
+      join(temporaryRoot, "app-config.local.json"),
+      JSON.stringify(
+        options.unavailableEnvironment === "local"
+          ? UNAVAILABLE_APP_CONFIG
+          : appConfig,
+      ),
       "utf8",
     );
     await writeFile(
@@ -1968,7 +1990,7 @@ async function runPublicGeneratorCli(options: {
         [TSX_CLI_PATH, GENERATOR_CLI_PATH],
         {
           cwd: temporaryRoot,
-          env: { ...process.env, FORCE_COLOR: "0" },
+          env: { ...process.env, FORCE_COLOR: "0", ...options.env },
           encoding: "utf8",
           maxBuffer: 1024 * 1024,
           timeout: 30_000,
@@ -2042,8 +2064,38 @@ describe("public generator build lifecycle", () => {
     expect(result.requestedUris.some((uri) => uri.includes("cdn.jsdelivr.net"))).toBe(false);
   });
 
-  it("fails without writing the artifact when the catalog source does not match appConfig", async () => {
+  it("reads app-config.json when APP_CONFIG_ENV is production", async () => {
     const result = await runPublicGeneratorCli({
+      unavailableEnvironment: "local",
+      env: { APP_CONFIG_ENV: "production" },
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.artifactKind).toBe("file");
+    expect(result.requestedUris).toHaveLength(4);
+    expect(
+      result.requestedUris.every((uri) =>
+        uri.startsWith("http://127.0.0.1:"),
+      ),
+    ).toBe(true);
+  });
+
+  it("reads app-config.local.json when APP_CONFIG_ENV is absent", async () => {
+    const result = await runPublicGeneratorCli({
+      unavailableEnvironment: "production",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.artifactKind).toBe("file");
+    expect(result.requestedUris).toHaveLength(4);
+    expect(
+      result.requestedUris.every((uri) =>
+        uri.startsWith("http://127.0.0.1:"),
+      ),
+    ).toBe(true);
+  });
+
+  it("fails without writing the artifact when the catalog source does not match appConfig", async () => {    const result = await runPublicGeneratorCli({
       catalog: {
         ...validCatalog,
         source: {

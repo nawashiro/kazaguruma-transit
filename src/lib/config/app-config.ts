@@ -1,8 +1,11 @@
 /**
- * app-config.json is a deployment-specific, ignored file. The npm/CI/Docker
- * preparation step creates it from the tracked example when it is absent.
+ * Public app config is split per environment: app-config.local.json for
+ * development and app-config.json for production. Both are ignored files
+ * supplied per checkout; APP_CONFIG_ENV is inlined by next.config.ts so the
+ * server and client bundles select the same file.
  */
-import rawAppConfig from "../../../app-config.json";
+import localAppConfig from "../../../app-config.local.json";
+import productionAppConfig from "../../../app-config.json";
 
 export interface DiscussionReadStrategyAppConfig {
   idleTimeoutMs: number;
@@ -57,7 +60,7 @@ function isNonEmptyString(value: unknown): value is string {
 }
 
 function invalidAppConfig(): never {
-  throw new Error("app-config.jsonの形式が不正です");
+  throw new Error("公開アプリ設定の形式が不正です");
 }
 
 export function parseAppConfig(value: unknown): AppConfig {
@@ -132,6 +135,10 @@ export function parseAppConfig(value: unknown): AppConfig {
   };
 }
 
-export const appConfig = parseAppConfig(rawAppConfig);
+export const appConfig = parseAppConfig(
+  process.env.APP_CONFIG_ENV === "production"
+    ? productionAppConfig
+    : localAppConfig,
+);
 
 export default appConfig;

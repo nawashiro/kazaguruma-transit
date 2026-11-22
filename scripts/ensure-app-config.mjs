@@ -2,13 +2,19 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 const projectRoot = process.cwd();
-const appConfigPath = resolve(projectRoot, "app-config.json");
+const requiredConfigFiles = ["app-config.json", "app-config.local.json"];
+const missingConfigFiles = requiredConfigFiles.filter(
+  (fileName) => !existsSync(resolve(projectRoot, fileName)),
+);
 
-if (existsSync(appConfigPath)) {
-  process.stdout.write("app-config.json exists; keeping the deployment-specific configuration.\n");
+if (missingConfigFiles.length === 0) {
+  process.stdout.write(
+    "app-config.json and app-config.local.json exist; keeping the deployment-specific configuration.\n",
+  );
 } else {
   process.stderr.write(
-    `app-config.json is required but was not found: ${appConfigPath}\n`,
+    `公開アプリ設定が見つかりません: ${missingConfigFiles.join(", ")}\n` +
+      "app-config.json.example から app-config.json と app-config.local.json を作成してください。\n",
   );
   process.exitCode = 1;
 }

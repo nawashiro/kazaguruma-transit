@@ -39,7 +39,37 @@ describe("app-config build and deployment boundary", () => {
     }
   });
 
-  it("makes CI own the explicit example-to-config copy", () => {
+  it("makes the build generate its artifact from the production configuration unless one is pinned", () => {
+    const packageJson = JSON.parse(readProjectFile("package.json")) as {
+      scripts: Record<string, string>;
+    };
+
+    expect(packageJson.scripts.prebuild).toContain(
+      "APP_CONFIG_ENV=${APP_CONFIG_ENV:-production}",
+    );
+    expect(packageJson.scripts.prebuild).toContain(
+      "scripts/generate-location-artifact.ts",
+    );
+
+    for (const scriptName of ["predev", "pretest"]) {
+      expect(packageJson.scripts[scriptName]).not.toContain(
+        "generate-location-artifact",
+      );
+    }
+  });
+
+  it("selects the local configuration inside the development image", () => {
+    const developmentDockerfile = readProjectFile("Dockerfile.dev");
+    const buildIndex = developmentDockerfile.indexOf("npm run build");
+
+    expect(buildIndex).toBeGreaterThan(-1);
+    expect(
+      developmentDockerfile.slice(0, buildIndex),
+    ).toContain("ENV APP_CONFIG_ENV=local");
+    expect(readProjectFile("Dockerfile.prod")).not.toContain("APP_CONFIG_ENV");
+  });
+
+  it("makes CI own the explicit template-to-config copy", () => {
     const workflow = readProjectFile(".github/workflows/quality-gate.yml");
     const prepareStep = readWorkflowStep(
       workflow,
@@ -48,6 +78,9 @@ describe("app-config build and deployment boundary", () => {
 
     expect(prepareStep).toMatch(
       /^\s*cp\s+app-config\.json\.example\s+app-config\.json\s*$/mu,
+    );
+    expect(prepareStep).toMatch(
+      /^\s*cp\s+app-config\.json\.example\s+app-config\.local\.json\s*$/mu,
     );
   });
 });

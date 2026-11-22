@@ -10,6 +10,7 @@ Prisma 7でのキャッシュの扱いは[交通キャッシュの再生成](reb
 
 ```bash
 cp app-config.json.example app-config.json
+cp app-config.json.example app-config.local.json
 cp .env.local.example .env.local
 cp transit-config.json.example transit-config.json
 chmod 600 .env.local transit-config.json
@@ -19,7 +20,8 @@ chmod 600 .env.local transit-config.json
 
 以下は外部に公開される設定です。秘密を書かないでください。
 
-- `app-config.json`: クライアントアプリ設定です。
+- `app-config.json`: 本番のクライアントアプリ設定です。`compose.prod.yml`と`npm run build`が読みます。テンプレートの開発用の値を配布先の値へ書き換えてください。
+- `app-config.local.json`: 開発のクライアントアプリ設定です。`compose.yml`と`npm run dev`が読みます。
 
 以下は秘密を含む設定です。コミットをしないでください。権限を狭めてください。
 

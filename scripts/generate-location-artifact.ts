@@ -9,6 +9,10 @@ import {
 import { basename, dirname, resolve } from "node:path";
 
 import {
+  appConfigFileName,
+  resolveAppConfigEnvironment,
+} from "../src/lib/config/app-config-environment";
+import {
   findOsmElementKey,
   validateDestinationCatalog,
   type DestinationCatalog,
@@ -1555,7 +1559,10 @@ async function writeArtifactAtomically(
 async function runCli(): Promise<void> {
   try {
     const projectRoot = process.cwd();
-    const appConfigPath = resolve(projectRoot, "app-config.json");
+    const appConfigPath = resolve(
+      projectRoot,
+      appConfigFileName(resolveAppConfigEnvironment(process.env)),
+    );
     const artifactPath = resolve(
       projectRoot,
       "public",

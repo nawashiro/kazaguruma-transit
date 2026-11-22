@@ -58,8 +58,8 @@ export default async () => {
         testMatch: serverTestFiles,
         testEnvironment: "node",
         maxWorkers: 1,
-        globalSetup: "<rootDir>/scripts/global-setup.mjs",
-        globalTeardown: "<rootDir>/scripts/global-teardown.mjs",
+        globalSetup: "<rootDir>/scripts/global-setup.ts",
+        globalTeardown: "<rootDir>/scripts/global-teardown.ts",
       },
     ],
   };

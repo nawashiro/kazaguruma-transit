@@ -1,12 +1,11 @@
 import { rmSync, readFileSync } from "node:fs";
-import path from "node:path";
 import {
   port,
   stateFile,
   pidsListeningOnPort,
-} from "./global-setup.mjs";
+} from "./global-setup";
 
-async function waitUntilDown(freeDeadline) {
+async function waitUntilDown(freeDeadline: number): Promise<boolean> {
   while (Date.now() < freeDeadline) {
     if (pidsListeningOnPort(port).length === 0) return true;
     await new Promise((resolve) => setTimeout(resolve, 250));
@@ -14,10 +13,10 @@ async function waitUntilDown(freeDeadline) {
   return false;
 }
 
-export default async function globalTeardown() {
-  let state;
+export default async function globalTeardown(): Promise<void> {
+  let state: { pid: number };
   try {
-    state = JSON.parse(readFileSync(stateFile, "utf8"));
+    state = JSON.parse(readFileSync(stateFile, "utf8")) as { pid: number };
   } catch {
     return;
   }

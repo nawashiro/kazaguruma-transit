@@ -99,12 +99,10 @@ const LONG_AREA_NAME = "神田和泉町";
 const OTHER_AREA_NAME = "その他";
 const DATA_PROVIDER_SOURCE_HREF =
   "https://github.com/nawashiro/chiyoda_city_main_facilities";
+const DATA_PROVIDER_WHEELMAP_HREF = "https://wheelmap.org";
+const DATA_PROVIDER_OSM_HREF = "https://openstreetmap.org";
 const DATA_PROVIDER_FORM_HREF =
   "https://docs.google.com/forms/d/e/1FAIpQLSeZ1eufe_2aZkRWQwr-RuCceUYUMJ7WmSfUr1ZsX5QTDRqFKQ/viewform?usp=header";
-const DATA_PROVIDER_SOURCE_DESCRIPTION =
-  "千代田区の主要施設を表示しています。";
-const DATA_PROVIDER_CORRECTION_DESCRIPTION =
-  "誤りがあるときは、OpenStreetMapまたはWheelMapで修正するか、こちらのフォームからお知らせください。";
 
 const townVisualLocations: LocationWithArea[] = [
   {
@@ -802,15 +800,27 @@ describe("category page origin/dev visual contract", () => {
     expectCardStructure(providerCard, "データ提供元");
 
     expect(
-      within(providerCard).getByText("千代田区の主要施設を表示しています。"),
+      within(providerCard).getByText(/このデータは誰でも使うことができます。/),
     ).toBeInTheDocument();
+    expect(within(providerCard).getByText(/誤りがあれば/)).toBeInTheDocument();
     expect(
-      within(providerCard).getByText(/バリアフリー情報はOpenStreetMap/),
+      within(providerCard).getByText(/よくわからなかったら、/),
     ).toBeInTheDocument();
     const providerLinks = within(providerCard).getAllByRole("link");
-    expect(providerLinks).toHaveLength(1);
+    expect(providerLinks.map((link) => link.textContent)).toEqual([
+      "千代田区区民施設向けデータ",
+      "WheelMap",
+      "OpenStreetMap",
+      "こちらのフォーム",
+    ]);
+    expect(providerLinks.map((link) => link.getAttribute("href"))).toEqual([
+      DATA_PROVIDER_SOURCE_HREF,
+      DATA_PROVIDER_WHEELMAP_HREF,
+      DATA_PROVIDER_OSM_HREF,
+      DATA_PROVIDER_FORM_HREF,
+    ]);
     expect(
       within(providerCard).getByRole("link", { name: "こちらのフォーム" }),
-    ).toHaveAttribute("href", DATA_PROVIDER_FORM_HREF);
+    ).toHaveAttribute("target", "_blank");
   });
 });

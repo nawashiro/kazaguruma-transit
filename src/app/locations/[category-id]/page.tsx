@@ -395,12 +395,12 @@ function DistanceLocationList({ bands }: { bands: readonly DistanceBand[] }) {
 function DataProviderCard() {
   return (
     <Card title="データ提供元" className="ruby-text">
-      <p>データは毎月いちど<a href="https://github.com/nawashiro/chiyoda_city_main_facilities" className="link">千代田区区民施設向けデータ</a>に取り込んでいます。</p>
+      <p>データは毎月いちど<a href="https://github.com/nawashiro/chiyoda_city_main_facilities" className="link">千代田区区民施設向けデータ</a>に取り込んでいます。このデータは誰でも使うことができます。</p>
       <p>
-        最新情報は<a href="https://wheelmap.org" className="link">WheelMap</a>または<a href="https://openstreetmap.org" className="link">OpenStreetMap</a>から修正できます。
+        誤りがあれば<a href="https://wheelmap.org" className="link">WheelMap</a>または<a href="https://openstreetmap.org" className="link">OpenStreetMap</a>から修正できます。
       </p>
       <p>
-        誤りがあるときは、OpenStreetMapまたはWheelMapで修正するか、
+        よくわからなかったら、
         <a
           href="https://docs.google.com/forms/d/e/1FAIpQLSeZ1eufe_2aZkRWQwr-RuCceUYUMJ7WmSfUr1ZsX5QTDRqFKQ/viewform?usp=header"
           target="_blank"

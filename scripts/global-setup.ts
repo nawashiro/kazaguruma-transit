@@ -1,14 +1,22 @@
 import { spawnSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readlinkSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readlinkSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
+import { isProductionBuildUsable } from "./production-build";
 
 export const projectRoot = path.resolve(process.cwd());
 export const port = 3100;
 export const serverUrl = `http://127.0.0.1:${port}/`;
 export const stateFile = path.join(projectRoot, ".jest", "transit-server.json");
 
-export function pidsListeningOnPort(portNumber) {
-  const inodes = new Set();
+export function pidsListeningOnPort(portNumber: number): number[] {
+  const inodes = new Set<string>();
   const hexPort = portNumber.toString(16).padStart(4, "0");
   for (const table of ["/proc/net/tcp", "/proc/net/tcp6"]) {
     if (!existsSync(table)) continue;
@@ -24,18 +32,18 @@ export function pidsListeningOnPort(portNumber) {
     }
   }
   if (inodes.size === 0) return [];
-  const pids = [];
+  const pids: number[] = [];
   for (const pidDir of readdirSync("/proc")) {
     if (!/^\d+$/.test(pidDir)) continue;
     const fdDir = `/proc/${pidDir}/fd`;
-    let fds;
+    let fds: string[];
     try {
       fds = readdirSync(fdDir);
     } catch {
       continue;
     }
     for (const fd of fds) {
-      let target;
+      let target: string;
       try {
         target = readlinkSync(`${fdDir}/${fd}`);
       } catch {
@@ -48,7 +56,7 @@ export function pidsListeningOnPort(portNumber) {
   return pids;
 }
 
-async function probe(retries, intervalMs) {
+async function probe(retries: number, intervalMs: number): Promise<boolean> {
   for (let attempt = 0; attempt < retries; attempt += 1) {
     try {
       const response = await fetch(serverUrl);
@@ -63,7 +71,7 @@ async function probe(retries, intervalMs) {
   return false;
 }
 
-function resolveDbPath(sqlitePath) {
+function resolveDbPath(sqlitePath: string): string {
   if (
     sqlitePath === ":memory:" ||
     path.isAbsolute(sqlitePath) ||
@@ -74,7 +82,7 @@ function resolveDbPath(sqlitePath) {
   return path.join(projectRoot, sqlitePath);
 }
 
-export function ensureDatabaseSchema() {
+export function ensureDatabaseSchema(): void {
   const configPath = path.join(projectRoot, "transit-config.json");
   if (!existsSync(configPath)) {
     throw new Error(
@@ -82,9 +90,11 @@ export function ensureDatabaseSchema() {
     );
   }
 
-  let sqlitePath;
+  let sqlitePath: unknown;
   try {
-    sqlitePath = JSON.parse(readFileSync(configPath, "utf8")).sqlitePath;
+    sqlitePath = (JSON.parse(readFileSync(configPath, "utf8")) as {
+      sqlitePath?: unknown;
+    }).sqlitePath;
   } catch {
     throw new Error("transit-config.json を読めませんでした。");
   }
@@ -116,14 +126,14 @@ export function ensureDatabaseSchema() {
   }
 }
 
-export default async function globalSetup() {
+export default async function globalSetup(): Promise<void> {
   if (await probe(1, 0)) {
     return;
   }
 
   ensureDatabaseSchema();
 
-  if (!existsSync(path.join(projectRoot, ".next", "BUILD_ID"))) {
+  if (!isProductionBuildUsable(path.join(projectRoot, ".next"))) {
     const build = spawnSync("npm", ["run", "build"], {
       cwd: projectRoot,
       stdio: "inherit",

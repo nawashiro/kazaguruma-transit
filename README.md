@@ -99,6 +99,8 @@ npm run test:watch
 | how-to      | [Docker開発・本番構成](docs/how-to/docker-setup.md)                                    |
 | how-to      | [SEOの現行実装](docs/how-to/seo-optimization.md)                                       |
 | how-to      | [ライセンス情報の更新](docs/how-to/license-page.md)                                    |
+| how-to      | [場所データの更新](docs/how-to/update-location-data.md)                                |
+| how-to      | [目的地目録の更新](docs/how-to/update-destinations.md)                                 |
 | reference   | [開発憲章](docs/reference/constitution.md)                                             |
 | reference   | [ディスカッションの実装事実](docs/reference/discussion.md)                             |
 | reference   | [文書執筆規範](docs/reference/writing-style.md)                                        |
@@ -111,7 +113,7 @@ npm run test:watch
 
 ## Quality Gate
 
-[`.github/workflows/quality-gate.yml`](.github/workflows/quality-gate.yml)は`dev`または`master`へのpushとPull Requestを検査します。
+[`.github/workflows/quality-gate.yml`](.github/workflows/quality-gate.yml)は`master`へのpush、`master`を対象とするPull Request、手動実行を検査します。
 
 - Node.js 22.x
 - 設定ファイルを一時準備
@@ -119,8 +121,8 @@ npm run test:watch
 - ESLint
 - strict TypeScript
 - `npm run build`
-- production serverの起動
-- Jest
+- Jest（unitと本番サーバー）
+- スキップリンクのブラウザ検証
 
 ## ライセンス
 

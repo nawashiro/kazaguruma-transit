@@ -21,7 +21,7 @@
   "scripts": {
     "predev": "node scripts/ensure-app-config.mjs",
     "dev": "prisma generate && npm run import-gtfs && next dev --turbopack",
-    "prebuild": "node scripts/ensure-app-config.mjs && tsx scripts/generate-location-artifact.ts",
+    "prebuild": "node scripts/ensure-app-config.mjs && APP_CONFIG_ENV=${APP_CONFIG_ENV:-production} tsx scripts/generate-location-artifact.ts",
     "build": "prisma generate && next build",
     "prestart": "node scripts/ensure-app-config.mjs",
     "start": "prisma generate && npm run import-gtfs && next start",

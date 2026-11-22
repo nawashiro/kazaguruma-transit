@@ -66,7 +66,6 @@ describe("Issue #87 public configuration boundary", () => {
   });
 
   it("keeps server-only secrets out of the public configuration template", () => {
-    const rawConfig = readProjectFile("app-config.json.example").toLowerCase();
     const forbiddenKeys = [
       "transit",
       "google_maps_api_key",
@@ -75,11 +74,46 @@ describe("Issue #87 public configuration boundary", () => {
       "puppeteer",
     ];
 
-    expect(forbiddenKeys.filter((key) => rawConfig.includes(key))).toEqual([]);
+    const collectKeys = (value: unknown): string[] => {
+      if (Array.isArray(value)) {
+        return value.flatMap(collectKeys);
+      }
+      if (typeof value !== "object" || value === null) {
+        return [];
+      }
+      return Object.entries(value).flatMap(([key, entry]) => [
+        key.toLowerCase(),
+        ...collectKeys(entry),
+      ]);
+    };
+
+    const keys = collectKeys(
+      JSON.parse(readProjectFile("app-config.json.example")) as unknown,
+    );
+    expect(
+      keys.filter((key) =>
+        forbiddenKeys.some((forbidden) => key.includes(forbidden)),
+      ),
+    ).toEqual([]);
   });
 
-  it("tracks the public template and ignores deployment-specific overrides", () => {
-    expect(existsSync(path.join(projectRoot, "app-config.json.example"))).toBe(true);
-    expect(readProjectFile(".gitignore")).toMatch(/^app-config\.json$/mu);
+  it("tracks the development template and ignores both environment files", () => {
+    expect(
+      existsSync(path.join(projectRoot, "app-config.json.example")),
+    ).toBe(true);
+    expect(
+      existsSync(path.join(projectRoot, "app-config.local.json.example")),
+    ).toBe(false);
+
+    const gitignore = readProjectFile(".gitignore");
+    expect(gitignore).toMatch(/^app-config\.json$/mu);
+    expect(gitignore).toMatch(/^app-config\.local\.json$/mu);
+  });
+
+  it("pins the selected configuration environment for server and client bundles", () => {
+    const source = readProjectFile("next.config.ts");
+
+    expect(source).toContain("resolveAppConfigEnvironment(process.env)");
+    expect(source).toMatch(/env:\s*\{\s*APP_CONFIG_ENV:/u);
   });
 });

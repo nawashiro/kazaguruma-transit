@@ -9,6 +9,10 @@ import {
 import { basename, dirname, resolve } from "node:path";
 
 import {
+  appConfigFileName,
+  resolveAppConfigEnvironment,
+} from "../src/lib/config/app-config-environment";
+import {
   findOsmElementKey,
   isAbsoluteHttpUri,
   validateDestinationCatalog,
@@ -56,7 +60,7 @@ function isNonEmptyString(value: unknown): value is string {
 
 function readSourceUris(appConfig: unknown): DestinationCatalogSourceUris {
   if (!isRecord(appConfig)) {
-    throw new Error("app-config.jsonの形式が不正です");
+    throw new Error("公開アプリ設定の形式が不正です");
   }
   const datasetJsonLdUri = appConfig.datasetJsonLdUri;
   const osmMirrorUri = appConfig.osmMirrorUri;
@@ -67,7 +71,7 @@ function readSourceUris(appConfig: unknown): DestinationCatalogSourceUris {
     !isAbsoluteHttpUri(osmMirrorUri)
   ) {
     throw new Error(
-      "app-config.jsonのdatasetJsonLdUriとosmMirrorUriは絶対 http(s) URI である必要があります",
+      "公開アプリ設定のdatasetJsonLdUriとosmMirrorUriは絶対 http(s) URI である必要があります",
     );
   }
   return { datasetJsonLdUri, osmMirrorUri };
@@ -342,8 +346,12 @@ async function readExistingCatalogFile(
 async function runCli(): Promise<void> {
   try {
     const projectRoot = process.cwd();
+    const appConfigPath = resolve(
+      projectRoot,
+      appConfigFileName(resolveAppConfigEnvironment(process.env)),
+    );
     const appConfig = JSON.parse(
-      await readFile(resolve(projectRoot, "app-config.json"), "utf8"),
+      await readFile(appConfigPath, "utf8"),
     ) as unknown;
     const catalogPath = resolve(projectRoot, "data", "destinations.json");
 

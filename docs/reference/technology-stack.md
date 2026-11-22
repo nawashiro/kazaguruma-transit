@@ -11,7 +11,7 @@
 
 - キャッシュにPrisma ORMとSQLiteを使う。保存先は`transit-config.json`の`sqlitePath`で指定する。起動ごとに再生成し、APIレート制限のカウンターもリセットする。
 - `prisma/schema.prisma`はGTFSと、APIのRateLimitを定義する。
-- Quality Gateはチェックアウト内で`app-config.json.example`を`app-config.json`へ一時コピーし、テストに使う。
+- Quality Gateはチェックアウト内で`app-config.json.example`を`app-config.json`と`app-config.local.json`へ一時コピーし、ビルドとテストに使う。
 
 ## よく使うスクリプト
 

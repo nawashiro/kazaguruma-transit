@@ -2,17 +2,18 @@
 
 ## 設定入力
 
-測定IDは公開アプリ設定`app-config.json`の`gaMeasurementId`へ設定します。
+測定IDは公開アプリ設定の`gaMeasurementId`へ設定します。本番は`app-config.json`、開発は`app-config.local.json`を使います。
 
 ```bash
 cp app-config.json.example app-config.json
+cp app-config.json.example app-config.local.json
 ```
 
-- `app-config.json`はGitで管理しません。
+- 2つの設定ファイルはGitで管理しません。
 - 測定IDを`.env.local`や`transit-config.json`へ移しません。
-- サーバー秘密値を`app-config.json`へ入れません。
+- サーバー秘密値を設定ファイルへ入れません。
 
-`app-config.json`がない場合、`npm run dev`、`npm test`、`npm run build`、`npm start`は非ゼロで終了します。これらのコマンドはexampleから設定を自動生成しません。Quality Gateだけがcheckout内へ一時コピーを作ります。
+どちらかの設定ファイルがない場合、`npm run dev`、`npm test`、`npm run build`、`npm start`は非ゼロで終了します。これらのコマンドはテンプレートから設定を自動生成しません。Quality Gateだけがcheckout内へ一時コピーを作ります。`app-config.json.example`は開発用の値を持つので、本番の測定IDは`app-config.json`へ書きます。
 
 ## 実装
 
@@ -42,7 +43,7 @@ sendEvent("category", "action", "label", 1);
 
 ## 確認
 
-1. `app-config.json`へ配布先の測定IDを設定します。
+1. `app-config.json`へ配布先の測定IDを設定します。開発中は`app-config.local.json`を使います。
 2. `npm run dev`を実行します。
 3. ブラウザでページを開き、開発者コンソールにGA無効化のログが出ることを確認します。
 4. 非development環境では、測定IDを設定したbuildを起動し、ページ遷移とイベントの送信を確認します。

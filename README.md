@@ -58,7 +58,7 @@ npm ci
 
 ### 設定ファイル
 
-記入例は `${filename}.example` のファイルをご覧ください。
+記入例は `${filename}.example` のファイルをご覧ください。`app-config.json.example` は開発用の値を持つので、本番用の `app-config.json` はこれをコピーして配布先の値へ書き換えます。
 
 設定ファイルがない場合、非ゼロで終了します。
 
@@ -69,7 +69,8 @@ npm ci
 
 | ファイル名            | 機密性 | 説明                                                                                                         |
 | --------------------- | ------ | ------------------------------------------------------------------------------------------------------------ |
-| `app-config.json`     | 公開   | クライアントの設定です。提供URL、Google Analytics、場所データのURI、会話設定、お知らせ、支援表示を設定します。 |
+| `app-config.json`     | 公開   | 本番のクライアント設定です。提供URL、Google Analytics、場所データのURI、会話設定、お知らせ、支援表示を設定します。 |
+| `app-config.local.json` | 公開 | 開発のクライアント設定です。`app-config.json.example` をそのままコピーして使います。 |
 | `transit-config.json` | 秘密   | GTFS取得URLを設定します。                                                                                    |
 | `.env.local`          | 秘密   | 開発サーバーの環境変数です。`GOOGLE_MAPS_API_KEY`（必須）、`PUPPETEER_EXECUTABLE_PATH`（任意）を設定します。     |
 | `.env`                | 秘密   | 本番サーバーの環境変数です。`CLOUDFLARE_TUNNEL_TOKEN`などの秘密値を設定します。開発が目的なら必要ありません。    |

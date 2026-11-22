@@ -9,10 +9,10 @@
 ## 取得元
 
 - 目的地目録: `data/destinations.json`
-- 公開グラフ: `app-config.json` の `datasetJsonLdUri`
-- OSMタグミラー: `app-config.json` の `osmMirrorUri`
-- 町字GeoJSON: `app-config.json` の `townGeoJsonUri`
-- Wikidataミラー: `app-config.json` の `wikidataMirrorUri`
+- 公開グラフ: `app-config.json`（開発中は`app-config.local.json`）の `datasetJsonLdUri`
+- OSMタグミラー: `app-config.json`（開発中は`app-config.local.json`）の `osmMirrorUri`
+- 町字GeoJSON: `app-config.json`（開発中は`app-config.local.json`）の `townGeoJsonUri`
+- Wikidataミラー: `app-config.json`（開発中は`app-config.local.json`）の `wikidataMirrorUri`
 - 写真: `schema:image` の `schema:contentUrl` からファイル名を取り、`https://commons.wikimedia.org/wiki/Special:FilePath/<ファイル名>?width=1280`
 
 公開グラフは、`schema:Place`のrecord、カテゴリ語彙の`schema:DefinedTermSet`と`schema:DefinedTerm`、record形状の`sh:NodeShape`を同じ`@graph`に含みます。カテゴリはPlaceの`schema:keywords`が参照するtermの`schema:identifier`から`gif-poi`コードを、`schema:name`から表示名を読みます。語彙の順序は`schema:hasDefinedTerm`に従います。

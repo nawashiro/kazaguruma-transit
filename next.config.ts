@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
 import WebpackLicensePlugin from "webpack-license-plugin";
+import { resolveAppConfigEnvironment } from "./src/lib/config/app-config-environment";
+
+const appConfigEnvironment = resolveAppConfigEnvironment(process.env);
 
 const nextConfig: NextConfig = {
+  env: {
+    APP_CONFIG_ENV: appConfigEnvironment,
+  },
   serverExternalPackages: ["@prisma/adapter-better-sqlite3", "opening_hours"],
   async headers() {
     return [

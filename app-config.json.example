@@ -1,7 +1,7 @@
 {
-  "datasetJsonLdUri": "https://nawashiro.github.io/chiyoda_city_main_facilities/dataset.jsonld",
   "appUrl": "http://localhost:3000",
   "gaMeasurementId": "G-RD0ELFR3RW",
+  "datasetJsonLdUri": "https://nawashiro.github.io/chiyoda_city_main_facilities/dataset.jsonld",
   "osmMirrorUri": "https://nawashiro.github.io/chiyoda_city_main_facilities/mirrors/osm.json",
   "townGeoJsonUri": "https://cdn.jsdelivr.net/gh/nawashiro/chiyoda_city_town_geojson@latest/chiyoda_city.json",
   "wikidataMirrorUri": "https://nawashiro.github.io/chiyoda_city_main_facilities/mirrors/wikidata.json",

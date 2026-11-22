@@ -68,6 +68,7 @@ Thumbs.db
 
 # config
 app-config.json
+app-config.local.json
 
 /src/generated/prisma/
 /.jest/

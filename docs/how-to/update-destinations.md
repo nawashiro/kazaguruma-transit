@@ -4,7 +4,7 @@
 
 ## 前提
 
-- `app-config.json`に`datasetJsonLdUri`と`osmMirrorUri`を設定します。
+- `app-config.json`（開発中は`app-config.local.json`）に`datasetJsonLdUri`と`osmMirrorUri`を設定します。`npm run update-destinations`は`NODE_ENV`が`production`でない限り開発用の設定を読みます。
 - 経路検索用の交通DBに停留所を取り込みます。目録の徒歩圏判定はこの停留所を使います。
 - Node.js 22で実行します。
 
@@ -48,6 +48,6 @@
 - `schema:keywords`の参照先termがない。
 - termの`gif-poi`コードが4桁でない、またはコードが重複する。
 - 公開グラフの形状がアプリの読むpathを宣言していない。
-- 目録の`source`が`app-config.json`の取得先と一致しない。
+- 目録の`source`が選択された設定ファイルの取得先と一致しない。
 
 OSM関連付けまたはOSMの名前がない掲載entryは、ビルドを失敗させず、そのentryだけをartifactから外します。カテゴリtermを1つも参照しない掲載entryも、警告を出してartifactから外します。目録にないrecordは場所一覧にも入りません。掲載件数と表示件数がずれるため、ビルド後の`public/generated/location-data.json`で表示件数を確認してください。

@@ -33,6 +33,7 @@
     "test:server": "NODE_ENV=test jest --selectProjects server --runInBand",
     "test:unit:ci": "NODE_ENV=test jest --selectProjects unit --ci",
     "test:server:ci": "NODE_ENV=test jest --selectProjects server --runInBand --ci",
+    "test:skip-link": "start-server-and-test \"next start\" http://127.0.0.1:3000 \"node --test scripts/__tests__/skip-link-targets.test.mjs\"",
     "a11y": "npm run accessibility",
     "accessibility": "tsx scripts/accessibility-audit.ts",
     "accessibility:strict": "tsx scripts/accessibility-audit.ts --strict",

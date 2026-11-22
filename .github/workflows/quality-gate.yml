@@ -56,6 +56,9 @@ jobs:
       - name: Run Jest production-server suites
         run: npm run test:server:ci
 
+      - name: Run skip-link browser test
+        run: npm run test:skip-link
+
       - name: Remove synthetic transit configuration
         if: always()
         working-directory: .

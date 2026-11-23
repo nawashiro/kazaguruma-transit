@@ -3,7 +3,10 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import OriginSelector from "../OriginSelector";
+import { track } from "@/lib/analytics/tracking";
 import type { Location } from "@/types/core";
+
+jest.mock("@/lib/analytics/tracking", () => ({ track: jest.fn() }));
 
 const mockRouterPush = jest.fn();
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockRouterPush }) }));
@@ -92,6 +95,8 @@ describe("OriginSelector", () => {
     expect(mockFetch).toHaveBeenCalledWith("/api/geocode?address=35.68,139.76");
     expect(mockGeolocation.getCurrentPosition).toHaveBeenCalledTimes(1);
     expect(submit).not.toHaveBeenCalled();
+    expect(track).toHaveBeenCalledWith("gps_result", { outcome: "granted" });
+    expect(track).toHaveBeenCalledWith("place_select", { field: "origin", source: "gps" });
   });
 
   it("逆引きだけが失敗しても取得済み座標を確定する", async () => {
@@ -111,6 +116,25 @@ describe("OriginSelector", () => {
     expect(await screen.findByText(/位置情報の取得に失敗しました/)).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "出発地" })).toHaveValue("神田駅");
     expect(screen.getByRole("button", { name: "検索" })).not.toBeDisabled();
+    expect(track).toHaveBeenCalledWith("gps_result", { outcome: "denied" });
+  });
+
+  it("GPSのタイムアウトを区別して記録する", async () => {
+    mockGeolocation.getCurrentPosition.mockImplementation((_success, error) => error({ code: 3, message: "Timeout" }));
+    render(<Selector />);
+    fireEvent.click(screen.getByRole("button", { name: "端末のGPSを許可する" }));
+    await waitFor(() => expect(track).toHaveBeenCalledWith("gps_result", { outcome: "timeout" }));
+  });
+
+  it("GPS非対応のブラウザを記録する", async () => {
+    Object.defineProperty(navigator, "geolocation", { value: undefined, configurable: true });
+    try {
+      render(<Selector />);
+      fireEvent.click(screen.getByRole("button", { name: "端末のGPSを許可する" }));
+      await waitFor(() => expect(track).toHaveBeenCalledWith("gps_result", { outcome: "unsupported" }));
+    } finally {
+      Object.defineProperty(navigator, "geolocation", { value: mockGeolocation, configurable: true });
+    }
   });
 
   it("空の住所では取得せず入力のエラーを表示する", async () => {

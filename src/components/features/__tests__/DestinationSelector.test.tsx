@@ -3,7 +3,10 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import DestinationSelector from "../DestinationSelector";
+import { track } from "@/lib/analytics/tracking";
 import type { Location } from "@/types/core";
+
+jest.mock("@/lib/analytics/tracking", () => ({ track: jest.fn() }));
 
 const mockRouterPush = jest.fn();
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockRouterPush }) }));
@@ -73,6 +76,8 @@ describe("DestinationSelector", () => {
     expect(group).toContainElement(document.activeElement as HTMLElement);
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockFetch).toHaveBeenCalledWith(`/api/geocode?address=${encodeURIComponent("千代田区 神田駅")}`);
+    expect(track).toHaveBeenCalledWith("place_search", { field: "destination", outcome: "found" });
+    expect(track).toHaveBeenCalledWith("place_select", { field: "destination", source: "address" });
     fireEvent.click(edit);
     expect(screen.getByRole("textbox", { name: "目的地" })).toHaveFocus();
     expect(screen.queryByTestId("selected-destination")).not.toBeInTheDocument();
@@ -84,6 +89,7 @@ describe("DestinationSelector", () => {
     fireEvent.click(screen.getByRole("button", { name: "千代田区役所" }));
     expect(within(screen.getByRole("group", { name: "目的地" })).getByTestId("selected-destination")).toHaveTextContent("千代田区役所");
     expect(mockFetch).not.toHaveBeenCalled();
+    expect(track).toHaveBeenCalledWith("place_select", { field: "destination", source: "catalog" });
   });
 
   it.each(["empty", "network", "api"])("%sの失敗は入力を保持しエラーを関連付ける", async kind => {

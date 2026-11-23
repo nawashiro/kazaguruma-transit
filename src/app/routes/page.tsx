@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import PageHeader from "@/components/layouts/PageHeader";
 import RouteSearchResults from "@/components/features/RouteSearchResults";
+import RouteSearchTracker from "@/components/features/RouteSearchTracker";
 import { searchRoutes } from "@/lib/transit/search-routes";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,7 @@ export default async function RoutesPage({ searchParams }: RoutesPageProps) {
           { label: "経路検索結果" },
         ]}
       />
+      {result.status === "success" && <RouteSearchTracker />}
       <RouteSearchResults result={result} />
     </div>
   );

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { logger } from "@/utils/logger";
+import { track } from "@/lib/analytics/tracking";
 import { Departure } from "@/types/core";
 import type { PostWithStats } from "@/types/discussion";
 import Button from "@/components/ui/Button";
@@ -62,6 +63,7 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
 
   // サーバーサイドPDF生成APIを呼び出す関数
   const handleGeneratePdf = async () => {
+    track("result_action", { action: "pdf" });
     try {
       setIsGenerating(true);
       setPdfError(null);

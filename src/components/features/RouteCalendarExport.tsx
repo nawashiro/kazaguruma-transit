@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import { buildRouteCalendar } from "@/lib/calendar/route-calendar";
 import type { RouteCalendarInput } from "@/types/calendar";
 import { logger } from "@/utils/logger";
+import { track } from "@/lib/analytics/tracking";
 
 type RouteCalendarExportProps = RouteCalendarInput;
 
@@ -23,6 +24,7 @@ export default function RouteCalendarExport(props: RouteCalendarExportProps) {
   }, []);
 
   const handleOpen = () => {
+    track("result_action", { action: "calendar" });
     try {
       setCalendarError(null);
       const calendar = buildRouteCalendar(props);

@@ -11,6 +11,7 @@ import Announcement from "@/components/features/Announcement";
 import type { Location } from "@/types/core";
 import type { RouteDestinationCategory } from "@/types/route-destinations";
 import { logger } from "@/utils/logger";
+import { markSearchStart, track } from "@/lib/analytics/tracking";
 
 interface HomeRouteFormProps {
   routeDestinations: RouteDestinationCategory[];
@@ -36,6 +37,7 @@ export default function HomeRouteForm({ routeDestinations }: HomeRouteFormProps)
       const destination = JSON.parse(decodeURIComponent(destinationParam)) as Location;
       if (Number.isFinite(destination.lat) && Number.isFinite(destination.lng) && typeof destination.address === "string") {
         setSelectedDestination(destination);
+        track("place_select", { field: "destination", source: "detail" });
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     } catch (error) {
@@ -55,9 +57,16 @@ export default function HomeRouteForm({ routeDestinations }: HomeRouteFormProps)
   const validateSearch = (event: FormEvent<HTMLFormElement>) => {
     if (!selectedOrigin || !selectedDestination) {
       event.preventDefault();
+      track("validation_failed", {
+        missing: !selectedOrigin && !selectedDestination
+          ? "both"
+          : !selectedOrigin ? "origin" : "destination",
+      });
       flushSync(() => setValidateLocations(true));
       locationInputs.current?.querySelector<HTMLInputElement>('input[aria-invalid="true"]')?.focus();
+      return;
     }
+    markSearchStart();
   };
 
   return (

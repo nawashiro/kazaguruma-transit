@@ -1,6 +1,9 @@
 import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import RoutePdfExport from "../RoutePdfExport";
+import { track } from "@/lib/analytics/tracking";
+
+jest.mock("@/lib/analytics/tracking", () => ({ track: jest.fn() }));
 
 // モックデータ
 const mockOriginStop = {
@@ -165,6 +168,7 @@ describe("RoutePdfExport", () => {
     await waitFor(() => {
       expect(mockCreateObjectURL).toHaveBeenCalled();
     });
+    expect(track).toHaveBeenCalledWith("result_action", { action: "pdf" });
   });
 
   it("PDF生成中もアイコンのDOMノードを維持し、ビジー状態を通知すること", async () => {

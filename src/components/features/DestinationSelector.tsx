@@ -8,6 +8,7 @@ import InputField from "@/components/ui/InputField";
 import SearchButton from "@/components/ui/SearchButton";
 import LocationFieldset, { type LocationSelectionProps } from "./LocationFieldset";
 import { useGeocodingSearch } from "./useGeocodingSearch";
+import { track } from "@/lib/analytics/tracking";
 
 interface DestinationSelectorProps extends LocationSelectionProps {
   onDestinationSelected: (location: Location) => void;
@@ -19,7 +20,7 @@ export default function DestinationSelector({
 }: DestinationSelectorProps) {
   const [address, setAddress] = useState("");
   const handleSelected = useCallback((location: Location) => onDestinationSelected(location), [onDestinationSelected]);
-  const { error, loading, search } = useGeocodingSearch(handleSelected);
+  const { error, loading, search } = useGeocodingSearch("destination", handleSelected);
 
   return (
     <LocationFieldset label="目的地" selectedLocation={selectedLocation} onEdit={onEdit} testId="selected-destination">
@@ -32,7 +33,10 @@ export default function DestinationSelector({
         {loading && <p role="status" className="text-base">住所を検索しています</p>}
       </form>
       <div className="divider text-base">または</div>
-      <LocationSuggestions categories={categories} onLocationSelected={handleSelected} />
+      <LocationSuggestions categories={categories} onLocationSelected={location => {
+        track("place_select", { field: "destination", source: "catalog" });
+        handleSelected(location);
+      }} />
     </LocationFieldset>
   );
 }

@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import SearchButton from "@/components/ui/SearchButton";
 import LocationFieldset, { type LocationSelectionProps } from "./LocationFieldset";
 import { useGeocodingSearch } from "./useGeocodingSearch";
+import { track } from "@/lib/analytics/tracking";
 import { LocateFixed } from "lucide-react";
 
 interface OriginSelectorProps extends LocationSelectionProps {
@@ -18,17 +19,19 @@ export default function OriginSelector({ onOriginSelected, selectedLocation, onE
   const router = useRouter();
   const [address, setAddress] = useState("");
   const handleSelected = useCallback((location: Location) => onOriginSelected(location), [onOriginSelected]);
-  const { error, setError, loading, setLoading, search } = useGeocodingSearch(handleSelected);
+  const { error, setError, loading, setLoading, search } = useGeocodingSearch("origin", handleSelected);
 
   const handleUseCurrentLocation = () => {
     setLoading(true);
     setError(null);
     if (!navigator.geolocation) {
+      track("gps_result", { outcome: "unsupported" });
       setError("お使いのブラウザではGPS機能に対応していません");
       setLoading(false);
       return;
     }
     navigator.geolocation.getCurrentPosition(async position => {
+      track("gps_result", { outcome: "granted" });
       const location: Location = { lat: position.coords.latitude, lng: position.coords.longitude };
       try {
         const response = await fetch(`/api/geocode?address=${location.lat},${location.lng}`);
@@ -43,8 +46,10 @@ export default function OriginSelector({ onOriginSelected, selectedLocation, onE
       } finally {
         setLoading(false);
       }
+      track("place_select", { field: "origin", source: "gps" });
       onOriginSelected(location);
     }, error => {
+      track("gps_result", { outcome: error.code === 3 ? "timeout" : "denied" });
       setError("位置情報の取得に失敗しました: " + error.message);
       setLoading(false);
     });

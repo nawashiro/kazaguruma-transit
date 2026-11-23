@@ -32,6 +32,8 @@ function navigate(url: string) {
 
 beforeEach(() => {
   ReactGA.reset();
+  localStorage.clear();
+  sessionStorage.clear();
   (window as unknown as { dataLayer: unknown[] }).dataLayer = [];
   navigate("/routes?from=35.123,139.456&to=35.789,139.987#35.555,139.111");
   Object.defineProperty(document, "referrer", {
@@ -134,3 +136,33 @@ it("waits for the pathname before initializing and sending a pageview", () => {
   rerender();
   expect(pageviews()).toHaveLength(1);
 });
+
+it("marks owner pageviews as internal traffic and strips the owner parameter", () => {
+  navigate("/routes?owner=1");
+
+  renderHook(useGA);
+
+  expect(commands().filter(([command]) => command === "config")).toEqual([
+    ["config", "G-TEST", { send_page_view: false, debug_mode: true }],
+  ]);
+  expect(pageviews()).toEqual([
+    ["event", "page_view", {
+      page_path: "/routes",
+      page_location: "http://localhost/routes",
+      page_referrer: "https://example.com/shared",
+      traffic_type: "internal",
+      user_type: "owner",
+    }],
+  ]);
+  expect(window.location.search).toBe("");
+});
+
+it("leaves regular pageviews unmarked", () => {
+  renderHook(useGA);
+
+  expect(commands().filter(([command]) => command === "config")).toEqual([
+    ["config", "G-TEST", { send_page_view: false }],
+  ]);
+  expect(JSON.stringify(commands())).not.toContain("traffic_type");
+});
+

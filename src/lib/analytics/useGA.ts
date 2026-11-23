@@ -3,8 +3,8 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import ReactGA from "react-ga4";
-import { logger } from "@/utils/logger";
 import { appConfig } from "@/lib/config/app-config";
+import { ownerFields, syncOwnerFlag } from "./tracking";
 
 const GA_MEASUREMENT_ID = appConfig.gaMeasurementId;
 const isDevelopment = process.env.NODE_ENV === "development";
@@ -27,6 +27,7 @@ export const useGA = () => {
   useEffect(() => {
     if (!pathname || isDevelopment || !GA_MEASUREMENT_ID) return;
 
+    const owner = syncOwnerFlag();
     const key = `${pathname}?${queryString}`;
     if (previousPage.current?.key === key) return;
 
@@ -34,41 +35,19 @@ export const useGA = () => {
       page_path: pathname,
       page_location: `${window.location.origin}${pathname}`,
       page_referrer: previousPage.current?.location ?? sanitizeUrl(document.referrer),
+      ...ownerFields(),
     };
     ReactGA.set(page);
     if (!ReactGA.isInitialized) {
       ReactGA.initialize(GA_MEASUREMENT_ID, {
-        gtagOptions: { send_page_view: false },
+        gtagOptions: {
+          send_page_view: false,
+          ...(owner ? { debug_mode: true } : {}),
+        },
       });
     }
 
     ReactGA.send({ hitType: "pageview", ...page });
     previousPage.current = { key, location: page.page_location };
   }, [pathname, queryString]);
-};
-
-/**
- * カスタムイベントを送信する関数
- */
-export const sendEvent = (
-  category: string,
-  action: string,
-  label?: string,
-  value?: number
-) => {
-  // 開発環境ではイベントをコンソールに出力するだけ
-  if (isDevelopment) {
-    logger.log(`[GA Event] ${category} / ${action} / ${label} / ${value}`);
-    return;
-  }
-
-  // GA4のイベント送信
-  if (GA_MEASUREMENT_ID) {
-    ReactGA.event({
-      category,
-      action,
-      label,
-      value,
-    });
-  }
 };

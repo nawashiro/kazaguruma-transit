@@ -1,6 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import RouteCalendarExport from "../RouteCalendarExport";
+import { track } from "@/lib/analytics/tracking";
+
+jest.mock("@/lib/analytics/tracking", () => ({ track: jest.fn() }));
 
 const mockCreateObjectURL = jest.fn(() => "blob:calendar-url");
 const mockRevokeObjectURL = jest.fn();
@@ -59,6 +62,7 @@ test("カレンダーボタンからICSを通常のリンクとして開き、UR
     expect.objectContaining({ type: "text/calendar;charset=utf-8" })
   );
   expect(mockAnchorClick).toHaveBeenCalledTimes(1);
+  expect(track).toHaveBeenCalledWith("result_action", { action: "calendar" });
   const firstLink = mockAnchorClick.mock.instances[0] as HTMLAnchorElement;
   expect(firstLink.href).toBe("blob:first-calendar");
   expect(firstLink).not.toHaveAttribute("download");

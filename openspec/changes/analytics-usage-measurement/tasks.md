@@ -33,8 +33,9 @@
 ## 6. 統合確認
 
 - [x] 6.1 `npm run lint`と`npm test`が通過することを確認する。
-- [ ] 6.2 DebugViewで、入力画面から検索したときに`route_search`が1回だけ届き、`elapsed_ms`が付くことを確認する。
+- [x] 6.2 DebugViewで、入力画面から検索したときに`route_search`が1回だけ届き、`elapsed_ms`が付くことを確認する。
 - [ ] 6.3 印の無いブラウザで検索し、翌日の標準レポートに`route_search`が出ること、`?owner=1`のブラウザでは出ないことを確認する。
+  - 初回の実測では不合格だった。`config`より先に届いたイベントをgtag.jsが捨てていたためで、`track`の保留キューと`flushPendingEvents`で修正した（`28ef56b`、v2.2.1）。修正後の実測では合格している（1回だけ送信、`elapsed_ms`あり、再読み込み・直開きでは送信なし）。
 - [ ] 6.4 探索レポートに「月次サマリ」（`route_search`の回数・ユーザー数）と「入力ファネル」（`page_view`→`place_select`→`route_search`→`result_action`）を保存し、四半期単位で見る手順を文書へ追記する。
 
 ## Workflow follow-up

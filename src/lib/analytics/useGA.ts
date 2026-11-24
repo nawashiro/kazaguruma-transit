@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import ReactGA from "react-ga4";
 import { appConfig } from "@/lib/config/app-config";
-import { ownerFields, syncOwnerFlag } from "./tracking";
+import { flushPendingEvents, ownerFields, syncOwnerFlag } from "./tracking";
 
 const GA_MEASUREMENT_ID = appConfig.gaMeasurementId;
 const isDevelopment = process.env.NODE_ENV === "development";
@@ -48,6 +48,7 @@ export const useGA = () => {
     }
 
     ReactGA.send({ hitType: "pageview", ...page });
+    flushPendingEvents();
     previousPage.current = { key, location: page.page_location };
   }, [pathname, queryString]);
 };

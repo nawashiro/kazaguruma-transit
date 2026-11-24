@@ -2,12 +2,16 @@ import ReactGA from "react-ga4";
 import { appConfig } from "@/lib/config/app-config";
 import { logger } from "@/utils/logger";
 
-jest.mock("react-ga4", () => ({ __esModule: true, default: { event: jest.fn() } }));
+jest.mock("react-ga4", () => ({
+  __esModule: true,
+  default: { event: jest.fn(), isInitialized: false },
+}));
 jest.mock("@/lib/config/app-config", () => ({ appConfig: { gaMeasurementId: "G-TEST" } }));
 
 import {
   OWNER_STORAGE_KEY,
   SEARCH_STARTED_KEY,
+  flushPendingEvents,
   markSearchStart,
   ownerFields,
   syncOwnerFlag,
@@ -16,6 +20,7 @@ import {
 } from "../tracking";
 
 const eventMock = ReactGA.event as jest.Mock;
+const ga = ReactGA as unknown as { isInitialized: boolean };
 const config = appConfig as { gaMeasurementId: string };
 const originalEnv = process.env.NODE_ENV;
 
@@ -27,6 +32,7 @@ beforeEach(() => {
   eventMock.mockClear();
   (logger.log as jest.Mock).mockClear();
   config.gaMeasurementId = "G-TEST";
+  ga.isInitialized = true;
   setNodeEnv("test");
   localStorage.clear();
   sessionStorage.clear();
@@ -112,4 +118,57 @@ it("ignores a malformed search start", () => {
 
   expect(takeSearchStart()).toBeNull();
   expect(sessionStorage.getItem(SEARCH_STARTED_KEY)).toBeNull();
+});
+
+it("holds events until the measurement id is configured, then flushes in order", () => {
+  ga.isInitialized = false;
+  track("route_search", { elapsed_ms: 12 });
+  track("place_select", { field: "origin", source: "gps" });
+
+  expect(eventMock).not.toHaveBeenCalled();
+
+  ga.isInitialized = true;
+  flushPendingEvents();
+
+  expect(eventMock.mock.calls).toEqual([
+    ["route_search", { elapsed_ms: 12 }],
+    ["place_select", { field: "origin", source: "gps" }],
+  ]);
+  expect(flushPendingEvents).toBeDefined();
+});
+
+it("does not flush twice", () => {
+  ga.isInitialized = false;
+  track("route_search", { elapsed_ms: 1 });
+  ga.isInitialized = true;
+  flushPendingEvents();
+  flushPendingEvents();
+
+  expect(eventMock).toHaveBeenCalledTimes(1);
+});
+
+it("drops pending events without a measurement id", () => {
+  ga.isInitialized = false;
+  config.gaMeasurementId = "";
+  track("route_search", { elapsed_ms: 1 });
+
+  config.gaMeasurementId = "G-TEST";
+  ga.isInitialized = true;
+  flushPendingEvents();
+
+  expect(eventMock).not.toHaveBeenCalled();
+});
+
+it("adds the owner fields when a queued event is flushed", () => {
+  ga.isInitialized = false;
+  track("route_search", { elapsed_ms: 3 });
+  localStorage.setItem(OWNER_STORAGE_KEY, "1");
+  ga.isInitialized = true;
+  flushPendingEvents();
+
+  expect(eventMock).toHaveBeenCalledWith("route_search", {
+    elapsed_ms: 3,
+    traffic_type: "internal",
+    user_type: "owner",
+  });
 });

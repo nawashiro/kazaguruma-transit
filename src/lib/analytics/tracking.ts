@@ -42,14 +42,36 @@ export function ownerFields(): MeasurementParams {
     : {};
 }
 
+interface PendingEvent {
+  name: string;
+  params: MeasurementParams;
+}
+
+const pendingEvents: PendingEvent[] = [];
+const PENDING_EVENT_LIMIT = 20;
+
 export function track(eventName: string, params: MeasurementParams = {}): void {
   if (process.env.NODE_ENV === "development") {
     logger.log(`[GA Event] ${eventName}`, params);
     return;
   }
   if (!appConfig.gaMeasurementId) return;
+  if (!ReactGA.isInitialized) {
+    if (pendingEvents.length >= PENDING_EVENT_LIMIT) pendingEvents.shift();
+    pendingEvents.push({ name: eventName, params });
+    return;
+  }
   ReactGA.event(eventName, { ...params, ...ownerFields() });
 }
+
+export function flushPendingEvents(): void {
+  if (!ReactGA.isInitialized || !appConfig.gaMeasurementId) return;
+  const queued = pendingEvents.splice(0, pendingEvents.length);
+  for (const event of queued) {
+    ReactGA.event(event.name, { ...event.params, ...ownerFields() });
+  }
+}
+
 
 export function markSearchStart(now: number = Date.now()): void {
   try {

@@ -25,6 +25,9 @@ cp app-config.json.example app-config.local.json
 
 `useGA`はpathnameとsearch paramsを監視し、ページビューを送ります。測定IDが空の場合は送信しません。開発環境では初期化せず、イベントはコンソールへ出力します。
 
+ページ側のイベントは、`useGA`の初期化（`config`）より先に発火することがあります。`track`は未初期化のあいだイベントを保持し、初期化後にまとめて送ります。`flushPendingEvents`を`useGA`が初期化直後に呼びます。保持するのは最大20件です。
+
+
 ## 計測するイベント
 
 | イベント | 送る条件 | パラメーター |

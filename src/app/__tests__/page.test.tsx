@@ -256,9 +256,17 @@ describe("Home", () => {
   async function selectAddress(label: string, lat: number, lng: number) {
     browserFetchSpy.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ success: true, results: [{ lat, lng, formattedAddress: `確定${label}` }] }),
+      json: async () => ({
+        success: true,
+        results: [
+          { name: `確定${label}`, address: `千代田区${label}一丁目1番`, lat, lng, kind: "public" },
+        ],
+      }),
     });
     await userEvent.setup().type(screen.getByRole("textbox", { name: label }), "神田駅{Enter}");
+    const group = screen.getByRole("group", { name: label });
+    const list = await within(group).findByRole("list", { name: `${label}の候補から選ぶ` });
+    fireEvent.click(within(list).getAllByRole("button")[0]);
     expect(await screen.findByTestId(label === "目的地" ? "selected-destination" : "selected-origin")).toHaveTextContent(`確定${label}`);
   }
 

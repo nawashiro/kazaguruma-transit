@@ -7,7 +7,9 @@ import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
 import SearchButton from "@/components/ui/SearchButton";
 import LocationFieldset, { type LocationSelectionProps } from "./LocationFieldset";
+import LocationCandidates from "./LocationCandidates";
 import { useGeocodingSearch } from "./useGeocodingSearch";
+import { reverseGeocoding } from "@/lib/location/geocoding-search";
 import { track } from "@/lib/analytics/tracking";
 import { LocateFixed } from "lucide-react";
 
@@ -19,7 +21,7 @@ export default function OriginSelector({ onOriginSelected, selectedLocation, onE
   const router = useRouter();
   const [address, setAddress] = useState("");
   const handleSelected = useCallback((location: Location) => onOriginSelected(location), [onOriginSelected]);
-  const { error, setError, loading, setLoading, search } = useGeocodingSearch("origin", handleSelected);
+  const { error, setError, loading, setLoading, candidates, search, selectCandidate } = useGeocodingSearch("origin", handleSelected);
 
   const handleUseCurrentLocation = () => {
     setLoading(true);
@@ -34,15 +36,12 @@ export default function OriginSelector({ onOriginSelected, selectedLocation, onE
       track("gps_result", { outcome: "granted" });
       const location: Location = { lat: position.coords.latitude, lng: position.coords.longitude };
       try {
-        const response = await fetch(`/api/geocode?address=${location.lat},${location.lng}`);
-        const data = await response.json();
-        if (response.status === 429 && data.limitExceeded) {
+        const result = await reverseGeocoding(location.lat, location.lng);
+        if (result.isRateLimited) {
           router.push("/rate-limit?source=home");
           return;
         }
-        if (response.ok && data.success && data.results?.length > 0) location.address = data.results[0].formattedAddress;
-      } catch {
-        // 住所の逆引きは任意であり、GPSで取得した座標は利用できる。
+        if (result.location?.address) location.address = result.location.address;
       } finally {
         setLoading(false);
       }
@@ -62,6 +61,7 @@ export default function OriginSelector({ onOriginSelected, selectedLocation, onE
           onChange={event => setAddress(event.target.value)} disabled={loading} testId="address-input" required
           error={error || validationError} description="建物名だけでも大丈夫な場合がほとんどです。"
           endAdornment={<SearchButton disabled={loading} loading={loading} joined testId="search-button" />} />
+        <LocationCandidates candidates={candidates} label="出発地" onSelect={selectCandidate} />
         <Button type="button" onClick={handleUseCurrentLocation} disabled={loading} loading={loading} testId="gps-button">
           <LocateFixed className="mr-2 h-5 w-5 shrink-0" aria-hidden="true" />
           端末のGPSを許可する

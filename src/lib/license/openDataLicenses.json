@@ -14,7 +14,7 @@
     "licenseName": "ODbL 1.0",
     "licenseUrl": "https://opendatacommons.org/licenses/odbl/1-0/",
     "sourceUrl": "https://www.openstreetmap.org/copyright",
-    "description": "施設名と座標、バリアフリー情報のwheelchairタグ、電話・ウェブサイト・営業時間の抽出元。WheelMapまたはOpenStreetMapで確認・更新できます。"
+    "description": "施設名と座標、バリアフリー情報のwheelchairタグ、電話・ウェブサイト・営業時間の抽出元。地点検索の名前索引の抽出元でもあります。WheelMapまたはOpenStreetMapで確認・更新できます。"
   },
   {
     "id": "chiyoda-town-geojson",
@@ -29,5 +29,14 @@
     "licenseName": "CC BY 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
     "sourceUrl": "https://ckan.odpt.org/dataset/hitachi_automobile_transportation_chiyoda_alllines"
+  },
+  {
+    "id": "mlit-position-reference",
+    "name": "位置参照情報（街区レベル）",
+    "provider": "国土交通省",
+    "licenseName": "公共データ利用規約（第1.0版）",
+    "licenseUrl": "https://www.digital.go.jp/resources/open_data/public_data_license_v1.0",
+    "sourceUrl": "https://nlftp.mlit.go.jp/isj/",
+    "description": "地点検索の番地解決と、GPS座標からの住所逆引きに使う街区代表点の出典。千代田区の街区レベル位置参照情報を加工して索引を作成しています。"
   }
 ]

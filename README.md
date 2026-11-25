@@ -72,7 +72,7 @@ npm ci
 | `app-config.json`     | 公開   | 本番のクライアント設定です。提供URL、Google Analytics、場所データのURI、会話設定、お知らせ、支援表示を設定します。 |
 | `app-config.local.json` | 公開 | 開発のクライアント設定です。`app-config.json.example` をそのままコピーして使います。 |
 | `transit-config.json` | 秘密   | GTFS取得URLを設定します。                                                                                    |
-| `.env.local`          | 秘密   | 開発サーバーの環境変数です。`GOOGLE_MAPS_API_KEY`（必須）、`PUPPETEER_EXECUTABLE_PATH`（任意）を設定します。     |
+| `.env.local`          | 秘密   | 開発サーバーの環境変数です。`GOOGLE_MAPS_API_KEY`（PDFの地図画像に使用）、`PUPPETEER_EXECUTABLE_PATH`（任意）を設定します。地点検索は索引だけを使うため、APIキーは不要です。     |
 | `.env`                | 秘密   | 本番サーバーの環境変数です。`CLOUDFLARE_TUNNEL_TOKEN`などの秘密値を設定します。開発が目的なら必要ありません。    |
 
 ## 開発
@@ -102,6 +102,7 @@ npm run test:watch
 | how-to      | [ライセンス情報の更新](docs/how-to/license-page.md)                                    |
 | how-to      | [場所データの更新](docs/how-to/update-location-data.md)                                |
 | how-to      | [目的地目録の更新](docs/how-to/update-destinations.md)                                 |
+| how-to      | [地点索引の更新](docs/how-to/update-geocode-index.md)                                  |
 | reference   | [開発憲章](docs/reference/constitution.md)                                             |
 | reference   | [ディスカッションの実装事実](docs/reference/discussion.md)                             |
 | reference   | [文書執筆規範](docs/reference/writing-style.md)                                        |

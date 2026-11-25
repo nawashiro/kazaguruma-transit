@@ -1,5 +1,4 @@
 import React from "react";
-import { generateGoogleMapPointLink } from "@/utils/maps";
 
 interface StopTimeDisplayProps {
   stopName: string;

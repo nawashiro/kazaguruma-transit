@@ -79,7 +79,7 @@ describe("/rate-limit public page contract (T032)", () => {
         name: "リクエスト制限に達しました",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/1時間.*60/)).toBeInTheDocument();
+    expect(screen.getByText(/1時間.*600/)).toBeInTheDocument();
     expect(screen.getByText(/1時間待/)).toBeInTheDocument();
     expect(screen.getByText(/ブラウザを閉じても/)).toBeInTheDocument();
 

@@ -60,22 +60,31 @@ describe("DestinationSelector", () => {
     expect(form.compareDocumentPosition(suggestions) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
   });
 
-  it("Enterで検索し、複数候補の先頭を同じfieldset内に確定する", async () => {
+  it("Enterで検索し、候補を一覧にして選んだ1件だけを確定する", async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, results: [
-      { lat: location.lat, lng: location.lng, formattedAddress: location.address },
-      { lat: 36, lng: 140, formattedAddress: "二番目" },
+      { name: location.address, address: "千代田区九段南一丁目2番", lat: location.lat, lng: location.lng, kind: "public" },
+      { name: "千代田区役所 食堂", address: "千代田区九段南一丁目2番", lat: 36, lng: 140, kind: "food" },
     ] }) });
     render(<Selector />);
     await submitAddress();
+    const group = screen.getByRole("group", { name: "目的地" });
+    expect(screen.queryByTestId("selected-destination")).not.toBeInTheDocument();
+    const candidateList = await within(group).findByRole("list", { name: "目的地の候補から選ぶ" });
+    const options = within(candidateList).getAllByRole("button");
+    expect(options).toHaveLength(2);
+    expect(options[0]).toHaveTextContent("千代田区役所");
+    expect(options[0]).toHaveTextContent("千代田区九段南一丁目2番");
+
+    fireEvent.click(options[0]);
+
     const selected = await screen.findByTestId("selected-destination");
     expect(selected.tagName).toBe("P");
     expect(selected).toHaveTextContent("千代田区役所");
-    const group = screen.getByRole("group", { name: "目的地" });
     expect(group).toContainElement(selected);
     const edit = within(group).getByRole("button", { name: "なおす" });
     expect(group).toContainElement(document.activeElement as HTMLElement);
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch).toHaveBeenCalledWith(`/api/geocode?address=${encodeURIComponent("千代田区 神田駅")}`);
+    expect(mockFetch).toHaveBeenCalledWith(`/api/geocode?q=${encodeURIComponent("神田駅")}`);
     expect(track).toHaveBeenCalledWith("place_search", { field: "destination", outcome: "found" });
     expect(track).toHaveBeenCalledWith("place_select", { field: "destination", source: "address" });
     fireEvent.click(edit);

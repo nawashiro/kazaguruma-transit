@@ -23,7 +23,7 @@ export default async function RateLimitPage({
       <PageHeader title="リクエスト制限に達しました" />
       <section className="space-y-4" aria-label="リクエスト制限の説明">
         <p>
-          1時間あたり60リクエストの制限に達しました。
+          1時間あたり600リクエストの制限に達しました。
         </p>
         <p>
           1時間待ってから再試行してください。

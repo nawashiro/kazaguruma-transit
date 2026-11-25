@@ -24,6 +24,15 @@ async function submitAddress() {
   await userEvent.setup().type(screen.getByRole("textbox", { name: "出発地" }), "神田駅{Enter}");
 }
 
+function candidatesResponse(results: Array<{ name: string; address: string; lat: number; lng: number; kind: string }>) {
+  return { ok: true, json: async () => ({ success: true, results }) };
+}
+
+const TWO_CANDIDATES = [
+  { name: "神田駅", address: "千代田区鍛冶町二丁目6番", lat: 35.68, lng: 139.76, kind: "station" },
+  { name: "神田駅前", address: "千代田区内神田三丁目13番", lat: 35.69, lng: 139.77, kind: "other" },
+];
+
 describe("OriginSelector", () => {
   beforeEach(() => { jest.clearAllMocks(); mockFetch.mockReset(); mockGeolocation.getCurrentPosition.mockReset(); });
 
@@ -46,23 +55,26 @@ describe("OriginSelector", () => {
     expect(container.querySelector(".card")).toBeNull();
   });
 
-  it("Enterの検索は先頭候補を同じfieldsetに確定し、なおすで入力へフォーカスする", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, results: [
-      { lat: 35.68, lng: 139.76, formattedAddress: "先頭の住所" },
-      { lat: 36, lng: 140, formattedAddress: "二番目" },
-    ] }) });
+  it("Enterの検索は候補を一覧にし、選んだ候補だけを確定する", async () => {
+    mockFetch.mockResolvedValueOnce(candidatesResponse(TWO_CANDIDATES));
     render(<Selector />);
     await submitAddress();
+    const group = screen.getByRole("group", { name: "出発地" });
+    const options = await within(group).findAllByRole("button", { name: /神田駅/ });
+    expect(options).toHaveLength(2);
+    expect(screen.queryByTestId("selected-origin")).not.toBeInTheDocument();
+
+    fireEvent.click(options[1]);
+
     const selected = await screen.findByTestId("selected-origin");
     expect(selected.tagName).toBe("P");
-    expect(selected).toHaveTextContent("先頭の住所");
-    const group = screen.getByRole("group", { name: "出発地" });
+    expect(selected).toHaveTextContent("神田駅前");
     expect(group).toContainElement(selected);
     expect(group).toContainElement(document.activeElement as HTMLElement);
     fireEvent.click(within(group).getByRole("button", { name: "なおす" }));
     expect(screen.getByRole("textbox", { name: "出発地" })).toHaveFocus();
     expect(screen.queryByTestId("selected-origin")).not.toBeInTheDocument();
-    expect(mockFetch).toHaveBeenCalledWith(`/api/geocode?address=${encodeURIComponent("千代田区 神田駅")}`);
+    expect(mockFetch).toHaveBeenCalledWith(`/api/geocode?q=${encodeURIComponent("神田駅")}`);
   });
 
   it.each(["empty", "network", "api"])("%sの失敗は入力を保持しエラーを関連付ける", async kind => {
@@ -86,13 +98,13 @@ describe("OriginSelector", () => {
 
   it("GPS取得は住所フォームを送信せず、住所の逆引き結果を確定する", async () => {
     mockGeolocation.getCurrentPosition.mockImplementation(success => success({ coords: { latitude: 35.68, longitude: 139.76 } }));
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, results: [{ formattedAddress: "GPS住所" }] }) });
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, location: { lat: 35.68, lng: 139.76, address: "GPS住所" } }) });
     render(<Selector />);
     const submit = jest.fn();
     document.querySelector("form")!.addEventListener("submit", submit);
     fireEvent.click(screen.getByRole("button", { name: "端末のGPSを許可する" }));
     expect(await screen.findByTestId("selected-origin")).toHaveTextContent("GPS住所");
-    expect(mockFetch).toHaveBeenCalledWith("/api/geocode?address=35.68,139.76");
+    expect(mockFetch).toHaveBeenCalledWith("/api/geocode?lat=35.68&lng=139.76");
     expect(mockGeolocation.getCurrentPosition).toHaveBeenCalledTimes(1);
     expect(submit).not.toHaveBeenCalled();
     expect(track).toHaveBeenCalledWith("gps_result", { outcome: "granted" });

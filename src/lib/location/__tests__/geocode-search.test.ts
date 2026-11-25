@@ -130,6 +130,40 @@ describe("parseGeocodeIndex", () => {
     );
   });
 
+  it("配列の要素を1行ずつ書き出す", () => {
+    const index = buildIndex();
+    const lines = serializeGeocodeIndex(index).split("\n");
+    const total =
+      index.boundary.length + index.blocks.length + index.names.length;
+
+    const entryLines = lines.filter((line) => /^    \{"/u.test(line));
+    expect(entryLines).toHaveLength(total);
+
+    for (const entry of index.names) {
+      expect(entryLines.map((line) => line.replace(/,$/u, ""))).toContain(
+        `    ${JSON.stringify(entry)}`,
+      );
+    }
+  });
+
+  it("要素が変わっても、ほかの要素の行は変わらない", () => {
+    const index = buildIndex();
+    const changed = {
+      ...index,
+      names: index.names.map((entry, position) =>
+        position === 0 ? { ...entry, lat: entry.lat + 0.0001 } : entry,
+      ),
+    };
+    const before = serializeGeocodeIndex(index).split("\n");
+    const after = serializeGeocodeIndex(changed).split("\n");
+    const changedLines = after.filter(
+      (line, position) => line !== before[position],
+    );
+    expect(changedLines).toEqual([
+      `    ${JSON.stringify(changed.names[0])},`,
+    ]);
+  });
+
   it("版が異なる索引を拒否する", () => {
     const index = buildIndex();
     expect(() =>

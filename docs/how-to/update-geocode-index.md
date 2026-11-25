@@ -2,6 +2,8 @@
 
 住所・名前の検索とGPSの逆引きは、`data/geocode-index.json` に置いた索引だけを使います。実行時に外部のジオコーディングサービスへ問い合わせません。
 
+索引はリポジトリで管理しています。クローン直後から検索が動くようにするためで、ビルドや起動のたびに外部から取り直しません。
+
 ## 出典
 
 | データ | 提供元 | ライセンス | 用途 |
@@ -32,8 +34,10 @@
 3. 生成結果を確認します。
 
    ```bash
-   node -e "const i=require('./data/geocode-index.json');console.log('街区',i.blocks.length,'名前',i.names.length,'生成',i.generatedAt)"
+   node -e "const i=require('./data/geocode-index.json');console.log('街区',i.blocks.length,'名前',i.names.length)"
    ```
+
+   索引の内容が前回と同じ場合、コマンドは `索引に変更はありません` と報告し、ファイルを書き換えません。`generatedAt` だけが変わることを理由に差分は出ません。
 
 4. 検索を確認します。開発サーバーを起動し、`えみふる`、`神田駅`、`霞が関1-1` を入力して候補が出ることを確かめます。
 
@@ -61,6 +65,8 @@ GEOCODE_OSM_PBF=/path/to/JP-13-latest.osm.pbf npm run update-geocode-index
 - `boundary`: 町字ポリゴン。千代田区の内外を判定し、逆引きの対象を区外へ広げません。
 - `source` / `generatedAt`: 出典と生成日時。
 
+配列の要素は1行ずつ書き出します。1行のJSONでは差分が全体の置換になり、どの地点が変わったかをレビューできないためです。git のリポジトリサイズへの影響はありません（圧縮チャンク単位で差分を取るため）。
+
 道路・鉄道線・水路・行政境界などの線形要素は、駅を除いて名前索引に含めません。
 
 ## 出典の表記
@@ -76,3 +82,5 @@ GEOCODE_OSM_PBF=/path/to/JP-13-latest.osm.pbf npm run update-geocode-index
 - 位置参照情報の新しい版が出た（`scripts/update-geocode-index.ts` の `ISJ_URI` を更新）
 
 索引が壊れている、または存在しない場合、`/api/geocode` は500を返します。外部サービスへは問い合わせません。
+
+`data/.cache/`（OSM抽出の取得物）はGit管理外です。索引だけを追跡し、133MBの生データは追跡しません。

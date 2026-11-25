@@ -10,11 +10,13 @@ import {
   resolveAppConfigEnvironment,
 } from "../src/lib/config/app-config-environment";
 import {
+  parseGeocodeIndex,
   serializeGeocodeIndex,
   type GeocodeIndex,
 } from "../src/lib/location/geocode-index";
 import {
   buildGeocodeIndex,
+  indexDigest,
   readArtifactNames,
   readTownBoundary,
 } from "./lib/geocode-build";
@@ -47,6 +49,7 @@ export interface UpdateGeocodeIndexOptions {
   readTownGeoJson: () => Promise<unknown>;
   readLocationArtifact: () => Promise<unknown>;
   loadStops: () => Promise<StopName[]>;
+  readExistingIndex: () => Promise<unknown | null>;
   writeIndex: (index: GeocodeIndex) => Promise<void>;
   now: () => Date;
   report: (message: string) => void;
@@ -54,6 +57,8 @@ export interface UpdateGeocodeIndexOptions {
 
 export interface UpdateGeocodeIndexResult {
   index: GeocodeIndex;
+  /** 索引の内容が前回と異なり、ファイルを書き換えたか。 */
+  written: boolean;
   counts: {
     isjBlocks: number;
     boundary: number;
@@ -106,9 +111,15 @@ export async function updateGeocodeIndex(
   });
   options.report(`索引 ${counts.names}件の名前を作成しました`);
 
-  await options.writeIndex(index);
+  const written = await writeIfChanged(
+    index,
+    options.readExistingIndex,
+    options.writeIndex,
+    options.report,
+  );
   return {
     index,
+    written,
     counts: {
       isjBlocks: isj.blocks.length,
       boundary: counts.boundary,
@@ -118,6 +129,33 @@ export async function updateGeocodeIndex(
       names: counts.names,
     },
   };
+}
+
+/**
+ * 索引の内容が前回と同じなら書き換えない。生成日時だけを理由に差分を
+ * 出さないため、既存索引のダイジェストと比較する。既存索引が無い、または
+ * 読めない場合は、壊れたファイルを残さないよう書き換える。
+ */
+export async function writeIfChanged(
+  index: GeocodeIndex,
+  readExistingIndex: () => Promise<unknown | null>,
+  writeIndex: (index: GeocodeIndex) => Promise<void>,
+  report: (message: string) => void,
+): Promise<boolean> {
+  const existing = await readExistingIndex();
+  if (existing !== null) {
+    try {
+      if (indexDigest(parseGeocodeIndex(existing)) === indexDigest(index)) {
+        report("索引に変更はありません");
+        return false;
+      }
+    } catch {
+      report("既存の索引を読めないため、書き換えます");
+    }
+  }
+  await writeIndex(index);
+  report("索引を書き出しました");
+  return true;
 }
 
 async function fetchBytes(uri: string): Promise<Buffer> {
@@ -171,6 +209,29 @@ export async function ensureOsmPbf(
     throw error;
   }
   return { path: targetPath, downloaded: true };
+}
+
+async function readExistingIndexFile(
+  indexPath: string,
+): Promise<unknown | null> {
+  let raw: string;
+  try {
+    raw = await readFile(indexPath, "utf8");
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      (error as { code?: unknown }).code === "ENOENT"
+    ) {
+      return null;
+    }
+    throw error;
+  }
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return null;
+  }
 }
 
 async function readJsonFile(path: string): Promise<unknown> {
@@ -256,6 +317,8 @@ async function runCli(): Promise<void> {
       readLocationArtifact: () =>
         readJsonFile(resolve(projectRoot, LOCATION_ARTIFACT_PATH)),
       loadStops: loadStopsFromDatabase,
+      readExistingIndex: () =>
+        readExistingIndexFile(resolve(projectRoot, GEOCODE_INDEX_PATH)),
       writeIndex: (index) =>
         writeIndexAtomically(index, resolve(projectRoot, GEOCODE_INDEX_PATH)),
       now: () => new Date(),
@@ -263,7 +326,7 @@ async function runCli(): Promise<void> {
     });
 
     report(
-      `索引を書き出しました: ${GEOCODE_INDEX_PATH}（街区 ${result.counts.isjBlocks}件、名前 ${result.counts.names}件）`,
+      `索引 ${result.counts.names}件の名前、街区 ${result.counts.isjBlocks}件`,
     );
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);

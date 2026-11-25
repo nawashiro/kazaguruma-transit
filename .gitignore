@@ -69,9 +69,6 @@ Thumbs.db
 # geocode index build cache
 /data/.cache/
 
-# generated geocode index (tracked separately in a follow-up change)
-/data/geocode-index.json
-
 # config
 app-config.json
 app-config.local.json

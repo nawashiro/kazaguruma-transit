@@ -262,17 +262,22 @@ export function parseGeocodeIndex(value: unknown): GeocodeIndex {
 /**
  * 索引の生成日時と出典はファイルの先頭に置く。作業者が中身を開いたとき、
  * どの時点のデータかを最初に確認できるようにするため。
+ *
+ * 配列の要素は1行ずつ書き出す。1行のJSONでは差分が全体の置換になり、
+ * どの地点が変わったかをレビューできない。
  */
 export function serializeGeocodeIndex(index: GeocodeIndex): string {
-  const ordered = {
+  const header = {
     version: index.version,
     generatedAt: index.generatedAt,
     source: index.source,
-    boundary: index.boundary,
-    blocks: index.blocks,
-    names: index.names,
   };
-  return `${JSON.stringify(ordered, null, 0)}\n`;
+  const headerText = JSON.stringify(header, null, 2).slice(0, -2);
+  const arrays = (["boundary", "blocks", "names"] as const).map((key) => {
+    const entries = index[key].map((entry) => JSON.stringify(entry));
+    return `  ${JSON.stringify(key)}: [\n${entries.map((entry) => `    ${entry}`).join(",\n")}\n  ]`;
+  });
+  return `${headerText},\n${arrays.join(",\n")}\n}\n`;
 }
 
 export function loadGeocodeIndex(

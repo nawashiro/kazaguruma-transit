@@ -51,6 +51,7 @@ describe("updateGeocodeIndex", () => {
       readTownGeoJson: async () => TOWN,
       readLocationArtifact: async () => ARTIFACT,
       loadStops: async () => [{ name: "神田駅前", lat: 35.6918, lng: 139.7712 }],
+      readExistingIndex: async () => null,
       writeIndex: async (index: GeocodeIndex) => {
         written.push(index);
       },
@@ -131,6 +132,108 @@ describe("updateGeocodeIndex", () => {
     expect(reports.join("\n")).toMatch(/街区/);
     expect(reports.join("\n")).toMatch(/町字/);
     expect(reports.join("\n")).toMatch(/索引/);
+  });
+
+  it("内容が同じなら索引を書き換えない", async () => {
+    const first = await updateGeocodeIndex({
+      ...options(),
+      openOsm: async () =>
+        (async function* () {
+          yield [];
+        })(),
+    });
+    written.length = 0;
+
+    const second = await updateGeocodeIndex({
+      ...options(),
+      readExistingIndex: async () => first.index,
+      openOsm: async () =>
+        (async function* () {
+          yield [];
+        })(),
+    });
+
+    expect(second.written).toBe(false);
+    expect(written).toHaveLength(0);
+  });
+
+  it("内容が変われば索引を書き換える", async () => {
+    const first = await updateGeocodeIndex({
+      ...options(),
+      openOsm: async () =>
+        (async function* () {
+          yield [];
+        })(),
+    });
+    written.length = 0;
+
+    const second = await updateGeocodeIndex({
+      ...options(),
+      readExistingIndex: async () => first.index,
+      loadStops: async () => [
+        { name: "神田駅前", lat: 35.6918, lng: 139.7712 },
+        { name: "九段下", lat: 35.6958, lng: 139.7517 },
+      ],
+      openOsm: async () =>
+        (async function* () {
+          yield [];
+        })(),
+    });
+
+    expect(second.written).toBe(true);
+    expect(written).toHaveLength(1);
+  });
+
+  it("既存の索引が無ければ書き換える", async () => {
+    const result = await updateGeocodeIndex({
+      ...options(),
+      readExistingIndex: async () => null,
+      openOsm: async () =>
+        (async function* () {
+          yield [];
+        })(),
+    });
+    expect(result.written).toBe(true);
+    expect(written).toHaveLength(1);
+  });
+
+  it("既存の索引が壊れていても書き換える", async () => {
+    const result = await updateGeocodeIndex({
+      ...options(),
+      readExistingIndex: async () => ({ version: 999 }),
+      openOsm: async () =>
+        (async function* () {
+          yield [];
+        })(),
+    });
+    expect(result.written).toBe(true);
+    expect(written).toHaveLength(1);
+  });
+
+  it("書き換えた場合と書き換えなかった場合で報告を分ける", async () => {
+    const firstReports: string[] = [];
+    const first = await updateGeocodeIndex({
+      ...options(),
+      report: (message) => firstReports.push(message),
+      openOsm: async () =>
+        (async function* () {
+          yield [];
+        })(),
+    });
+    expect(firstReports.join("\n")).toMatch(/索引を書き出しました/);
+
+    const secondReports: string[] = [];
+    await updateGeocodeIndex({
+      ...options(),
+      readExistingIndex: async () => first.index,
+      report: (message) => secondReports.push(message),
+      openOsm: async () =>
+        (async function* () {
+          yield [];
+        })(),
+    });
+    expect(secondReports.join("\n")).toMatch(/索引に変更はありません/);
+    expect(secondReports.join("\n")).not.toMatch(/索引を書き出しました/);
   });
 
   it("街区域が空でも停留所の名前を索引に残す", async () => {

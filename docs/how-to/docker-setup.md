@@ -25,7 +25,7 @@ chmod 600 .env.local transit-config.json
 
 以下は秘密を含む設定です。コミットをしないでください。権限を狭めてください。
 
-- `.env.local`: 開発用のサーバー設定です。`GOOGLE_MAPS_API_KEY`などの秘密値を置きます。本番では必要ありません。
+- `.env.local`: 開発用のサーバー設定です。秘密値を置きます。本番では必要ありません。
 - `.env`: 本番用のサーバー設定です。`compose.prod.yml`が読みます。開発では必要ありません。
 - `transit-config.json`: GTFS用のサーバー設定です。本番でも開発でも必要です。
 

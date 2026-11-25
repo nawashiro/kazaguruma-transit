@@ -72,7 +72,7 @@ npm ci
 | `app-config.json`     | 公開   | 本番のクライアント設定です。提供URL、Google Analytics、場所データのURI、会話設定、お知らせ、支援表示を設定します。 |
 | `app-config.local.json` | 公開 | 開発のクライアント設定です。`app-config.json.example` をそのままコピーして使います。 |
 | `transit-config.json` | 秘密   | GTFS取得URLを設定します。                                                                                    |
-| `.env.local`          | 秘密   | 開発サーバーの環境変数です。`GOOGLE_MAPS_API_KEY`（PDFの地図画像に使用）、`PUPPETEER_EXECUTABLE_PATH`（任意）を設定します。地点検索は索引だけを使うため、APIキーは不要です。     |
+| `.env.local`          | 秘密   | 開発サーバーの環境変数です。`PUPPETEER_EXECUTABLE_PATH`（任意、[ローカルのChromeを動かす](docs/how-to/local-chrome.md)を参照）を設定します。地点検索とPDFの地図は外部のAPIキーを使いません。     |
 | `.env`                | 秘密   | 本番サーバーの環境変数です。`CLOUDFLARE_TUNNEL_TOKEN`などの秘密値を設定します。開発が目的なら必要ありません。    |
 
 ## 開発
@@ -98,6 +98,7 @@ npm run test:watch
 | ----------- | -------------------------------------------------------------------------------------- |
 | how-to      | [Google Analytics設定](docs/how-to/analytics.md)                                       |
 | how-to      | [Docker開発・本番構成](docs/how-to/docker-setup.md)                                    |
+| how-to      | [ローカルのChromeを動かす](docs/how-to/local-chrome.md)                                |
 | how-to      | [SEOの現行実装](docs/how-to/seo-optimization.md)                                       |
 | how-to      | [ライセンス情報の更新](docs/how-to/license-page.md)                                    |
 | how-to      | [場所データの更新](docs/how-to/update-location-data.md)                                |

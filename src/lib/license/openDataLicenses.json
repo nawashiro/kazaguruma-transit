@@ -14,7 +14,25 @@
     "licenseName": "ODbL 1.0",
     "licenseUrl": "https://opendatacommons.org/licenses/odbl/1-0/",
     "sourceUrl": "https://www.openstreetmap.org/copyright",
-    "description": "施設名と座標、バリアフリー情報のwheelchairタグ、電話・ウェブサイト・営業時間の抽出元。地点検索の名前索引の抽出元でもあります。WheelMapまたはOpenStreetMapで確認・更新できます。"
+    "description": "施設名と座標、バリアフリー情報のwheelchairタグ、電話・ウェブサイト・営業時間の抽出元。地点検索の名前索引の抽出元でもあります。印刷用PDFの地図タイルの原データでもあります。WheelMapまたはOpenStreetMapで確認・更新できます。"
+  },
+  {
+    "id": "openfreemap",
+    "name": "OpenFreeMap",
+    "provider": "Zsolt Ero",
+    "licenseName": "MIT",
+    "licenseUrl": "https://github.com/hyperknot/openfreemap/blob/main/LICENSE.md",
+    "sourceUrl": "https://openfreemap.org/",
+    "description": "印刷用PDFの地図タイルとスタイルの配信元。タイルのスキーマはOpenMapTiles、データはOpenStreetMapに由来します。"
+  },
+  {
+    "id": "openmaptiles",
+    "name": "OpenMapTiles",
+    "provider": "MapTiler",
+    "licenseName": "BSD-3-Clause",
+    "licenseUrl": "https://github.com/openmaptiles/openmaptiles/blob/master/LICENSE.md",
+    "sourceUrl": "https://www.openmaptiles.org/",
+    "description": "印刷用PDFの地図タイルが使うベクタタイルのスキーマ。OpenFreeMapのPositronスタイルもこのスキーマに基づきます。"
   },
   {
     "id": "chiyoda-town-geojson",

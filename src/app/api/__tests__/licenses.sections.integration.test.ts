@@ -12,4 +12,14 @@ describe("GET /api/licenses section mapping", () => {
     expect(Array.isArray(data.dependencies)).toBe(true);
     expect(data.openData.length).toBeGreaterThan(0);
   });
+
+  it("lists the sources of the printed map", async () => {
+    const response = await GET();
+    const data = await response.json();
+    const ids = data.openData.map((entry: { id: string }) => entry.id);
+
+    expect(ids).toContain("openstreetmap");
+    expect(ids).toContain("openfreemap");
+    expect(ids).toContain("openmaptiles");
+  });
 });

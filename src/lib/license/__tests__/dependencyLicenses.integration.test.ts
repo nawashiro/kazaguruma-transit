@@ -74,3 +74,13 @@ describe("parseDependencyLicenses default ingestion", () => {
     await rm(tmpRoot, { recursive: true, force: true });
   });
 });
+
+describe("external server dependencies", () => {
+  it("includes maplibre-gl, which is injected into the page rather than bundled", async () => {
+    const entries = await loadDependencyLicenses("/nonexistent/path.json");
+    const maplibre = entries.find((entry) => entry.packageName === "maplibre-gl");
+
+    expect(maplibre).toBeDefined();
+    expect(maplibre?.license).toBe("BSD-3-Clause");
+  });
+});

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import type { StopPosition } from "@/lib/transit/stop-selection";
+import { createGridWalkGraph } from "@/lib/transit/test-support/walk-network-fixture";
 
 export {};
 
@@ -24,6 +25,7 @@ type UpdateOptions = {
   readExistingCatalog: () => Promise<unknown | null>;
   writeCatalog: CatalogWriter;
   report: (message: string) => void;
+  walkGraph?: ReturnType<typeof createGridWalkGraph>;
 };
 
 type UpdateCatalog = (options: UpdateOptions) => Promise<{
@@ -232,6 +234,7 @@ function createHarness(
       report: (message: string) => {
         reported.push(message);
       },
+      walkGraph: createGridWalkGraph(ORIGIN, 1.5, 0.01),
     },
   };
 }
@@ -426,6 +429,31 @@ describe("updateDestinationCatalog", () => {
 
     await expect(getUpdater()(harness.options)).rejects.toThrow(/network unreachable/u);
     expect(harness.writeCatalog).not.toHaveBeenCalled();
+  });
+});
+
+describe("徒歩距離による候補抽出", () => {
+  it("直線距離に√2を掛けると圏外でも、徒歩距離が500m以内なら候補にする", async () => {
+    // 直線0.45kmは√2補正で0.636kmになり旧判定では圏外。格子状の徒歩経路は約0.45km。
+    const distantStop: StopPosition[] = [
+      { id: "stop-far", name: "遠い停留所", lat: northOfOrigin(0.45), lon: ORIGIN.lng },
+    ];
+    const harness = createHarness({ loadStops: async () => distantStop });
+
+    const catalog = await getUpdater()(harness.options);
+
+    expect(catalog.places.map((place) => place.id)).toContain(ID.cityOffice);
+  });
+
+  it("徒歩ネットワークにつながらない停留所しかなければ候補にしない", async () => {
+    const disconnected: StopPosition[] = [
+      { id: "stop-out", name: "圏外停留所", lat: northOfOrigin(3), lon: ORIGIN.lng },
+    ];
+    const harness = createHarness({ loadStops: async () => disconnected });
+
+    const catalog = await getUpdater()(harness.options);
+
+    expect(catalog.places).toEqual([]);
   });
 });
 

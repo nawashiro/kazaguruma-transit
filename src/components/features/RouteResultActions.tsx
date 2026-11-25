@@ -48,6 +48,10 @@ export default function RouteResultActions({ routeInfo, query }: RouteResultActi
   useEffect(() => { setMounted(true); }, []);
 
   const memoData = discussionsEnabled && memoState?.busStops === busStops ? memoState.data : new Map<string, PostWithStats>();
+  const walkPaths = {
+    originToStop: routeInfo.originWalkPath,
+    stopToDestination: routeInfo.destinationWalkPath,
+  };
   const exportProps = {
     originStop: routeInfo.originStop,
     destinationStop: routeInfo.destinationStop,
@@ -62,7 +66,7 @@ export default function RouteResultActions({ routeInfo, query }: RouteResultActi
   return <>
     <div className="flex flex-col items-start gap-4">
       <RouteCalendarExport {...exportProps} />
-      <RoutePdfExport {...exportProps} type={routeInfo.type} transfers={routeInfo.transfers} memoData={memoData} />
+      <RoutePdfExport {...exportProps} type={routeInfo.type} transfers={routeInfo.transfers} walkPaths={walkPaths} memoData={memoData} />
     </div>
     {mounted && discussionsEnabled && <DiscussionErrorBoundary key={JSON.stringify(busStops)}>
       <Suspense fallback={null}>

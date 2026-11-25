@@ -7,6 +7,7 @@ describe("IntegratedRouteDisplay", () => {
     stopId: "origin123",
     stopName: "出発バス停",
     distance: 0.2,
+    walkingTimeMinutes: 6,
     stop_lat: 35.1,
     stop_lon: 139.1,
   };
@@ -15,6 +16,7 @@ describe("IntegratedRouteDisplay", () => {
     stopId: "dest456",
     stopName: "到着バス停",
     distance: 0.3,
+    walkingTimeMinutes: 9,
     stop_lat: 35.2,
     stop_lon: 139.2,
   };

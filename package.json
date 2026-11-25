@@ -45,6 +45,7 @@
     "import-gtfs": "tsx scripts/import-gtfs.ts",
     "update-destinations": "tsx scripts/update-destinations.ts",
     "update-geocode-index": "tsx scripts/update-geocode-index.ts",
+    "update-walk-network": "tsx scripts/update-walk-network.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

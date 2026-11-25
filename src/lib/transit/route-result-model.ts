@@ -23,11 +23,14 @@ export interface RouteDetailInfo {
 export interface RouteDisplayStop {
   stopId: string;
   stopName: string;
+  /** 利用者地点からの直線距離（キロメートル）。 */
   distance: number;
   stop_lat?: number;
   stop_lon?: number;
   lat?: number;
   lng?: number;
+  /** 徒歩ネットワーク上の徒歩時間（分）。分かるときだけ入る。 */
+  walkingTimeMinutes?: number;
 }
 
 export interface RouteResultViewModel {
@@ -38,6 +41,10 @@ export interface RouteResultViewModel {
   message?: string;
   originStop: RouteDisplayStop;
   destinationStop: RouteDisplayStop;
+  /** 出発地から乗車停留所までの徒歩経路。[経度, 緯度] の配列。 */
+  originWalkPath?: Array<[number, number]>;
+  /** 降車停留所から目的地までの徒歩経路。[経度, 緯度] の配列。 */
+  destinationWalkPath?: Array<[number, number]>;
 }
 
 export interface RouteResultData {
@@ -137,12 +144,15 @@ export function createRouteResultViewModel(
     type: journey.transfers > 0 ? "transfer" : "direct",
     transfers: journey.transfers || 0,
     message: data?.message,
+    originWalkPath: journey.originWalkPath,
+    destinationWalkPath: journey.destinationWalkPath,
     originStop: {
       stopId: originStopInfo?.id || "unknown",
       stopName: journey.from,
       distance: originStopInfo?.distance || 0,
       stop_lat: originStopInfo?.lat || 0,
       stop_lon: originStopInfo?.lng || 0,
+      walkingTimeMinutes: originStopInfo?.walkingTimeMinutes,
       ...origin,
     },
     destinationStop: {
@@ -151,6 +161,7 @@ export function createRouteResultViewModel(
       distance: destinationStopInfo?.distance || 0,
       stop_lat: destinationStopInfo?.lat || 0,
       stop_lon: destinationStopInfo?.lng || 0,
+      walkingTimeMinutes: destinationStopInfo?.walkingTimeMinutes,
       ...destination,
     },
   };

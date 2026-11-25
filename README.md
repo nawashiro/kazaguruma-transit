@@ -104,6 +104,7 @@ npm run test:watch
 | how-to      | [場所データの更新](docs/how-to/update-location-data.md)                                |
 | how-to      | [目的地目録の更新](docs/how-to/update-destinations.md)                                 |
 | how-to      | [地点索引の更新](docs/how-to/update-geocode-index.md)                                  |
+| how-to      | [徒歩ネットワークの更新](docs/how-to/update-walk-network.md)                           |
 | reference   | [開発憲章](docs/reference/constitution.md)                                             |
 | reference   | [ディスカッションの実装事実](docs/reference/discussion.md)                             |
 | reference   | [文書執筆規範](docs/reference/writing-style.md)                                        |

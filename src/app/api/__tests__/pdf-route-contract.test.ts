@@ -1,5 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { generateRouteHTML } from "@/lib/pdf/route-html";
+import { buildPrintMapDrawing } from "@/lib/pdf/print-map";
+import { collectPrintMapLegs } from "@/lib/pdf/route-html";
 
 describe("PDF route input contract", () => {
   it("keeps legacy fields optional while requiring route meaning fields", () => {
@@ -70,5 +72,67 @@ describe("PDF route input contract", () => {
     const stripMapArea = (html: string) =>
       html.replace(/<div class="print-map-frame">[\s\S]*?<\/p>\s*<\/div>/g, "");
     expect(stripMapArea(withPaths)).toBe(stripMapArea(withoutPaths));
+  });
+});
+
+describe("徒歩経路の折れ線", () => {
+  const base = {
+    originStop: {
+      stopId: "origin",
+      stopName: "出発",
+      distance: 100,
+      stop_lat: 35.6941,
+      stop_lon: 139.7532,
+    },
+    destinationStop: {
+      stopId: "destination",
+      stopName: "到着",
+      distance: 100,
+      stop_lat: 35.6925,
+      stop_lon: 139.7559,
+    },
+    routes: [
+      {
+        routeId: "000001",
+        routeName: "麹町ルート",
+        routeShortName: "",
+        routeLongName: "麹町ルート",
+        routeColor: "#000000",
+        routeTextColor: "#ffffff",
+      },
+    ],
+    type: "direct" as const,
+    transfers: 0,
+    originLat: 35.6901,
+    originLng: 139.7499,
+    destLat: 35.6999,
+    destLng: 139.7601,
+  };
+
+  it("折れ線を渡すと地図がその折れ線に沿った実線になる", async () => {
+    const legs = collectPrintMapLegs({
+      ...base,
+      walkPaths: {
+        originToStop: [
+          [139.7499, 35.6901],
+          [139.7515, 35.6918],
+          [139.7532, 35.6941],
+        ],
+      },
+    });
+    const origin = legs.find((leg) => leg.id === "origin");
+    const drawing = buildPrintMapDrawing(origin!);
+
+    expect(drawing.followsWalkNetwork).toBe(true);
+    expect(drawing.path).toHaveLength(3);
+  });
+
+  it("折れ線を渡さないと始点と終点を結ぶ破線の対象になる", async () => {
+    const legs = collectPrintMapLegs(base);
+    const origin = legs.find((leg) => leg.id === "origin");
+    const drawing = buildPrintMapDrawing(origin!);
+
+    expect(drawing.followsWalkNetwork).toBe(false);
+    expect(drawing.path).toHaveLength(2);
   });
 });

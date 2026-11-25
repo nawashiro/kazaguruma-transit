@@ -18,10 +18,18 @@ export const PRINT_MAP_ATTRIBUTION =
 export const PRINT_MAP_TIMEOUT_MS = 20_000;
 
 /**
- * 徒歩区間の線。破線にするのは、直線が実在の歩行経路ではないことを
- * 線種で示すためで、地図の描画側とテストで同じ指定を共有する。
+ * 実在の徒歩経路の線。徒歩ネットワークから得た折れ線を実線で描く。
  */
 export const PRINT_MAP_LINE_PAINT = {
+  "line-color": "#111111",
+  "line-width": 3,
+} as const;
+
+/**
+ * 折れ線が無いときの線。始点と終点を結ぶ直線は実在の歩行経路ではないため、
+ * 破線で描き、実線の経路と読み違えられないようにする。
+ */
+export const PRINT_MAP_FALLBACK_LINE_PAINT = {
   "line-color": "#111111",
   "line-width": 3,
   "line-dasharray": [2, 1.5],
@@ -66,6 +74,8 @@ export interface PrintMapDrawing {
   readonly path: readonly LngLat[];
   readonly start: PrintMapEndpoint;
   readonly end: PrintMapEndpoint;
+  /** 折れ線が実在の歩行経路か。falseのときは破線で描く。 */
+  readonly followsWalkNetwork: boolean;
 }
 
 export type PrintMapDrawResult =
@@ -89,12 +99,14 @@ export interface PrintMapPage {
       drawings: readonly PrintMapDrawing[];
       timeoutMs: number;
       linePaint: Readonly<Record<string, unknown>>;
+      fallbackLinePaint: Readonly<Record<string, unknown>>;
     }) => Promise<R>,
     input: {
       styleUrl: string;
       drawings: readonly PrintMapDrawing[];
       timeoutMs: number;
       linePaint: Readonly<Record<string, unknown>>;
+      fallbackLinePaint: Readonly<Record<string, unknown>>;
     },
   ): Promise<R>;
 }
@@ -135,6 +147,14 @@ export function printMapBounds(path: readonly LngLat[]): PrintMapBounds {
   return { west, south, east, north };
 }
 
+/**
+ * 折れ線が与えられたかを返す。与えられた折れ線は、2点だけでも実在の
+ * 歩行経路である。破線にするのは、折れ線が無く始点と終点を結ぶときだけ。
+ */
+export function followsWalkNetwork(leg: PrintMapLeg): boolean {
+  return leg.path !== undefined && leg.path.length >= 2;
+}
+
 export function buildPrintMapDrawing(leg: PrintMapLeg): PrintMapDrawing {
   const path = printMapPath(leg);
   return {
@@ -143,6 +163,7 @@ export function buildPrintMapDrawing(leg: PrintMapLeg): PrintMapDrawing {
     path,
     start: leg.start,
     end: leg.end,
+    followsWalkNetwork: followsWalkNetwork(leg),
   };
 }
 
@@ -175,6 +196,7 @@ async function renderPrintMapsInPage(input: {
   drawings: readonly PrintMapDrawing[];
   timeoutMs: number;
   linePaint: Readonly<Record<string, unknown>>;
+  fallbackLinePaint: Readonly<Record<string, unknown>>;
 }): Promise<{
   ok: boolean;
   failed: Array<{ id: string; reason: string }>;
@@ -269,7 +291,9 @@ async function renderPrintMapsInPage(input: {
               id: "walk",
               type: "line",
               source: "walk",
-              paint: input.linePaint,
+              paint: drawing.followsWalkNetwork
+                ? input.linePaint
+                : input.fallbackLinePaint,
             });
           });
 
@@ -379,6 +403,7 @@ export async function drawPrintMaps(
       drawings,
       timeoutMs,
       linePaint: PRINT_MAP_LINE_PAINT,
+      fallbackLinePaint: PRINT_MAP_FALLBACK_LINE_PAINT,
     }),
     new Promise<{ ok: false; reason: string; failed: Array<{ id: string; reason: string }> }>(
       (resolve) => {

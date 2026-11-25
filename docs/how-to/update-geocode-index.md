@@ -43,7 +43,7 @@
 
 ## OSM抽出のキャッシュ
 
-OSM抽出は133MBあるため、`data/.cache/JP-13-latest.osm.pbf` に取得物を置き、24時間以内なら再利用します。`data/.cache/` はGit管理外です。
+OSM抽出は133MBあるため、`data/.cache/JP-13-latest.osm.pbf` に取得物を置き、24時間以内なら再利用します。`data/.cache/` はGit管理外です。同じ抽出は[徒歩ネットワークの更新](update-walk-network.md)でも使います。
 
 取得をやり直すときは、キャッシュを消してから実行します。
 

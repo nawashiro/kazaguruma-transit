@@ -1,6 +1,12 @@
 import type { NearbyStop } from "../../types/core";
 import { TRANSIT_PARAMS } from "./transit-params";
-import { calculateGridWalkingDistanceKm } from "./walking";
+import {
+  getWalkNetwork,
+  haversineKm,
+  prepareWalkSearch,
+  walkLeg,
+  type WalkGraph,
+} from "./walk-network";
 
 const EARTH_RADIUS_KM = 6371;
 
@@ -45,25 +51,38 @@ export function calculateHaversineDistanceKm(
 }
 
 /**
- * 指定座標から補正徒歩距離が半径以内の停留所を、直線距離の近い順に返す。
- * 上限ちょうどの距離は含める。
+ * 指定座標から、徒歩ネットワーク上の徒歩距離が半径以内の停留所を、
+ * 徒歩距離の近い順に返す。上限ちょうどの距離は含める。起点から最寄りノード
+ * までの接続区間と、停留所から最寄りノードまでの接続区間を含める。
  */
 export function selectNearbyStops(
   stops: readonly StopPosition[],
   lat: number,
   lng: number,
   radiusKm: number = TRANSIT_PARAMS.DEFAULT_SEARCH_RADIUS / 1000,
+  graph: WalkGraph = getWalkNetwork(),
 ): NearbyStop[] {
-  return stops
-    .map((stop) => ({
-      id: stop.id,
-      name: stop.name,
-      lat: stop.lat,
-      lng: stop.lon,
-      distance: calculateHaversineDistanceKm(lat, lng, stop.lat, stop.lon),
-    }))
-    .filter(
-      (stop) => calculateGridWalkingDistanceKm(stop.distance) <= radiusKm,
-    )
-    .sort((firstStop, secondStop) => firstStop.distance - secondStop.distance);
+  const origin = { lat, lng };
+  const prepared = prepareWalkSearch(graph, origin);
+  const scored: Array<{ stop: NearbyStop; walkingKm: number }> = [];
+  for (const stop of stops) {
+    const position = { lat: stop.lat, lng: stop.lon };
+    const leg = walkLeg(graph, prepared, position, { path: false });
+    if (leg === null || leg.distanceKm > radiusKm) {
+      continue;
+    }
+    scored.push({
+      stop: {
+        id: stop.id,
+        name: stop.name,
+        lat: stop.lat,
+        lng: stop.lon,
+        distance: haversineKm(origin, position),
+      },
+      walkingKm: leg.distanceKm,
+    });
+  }
+  return scored
+    .sort((firstStop, secondStop) => firstStop.walkingKm - secondStop.walkingKm)
+    .map((entry) => entry.stop);
 }

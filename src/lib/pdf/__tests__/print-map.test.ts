@@ -1,6 +1,7 @@
 import {
   PRINT_MAP_ATTRIBUTION,
   PRINT_MAP_CSS,
+  PRINT_MAP_FALLBACK_LINE_PAINT,
   PRINT_MAP_LINE_PAINT,
   PRINT_MAP_STYLE_URL,
   buildPrintMapDrawing,
@@ -135,9 +136,56 @@ describe("PRINT_MAP_CSS", () => {
 });
 
 describe("PRINT_MAP_LINE_PAINT", () => {
-  it("徒歩区間を実経路と読み違えないよう破線にする", () => {
-    expect(PRINT_MAP_LINE_PAINT["line-dasharray"]).toEqual([2, 1.5]);
+  it("実在の徒歩経路は実線で描く", () => {
+    expect(PRINT_MAP_LINE_PAINT).not.toHaveProperty("line-dasharray");
     expect(PRINT_MAP_LINE_PAINT["line-color"]).toBe("#111111");
+  });
+
+  it("折れ線が無いときの直線は実経路と読み違えないよう破線にする", () => {
+    expect(PRINT_MAP_FALLBACK_LINE_PAINT["line-dasharray"]).toEqual([2, 1.5]);
+    expect(PRINT_MAP_FALLBACK_LINE_PAINT["line-color"]).toBe("#111111");
+  });
+});
+
+describe("buildPrintMapDrawing", () => {
+  it("折れ線が与えられた区間は実在の徒歩経路として扱う", () => {
+    const drawing = buildPrintMapDrawing({
+      id: "origin",
+      start: { label: "出発地", position: [139.75, 35.69] },
+      end: { label: "停留所", position: [139.76, 35.7] },
+      path: [
+        [139.75, 35.69],
+        [139.755, 35.695],
+        [139.76, 35.7],
+      ],
+    });
+
+    expect(drawing.followsWalkNetwork).toBe(true);
+  });
+
+  it("2点だけの折れ線も実在の徒歩経路として扱う", () => {
+    const drawing = buildPrintMapDrawing({
+      id: "origin",
+      start: { label: "出発地", position: [139.75, 35.69] },
+      end: { label: "停留所", position: [139.76, 35.7] },
+      path: [
+        [139.75, 35.69],
+        [139.76, 35.7],
+      ],
+    });
+
+    expect(drawing.followsWalkNetwork).toBe(true);
+  });
+
+  it("折れ線が無い区間は徒歩ネットワークの経路として扱わない", () => {
+    const drawing = buildPrintMapDrawing({
+      id: "origin",
+      start: { label: "出発地", position: [139.75, 35.69] },
+      end: { label: "停留所", position: [139.76, 35.7] },
+    });
+
+    expect(drawing.followsWalkNetwork).toBe(false);
+    expect(drawing.path).toHaveLength(2);
   });
 });
 

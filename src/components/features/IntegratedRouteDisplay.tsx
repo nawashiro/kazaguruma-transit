@@ -3,8 +3,6 @@ import type { RouteDetailInfo, RouteDisplayStop } from "@/lib/transit/route-resu
 import { generateGoogleMapDirectionLink, generateGoogleMapPointLink } from "@/utils/maps";
 import StopTimeDisplay from "./StopTimeDisplay";
 import { calculateArrivalTime } from "@/lib/transit/route-display-model";
-import { calculateWalkingTimeMinutes } from "@/lib/transit/walking";
-import { TRANSIT_PARAMS } from "@/lib/transit/transit-params";
 
 interface IntegratedRouteDisplayProps {
   originStop: RouteDisplayStop;
@@ -36,8 +34,15 @@ function formatTime(time: string): string {
   return `${Math.floor(base / 60)}時${base % 60}分`;
 }
 
+/**
+ * 停留所までの徒歩時間。経路検索が徒歩ネットワークから求めた値を使う。
+ * 値がないときは直線距離から概算しない。概算は実際の徒歩距離と食い違う。
+ */
 function walkMinutes(stop: RouteDisplayStop): number {
-  return Math.ceil(calculateWalkingTimeMinutes(stop.distance, TRANSIT_PARAMS.WALKING_SPEED_KM_H)) + 5;
+  if (stop.walkingTimeMinutes === undefined) {
+    return 0;
+  }
+  return stop.walkingTimeMinutes + 5;
 }
 
 function AccentEdge() {

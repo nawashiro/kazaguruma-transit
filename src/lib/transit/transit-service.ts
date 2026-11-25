@@ -19,7 +19,6 @@ import {
 } from "./route-algorithm";
 import { TRANSIT_PARAMS } from "./transit-params";
 import {
-  calculateGridWalkingDistanceKm,
   calculateJourneyDurationMinutes,
   calculateRouteSearchTime,
   parseGtfsTime,
@@ -28,6 +27,12 @@ import {
   calculateHaversineDistanceKm,
   selectNearbyStops,
 } from "./stop-selection";
+import {
+  getWalkNetwork,
+  prepareWalkSearch,
+  walkLeg,
+  type LngLat,
+} from "./walk-network";
 import { selectBestRouteCandidate } from "./route-result-ranking";
 
 interface StopLocation {
@@ -430,12 +435,14 @@ export class TransitService {
     targetLat: number,
     targetLng: number
   ) {
-    const stopsWithDistance = stops.map((stop) => {
-      const distance = calculateHaversineDistanceKm(
-        targetLat,
-        targetLng,
-        stop.lat,
-        stop.lon
+    const graph = getWalkNetwork();
+    const prepared = prepareWalkSearch(graph, { lat: targetLat, lng: targetLng });
+    const scored = stops.map((stop) => {
+      const leg = walkLeg(
+        graph,
+        prepared,
+        { lat: stop.lat, lng: stop.lon },
+        { path: false }
       );
 
       return {
@@ -443,11 +450,11 @@ export class TransitService {
         stopName: stop.name,
         stopLat: stop.lat,
         stopLon: stop.lon,
-        distance,
+        distance: leg === null ? Number.POSITIVE_INFINITY : leg.distanceKm,
       };
     });
 
-    return stopsWithDistance.sort(
+    return scored.sort(
       (firstStop, secondStop) => firstStop.distance - secondStop.distance
     )[0];
   }
@@ -538,6 +545,9 @@ export class TransitService {
    */
   public async findRoute(query: RouteQuery): Promise<TransitResponse> {
     try {
+      // 徒歩ネットワークを読めないときは、直線距離で代替せず失敗を返す。
+      // 代替すると、artifactの更新漏れが精度の低い経路として静かに現れる。
+      getWalkNetwork();
       logger.log(
         `[TransitService] 経路検索API: 出発地(${query.origin.lat}, ${
           query.origin.lng
@@ -701,23 +711,32 @@ export class TransitService {
     isDeparture: boolean = true
   ): Promise<{ journeys: Journey[]; stops: NearbyStop[] }> {
     try {
-      // 出発地点から最初のバス停までの徒歩距離を計算
-      const walkToFirstStop = calculateGridWalkingDistanceKm(
-        calculateHaversineDistanceKm(origin.lat, origin.lng, from.lat, from.lng)
-      );
+      const graph = getWalkNetwork();
 
-      // 徒歩時間（分）を計算
+      // 出発地点から最初のバス停までの徒歩経路を計算
+      const toFirstStop = walkLeg(
+        graph,
+        prepareWalkSearch(graph, origin),
+        { lat: from.lat, lng: from.lng }
+      );
+      if (toFirstStop === null) {
+        logger.log("[findConventionalRoute] 出発地から乗車停留所まで歩けません");
+        return { journeys: [], stops: [] };
+      }
+      const walkToFirstStop = toFirstStop.distanceKm;
       const walkTimeToFirstStop =
         walkToFirstStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
 
-      const walkFromLastStop = calculateGridWalkingDistanceKm(
-        calculateHaversineDistanceKm(
-          to.lat,
-          to.lng,
-          destination.lat,
-          destination.lng
-        )
+      const fromLastStop = walkLeg(
+        graph,
+        prepareWalkSearch(graph, { lat: to.lat, lng: to.lng }),
+        destination
       );
+      if (fromLastStop === null) {
+        logger.log("[findConventionalRoute] 降車停留所から目的地まで歩けません");
+        return { journeys: [], stops: [] };
+      }
+      const walkFromLastStop = fromLastStop.distanceKm;
       const walkTimeFromLastStop =
         walkFromLastStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
 
@@ -785,6 +804,7 @@ export class TransitService {
             from.lat,
             from.lng
           ),
+          walkingTimeMinutes: Math.ceil(walkTimeToFirstStop),
           lat: parseFloat(from.lat.toString()),
           lng: parseFloat(from.lng.toString()),
         },
@@ -798,6 +818,7 @@ export class TransitService {
             destination.lat,
             destination.lng
           ),
+          walkingTimeMinutes: Math.ceil(walkTimeFromLastStop),
           lat: parseFloat(to.lat.toString()),
           lng: parseFloat(to.lng.toString()),
         },
@@ -838,6 +859,8 @@ export class TransitService {
       convertedJourney.walkingTimeMinutes = Math.round(
         walkTimeToFirstStop + walkTimeFromLastStop
       );
+      convertedJourney.originWalkPath = toFirstStop.path;
+      convertedJourney.destinationWalkPath = fromLastStop.path;
       convertedJourney.duration = Math.round(totalDuration); // 総所要時間を更新
 
       // 出発時刻指定の場合、ユーザーが指定した元の時刻を表示用に設定
@@ -925,6 +948,25 @@ export class TransitService {
       // 時刻表ベースのルーター
       const timeTableRouter = new TimeTableRouter();
       const userRequestedTime = time ? new Date(time) : new Date();
+      const graph = getWalkNetwork();
+      const originWalk = prepareWalkSearch(graph, origin);
+
+      // 降車停留所から目的地までの徒歩経路は、出発停留所の組み合わせに
+      // 依存しない。停留所ごとに1度だけ求める。
+      const destinationLegs = new Map<string, ReturnType<typeof walkLeg>>();
+      for (const destStop of topDestStops) {
+        if (!destStop.lat || !destStop.lng) {
+          continue;
+        }
+        destinationLegs.set(
+          destStop.id,
+          walkLeg(
+            graph,
+            prepareWalkSearch(graph, { lat: destStop.lat, lng: destStop.lng }),
+            destination
+          )
+        );
+      }
 
       // すべての組み合わせを試す
       for (const originStop of topOriginStops) {
@@ -932,14 +974,14 @@ export class TransitService {
           continue;
         }
 
-        const walkToFirstStop = calculateGridWalkingDistanceKm(
-          calculateHaversineDistanceKm(
-            origin.lat,
-            origin.lng,
-            originStop.lat,
-            originStop.lng
-          )
-        );
+        const toFirstStop = walkLeg(graph, originWalk, {
+          lat: originStop.lat,
+          lng: originStop.lng,
+        });
+        if (toFirstStop === null) {
+          continue;
+        }
+        const walkToFirstStop = toFirstStop.distanceKm;
 
         const walkTimeToFirstStop = walkToFirstStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
 
@@ -963,14 +1005,11 @@ export class TransitService {
               stopName: destStop.name,
             };
 
-            const walkFromLastStop = calculateGridWalkingDistanceKm(
-              calculateHaversineDistanceKm(
-                destStop.lat,
-                destStop.lng,
-                destination.lat,
-                destination.lng
-              )
-            );
+            const fromLastStop = destinationLegs.get(destStop.id);
+            if (fromLastStop === undefined || fromLastStop === null) {
+              continue;
+            }
+            const walkFromLastStop = fromLastStop.distanceKm;
             const walkTimeFromLastStop =
               walkFromLastStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
             const routeSearchTime = calculateRouteSearchTime(
@@ -1003,13 +1042,21 @@ export class TransitService {
                 walkTimeFromLastStop,
                 isDeparture,
                 time,
-                userRequestedTime
+                userRequestedTime,
+                toFirstStop.path,
+                fromLastStop.path
               );
 
               allResults.push({
                 journey: routeResult.journey,
-                originStop,
-                destStop,
+                originStop: {
+                  ...originStop,
+                  walkingTimeMinutes: Math.ceil(walkTimeToFirstStop),
+                },
+                destStop: {
+                  ...destStop,
+                  walkingTimeMinutes: Math.ceil(walkTimeFromLastStop),
+                },
                 totalWalkingDistance: routeResult.totalWalkingDistance,
                 totalDuration: routeResult.totalDuration,
               });
@@ -1288,7 +1335,9 @@ export class TransitService {
     walkTimeFromLastStop: number,
     isDeparture: boolean,
     time?: string,
-    userRequestedTime?: Date
+    userRequestedTime?: Date,
+    originWalkPath?: LngLat[],
+    destinationWalkPath?: LngLat[]
   ) {
     const totalWalkingDistance = walkToFirstStop + walkFromLastStop;
 
@@ -1305,6 +1354,8 @@ export class TransitService {
     const convertedJourney = this.transformToJourney(journey, from, to);
     convertedJourney.walkingDistanceKm = totalWalkingDistance;
     convertedJourney.walkingTimeMinutes = Math.round(walkTimeToFirstStop + walkTimeFromLastStop);
+    convertedJourney.originWalkPath = originWalkPath;
+    convertedJourney.destinationWalkPath = destinationWalkPath;
     convertedJourney.duration = Math.round(totalDuration);
 
     if (isDeparture && time && userRequestedTime) {

@@ -14,3 +14,27 @@ it("経路なしの静的本文と入力画面リンクを表示しブラウザ�
 });
 
 
+
+it("停留所の徒歩時間は直線距離からではなく経路検索の値を使う", () => {
+  const data = {
+    journeys: [
+      {
+        departure: "09:30:00",
+        arrival: "10:15:00",
+        duration: 45,
+        transfers: 0,
+        from: "出発バス停",
+        to: "到着バス停",
+      },
+    ],
+    stops: [
+      { id: "origin", name: "出発バス停", distance: 0.2, walkingTimeMinutes: 6 },
+      { id: "destination", name: "到着バス停", distance: 0.3, walkingTimeMinutes: 9 },
+    ],
+  };
+  const routeInfo = createRouteResultViewModel(data, query.origin, query.destination);
+
+  expect(routeInfo.originStop.walkingTimeMinutes).toBe(6);
+  expect(routeInfo.destinationStop.walkingTimeMinutes).toBe(9);
+  expect(routeInfo.originStop.distance).toBe(0.2);
+});

@@ -79,7 +79,7 @@ export default async function LicensePage() {
                   {payload.openData.map((entry) => (
                     <tr key={entry.id}>
                       <th scope="row" className="break-words whitespace-normal"><a href={entry.sourceUrl} className="link">{entry.name}</a></th>
-                      <td className="whitespace-normal"><a href={entry.licenseUrl} className="badge badge-primary badge-md h-auto max-w-full break-words py-1 text-center whitespace-normal">{entry.licenseName}</a></td>
+                      <td className="whitespace-normal"><a href={entry.licenseUrl} className="badge badge-primary badge-md h-auto max-w-full break-words py-1 text-center whitespace-normal"><span>{entry.licenseName}</span></a></td>
                     </tr>
                   ))}
                 </tbody>

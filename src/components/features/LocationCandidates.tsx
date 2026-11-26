@@ -17,7 +17,6 @@ export default function LocationCandidates({
   label,
   id,
 }: LocationCandidatesProps) {
-  const headingId = useId();
   const generatedListId = useId();
   const listId = id ?? generatedListId;
   if (candidates.length === 0) {
@@ -26,18 +25,15 @@ export default function LocationCandidates({
 
   return (
     <div className="min-w-0 space-y-2 text-base">
-      <p id={headingId} className="font-bold ruby-text">
-        {label}の候補から選ぶ
-      </p>
-      <p role="status" className="text-base">
+      <p role="status" className="sr-only">
         {candidates.length}件の候補があります
       </p>
-      <ul id={listId} aria-labelledby={headingId} className="min-w-0 space-y-1">
+      <ul id={listId} aria-label={`${label}の候補`} className="min-w-0 space-y-1">
         {candidates.map((candidate) => (
           <li key={`${candidate.name}-${candidate.lat}-${candidate.lng}`} className="min-w-0">
             <button
               type="button"
-              className="min-h-[44px] w-full min-w-0 rounded-box border border-base-300 p-2 text-start text-base whitespace-normal break-words hover:bg-base-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="min-h-[44px] w-full min-w-0 cursor-pointer rounded-box border border-base-300 p-2 text-start text-base whitespace-normal break-words transition-colors hover:bg-base-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               onClick={() => onSelect(candidate)}
             >
               <MapPin className="mr-2 inline h-4 w-4 shrink-0" aria-hidden="true" />

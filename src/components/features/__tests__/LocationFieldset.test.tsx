@@ -3,6 +3,14 @@ import "@testing-library/jest-dom";
 import LocationFieldset from "../LocationFieldset";
 
 describe("LocationFieldset", () => {
+  it("グループの見出しを本文より大きい20pxで表示する", () => {
+    render(<LocationFieldset label="目的地" testId="selected"><input aria-label="目的地" /></LocationFieldset>);
+
+    const legend = screen.getByRole("group", { name: "目的地" }).querySelector("legend");
+    expect(legend).toHaveClass("fieldset-legend", "text-xl");
+    expect(legend).not.toHaveClass("text-base");
+  });
+
   it("非同期の確定前に別グループへ移ったフォーカスを奪わない", () => {
     const view = (selectedLocation?: { lat: number; lng: number }) => <>
       <LocationFieldset label="目的地" testId="selected" selectedLocation={selectedLocation}>

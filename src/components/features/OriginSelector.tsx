@@ -55,7 +55,7 @@ export default function OriginSelector({ onOriginSelected, selectedLocation, onE
       <form onSubmit={async event => { event.preventDefault(); await search(); }} className="space-y-4 min-w-0">
         <InputField label="出発地" placeholder="千代田区役所" value={query}
           onChange={event => setQuery(event.target.value)} disabled={loading} testId="address-input" required
-          error={error || validationError} description="建物名だけでも大丈夫な場合がほとんどです。"
+          error={error || validationError} description="住所か建物名を入力してください。"
           autoComplete="off"
           controls={candidates.length > 0 ? candidateListId : undefined}
           onBlur={handleBlur} onCompositionStart={handleCompositionStart} onCompositionEnd={handleCompositionEnd}

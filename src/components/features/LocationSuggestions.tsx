@@ -17,7 +17,7 @@ function LocationSuggestions({
 }: LocationSuggestionsProps) {
   return (
     <div className="min-w-0 text-base">
-      <h3 className="text-base font-bold ruby-text my-4">
+      <h3 className="text-lg font-bold ruby-text my-4">
         よく利用される施設から選択
       </h3>
       <div className="space-y-2 min-w-0">

@@ -54,7 +54,8 @@ describe("OriginSelector", () => {
     render(<Selector />);
     await submitAddress();
     const group = screen.getByRole("group", { name: "出発地" });
-    const options = await within(group).findAllByRole("button", { name: /神田駅/ });
+    const list = await within(group).findByRole("list", { name: "出発地の候補" });
+    const options = within(list).getAllByRole("button", { name: /神田駅/ });
     expect(options).toHaveLength(2);
     expect(screen.queryByTestId("selected-origin")).not.toBeInTheDocument();
 
@@ -88,6 +89,13 @@ describe("OriginSelector", () => {
     const input = screen.getByRole("textbox", { name: "出発地" });
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(input).toHaveAccessibleDescription(expect.stringContaining("出発地を確定してください"));
+  });
+
+  it("住所欄に住所か建物名の入力を促し、建物名だけの案内を残さない", () => {
+    render(<Selector />);
+    const input = screen.getByRole("textbox", { name: "出発地" });
+    expect(input).toHaveAccessibleDescription(expect.stringContaining("住所か建物名を入力してください。"));
+    expect(input).not.toHaveAccessibleDescription(expect.stringContaining("建物名だけでも大丈夫な場合がほとんどです。"));
   });
 
   it("GPS取得は住所フォームを送信せず、住所の逆引き結果を確定する", async () => {

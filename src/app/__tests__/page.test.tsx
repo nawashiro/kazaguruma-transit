@@ -265,7 +265,7 @@ describe("Home", () => {
     });
     await userEvent.setup().type(screen.getByRole("textbox", { name: label }), "神田駅{Enter}");
     const group = screen.getByRole("group", { name: label });
-    const list = await within(group).findByRole("list", { name: `${label}の候補から選ぶ` });
+    const list = await within(group).findByRole("list", { name: `${label}の候補` });
     fireEvent.click(within(list).getAllByRole("button")[0]);
     expect(await screen.findByTestId(label === "目的地" ? "selected-destination" : "selected-origin")).toHaveTextContent(`確定${label}`);
   }

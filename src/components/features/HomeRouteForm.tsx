@@ -84,7 +84,7 @@ export default function HomeRouteForm({ routeDestinations }: HomeRouteFormProps)
           {selectedDestination && <input type="hidden" name="destination" value={`${selectedDestination.lat},${selectedDestination.lng}`} />}
           <DateTimeSelector />
           <fieldset className="fieldset min-w-0 w-full border border-base-300 rounded-box bg-base-200 p-4 text-base">
-            <legend className="fieldset-legend text-base">優先条件</legend>
+            <legend className="fieldset-legend text-xl">優先条件</legend>
             {[{ value: false, label: "なるべく歩きたくない、時間がかかってもいい" }, { value: true, label: "歩いてもいい、早く着きたい" }].map(option => (
               <label key={String(option.value)} className="flex items-center gap-2 text-base cursor-pointer">
                 <input type="radio" className="radio shrink-0" name="prioritizeSpeed" value={String(option.value)} checked={prioritizeSpeed === option.value} onChange={() => selectPriority(option.value)} />

@@ -28,10 +28,10 @@ export default function DestinationSelector({
   return (
     <LocationFieldset label="目的地" selectedLocation={selectedLocation} onEdit={onEdit} testId="selected-destination">
       <form onSubmit={async event => { event.preventDefault(); await search(); }} className="space-y-4 min-w-0">
-        <h3 className="text-base font-bold ruby-text">名前で検索</h3>
+        <h3 className="text-lg font-bold ruby-text">名前で検索</h3>
         <InputField label="目的地" placeholder="神田駿河台" value={query}
           onChange={event => setQuery(event.target.value)} disabled={loading} testId="address-input"
-          error={error || validationError} description="建物名だけでも大丈夫な場合がほとんどです。"
+          error={error || validationError} description="住所か建物名を入力してください。"
           autoComplete="off"
           controls={candidates.length > 0 ? candidateListId : undefined}
           onBlur={handleBlur} onCompositionStart={handleCompositionStart} onCompositionEnd={handleCompositionEnd}

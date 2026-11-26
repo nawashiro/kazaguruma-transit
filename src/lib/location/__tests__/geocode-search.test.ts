@@ -9,6 +9,10 @@ import { GeocodeSearcher } from "../geocode-search";
 
 const HIGASHI = "霞が関";
 const KANDA_IZUMICHO = "神田和泉町";
+const HAYABUSACHO = "隼町";
+const ICHIBANCHO = "一番町";
+const KONNYACHO = "神田紺屋町";
+const KOJIMACHI = "麹町";
 
 function buildIndex(overrides: Partial<GeocodeIndex> = {}): GeocodeIndex {
   return {
@@ -52,6 +56,14 @@ function buildIndex(overrides: Partial<GeocodeIndex> = {}): GeocodeIndex {
       { town: HIGASHI, chome: 2, block: "1", lat: 35.6761, lng: 139.7511, representative: true },
       { town: KANDA_IZUMICHO, chome: 0, block: "1", lat: 35.6992, lng: 139.776, representative: true },
       { town: KANDA_IZUMICHO, chome: 0, block: "2", lat: 35.6994, lng: 139.7763, representative: true },
+      { town: HAYABUSACHO, chome: 0, block: "1", lat: 35.6826, lng: 139.7424, representative: true },
+      { town: HAYABUSACHO, chome: 0, block: "4", lat: 35.6829, lng: 139.7428, representative: true },
+      { town: ICHIBANCHO, chome: 0, block: "1", lat: 35.6871, lng: 139.7418, representative: true },
+      { town: ICHIBANCHO, chome: 0, block: "25", lat: 35.6881, lng: 139.7431, representative: true },
+      { town: KONNYACHO, chome: 0, block: "5", lat: 35.6916, lng: 139.7736, representative: true },
+      { town: KONNYACHO, chome: 0, block: "30", lat: 35.6927, lng: 139.7734, representative: true },
+      { town: KOJIMACHI, chome: 1, block: "1", lat: 35.6905, lng: 139.7385, representative: true },
+      { town: KOJIMACHI, chome: 2, block: "1", lat: 35.6899, lng: 139.7379, representative: true },
     ],
     names: [
       {
@@ -116,6 +128,34 @@ function buildIndex(overrides: Partial<GeocodeIndex> = {}): GeocodeIndex {
         lat: 35.6939,
         lng: 139.7534,
         kind: "culture",
+      },
+      {
+        name: "隼町",
+        aliases: [],
+        lat: 35.6827,
+        lng: 139.7426,
+        kind: "other",
+      },
+      {
+        name: "麹町",
+        aliases: [],
+        lat: 35.6902,
+        lng: 139.7382,
+        kind: "station",
+      },
+      {
+        name: "千代田区役所別館前",
+        aliases: [],
+        lat: 35.6943,
+        lng: 139.7537,
+        kind: "other",
+      },
+      {
+        name: "役所別館",
+        aliases: [],
+        lat: 35.6945,
+        lng: 139.7539,
+        kind: "other",
       },
     ],
     ...overrides,
@@ -254,6 +294,28 @@ describe("GeocodeSearcher", () => {
     expect(searcher.findAddress("千代田区丸の内1-1")).toBeNull();
   });
 
+  it("街区のあとの号を街区として読まない", () => {
+    expect(searcher.findAddress("隼町4-1")).toMatchObject({
+      address: "千代田区隼町4番",
+      lat: 35.6829,
+    });
+    expect(searcher.findAddress("一番町25-1")).toMatchObject({
+      address: "千代田区一番町25番",
+      lat: 35.6881,
+    });
+    expect(searcher.findAddress("神田紺屋町30-2")).toMatchObject({
+      address: "千代田区神田紺屋町30番",
+      lat: 35.6927,
+    });
+  });
+
+  it("丁目と街区と号を伴う住所を解決する", () => {
+    expect(searcher.findAddress("霞が関1-1-1")).toMatchObject({
+      address: "千代田区霞が関一丁目1番",
+      lat: 35.6751,
+    });
+  });
+
   it("番地として解決できた検索は1件だけ返す", () => {
     expect(searcher.search("霞が関1-1")).toHaveLength(1);
   });
@@ -306,6 +368,99 @@ describe("GeocodeSearcher", () => {
     const first = searcher.search("千代田");
     const second = new GeocodeSearcher(buildIndex()).search("千代田");
     expect(first).toEqual(second);
+  });
+
+  it("街区を町・丁目・街区のキーで引く", () => {
+    expect(searcher.search("霞が関一丁目1番").map((candidate) => candidate.name)).toEqual([
+      "千代田区霞が関一丁目1番",
+    ]);
+    expect(searcher.search("神田和泉町2番").map((candidate) => candidate.name)).toEqual([
+      "千代田区神田和泉町2番",
+    ]);
+  });
+
+  it("町名を打ち終えたら街区を候補にする", () => {
+    expect(searcher.search("千代田区神田和泉町").map((candidate) => candidate.name)).toEqual([
+      "千代田区神田和泉町1番",
+      "千代田区神田和泉町2番",
+    ]);
+  });
+
+  it("町名の途中でも候補を返す", () => {
+    expect(searcher.search("千代田区神田和").map((candidate) => candidate.name)).toEqual([
+      "千代田区神田和泉町1番",
+      "千代田区神田和泉町2番",
+    ]);
+  });
+
+  it("丁目を持つ町名では丁目を候補にする", () => {
+    expect(searcher.search("千代田区霞が関").map((candidate) => candidate.name)).toEqual([
+      "千代田区霞が関一丁目1番",
+      "千代田区霞が関二丁目1番",
+    ]);
+  });
+
+  it("丁目まで打ったらその丁目の街区を候補にする", () => {
+    expect(searcher.search("千代田区霞が関1").map((candidate) => candidate.name)).toEqual([
+      "千代田区霞が関一丁目1番",
+      "千代田区霞が関一丁目2番",
+    ]);
+  });
+
+  it("複数の町に割れる語では住所候補を出さない", () => {
+    const result = searcher.search("神田");
+    expect(result.map((candidate) => candidate.kind)).not.toContain("address");
+    expect(searcher.search("千代田区").map((candidate) => candidate.kind)).not.toContain("address");
+  });
+
+  it("候補の住所は街区符号を持つ", () => {
+    for (const query of ["千代田区霞が関", "千代田区神田和泉町", "隼町", "千代田区霞が関1"]) {
+      for (const candidate of searcher.search(query)) {
+        if (candidate.kind !== "address") {
+          continue;
+        }
+        expect(candidate.address).toMatch(/^千代田区.+[0-9]+番$/u);
+        expect(candidate.name).toBe(candidate.address);
+      }
+    }
+  });
+
+  it("区名を付けた名前でも索引の地点に当たる", () => {
+    expect(searcher.search("千代田区役所")[0]?.name).toBe("千代田区役所");
+    expect(searcher.search("東京都千代田区役所")[0]?.name).toBe("千代田区役所");
+  });
+
+  it("区名を落とした語の一致は元の語の一致より後ろに並ぶ", () => {
+    const result = searcher.search("千代田区役所");
+    const original = result.findIndex((candidate) => candidate.name === "千代田区役所");
+    const stripped = result.findIndex((candidate) => candidate.name === "役所別館");
+    expect(original).toBe(0);
+    expect(stripped).toBeGreaterThan(original);
+  });
+
+  it("区名を落としても2文字に満たない語では照合しない", () => {
+    const result = searcher.search("千代田区役");
+    expect(result.map((candidate) => candidate.name)).not.toContain("役所別館");
+  });
+
+  it("番地を確定した検索はその街区だけを返す", () => {
+    expect(searcher.search("隼町4-1").map((candidate) => candidate.name)).toEqual([
+      "千代田区隼町4番",
+    ]);
+  });
+
+  it("住所と同名の名前がある町では住所を先に並べる", () => {
+    expect(searcher.search("隼町").map((candidate) => candidate.name)).toEqual([
+      "千代田区隼町1番",
+      "千代田区隼町4番",
+      "隼町",
+    ]);
+  });
+
+  it("同じ町名の駅があるときは完全一致の駅を先頭に置く", () => {
+    const result = searcher.search("麹町");
+    expect(result[0]).toMatchObject({ name: "麹町", kind: "station" });
+    expect(result[1]?.kind).toBe("address");
   });
 
   it("空の検索語には候補を返さない", () => {

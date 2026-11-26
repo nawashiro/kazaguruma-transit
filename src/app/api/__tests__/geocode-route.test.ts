@@ -58,6 +58,26 @@ describe("/api/geocode", () => {
     expect(body.results[0].address).toBe("千代田区霞が関一丁目1番");
   });
 
+  it("町名の途中でも住所候補を返す", async () => {
+    const response = await GET(request("q=%E5%8D%83%E4%BB%A3%E7%94%B0%E5%8C%BA%E7%A5%9E%E7%94%B0%E5%92%8C%E6%B3%89%E7%94%BA"));
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    const addresses = body.results
+      .filter((entry: { kind: string }) => entry.kind === "address")
+      .map((entry: { address: string }) => entry.address);
+    expect(addresses).toEqual([
+      "千代田区神田和泉町1番",
+      "千代田区神田和泉町2番",
+      "千代田区神田和泉町3番",
+    ]);
+  });
+
+  it("街区のあとの号を街区として読まない", async () => {
+    const response = await GET(request("q=%E9%9A%BC%E7%94%BA4-1"));
+    const body = await response.json();
+    expect(body.results[0].address).toBe("千代田区隼町4番");
+  });
+
   it("候補が無いときも成功として空配列を返す", async () => {
     const response = await GET(request("q=%E3%81%82%E3%81%82%E3%81%82%E3%81%82"));
     const body = await response.json();

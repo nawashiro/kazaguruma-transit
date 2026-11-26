@@ -115,27 +115,21 @@ describe("normalizeAddressQuery", () => {
 });
 
 describe("parseAddressQuery", () => {
-  it("丁目を持つ町名の番地を町名・丁目・街区に分ける", () => {
+  it("町名に続く数字を並びのまま取り出す", () => {
     expect(parseAddressQuery("霞が関-1-1")).toEqual({
       town: "霞が関",
-      chome: 1,
-      block: "1",
+      numbers: ["1", "1"],
+    });
+    expect(parseAddressQuery("隼町-4-1")).toEqual({
+      town: "隼町",
+      numbers: ["4", "1"],
     });
   });
 
-  it("丁目を省略した番地を町名と街区に分ける", () => {
-    expect(parseAddressQuery("神田和泉町-1")).toEqual({
-      town: "神田和泉町",
-      chome: 0,
-      block: "1",
-    });
-  });
-
-  it("番地の無い町名は街区を持たない", () => {
+  it("数字を持たない町名は空の並びを返す", () => {
     expect(parseAddressQuery("神田和泉町")).toEqual({
       town: "神田和泉町",
-      chome: 0,
-      block: null,
+      numbers: [],
     });
   });
 

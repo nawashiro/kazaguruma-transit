@@ -110,34 +110,27 @@ export function normalizeAddressQuery(input: string): string {
 export interface AddressQueryParts {
   /** 入力に含まれる町名。丁目は含まない。 */
   town: string;
-  /** 丁目。指定が無い、または町名が丁目を持たない場合は 0。 */
-  chome: number;
-  /** 街区符号。無い場合は null。 */
-  block: string | null;
+  /** 町名に続く数字の並び。それぞれの意味は町の構造で決まる。 */
+  numbers: string[];
 }
 
 /**
- * 正規化済みの入力を町名・丁目・街区へ分解する。町名が丁目を持つかは
- * 索引側にしか分からないため、ここでは数字の並びから取り出せる形だけを
- * 作り、どちらの解釈を採るかは呼び出し側に委ねる。
+ * 正規化済みの入力を町名と数字の並びへ分解する。数字の意味は町が丁目を
+ * 持つかで変わるため、ここでは並びを取り出すだけにして、解釈は呼び出し側に
+ * 委ねる。町名に `-` を含む町はないため、最初の区切りより前を町名とする。
  */
 export function parseAddressQuery(normalized: string): AddressQueryParts | null {
   if (!normalized) {
     return null;
   }
-  const match = normalized.match(/^(.*?)([0-9]+)(?:-([0-9]+))?$/u);
-  if (!match) {
-    return { town: normalized, chome: 0, block: null };
-  }
-  const [, rawTown, first, second] = match;
-  const town = rawTown.replace(/-$/u, "");
+  const [town, ...numbers] = normalized.split("-");
   if (!town) {
     return null;
   }
-  if (second !== undefined) {
-    return { town, chome: Number(first), block: second };
+  if (numbers.some((value) => !/^[0-9]+$/u.test(value))) {
+    return null;
   }
-  return { town, chome: 0, block: first };
+  return { town, numbers };
 }
 
 /**

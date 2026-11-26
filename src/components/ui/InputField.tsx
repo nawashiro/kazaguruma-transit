@@ -15,8 +15,13 @@ interface InputFieldProps {
   description?: string;
   name?: string;
   maxLength?: number;
-  endAdornment?: React.ReactNode;
   label?: string;
+  autoComplete?: string;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+  onCompositionStart?: React.CompositionEventHandler<HTMLInputElement>;
+  onCompositionEnd?: React.CompositionEventHandler<HTMLInputElement>;
+  controls?: string;
 }
 
 export default function InputField({
@@ -31,8 +36,13 @@ export default function InputField({
   description,
   name,
   maxLength,
-  endAdornment,
   label,
+  autoComplete = "true",
+  onBlur,
+  onKeyDown,
+  onCompositionStart,
+  onCompositionEnd,
+  controls,
 }: InputFieldProps) {
   const uniqueId = useId();
   const inputId = `input-${uniqueId}`;
@@ -58,28 +68,28 @@ export default function InputField({
           {description}
         </p>
       )}
-      <div className={endAdornment ? "join min-w-0 w-full" : ""}>
-        <input
-          id={inputId}
-          type={type}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          disabled={disabled}
-          required={required}
-          name={name}
-          maxLength={maxLength}
-          className={`input min-w-0 text-base min-h-[44px] leading-relaxed ${hasError ? "input-error" : ""
-            } ${endAdornment ? "join-item flex-1" : "w-full"} ${disabled ? "cursor-not-allowed" : ""
-            }`}
-          aria-invalid={hasError ? "true" : undefined}
-          aria-required={required ? "true" : undefined}
-          aria-describedby={ariaDescribedby}
-          data-testid={testId}
-          autoComplete="true"
-        />
-        {endAdornment}
-      </div>
+      <input
+        id={inputId}
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        required={required}
+        name={name}
+        maxLength={maxLength}
+        className={`input min-w-0 w-full text-base min-h-[44px] leading-relaxed ${hasError ? "input-error" : ""} ${disabled ? "cursor-not-allowed" : ""}`}
+        aria-invalid={hasError ? "true" : undefined}
+        aria-required={required ? "true" : undefined}
+        aria-describedby={ariaDescribedby}
+        data-testid={testId}
+        autoComplete={autoComplete}
+        aria-controls={controls}
+        onBlur={onBlur}
+        onKeyDown={onKeyDown}
+        onCompositionStart={onCompositionStart}
+        onCompositionEnd={onCompositionEnd}
+      />
       {hasError && (
         <div
           id={errorId}

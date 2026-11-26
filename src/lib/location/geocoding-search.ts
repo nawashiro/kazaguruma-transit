@@ -1,6 +1,6 @@
 import type { Location } from "@/types/core";
 
-export type GeocodingStatus = "idle" | "loading" | "success" | "empty" | "rate-limited" | "error";
+export type GeocodingStatus = "idle" | "loading" | "success" | "empty" | "error";
 
 export interface GeocodeCandidate {
   name: string;
@@ -14,14 +14,12 @@ export interface GeocodingSearchResult {
   candidates: GeocodeCandidate[];
   status: GeocodingStatus;
   error?: string;
-  isRateLimited?: boolean;
 }
 
 export interface GeocodingReverseResult {
   location?: Location;
   status: GeocodingStatus;
   error?: string;
-  isRateLimited?: boolean;
 }
 
 interface GeocodeSearchResponse {
@@ -59,9 +57,6 @@ export async function searchGeocoding(
   try {
     const response = await fetcher(`/api/geocode?q=${encodeURIComponent(query)}`);
     const data = (await response.json()) as GeocodeSearchResponse;
-    if (response.status === 429) {
-      return { candidates: [], status: "rate-limited", isRateLimited: true };
-    }
     if (!response.ok) {
       return {
         candidates: [],
@@ -101,9 +96,6 @@ export async function reverseGeocoding(
   try {
     const response = await fetcher(`/api/geocode?lat=${lat}&lng=${lng}`);
     const data = (await response.json()) as GeocodeReverseResponse;
-    if (response.status === 429) {
-      return { status: "rate-limited", isRateLimited: true };
-    }
     if (!response.ok || !data.location) {
       return {
         status: "empty",

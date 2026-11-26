@@ -8,14 +8,18 @@ interface LocationCandidatesProps {
   candidates: GeocodeCandidate[];
   onSelect: (candidate: GeocodeCandidate) => void;
   label: string;
+  id?: string;
 }
 
 export default function LocationCandidates({
   candidates,
   onSelect,
   label,
+  id,
 }: LocationCandidatesProps) {
   const headingId = useId();
+  const generatedListId = useId();
+  const listId = id ?? generatedListId;
   if (candidates.length === 0) {
     return null;
   }
@@ -25,7 +29,10 @@ export default function LocationCandidates({
       <p id={headingId} className="font-bold ruby-text">
         {label}の候補から選ぶ
       </p>
-      <ul aria-labelledby={headingId} className="min-w-0 space-y-1">
+      <p role="status" className="text-base">
+        {candidates.length}件の候補があります
+      </p>
+      <ul id={listId} aria-labelledby={headingId} className="min-w-0 space-y-1">
         {candidates.map((candidate) => (
           <li key={`${candidate.name}-${candidate.lat}-${candidate.lng}`} className="min-w-0">
             <button

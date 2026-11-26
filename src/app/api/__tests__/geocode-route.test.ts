@@ -96,18 +96,17 @@ describe("/api/geocode", () => {
     expect((await response.json()).error).toMatch(/q/);
   });
 
-  it("利用制限に達したら経路検索と同じ429を返す", async () => {
+  it("同じ利用元から繰り返し検索しても429を返さない", async () => {
     db.getRateLimitByIp.mockResolvedValue({
       ip: "192.0.2.1",
       count: 600,
       lastAccess: Date.now(),
     });
-    const response = await GET(request("q=%E5%8D%83%E4%BB%A3%E7%94%B0"));
-    expect(response.status).toBe(429);
-    expect(await response.json()).toEqual({
-      success: false,
-      error: "レート制限を超えました。1時間後に再度お試しください。",
-      limitExceeded: true,
-    });
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const response = await GET(request("q=%E5%8D%83%E4%BB%A3%E7%94%B0"));
+      expect(response.status).toBe(200);
+      expect((await response.json()).results.length).toBeGreaterThan(0);
+    }
+    expect(db.incrementRateLimit).not.toHaveBeenCalled();
   });
 });

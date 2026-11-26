@@ -51,13 +51,16 @@ describe("searchGeocoding", () => {
     expect(result.error).toMatch(/見つかりません/);
   });
 
-  it("429を利用制限として扱う", async () => {
+  it("失敗した応答は429でもエラーとして扱う", async () => {
     const fetcher = jest.fn(async () =>
-      jsonResponse(429, { success: false, error: "限界", limitExceeded: true }),
+      jsonResponse(429, { success: false, error: "混雑しています" }),
     ) as unknown as typeof fetch;
     const result = await searchGeocoding("千代田区役所", fetcher);
-    expect(result.status).toBe("rate-limited");
-    expect(result.isRateLimited).toBe(true);
+    expect(result).toEqual({
+      candidates: [],
+      status: "error",
+      error: "混雑しています",
+    });
   });
 
   it("サーバーのエラーをそのまま伝える", async () => {

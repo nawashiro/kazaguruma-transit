@@ -33,7 +33,7 @@ cp app-config.json.example app-config.local.json
 | イベント | 送る条件 | パラメーター |
 |---|---|---|
 | `route_search` | 入力画面から検索し、結果ページに検索結果を表示した | `elapsed_ms` |
-| `place_search` | 住所検索が終わった | `field`、`outcome` |
+| `place_search` | 住所検索を確定して結果が返った | `field`、`outcome` |
 | `place_select` | 地点を確定した | `field`、`source` |
 | `gps_result` | GPSの取得が終わった | `outcome` |
 | `validation_failed` | 地点が未確定のまま送信した | `missing` |
@@ -42,13 +42,13 @@ cp app-config.json.example app-config.local.json
 パラメーターの値は次のとおりです。
 
 - `field`: `origin`、`destination`
-- `outcome`（住所検索）: `found`、`not_found`、`failed`、`rate_limited`
+- `outcome`（住所検索）: `found`、`not_found`、`failed`
 - `outcome`（GPS）: `granted`、`denied`、`timeout`、`unsupported`
 - `source`: `address`、`catalog`、`gps`、`detail`
 - `missing`: `origin`、`destination`、`both`
 - `action`: `pdf`、`calendar`
 
-座標、住所、停留所名、入力した文字列はイベントへ含めません。
+入力中の候補表示は打鍵のたびに走るため、`place_search`を送りません。地点を確定したときの`place_select`だけを送ります。座標、住所、停留所名、入力した文字列はイベントへ含めません。
 
 イベントは`track`で送ります。
 

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "node:path";
 
-import { appRouterRateLimitMiddleware } from "../../../lib/api/rate-limit-middleware";
 import { logger } from "../../../utils/logger";
 import { loadGeocodeIndex } from "../../../lib/location/geocode-index";
 import { GeocodeSearcher } from "../../../lib/location/geocode-search";
@@ -33,7 +32,6 @@ interface GeocodeReverseResponse {
 interface GeocodeErrorResponse {
   success: false;
   error: string;
-  limitExceeded?: boolean;
 }
 
 let cachedSearcher: GeocodeSearcher | null = null;
@@ -57,11 +55,8 @@ function getSearcher(): GeocodeSearcher | null {
   return cachedSearcher;
 }
 
-function errorResponse(error: string, status: number, limitExceeded?: boolean) {
-  const body: GeocodeErrorResponse =
-    limitExceeded === undefined
-      ? { success: false, error }
-      : { success: false, error, limitExceeded };
+function errorResponse(error: string, status: number) {
+  const body: GeocodeErrorResponse = { success: false, error };
   return NextResponse.json(body, { status });
 }
 
@@ -75,11 +70,6 @@ function readCoordinate(value: string | null): number | null {
 
 export async function GET(req: NextRequest) {
   try {
-    const limitResponse = await appRouterRateLimitMiddleware(req);
-    if (limitResponse) {
-      return limitResponse;
-    }
-
     const { searchParams } = new URL(req.url);
     if (searchParams.has("address")) {
       return errorResponse(

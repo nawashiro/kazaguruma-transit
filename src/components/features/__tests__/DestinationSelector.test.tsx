@@ -8,11 +8,12 @@ import type { Location } from "@/types/core";
 
 jest.mock("@/lib/analytics/tracking", () => ({ track: jest.fn() }));
 
-const mockRouterPush = jest.fn();
-jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockRouterPush }) }));
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 const location: Location = { lat: 35.694, lng: 139.753, address: "千代田区役所" };
+const TYPED_AT_HEAD = [
+  { name: "千代田区役所", address: "千代田区九段南一丁目2番", lat: 35.694, lng: 139.753, kind: "public" },
+];
 const categories = [{ category: "公共施設", categoryId: "1302", locations: [{ name: location.address!, lat: location.lat, lng: location.lng }] }];
 
 function Selector({ validationError }: { validationError?: string }) {
@@ -35,19 +36,29 @@ function expectInputError() {
 describe("DestinationSelector", () => {
   beforeEach(() => { jest.clearAllMocks(); mockFetch.mockReset(); });
 
-  it("目的地のlegendとlabelを持ち、アイコンのみの検索submitを提供する", () => {
+  it("目的地のlegendとlabelを持ち、住所欄に検索ボタンを置かない", () => {
     const { container } = render(<Selector />);
     const group = screen.getByRole("group", { name: "目的地" });
     expect(group.tagName).toBe("FIELDSET");
     expect(group.querySelector("legend")).toHaveTextContent("目的地");
     const input = screen.getByRole("textbox", { name: "目的地" });
-    const button = within(group).getByRole("button", { name: "検索" });
-    expect(button).toHaveAttribute("type", "submit");
-    expect(button).toHaveAttribute("aria-label", "検索");
-    expect(button.textContent?.trim()).toBe("");
-    expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
-    expect(button.closest("form")).toContainElement(input);
+    expect(within(group).queryByRole("button", { name: "検索" })).not.toBeInTheDocument();
+    expect(input.closest("form")).toContainElement(input);
     expect(container.querySelector(".card")).toBeNull();
+  });
+
+  it("住所欄の自動補完を切り、候補が出たときだけ一覧と関連付ける", async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ success: true, results: TYPED_AT_HEAD }) });
+    render(<Selector />);
+    const input = screen.getByRole("textbox", { name: "目的地" });
+    expect(input).toHaveAttribute("autocomplete", "off");
+    expect(input).not.toHaveAttribute("aria-controls");
+
+    fireEvent.change(input, { target: { value: "千代田" } });
+
+    const list = await screen.findByRole("list", { name: "目的地の候補から選ぶ" }, { timeout: 2000 });
+    expect(list.id).toBeTruthy();
+    expect(input.getAttribute("aria-controls")).toBe(list.id);
   });
 
   it("名前で検索をよく使う施設より先に表示する", () => {
@@ -119,21 +130,75 @@ describe("DestinationSelector", () => {
 
   it("空の住所では取得せず入力のエラーを表示する", async () => {
     render(<Selector />);
-    fireEvent.submit(screen.getByRole("button", { name: "検索" }).closest("form")!);
+    fireEvent.submit(screen.getByRole("textbox", { name: "目的地" }).closest("form")!);
     expect(await screen.findByText("住所を入力してください")).toBeInTheDocument();
     expect(mockFetch).not.toHaveBeenCalled();
     expect(screen.getByRole("textbox", { name: "目的地" })).toHaveAttribute("aria-invalid", "true");
   });
+});
 
-  it("429では一度だけ利用制限へ案内する", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({ limitExceeded: true }) });
-    const view = render(<Selector />);
-    await submitAddress();
-    await waitFor(() => expect(mockRouterPush).toHaveBeenCalledWith("/rate-limit?source=home"));
-    view.rerender(<Selector />);
-    expect(mockRouterPush).toHaveBeenCalledTimes(1);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("textbox", { name: "目的地" })).toHaveValue("神田駅");
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+describe("入力中の候補表示", () => {
+  const TYPED = [
+    { name: "神田駅", address: "千代田区鍛冶町二丁目6番", lat: 35.68, lng: 139.76, kind: "station" },
+  ];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFetch.mockReset();
+  });
+
+  it("決定ボタンを押さずに入力だけで候補が出て、選ぶと確定する", async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ success: true, results: TYPED }) });
+    render(<Selector />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "目的地" }), { target: { value: "神田" } });
+
+    const group = screen.getByRole("group", { name: "目的地" });
+    const options = await within(group).findAllByRole("button", { name: /神田駅/ }, { timeout: 2000 });
+    expect(options).toHaveLength(1);
+    expect(screen.queryByTestId("selected-destination")).not.toBeInTheDocument();
+
+    fireEvent.click(options[0]);
+
+    expect(await screen.findByTestId("selected-destination")).toHaveTextContent("神田駅");
+    expect(mockFetch).toHaveBeenCalledWith(`/api/geocode?q=${encodeURIComponent("神田")}`);
+  });
+
+  it("候補が出たことを件数つきで読み上げる", async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ success: true, results: TYPED }) });
+    render(<Selector />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "目的地" }), { target: { value: "神田" } });
+
+    expect(await screen.findByText("1件の候補があります", undefined, { timeout: 2000 })).toBeInTheDocument();
+  });
+
+  it("Escで候補を閉じても入力は残る", async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ success: true, results: TYPED }) });
+    render(<Selector />);
+    const input = screen.getByRole("textbox", { name: "目的地" });
+
+    fireEvent.change(input, { target: { value: "神田" } });
+    const group = screen.getByRole("group", { name: "目的地" });
+    await within(group).findAllByRole("button", { name: /神田駅/ }, { timeout: 2000 });
+
+    fireEvent.keyDown(input, { key: "Escape" });
+
+    expect(within(group).queryAllByRole("button", { name: /神田駅/ })).toHaveLength(0);
+    expect(input).toHaveValue("神田");
+  });
+
+  it("入力欄を離れると候補なしのエラーを入力に関連付ける", async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ success: true, results: [] }) });
+    render(<Selector />);
+    const input = screen.getByRole("textbox", { name: "目的地" });
+
+    fireEvent.change(input, { target: { value: "存在しない場所" } });
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled(), { timeout: 2000 });
+    fireEvent.blur(input);
+
+    await waitFor(() => expect(input).toHaveAttribute("aria-invalid", "true"));
+    expect(input).toHaveAccessibleDescription(expect.stringMatching(/見つかりません|ありません/));
+    expect(input).toHaveValue("存在しない場所");
   });
 });

@@ -8,8 +8,6 @@ import type { Location } from "@/types/core";
 
 jest.mock("@/lib/analytics/tracking", () => ({ track: jest.fn() }));
 
-const mockRouterPush = jest.fn();
-jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockRouterPush }) }));
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 const mockGeolocation = { getCurrentPosition: jest.fn() };
@@ -36,18 +34,14 @@ const TWO_CANDIDATES = [
 describe("OriginSelector", () => {
   beforeEach(() => { jest.clearAllMocks(); mockFetch.mockReset(); mockGeolocation.getCurrentPosition.mockReset(); });
 
-  it("出発地のfieldsetとラベル、検索submit、GPSの可視名を提供する", () => {
+  it("出発地のfieldsetとラベル、GPSの可視名を提供する", () => {
     const { container } = render(<Selector />);
     const group = screen.getByRole("group", { name: "出発地" });
     expect(group.tagName).toBe("FIELDSET");
     expect(group.querySelector("legend")).toHaveTextContent("出発地");
     const input = screen.getByRole("textbox", { name: "出発地" });
-    const search = within(group).getByRole("button", { name: "検索" });
-    expect(search).toHaveAttribute("type", "submit");
-    expect(search).toHaveAttribute("aria-label", "検索");
-    expect(search.textContent?.trim()).toBe("");
-    expect(search.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
-    expect(search.closest("form")).toContainElement(input);
+    expect(within(group).queryByRole("button", { name: "検索" })).not.toBeInTheDocument();
+    expect(input.closest("form")).toContainElement(input);
     const gps = within(group).getByRole("button", { name: "端末のGPSを許可する" });
     expect(gps).toHaveTextContent("端末のGPSを許可する");
     expect(gps).toHaveAccessibleName("端末のGPSを許可する");
@@ -127,7 +121,7 @@ describe("OriginSelector", () => {
     fireEvent.click(screen.getByRole("button", { name: "端末のGPSを許可する" }));
     expect(await screen.findByText(/位置情報の取得に失敗しました/)).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "出発地" })).toHaveValue("神田駅");
-    expect(screen.getByRole("button", { name: "検索" })).not.toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "出発地" })).not.toBeDisabled();
     expect(track).toHaveBeenCalledWith("gps_result", { outcome: "denied" });
   });
 
@@ -151,31 +145,9 @@ describe("OriginSelector", () => {
 
   it("空の住所では取得せず入力のエラーを表示する", async () => {
     render(<Selector />);
-    fireEvent.submit(screen.getByRole("button", { name: "検索" }).closest("form")!);
+    fireEvent.submit(screen.getByRole("textbox", { name: "出発地" }).closest("form")!);
     expect(await screen.findByText("住所を入力してください")).toBeInTheDocument();
     expect(mockFetch).not.toHaveBeenCalled();
     expect(screen.getByRole("textbox", { name: "出発地" })).toHaveAttribute("aria-invalid", "true");
-  });
-
-  it("逆引きの429でも利用制限へ案内し地点を確定しない", async () => {
-    mockGeolocation.getCurrentPosition.mockImplementation(success => success({ coords: { latitude: 35.68, longitude: 139.76 } }));
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({ limitExceeded: true }) });
-    render(<Selector />);
-    fireEvent.click(screen.getByRole("button", { name: "端末のGPSを許可する" }));
-    await waitFor(() => expect(mockRouterPush).toHaveBeenCalledWith("/rate-limit?source=home"));
-    expect(mockRouterPush).toHaveBeenCalledTimes(1);
-    expect(screen.queryByTestId("selected-origin")).not.toBeInTheDocument();
-  });
-
-  it("429では一度だけ利用制限へ案内する", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({ limitExceeded: true }) });
-    const view = render(<Selector />);
-    await submitAddress();
-    await waitFor(() => expect(mockRouterPush).toHaveBeenCalledWith("/rate-limit?source=home"));
-    view.rerender(<Selector />);
-    expect(mockRouterPush).toHaveBeenCalledTimes(1);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("textbox", { name: "出発地" })).toHaveValue("神田駅");
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

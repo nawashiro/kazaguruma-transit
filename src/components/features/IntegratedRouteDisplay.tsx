@@ -50,7 +50,7 @@ function AccentEdge() {
 }
 
 function SecondaryEdge() {
-  return <hr className="bg-secondary" />;
+  return <hr className="bg-secondary-content dark:bg-secondary" />;
 }
 
 function BusNode() {

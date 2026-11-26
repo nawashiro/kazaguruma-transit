@@ -68,6 +68,9 @@ describe("IntegratedRouteDisplay", () => {
   const timelineRows = () =>
     [...document.querySelectorAll("ol.timeline > li")].map((li) => li.textContent);
 
+  const walkEdge = "bg-accent";
+  const rideEdge = "bg-secondary-content dark:bg-secondary";
+
   const edgeClasses = (li: Element) =>
     [...li.children]
       .filter((child) => child.tagName === "HR")
@@ -132,17 +135,17 @@ describe("IntegratedRouteDisplay", () => {
       />
     );
     const rows = [...document.querySelectorAll("ol.timeline > li")];
-    expect(edgeClasses(rows[0])).toEqual(["bg-accent"]);
-    expect(edgeClasses(rows[1])).toEqual(["bg-accent", "bg-accent"]);
-    expect(edgeClasses(rows[2])).toEqual(["bg-accent", "bg-secondary"]);
-    expect(edgeClasses(rows[3])).toEqual(["bg-secondary", "bg-secondary"]);
-    expect(edgeClasses(rows[4])).toEqual(["bg-secondary", "bg-accent"]);
-    expect(edgeClasses(rows[5])).toEqual(["bg-accent", "bg-accent"]);
-    expect(edgeClasses(rows[6])).toEqual(["bg-accent", "bg-secondary"]);
-    expect(edgeClasses(rows[7])).toEqual(["bg-secondary", "bg-secondary"]);
-    expect(edgeClasses(rows[8])).toEqual(["bg-secondary", "bg-accent"]);
-    expect(edgeClasses(rows[9])).toEqual(["bg-accent", "bg-accent"]);
-    expect(edgeClasses(rows[10])).toEqual(["bg-accent"]);
+    expect(edgeClasses(rows[0])).toEqual([walkEdge]);
+    expect(edgeClasses(rows[1])).toEqual([walkEdge, walkEdge]);
+    expect(edgeClasses(rows[2])).toEqual([walkEdge, rideEdge]);
+    expect(edgeClasses(rows[3])).toEqual([rideEdge, rideEdge]);
+    expect(edgeClasses(rows[4])).toEqual([rideEdge, walkEdge]);
+    expect(edgeClasses(rows[5])).toEqual([walkEdge, walkEdge]);
+    expect(edgeClasses(rows[6])).toEqual([walkEdge, rideEdge]);
+    expect(edgeClasses(rows[7])).toEqual([rideEdge, rideEdge]);
+    expect(edgeClasses(rows[8])).toEqual([rideEdge, walkEdge]);
+    expect(edgeClasses(rows[9])).toEqual([walkEdge, walkEdge]);
+    expect(edgeClasses(rows[10])).toEqual([walkEdge]);
   });
 
   it("出発地と目的地をGoogleマップの地点リンクで示す", () => {

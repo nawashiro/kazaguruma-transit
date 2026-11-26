@@ -449,8 +449,12 @@ export function prepareWalkSearch(graph: WalkGraph, from: LatLng): PreparedWalk 
 }
 
 /**
- * 準備済みの探索から、到着点までの徒歩距離と折れ線を返す。折れ線は起点、
- * 通過したノード、到着点の順に並べる。
+ * 準備済みの探索から、到着点までの徒歩距離と折れ線を返す。
+ *
+ * 折れ線は道の上を通る部分だけで、通過したノードを起点側から順に並べる。
+ * 起点と到着点から最寄りノードまでの接続区間は実在の道ではなく、地図に
+ * 引くと歩ける道として読まれるため、折れ線には含めない。接続区間は距離
+ * にだけ含める。両端が同じノードに接続するときは、折れ線はその1点になる。
  */
 export function walkLeg(
   graph: WalkGraph,
@@ -469,22 +473,23 @@ export function walkLeg(
     return { distanceKm, path: [] };
   }
   const previous = prepared.search.previous;
-  const path: LngLat[] = [[prepared.from.lng, prepared.from.lat]];
+  const path: LngLat[] = [];
+  let nodes: number[] = [toSnap.node];
   if (previous !== null) {
+    nodes = [];
     let cursor = toSnap.node;
-    const chain: number[] = [];
     while (cursor !== -1) {
-      chain.push(cursor);
+      nodes.push(cursor);
       if (cursor === prepared.snap.node) {
         break;
       }
       cursor = previous[cursor];
     }
-    for (const node of chain.reverse()) {
-      path.push([graph.longitude[node], graph.latitude[node]]);
-    }
+    nodes.reverse();
   }
-  path.push([to.lng, to.lat]);
+  for (const node of nodes) {
+    path.push([graph.longitude[node], graph.latitude[node]]);
+  }
   return { distanceKm, path };
 }
 

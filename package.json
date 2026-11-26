@@ -59,6 +59,7 @@
     "gtfs": "4.20.1",
     "iron-session": "^8.0.4",
     "isomorphic-fetch": "^3.0.0",
+    "lucide": "^1.81.0",
     "lucide-react": "^1.35.0",
     "luxon": "^3.6.0",
     "maplibre-gl": "^5.24.1",

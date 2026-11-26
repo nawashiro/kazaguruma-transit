@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import { generateRouteHTML } from "@/lib/pdf/route-html";
 import { buildPrintMapDrawing } from "@/lib/pdf/print-map";
 import { collectPrintMapLegs } from "@/lib/pdf/route-html";
+import { getWalkNetwork, prepareWalkSearch, walkLeg } from "@/lib/transit/walk-network";
 
 describe("PDF route input contract", () => {
   it("keeps legacy fields optional while requiring route meaning fields", () => {
@@ -123,16 +124,69 @@ describe("徒歩経路の折れ線", () => {
     const origin = legs.find((leg) => leg.id === "origin");
     const drawing = buildPrintMapDrawing(origin!);
 
-    expect(drawing.followsWalkNetwork).toBe(true);
+    expect(drawing.hasLine).toBe(true);
     expect(drawing.path).toHaveLength(3);
   });
 
-  it("折れ線を渡さないと始点と終点を結ぶ破線の対象になる", async () => {
+  it("折れ線を渡さないと線を描かない", async () => {
     const legs = collectPrintMapLegs(base);
     const origin = legs.find((leg) => leg.id === "origin");
     const drawing = buildPrintMapDrawing(origin!);
 
-    expect(drawing.followsWalkNetwork).toBe(false);
-    expect(drawing.path).toHaveLength(2);
+    expect(drawing.hasLine).toBe(false);
+    expect(drawing.path).toEqual([]);
+  });
+});
+
+describe("麹町出張所を目的地にした地図", () => {
+  it("降車停留所から目的地までの折れ線が1点になり、往復の線を描かない", () => {
+    const graph = getWalkNetwork();
+    const stop = { lat: 35.68577, lng: 139.739865 };
+    const destination = { lat: 35.6857645, lng: 139.7398931 };
+    const leg = walkLeg(graph, prepareWalkSearch(graph, stop), destination);
+
+    expect(leg).not.toBeNull();
+    const path = (leg as NonNullable<typeof leg>).path;
+    expect(path).toEqual([[139.740246, 35.685814]]);
+
+    const legs = collectPrintMapLegs({
+      originStop: {
+        stopId: "STP_000001_008",
+        stopName: "麹町出張所",
+        distance: 67,
+        stop_lat: stop.lat,
+        stop_lon: stop.lng,
+      },
+      destinationStop: {
+        stopId: "STP_000001_008",
+        stopName: "麹町出張所",
+        distance: 67,
+        stop_lat: stop.lat,
+        stop_lon: stop.lng,
+      },
+      routes: [
+        {
+          routeId: "000001",
+          routeName: "麹町ルート",
+          routeShortName: "",
+          routeLongName: "麹町ルート",
+          routeColor: "#000000",
+          routeTextColor: "#ffffff",
+        },
+      ],
+      type: "direct",
+      transfers: 0,
+      originLat: stop.lat,
+      originLng: stop.lng,
+      destLat: destination.lat,
+      destLng: destination.lng,
+      walkPaths: { originToStop: path, stopToDestination: path },
+    });
+
+    const destinationLeg = buildPrintMapDrawing(
+      legs.find((entry) => entry.id === "destination")!,
+    );
+    expect(destinationLeg.hasLine).toBe(false);
+    expect(destinationLeg.path).toHaveLength(1);
   });
 });

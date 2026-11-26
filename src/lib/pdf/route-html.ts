@@ -72,7 +72,7 @@ export interface GeneratePdfRequest {
   destLat?: number;
   destLng?: number;
   selectedDateTime?: string;
-  /** 徒歩区間の折れ線。与えられた場合はその線を、無ければ2地点を結ぶ直線を描く。 */
+  /** 徒歩区間の折れ線。道の上の座標だけを渡し、2点に満たないときは線を描かない。 */
   walkPaths?: {
     originToStop?: Array<[number, number]>;
     stopToDestination?: Array<[number, number]>;
@@ -366,10 +366,15 @@ export function collectPrintMapLegs(data: GeneratePdfRequest): PrintMapLeg[] {
   ) {
     legs.push({
       id: "origin",
-      start: { label: "出発地", position: [data.originLng, data.originLat] },
+      start: {
+        label: "出発地",
+        position: [data.originLng, data.originLat],
+        kind: "place",
+      },
       end: {
         label: data.originStop.stopName,
         position: [Number(originStopLng), Number(originStopLat)],
+        kind: "stop",
       },
       path: data.walkPaths?.originToStop,
     });
@@ -390,8 +395,9 @@ export function collectPrintMapLegs(data: GeneratePdfRequest): PrintMapLeg[] {
       start: {
         label: data.destinationStop.stopName,
         position: [Number(destinationStopLng), Number(destinationStopLat)],
+        kind: "stop",
       },
-      end: { label: "目的地", position: [data.destLng, data.destLat] },
+      end: { label: "目的地", position: [data.destLng, data.destLat], kind: "place" },
       path: data.walkPaths?.stopToDestination,
     });
   }

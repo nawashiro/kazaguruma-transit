@@ -202,9 +202,48 @@ describe("walkRoute", () => {
 
     expect(route).not.toBeNull();
     const path = (route as NonNullable<typeof route>).path;
-    expect(path[0]).toEqual([at(0).lng, at(0).lat]);
+    expect(path.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("折れ線の両端は道の上のノードで、地点そのものを含まない", () => {
+    const graph = buildWalkGraph(lineArtifact());
+    // ノード1の東へ約40メートル離れた地点から歩き始める。
+    const start = { lat: at(0).lat, lng: at(0).lng + 0.04 / KM_PER_LNG_DEGREE };
+    const route = walkRoute(graph, start, at(0.03, 0.02));
+
+    expect(route).not.toBeNull();
+    const path = (route as NonNullable<typeof route>).path;
+    const nodeCoordinates = new Set(
+      Array.from(graph.longitude, (lng, node) => `${lng},${graph.latitude[node]}`),
+    );
+    expect(path.every(([lng, lat]) => nodeCoordinates.has(`${lng},${lat}`))).toBe(true);
+    expect(path).not.toContainEqual([start.lng, start.lat]);
     expect(path[path.length - 1]).toEqual([at(0.03, 0.02).lng, at(0.03, 0.02).lat]);
-    expect(path.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("同じノードに接続する2地点の折れ線は1点になる", () => {
+    const graph = buildWalkGraph(lineArtifact());
+    // ノード3の東西3メートル。どちらも最寄りはノード3になる。
+    const from = { lat: at(0.02).lat, lng: at(0.02).lng - 0.003 / KM_PER_LNG_DEGREE };
+    const to = { lat: at(0.02).lat, lng: at(0.02).lng + 0.003 / KM_PER_LNG_DEGREE };
+
+    const route = walkRoute(graph, from, to);
+
+    expect(route).not.toBeNull();
+    expect((route as NonNullable<typeof route>).path).toEqual([
+      [at(0.02).lng, at(0.02).lat],
+    ]);
+  });
+
+  it("同じノードに接続しても徒歩距離は両端の接続区間を含む", () => {
+    const graph = buildWalkGraph(lineArtifact());
+    const from = { lat: at(0.02).lat, lng: at(0.02).lng - 0.003 / KM_PER_LNG_DEGREE };
+    const to = { lat: at(0.02).lat, lng: at(0.02).lng + 0.003 / KM_PER_LNG_DEGREE };
+
+    const distance = walkRoute(graph, from, to)?.distanceKm as number;
+
+    expect(distance).toBeCloseTo(0.006, 2);
+    expect(distance).toBeGreaterThan(0.005);
   });
 
   it("経路の長さは直線距離より長い", () => {

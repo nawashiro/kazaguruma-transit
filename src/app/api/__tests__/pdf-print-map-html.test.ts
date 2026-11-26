@@ -119,6 +119,35 @@ describe("徒歩区間の座標の受け口", () => {
     expect(withoutMapFrames(withPaths)).toBe(withoutMapFrames(plain));
   });
 
+  it("折れ線が1点だけでも地図とマーカーを残す", async () => {
+    const legs = collectPrintMapLegs(
+      createRequest({
+        walkPaths: {
+          originToStop: [[139.7532, 35.6941]],
+          stopToDestination: [[139.7559, 35.6925]],
+        },
+      }),
+    );
+    expect(legs.find((leg) => leg.id === "origin")?.path).toHaveLength(1);
+
+    const html = await generateRouteHTML(
+      createRequest({
+        walkPaths: {
+          originToStop: [[139.7532, 35.6941]],
+          stopToDestination: [[139.7559, 35.6925]],
+        },
+      }),
+    );
+    expect(html).toContain('data-print-map="origin"');
+    expect(html).toContain('data-print-map="destination"');
+  });
+
+  it("地図の読み上げ名に両端の地名を含める", async () => {
+    const html = await generateRouteHTML(createRequest());
+    expect(html).toContain('aria-label="出発地から出発までの地図"');
+    expect(html).toContain('aria-label="到着から目的地までの地図"');
+  });
+
   it("折れ線の有無で描く線の座標が変わる", async () => {
     const plain = collectPrintMapLegs(createRequest());
     const withPaths = collectPrintMapLegs(

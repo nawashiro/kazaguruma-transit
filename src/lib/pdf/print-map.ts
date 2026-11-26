@@ -8,6 +8,8 @@
  * https://openfreemap.org/
  */
 
+import { Bus, MapPin, type IconNode } from "lucide";
+
 export const PRINT_MAP_STYLE_URL =
   "https://tiles.openfreemap.org/styles/positron";
 
@@ -25,15 +27,43 @@ export const PRINT_MAP_LINE_PAINT = {
   "line-width": 3,
 } as const;
 
+/** マーカーのアイコンの一辺（ピクセル）。 */
+export const PRINT_MAP_MARKER_ICON_SIZE = 16;
+
 /**
- * 折れ線が無いときの線。始点と終点を結ぶ直線は実在の歩行経路ではないため、
- * 破線で描き、実線の経路と読み違えられないようにする。
+ * Lucideの図形データをSVGの文字列にする。PuppeteerのページにはReactの
+ * 実行環境がないため、ここで文字列へ直してから渡す。lucideの
+ * `createElement`はDOMを要求するので、サーバー側では使えない。
  */
-export const PRINT_MAP_FALLBACK_LINE_PAINT = {
-  "line-color": "#111111",
-  "line-width": 3,
-  "line-dasharray": [2, 1.5],
-} as const;
+export function renderPrintMapIcon(iconNode: IconNode): string {
+  const shapes = iconNode
+    .map(([tag, attributes]) => {
+      const rendered = Object.entries(attributes)
+        .map(([name, value]) => `${name}="${escapePrintMapHtml(String(value))}"`)
+        .join(" ");
+      return `<${tag} ${rendered} />`;
+    })
+    .join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${PRINT_MAP_MARKER_ICON_SIZE}" height="${PRINT_MAP_MARKER_ICON_SIZE}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" class="print-map-icon">${shapes}</svg>`;
+}
+
+/**
+ * 地点マーカーのアイコン。currentColorで描くため、色はマーカーの文字色で決まる。
+ */
+export const PRINT_MAP_MARKER_ICONS: Readonly<
+  Record<PrintMapEndpointKind, string>
+> = {
+  stop: renderPrintMapIcon(Bus),
+  place: renderPrintMapIcon(MapPin),
+};
+
+/**
+ * 地図に写す範囲の最小の広がり（メートル）。地点が近いときに縮尺が寄り
+ * すぎて周りの街区が読めなくなるのを防ぐ。
+ */
+export const PRINT_MAP_MIN_SPAN_METERS = 200;
+
+const METERS_PER_DEGREE = 111_195;
 
 /**
  * ブラウザ側の上限が働かない場合に備えた、プロセス側の打ち切り。
@@ -50,14 +80,18 @@ export type LngLat = readonly [number, number];
 export interface PrintMapEndpoint {
   readonly label: string;
   readonly position: LngLat;
+  /** 停留所か、出発地・目的地か。マーカーのアイコンの形を決める。 */
+  readonly kind: PrintMapEndpointKind;
 }
+
+export type PrintMapEndpointKind = "stop" | "place";
 
 export interface PrintMapLeg {
   /** 地図の描画先を指す識別子。HTMLの data 属性になる。 */
   readonly id: string;
   readonly start: PrintMapEndpoint;
   readonly end: PrintMapEndpoint;
-  /** 徒歩経路の折れ線。無い場合は始点と終点を結ぶ直線を描く。 */
+  /** 徒歩ネットワークから得た折れ線。2点に満たないときは線を描かない。 */
   readonly path?: readonly LngLat[];
 }
 
@@ -74,8 +108,8 @@ export interface PrintMapDrawing {
   readonly path: readonly LngLat[];
   readonly start: PrintMapEndpoint;
   readonly end: PrintMapEndpoint;
-  /** 折れ線が実在の歩行経路か。falseのときは破線で描く。 */
-  readonly followsWalkNetwork: boolean;
+  /** 折れ線を実線で描くか。2点に満たない折れ線では線を引かない。 */
+  readonly hasLine: boolean;
 }
 
 export type PrintMapDrawResult =
@@ -94,21 +128,17 @@ export interface PrintMapPage {
   addStyleTag(options: { path: string }): Promise<unknown>;
   addScriptTag(options: { path: string }): Promise<unknown>;
   evaluate<R>(
-    pageFunction: (input: {
-      styleUrl: string;
-      drawings: readonly PrintMapDrawing[];
-      timeoutMs: number;
-      linePaint: Readonly<Record<string, unknown>>;
-      fallbackLinePaint: Readonly<Record<string, unknown>>;
-    }) => Promise<R>,
-    input: {
-      styleUrl: string;
-      drawings: readonly PrintMapDrawing[];
-      timeoutMs: number;
-      linePaint: Readonly<Record<string, unknown>>;
-      fallbackLinePaint: Readonly<Record<string, unknown>>;
-    },
+    pageFunction: (input: PrintMapRenderInput) => Promise<R>,
+    input: PrintMapRenderInput,
   ): Promise<R>;
+}
+
+export interface PrintMapRenderInput {
+  styleUrl: string;
+  drawings: readonly PrintMapDrawing[];
+  timeoutMs: number;
+  linePaint: Readonly<Record<string, unknown>>;
+  icons: Readonly<Record<PrintMapEndpointKind, string>>;
 }
 
 export function escapePrintMapHtml(value: string): string {
@@ -120,22 +150,32 @@ export function escapePrintMapHtml(value: string): string {
 }
 
 /**
- * 描く折れ線を返す。折れ線が与えられていればそれを、無ければ
- * 始点と終点を結ぶ2点を返す。描画側はこの戻り値だけを見る。
+ * 描く折れ線を返す。折れ線が無ければ空を返し、線を引かない。
  */
 export function printMapPath(leg: PrintMapLeg): readonly LngLat[] {
-  if (leg.path !== undefined && leg.path.length >= 2) {
-    return leg.path;
-  }
-  return [leg.start.position, leg.end.position];
+  return leg.path ?? [];
 }
 
-export function printMapBounds(path: readonly LngLat[]): PrintMapBounds {
+/** 折れ線を実線で描くか。2点に満たない折れ線は地図に引ける道を持たない。 */
+export function hasPrintMapLine(path: readonly LngLat[]): boolean {
+  return path.length >= 2;
+}
+
+/**
+ * 地図に写す範囲を返す。折れ線と両端の地点のすべてを含め、東西・南北の
+ * 幅が最小の広がりを下回るときは中心を保ったまま広げる。
+ */
+export function printMapBounds(leg: PrintMapLeg): PrintMapBounds {
+  const points: LngLat[] = [
+    ...printMapPath(leg),
+    leg.start.position,
+    leg.end.position,
+  ];
   let west = Number.POSITIVE_INFINITY;
   let south = Number.POSITIVE_INFINITY;
   let east = Number.NEGATIVE_INFINITY;
   let north = Number.NEGATIVE_INFINITY;
-  for (const [lng, lat] of path) {
+  for (const [lng, lat] of points) {
     west = Math.min(west, lng);
     east = Math.max(east, lng);
     south = Math.min(south, lat);
@@ -144,26 +184,41 @@ export function printMapBounds(path: readonly LngLat[]): PrintMapBounds {
   if (!Number.isFinite(west)) {
     return { west: 0, south: 0, east: 0, north: 0 };
   }
-  return { west, south, east, north };
-}
-
-/**
- * 折れ線が与えられたかを返す。与えられた折れ線は、2点だけでも実在の
- * 歩行経路である。破線にするのは、折れ線が無く始点と終点を結ぶときだけ。
- */
-export function followsWalkNetwork(leg: PrintMapLeg): boolean {
-  return leg.path !== undefined && leg.path.length >= 2;
+  const centerLat = (south + north) / 2;
+  const centerLng = (west + east) / 2;
+  const minimumLatitudeSpan = PRINT_MAP_MIN_SPAN_METERS / METERS_PER_DEGREE;
+  const minimumLongitudeSpan =
+    PRINT_MAP_MIN_SPAN_METERS /
+    (METERS_PER_DEGREE * Math.cos((centerLat * Math.PI) / 180));
+  return {
+    west:
+      east - west >= minimumLongitudeSpan
+        ? west
+        : centerLng - minimumLongitudeSpan / 2,
+    east:
+      east - west >= minimumLongitudeSpan
+        ? east
+        : centerLng + minimumLongitudeSpan / 2,
+    south:
+      north - south >= minimumLatitudeSpan
+        ? south
+        : centerLat - minimumLatitudeSpan / 2,
+    north:
+      north - south >= minimumLatitudeSpan
+        ? north
+        : centerLat + minimumLatitudeSpan / 2,
+  };
 }
 
 export function buildPrintMapDrawing(leg: PrintMapLeg): PrintMapDrawing {
   const path = printMapPath(leg);
   return {
     id: leg.id,
-    bounds: printMapBounds(path),
+    bounds: printMapBounds(leg),
     path,
     start: leg.start,
     end: leg.end,
-    followsWalkNetwork: followsWalkNetwork(leg),
+    hasLine: hasPrintMapLine(path),
   };
 }
 
@@ -183,21 +238,18 @@ export const PRINT_MAP_CSS = `
   .print-map-frame { position: relative; max-width: 600px; margin: 0 auto; }
   .print-map { width: 100%; height: 200px; border-radius: 0.25rem; border: 1px solid #e5e7eb; overflow: hidden; background-color: #f2f3f0; }
   .print-map-attribution { margin: 0.25rem 0 0; font-size: 0.75rem; color: #4b5563; }
-  .print-map-marker { transform: translate(-50%, -100%); background-color: #111111; color: #ffffff; border-radius: 9999px; padding: 1px 6px; font-size: 0.75rem; white-space: nowrap; }
-  .print-map-marker.is-end { background-color: #ffffff; color: #111111; border: 2px solid #111111; }
+  .print-map-marker { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 9999px; background-color: #111111; color: #ffffff; border: 2px solid #111111; box-sizing: border-box; }
+  .print-map-marker[data-kind="place"] { width: 30px; height: 30px; background-color: #ffffff; color: #111111; border-width: 3px; }
+  .print-map-marker svg { display: block; width: 16px; height: 16px; }
 `;
 
 /**
  * ページの中で地図を描く。この関数はpage.evaluateへ渡すため、
  * 外部の変数を参照せず、引数だけで完結させる。
  */
-async function renderPrintMapsInPage(input: {
-  styleUrl: string;
-  drawings: readonly PrintMapDrawing[];
-  timeoutMs: number;
-  linePaint: Readonly<Record<string, unknown>>;
-  fallbackLinePaint: Readonly<Record<string, unknown>>;
-}): Promise<{
+async function renderPrintMapsInPage(
+  input: PrintMapRenderInput,
+): Promise<{
   ok: boolean;
   failed: Array<{ id: string; reason: string }>;
 }> {
@@ -279,6 +331,9 @@ async function renderPrintMapsInPage(input: {
           }
 
           map.on("load", () => {
+            if (!drawing.hasLine) {
+              return;
+            }
             map.addSource("walk", {
               type: "geojson",
               data: {
@@ -291,17 +346,19 @@ async function renderPrintMapsInPage(input: {
               id: "walk",
               type: "line",
               source: "walk",
-              paint: drawing.followsWalkNetwork
-                ? input.linePaint
-                : input.fallbackLinePaint,
+              paint: input.linePaint,
             });
           });
 
-          for (const endpoint of [drawing.start, drawing.end]) {
+          const endpoints = [drawing.start, drawing.end].sort(
+            (first, second) => Number(first.kind === "stop") - Number(second.kind === "stop"),
+          );
+          for (const endpoint of endpoints) {
             const element = document.createElement("div");
-            element.className = `print-map-marker${endpoint === drawing.end ? " is-end" : ""}`;
-            element.textContent = endpoint.label;
-            new mapApi.Marker({ element, anchor: "bottom" })
+            element.className = "print-map-marker";
+            element.dataset.kind = endpoint.kind;
+            element.innerHTML = input.icons[endpoint.kind];
+            new mapApi.Marker({ element, anchor: "center" })
               .setLngLat(endpoint.position)
               .addTo(map);
           }
@@ -403,7 +460,7 @@ export async function drawPrintMaps(
       drawings,
       timeoutMs,
       linePaint: PRINT_MAP_LINE_PAINT,
-      fallbackLinePaint: PRINT_MAP_FALLBACK_LINE_PAINT,
+      icons: PRINT_MAP_MARKER_ICONS,
     }),
     new Promise<{ ok: false; reason: string; failed: Array<{ id: string; reason: string }> }>(
       (resolve) => {

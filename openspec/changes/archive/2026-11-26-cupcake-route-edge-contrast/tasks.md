@@ -2,7 +2,7 @@
 
 ## 1. 乗車区間の線の色
 
-- [x] 1.1 [IntegratedRouteDisplay.test.tsx](../../../src/components/features/__tests__/IntegratedRouteDisplay.test.tsx)のエッジ色の期待値を、`bg-secondary-content dark:bg-secondary`を含む形に書き換え、現行実装で失敗することを`npm run test:unit -- IntegratedRouteDisplay`で確認する
+- [x] 1.1 [IntegratedRouteDisplay.test.tsx](../../../../src/components/features/__tests__/IntegratedRouteDisplay.test.tsx)のエッジ色の期待値を、`bg-secondary-content dark:bg-secondary`を含む形に書き換え、現行実装で失敗することを`npm run test:unit -- IntegratedRouteDisplay`で確認する
 - [x] 1.2 `SecondaryEdge`の`<hr>`を`bg-secondary-content dark:bg-secondary`に変え、1.1のテストが通ることを確認する。`npm run test:unit -- IntegratedRouteDisplay`を実行する
 - [x] 1.3 徒歩区間（`bg-accent`）、停留所の丸、路線名の文字のクラスが変わっていないことを`git diff src/components/features/IntegratedRouteDisplay.tsx`で確認する
 

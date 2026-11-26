@@ -72,19 +72,39 @@ function collectClassNameViolations(
   return violations;
 }
 
+/**
+ * 属性のないspanでも、折り返す必要のある文字列を包むものは残す。
+ * DaisyUIのbadgeはinline-flexであり、rubyを直に置くと各rubyがflex項目に
+ * なって折り返さない。spanが1つのテキスト箱になることで、狭いセルでも
+ * ルビ付きの文字列が折り返せる。
+ */
+const WRAPPING_TEXT_SPAN_PATTERN = /<span\s*>([\s\S]*?)<\/span>/g;
+
 describe("Issue #106 span and DaisyUI gap contract", () => {
-  it("production TSXに属性のないspanを残さない", () => {
+  it("production TSXに、静的な文字列だけを包む属性なしのspanを残さない", () => {
     const violations = readProductionSources().flatMap((source) => {
       const matches: string[] = [];
-      const pattern = /<span\s*>/g;
+      WRAPPING_TEXT_SPAN_PATTERN.lastIndex = 0;
       let match: RegExpExecArray | null;
-      while ((match = pattern.exec(source.content)) !== null) {
+      while ((match = WRAPPING_TEXT_SPAN_PATTERN.exec(source.content)) !== null) {
+        if (match[1].includes("{")) continue;
         matches.push(`${source.path}:${lineNumber(source.content, match.index)}`);
       }
       return matches;
     });
 
     expect(violations).toEqual([]);
+  });
+
+  it("折り返す必要のあるルビ付き文字列は、spanで包んだままにする", () => {
+    const licenseSource = readFileSync(
+      path.resolve(process.cwd(), "src/app/license/page.tsx"),
+      "utf8",
+    );
+
+    expect(licenseSource).toMatch(
+      /<span>\{entry\.licenseName\}<\/span>/,
+    );
   });
 
   it("DaisyUIのbtnへgap-0を明示する", () => {

@@ -1,18 +1,27 @@
 import {
-  calculateGridWalkingDistanceKm,
   calculateJourneyDurationMinutes,
   calculateRouteSearchTime,
   calculateWalkingTimeMinutes,
 } from "../walking";
 
 describe("walking", () => {
-  test("直線距離を碁盤目上の最悪距離に補正する", () => {
-    expect(calculateGridWalkingDistanceKm(1)).toBeCloseTo(Math.SQRT2);
+  test("徒歩距離をそのまま歩行速度で割って徒歩時間にする", () => {
+    expect(calculateWalkingTimeMinutes(1, 3)).toBeCloseTo(20);
   });
 
-  test("補正後の距離から徒歩時間を計算する", () => {
-    expect(calculateWalkingTimeMinutes(1, 3)).toBeCloseTo(
+  test("600メートルの徒歩は時速3キロメートルで12分になる", () => {
+    expect(calculateWalkingTimeMinutes(0.6, 3)).toBeCloseTo(12);
+  });
+
+  test("距離に補正係数を掛け直さない", () => {
+    expect(calculateWalkingTimeMinutes(1, 3)).not.toBeCloseTo(
       Math.SQRT2 * 20
+    );
+  });
+
+  test("歩行速度が0以下なら拒否する", () => {
+    expect(() => calculateWalkingTimeMinutes(0.5, 0)).toThrow(
+      "歩行速度は0より大きい必要があります"
     );
   });
 

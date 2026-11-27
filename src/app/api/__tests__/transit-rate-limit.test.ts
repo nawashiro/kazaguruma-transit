@@ -40,7 +40,7 @@ describe("APIとページの共通利用制限", () => {
     expect(db.incrementRateLimit.mock.calls).toEqual([["a"], ["b"]]);
   });
   it("POST上限でも既存の429契約を保ち計算しない", async () => {
-    db.getRateLimitByIp.mockResolvedValue({ ip: "a", count: 60, lastAccess: Date.now() });
+    db.getRateLimitByIp.mockResolvedValue({ ip: "a", count: 600, lastAccess: Date.now() });
     const response = await POST(request("a"));
     expect(response.status).toBe(429);
     expect(await response.json()).toEqual({ success: false, error: "レート制限を超えました。1時間後に再度お試しください。", limitExceeded: true });
@@ -53,28 +53,28 @@ describe("APIとページの共通利用制限", () => {
     await GET(request(" ,proxy"));
     expect(db.incrementRateLimit.mock.calls).toEqual([["192.0.2.1"], ["192.0.2.3"], ["0.0.0.0"], [""]]);
   });
-  it("60回は拒否し、59回は加算する", async () => {
-    db.getRateLimitByIp.mockResolvedValue({ ip: "192.0.2.1", count: 60, lastAccess: Date.now() });
+  it("600回は拒否し、599回は加算する", async () => {
+    db.getRateLimitByIp.mockResolvedValue({ ip: "192.0.2.1", count: 600, lastAccess: Date.now() });
     const denied = await GET(request("192.0.2.1"));
     expect(denied.status).toBe(429);
     expect(await denied.json()).toEqual({ success: false, error: "レート制限を超えました。1時間後に再度お試しください。", limitExceeded: true });
     expect(db.incrementRateLimit).not.toHaveBeenCalled();
-    db.getRateLimitByIp.mockResolvedValue({ ip: "192.0.2.1", count: 59, lastAccess: Date.now() });
+    db.getRateLimitByIp.mockResolvedValue({ ip: "192.0.2.1", count: 599, lastAccess: Date.now() });
     expect((await GET(request("192.0.2.1"))).status).toBe(200);
     expect(db.incrementRateLimit).toHaveBeenCalledTimes(1);
   });
   it("1時間を超えた窓だけリセットし一度加算する", async () => {
     jest.spyOn(Date, "now").mockReturnValue(10_000_000);
-    db.getRateLimitByIp.mockResolvedValue({ ip: "a", count: 60, lastAccess: 6_400_000 });
+    db.getRateLimitByIp.mockResolvedValue({ ip: "a", count: 600, lastAccess: 6_400_000 });
     expect((await GET(request("a"))).status).toBe(429);
-    db.getRateLimitByIp.mockResolvedValue({ ip: "a", count: 60, lastAccess: 6_399_999 });
+    db.getRateLimitByIp.mockResolvedValue({ ip: "a", count: 600, lastAccess: 6_399_999 });
     expect((await GET(request("a"))).status).toBe(200);
     expect(db.resetRateLimit).toHaveBeenCalledWith("a");
     expect(db.incrementRateLimit).toHaveBeenCalledTimes(1);
     jest.restoreAllMocks();
   });
   it.each(["init", "getRateLimitByIp", "incrementRateLimit", "resetRateLimit"] as const)("判定・加算の失敗も429にする: %s", async (method) => {
-    if (method === "resetRateLimit") db.getRateLimitByIp.mockResolvedValue({ ip: "a", count: 60, lastAccess: 0 });
+    if (method === "resetRateLimit") db.getRateLimitByIp.mockResolvedValue({ ip: "a", count: 600, lastAccess: 0 });
     db[method].mockRejectedValue(new Error("db"));
     const response = await GET(request("a"));
     expect(response.status).toBe(429);
@@ -83,7 +83,7 @@ describe("APIとページの共通利用制限", () => {
   it("ページ検索でも同じIP制限を一度だけ適用する", async () => {
     await searchRoutes(params, new Headers({ "x-forwarded-for": "192.0.2.4, proxy" }));
     expect(db.incrementRateLimit.mock.calls).toEqual([["192.0.2.4"]]);
-    db.getRateLimitByIp.mockResolvedValue({ ip: "192.0.2.4", count: 60, lastAccess: Date.now() });
+    db.getRateLimitByIp.mockResolvedValue({ ip: "192.0.2.4", count: 600, lastAccess: Date.now() });
     expect(await searchRoutes(params, new Headers({ "x-forwarded-for": "192.0.2.4" }))).toEqual({ status: "limited" });
   });
 });

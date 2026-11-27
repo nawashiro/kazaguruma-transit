@@ -208,3 +208,19 @@ describe("InputField", () => {
     expect(describedByIds).toContain(screen.getByRole("alert").id);
   });
 });
+
+describe("自動補完の指定", () => {
+  it("autoCompleteを入力要素へそのまま渡す", () => {
+    render(
+      <InputField value="" onChange={jest.fn()} autoComplete="off" testId="test-input" />
+    );
+
+    expect(screen.getByTestId("test-input")).toHaveAttribute("autocomplete", "off");
+  });
+
+  it("指定がなければ従来の値を使う", () => {
+    render(<InputField value="" onChange={jest.fn()} testId="test-input" />);
+
+    expect(screen.getByTestId("test-input")).toHaveAttribute("autocomplete", "true");
+  });
+});

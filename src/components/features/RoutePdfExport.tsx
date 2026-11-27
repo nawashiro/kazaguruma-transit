@@ -54,6 +54,11 @@ interface RoutePdfExportProps {
   destLng?: number;
   selectedDateTime?: string;
   memoData?: Map<string, PostWithStats>;
+  /** 徒歩区間の折れ線。地図に実線で描く。 */
+  walkPaths?: {
+    originToStop?: Array<[number, number]>;
+    stopToDestination?: Array<[number, number]>;
+  };
 }
 
 // PDF出力機能を提供するメインコンポーネント
@@ -90,6 +95,7 @@ const RoutePdfExport: React.FC<RoutePdfExportProps> = (props) => {
           destLat: props.destLat,
           destLng: props.destLng,
           selectedDateTime: props.selectedDateTime,
+          walkPaths: props.walkPaths,
           memoData: props.memoData ? Object.fromEntries(props.memoData) : undefined,
         }),
       });

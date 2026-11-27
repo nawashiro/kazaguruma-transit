@@ -1,101 +1,133 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Client } from "@googlemaps/google-maps-services-js";
-import { appRouterRateLimitMiddleware } from "../../../lib/api/rate-limit-middleware";
+import path from "node:path";
+
 import { logger } from "../../../utils/logger";
+import { loadGeocodeIndex } from "../../../lib/location/geocode-index";
+import { GeocodeSearcher } from "../../../lib/location/geocode-search";
 
-export interface GeocodeResponse {
-  success: boolean;
-  data?: {
-    location: {
-      lat: number;
-      lng: number;
-      address: string;
-    };
-  };
-  error?: string;
-  limitExceeded?: boolean;
-}
+const GEOCODE_INDEX_PATH = path.join(process.cwd(), "data", "geocode-index.json");
 
-export interface GeocodeResult {
+interface GeocodeCandidateResponse {
+  name: string;
+  address: string;
   lat: number;
   lng: number;
-  formattedAddress: string;
+  kind: string;
+}
+
+interface GeocodeSearchResponse {
+  success: true;
+  results: GeocodeCandidateResponse[];
+}
+
+interface GeocodeReverseResponse {
+  success: true;
+  location: {
+    lat: number;
+    lng: number;
+    address: string;
+  };
+}
+
+interface GeocodeErrorResponse {
+  success: false;
+  error: string;
+}
+
+let cachedSearcher: GeocodeSearcher | null = null;
+
+/**
+ * 索引は1.3MBあり、要求のたびに読み直す必要はない。開発時は索引を
+ * 更新したら再起動する前提で、プロセス内に1度だけ読み込む。
+ */
+function getSearcher(): GeocodeSearcher | null {
+  if (cachedSearcher !== null) {
+    return cachedSearcher;
+  }
+  const loaded: ReturnType<typeof loadGeocodeIndex> = loadGeocodeIndex(
+    GEOCODE_INDEX_PATH,
+  );
+  if (loaded.status !== "success") {
+    logger.error("地点索引を読み込めません:", loaded.error.message);
+    return null;
+  }
+  cachedSearcher = new GeocodeSearcher(loaded.index);
+  return cachedSearcher;
+}
+
+function errorResponse(error: string, status: number) {
+  const body: GeocodeErrorResponse = { success: false, error };
+  return NextResponse.json(body, { status });
+}
+
+function readCoordinate(value: string | null): number | null {
+  if (value === null || value.trim().length === 0) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 export async function GET(req: NextRequest) {
   try {
-    // レート制限を適用
-    const limitResponse = await appRouterRateLimitMiddleware(req);
-    if (limitResponse) {
-      return limitResponse;
-    }
-
     const { searchParams } = new URL(req.url);
-    const address = searchParams.get("address");
-
-    if (!address) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "住所パラメータが必要です",
-        } as GeocodeResponse,
-        { status: 400 }
+    if (searchParams.has("address")) {
+      return errorResponse(
+        "address パラメーターは廃止しました。q か lat/lng を使ってください",
+        400,
       );
     }
 
-    // Google Maps Clientの初期化
-    const client = new Client({});
-
-    // Google Maps Geocoding APIへのリクエスト
-    const response = await client.geocode({
-      params: {
-        address: address,
-        key: process.env.GOOGLE_MAPS_API_KEY || "",
-        language: "ja",
-        region: "jp",
-      },
-      timeout: 5000, // 5秒タイムアウト
-    });
-
-    if (response.data.status !== "OK") {
-      logger.error("Geocoding API error:", response.data.status);
-      return NextResponse.json(
-        {
-          success: false,
-          error: `ジオコーディングに失敗しました: ${response.data.status}`,
-        } as GeocodeResponse,
-        { status: 400 }
-      );
+    const searcher = getSearcher();
+    if (searcher === null) {
+      return errorResponse("地点索引を読み込めませんでした", 500);
     }
 
-    if (response.data.results.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "指定された住所が見つかりませんでした",
-        } as GeocodeResponse,
-        { status: 404 }
-      );
+    const rawLat = searchParams.get("lat");
+    const rawLng = searchParams.get("lng");
+    if (rawLat !== null || rawLng !== null) {
+      const lat = readCoordinate(rawLat);
+      const lng = readCoordinate(rawLng);
+      if (lat === null || lng === null) {
+        return errorResponse("lat と lng には数値を指定してください", 400);
+      }
+      const address = searcher.reverse(lat, lng);
+      if (address === null) {
+        return errorResponse(
+          "指定された座標の住所は見つかりませんでした",
+          404,
+        );
+      }
+      const body: GeocodeReverseResponse = {
+        success: true,
+        location: { lat, lng, address },
+      };
+      return NextResponse.json(body);
     }
 
-    const results: GeocodeResult[] = response.data.results.map((result) => ({
-      lat: result.geometry.location.lat,
-      lng: result.geometry.location.lng,
-      formattedAddress: result.formatted_address,
-    }));
+    const query = searchParams.get("q");
+    if (query === null || query.trim().length === 0) {
+      return errorResponse("q パラメーターが必要です", 400);
+    }
 
-    return NextResponse.json({
+    const results = searcher.search(query);
+    if (results.length === 0) {
+      const body: GeocodeSearchResponse = { success: true, results: [] };
+      return NextResponse.json(body);
+    }
+    const body: GeocodeSearchResponse = {
       success: true,
-      results,
-    });
+      results: results.map((candidate) => ({
+        name: candidate.name,
+        address: candidate.address,
+        lat: candidate.lat,
+        lng: candidate.lng,
+        kind: candidate.kind,
+      })),
+    };
+    return NextResponse.json(body);
   } catch (error) {
-    logger.error("Geocoding error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: "ジオコーディング処理中にエラーが発生しました",
-      } as GeocodeResponse,
-      { status: 500 }
-    );
+    logger.error("地点検索エラー:", error);
+    return errorResponse("地点検索処理中にエラーが発生しました", 500);
   }
 }

@@ -24,9 +24,12 @@ export interface StopInfo {
 export interface NearbyStop {
   id: string;
   name: string;
+  /** 利用者地点からの直線距離（キロメートル）。徒歩距離ではない。 */
   distance: number;
   lat?: number;
   lng?: number;
+  /** 徒歩ネットワーク上の徒歩時間（分）。停留所への徒歩区間がある場合だけ入る。 */
+  walkingTimeMinutes?: number;
 }
 
 // 路線情報 - 色情報は表示に影響するため正確性が必要
@@ -74,6 +77,10 @@ export interface Journey {
   walkingDistanceKm?: number;
   walkingTimeMinutes?: number;
   userRequestedDepartureTime?: string;
+  /** 出発地から乗車停留所までの徒歩経路。GeoJSONと同じ [経度, 緯度]。 */
+  originWalkPath?: Array<[number, number]>;
+  /** 降車停留所から目的地までの徒歩経路。GeoJSONと同じ [経度, 緯度]。 */
+  destinationWalkPath?: Array<[number, number]>;
 }
 
 // 出発情報（時刻表表示用）

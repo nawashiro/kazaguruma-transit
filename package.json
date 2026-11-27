@@ -1,6 +1,6 @@
 {
   "name": "kazaguruma-transit",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "author": {
     "name": "Nawashiro"
   },
@@ -44,10 +44,11 @@
     "prisma:studio": "prisma studio",
     "import-gtfs": "tsx scripts/import-gtfs.ts",
     "update-destinations": "tsx scripts/update-destinations.ts",
+    "update-geocode-index": "tsx scripts/update-geocode-index.ts",
+    "update-walk-network": "tsx scripts/update-walk-network.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@googlemaps/google-maps-services-js": "^3.4.1",
     "@nostr-dev-kit/ndk": "latest",
     "@prisma/adapter-better-sqlite3": "7.10.1",
     "@prisma/client": "7.10.1",
@@ -58,8 +59,10 @@
     "gtfs": "4.20.1",
     "iron-session": "^8.0.4",
     "isomorphic-fetch": "^3.0.0",
+    "lucide": "^1.81.0",
     "lucide-react": "^1.35.0",
     "luxon": "^3.6.0",
+    "maplibre-gl": "^5.24.1",
     "ml-kmeans": "^6.0.0",
     "ml-matrix": "^6.12.1",
     "ml-pca": "^4.1.1",
@@ -95,6 +98,7 @@
     "jest-fetch-mock": "^3.0.3",
     "jest-localstorage-mock": "^2.4.26",
     "lighthouse": "^13.4.1",
+    "osm-pbf-parser": "^2.3.0",
     "postcss": "^8.5.28",
     "start-server-and-test": "^3.0.12",
     "tailwindcss": "^4",

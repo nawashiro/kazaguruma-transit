@@ -11,21 +11,31 @@ jest.mock("../route-algorithm", () => ({
   },
 }));
 
+jest.mock("../walk-network", () => {
+  const actual = jest.requireActual("../walk-network");
+  const fixture = jest.requireActual("../test-support/walk-network-fixture");
+  return {
+    ...actual,
+    getWalkNetwork: () => fixture.createGridWalkGraph(),
+  };
+});
+
 import { TransitService } from "../transit-service";
 import type { TimeTableRouteResult } from "../route-algorithm";
+import { gridPoint } from "../test-support/walk-network-fixture";
 
-describe("従来型経路検索の停留所距離", () => {
-  const origin = { lat: 35.698353, lng: 139.773114 };
-  const destination = { lat: 35.693807, lng: 139.750046 };
+describe("従来型経路検索の徒歩距離", () => {
+  const origin = { lat: 35.6938, lng: 139.7504 };
+  const destination = { lat: 35.6938, lng: 139.7542 };
+  const fromPoint = gridPoint(origin, 0.1);
+  const toPoint = gridPoint(destination, 0.2);
   const from = {
-    lat: origin.lat + 0.001,
-    lng: origin.lng,
+    ...fromPoint,
     stopId: "from-stop",
     stopName: "出発バス停",
   };
   const to = {
-    lat: destination.lat + 0.002,
-    lng: destination.lng,
+    ...toPoint,
     stopId: "to-stop",
     stopName: "目的バス停",
   };
@@ -83,9 +93,95 @@ describe("従来型経路検索の停留所距離", () => {
     const destStopRow = result.stops.find((stop) => stop.id === to.stopId);
     expect(originStopRow).toBeDefined();
     expect(destStopRow).toBeDefined();
+    // 200メートル以内の直線距離は、徒歩距離ではなく直線距離のまま返す。
     expect(originStopRow!.distance).toBeGreaterThan(0.09);
     expect(originStopRow!.distance).toBeLessThan(0.13);
     expect(destStopRow!.distance).toBeGreaterThan(0.18);
     expect(destStopRow!.distance).toBeLessThan(0.26);
+  });
+
+  it("優先条件によって通常経路の選択が変わる", async () => {
+    const directRoute: TimeTableRouteResult = {
+      ...route,
+      nodes: [
+        { ...route.nodes[0], departureTime: "10:29:00", arrivalTime: "10:29:00" },
+        { ...route.nodes[1], departureTime: "11:00:00", arrivalTime: "11:00:00" },
+      ],
+      departure: "10:29:00",
+      arrival: "11:00:00",
+      transfers: 0,
+    };
+    const transferRoute: TimeTableRouteResult = {
+      ...route,
+      nodes: [
+        { ...route.nodes[0], departureTime: "10:29:00", arrivalTime: "10:29:00" },
+        {
+          ...route.nodes[1],
+          stopId: "transfer-stop",
+          stopName: "乗換バス停",
+          arrivalTime: "10:44:00",
+          departureTime: "10:44:00",
+        },
+        {
+          ...route.nodes[1],
+          stopId: "transfer-stop",
+          stopName: "乗換バス停",
+          arrivalTime: "10:46:00",
+          departureTime: "10:46:00",
+        },
+        { ...route.nodes[1], departureTime: "10:55:00", arrivalTime: "10:55:00" },
+      ],
+      departure: "10:29:00",
+      arrival: "10:55:00",
+      transfers: 1,
+    };
+    mockFindOptimalRoute.mockResolvedValue([transferRoute, directRoute]);
+
+    const service = TransitService.getInstance() as unknown as {
+      findConventionalRoute: (...args: unknown[]) => Promise<{
+        journeys: { transfers: number; arrival: string }[];
+      }>;
+    };
+
+    const walking = await service.findConventionalRoute(
+      from,
+      to,
+      origin,
+      destination,
+      "2026-10-27T10:29",
+      true,
+      false
+    );
+    const speedy = await service.findConventionalRoute(
+      from,
+      to,
+      origin,
+      destination,
+      "2026-10-27T10:29",
+      true,
+      true
+    );
+
+    expect(walking.journeys[0].transfers).toBe(0);
+    expect(walking.journeys[0].arrival).toBe("11:00:00");
+    expect(speedy.journeys[0].transfers).toBe(1);
+    expect(speedy.journeys[0].arrival).toBe("10:55:00");
+  });
+
+  it("徒歩時間は格子状の徒歩距離から求める", async () => {
+    const service = TransitService.getInstance();
+    const result = await (
+      service as unknown as {
+        findConventionalRoute: (...args: unknown[]) => Promise<{
+          journeys: { walkingDistanceKm?: number; walkingTimeMinutes?: number }[];
+        }>;
+      }
+    ).findConventionalRoute(from, to, origin, destination, "2026-10-27T10:00", true);
+
+    const journey = result.journeys[0];
+    // 出発地から停留所まで約100メートル、降車停留所から目的地まで約200メートル。
+    expect(journey.walkingDistanceKm).toBeGreaterThan(0.25);
+    expect(journey.walkingDistanceKm).toBeLessThan(0.4);
+    expect(journey.walkingTimeMinutes).toBe(Math.round((journey.walkingDistanceKm as number) / 0.05));
   });
 });

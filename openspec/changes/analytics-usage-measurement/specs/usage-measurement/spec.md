@@ -24,7 +24,7 @@
 
 住所検索の結果、地点の確定、GPS取得の結果、地点未確定での送信を、それぞれ識別可能なイベントで送らなければならない（SHALL）。イベントはどの項目の・どの結果かを表すパラメーターを持ち、送信の成否は利用者の操作を妨げてはならない（MUST NOT）。
 
-- `place_search`: `field`（`origin`または`destination`）と`outcome`（`found`、`not_found`、`failed`、`rate_limited`）
+- `place_search`: `field`（`origin`または`destination`）と`outcome`（`found`、`not_found`、`failed`）
 - `place_select`: `field`と`source`（`address`、`catalog`、`gps`、`detail`）
 - `gps_result`: `outcome`（`granted`、`denied`、`timeout`、`unsupported`）
 - `validation_failed`: `missing`（`origin`、`destination`、`both`）

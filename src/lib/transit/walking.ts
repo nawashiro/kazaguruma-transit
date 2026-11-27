@@ -1,5 +1,3 @@
-const GRID_WORST_CASE_FACTOR = Math.SQRT2;
-
 interface JourneyDurationInput {
   isDeparture: boolean;
   requestedTime: string;
@@ -10,29 +8,18 @@ interface JourneyDurationInput {
 }
 
 /**
- * 直線距離を、碁盤目状の街路を直角二等辺三角形の二辺に沿って歩く
- * 最悪ケースの距離へ補正する。
+ * 徒歩距離から所要時間を分単位で返す。距離は徒歩ネットワークから求めた
+ * 実際の経路長であり、直線距離の補正は掛けない。
  */
-export function calculateGridWalkingDistanceKm(
-  straightLineDistanceKm: number
-): number {
-  return straightLineDistanceKm * GRID_WORST_CASE_FACTOR;
-}
-
-/** 補正済みの徒歩距離から所要時間を分単位で返す。 */
 export function calculateWalkingTimeMinutes(
-  straightLineDistanceKm: number,
+  walkingDistanceKm: number,
   walkingSpeedKmH: number
 ): number {
   if (walkingSpeedKmH <= 0) {
     throw new Error("歩行速度は0より大きい必要があります");
   }
 
-  return (
-    (calculateGridWalkingDistanceKm(straightLineDistanceKm) /
-      walkingSpeedKmH) *
-    60
-  );
+  return (walkingDistanceKm / walkingSpeedKmH) * 60;
 }
 
 /** 徒歩を考慮し、時刻表探索に渡す停留所基準の時刻を返す。 */

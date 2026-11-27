@@ -26,12 +26,12 @@
     },
     {
       "id": "urn:uuid:019fa880-5cd4-729d-8095-deb5f1a4597f",
-      "name": "千代田区立障害者福祉センター　えみふる",
+      "name": "千代田区立障害者福祉センター えみふる",
       "includeInRouteForm": true
     },
     {
       "id": "urn:uuid:019fa880-5cd4-75da-ae8b-ec6d104eb49b",
-      "name": "千代田区役所和泉橋出張所",
+      "name": "千代田区 和泉橋出張所",
       "includeInRouteForm": true
     },
     {
@@ -41,12 +41,12 @@
     },
     {
       "id": "urn:uuid:019fa880-5cd4-7b4b-86c4-92d4d1fbe213",
-      "name": "千代田区役所 神田公園出張所・区民館",
+      "name": "千代田区 神田公園出張所・区民館",
       "includeInRouteForm": true
     },
     {
       "id": "urn:uuid:019fa880-5cd4-7ba6-a5af-481b9cb95516",
-      "name": "千代田区役所 万世橋出張所・区民館",
+      "name": "千代田区 万世橋出張所・区民館",
       "includeInRouteForm": true
     },
     {
@@ -101,7 +101,7 @@
     },
     {
       "id": "urn:uuid:019fa880-5cd5-7537-802b-2421832099f4",
-      "name": "昌平まちかど図書館",
+      "name": "千代田区立昌平まちかど図書館",
       "includeInRouteForm": true
     },
     {
@@ -135,11 +135,6 @@
       "includeInRouteForm": true
     },
     {
-      "id": "urn:uuid:019fa880-5cd5-79f3-8608-d5a71f5492f7",
-      "name": "千鳥ヶ淵公園",
-      "includeInRouteForm": false
-    },
-    {
       "id": "urn:uuid:019fa880-5cd5-7a69-ace7-2a132f6f2b57",
       "name": "日本キリスト教団富士見町教会",
       "includeInRouteForm": false
@@ -151,7 +146,7 @@
     },
     {
       "id": "urn:uuid:019fa880-5cd5-7b01-9dd8-2e4787f423aa",
-      "name": "西神田児童・家庭支援センター",
+      "name": "西神田コスモス館",
       "includeInRouteForm": true
     },
     {
@@ -171,7 +166,7 @@
     },
     {
       "id": "urn:uuid:019fa880-5cd5-7cf5-8a1f-da236422ebdb",
-      "name": "㈶石川文化事業財団お茶の水図書館",
+      "name": "石川武美記念図書館",
       "includeInRouteForm": false
     },
     {
@@ -245,11 +240,6 @@
       "includeInRouteForm": false
     },
     {
-      "id": "urn:uuid:019fa880-5cd5-7fb2-9df1-c9da871e3bfb",
-      "name": "北の丸公園",
-      "includeInRouteForm": false
-    },
-    {
       "id": "urn:uuid:019fa880-5cd5-7fce-b42f-51fa0dac8c01",
       "name": "お茶の水キリストの教会",
       "includeInRouteForm": false
@@ -285,6 +275,11 @@
       "includeInRouteForm": false
     },
     {
+      "id": "urn:uuid:019fa880-5cd6-7627-9186-3eb6765242cb",
+      "name": "国立公文書館",
+      "includeInRouteForm": false
+    },
+    {
       "id": "urn:uuid:019fa880-5cd6-7640-8ec1-c2e6c99e5c26",
       "name": "稲荷湯",
       "includeInRouteForm": false
@@ -307,11 +302,6 @@
     {
       "id": "urn:uuid:019fa880-5cd6-78d5-8f0d-d2b980c78320",
       "name": "於玉湯",
-      "includeInRouteForm": false
-    },
-    {
-      "id": "urn:uuid:019fa880-5cd6-79dd-aaf4-367c7aee85f3",
-      "name": "科学技術館",
       "includeInRouteForm": false
     },
     {
@@ -361,7 +351,7 @@
     },
     {
       "id": "urn:uuid:01a1e8ab-f038-7ce4-b0fb-c9684533e7e3",
-      "name": "千代田区立麹町小学校",
+      "name": "千代田区立 麹町小学校",
       "includeInRouteForm": true
     },
     {
@@ -371,7 +361,7 @@
     },
     {
       "id": "urn:uuid:01a1e8ab-f0c4-79e3-a1d4-42b3c152ffcf",
-      "name": "千代田区立番町小学校",
+      "name": "千代田区立 番町小学校",
       "includeInRouteForm": true
     },
     {
@@ -406,7 +396,7 @@
     },
     {
       "id": "urn:uuid:01a1e8c0-297e-7d68-96c0-61e2a611646b",
-      "name": "東京都教職員互助会三楽病院",
+      "name": "三楽病院",
       "includeInRouteForm": true
     },
     {
@@ -426,8 +416,13 @@
     },
     {
       "id": "urn:uuid:01a1e8c7-83fd-76ea-a425-b3fec7d992f8",
-      "name": "佐々木研究所附属杏雲堂病院",
+      "name": "杏雲堂病院",
       "includeInRouteForm": true
+    },
+    {
+      "id": "urn:uuid:01a1f74a-56c5-7fdc-9022-ac0ab000f2c1",
+      "name": "神田さくら館",
+      "includeInRouteForm": false
     },
     {
       "id": "urn:uuid:01a1f74a-7ced-7363-a7e6-08976d268c4d",

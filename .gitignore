@@ -66,6 +66,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# geocode index build cache
+/data/.cache/
+
 # config
 app-config.json
 app-config.local.json

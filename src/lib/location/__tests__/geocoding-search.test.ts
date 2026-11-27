@@ -1,51 +1,134 @@
-import { normalizeSearchAddress, searchGeocoding } from "../geocoding-search";
+import {
+  candidateToLocation,
+  normalizeSearchAddress,
+  reverseGeocoding,
+  searchGeocoding,
+  type GeocodeCandidate,
+} from "../geocoding-search";
 
-const response = (body: unknown, init?: ResponseInit) => Promise.resolve(new Response(JSON.stringify(body), init));
+const CANDIDATE: GeocodeCandidate = {
+  name: "千代田区役所",
+  address: "千代田区九段南一丁目2番",
+  lat: 35.6941626,
+  lng: 139.7535624,
+  kind: "public",
+};
 
-describe("geocoding-search", () => {
-  it("normalizes the Chiyoda-ku prefix and handles success", async () => {
-    expect(normalizeSearchAddress("神田駅")).toBe("千代田区 神田駅");
-    await expect(searchGeocoding("神田駅", () => response({ success: true, results: [{ lat: 1, lng: 2, formattedAddress: "東京都" }] }))).resolves.toEqual({ status: "success", location: { lat: 1, lng: 2, address: "東京都" } });
+function jsonResponse(status: number, body: unknown): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+  } as unknown as Response;
+}
+
+describe("searchGeocoding", () => {
+  it("候補配列を返す", async () => {
+    const fetcher = jest.fn(async () =>
+      jsonResponse(200, { success: true, results: [CANDIDATE] }),
+    ) as unknown as typeof fetch;
+    const result = await searchGeocoding("千代田区役所", fetcher);
+    expect(result.status).toBe("success");
+    expect(result.candidates).toEqual([CANDIDATE]);
   });
 
-  it.each([
-    [{ success: true, results: [] }, undefined, "empty"],
-    [{ limitExceeded: true }, { status: 429 }, "rate-limited"],
-    [{ error: "bad" }, { status: 500 }, "error"],
-  ])("returns a shared status for response failures", async (body, init, status) => {
-    await expect(searchGeocoding("場所", () => response(body, init))).resolves.toMatchObject({ status });
-  });
-
-  it("429 + limitExceeded returns an explicit rate-limited result without retrying", async () => {
-    const fetcher = jest.fn(() =>
-      response({ limitExceeded: true }, { status: 429 }),
+  it("q パラメーターで問い合わせる", async () => {
+    const fetcher = jest.fn(async () =>
+      jsonResponse(200, { success: true, results: [] }),
+    ) as unknown as typeof fetch;
+    await searchGeocoding("  千代田区役所  ", fetcher);
+    expect(fetcher).toHaveBeenCalledWith(
+      `/api/geocode?q=${encodeURIComponent("千代田区役所")}`,
     );
+  });
 
-    await expect(searchGeocoding("場所", fetcher)).resolves.toEqual({
-      status: "rate-limited",
-      isRateLimited: true,
+  it("空の候補を not found として扱う", async () => {
+    const fetcher = jest.fn(async () =>
+      jsonResponse(200, { success: true, results: [] }),
+    ) as unknown as typeof fetch;
+    const result = await searchGeocoding("あああ", fetcher);
+    expect(result.status).toBe("empty");
+    expect(result.error).toMatch(/見つかりません/);
+  });
+
+  it("失敗した応答は429でもエラーとして扱う", async () => {
+    const fetcher = jest.fn(async () =>
+      jsonResponse(429, { success: false, error: "混雑しています" }),
+    ) as unknown as typeof fetch;
+    const result = await searchGeocoding("千代田区役所", fetcher);
+    expect(result).toEqual({
+      candidates: [],
+      status: "error",
+      error: "混雑しています",
     });
-    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
-  it("ordinary errors and success are not marked rate-limited", async () => {
-    const error = await searchGeocoding("場所", () =>
-      response({ error: "bad" }, { status: 500 }),
-    );
-    expect(error).toMatchObject({ status: "error" });
-    expect(error.isRateLimited).not.toBe(true);
-    const success = await searchGeocoding("場所", () =>
-      response({
+  it("サーバーのエラーをそのまま伝える", async () => {
+    const fetcher = jest.fn(async () =>
+      jsonResponse(500, { success: false, error: "索引が壊れています" }),
+    ) as unknown as typeof fetch;
+    const result = await searchGeocoding("千代田区役所", fetcher);
+    expect(result.status).toBe("error");
+    expect(result.error).toBe("索引が壊れています");
+  });
+
+  it("空の検索語は問い合わせない", async () => {
+    const fetcher = jest.fn() as unknown as typeof fetch;
+    const result = await searchGeocoding("   ", fetcher);
+    expect(result.status).toBe("error");
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("通信の失敗をエラーにする", async () => {
+    const fetcher = jest.fn(async () => {
+      throw new Error("offline");
+    }) as unknown as typeof fetch;
+    const result = await searchGeocoding("千代田区役所", fetcher);
+    expect(result.status).toBe("error");
+    expect(result.error).toBe("offline");
+  });
+});
+
+describe("reverseGeocoding", () => {
+  it("住所を返す", async () => {
+    const fetcher = jest.fn(async () =>
+      jsonResponse(200, {
         success: true,
-        results: [{ lat: 1, lng: 2, formattedAddress: "東京都" }],
+        location: { lat: 35.69, lng: 139.75, address: "千代田区九段南一丁目2番" },
       }),
-    );
-    expect(success).toMatchObject({ status: "success" });
-    expect(success.isRateLimited).not.toBe(true);
+    ) as unknown as typeof fetch;
+    const result = await reverseGeocoding(35.69, 139.75, fetcher);
+    expect(result.status).toBe("success");
+    expect(result.location?.address).toBe("千代田区九段南一丁目2番");
   });
 
-  it("handles empty input and network failure", async () => {
-    await expect(searchGeocoding("   ")).resolves.toMatchObject({ status: "error" });
-    await expect(searchGeocoding("場所", () => Promise.reject(new Error("offline")))).resolves.toMatchObject({ status: "error", error: "offline" });
+  it("区外の座標を住所なしとして扱う", async () => {
+    const fetcher = jest.fn(async () =>
+      jsonResponse(404, { success: false, error: "見つかりません" }),
+    ) as unknown as typeof fetch;
+    const result = await reverseGeocoding(35.5, 139.5, fetcher);
+    expect(result.status).toBe("empty");
+    expect(result.location).toBeUndefined();
+  });
+
+  it("数値でない座標は問い合わせない", async () => {
+    const fetcher = jest.fn() as unknown as typeof fetch;
+    const result = await reverseGeocoding(Number.NaN, 139.75, fetcher);
+    expect(result.status).toBe("error");
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+});
+
+describe("candidateToLocation / normalizeSearchAddress", () => {
+  it("候補の名前を表示用の住所として使う", () => {
+    expect(candidateToLocation(CANDIDATE)).toEqual({
+      lat: CANDIDATE.lat,
+      lng: CANDIDATE.lng,
+      address: "千代田区役所",
+    });
+  });
+
+  it("検索語の前後の空白だけを落とす", () => {
+    expect(normalizeSearchAddress(" 千代田区 神田 ")).toBe("千代田区 神田");
   });
 });

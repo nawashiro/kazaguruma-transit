@@ -256,9 +256,17 @@ describe("Home", () => {
   async function selectAddress(label: string, lat: number, lng: number) {
     browserFetchSpy.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ success: true, results: [{ lat, lng, formattedAddress: `確定${label}` }] }),
+      json: async () => ({
+        success: true,
+        results: [
+          { name: `確定${label}`, address: `千代田区${label}一丁目1番`, lat, lng, kind: "public" },
+        ],
+      }),
     });
     await userEvent.setup().type(screen.getByRole("textbox", { name: label }), "神田駅{Enter}");
+    const group = screen.getByRole("group", { name: label });
+    const list = await within(group).findByRole("list", { name: `${label}の候補` });
+    fireEvent.click(within(list).getAllByRole("button")[0]);
     expect(await screen.findByTestId(label === "目的地" ? "selected-destination" : "selected-origin")).toHaveTextContent(`確定${label}`);
   }
 
@@ -272,16 +280,9 @@ describe("Home", () => {
     expect(screen.queryByRole("button", { name: /リセット/ })).not.toBeInTheDocument();
   });
 
-  it("住所検索はアイコン専用、最終検索は可視文字「経路を検索」のsubmitに分ける", async () => {
+  it("住所欄に検索ボタンを置かず、最終検索は可視文字「経路を検索」のsubmitにする", async () => {
     await renderPublicHome();
-    const addressButtons = screen.getAllByRole("button", { name: "検索" });
-    expect(addressButtons).toHaveLength(2);
-    for (const button of addressButtons) {
-      expect(button).toHaveAttribute("type", "submit");
-      expect(button).toHaveAttribute("aria-label", "検索");
-      expect(button.textContent?.trim()).toBe("");
-      expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
-    }
+    expect(screen.queryAllByRole("button", { name: "検索" })).toHaveLength(0);
     const submit = within(routeForm()).getByRole("button", { name: "経路を検索" });
     expect(submit).toHaveAttribute("type", "submit");
     expect(submit).toHaveAccessibleName("経路を検索");

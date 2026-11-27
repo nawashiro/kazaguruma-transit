@@ -13,40 +13,28 @@ jest.mock("../route-algorithm", () => ({
   },
 }));
 
+jest.mock("../walk-network", () => {
+  const actual = jest.requireActual("../walk-network");
+  const fixture = jest.requireActual("../test-support/walk-network-fixture");
+  return {
+    ...actual,
+    getWalkNetwork: () => fixture.createGridWalkGraph(),
+  };
+});
+
 import { TransitService } from "../transit-service";
 import { prisma } from "../../db/prisma";
 import type { TimeTableRouteResult } from "../route-algorithm";
+import { gridPoint } from "../test-support/walk-network-fixture";
 
 const findManyMock = prisma.stop.findMany as unknown as jest.Mock;
 
 const ORIGIN = { lat: 35.69, lng: 139.75 };
 const DESTINATION = { lat: 35.685, lng: 139.748 };
-const KM_PER_LAT_DEGREE = 111.195;
 
-function stopAtNorthDistance(
-  id: string,
-  baseLat: number,
-  distanceKm: number
-): { id: string; name: string; lat: number; lon: number } {
-  return {
-    id,
-    name: id,
-    lat: baseLat + distanceKm / KM_PER_LAT_DEGREE,
-    lon: ORIGIN.lng,
-  };
-}
-
-function stopAtSouthDistance(
-  id: string,
-  baseLat: number,
-  distanceKm: number
-): { id: string; name: string; lat: number; lon: number } {
-  return {
-    id,
-    name: id,
-    lat: baseLat - distanceKm / KM_PER_LAT_DEGREE,
-    lon: ORIGIN.lng,
-  };
+function stopAt(id: string, base: { lat: number; lng: number }, northKm: number, eastKm = 0) {
+  const point = gridPoint(base, northKm, eastKm);
+  return { id, name: id, lat: point.lat, lon: point.lng };
 }
 
 const route: TimeTableRouteResult = {
@@ -60,7 +48,7 @@ const route: TimeTableRouteResult = {
       arrivalTime: "10:00:00",
       departureTime: "10:14:00",
       stopSequence: 1,
-      stopLat: ORIGIN.lat + 0.05 / KM_PER_LAT_DEGREE,
+      stopLat: ORIGIN.lat,
       stopLon: ORIGIN.lng,
     },
     {
@@ -72,7 +60,7 @@ const route: TimeTableRouteResult = {
       arrivalTime: "11:00:00",
       departureTime: "11:03:00",
       stopSequence: 2,
-      stopLat: DESTINATION.lat + 0.05 / KM_PER_LAT_DEGREE,
+      stopLat: DESTINATION.lat,
       stopLon: DESTINATION.lng,
     },
   ],
@@ -87,12 +75,12 @@ beforeEach(() => {
   mockFindOptimalRoute.mockResolvedValue([route]);
 });
 
-describe("バス停候補の最悪徒歩距離上限", () => {
-  it("周辺候補の絞り込みは碁盤目補正後の徒歩距離で行う", async () => {
+describe("徒歩距離によるバス停候補の絞り込み", () => {
+  it("徒歩距離が500メートル以内の停留所を候補にする", async () => {
     findManyMock.mockResolvedValue([
-      stopAtNorthDistance("stop-200m", ORIGIN.lat, 0.2),
-      stopAtNorthDistance("stop-350m", ORIGIN.lat, 0.35),
-      stopAtNorthDistance("stop-360m", ORIGIN.lat, 0.36),
+      stopAt("stop-200m", ORIGIN, 0.2),
+      stopAt("stop-400m", ORIGIN, 0.4),
+      stopAt("stop-600m", ORIGIN, 0.6),
     ]);
 
     const service = TransitService.getInstance();
@@ -101,18 +89,38 @@ describe("バス停候補の最悪徒歩距離上限", () => {
         findNearbyStops: (
           lat: number,
           lng: number,
-          radiusKm: number
+          radiusKm: number,
         ) => Promise<{ id: string; distance: number }[]>;
       }
     ).findNearbyStops(ORIGIN.lat, ORIGIN.lng, 0.5);
 
-    expect(stops.map((stop) => stop.id)).toEqual(["stop-200m", "stop-350m"]);
+    expect(stops.map((stop) => stop.id)).toEqual(["stop-200m", "stop-400m"]);
   });
 
-  it("最寄りバス停が上限を超える従来経路は経路を返さない", async () => {
+  it("道から離れた停留所は接続区間の分だけ徒歩距離が伸びる", async () => {
     findManyMock.mockResolvedValue([
-      stopAtNorthDistance("far-origin-stop", ORIGIN.lat, 2),
-      stopAtSouthDistance("far-destination-stop", DESTINATION.lat, 2),
+      stopAt("on-road", ORIGIN, 0.3),
+      stopAt("off-road", ORIGIN, 0.3, 0.1),
+    ]);
+
+    const service = TransitService.getInstance();
+    const stops = await (
+      service as unknown as {
+        findNearbyStops: (
+          lat: number,
+          lng: number,
+          radiusKm: number,
+        ) => Promise<{ id: string; distance: number }[]>;
+      }
+    ).findNearbyStops(ORIGIN.lat, ORIGIN.lng, 0.5);
+
+    expect(stops.map((stop) => stop.id)).toEqual(["on-road", "off-road"]);
+  });
+
+  it("最寄り停留所が徒歩距離で上限を超える従来経路は経路を返さない", async () => {
+    findManyMock.mockResolvedValue([
+      stopAt("far-origin-stop", ORIGIN, 2),
+      stopAt("far-destination-stop", DESTINATION, 2),
     ]);
 
     const service = TransitService.getInstance();
@@ -135,10 +143,10 @@ describe("バス停候補の最悪徒歩距離上限", () => {
     expect(mockFindOptimalRoute).not.toHaveBeenCalled();
   });
 
-  it("上限以内の最寄りバス停がある従来経路は従来どおり検索する", async () => {
+  it("上限以内の最寄り停留所がある従来経路は従来どおり検索する", async () => {
     findManyMock.mockResolvedValue([
-      stopAtNorthDistance("near-origin-stop", ORIGIN.lat, 0.05),
-      stopAtNorthDistance("near-destination-stop", DESTINATION.lat, 0.05),
+      stopAt("near-origin-stop", ORIGIN, 0.05),
+      stopAt("near-destination-stop", DESTINATION, 0.05),
     ]);
 
     const service = TransitService.getInstance();

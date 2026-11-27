@@ -69,6 +69,10 @@ describe("TimeTableRouter", () => {
     expect(ROUTE_PARAMS.MAX_TRANSFERS).toBe(1);
   });
 
+  test("乗換1回のコストを10分として探索パラメータに置く", () => {
+    expect(ROUTE_PARAMS.TRANSFER_PENALTY_MINUTES).toBe(10);
+  });
+
   test("一括取得した時刻表を索引化して直通便と1回乗換便を探す", async () => {
     mockedTripFindMany.mockResolvedValue([
       trip("direct", "直通", [

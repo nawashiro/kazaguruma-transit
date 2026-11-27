@@ -7,6 +7,7 @@ describe("IntegratedRouteDisplay", () => {
     stopId: "origin123",
     stopName: "出発バス停",
     distance: 0.2,
+    walkingTimeMinutes: 6,
     stop_lat: 35.1,
     stop_lon: 139.1,
   };
@@ -15,6 +16,7 @@ describe("IntegratedRouteDisplay", () => {
     stopId: "dest456",
     stopName: "到着バス停",
     distance: 0.3,
+    walkingTimeMinutes: 9,
     stop_lat: 35.2,
     stop_lon: 139.2,
   };
@@ -66,6 +68,9 @@ describe("IntegratedRouteDisplay", () => {
   const timelineRows = () =>
     [...document.querySelectorAll("ol.timeline > li")].map((li) => li.textContent);
 
+  const walkEdge = "bg-accent";
+  const rideEdge = "bg-secondary-content dark:bg-secondary";
+
   const edgeClasses = (li: Element) =>
     [...li.children]
       .filter((child) => child.tagName === "HR")
@@ -87,7 +92,7 @@ describe("IntegratedRouteDisplay", () => {
     expect(screen.queryByRole("heading", { name: "経路" })).toBeNull();
     const rows = timelineRows();
     expect(rows[0]).toContain("出発地");
-    expect(rows[0]).toContain("9時19分");
+    expect(rows[0]).toContain("9時24分");
     expect(rows[1]).toContain("徒歩で移動");
     expect(rows[2]).toContain("出発バス停");
     expect(rows[2]).toContain("9時30分");
@@ -96,7 +101,7 @@ describe("IntegratedRouteDisplay", () => {
     expect(rows[4]).toContain("10時15分");
     expect(rows[5]).toContain("徒歩で移動");
     expect(rows[6]).toContain("目的地");
-    expect(rows[6]).toContain("10時29分");
+    expect(rows[6]).toContain("10時24分");
   });
 
   it("乗換経路を乗車停留所・路線名・降車停留所の順で示す", () => {
@@ -130,17 +135,17 @@ describe("IntegratedRouteDisplay", () => {
       />
     );
     const rows = [...document.querySelectorAll("ol.timeline > li")];
-    expect(edgeClasses(rows[0])).toEqual(["bg-accent"]);
-    expect(edgeClasses(rows[1])).toEqual(["bg-accent", "bg-accent"]);
-    expect(edgeClasses(rows[2])).toEqual(["bg-accent", "bg-secondary"]);
-    expect(edgeClasses(rows[3])).toEqual(["bg-secondary", "bg-secondary"]);
-    expect(edgeClasses(rows[4])).toEqual(["bg-secondary", "bg-accent"]);
-    expect(edgeClasses(rows[5])).toEqual(["bg-accent", "bg-accent"]);
-    expect(edgeClasses(rows[6])).toEqual(["bg-accent", "bg-secondary"]);
-    expect(edgeClasses(rows[7])).toEqual(["bg-secondary", "bg-secondary"]);
-    expect(edgeClasses(rows[8])).toEqual(["bg-secondary", "bg-accent"]);
-    expect(edgeClasses(rows[9])).toEqual(["bg-accent", "bg-accent"]);
-    expect(edgeClasses(rows[10])).toEqual(["bg-accent"]);
+    expect(edgeClasses(rows[0])).toEqual([walkEdge]);
+    expect(edgeClasses(rows[1])).toEqual([walkEdge, walkEdge]);
+    expect(edgeClasses(rows[2])).toEqual([walkEdge, rideEdge]);
+    expect(edgeClasses(rows[3])).toEqual([rideEdge, rideEdge]);
+    expect(edgeClasses(rows[4])).toEqual([rideEdge, walkEdge]);
+    expect(edgeClasses(rows[5])).toEqual([walkEdge, walkEdge]);
+    expect(edgeClasses(rows[6])).toEqual([walkEdge, rideEdge]);
+    expect(edgeClasses(rows[7])).toEqual([rideEdge, rideEdge]);
+    expect(edgeClasses(rows[8])).toEqual([rideEdge, walkEdge]);
+    expect(edgeClasses(rows[9])).toEqual([walkEdge, walkEdge]);
+    expect(edgeClasses(rows[10])).toEqual([walkEdge]);
   });
 
   it("出発地と目的地をGoogleマップの地点リンクで示す", () => {

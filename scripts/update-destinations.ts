@@ -24,6 +24,7 @@ import {
   selectNearbyStops,
   type StopPosition,
 } from "../src/lib/transit/stop-selection";
+import { getWalkNetwork, type WalkGraph } from "../src/lib/transit/walk-network";
 
 export interface DestinationCatalogTransportResponse {
   ok: boolean;
@@ -42,6 +43,11 @@ export interface UpdateDestinationsOptions {
   readExistingCatalog: () => Promise<unknown | null>;
   writeCatalog: (catalog: DestinationCatalog) => Promise<void> | void;
   report: (message: string) => void;
+  /**
+   * 徒歩距離を求める徒歩ネットワーク。関数を渡すと、最初に必要になった
+   * 時点で読み込む。省略時はartifactを読む。
+   */
+  walkGraph?: WalkGraph | (() => WalkGraph);
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -157,6 +163,7 @@ function selectCandidates(
   osmNames: Map<string, string>,
   stops: StopPosition[],
   previousEntries: Map<string, DestinationCatalogEntry>,
+  walkGraph?: WalkGraph,
 ): DestinationCatalogEntry[] {
   const candidates = new Map<string, DestinationCatalogEntry>();
 
@@ -172,7 +179,13 @@ function selectCandidates(
     }
 
     if (
-      selectNearbyStops(stops, coordinates.lat, coordinates.lng).length === 0
+      selectNearbyStops(
+        stops,
+        coordinates.lat,
+        coordinates.lng,
+        undefined,
+        walkGraph,
+      ).length === 0
     ) {
       continue;
     }
@@ -271,11 +284,16 @@ export async function updateDestinationCatalog(
   const previousEntries = readPreviousEntries(existingCatalog);
   const records = readPlaceRecords(placesPayload);
   const osmNames = readOsmNames(osmPayload);
+  const walkGraph =
+    typeof options.walkGraph === "function"
+      ? options.walkGraph()
+      : options.walkGraph;
   const candidates = selectCandidates(
     records,
     osmNames,
     stops,
     previousEntries,
+    walkGraph,
   );
   const places = applySelection(candidates, previousEntries, options.report);
   const catalog: DestinationCatalog = { source, places };
@@ -359,6 +377,8 @@ async function runCli(): Promise<void> {
       appConfig,
       transport: fetchFromNetwork,
       loadStops: loadStopsFromDatabase,
+      walkGraph: () =>
+        getWalkNetwork(resolve(projectRoot, "data", "walk-network.json")),
       readExistingCatalog: () => readExistingCatalogFile(catalogPath),
       writeCatalog: (catalog) => writeCatalogAtomically(catalog, catalogPath),
       report: (message) => {

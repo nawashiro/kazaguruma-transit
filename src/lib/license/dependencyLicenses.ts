@@ -43,7 +43,18 @@ function fromPluginRow(value: unknown): DependencyLicenseEntry | null {
   };
 }
 
+/**
+ * バンドルに含まれないため webpack-license-plugin が拾わない依存。
+ * PDFの地図はページへ配信物を注入するので、依存はあるがチャンクには現れない。
+ */
 const EXTERNAL_SERVER_DEPENDENCIES: readonly DependencyLicenseEntry[] = [
+  {
+    packageName: "maplibre-gl",
+    version: "5.24.1",
+    license: "BSD-3-Clause",
+    repository: "https://github.com/maplibre/maplibre-gl-js",
+    homepage: "https://maplibre.org/",
+  },
   {
     packageName: "opening_hours",
     version: "3.16.0",

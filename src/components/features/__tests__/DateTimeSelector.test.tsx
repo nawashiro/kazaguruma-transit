@@ -93,6 +93,13 @@ describe("DateTimeSelector", () => {
     expect(label).toHaveClass("text-base-content");
   });
 
+  it("グループの見出しを本文より大きい20pxで表示する", () => {
+    render(<DateTimeSelector />);
+    const legend = screen.getByRole("group", { name: "日時" }).querySelector("legend");
+    expect(legend).toHaveClass("fieldset-legend", "text-xl");
+    expect(legend).not.toHaveClass("text-base");
+  });
+
   it("disabled時には日時と両ラジオを無効にする", () => {
     render(<DateTimeSelector disabled />);
     expect(screen.getByLabelText("日時")).toBeDisabled();

@@ -52,7 +52,7 @@ const DateTimeSelector: React.FC<DateTimeSelectorProps> = ({
 
   return (
     <fieldset className="fieldset min-w-0 w-full space-y-4 border border-base-300 rounded-box bg-base-200 p-4 text-base">
-        <legend className="fieldset-legend text-base">日時</legend>
+        <legend className="fieldset-legend text-xl">日時</legend>
         <div className="space-y-2">
           <label htmlFor={`departure-radio-${uniqueId}`} className="flex cursor-pointer items-center gap-2 text-base">
             <input

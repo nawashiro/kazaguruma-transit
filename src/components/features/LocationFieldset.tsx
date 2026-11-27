@@ -29,7 +29,7 @@ export default function LocationFieldset({
   return (
     <section className="min-w-0">
       <fieldset ref={fieldset} onFocusCapture={event => { lastFocused.current = event.target; }} className="fieldset min-w-0 w-full border border-base-300 rounded-box bg-base-200 p-4 text-base">
-        <legend className="fieldset-legend text-base">{label}</legend>
+        <legend className="fieldset-legend text-xl">{label}</legend>
         {selectedLocation ? (
           <>
             <p data-selected-location tabIndex={-1} data-testid={testId} className="min-w-0 break-words text-base focus-visible:outline-2 focus-visible:outline-offset-2">

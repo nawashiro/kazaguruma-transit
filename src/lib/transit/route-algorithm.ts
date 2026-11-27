@@ -2,6 +2,7 @@ import type { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../db/prisma";
 import { logger } from "@/utils/logger";
 import { parseGtfsTime } from "./walking";
+import { TRANSFER_PENALTY_MINUTES } from "./route-result-ranking";
 
 export const ROUTE_PARAMS = {
   DEFAULT_TIME_WINDOW: 180,
@@ -10,6 +11,7 @@ export const ROUTE_PARAMS = {
   MIN_TRANSFER_WAIT: 1,
   MAX_TRANSFER_WAIT: 15,
   MAX_TRANSFER_CANDIDATES: 10,
+  TRANSFER_PENALTY_MINUTES,
 } as const;
 
 export interface TimeTableNode {

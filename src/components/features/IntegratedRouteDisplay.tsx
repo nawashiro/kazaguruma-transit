@@ -39,10 +39,7 @@ function formatTime(time: string): string {
  * 値がないときは直線距離から概算しない。概算は実際の徒歩距離と食い違う。
  */
 function walkMinutes(stop: RouteDisplayStop): number {
-  if (stop.walkingTimeMinutes === undefined) {
-    return 0;
-  }
-  return stop.walkingTimeMinutes + 5;
+  return stop.walkingTimeMinutes ?? 0;
 }
 
 function AccentEdge() {

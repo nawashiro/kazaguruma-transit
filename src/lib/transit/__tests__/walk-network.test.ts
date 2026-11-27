@@ -235,18 +235,31 @@ describe("walkRoute", () => {
     ]);
   });
 
-  it("同じノードに接続しても徒歩距離は両端の接続区間を含む", () => {
+  it("同じノードに接続する2地点の徒歩距離は直線距離になる", () => {
     const graph = buildWalkGraph(lineArtifact());
-    const from = { lat: at(0.02).lat, lng: at(0.02).lng - 0.003 / KM_PER_LNG_DEGREE };
-    const to = { lat: at(0.02).lat, lng: at(0.02).lng + 0.003 / KM_PER_LNG_DEGREE };
+    // ノード3の西側、10メートルと3メートル。どちらも最寄りはノード3になる。
+    const from = { lat: at(0.02).lat, lng: at(0.02).lng - 0.01 / KM_PER_LNG_DEGREE };
+    const to = { lat: at(0.02).lat, lng: at(0.02).lng - 0.003 / KM_PER_LNG_DEGREE };
 
     const distance = walkRoute(graph, from, to)?.distanceKm as number;
 
-    expect(distance).toBeCloseTo(0.006, 2);
-    expect(distance).toBeGreaterThan(0.005);
+    // 接続区間を足すとノード3を経由して13メートルになる。2地点は直接7メートル離れている。
+    expect(haversineKm(from, to)).toBeCloseTo(0.007, 3);
+    expect(distance).toBeCloseTo(haversineKm(from, to), 9);
   });
 
-  it("経路の長さは直線距離より長い", () => {
+  it("停留所自身の座標から同じ停留所までの徒歩距離は0になる", () => {
+    const graph = buildWalkGraph(lineArtifact());
+    // ノード3の東へ5メートル離れた停留所。それでも最寄りはノード3である。
+    const stop = { lat: at(0.02).lat, lng: at(0.02).lng + 0.005 / KM_PER_LNG_DEGREE };
+
+    const distance = walkRoute(graph, stop, stop)?.distanceKm as number;
+
+    expect(distance).toBe(0);
+    expect(distance).toBeLessThan(0.1);
+  });
+
+  it("同じノードに接続する2地点の徒歩距離は直線距離になる", () => {
     const graph = buildWalkGraph(lineArtifact());
     const route = walkRoute(graph, at(0), at(0.03, 0.02));
 

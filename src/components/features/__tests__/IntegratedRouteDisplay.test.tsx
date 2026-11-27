@@ -92,7 +92,7 @@ describe("IntegratedRouteDisplay", () => {
     expect(screen.queryByRole("heading", { name: "経路" })).toBeNull();
     const rows = timelineRows();
     expect(rows[0]).toContain("出発地");
-    expect(rows[0]).toContain("9時19分");
+    expect(rows[0]).toContain("9時24分");
     expect(rows[1]).toContain("徒歩で移動");
     expect(rows[2]).toContain("出発バス停");
     expect(rows[2]).toContain("9時30分");
@@ -101,7 +101,7 @@ describe("IntegratedRouteDisplay", () => {
     expect(rows[4]).toContain("10時15分");
     expect(rows[5]).toContain("徒歩で移動");
     expect(rows[6]).toContain("目的地");
-    expect(rows[6]).toContain("10時29分");
+    expect(rows[6]).toContain("10時24分");
   });
 
   it("乗換経路を乗車停留所・路線名・降車停留所の順で示す", () => {

@@ -673,7 +673,8 @@ export class TransitService {
         origin,
         destination,
         time,
-        isDeparture
+        isDeparture,
+        prioritizeSpeed
       );
 
       // 従来の方法で結果が見つかった場合はそれを返す
@@ -707,8 +708,9 @@ export class TransitService {
     to: StopLocation,
     origin: { lat: number; lng: number },
     destination: { lat: number; lng: number },
-    time?: string,
-    isDeparture: boolean = true
+    time: string | undefined,
+    isDeparture: boolean,
+    prioritizeSpeed: boolean
   ): Promise<{ journeys: Journey[]; stops: NearbyStop[] }> {
     try {
       const graph = getWalkNetwork();
@@ -782,7 +784,20 @@ export class TransitService {
         return { journeys: [], stops: [] };
       }
 
-      const selectedRoute = routes[0];
+      const routeTotalWalkingDistance = walkToFirstStop + walkFromLastStop;
+      const selectedRoute = selectBestRouteCandidate(
+        routes.map((route) => ({
+          route,
+          totalWalkingDistance: routeTotalWalkingDistance,
+          departure: route.departure,
+          arrival: route.arrival,
+          transfers: route.transfers,
+        })),
+        { prioritizeSpeed, isDeparture }
+      )?.route;
+      if (!selectedRoute) {
+        return { journeys: [], stops: [] };
+      }
 
       // 使用する停留所のリストを作成
       const stops: NearbyStop[] = [
@@ -943,6 +958,9 @@ export class TransitService {
         destStop: NearbyStop;
         totalWalkingDistance: number;
         totalDuration: number;
+        departure: string;
+        arrival: string;
+        transfers: number;
       }[] = [];
 
       // 時刻表ベースのルーター
@@ -1029,11 +1047,9 @@ export class TransitService {
               ROUTE_PARAMS.DEFAULT_TIME_WINDOW
             );
 
-            if (routes.length > 0) {
-              const selectedRoute = routes[0];
-
+            for (const route of routes) {
               const routeResult = this.buildRouteResult(
-                selectedRoute,
+                route,
                 from,
                 to,
                 walkToFirstStop,
@@ -1059,6 +1075,9 @@ export class TransitService {
                 },
                 totalWalkingDistance: routeResult.totalWalkingDistance,
                 totalDuration: routeResult.totalDuration,
+                departure: route.departure,
+                arrival: route.arrival,
+                transfers: route.transfers,
               });
             }
           } catch (error) {
@@ -1077,10 +1096,10 @@ export class TransitService {
         return { journeys: [], stops: [] };
       }
 
-      const bestResult = selectBestRouteCandidate(
-        allResults,
-        prioritizeSpeed
-      );
+      const bestResult = selectBestRouteCandidate(allResults, {
+        prioritizeSpeed,
+        isDeparture,
+      });
 
       if (!bestResult) {
         return { journeys: [], stops: [] };
@@ -1300,8 +1319,11 @@ export class TransitService {
           lat: route.nodes[2].stopLat,
           lng: route.nodes[2].stopLon,
         },
-        distanceMeters: 0, // 後で修正
-        walkingTimeMinutes: waitTime, // 計算したwaitTimeを使用
+        // 探索は降車停留所と同じ停留所からの乗り継ぎだけを生成するため、乗換の徒歩距離は0になる。
+        // 異なる停留所へ歩く乗換を扱うときは、停留所間の徒歩距離をここへ入れる。
+        distanceMeters: 0,
+        // 乗換に要する時間は待ち時間だけである。徒歩時間ではない。
+        walkingTimeMinutes: waitTime,
       };
 
       return {

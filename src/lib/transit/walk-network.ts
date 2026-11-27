@@ -416,6 +416,7 @@ export function searchFrom(
 /**
  * 2地点間の徒歩経路を返す。距離は起点から最寄りノードまでの接続区間、
  * ネットワーク上の最短距離、到着点の最寄りノードから到着点までの接続区間の和。
+ * 両端の最寄りノードが同じときは、接続区間を2回足さず2地点間の直線距離にする。
  * 到達できないときは`null`を返す。
  */
 export function walkRoute(
@@ -467,7 +468,10 @@ export function walkLeg(
   if (!Number.isFinite(networkKm)) {
     return null;
   }
-  const distanceKm = prepared.snap.km + networkKm + toSnap.km;
+  const distanceKm =
+    prepared.snap.node === toSnap.node
+      ? haversineKm(prepared.from, to)
+      : prepared.snap.km + networkKm + toSnap.km;
   const withPath = options.path ?? true;
   if (!withPath) {
     return { distanceKm, path: [] };

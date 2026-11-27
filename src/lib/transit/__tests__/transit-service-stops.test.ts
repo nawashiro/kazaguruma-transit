@@ -100,6 +100,74 @@ describe("従来型経路検索の徒歩距離", () => {
     expect(destStopRow!.distance).toBeLessThan(0.26);
   });
 
+  it("優先条件によって通常経路の選択が変わる", async () => {
+    const directRoute: TimeTableRouteResult = {
+      ...route,
+      nodes: [
+        { ...route.nodes[0], departureTime: "10:29:00", arrivalTime: "10:29:00" },
+        { ...route.nodes[1], departureTime: "11:00:00", arrivalTime: "11:00:00" },
+      ],
+      departure: "10:29:00",
+      arrival: "11:00:00",
+      transfers: 0,
+    };
+    const transferRoute: TimeTableRouteResult = {
+      ...route,
+      nodes: [
+        { ...route.nodes[0], departureTime: "10:29:00", arrivalTime: "10:29:00" },
+        {
+          ...route.nodes[1],
+          stopId: "transfer-stop",
+          stopName: "乗換バス停",
+          arrivalTime: "10:44:00",
+          departureTime: "10:44:00",
+        },
+        {
+          ...route.nodes[1],
+          stopId: "transfer-stop",
+          stopName: "乗換バス停",
+          arrivalTime: "10:46:00",
+          departureTime: "10:46:00",
+        },
+        { ...route.nodes[1], departureTime: "10:55:00", arrivalTime: "10:55:00" },
+      ],
+      departure: "10:29:00",
+      arrival: "10:55:00",
+      transfers: 1,
+    };
+    mockFindOptimalRoute.mockResolvedValue([transferRoute, directRoute]);
+
+    const service = TransitService.getInstance() as unknown as {
+      findConventionalRoute: (...args: unknown[]) => Promise<{
+        journeys: { transfers: number; arrival: string }[];
+      }>;
+    };
+
+    const walking = await service.findConventionalRoute(
+      from,
+      to,
+      origin,
+      destination,
+      "2026-10-27T10:29",
+      true,
+      false
+    );
+    const speedy = await service.findConventionalRoute(
+      from,
+      to,
+      origin,
+      destination,
+      "2026-10-27T10:29",
+      true,
+      true
+    );
+
+    expect(walking.journeys[0].transfers).toBe(0);
+    expect(walking.journeys[0].arrival).toBe("11:00:00");
+    expect(speedy.journeys[0].transfers).toBe(1);
+    expect(speedy.journeys[0].arrival).toBe("10:55:00");
+  });
+
   it("徒歩時間は格子状の徒歩距離から求める", async () => {
     const service = TransitService.getInstance();
     const result = await (

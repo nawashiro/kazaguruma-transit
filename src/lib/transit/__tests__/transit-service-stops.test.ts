@@ -168,6 +168,61 @@ describe("従来型経路検索の徒歩距離", () => {
     expect(speedy.journeys[0].arrival).toBe("10:55:00");
   });
 
+  it("500mを超え750m以内の停留所も従来経路の対象にする", async () => {
+    const service = TransitService.getInstance() as unknown as {
+      findConventionalRoute: (...args: unknown[]) => Promise<{
+        journeys: unknown[];
+      }>;
+    };
+
+    // 格子は10m間隔なので、徒歩距離は10m単位に丸まる。
+    const inside = { ...from, ...gridPoint(origin, 0.6) };
+    const outside = { ...from, ...gridPoint(origin, 0.76) };
+    const destStop = { ...to, ...gridPoint(destination, 0.1) };
+
+    const accepted = await service.findConventionalRoute(
+      inside,
+      destStop,
+      origin,
+      destination,
+      "2026-10-27T10:00",
+      true
+    );
+    expect(accepted.journeys).not.toEqual([]);
+
+    const rejected = await service.findConventionalRoute(
+      outside,
+      destStop,
+      origin,
+      destination,
+      "2026-10-27T10:00",
+      true
+    );
+    expect(rejected.journeys).toEqual([]);
+  });
+
+  it("区間ごとの徒歩距離をメートルで返す", async () => {
+    const service = TransitService.getInstance() as unknown as {
+      findConventionalRoute: (...args: unknown[]) => Promise<{
+        originWalkMeters?: number;
+        destinationWalkMeters?: number;
+      }>;
+    };
+
+    const result = await service.findConventionalRoute(
+      from,
+      to,
+      origin,
+      destination,
+      "2026-10-27T10:00",
+      true
+    );
+
+    // 格子の刻みに丸まるため、公称100m・200mに対して数mの差が出る。
+    expect(result.originWalkMeters).toBeCloseTo(109, 0);
+    expect(result.destinationWalkMeters).toBeCloseTo(205, 0);
+  });
+
   it("徒歩時間は格子状の徒歩距離から求める", async () => {
     const service = TransitService.getInstance();
     const result = await (

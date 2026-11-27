@@ -42,6 +42,49 @@ interface StopLocation {
   stopName: string;
 }
 
+/**
+ * 停留所までの徒歩距離が上限を超え、経路を検索できなかった地点。
+ * `field`はどちらの地点か、`meters`はその徒歩距離（メートル）。
+ */
+export interface BlockedBy {
+  field: "origin" | "destination";
+  meters: number;
+}
+
+interface RouteSearchOutcome {
+  journeys: Journey[];
+  stops: NearbyStop[];
+  blockedBy?: BlockedBy;
+  /** 出発地から乗車停留所までの徒歩距離（メートル）。 */
+  originWalkMeters?: number;
+  /** 降車停留所から目的地までの徒歩距離（メートル）。 */
+  destinationWalkMeters?: number;
+}
+
+/**
+ * 出発地と目的地の最寄り停留所までの徒歩距離から、経路検索の対象外になる
+ * 地点を選ぶ。上限を超える地点が2つあるときは、遠い方を示す。
+ */
+function blockedLocation(
+  originMeters: number,
+  destinationMeters: number
+): BlockedBy | null {
+  const limit = TRANSIT_PARAMS.MAX_WALK_TO_STOP_METERS;
+  const originBlocked = !(originMeters <= limit);
+  const destinationBlocked = !(destinationMeters <= limit);
+  if (!originBlocked && !destinationBlocked) {
+    return null;
+  }
+  if (originBlocked && destinationBlocked) {
+    return originMeters >= destinationMeters
+      ? { field: "origin", meters: originMeters }
+      : { field: "destination", meters: destinationMeters };
+  }
+  return originBlocked
+    ? { field: "origin", meters: originMeters }
+    : { field: "destination", meters: destinationMeters };
+}
+
 // 内部で使用するRouteJourney インターフェース - 完全な移動経路を表現
 interface RouteJourney {
   departureTime: string;
@@ -395,6 +438,8 @@ export class TransitService {
     stopName: string;
     stopLat: number;
     stopLon: number;
+    /** 入力座標から停留所までの徒歩距離（メートル）。到達できなければ Infinity。 */
+    walkMeters: number;
   } | null> {
     try {
       logger.log("[findNearestStop] 入力座標:", { lat, lng });
@@ -420,6 +465,7 @@ export class TransitService {
         stopName: nearestStop.stopName,
         stopLat: nearestStop.stopLat,
         stopLon: nearestStop.stopLon,
+        walkMeters: nearestStop.walkMeters,
         inputCoords: { lat, lng },
       });
 
@@ -451,6 +497,8 @@ export class TransitService {
         stopLat: stop.lat,
         stopLon: stop.lon,
         distance: leg === null ? Number.POSITIVE_INFINITY : leg.distanceKm,
+        walkMeters:
+          leg === null ? Number.POSITIVE_INFINITY : leg.distanceKm * 1000,
       };
     });
 
@@ -561,6 +609,13 @@ export class TransitService {
         data: {
           journeys: result.journeys,
           stops: result.stops,
+          ...(result.blockedBy === undefined ? {} : { blockedBy: result.blockedBy }),
+          ...(result.originWalkMeters === undefined
+            ? {}
+            : { originWalkMeters: result.originWalkMeters }),
+          ...(result.destinationWalkMeters === undefined
+            ? {}
+            : { destinationWalkMeters: result.destinationWalkMeters }),
         },
       };
     } catch (error) {
@@ -577,9 +632,7 @@ export class TransitService {
   /**
    * 出発地点と目的地点の座標から最適な経路を検索
    */
-  private async searchRoute(
-    query: RouteQuery
-  ): Promise<{ journeys: Journey[]; stops: NearbyStop[] }> {
+  private async searchRoute(query: RouteQuery): Promise<RouteSearchOutcome> {
     try {
       const {
         origin,
@@ -607,6 +660,14 @@ export class TransitService {
       if (!originStop || !destStop) {
         logger.error("[searchRoute] 最寄りバス停が見つかりません");
         return { journeys: [], stops: [] };
+      }
+
+      const blockedBy = blockedLocation(originStop.walkMeters, destStop.walkMeters);
+      if (blockedBy !== null) {
+        logger.log(
+          `[searchRoute] 最寄りバス停までの徒歩が上限を超える: ${blockedBy.field}=${blockedBy.meters.toFixed(0)}m`
+        );
+        return { journeys: [], stops: [], blockedBy };
       }
 
       logger.log("[searchRoute] 座標データ詳細:", {
@@ -711,7 +772,7 @@ export class TransitService {
     time: string | undefined,
     isDeparture: boolean,
     prioritizeSpeed: boolean
-  ): Promise<{ journeys: Journey[]; stops: NearbyStop[] }> {
+  ): Promise<RouteSearchOutcome> {
     try {
       const graph = getWalkNetwork();
 
@@ -742,8 +803,8 @@ export class TransitService {
       const walkTimeFromLastStop =
         walkFromLastStop / TRANSIT_PARAMS.WALKING_SPEED_KM_MIN;
 
-      const radiusKm = TRANSIT_PARAMS.DEFAULT_SEARCH_RADIUS / 1000;
-      if (walkToFirstStop > radiusKm || walkFromLastStop > radiusKm) {
+      const limitKm = TRANSIT_PARAMS.MAX_WALK_TO_STOP_METERS / 1000;
+      if (walkToFirstStop > limitKm || walkFromLastStop > limitKm) {
         logger.log(
           `[findConventionalRoute] 最寄りバス停までの徒歩が上限を超える: 出発=${walkToFirstStop.toFixed(3)}km, 到着=${walkFromLastStop.toFixed(3)}km`
         );
@@ -899,6 +960,8 @@ export class TransitService {
       return {
         journeys: [convertedJourney],
         stops,
+        originWalkMeters: walkToFirstStop * 1000,
+        destinationWalkMeters: walkFromLastStop * 1000,
       };
     } catch (error) {
       logger.error("[TransitService] 従来型経路検索エラー:", error);
@@ -915,10 +978,10 @@ export class TransitService {
     time?: string,
     isDeparture: boolean = true,
     prioritizeSpeed: boolean = false
-  ): Promise<{ journeys: Journey[]; stops: NearbyStop[] }> {
+  ): Promise<RouteSearchOutcome> {
     try {
       // 検索半径をメートルからキロメートルに変換
-      const radiusKm = TRANSIT_PARAMS.DEFAULT_SEARCH_RADIUS / 1000;
+      const radiusKm = TRANSIT_PARAMS.MAX_WALK_TO_STOP_METERS / 1000;
 
       // 出発地点と目的地点の周辺バス停を取得
       const nearbyOriginStops = await this.findNearbyStops(
@@ -961,6 +1024,8 @@ export class TransitService {
         departure: string;
         arrival: string;
         transfers: number;
+        originWalkMeters: number;
+        destWalkMeters: number;
       }[] = [];
 
       // 時刻表ベースのルーター
@@ -1065,6 +1130,8 @@ export class TransitService {
 
               allResults.push({
                 journey: routeResult.journey,
+                originWalkMeters: walkToFirstStop * 1000,
+                destWalkMeters: walkFromLastStop * 1000,
                 originStop: {
                   ...originStop,
                   walkingTimeMinutes: Math.ceil(walkTimeToFirstStop),
@@ -1142,6 +1209,8 @@ export class TransitService {
       return {
         journeys: [bestResult.journey],
         stops,
+        originWalkMeters: bestResult.originWalkMeters,
+        destinationWalkMeters: bestResult.destWalkMeters,
       };
     } catch (error) {
       logger.error(
@@ -1397,7 +1466,7 @@ export class TransitService {
   private async findNearbyStops(
     lat: number,
     lng: number,
-    radiusKm: number = TRANSIT_PARAMS.DEFAULT_SEARCH_RADIUS / 1000
+    radiusKm: number = TRANSIT_PARAMS.MAX_WALK_TO_STOP_METERS / 1000
   ): Promise<NearbyStop[]> {
     try {
       logger.log(

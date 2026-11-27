@@ -89,12 +89,20 @@ describe("calculateHaversineDistanceKm", () => {
 });
 
 describe("selectNearbyStops", () => {
-  it("徒歩距離が500m以内の停留所を採用する", () => {
+  it("徒歩距離が上限以内の停留所を採用する", () => {
     const stops = [stopOnNorthRoad("stop-300m", 0.3), stopOnNorthRoad("stop-too-far", 2)];
 
     expect(
-      selectNearbyStops(stops, ORIGIN.lat, ORIGIN.lng, 0.5, graph).map((stop) => stop.id),
+      selectNearbyStops(stops, ORIGIN.lat, ORIGIN.lng, 0.75, graph).map((stop) => stop.id),
     ).toEqual(["stop-300m"]);
+  });
+
+  it("500mを超え750m以内の停留所も採用する", () => {
+    const stops = [stopOnNorthRoad("stop-600m", 0.6)];
+
+    expect(
+      selectNearbyStops(stops, ORIGIN.lat, ORIGIN.lng, 0.75, graph).map((stop) => stop.id),
+    ).toEqual(["stop-600m"]);
   });
 
   it("接続区間を含めると徒歩距離が直線距離より長くなる", () => {
@@ -153,8 +161,8 @@ describe("selectNearbyStops", () => {
     expect(selected.distance).toBeCloseTo(straightDistanceTo(stop), 6);
   });
 
-  it("既定の探索半径は500mである", () => {
-    const stops = [stopOnNorthRoad("stop-just-inside", 0.49), stopOnNorthRoad("stop-just-outside", 0.6)];
+  it("既定の探索半径は750mである", () => {
+    const stops = [stopOnNorthRoad("stop-just-inside", 0.74), stopOnNorthRoad("stop-just-outside", 0.76)];
 
     expect(
       selectNearbyStops(stops, ORIGIN.lat, ORIGIN.lng, undefined, graph).map((stop) => stop.id),

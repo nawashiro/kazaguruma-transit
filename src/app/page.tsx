@@ -80,7 +80,11 @@ function isRouteDestinations(
         typeof location.lat === "number" &&
         Number.isFinite(location.lat) &&
         typeof location.lng === "number" &&
-        Number.isFinite(location.lng),
+        Number.isFinite(location.lng) &&
+        (location.walkMeters === undefined ||
+          (typeof location.walkMeters === "number" &&
+            Number.isInteger(location.walkMeters) &&
+            location.walkMeters >= 0)),
     );
   });
 }

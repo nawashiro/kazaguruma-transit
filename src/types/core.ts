@@ -9,6 +9,8 @@ export interface Location {
   lat: number;
   lng: number;
   address?: string;
+  /** 最寄り停留所までの徒歩距離（メートル）。分からないときは含めない。 */
+  walkMeters?: number;
 }
 
 // バス停情報 - IDと名前は必須、位置情報も重要
@@ -171,6 +173,12 @@ export interface RouteResponse {
     journeys: Journey[];
     stops: NearbyStop[];
     message?: string;
+    /** 出発地から乗車停留所までの徒歩距離（メートル）。 */
+    originWalkMeters?: number;
+    /** 降車停留所から目的地までの徒歩距離（メートル）。 */
+    destinationWalkMeters?: number;
+    /** 停留所まで遠すぎて経路を検索できなかった地点。 */
+    blockedBy?: { field: "origin" | "destination"; meters: number };
   };
 }
 

@@ -6,9 +6,25 @@ import type { Location } from "@/types/core";
 jest.mock("@/lib/analytics/tracking", () => ({ track: jest.fn(), markSearchStart: jest.fn() }));
 jest.mock("../DestinationSelector", () => function DestinationSelector({
   onDestinationSelected,
+  selectedLocation,
 }: {
   onDestinationSelected: (location: Location) => void;
+  selectedLocation?: Location | null;
 }) {
+  if (selectedLocation) {
+    return (
+      <p data-testid="selected-destination">
+        {selectedLocation.address}
+        {selectedLocation.walkMeters === undefined
+          ? null
+          : ` ${Math.round(selectedLocation.walkMeters)}m ${
+              selectedLocation.walkMeters > 500 ? "バス停から遠い" : ""
+            }${
+              selectedLocation.walkMeters > 750 ? " バス停から遠すぎ" : ""
+            }`}
+      </p>
+    );
+  }
   return (
     <button type="button" onClick={() => onDestinationSelected({ lat: 35.69, lng: 139.75, address: "目的地" })}>
       目的地を選ぶ
@@ -84,5 +100,41 @@ describe("HomeRouteForm", () => {
 
     expect(trackMock).not.toHaveBeenCalledWith("validation_failed", expect.anything());
     expect(markSearchStartMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("施設詳細から渡された目的地の徒歩距離を確定済みの表示へ渡す", () => {
+    window.history.replaceState(
+      {},
+      "",
+      `/?destination=${encodeURIComponent(
+        JSON.stringify({
+          lat: 35.6865,
+          lng: 139.7589,
+          address: "皇居三の丸尚蔵館",
+          walkMeters: 963,
+        }),
+      )}`,
+    );
+    render(<HomeRouteForm routeDestinations={[]} />);
+
+    const confirmed = screen.getByTestId("selected-destination");
+    expect(confirmed).toHaveTextContent("皇居三の丸尚蔵館");
+    expect(confirmed).toHaveTextContent("963m");
+    expect(confirmed).toHaveTextContent("バス停から遠すぎ");
+  });
+
+  it("徒歩距離のない目的地でも確定済みとして扱う", () => {
+    window.history.replaceState(
+      {},
+      "",
+      `/?destination=${encodeURIComponent(
+        JSON.stringify({ lat: 35.694, lng: 139.753, address: "千代田区役所" }),
+      )}`,
+    );
+    render(<HomeRouteForm routeDestinations={[]} />);
+
+    const confirmed = screen.getByTestId("selected-destination");
+    expect(confirmed).toHaveTextContent("千代田区役所");
+    expect(confirmed).not.toHaveTextContent("バス停から");
   });
 });

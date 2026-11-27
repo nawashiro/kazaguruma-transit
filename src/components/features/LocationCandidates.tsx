@@ -3,6 +3,8 @@
 import { useId } from "react";
 import { MapPin } from "lucide-react";
 import type { GeocodeCandidate } from "@/lib/location/geocoding-search";
+import { walkAccessLevel } from "@/lib/transit/walk-access-level";
+import { WalkDistance, WalkWarning } from "./WalkDistance";
 
 interface LocationCandidatesProps {
   candidates: GeocodeCandidate[];
@@ -10,6 +12,9 @@ interface LocationCandidatesProps {
   label: string;
   id?: string;
 }
+
+const ITEM_CLASS =
+  "min-h-[44px] w-full min-w-0 rounded-box border border-base-300 p-2 text-start text-base whitespace-normal break-words transition-colors";
 
 export default function LocationCandidates({
   candidates,
@@ -29,21 +34,49 @@ export default function LocationCandidates({
         {candidates.length}件の候補があります
       </p>
       <ul id={listId} aria-label={`${label}の候補`} className="min-w-0 space-y-1">
-        {candidates.map((candidate) => (
-          <li key={`${candidate.name}-${candidate.lat}-${candidate.lng}`} className="min-w-0">
-            <button
-              type="button"
-              className="min-h-[44px] w-full min-w-0 cursor-pointer rounded-box border border-base-300 p-2 text-start text-base whitespace-normal break-words transition-colors hover:bg-base-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              onClick={() => onSelect(candidate)}
-            >
+        {candidates.map((candidate) => {
+          const key = `${candidate.name}-${candidate.lat}-${candidate.lng}`;
+          const contents = (
+            <>
               <MapPin className="mr-2 inline h-4 w-4 shrink-0" aria-hidden="true" />
               <span className="font-bold">{candidate.name}</span>
               {candidate.address && candidate.address !== candidate.name && (
                 <span className="ml-2 break-words">{candidate.address}</span>
               )}
-            </button>
-          </li>
-        ))}
+              <span className="ml-2 inline-block">
+                <WalkWarning walkMeters={candidate.walkMeters} />
+              </span>
+              <span className="ml-2 inline-block">
+                <WalkDistance walkMeters={candidate.walkMeters} />
+              </span>
+            </>
+          );
+
+          if (
+            candidate.walkMeters !== undefined &&
+            walkAccessLevel(candidate.walkMeters) === "tooFar"
+          ) {
+            return (
+              <li key={key} className="min-w-0">
+                <div className="min-h-[44px] w-full min-w-0 rounded-box border border-base-300 p-2 text-start text-base whitespace-normal break-words">
+                  {contents}
+                </div>
+              </li>
+            );
+          }
+
+          return (
+            <li key={key} className="min-w-0">
+              <button
+                type="button"
+                className={`${ITEM_CLASS} cursor-pointer hover:bg-base-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+                onClick={() => onSelect(candidate)}
+              >
+                {contents}
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

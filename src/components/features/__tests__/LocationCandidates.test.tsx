@@ -51,4 +51,58 @@ describe("LocationCandidates", () => {
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onSelect).toHaveBeenCalledWith(candidates[1]);
   });
+
+  it("徒歩距離と警告を候補ごとに示す", () => {
+    render(
+      <LocationCandidates
+        candidates={[
+          { ...candidates[0], walkMeters: 450 },
+          { ...candidates[1], walkMeters: 537 },
+        ]}
+        label="目的地"
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const list = screen.getByRole("list", { name: "目的地の候補" });
+    expect(within(list).getByText("450m")).toBeInTheDocument();
+    expect(within(list).getByText("537m")).toBeInTheDocument();
+    expect(within(list).getByText("バス停から遠い")).toBeInTheDocument();
+    expect(within(list).queryAllByText("バス停から遠い")).toHaveLength(1);
+  });
+
+  it("750mを超える候補は選べず、理由を文章として残す", () => {
+    const onSelect = jest.fn();
+    render(
+      <LocationCandidates
+        candidates={[
+          { ...candidates[0], walkMeters: 537 },
+          { ...candidates[1], walkMeters: 939 },
+        ]}
+        label="目的地"
+        onSelect={onSelect}
+      />,
+    );
+
+    const list = screen.getByRole("list", { name: "目的地の候補" });
+    const buttons = within(list).getAllByRole("button");
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveTextContent("神田駅");
+
+    expect(within(list).getByText("バス停から遠すぎ")).toBeInTheDocument();
+    expect(screen.getByText("939m")).toBeInTheDocument();
+    expect(within(list).getByText("千代田区役所")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("千代田区役所"));
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("徒歩距離のない候補は警告を出さずに選べる", () => {
+    const onSelect = jest.fn();
+    render(<LocationCandidates candidates={candidates} label="目的地" onSelect={onSelect} />);
+
+    expect(screen.queryByText(/バス停から/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /神田駅/ }));
+    expect(onSelect).toHaveBeenCalledWith(candidates[0]);
+  });
 });

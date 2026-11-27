@@ -13,6 +13,19 @@ import type { RouteDestinationCategory } from "@/types/route-destinations";
 import { logger } from "@/utils/logger";
 import { markSearchStart, track } from "@/lib/analytics/tracking";
 
+/**
+ * 施設詳細は徒歩距離を目的地のJSONへ載せて渡す。載っていないときは距離を
+ * 示さず、地点そのものを確定済みとして扱う。
+ */
+function readWalkMeters(candidate: Location): number | undefined {
+  const walkMeters = (candidate as { walkMeters?: unknown }).walkMeters;
+  return typeof walkMeters === "number" &&
+    Number.isInteger(walkMeters) &&
+    walkMeters >= 0
+    ? walkMeters
+    : undefined;
+}
+
 interface HomeRouteFormProps {
   routeDestinations: RouteDestinationCategory[];
 }
@@ -36,7 +49,10 @@ export default function HomeRouteForm({ routeDestinations }: HomeRouteFormProps)
     try {
       const destination = JSON.parse(decodeURIComponent(destinationParam)) as Location;
       if (Number.isFinite(destination.lat) && Number.isFinite(destination.lng) && typeof destination.address === "string") {
-        setSelectedDestination(destination);
+        const walkMeters = readWalkMeters(destination);
+        setSelectedDestination(
+          walkMeters === undefined ? destination : { ...destination, walkMeters },
+        );
         track("place_select", { field: "destination", source: "detail" });
         window.history.replaceState({}, document.title, window.location.pathname);
       }

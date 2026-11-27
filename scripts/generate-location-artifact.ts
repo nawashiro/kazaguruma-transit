@@ -135,17 +135,10 @@ export interface GenerateLocationArtifactOptions {
 
 type JsonRecord = Record<string, unknown>;
 
-export interface RouteDestinationLocation {
-  name: string;
-  lat: number;
-  lng: number;
-}
-
-export interface RouteDestinationCategory {
-  category: string;
-  categoryId: string;
-  locations: RouteDestinationLocation[];
-}
+import type {
+  RouteDestinationCategory,
+  RouteDestinationLocation,
+} from "@/types/route-destinations";
 
 interface CategoryTerm {
   id: string;
@@ -693,6 +686,7 @@ export interface LocationEntry {
   name: string;
   lat: number;
   lng: number;
+  walkMeters?: number;
   imageUri?: string;
   imageCreator?: string;
   imageLicense?: string;
@@ -714,11 +708,15 @@ export interface LocationCategory {
 }
 
 function buildLocations(
-  catalogIds: ReadonlySet<string>,
+  catalog: DestinationCatalog,
   dataset: DatasetGraph,
   osmPayload: unknown,
   wikidataPayload: unknown,
 ): LocationCategory[] {
+  const catalogIds = new Set(catalog.places.map((entry) => entry.id));
+  const walkMetersById = new Map(
+    catalog.places.map((entry) => [entry.id, entry.walkToStopMeters]),
+  );
   const osmDetails = parseOsmDetails(osmPayload);
   const wikidata = parseWikidataMirror(wikidataPayload);
   const locationsByCode = new Map<string, LocationEntry[]>();
@@ -756,6 +754,7 @@ function buildLocations(
       name: detail.name,
       lat: coordinates.lat,
       lng: coordinates.lng,
+      walkMeters: walkMetersById.get(id),
       relatedPages,
       osmElement,
       wheelchair: mapWheelchair(detail.wheelchair),
@@ -844,7 +843,12 @@ function buildRouteDestinations(
     const codes = readCategoryCodes(record, dataset);
     for (const code of codes) {
       const locations = locationsByCode.get(code) ?? [];
-      locations.push({ name, lat: coordinates.lat, lng: coordinates.lng });
+      locations.push({
+        name,
+        lat: coordinates.lat,
+        lng: coordinates.lng,
+        walkMeters: item.walkToStopMeters,
+      });
       locationsByCode.set(code, locations);
     }
   }
@@ -1390,9 +1394,8 @@ export async function generateLocationArtifact(
 
   const dataset = parseDatasetGraph(datasetPayload);
   const routeDestinations = buildRouteDestinations(catalog, dataset, osmPayload);
-  const catalogIds = new Set(catalog.places.map((entry) => entry.id));
   const locations = buildLocations(
-    catalogIds,
+    catalog,
     dataset,
     osmPayload,
     wikidataPayload,

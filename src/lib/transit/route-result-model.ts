@@ -33,6 +33,12 @@ export interface RouteDisplayStop {
   walkingTimeMinutes?: number;
 }
 
+/** 停留所までの徒歩距離が上限を超え、経路を検索できなかった地点。 */
+export interface RouteBlockedBy {
+  field: "origin" | "destination";
+  meters: number;
+}
+
 export interface RouteResultViewModel {
   hasRoute: boolean;
   routes: RouteDetailInfo[];
@@ -45,12 +51,21 @@ export interface RouteResultViewModel {
   originWalkPath?: Array<[number, number]>;
   /** 降車停留所から目的地までの徒歩経路。[経度, 緯度] の配列。 */
   destinationWalkPath?: Array<[number, number]>;
+  /** 出発地から乗車停留所までの徒歩距離（メートル）。 */
+  originWalkMeters?: number;
+  /** 降車停留所から目的地までの徒歩距離（メートル）。 */
+  destinationWalkMeters?: number;
+  /** 停留所まで遠すぎて経路を検索できなかった地点。 */
+  blockedBy?: RouteBlockedBy;
 }
 
 export interface RouteResultData {
   journeys: Journey[];
   stops: NearbyStop[];
   message?: string;
+  originWalkMeters?: number;
+  destinationWalkMeters?: number;
+  blockedBy?: RouteBlockedBy;
 }
 
 function findStop(stops: NearbyStop[], name: string): NearbyStop | undefined {
@@ -132,6 +147,7 @@ export function createRouteResultViewModel(
         stopName: "目的地最寄りバス停",
         distance: 0,
       },
+      ...(data?.blockedBy === undefined ? {} : { blockedBy: data.blockedBy }),
     };
   }
 
@@ -146,6 +162,13 @@ export function createRouteResultViewModel(
     message: data?.message,
     originWalkPath: journey.originWalkPath,
     destinationWalkPath: journey.destinationWalkPath,
+    ...(data?.originWalkMeters === undefined
+      ? {}
+      : { originWalkMeters: data.originWalkMeters }),
+    ...(data?.destinationWalkMeters === undefined
+      ? {}
+      : { destinationWalkMeters: data.destinationWalkMeters }),
+    ...(data?.blockedBy === undefined ? {} : { blockedBy: data.blockedBy }),
     originStop: {
       stopId: originStopInfo?.id || "unknown",
       stopName: journey.from,

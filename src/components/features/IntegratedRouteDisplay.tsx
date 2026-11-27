@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import type { RouteDetailInfo, RouteDisplayStop } from "@/lib/transit/route-result-model";
+import { WalkDistance, WalkWarning } from "./WalkDistance";
 import { generateGoogleMapDirectionLink, generateGoogleMapPointLink } from "@/utils/maps";
 import StopTimeDisplay from "./StopTimeDisplay";
 import { calculateArrivalTime } from "@/lib/transit/route-display-model";
@@ -13,6 +14,12 @@ interface IntegratedRouteDisplayProps {
   originLng?: number;
   destLat?: number;
   destLng?: number;
+  /** 出発地から乗車停留所までの徒歩距離（メートル）。 */
+  originWalkMeters?: number;
+  /** 降車停留所から目的地までの徒歩距離（メートル）。 */
+  destinationWalkMeters?: number;
+  /** 停留所まで遠すぎて経路を検索できなかった地点。 */
+  blockedBy?: { field: "origin" | "destination"; meters: number };
 }
 
 function toMinutes(time: string): number | undefined {
@@ -70,13 +77,37 @@ function TransferLabel() {
   return <p className="py-1">ここで乗り換え</p>;
 }
 
-function WalkLink({ href }: { href: string }) {
-  return <a href={href} target="_blank" rel="noopener noreferrer" className="link">徒歩で移動(Googleマップ)</a>;
+function WalkLink({ href, walkMeters }: { href: string; walkMeters?: number }) {
+  if (walkMeters === undefined) {
+    return <a href={href} target="_blank" rel="noopener noreferrer" className="link">徒歩で移動(Googleマップ)</a>;
+  }
+  return (
+    <div className="min-w-0">
+      <a href={href} target="_blank" rel="noopener noreferrer" className="link">徒歩で移動(Googleマップ)</a>
+      <p className="flex flex-wrap items-center gap-2 text-base">
+        <WalkWarning walkMeters={walkMeters} />
+        <WalkDistance walkMeters={walkMeters} />
+      </p>
+    </div>
+  );
 }
 
 export default function IntegratedRouteDisplay({
   originStop, destinationStop, routes, type, originLat, originLng, destLat, destLng,
+  originWalkMeters, destinationWalkMeters, blockedBy,
 }: IntegratedRouteDisplayProps) {
+  if (type === "none" && blockedBy !== undefined) {
+    const place = blockedBy.field === "origin" ? "出発地" : "目的地";
+    const distance = `${Math.round(blockedBy.meters)}m`;
+    return <section className="text-base">
+      <h2 className="mb-2 text-xl font-bold">バス停が遠すぎます</h2>
+      <p>{`${place}は最寄りのバス停から徒歩${distance}離れています。`}</p>
+      <p className="mt-2">
+        バス停から徒歩15分（750m）以内の地点を選んでください。
+      </p>
+    </section>;
+  }
+
   if (type === "none") return <section className="text-base">
     <h2 className="mb-2 text-xl font-bold">ルートが見つかりません</h2>
     <p>この2つの地点を結ぶルートが見つかりませんでした</p>
@@ -116,7 +147,7 @@ export default function IntegratedRouteDisplay({
         <AccentEdge />
         <div className="timeline-middle w-4"></div>
         <div className="timeline-end min-w-0 w-full">
-          <WalkLink href={originMap} />
+          <WalkLink href={originMap} walkMeters={originWalkMeters} />
         </div>
         <AccentEdge />
       </li>}
@@ -192,7 +223,7 @@ export default function IntegratedRouteDisplay({
         <AccentEdge />
         <div className="timeline-middle w-4"></div>
         <div className="timeline-end min-w-0 w-full">
-          <WalkLink href={destinationMap} />
+          <WalkLink href={destinationMap} walkMeters={destinationWalkMeters} />
         </div>
         <AccentEdge />
       </li>}

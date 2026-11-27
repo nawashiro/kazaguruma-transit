@@ -59,7 +59,7 @@ export function selectNearbyStops(
   stops: readonly StopPosition[],
   lat: number,
   lng: number,
-  radiusKm: number = TRANSIT_PARAMS.DEFAULT_SEARCH_RADIUS / 1000,
+  radiusKm: number = TRANSIT_PARAMS.MAX_WALK_TO_STOP_METERS / 1000,
   graph: WalkGraph = getWalkNetwork(),
 ): NearbyStop[] {
   const origin = { lat, lng };

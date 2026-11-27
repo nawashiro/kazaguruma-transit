@@ -13,6 +13,8 @@ export interface DestinationCatalogEntry {
   id: string;
   name: string;
   includeInRouteForm: boolean;
+  /** 候補にしたときの最寄り停留所までの徒歩距離（メートル）。 */
+  walkToStopMeters: number;
 }
 
 export interface DestinationCatalog {
@@ -126,11 +128,20 @@ function validatePlaces(value: unknown): DestinationCatalogEntry[] {
     if (typeof rawEntry.includeInRouteForm !== "boolean") {
       fail(`${entryPath}.includeInRouteForm は真偽値である必要があります`);
     }
+    const walkToStopMeters = rawEntry.walkToStopMeters;
+    if (
+      typeof walkToStopMeters !== "number" ||
+      !Number.isInteger(walkToStopMeters) ||
+      walkToStopMeters < 0
+    ) {
+      fail(`${entryPath}.walkToStopMeters は0以上の整数である必要があります`);
+    }
 
     const entry: DestinationCatalogEntry = {
       id,
       name: rawEntry.name,
       includeInRouteForm: rawEntry.includeInRouteForm,
+      walkToStopMeters,
     };
     return entry;
   });

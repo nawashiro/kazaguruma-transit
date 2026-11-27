@@ -370,23 +370,45 @@ export interface WalkSearchResult {
   previous: Int32Array | null;
 }
 
+/** 多点探索の種。`km`は種のノードまでの接続区間の距離。 */
+export interface WalkSource {
+  node: number;
+  km: number;
+}
+
+interface RelaxedSearch {
+  distances: Float64Array;
+  /** 各ノードへ最短で到達する種の添字。未到達は-1。 */
+  owners: Int32Array;
+  /** 経路を復元するための直前ノード。記録しないときは`null`。 */
+  previous: Int32Array | null;
+}
+
 /**
- * 1つのノードから全ノードへの最短距離を求める。停留所79件の距離は
- * この1回の結果から読めるため、停留所ごとに探索しない。
+ * 種のノードから全ノードへの最短距離を1回のダイクストラで求める。種への
+ * 接続区間を初期距離に含めるため、返る距離は利用者の地点からの距離になる。
+ * 種の距離が同じノードで競合するときは、先に現れた種を残す。
  */
-export function searchFrom(
+function relaxFromSources(
   graph: WalkGraph,
-  source: number,
-  options: WalkSearchOptions = {},
-): WalkSearchResult {
+  sources: readonly WalkSource[],
+  options: WalkSearchOptions,
+): RelaxedSearch {
   const nodeCount = graph.latitude.length;
   const limitKm = options.limitKm ?? Number.POSITIVE_INFINITY;
   const distances = new Float64Array(nodeCount).fill(Number.POSITIVE_INFINITY);
+  const owners = new Int32Array(nodeCount).fill(-1);
   const previous = options.trackPrevious ? new Int32Array(nodeCount).fill(-1) : null;
   const settled = new Uint8Array(nodeCount);
   const heap: Heap = { distances: [], nodes: [] };
-  distances[source] = 0;
-  heapPush(heap, 0, source);
+
+  sources.forEach((source, index) => {
+    if (source.km < distances[source.node]) {
+      distances[source.node] = source.km;
+      owners[source.node] = index;
+      heapPush(heap, source.km, source.node);
+    }
+  });
 
   while (heap.distances.length > 0) {
     const [distance, node] = heapPop(heap);
@@ -402,6 +424,7 @@ export function searchFrom(
       const next = distance + graph.weights[edge];
       if (next <= limitKm && next < distances[target] - 1e-12) {
         distances[target] = next;
+        owners[target] = owners[node];
         if (previous !== null) {
           previous[target] = node;
         }
@@ -410,7 +433,43 @@ export function searchFrom(
     }
   }
 
+  return { distances, owners, previous };
+}
+
+/**
+ * 1つのノードから全ノードへの最短距離を求める。停留所79件の距離は
+ * この1回の結果から読めるため、停留所ごとに探索しない。
+ */
+export function searchFrom(
+  graph: WalkGraph,
+  source: number,
+  options: WalkSearchOptions = {},
+): WalkSearchResult {
+  const { distances, previous } = relaxFromSources(
+    graph,
+    [{ node: source, km: 0 }],
+    options,
+  );
   return { distances, previous };
+}
+
+export interface MultiSourceSearchResult {
+  distances: Float64Array;
+  /** 各ノードへ最短で到達する種の添字。未到達は-1。 */
+  owners: Int32Array;
+}
+
+/**
+ * 複数のノードを種にして、全ノードへの最短距離を1回で求める。停留所79件を
+ * 種にすれば、任意の地点から最寄り停留所までの距離が1回の探索で読める。
+ */
+export function searchFromMany(
+  graph: WalkGraph,
+  sources: readonly WalkSource[],
+  options: WalkSearchOptions = {},
+): MultiSourceSearchResult {
+  const { distances, owners } = relaxFromSources(graph, sources, options);
+  return { distances, owners };
 }
 
 /**

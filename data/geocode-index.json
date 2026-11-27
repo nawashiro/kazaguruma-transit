@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-25T00:52:56.880Z",
+  "generatedAt": "2026-11-27T12:47:34.297Z",
   "source": {
     "isj": {
       "name": "位置参照情報（街区レベル）",
@@ -8059,8 +8059,8 @@
     {"name":"国立劇場","aliases":[],"lat":35.681481,"lng":139.743473,"kind":"other"},
     {"name":"国立劇場","aliases":[],"lat":35.682218,"lng":139.743292,"kind":"other"},
     {"name":"国立劇場前","aliases":[],"lat":35.6818789,"lng":139.744603,"kind":"other"},
-    {"name":"国立公文書館","aliases":[],"lat":35.6902974,"lng":139.7539074,"kind":"culture"},
-    {"name":"国立国会図書館","aliases":["NDL"],"lat":35.6784197,"lng":139.7445633,"kind":"culture"},
+    {"name":"国立公文書館","aliases":[],"lat":35.6902788,"lng":139.7538928,"kind":"culture"},
+    {"name":"国立国会図書館","aliases":["NDL"],"lat":35.6785227,"lng":139.7444494,"kind":"culture"},
     {"name":"国立国会図書館お知らせ","aliases":[],"lat":35.6778457,"lng":139.7442786,"kind":"other"},
     {"name":"国立国会図書館お知らせ","aliases":[],"lat":35.6786755,"lng":139.7452154,"kind":"other"},
     {"name":"国立国会図書館お知らせ","aliases":[],"lat":35.679145,"lng":139.7433217,"kind":"other"},
@@ -9194,7 +9194,7 @@
     {"name":"神田キリスト教診療所","aliases":[],"lat":35.6944415,"lng":139.7657224,"kind":"medical"},
     {"name":"神田クレストビル","aliases":[],"lat":35.6956412,"lng":139.7670211,"kind":"other"},
     {"name":"神田サクラビル","aliases":[],"lat":35.69073,"lng":139.7723667,"kind":"other"},
-    {"name":"神田さくら館","aliases":[],"lat":35.693118,"lng":139.7684459,"kind":"public"},
+    {"name":"神田さくら館","aliases":[],"lat":35.6931543,"lng":139.7684379,"kind":"public"},
     {"name":"神田スクエア","aliases":[],"lat":35.693408,"lng":139.762809,"kind":"other"},
     {"name":"神田ステーションホテル (Kanda Station Hotel)","aliases":["神田ステーションホテル"],"lat":35.6894907,"lng":139.770565,"kind":"lodging"},
     {"name":"神田センタービルディング","aliases":[],"lat":35.6911994,"lng":139.772264,"kind":"other"},
@@ -9918,7 +9918,7 @@
     {"name":"千鳥ヶ淵公園","aliases":[],"lat":35.6858002,"lng":139.744945,"kind":"park"},
     {"name":"千鳥ヶ淵周辺のご案内","aliases":[],"lat":35.6891272,"lng":139.7456517,"kind":"other"},
     {"name":"千鳥ヶ淵周辺のご案内","aliases":[],"lat":35.6944378,"lng":139.7476159,"kind":"other"},
-    {"name":"千鳥ヶ淵戦没者墓苑","aliases":[],"lat":35.6896839,"lng":139.7467972,"kind":"other"},
+    {"name":"千鳥ヶ淵戦没者墓苑","aliases":[],"lat":35.6898165,"lng":139.7468393,"kind":"park"},
     {"name":"千鳥ヶ淵戦没者墓苑案内図","aliases":[],"lat":35.6944803,"lng":139.7476119,"kind":"other"},
     {"name":"千年の宴","aliases":[],"lat":35.686125,"lng":139.731812,"kind":"food"},
     {"name":"千年の宴","aliases":[],"lat":35.7008769,"lng":139.7463281,"kind":"food"},

@@ -30,7 +30,12 @@ type UpdateOptions = {
 
 type UpdateCatalog = (options: UpdateOptions) => Promise<{
   source: { datasetJsonLdUri: string; osmMirrorUri: string };
-  places: Array<{ id: string; name: string; includeInRouteForm: boolean }>;
+  places: Array<{
+    id: string;
+    name: string;
+    includeInRouteForm: boolean;
+    walkToStopMeters: number;
+  }>;
 }>;
 
 const PLACES_URI = "https://fixtures.example.test/dataset.jsonld";
@@ -86,7 +91,7 @@ function placeRecord(
 }
 
 const within = northOfOrigin(0.2);
-const outside = northOfOrigin(0.6);
+const outside = northOfOrigin(0.8);
 
 const placesJsonLd = {
   "@context": { "@version": 1.1 },
@@ -160,10 +165,26 @@ const existingCatalog = {
       name: "旧い名前",
       group: "disability-support",
       includeInRouteForm: true,
+      walkToStopMeters: 200,
     },
-    { id: ID.library, name: "千代田区立千代田図書館", includeInRouteForm: false },
-    { id: ID.far, name: "遠い施設", includeInRouteForm: true },
-    { id: ID.vanished, name: "消えた施設", includeInRouteForm: false },
+    {
+      id: ID.library,
+      name: "千代田区立千代田図書館",
+      includeInRouteForm: false,
+      walkToStopMeters: 200,
+    },
+    {
+      id: ID.far,
+      name: "遠い施設",
+      includeInRouteForm: true,
+      walkToStopMeters: 600,
+    },
+    {
+      id: ID.vanished,
+      name: "消えた施設",
+      includeInRouteForm: false,
+      walkToStopMeters: 300,
+    },
   ],
 };
 
@@ -250,7 +271,7 @@ function jsonResponse(payload: unknown, status = 200): TransportResponse {
 }
 
 describe("updateDestinationCatalog", () => {
-  it("公開グラフのIDを取り、500m以内の候補を書いてOSM名のない新規recordを除く", async () => {
+  it("公開グラフのIDを取り、750m以内の候補を書いてOSM名のない新規recordを除く", async () => {
     const harness = createHarness();
 
     const catalog = await getUpdater()(harness.options);
@@ -302,11 +323,17 @@ describe("updateDestinationCatalog", () => {
     const catalog = await getUpdater()(harness.options);
 
     expect(catalog.places).toEqual([
-      { id: ID.cityOffice, name: "千代田区役所", includeInRouteForm: true },
+      {
+        id: ID.cityOffice,
+        name: "千代田区役所",
+        includeInRouteForm: true,
+        walkToStopMeters: expect.any(Number),
+      },
       {
         id: ID.library,
         name: "千代田区立千代田図書館",
         includeInRouteForm: false,
+        walkToStopMeters: expect.any(Number),
       },
     ]);
   });
@@ -315,7 +342,14 @@ describe("updateDestinationCatalog", () => {
     const harness = createHarness({
       existingCatalog: {
         source: { datasetJsonLdUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI },
-        places: [{ id: ID.cityOffice, name: "千代田区役所", includeInRouteForm: true }],
+        places: [
+          {
+            id: ID.cityOffice,
+            name: "千代田区役所",
+            includeInRouteForm: true,
+            walkToStopMeters: 200,
+          },
+        ],
       },
     });
 
@@ -325,6 +359,7 @@ describe("updateDestinationCatalog", () => {
       id: ID.library,
       name: "千代田区立千代田図書館",
       includeInRouteForm: false,
+      walkToStopMeters: expect.any(Number),
     });
     expect(harness.reported).toContainEqual(expect.stringContaining(ID.library));
     expect(harness.reported).toContainEqual(expect.stringContaining("追加"));
@@ -373,6 +408,7 @@ describe("updateDestinationCatalog", () => {
       id: ID.cityOffice,
       name: "千代田区役所",
       includeInRouteForm: true,
+      walkToStopMeters: expect.any(Number),
     });
     expect(cityOffice).not.toHaveProperty("group");
   });
@@ -390,7 +426,14 @@ describe("updateDestinationCatalog", () => {
     const harness = createHarness({
       existingCatalog: {
         source: { datasetJsonLdUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI },
-        places: [{ id: ID.noOsmLink, name: "OSMなし", includeInRouteForm: true }],
+        places: [
+          {
+            id: ID.noOsmLink,
+            name: "OSMなし",
+            includeInRouteForm: true,
+            walkToStopMeters: 200,
+          },
+        ],
       },
     });
 
@@ -400,6 +443,7 @@ describe("updateDestinationCatalog", () => {
       id: ID.noOsmLink,
       name: "OSMなし",
       includeInRouteForm: true,
+      walkToStopMeters: expect.any(Number),
     });
     expect(harness.reported).not.toContainEqual(
       expect.stringContaining(ID.noOsmLink),
@@ -433,7 +477,7 @@ describe("updateDestinationCatalog", () => {
 });
 
 describe("徒歩距離による候補抽出", () => {
-  it("直線距離に√2を掛けると圏外でも、徒歩距離が500m以内なら候補にする", async () => {
+  it("直線距離に√2を掛けると圏外でも、徒歩距離が上限以内なら候補にする", async () => {
     // 直線0.45kmは√2補正で0.636kmになり旧判定では圏外。格子状の徒歩経路は約0.45km。
     const distantStop: StopPosition[] = [
       { id: "stop-far", name: "遠い停留所", lat: northOfOrigin(0.45), lon: ORIGIN.lng },
@@ -443,6 +487,34 @@ describe("徒歩距離による候補抽出", () => {
     const catalog = await getUpdater()(harness.options);
 
     expect(catalog.places.map((place) => place.id)).toContain(ID.cityOffice);
+  });
+
+  it("候補にしたときの徒歩距離をメートルで記録する", async () => {
+    const harness = createHarness();
+
+    const catalog = await getUpdater()(harness.options);
+
+    const cityOffice = catalog.places.find((place) => place.id === ID.cityOffice);
+    // 停留所は原点、候補は北へ0.2km。格子状の徒歩距離も約200mになる。
+    expect(cityOffice?.walkToStopMeters).toBe(200);
+  });
+
+  it("750mを超えるrecordは候補にしない", async () => {
+    const beyond: StopPosition[] = [
+      { id: "stop-far", name: "遠い停留所", lat: northOfOrigin(0.2), lon: ORIGIN.lng },
+    ];
+    const far = placeRecord(ID.far, northOfOrigin(0.2 + 0.8), {
+      seeAlso: ["https://www.openstreetmap.org/node/1003"],
+    });
+    const harness = createHarness({
+      places: { ...placesJsonLd, "@graph": [far] },
+      loadStops: async () => beyond,
+      existingCatalog: null,
+    });
+
+    const catalog = await getUpdater()(harness.options);
+
+    expect(catalog.places).toEqual([]);
   });
 
   it("徒歩ネットワークにつながらない停留所しかなければ候補にしない", async () => {

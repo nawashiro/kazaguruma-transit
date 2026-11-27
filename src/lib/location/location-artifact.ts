@@ -30,6 +30,8 @@ export interface LocationEntry {
   name: string;
   lat: number;
   lng: number;
+  /** 最寄り停留所までの徒歩距離（メートル）。目録が候補にしたときの値。 */
+  walkMeters?: number;
   imageUri?: string;
   imageCreator?: string;
   imageLicense?: string;
@@ -207,6 +209,18 @@ function validateLocationEntry(value: unknown, fieldPath: string): LocationEntry
   const osmElement = validateOsmElement(value["osmElement"], `${fieldPath}.osmElement`);
   const wheelchair = validateWheelchair(value["wheelchair"], `${fieldPath}.wheelchair`);
   const relatedPages = validateRelatedPages(value["relatedPages"], `${fieldPath}.relatedPages`);
+  const hasWalkMeters =
+    value["walkMeters"] !== undefined && value["walkMeters"] !== null;
+  let walkMeters: number | undefined;
+  if (hasWalkMeters) {
+    walkMeters = requireFiniteNumber(
+      value["walkMeters"],
+      `${fieldPath}.walkMeters`,
+    );
+    if (!Number.isInteger(walkMeters) || walkMeters < 0) {
+      fail(`${fieldPath}.walkMeters は0以上の整数である必要があります`);
+    }
+  }
 
   const hasImageUri = value["imageUri"] !== undefined && value["imageUri"] !== null;
   const hasImageCreator = value["imageCreator"] !== undefined && value["imageCreator"] !== null;
@@ -278,6 +292,9 @@ function validateLocationEntry(value: unknown, fieldPath: string): LocationEntry
     wheelchair,
     osmEditUrl,
   };
+  if (walkMeters !== undefined) {
+    entry.walkMeters = walkMeters;
+  }
   if (imageUri !== undefined && imageLicense !== undefined) {
     entry.imageUri = imageUri;
     entry.imageLicense = imageLicense;
@@ -377,10 +394,18 @@ function validateRouteDestinations(value: unknown): RouteDestinationCategory[] {
       if (!isRecord(location)) {
         fail(`${locationPath} はオブジェクトである必要があります`);
       }
+      const walkMeters = requireFiniteNumber(
+        location.walkMeters,
+        `${locationPath}.walkMeters`,
+      );
+      if (!Number.isInteger(walkMeters) || walkMeters < 0) {
+        fail(`${locationPath}.walkMeters は0以上の整数である必要があります`);
+      }
       return {
         name: requireNonEmptyString(location.name, `${locationPath}.name`),
         lat: requireFiniteNumber(location.lat, `${locationPath}.lat`),
         lng: requireFiniteNumber(location.lng, `${locationPath}.lng`),
+        walkMeters,
       } satisfies RouteDestinationLocation;
     });
 

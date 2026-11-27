@@ -255,4 +255,71 @@ describe("IntegratedRouteDisplay", () => {
       screen.getByText("別の交通手段をご検討ください")
     ).toBeInTheDocument();
   });
+
+  it("徒歩区間の距離を表示し、500mを超える区間に警告を付ける", () => {
+    render(
+      <IntegratedRouteDisplay
+        originStop={mockOriginStop}
+        destinationStop={mockDestinationStop}
+        routes={directRoutes}
+        type="direct"
+        {...coordinateProps}
+        originWalkMeters={537}
+        destinationWalkMeters={120}
+      />,
+    );
+
+    expect(screen.getAllByText(/徒歩で移動\(Googleマップ\)/)).toHaveLength(2);
+    const warning = screen.getByText("バス停から遠い");
+    expect(warning.closest("p")).toHaveTextContent("537m");
+    expect(screen.getByText("120m")).toBeInTheDocument();
+    expect(screen.getAllByText("バス停から遠い")).toHaveLength(1);
+  });
+
+  it("徒歩距離がなければ距離も警告も表示しない", () => {
+    render(
+      <IntegratedRouteDisplay
+        originStop={mockOriginStop}
+        destinationStop={mockDestinationStop}
+        routes={directRoutes}
+        type="direct"
+        {...coordinateProps}
+      />,
+    );
+
+    expect(screen.queryByText(/^\d+m$/)).not.toBeInTheDocument();
+    expect(screen.queryByText("バス停から遠い")).not.toBeInTheDocument();
+  });
+
+  it("停留所が遠すぎるときは経路なしの代わりに地点と距離を示す", () => {
+    render(
+      <IntegratedRouteDisplay
+        originStop={mockOriginStop}
+        destinationStop={mockDestinationStop}
+        routes={[]}
+        type="none"
+        {...coordinateProps}
+        blockedBy={{ field: "destination", meters: 939 }}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "バス停が遠すぎます" })).toBeInTheDocument();
+    expect(screen.getByText(/目的地は最寄りのバス停から徒歩939m/)).toBeInTheDocument();
+    expect(screen.queryByText("ルートが見つかりません")).not.toBeInTheDocument();
+  });
+
+  it("blockedByがなければ従来どおり経路なしを示す", () => {
+    render(
+      <IntegratedRouteDisplay
+        originStop={mockOriginStop}
+        destinationStop={mockDestinationStop}
+        routes={[]}
+        type="none"
+        {...coordinateProps}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "ルートが見つかりません" })).toBeInTheDocument();
+    expect(screen.queryByText("バス停が遠すぎます")).not.toBeInTheDocument();
+  });
 });

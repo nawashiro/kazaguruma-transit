@@ -101,4 +101,55 @@ describe("LocationSuggestions", () => {
     expect(screen.getByText("よく利用される施設から選択")).toBeInTheDocument();
     expect(container.querySelector("details")).toBeNull();
   });
+
+  it("施設の徒歩距離と、500mを超えるときの警告を表示する", () => {
+    const walkCategories: RouteDestinationCategory[] = [
+      {
+        category: "文化施設",
+        categoryId: "0801",
+        locations: [
+          { name: "科学技術館", lat: 35.6915, lng: 139.7531, walkMeters: 535 },
+          { name: "近い施設", lat: 35.694, lng: 139.753, walkMeters: 450 },
+        ],
+      },
+    ];
+    render(
+      <LocationSuggestions categories={walkCategories} onLocationSelected={jest.fn()} />,
+    );
+    fireEvent.click(screen.getByText("文化施設"));
+
+    expect(screen.getByRole("button", { name: /科学技術館/ })).toHaveTextContent("535m");
+    expect(screen.getByRole("button", { name: /科学技術館/ })).toHaveTextContent(
+      "バス停から遠い",
+    );
+    expect(screen.getByRole("button", { name: /近い施設/ })).toHaveTextContent("450m");
+    expect(screen.queryAllByText("バス停から遠い")).toHaveLength(1);
+  });
+
+  it("徒歩距離があっても750m以内なら選べる", () => {
+    const onLocationSelected = jest.fn();
+    const walkCategories: RouteDestinationCategory[] = [
+      {
+        category: "文化施設",
+        categoryId: "0801",
+        locations: [
+          { name: "科学技術館", lat: 35.6915, lng: 139.7531, walkMeters: 535 },
+        ],
+      },
+    ];
+    render(
+      <LocationSuggestions
+        categories={walkCategories}
+        onLocationSelected={onLocationSelected}
+      />,
+    );
+    fireEvent.click(screen.getByText("文化施設"));
+    fireEvent.click(screen.getByRole("button", { name: /科学技術館/ }));
+
+    expect(onLocationSelected).toHaveBeenCalledWith({
+      lat: 35.6915,
+      lng: 139.7531,
+      address: "科学技術館",
+    });
+  });
 });

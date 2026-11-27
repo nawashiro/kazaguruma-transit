@@ -60,4 +60,43 @@ describe("LocationFieldset", () => {
     expect(button).not.toHaveClass("w-full");
     expect(button.parentElement).not.toBe(group);
   });
+
+  it("確定した地点が遠ければ徒歩距離と警告を示す", () => {
+    render(
+      <LocationFieldset
+        label="目的地"
+        testId="selected"
+        selectedLocation={{
+          lat: 35.6865,
+          lng: 139.7589,
+          address: "皇居三の丸尚蔵館",
+          walkMeters: 963,
+        }}
+      >
+        <input aria-label="目的地" />
+      </LocationFieldset>,
+    );
+
+    const confirmed = screen.getByTestId("selected");
+    expect(confirmed).toHaveTextContent("皇居三の丸尚蔵館");
+    expect(confirmed).toHaveTextContent("963m");
+    expect(confirmed).toHaveTextContent("バス停から遠すぎ");
+  });
+
+  it("徒歩距離がなければ距離も警告も示さない", () => {
+    render(
+      <LocationFieldset
+        label="目的地"
+        testId="selected"
+        selectedLocation={{ lat: 35.694, lng: 139.753, address: "千代田区役所" }}
+      >
+        <input aria-label="目的地" />
+      </LocationFieldset>,
+    );
+
+    const confirmed = screen.getByTestId("selected");
+    expect(confirmed).toHaveTextContent("千代田区役所");
+    expect(confirmed).not.toHaveTextContent(/m$/);
+    expect(confirmed).not.toHaveTextContent("バス停から");
+  });
 });

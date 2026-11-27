@@ -307,9 +307,24 @@ const validWikidataMirror = {
 const validCatalog = {
   source: { datasetJsonLdUri: PLACES_URI, osmMirrorUri: OSM_MIRROR_URI },
   places: [
-    { id: ID.cityOffice, name: "目録の区役所", includeInRouteForm: true },
-    { id: ID.library, name: "目録の図書館", includeInRouteForm: true },
-    { id: ID.cinema, name: "目録の映画館", includeInRouteForm: false },
+    {
+      id: ID.cityOffice,
+      name: "目録の区役所",
+      includeInRouteForm: true,
+      walkToStopMeters: 21,
+    },
+    {
+      id: ID.library,
+      name: "目録の図書館",
+      includeInRouteForm: true,
+      walkToStopMeters: 120,
+    },
+    {
+      id: ID.cinema,
+      name: "目録の映画館",
+      includeInRouteForm: false,
+      walkToStopMeters: 300,
+    },
   ],
 };
 
@@ -353,13 +368,18 @@ const expectedRouteDestinations = [
     category: "図書館",
     categoryId: "1512",
     locations: [
-      { name: "千代田区立千代田図書館", lat: LIBRARY_LAT, lng: LIBRARY_LNG },
+      {
+        name: "千代田区立千代田図書館",
+        lat: LIBRARY_LAT,
+        lng: LIBRARY_LNG,
+        walkMeters: 120,
+      },
     ],
   },
   {
     category: "市役所・東京都の区役所",
     categoryId: "1302",
-    locations: [{ name: "千代田区役所", lat: LAT, lng: LNG }],
+    locations: [{ name: "千代田区役所", lat: LAT, lng: LNG, walkMeters: 21 }],
   },
 ];
 
@@ -515,7 +535,7 @@ function catalogWith(
 
 function selectOnly(id: string, name = "目録の名前"): unknown {
   return catalogWith({}, [
-    { id, name, includeInRouteForm: true },
+    { id, name, includeInRouteForm: true, walkToStopMeters: 100 },
   ]);
 }
 
@@ -752,8 +772,18 @@ describe("generateLocationArtifact build boundary", () => {
         { datasetJsonLd: places },
         {
           catalog: catalogWith({}, [
-            { id: ID.cityOffice, name: "区役所", includeInRouteForm: true },
-            { id: ID.library, name: "出張所", includeInRouteForm: true },
+            {
+              id: ID.cityOffice,
+              name: "区役所",
+              includeInRouteForm: true,
+              walkToStopMeters: 21,
+            },
+            {
+              id: ID.library,
+              name: "出張所",
+              includeInRouteForm: true,
+              walkToStopMeters: 120,
+            },
           ]),
         },
       );
@@ -766,7 +796,7 @@ describe("generateLocationArtifact build boundary", () => {
         {
           category: "市役所・東京都の区役所",
           categoryId: "1302",
-          locations: [{ name: "千代田区役所", lat: LAT, lng: LNG }],
+          locations: [{ name: "千代田区役所", lat: LAT, lng: LNG, walkMeters: 21 }],
         },
         {
           category: "役場支所及び出張所",
@@ -776,6 +806,7 @@ describe("generateLocationArtifact build boundary", () => {
               name: "千代田区立千代田図書館",
               lat: LIBRARY_LAT,
               lng: LIBRARY_LNG,
+              walkMeters: 120,
             },
           ],
         },
@@ -874,12 +905,12 @@ describe("generateLocationArtifact build boundary", () => {
         {
           category: "市役所・東京都の区役所",
           categoryId: "1302",
-          locations: [{ name: "千代田区役所", lat: LAT, lng: LNG }],
+          locations: [{ name: "千代田区役所", lat: LAT, lng: LNG, walkMeters: 100 }],
         },
         {
           category: "役場支所及び出張所",
           categoryId: "1304",
-          locations: [{ name: "千代田区役所", lat: LAT, lng: LNG }],
+          locations: [{ name: "千代田区役所", lat: LAT, lng: LNG, walkMeters: 100 }],
         },
       ]);
       expect(
@@ -1035,6 +1066,7 @@ describe("generateLocationArtifact build boundary", () => {
               name: "目録の名前",
               group: "disability-support",
               includeInRouteForm: true,
+              walkToStopMeters: 21,
             },
           ]),
         },
@@ -1048,7 +1080,7 @@ describe("generateLocationArtifact build boundary", () => {
         {
           category: "市役所・東京都の区役所",
           categoryId: "1302",
-          locations: [{ name: "千代田区役所", lat: LAT, lng: LNG }],
+          locations: [{ name: "千代田区役所", lat: LAT, lng: LNG, walkMeters: 21 }],
         },
       ]);
       expect(JSON.stringify(artifact.sources.routeDestinations)).not.toContain(
@@ -1115,7 +1147,12 @@ describe("generateLocationArtifact build boundary", () => {
           category: "図書館",
           categoryId: "1512",
           locations: [
-            { name: "千代田区立千代田図書館", lat: LIBRARY_LAT, lng: LIBRARY_LNG },
+            {
+              name: "千代田区立千代田図書館",
+              lat: LIBRARY_LAT,
+              lng: LIBRARY_LNG,
+              walkMeters: 120,
+            },
           ],
         },
       ]);
@@ -1316,7 +1353,12 @@ describe("generateLocationArtifact build boundary", () => {
     it("keeps catalog entries without an OSM name out of the location list and still succeeds", async () => {
       const catalog = catalogWith({}, [
         ...validCatalog.places,
-        { id: ID.missing, name: "目録だけの施設", includeInRouteForm: false },
+        {
+          id: ID.missing,
+          name: "目録だけの施設",
+          includeInRouteForm: false,
+          walkToStopMeters: 200,
+        },
       ]);
       const harness = createHarness(
         {

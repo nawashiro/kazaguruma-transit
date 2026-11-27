@@ -4,6 +4,10 @@ import path from "node:path";
 import { logger } from "../../../utils/logger";
 import { loadGeocodeIndex } from "../../../lib/location/geocode-index";
 import { GeocodeSearcher } from "../../../lib/location/geocode-search";
+import {
+  getWalkAccessIndex,
+  type WalkAccessStop,
+} from "../../../lib/transit/stop-access";
 
 const GEOCODE_INDEX_PATH = path.join(process.cwd(), "data", "geocode-index.json");
 
@@ -13,6 +17,8 @@ interface GeocodeCandidateResponse {
   lat: number;
   lng: number;
   kind: string;
+  /** 最寄り停留所までの徒歩距離（メートル）。測れないときは含めない。 */
+  walkMeters?: number;
 }
 
 interface GeocodeSearchResponse {
@@ -26,6 +32,8 @@ interface GeocodeReverseResponse {
     lat: number;
     lng: number;
     address: string;
+    /** 最寄り停留所までの徒歩距離（メートル）。測れないときは含めない。 */
+    walkMeters?: number;
   };
 }
 
@@ -53,6 +61,35 @@ function getSearcher(): GeocodeSearcher | null {
   }
   cachedSearcher = new GeocodeSearcher(loaded.index);
   return cachedSearcher;
+}
+
+/**
+ * 徒歩距離を測る関数を返す。徒歩ネットワークか停留所を読めないときは
+ * `null` を返し、呼び出し側は距離を付けずに地点検索を成功させる。近さを
+ * 知らせられないことより、地点を選べないことの方が困る。
+ */
+async function createWalkMeasurer(): Promise<
+  ((lat: number, lng: number) => number | undefined) | null
+> {
+  try {
+    const { prisma } = await import("../../../lib/db/prisma");
+    const rows = await prisma.stop.findMany({
+      select: { id: true, lat: true, lon: true },
+    });
+    const stops: WalkAccessStop[] = rows.map((stop) => ({
+      id: stop.id,
+      lat: stop.lat,
+      lon: stop.lon,
+    }));
+    const index = getWalkAccessIndex(stops);
+    return (lat, lng) => {
+      const access = index.measure(lat, lng);
+      return access === null ? undefined : Math.round(access.meters);
+    };
+  } catch (error) {
+    logger.error("徒歩距離を測れません:", error);
+    return null;
+  }
 }
 
 function errorResponse(error: string, status: number) {
@@ -98,9 +135,16 @@ export async function GET(req: NextRequest) {
           404,
         );
       }
+      const measure = await createWalkMeasurer();
+      const walkMeters = measure?.(lat, lng);
       const body: GeocodeReverseResponse = {
         success: true,
-        location: { lat, lng, address },
+        location: {
+          lat,
+          lng,
+          address,
+          ...(walkMeters === undefined ? {} : { walkMeters }),
+        },
       };
       return NextResponse.json(body);
     }
@@ -115,15 +159,20 @@ export async function GET(req: NextRequest) {
       const body: GeocodeSearchResponse = { success: true, results: [] };
       return NextResponse.json(body);
     }
+    const measure = await createWalkMeasurer();
     const body: GeocodeSearchResponse = {
       success: true,
-      results: results.map((candidate) => ({
-        name: candidate.name,
-        address: candidate.address,
-        lat: candidate.lat,
-        lng: candidate.lng,
-        kind: candidate.kind,
-      })),
+      results: results.map((candidate) => {
+        const walkMeters = measure?.(candidate.lat, candidate.lng);
+        return {
+          name: candidate.name,
+          address: candidate.address,
+          lat: candidate.lat,
+          lng: candidate.lng,
+          kind: candidate.kind,
+          ...(walkMeters === undefined ? {} : { walkMeters }),
+        };
+      }),
     };
     return NextResponse.json(body);
   } catch (error) {

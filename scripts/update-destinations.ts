@@ -20,10 +20,9 @@ import {
   type DestinationCatalogEntry,
   type DestinationCatalogSourceUris,
 } from "../src/lib/location/destination-catalog";
-import {
-  selectNearbyStops,
-  type StopPosition,
-} from "../src/lib/transit/stop-selection";
+import type { StopPosition } from "../src/lib/transit/stop-selection";
+import { getWalkAccessIndex, type WalkAccessStop } from "../src/lib/transit/stop-access";
+import { walkAccessLevel } from "../src/lib/transit/walk-access-level";
 import { getWalkNetwork, type WalkGraph } from "../src/lib/transit/walk-network";
 
 export interface DestinationCatalogTransportResponse {
@@ -158,6 +157,10 @@ function readPlaceCoordinates(
   return { lat, lng };
 }
 
+function toAccessStops(stops: readonly StopPosition[]): WalkAccessStop[] {
+  return stops.map((stop) => ({ id: stop.id, lat: stop.lat, lon: stop.lon }));
+}
+
 function selectCandidates(
   records: JsonRecord[],
   osmNames: Map<string, string>,
@@ -166,6 +169,10 @@ function selectCandidates(
   walkGraph?: WalkGraph,
 ): DestinationCatalogEntry[] {
   const candidates = new Map<string, DestinationCatalogEntry>();
+  const accessIndex = getWalkAccessIndex(
+    toAccessStops(stops),
+    walkGraph ?? getWalkNetwork(),
+  );
 
   for (const record of records) {
     const id = record["@id"];
@@ -178,15 +185,8 @@ function selectCandidates(
       continue;
     }
 
-    if (
-      selectNearbyStops(
-        stops,
-        coordinates.lat,
-        coordinates.lng,
-        undefined,
-        walkGraph,
-      ).length === 0
-    ) {
+    const access = accessIndex.measure(coordinates.lat, coordinates.lng);
+    if (access === null || walkAccessLevel(access.meters) === "tooFar") {
       continue;
     }
 
@@ -198,7 +198,12 @@ function selectCandidates(
       continue;
     }
 
-    candidates.set(id, { id, name, includeInRouteForm: false });
+    candidates.set(id, {
+      id,
+      name,
+      includeInRouteForm: false,
+      walkToStopMeters: Math.round(access.meters),
+    });
   }
 
   return [...candidates.values()].sort((first, second) =>

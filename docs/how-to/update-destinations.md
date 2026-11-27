@@ -6,6 +6,7 @@
 
 - `app-config.json`（開発中は`app-config.local.json`）に`datasetJsonLdUri`と`osmMirrorUri`を設定します。`npm run update-destinations`は`NODE_ENV`が`production`でない限り開発用の設定を読みます。
 - 経路検索用の交通DBに停留所を取り込みます。目録の徒歩圏判定はこの停留所を使います。
+- 徒歩ネットワーク（`data/walk-network.json`）を最新にします。徒歩ネットワークを更新したら、この目録も更新してください。距離が古いままだと、施設一覧の警告と経路検索の結果が食い違います。
 - Node.js 22で実行します。
 
 ## 目録の再生成
@@ -23,7 +24,9 @@
 4. `data/destinations.json`の差分を確認します。
 5. `npm run build`を実行し、目録のIDと公開データが一致することを確認します。
 
-コマンドは公開グラフとOSMタグミラーを取得します。経路検索と同じ補正徒歩距離が500m以下のrecordを候補にします。候補の`name`はOSMタグミラーの`name`を使います。OSM名を解決できないrecordは、目録に同じIDのentryがあり、その名前がある場合だけ候補として残します。
+コマンドは公開グラフとOSMタグミラーを取得します。経路検索と同じ徒歩ネットワーク上の徒歩距離が750m以下のrecordを候補にします。候補の`name`はOSMタグミラーの`name`を使います。OSM名を解決できないrecordは、目録に同じIDのentryがあり、その名前がある場合だけ候補として残します。
+
+各entryは、候補にしたときの最寄り停留所までの徒歩距離を`walkToStopMeters`（メートル、0以上の整数）に持ちます。ルートページの施設一覧はこの値を使って「バス停から遠い」を表示します。ビルドは測り直さず、この値をそのまま場所artifactの`walkMeters`へ写します。
 
 コマンドは候補だけを目録へ書き、候補でないrecordを書きません。同じIDが残るentryの`includeInRouteForm`を引き継ぎます。新しい候補は`includeInRouteForm: false`で追加し、`name`はOSMの名前に更新します。OSM名がないentryは既存の名前を保ちます。
 

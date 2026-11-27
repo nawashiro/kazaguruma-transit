@@ -143,6 +143,30 @@ describe("徒歩距離によるバス停候補の絞り込み", () => {
     expect(mockFindOptimalRoute).not.toHaveBeenCalled();
   });
 
+  it("上限を超えた地点と徒歩距離をblockedByで返す", async () => {
+    findManyMock.mockResolvedValue([
+      stopAt("near-origin-stop", ORIGIN, 0.2),
+      stopAt("far-destination-stop", DESTINATION, 2),
+    ]);
+
+    const service = TransitService.getInstance();
+    const result = await (
+      service as unknown as {
+        searchRoute: (query: unknown) => Promise<{
+          blockedBy?: { field: "origin" | "destination"; meters: number };
+        }>;
+      }
+    ).searchRoute({
+      origin: ORIGIN,
+      destination: DESTINATION,
+      time: "2026-11-01T10:00",
+      isDeparture: true,
+    });
+
+    expect(result.blockedBy?.field).toBe("destination");
+    expect(result.blockedBy?.meters).toBeGreaterThan(750);
+  });
+
   it("上限以内の最寄り停留所がある従来経路は従来どおり検索する", async () => {
     findManyMock.mockResolvedValue([
       stopAt("near-origin-stop", ORIGIN, 0.05),

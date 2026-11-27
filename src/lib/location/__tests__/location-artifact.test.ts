@@ -62,6 +62,7 @@ const routeDestinations = [
         name: "千代田区役所",
         lat: 35.694,
         lng: 139.753,
+        walkMeters: 21,
       },
     ],
   },
@@ -475,6 +476,24 @@ describe("readLocationArtifact runtime artifact boundary", () => {
         routeDestinations: [{
           ...routeDestinations[0],
           locations: [{ ...routeDestinations[0].locations[0], name: "" }],
+        }],
+      },
+    })],
+    ["missing route destination walk distance", artifactWith({
+      sources: {
+        ...validArtifact.sources,
+        routeDestinations: [{
+          ...routeDestinations[0],
+          locations: [{ name: "千代田区役所", lat: 35.694, lng: 139.753 }],
+        }],
+      },
+    })],
+    ["negative route destination walk distance", artifactWith({
+      sources: {
+        ...validArtifact.sources,
+        routeDestinations: [{
+          ...routeDestinations[0],
+          locations: [{ ...routeDestinations[0].locations[0], walkMeters: -1 }],
         }],
       },
     })],

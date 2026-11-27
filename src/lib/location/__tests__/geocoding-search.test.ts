@@ -131,4 +131,62 @@ describe("candidateToLocation / normalizeSearchAddress", () => {
   it("検索語の前後の空白だけを落とす", () => {
     expect(normalizeSearchAddress(" 千代田区 神田 ")).toBe("千代田区 神田");
   });
+
+  it("候補の徒歩距離があれば地点へ引き継ぐ", () => {
+    const location = candidateToLocation({
+      name: "科学技術館",
+      address: "千代田区北の丸公園2-1",
+      lat: 35.6915,
+      lng: 139.7531,
+      kind: "culture",
+      walkMeters: 537,
+    });
+
+    expect(location.walkMeters).toBe(537);
+  });
+
+  it("候補の徒歩距離がなければ欄を作らない", () => {
+    const location = candidateToLocation({
+      name: "科学技術館",
+      address: "千代田区北の丸公園2-1",
+      lat: 35.6915,
+      lng: 139.7531,
+      kind: "culture",
+    });
+
+    expect(location).not.toHaveProperty("walkMeters");
+  });
+
+  it("逆引きの徒歩距離を受け取る", async () => {
+    const fetcher = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        location: {
+          lat: 35.6915,
+          lng: 139.7531,
+          address: "千代田区北の丸公園",
+          walkMeters: 720,
+        },
+      }),
+    });
+
+    const result = await reverseGeocoding(35.6915, 139.7531, fetcher as unknown as typeof fetch);
+
+    expect(result.location?.walkMeters).toBe(720);
+  });
+
+  it("逆引きの徒歩距離がなければ欄を作らない", async () => {
+    const fetcher = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        location: { lat: 35.6915, lng: 139.7531, address: "千代田区北の丸公園" },
+      }),
+    });
+
+    const result = await reverseGeocoding(35.6915, 139.7531, fetcher as unknown as typeof fetch);
+
+    expect(result.location).not.toHaveProperty("walkMeters");
+  });
 });

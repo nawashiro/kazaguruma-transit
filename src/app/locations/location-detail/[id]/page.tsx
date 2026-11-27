@@ -184,6 +184,9 @@ function DestinationLink({ location }: { location: LocationWithArea }) {
     lat: location.lat,
     lng: location.lng,
     address: location.name,
+    ...(location.walkMeters === undefined
+      ? {}
+      : { walkMeters: location.walkMeters }),
   };
 
   return (

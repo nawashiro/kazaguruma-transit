@@ -8,6 +8,8 @@ export interface GeocodeCandidate {
   lat: number;
   lng: number;
   kind: string;
+  /** 最寄り停留所までの徒歩距離（メートル）。測れないときは含まれない。 */
+  walkMeters?: number;
 }
 
 export interface GeocodingSearchResult {
@@ -30,7 +32,12 @@ interface GeocodeSearchResponse {
 
 interface GeocodeReverseResponse {
   success?: boolean;
-  location?: { lat: number; lng: number; address: string };
+  location?: {
+    lat: number;
+    lng: number;
+    address: string;
+    walkMeters?: number;
+  };
   error?: string;
 }
 
@@ -43,6 +50,9 @@ export function candidateToLocation(candidate: GeocodeCandidate): Location {
     lat: candidate.lat,
     lng: candidate.lng,
     address: candidate.name,
+    ...(candidate.walkMeters === undefined
+      ? {}
+      : { walkMeters: candidate.walkMeters }),
   };
 }
 
@@ -108,6 +118,9 @@ export async function reverseGeocoding(
         lat: data.location.lat,
         lng: data.location.lng,
         address: data.location.address,
+        ...(data.location.walkMeters === undefined
+          ? {}
+          : { walkMeters: data.location.walkMeters }),
       },
     };
   } catch (error) {

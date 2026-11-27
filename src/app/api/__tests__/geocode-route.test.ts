@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 
+import { prisma } from "@/lib/db/prisma";
+
 import { GET } from "../geocode/route";
 import { dataManager } from "@/lib/db/data-manager";
 
@@ -14,7 +16,16 @@ jest.mock("@/lib/db/data-manager", () => ({
   },
 }));
 
+jest.mock("@/lib/db/prisma", () => ({
+  prisma: {
+    stop: {
+      findMany: jest.fn(),
+    },
+  },
+}));
+
 const db = jest.mocked(dataManager);
+const findManyMock = prisma.stop.findMany as unknown as jest.Mock;
 
 function request(query: string, ip = "192.0.2.1"): NextRequest {
   const req = new NextRequest(`http://localhost/api/geocode?${query}`);
@@ -30,6 +41,7 @@ describe("/api/geocode", () => {
     db.init.mockResolvedValue(undefined);
     db.getRateLimitByIp.mockResolvedValue(null);
     db.incrementRateLimit.mockResolvedValue(undefined);
+    findManyMock.mockResolvedValue([]);
   });
 
   it("名前で検索して候補を最大5件返す", async () => {
@@ -49,6 +61,36 @@ describe("/api/geocode", () => {
         kind: expect.any(String),
       }),
     );
+  });
+
+  it("候補に最寄り停留所までの徒歩距離を付ける", async () => {
+    findManyMock.mockResolvedValue([
+      { id: "STP_000001_001", lat: 35.694049, lon: 139.753241 },
+      { id: "STP_000001_002", lat: 35.690651, lon: 139.757841 },
+    ]);
+
+    const response = await GET(request(`q=${encodeURIComponent("科学技術館")}`));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    const hit = body.results.find(
+      (entry: { name: string }) => entry.name === "科学技術館",
+    );
+    expect(hit.walkMeters).toBeGreaterThan(500);
+    expect(hit.walkMeters).toBeLessThan(600);
+  });
+
+  it("停留所を読めないときは徒歩距離を付けずに成功する", async () => {
+    findManyMock.mockRejectedValue(new Error("no database"));
+
+    const response = await GET(request(`q=${encodeURIComponent("科学技術館")}`));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.results.length).toBeGreaterThan(0);
+    for (const entry of body.results) {
+      expect(entry.walkMeters).toBeUndefined();
+    }
   });
 
   it("番地として解決できた検索は1件だけ返す", async () => {

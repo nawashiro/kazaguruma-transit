@@ -4,7 +4,7 @@
 
 ## 母集団
 
-場所一覧は、目的地目録（`data/destinations.json`）の候補に含まれるrecordだけを対象にします。`npm run update-destinations` が経路検索と同じ徒歩圏の判定で目録を更新します。公開グラフにrecordが増えても、目録を更新するまで場所一覧には出ません。目録の候補のうち、OSM要素に空でない`name`がなく、カテゴリtermを1つも参照しないrecordは表示しません。ビルドは距離を再計算せず、目録のID集合だけで母集団を決めます。
+場所一覧は、目的地目録（`data/destinations.json`）の候補に含まれるrecordだけを対象にします。各場所は目録の`walkToStopMeters`を`walkMeters`として持ちます。ルートページの施設一覧はこの値を使います。`npm run update-destinations` が経路検索と同じ徒歩圏の判定で目録を更新します。公開グラフにrecordが増えても、目録を更新するまで場所一覧には出ません。目録の候補のうち、OSM要素に空でない`name`がなく、カテゴリtermを1つも参照しないrecordは表示しません。ビルドは距離を再計算せず、目録のID集合だけで母集団を決めます。
 
 ## 取得元
 
@@ -30,18 +30,19 @@
 
 3. `public/generated/location-data.json` を確認します。目安は次のとおりです。
 
-   - 場所86件
+   - 場所91件
    - `wheelchair` のある場所14件（`yes` 9、`limited` 3、`no` 2）
    - カテゴリ20件（語彙22件のうち、場所がないカテゴリを除く）
-   - 画像の作者とライセンス48件、作者不明の画像2件（`schema:license`は非空の文字列なら表示し、絶対http(s) URIのときだけリンクにする）
-   - 派生画像のある場所50件。幅は480・960・1280pxを上限とし、元画像が小さい場合は元画像の幅
-   - 電話28件、ウェブサイト40件、Wikipediaリンク34件、編集リンク86件
-   - 経路フォームに掲載する目的地35件、カテゴリ9件
+   - 画像の作者とライセンス51件、作者不明の画像2件（`schema:license`は非空の文字列なら表示し、絶対http(s) URIのときだけリンクにする）
+   - 派生画像のある場所53件。幅は480・960・1280pxを上限とし、元画像が小さい場合は元画像の幅
+   - 電話28件、ウェブサイト45件、Wikipediaリンク38件、編集リンク91件
+   - 経路フォームに掲載する目的地36件、カテゴリ9件
+   - 徒歩距離（`walkMeters`）を持つ場所91件
 
    件数は、次のコマンドでも確認できます。
 
    ```bash
-   node -e "const a=require('./public/generated/location-data.json');const l=a.sources.locations.flatMap(c=>c.locations);console.log('場所',l.length,'カテゴリ',a.sources.locations.length,'車いす',l.filter(x=>x.wheelchair).length,'写真',l.filter(x=>x.imageUri).length,'作者不明',l.filter(x=>x.imageUri&&!x.imageCreator).length,'派生画像',l.filter(x=>x.image).length)"
+   node -e "const a=require('./public/generated/location-data.json');const l=a.sources.locations.flatMap(c=>c.locations);console.log('場所',l.length,'カテゴリ',a.sources.locations.length,'車いす',l.filter(x=>x.wheelchair).length,'写真',l.filter(x=>x.imageUri).length,'作者不明',l.filter(x=>x.imageUri&&!x.imageCreator).length,'派生画像',l.filter(x=>x.image).length,'徒歩距離',l.filter(x=>x.walkMeters!==undefined).length)"
    ls public/generated/location-images/*.webp | wc -l
    ```
 

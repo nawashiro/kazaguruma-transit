@@ -6,6 +6,7 @@ import {
   parseWalkNetwork,
   resetWalkNetworkCache,
   searchFrom,
+  searchFromMany,
   serializeWalkNetwork,
   snapToNetwork,
   walkDistanceKm,
@@ -192,6 +193,49 @@ describe("searchFrom", () => {
     const { distances } = searchFrom(graph, source, { limitKm: 0.045 });
 
     expect(distances[east]).toBe(Number.POSITIVE_INFINITY);
+  });
+});
+
+describe("searchFromMany", () => {
+  it("複数の種から各ノードへ最も近い種までの距離を返す", () => {
+    const graph = buildWalkGraph(lineArtifact());
+    const west = graph.indexOfId.get(1) as number;
+    const eastEnd = graph.indexOfId.get(7) as number;
+    const north = graph.indexOfId.get(5) as number;
+
+    const { distances, owners } = searchFromMany(graph, [
+      { node: west, km: 0 },
+      { node: eastEnd, km: 0 },
+    ]);
+
+    expect(distances[west]).toBeCloseTo(0, 9);
+    expect(distances[eastEnd]).toBeCloseTo(0, 9);
+    expect(distances[north]).toBeCloseTo(0.03, 4);
+    expect(owners[north]).toBe(1);
+  });
+
+  it("種の接続区間を距離に含める", () => {
+    const graph = buildWalkGraph(lineArtifact());
+    const west = graph.indexOfId.get(1) as number;
+
+    const { distances } = searchFromMany(graph, [{ node: west, km: 0.01 }]);
+
+    expect(distances[west]).toBeCloseTo(0.01, 9);
+  });
+
+  it("上限を超える距離を打ち切る", () => {
+    const graph = buildWalkGraph(lineArtifact());
+    const west = graph.indexOfId.get(1) as number;
+    const eastEnd = graph.indexOfId.get(7) as number;
+
+    const { distances, owners } = searchFromMany(
+      graph,
+      [{ node: west, km: 0 }],
+      { limitKm: 0.045 },
+    );
+
+    expect(distances[eastEnd]).toBe(Number.POSITIVE_INFINITY);
+    expect(owners[eastEnd]).toBe(-1);
   });
 });
 

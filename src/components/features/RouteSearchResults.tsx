@@ -23,6 +23,9 @@ export default function RouteSearchResults({ result }: RouteSearchResultsProps) 
           originLng={result.query.origin.lng}
           destLat={result.query.destination.lat}
           destLng={result.query.destination.lng}
+          originWalkMeters={result.routeInfo.originWalkMeters}
+          destinationWalkMeters={result.routeInfo.destinationWalkMeters}
+          blockedBy={result.routeInfo.blockedBy}
         />
         {result.routeInfo.type !== "none" && <RouteResultActions routeInfo={result.routeInfo} query={result.query} />}
       </>}

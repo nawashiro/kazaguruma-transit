@@ -61,6 +61,10 @@ jest.mock("@/lib/nostr/nostr-utils", () => ({
   getAdminPubkeyHex: () => "a".repeat(64),
 }));
 
+jest.mock("@/lib/nostr/mnemonic-utils", () => ({
+  formatBip39JapaneseMnemonicPreviewFromPubkey: () => "とんかつ やたい うごかす",
+}));
+
 describe("DiscussionCreatePage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -125,8 +129,11 @@ describe("DiscussionCreatePage", () => {
       expect(screen.getByLabelText("モデレーター（任意）")).toHaveValue("npub1pending");
     });
     expect(
-      screen.getByRole("button", { name: "モデレーター npub1restored を削除" }),
+      screen.getByRole("button", { name: "モデレーター とんかつ やたい うごかす を削除" }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "モデレーター npub1restored を削除" }),
+    ).not.toBeInTheDocument();
   });
 
   it("saves changed title, description, moderator list, and moderator input to sessionStorage", async () => {

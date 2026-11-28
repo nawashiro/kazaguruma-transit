@@ -36,6 +36,7 @@ import {
   createDiscussionListingRequest,
 } from "@/lib/discussion/user-creation-flow";
 import { UserIdentity } from "@/components/ui/UserIdentity";
+import { formatBip39JapaneseMnemonicPreviewFromPubkey } from "@/lib/nostr/mnemonic-utils";
 import Button from "@/components/ui/Button";
 import type { Discussion } from "@/types/discussion";
 import { logger } from "@/utils/logger";
@@ -560,7 +561,7 @@ export default function DiscussionEditPage() {
                               type="button"
                               onClick={() => removeModerator(npub)}
                               className="btn text-base btn-ghost ruby-text gap-0 min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-0"
-                              aria-label={`モデレーター ${npub} を削除`}
+                              aria-label={`モデレーター ${formatBip39JapaneseMnemonicPreviewFromPubkey(npub)} を削除`}
                               disabled={
                                 isSaving || isDeleting || !hasEditPermission
                               }

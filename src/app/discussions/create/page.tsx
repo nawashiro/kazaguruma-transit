@@ -13,6 +13,7 @@ import {
 } from "@/lib/config/discussion-config";
 import { createNostrService } from "@/lib/nostr/nostr-service";
 import { getAdminPubkeyHex } from "@/lib/nostr/nostr-utils";
+import { formatBip39JapaneseMnemonicPreviewFromPubkey } from "@/lib/nostr/mnemonic-utils";
 import {
   processDiscussionCreationFlow,
   type DiscussionCreationForm,
@@ -350,7 +351,7 @@ export default function DiscussionCreatePage() {
                             type="button"
                             onClick={() => removeModerator(npub)}
                             className="btn text-base btn-ghost ruby-text gap-0 min-h-[44px] min-w-[44px] rounded-full dark:rounded-sm p-0"
-                            aria-label={`モデレーター ${npub} を削除`}
+                            aria-label={`モデレーター ${formatBip39JapaneseMnemonicPreviewFromPubkey(npub)} を削除`}
                             disabled={isSubmitting}
                           >
                             ×

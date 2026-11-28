@@ -9,6 +9,14 @@ interface Props {
   pubkey: string;
 }
 
+const DISPLAY_PREFIX_LENGTH = 9;
+
+export function formatNpubForDisplay(npub: string): string {
+  return npub.length > DISPLAY_PREFIX_LENGTH
+    ? `${npub.slice(0, DISPLAY_PREFIX_LENGTH)}…`
+    : npub;
+}
+
 export function NpubDisplay({ pubkey }: Props) {
   const [isCopied, setIsCopied] = useState(false);
   const npub = pubkey.startsWith("npub1") ? pubkey : hexToNpub(pubkey);
@@ -26,7 +34,7 @@ export function NpubDisplay({ pubkey }: Props) {
   return (
     <div className="flex min-w-0 items-center gap-2">
       <code className="min-w-0 flex-1 truncate font-mono text-base-content">
-        {npub}
+        {formatNpubForDisplay(npub)}
       </code>
       <button
         type="button"

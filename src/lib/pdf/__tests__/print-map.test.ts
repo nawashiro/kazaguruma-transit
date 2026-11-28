@@ -14,6 +14,7 @@ import {
   renderPrintMapIcon,
   type PrintMapLeg,
   type PrintMapPage,
+  type PrintMapRenderInput,
 } from "../print-map";
 
 const originLeg: PrintMapLeg = {
@@ -36,7 +37,6 @@ function createPage(
 ): jest.Mocked<PrintMapPage> {
   return {
     addStyleTag: jest.fn().mockResolvedValue(undefined),
-    addScriptTag: jest.fn().mockResolvedValue(undefined),
     evaluate,
   } as unknown as jest.Mocked<PrintMapPage>;
 }
@@ -287,7 +287,7 @@ describe("drawPrintMaps", () => {
   it("地図が無ければ何も読み込まずに成功を返す", async () => {
     const page = createPage();
     await expect(drawPrintMaps(page, [])).resolves.toEqual({ ok: true });
-    expect(page.addScriptTag).not.toHaveBeenCalled();
+    expect(page.evaluate).not.toHaveBeenCalled();
   });
 
   it("地図ごとに描画を依頼し、成功を返す", async () => {
@@ -295,14 +295,29 @@ describe("drawPrintMaps", () => {
     await expect(drawPrintMaps(page, [originLeg, destinationLeg])).resolves.toEqual({
       ok: true,
     });
-    expect(page.addScriptTag).toHaveBeenCalledTimes(1);
-    const [callback, input] = page.evaluate.mock.calls[0];
+    expect(page.evaluate).toHaveBeenCalledTimes(2);
+    const [callback, input] = page.evaluate.mock.calls[1] as unknown as [
+      unknown,
+      PrintMapRenderInput,
+    ];
     expect(input.styleUrl).toBe(PRINT_MAP_STYLE_URL);
     expect(input.drawings.map((drawing) => drawing.id)).toEqual([
       "origin",
       "destination",
     ]);
     expect(typeof callback).toBe("function");
+  });
+
+  it("地図ライブラリとworkerをページへ渡す", async () => {
+    const page = createPage();
+    await drawPrintMaps(page, [originLeg]);
+    const [, sources] = page.evaluate.mock.calls[0] as unknown as [
+      unknown,
+      { library: string; worker: string },
+    ];
+    expect(sources.library).toContain("MapLibre GL JS");
+    expect(sources.worker).toContain("MapLibre GL JS");
+    expect(sources.worker).not.toBe(sources.library);
   });
 
   it("描画の失敗を例外にせず、失敗した地図の識別子ごと返す", async () => {
@@ -321,7 +336,7 @@ describe("drawPrintMaps", () => {
 
   it("MapLibreを読み込めない場合も失敗として返す", async () => {
     const page = createPage();
-    page.addScriptTag.mockRejectedValueOnce(new Error("injection failed"));
+    page.evaluate.mockRejectedValueOnce(new Error("injection failed"));
     await expect(drawPrintMaps(page, [originLeg])).resolves.toEqual({
       ok: false,
       reason: "injection failed",

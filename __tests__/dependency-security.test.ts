@@ -5,7 +5,10 @@ interface PackageManifest {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   version?: string;
-  overrides?: { next?: Record<string, string> };
+  overrides?: {
+    next?: Record<string, string>;
+    "@prisma/config"?: Record<string, string>;
+  };
 }
 
 function readPackageManifest(packagePath: string): PackageManifest {
@@ -113,5 +116,51 @@ describe("dependency security", () => {
     expect(
       isVersionAtLeast(readInstalledPackageVersion("nanoid"), "3.3.18")
     ).toBe(true);
+  });
+
+  it("declares the patched print-map and image-optimization dependencies", () => {
+    const packageJson = readPackageManifest(join(__dirname, "..", "package.json"));
+
+    expect(
+      isVersionAtLeast(
+        getDeclaredMinimumVersion(packageJson.dependencies?.["maplibre-gl"]),
+        "6.4.1"
+      )
+    ).toBe(true);
+    expect(
+      isVersionAtLeast(
+        getDeclaredMinimumVersion(packageJson.dependencies?.next),
+        "15.5.29"
+      )
+    ).toBe(true);
+    expect(
+      isVersionAtLeast(
+        getDeclaredMinimumVersion(packageJson.devDependencies?.["eslint-config-next"]),
+        "15.5.29"
+      )
+    ).toBe(true);
+  });
+
+  it("resolves the patched print-map and image-optimization dependencies", () => {
+    const maplibreGlVersion = readInstalledPackageVersion("maplibre-gl");
+
+    expect(maplibreGlVersion).toBeDefined();
+    expect(isVersionAtLeast(maplibreGlVersion, "6.4.1")).toBe(true);
+    expect(isVersionAtLeast(readInstalledPackageVersion("next"), "15.5.29")).toBe(
+      true
+    );
+  });
+
+  it("resolves the effect used by the Prisma CLI to a patched version", () => {
+    const prismaConfigDirectory = dirname(
+      require.resolve("@prisma/config/package.json")
+    );
+    const effectPackagePath = require.resolve("effect/package.json", {
+      paths: [prismaConfigDirectory],
+    });
+    const effectVersion = readPackageManifest(effectPackagePath).version;
+
+    expect(effectVersion).toBeDefined();
+    expect(isVersionAtLeast(effectVersion ?? "0.0.0", "3.22.1")).toBe(true);
   });
 });

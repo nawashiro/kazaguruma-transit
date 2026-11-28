@@ -50,7 +50,7 @@ function fromPluginRow(value: unknown): DependencyLicenseEntry | null {
 const EXTERNAL_SERVER_DEPENDENCIES: readonly DependencyLicenseEntry[] = [
   {
     packageName: "maplibre-gl",
-    version: "5.24.1",
+    version: "6.20.0",
     license: "BSD-3-Clause",
     repository: "https://github.com/maplibre/maplibre-gl-js",
     homepage: "https://maplibre.org/",

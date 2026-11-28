@@ -8,6 +8,7 @@
  * https://openfreemap.org/
  */
 
+import { readFile } from "node:fs/promises";
 import { Bus, MapPin, type IconNode } from "lucide";
 
 export const PRINT_MAP_STYLE_URL =
@@ -71,7 +72,8 @@ const METERS_PER_DEGREE = 111_195;
  */
 const PRINT_MAP_BACKSTOP_MS = PRINT_MAP_TIMEOUT_MS + 5_000;
 
-const MAP_WORKER_SCRIPT = "node_modules/maplibre-gl/dist/maplibre-gl.js";
+const MAP_WORKER_SCRIPT = "node_modules/maplibre-gl/dist/maplibre-gl.mjs";
+const MAP_WORKER_THREAD = "node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs";
 const MAP_WORKER_STYLE = "node_modules/maplibre-gl/dist/maplibre-gl.css";
 
 /** GeoJSONと同じく [経度, 緯度] の順で持つ。 */
@@ -126,11 +128,20 @@ export type PrintMapDrawResult =
  */
 export interface PrintMapPage {
   addStyleTag(options: { path: string }): Promise<unknown>;
-  addScriptTag(options: { path: string }): Promise<unknown>;
   evaluate<R>(
     pageFunction: (input: PrintMapRenderInput) => Promise<R>,
     input: PrintMapRenderInput,
   ): Promise<R>;
+  evaluate<R>(
+    pageFunction: (input: PrintMapLibrarySources) => Promise<R>,
+    input: PrintMapLibrarySources,
+  ): Promise<R>;
+}
+
+/** ページへ読み込む地図ライブラリの配布物。workerは本体とは別のファイルである。 */
+export interface PrintMapLibrarySources {
+  readonly library: string;
+  readonly worker: string;
 }
 
 export interface PrintMapRenderInput {
@@ -244,6 +255,30 @@ export const PRINT_MAP_CSS = `
 `;
 
 /**
+ * ページへ地図ライブラリを読み込む。この関数はpage.evaluateへ渡すため、
+ * 外部の変数を参照せず、引数だけで完結させる。
+ *
+ * MapLibre 6はESMだけを配布し、classicのバンドルを持たない。scriptタグでは
+ * 読み込めないため、配布物をBlobにしてimportする。workerはimport.meta.url
+ * からの相対解決に頼れないので、同じ方法で作ったURLを明示的に渡す。
+ */
+async function loadPrintMapLibraryInPage(
+  sources: PrintMapLibrarySources,
+): Promise<void> {
+  const api: {
+    setWorkerUrl(url: string): void;
+  } = await import(
+    URL.createObjectURL(
+      new Blob([sources.library], { type: "text/javascript" }),
+    )
+  );
+  api.setWorkerUrl(
+    URL.createObjectURL(new Blob([sources.worker], { type: "text/javascript" })),
+  );
+  (window as unknown as { maplibregl: unknown }).maplibregl = api;
+}
+
+/**
  * ページの中で地図を描く。この関数はpage.evaluateへ渡すため、
  * 外部の変数を参照せず、引数だけで完結させる。
  */
@@ -322,7 +357,7 @@ async function renderPrintMapsInPage(
               fitBoundsOptions: { padding: 48 },
               interactive: false,
               attributionControl: false,
-              preserveDrawingBuffer: true,
+              canvasContextAttributes: { preserveDrawingBuffer: true },
             });
           } catch (error) {
             window.clearTimeout(timer);
@@ -442,9 +477,11 @@ export async function drawPrintMaps(
     await page.addStyleTag({
       path: `${process.cwd()}/${MAP_WORKER_STYLE}`,
     });
-    await page.addScriptTag({
-      path: `${process.cwd()}/${MAP_WORKER_SCRIPT}`,
-    });
+    const [library, worker] = await Promise.all([
+      readFile(`${process.cwd()}/${MAP_WORKER_SCRIPT}`, "utf8"),
+      readFile(`${process.cwd()}/${MAP_WORKER_THREAD}`, "utf8"),
+    ]);
+    await page.evaluate(loadPrintMapLibraryInPage, { library, worker });
   } catch (error) {
     return {
       ok: false,

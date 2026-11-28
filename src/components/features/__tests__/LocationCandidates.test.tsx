@@ -113,11 +113,12 @@ describe("LocationCandidates", () => {
     expect(within(button).getByText("バス停から遠すぎ").closest("[aria-hidden]")).not.toBeNull();
   });
 
-  it("遠すぎる候補は地図のアイコンをバツ付きにして、色に頼らず示す", () => {
+  it("徒歩距離の段階を丸・三角・バツの形で示し、色に頼らせない", () => {
     const { container } = render(
       <LocationCandidates
         candidates={[
-          { ...candidates[0], walkMeters: 537 },
+          { ...candidates[0], walkMeters: 450 },
+          { ...candidates[0], name: "遠い施設", walkMeters: 537 },
           { ...candidates[1], walkMeters: 939 },
         ]}
         label="目的地"
@@ -125,10 +126,11 @@ describe("LocationCandidates", () => {
       />,
     );
 
-    const icons = container.querySelectorAll("svg.lucide");
-    expect(icons).toHaveLength(2);
-    expect(icons[0].getAttribute("class")).toContain("lucide-map-pin");
-    expect(icons[1].getAttribute("class")).toContain("lucide-map-pin-x");
+    const icons = [...container.querySelectorAll("svg.lucide")];
+    expect(icons).toHaveLength(3);
+    expect(icons[0].getAttribute("class")).toContain("lucide-circle");
+    expect(icons[1].getAttribute("class")).toContain("lucide-triangle");
+    expect(icons[2].getAttribute("class")).toContain("lucide-x");
     icons.forEach((icon) => expect(icon).toHaveAttribute("aria-hidden", "true"));
   });
 

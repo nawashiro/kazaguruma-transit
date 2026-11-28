@@ -1,10 +1,23 @@
 "use client";
 
 import { useId } from "react";
-import { MapPin, MapPinX } from "lucide-react";
+import { Circle, Triangle, X } from "lucide-react";
 import type { GeocodeCandidate } from "@/lib/location/geocoding-search";
-import { walkAccessLevel } from "@/lib/transit/walk-access-level";
+import {
+  walkAccessLevel,
+  type WalkAccessLevel,
+} from "@/lib/transit/walk-access-level";
 import { WalkWarning } from "./WalkDistance";
+
+/**
+ * 徒歩距離の段階を図形で示す。色を見分けられなくても、丸・三角・バツの
+ * 形の違いで「そのまま選べる」「遠い」「選べない」を読み分けられる。
+ */
+const LEVEL_ICON: Record<WalkAccessLevel, typeof Circle> = {
+  near: Circle,
+  far: Triangle,
+  tooFar: X,
+};
 
 interface LocationCandidatesProps {
   candidates: GeocodeCandidate[];
@@ -16,11 +29,10 @@ interface LocationCandidatesProps {
 const ITEM_CLASS =
   "min-h-[44px] w-full min-w-0 rounded-box border p-2 text-start text-base whitespace-normal break-words transition-colors";
 
-function isUnselectable(candidate: GeocodeCandidate): boolean {
-  return (
-    candidate.walkMeters !== undefined &&
-    walkAccessLevel(candidate.walkMeters) === "tooFar"
-  );
+function levelOf(candidate: GeocodeCandidate): WalkAccessLevel {
+  return candidate.walkMeters === undefined
+    ? "near"
+    : walkAccessLevel(candidate.walkMeters);
 }
 
 export default function LocationCandidates({
@@ -43,9 +55,10 @@ export default function LocationCandidates({
       <ul id={listId} aria-label={`${label}の候補`} className="min-w-0 space-y-1">
         {candidates.map((candidate, index) => {
           const key = `${candidate.name}-${candidate.lat}-${candidate.lng}`;
-          const unselectable = isUnselectable(candidate);
+          const level = levelOf(candidate);
+          const unselectable = level === "tooFar";
           const reasonId = `${listId}-${index}-reason`;
-          const Icon = unselectable ? MapPinX : MapPin;
+          const Icon = LEVEL_ICON[level];
 
           return (
             <li key={key} className="min-w-0">

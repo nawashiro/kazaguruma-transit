@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import type { RouteDetailInfo, RouteDisplayStop } from "@/lib/transit/route-result-model";
+import { hasWalkWarning } from "@/lib/transit/walk-access-level";
 import { WalkDistance, WalkWarning } from "./WalkDistance";
 import { generateGoogleMapDirectionLink, generateGoogleMapPointLink } from "@/utils/maps";
 import StopTimeDisplay from "./StopTimeDisplay";
@@ -85,7 +86,7 @@ function WalkLink({ href, walkMeters }: { href: string; walkMeters?: number }) {
     <div className="min-w-0">
       <a href={href} target="_blank" rel="noopener noreferrer" className="link">徒歩で移動(Googleマップ)</a>
       <p className="flex flex-wrap items-center gap-2 text-base">
-        <WalkWarning walkMeters={walkMeters} />
+        {hasWalkWarning(walkMeters) && <WalkWarning walkMeters={walkMeters} />}
         <WalkDistance walkMeters={walkMeters} />
       </p>
     </div>

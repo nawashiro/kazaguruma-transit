@@ -3,8 +3,8 @@
 import { useId } from "react";
 import { MapPin } from "lucide-react";
 import type { GeocodeCandidate } from "@/lib/location/geocoding-search";
-import { walkAccessLevel } from "@/lib/transit/walk-access-level";
-import { WalkDistance, WalkWarning } from "./WalkDistance";
+import { hasWalkWarning, walkAccessLevel } from "@/lib/transit/walk-access-level";
+import { WalkWarning } from "./WalkDistance";
 
 interface LocationCandidatesProps {
   candidates: GeocodeCandidate[];
@@ -14,7 +14,7 @@ interface LocationCandidatesProps {
 }
 
 const ITEM_CLASS =
-  "min-h-[44px] w-full min-w-0 rounded-box border border-base-300 p-2 text-start text-base whitespace-normal break-words transition-colors";
+  "min-h-[44px] w-full min-w-0 rounded-box border p-2 text-start text-base whitespace-normal break-words transition-colors";
 
 export default function LocationCandidates({
   candidates,
@@ -43,12 +43,11 @@ export default function LocationCandidates({
               {candidate.address && candidate.address !== candidate.name && (
                 <span className="ml-2 break-words">{candidate.address}</span>
               )}
-              <span className="ml-2 inline-block">
-                <WalkWarning walkMeters={candidate.walkMeters} />
-              </span>
-              <span className="ml-2 inline-block">
-                <WalkDistance walkMeters={candidate.walkMeters} />
-              </span>
+              {hasWalkWarning(candidate.walkMeters) && (
+                <span className="ml-2 inline-block">
+                  <WalkWarning walkMeters={candidate.walkMeters} />
+                </span>
+              )}
             </>
           );
 
@@ -58,7 +57,10 @@ export default function LocationCandidates({
           ) {
             return (
               <li key={key} className="min-w-0">
-                <div className="min-h-[44px] w-full min-w-0 rounded-box border border-base-300 p-2 text-start text-base whitespace-normal break-words">
+                <div
+                  aria-disabled="true"
+                  className={`${ITEM_CLASS} border-dashed border-base-300 bg-base-300 cursor-not-allowed`}
+                >
                   {contents}
                 </div>
               </li>
@@ -69,7 +71,7 @@ export default function LocationCandidates({
             <li key={key} className="min-w-0">
               <button
                 type="button"
-                className={`${ITEM_CLASS} cursor-pointer hover:bg-base-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+                className={`${ITEM_CLASS} border-base-300 cursor-pointer hover:bg-base-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
                 onClick={() => onSelect(candidate)}
               >
                 {contents}

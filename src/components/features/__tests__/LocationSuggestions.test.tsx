@@ -102,7 +102,7 @@ describe("LocationSuggestions", () => {
     expect(container.querySelector("details")).toBeNull();
   });
 
-  it("施設の徒歩距離と、500mを超えるときの警告を表示する", () => {
+  it("500mを超える施設にだけ警告を付け、距離の数値は出さない", () => {
     const walkCategories: RouteDestinationCategory[] = [
       {
         category: "文化施設",
@@ -118,11 +118,13 @@ describe("LocationSuggestions", () => {
     );
     fireEvent.click(screen.getByText("文化施設"));
 
-    expect(screen.getByRole("button", { name: /科学技術館/ })).toHaveTextContent("535m");
     expect(screen.getByRole("button", { name: /科学技術館/ })).toHaveTextContent(
       "バス停から遠い",
     );
-    expect(screen.getByRole("button", { name: /近い施設/ })).toHaveTextContent("450m");
+    expect(screen.getByRole("button", { name: /近い施設/ })).not.toHaveTextContent(
+      "バス停から",
+    );
+    expect(screen.queryByText(/\d+m$/)).not.toBeInTheDocument();
     expect(screen.queryAllByText("バス停から遠い")).toHaveLength(1);
   });
 

@@ -61,7 +61,7 @@ describe("LocationFieldset", () => {
     expect(button.parentElement).not.toBe(group);
   });
 
-  it("確定した地点が遠ければ徒歩距離と警告を示す", () => {
+  it("確定した地点が遠ければ警告を示し、距離の数値は出さない", () => {
     render(
       <LocationFieldset
         label="目的地"
@@ -79,11 +79,11 @@ describe("LocationFieldset", () => {
 
     const confirmed = screen.getByTestId("selected");
     expect(confirmed).toHaveTextContent("皇居三の丸尚蔵館");
-    expect(confirmed).toHaveTextContent("963m");
     expect(confirmed).toHaveTextContent("バス停から遠すぎ");
+    expect(confirmed).not.toHaveTextContent("963m");
   });
 
-  it("徒歩距離がなければ距離も警告も示さない", () => {
+  it("徒歩距離がなければ警告も示さない", () => {
     render(
       <LocationFieldset
         label="目的地"
@@ -96,7 +96,7 @@ describe("LocationFieldset", () => {
 
     const confirmed = screen.getByTestId("selected");
     expect(confirmed).toHaveTextContent("千代田区役所");
-    expect(confirmed).not.toHaveTextContent(/m$/);
+    expect(confirmed).not.toHaveTextContent(/\d+m/);
     expect(confirmed).not.toHaveTextContent("バス停から");
   });
 });

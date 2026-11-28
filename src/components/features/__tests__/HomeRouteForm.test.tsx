@@ -13,15 +13,11 @@ jest.mock("../DestinationSelector", () => function DestinationSelector({
 }) {
   if (selectedLocation) {
     return (
-      <p data-testid="selected-destination">
+      <p
+        data-testid="selected-destination"
+        data-walk-meters={selectedLocation.walkMeters ?? ""}
+      >
         {selectedLocation.address}
-        {selectedLocation.walkMeters === undefined
-          ? null
-          : ` ${Math.round(selectedLocation.walkMeters)}m ${
-              selectedLocation.walkMeters > 500 ? "バス停から遠い" : ""
-            }${
-              selectedLocation.walkMeters > 750 ? " バス停から遠すぎ" : ""
-            }`}
       </p>
     );
   }
@@ -119,8 +115,7 @@ describe("HomeRouteForm", () => {
 
     const confirmed = screen.getByTestId("selected-destination");
     expect(confirmed).toHaveTextContent("皇居三の丸尚蔵館");
-    expect(confirmed).toHaveTextContent("963m");
-    expect(confirmed).toHaveTextContent("バス停から遠すぎ");
+    expect(confirmed).toHaveAttribute("data-walk-meters", "963");
   });
 
   it("徒歩距離のない目的地でも確定済みとして扱う", () => {
@@ -135,6 +130,6 @@ describe("HomeRouteForm", () => {
 
     const confirmed = screen.getByTestId("selected-destination");
     expect(confirmed).toHaveTextContent("千代田区役所");
-    expect(confirmed).not.toHaveTextContent("バス停から");
+    expect(confirmed).toHaveAttribute("data-walk-meters", "");
   });
 });

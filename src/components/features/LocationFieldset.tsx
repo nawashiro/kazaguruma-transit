@@ -3,7 +3,8 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import type { Location } from "@/types/core";
 import Button from "@/components/ui/Button";
-import { WalkDistance, WalkWarning } from "./WalkDistance";
+import { hasWalkWarning } from "@/lib/transit/walk-access-level";
+import { WalkWarning } from "./WalkDistance";
 
 export interface LocationSelectionProps {
   selectedLocation?: Location | null;
@@ -35,14 +36,10 @@ export default function LocationFieldset({
           <>
             <p data-selected-location tabIndex={-1} data-testid={testId} className="min-w-0 break-words text-base focus-visible:outline-2 focus-visible:outline-offset-2">
               {selectedLocation.address || `緯度: ${selectedLocation.lat.toFixed(6)}, 経度: ${selectedLocation.lng.toFixed(6)}`}
-              {selectedLocation.walkMeters !== undefined && (
-                <>
-                  {" "}
-                  <WalkDistance walkMeters={selectedLocation.walkMeters} />
-                  <span className="ml-2 inline-block">
-                    <WalkWarning walkMeters={selectedLocation.walkMeters} />
-                  </span>
-                </>
+              {hasWalkWarning(selectedLocation.walkMeters) && (
+                <span className="ml-2 inline-block">
+                  <WalkWarning walkMeters={selectedLocation.walkMeters} />
+                </span>
               )}
             </p>
             <p className="min-w-0 text-base"><Button onClick={onEdit}>なおす</Button></p>

@@ -5,7 +5,8 @@ import { Location } from "@/types/core";
 import type { RouteDestinationCategory } from "@/types/route-destinations";
 import { convertToLocation } from "@/utils/addressLoader";
 import RubyWrapper from "@/components/ui/RubyWrapper";
-import { WalkDistance, WalkWarning } from "./WalkDistance";
+import { hasWalkWarning } from "@/lib/transit/walk-access-level";
+import { WalkWarning } from "./WalkDistance";
 
 interface LocationSuggestionsProps {
   categories?: RouteDestinationCategory[];
@@ -35,12 +36,11 @@ function LocationSuggestions({
                       onClick={() => onLocationSelected(convertToLocation(location))}
                     >
                       {location.name}
-                      <span className="ml-2 inline-block">
-                        <WalkDistance walkMeters={location.walkMeters} />
-                      </span>
-                      <span className="ml-2 inline-block">
-                        <WalkWarning walkMeters={location.walkMeters} />
-                      </span>
+                      {hasWalkWarning(location.walkMeters) && (
+                        <span className="ml-2 inline-block">
+                          <WalkWarning walkMeters={location.walkMeters} />
+                        </span>
+                      )}
                     </button>
                   </li>
                 ))}

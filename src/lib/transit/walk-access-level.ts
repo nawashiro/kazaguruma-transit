@@ -23,3 +23,8 @@ export const WALK_WARNING_LABEL: Record<WalkAccessLevel, string | null> = {
   far: "バス停から遠い",
   tooFar: "バス停から遠すぎ",
 };
+
+/** 警告を表示する距離か。距離が分からない候補には警告しない。 */
+export function hasWalkWarning(meters?: number): boolean {
+  return meters !== undefined && walkAccessLevel(meters) !== "near";
+}

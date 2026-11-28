@@ -52,7 +52,7 @@ describe("LocationCandidates", () => {
     expect(onSelect).toHaveBeenCalledWith(candidates[1]);
   });
 
-  it("徒歩距離と警告を候補ごとに示す", () => {
+  it("遠い候補にだけ警告を付け、距離の数値は出さない", () => {
     render(
       <LocationCandidates
         candidates={[
@@ -65,13 +65,12 @@ describe("LocationCandidates", () => {
     );
 
     const list = screen.getByRole("list", { name: "目的地の候補" });
-    expect(within(list).getByText("450m")).toBeInTheDocument();
-    expect(within(list).getByText("537m")).toBeInTheDocument();
+    expect(within(list).queryByText(/\d+m$/)).not.toBeInTheDocument();
     expect(within(list).getByText("バス停から遠い")).toBeInTheDocument();
     expect(within(list).queryAllByText("バス停から遠い")).toHaveLength(1);
   });
 
-  it("750mを超える候補は選べず、理由を文章として残す", () => {
+  it("750mを超える候補は選べず、選べないことを示す", () => {
     const onSelect = jest.fn();
     render(
       <LocationCandidates
@@ -89,12 +88,27 @@ describe("LocationCandidates", () => {
     expect(buttons).toHaveLength(1);
     expect(buttons[0]).toHaveTextContent("神田駅");
 
-    expect(within(list).getByText("バス停から遠すぎ")).toBeInTheDocument();
-    expect(screen.getByText("939m")).toBeInTheDocument();
-    expect(within(list).getByText("千代田区役所")).toBeInTheDocument();
+    const unavailable = within(list).getByText("バス停から遠すぎ").closest("[aria-disabled]");
+    expect(unavailable).toHaveAttribute("aria-disabled", "true");
+    expect(unavailable).toHaveClass("bg-base-300", "border-dashed");
+    expect(unavailable).toHaveTextContent("千代田区役所");
 
     fireEvent.click(screen.getByText("千代田区役所"));
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("遠すぎる候補は背景を変えず、ポインターも指にしない", () => {
+    render(
+      <LocationCandidates
+        candidates={[{ ...candidates[1], walkMeters: 939 }]}
+        label="目的地"
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const item = screen.getByText("バス停から遠すぎ").closest("[aria-disabled]");
+    expect(item).toHaveClass("cursor-not-allowed");
+    expect(item).not.toHaveClass("hover:bg-base-100");
   });
 
   it("徒歩距離のない候補は警告を出さずに選べる", () => {

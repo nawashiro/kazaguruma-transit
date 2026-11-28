@@ -24,8 +24,8 @@ export function WalkWarning({ walkMeters }: { walkMeters?: number }) {
     <span
       className={
         level === "tooFar"
-          ? "badge badge-md h-auto whitespace-nowrap p-2 text-base badge-neutral"
-          : "badge badge-md h-auto whitespace-nowrap p-2 text-base badge-warning"
+          ? "badge badge-lg whitespace-nowrap badge-neutral"
+          : "badge badge-lg whitespace-nowrap badge-warning"
       }
     >
       {WALK_WARNING_LABEL[level]}

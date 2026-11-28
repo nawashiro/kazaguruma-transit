@@ -36,7 +36,7 @@
 
 ## 5. 入力画面
 
-- [x] 5.1 `src/components/features/LocationCandidates.tsx`で、各候補に警告を表示する。500m超は「バス停から遠い」、750m超は「バス停から遠すぎ」を文字で示し、750m超の項目はbuttonにせず文章として残す。この項目は`bg-base-300`・破線の枠・`cursor-not-allowed`・`aria-disabled`で選べないことを示す。バッジは`badge-lg`の既定のパディングに戻し、距離の数値は併記しない。`src/components/features/__tests__/LocationCandidates.test.tsx`に、3段階の表示・距離の数値を出さないこと・750m超が操作対象にならないことを追加して通す。
+- [x] 5.1 `src/components/features/LocationCandidates.tsx`で、各候補に警告を表示する。500m超は「バス停から遠い」、750m超は「バス停から遠すぎ」を文字で示す。750m超も`aria-disabled="true"`を付けたbuttonとして残し、`aria-describedby`で理由を読ませ、押下では確定しない。地色`bg-base-300`・破線の枠・`MapPin`から`MapPinX`へのアイコン変更で選べないことを示す。ポインターの形は変えない。バッジは`badge-lg`の既定のパディングに戻し、距離の数値は併記しない。`src/components/features/__tests__/LocationCandidates.test.tsx`に、3段階の表示・距離の数値を出さないこと・押しても確定しないこと・説明文とアイコンで選べないことを追加して通す。
 - [x] 5.2 `src/components/features/LocationSuggestions.tsx`で、500mを超える施設に「バス停から遠い」を付ける。距離の数値は表示しない。目録の候補は750m以内に限られるため、選択を止める分岐は置かない。`src/components/features/__tests__/LocationSuggestions.test.tsx`に、535mの施設が警告付きで選べ、450mの施設が警告なしで選べ、どちらにも距離の数値が出ないことを追加して通す。
 - [x] 5.3 `src/components/features/LocationFieldset.tsx`で、確定済みの地点に警告を示す。距離の数値は出さない。`src/components/features/__tests__/LocationFieldset.test.tsx`または既存の`DestinationSelector.test.tsx`に、URLで渡された963mの目的地が「バス停から遠すぎ」を示し、数値を出さないことを追加して通す。
 - [x] 5.4 `src/components/features/HomeRouteForm.tsx`で、施設詳細から渡された目的地の距離を確定済みの表示へ渡す。`src/components/features/__tests__/HomeRouteForm.test.tsx`が通ることを確認する。

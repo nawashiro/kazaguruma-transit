@@ -70,7 +70,7 @@ describe("LocationCandidates", () => {
     expect(within(list).queryAllByText("バス停から遠い")).toHaveLength(1);
   });
 
-  it("750mを超える候補は選べず、選べないことを示す", () => {
+  it("750mを超える候補もボタンとして残し、押しても確定しない", () => {
     const onSelect = jest.fn();
     render(
       <LocationCandidates
@@ -85,19 +85,18 @@ describe("LocationCandidates", () => {
 
     const list = screen.getByRole("list", { name: "目的地の候補" });
     const buttons = within(list).getAllByRole("button");
-    expect(buttons).toHaveLength(1);
-    expect(buttons[0]).toHaveTextContent("神田駅");
+    expect(buttons).toHaveLength(2);
 
-    const unavailable = within(list).getByText("バス停から遠すぎ").closest("[aria-disabled]");
+    const unavailable = buttons[1];
+    expect(unavailable).toHaveAccessibleName(/千代田区役所/);
     expect(unavailable).toHaveAttribute("aria-disabled", "true");
     expect(unavailable).toHaveClass("bg-base-300", "border-dashed");
-    expect(unavailable).toHaveTextContent("千代田区役所");
 
-    fireEvent.click(screen.getByText("千代田区役所"));
+    fireEvent.click(unavailable);
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it("遠すぎる候補は背景を変えず、ポインターも指にしない", () => {
+  it("遠すぎる候補は名前を汚さず、理由を説明文として読ませる", () => {
     render(
       <LocationCandidates
         candidates={[{ ...candidates[1], walkMeters: 939 }]}
@@ -106,9 +105,31 @@ describe("LocationCandidates", () => {
       />,
     );
 
-    const item = screen.getByText("バス停から遠すぎ").closest("[aria-disabled]");
-    expect(item).toHaveClass("cursor-not-allowed");
-    expect(item).not.toHaveClass("hover:bg-base-100");
+    const button = screen.getByRole("button", { name: /千代田区役所/ });
+    expect(button).toHaveAccessibleName("千代田区役所 千代田区九段南一丁目2番");
+    expect(button).toHaveAccessibleDescription(
+      "バス停から遠すぎるため、この地点は選べません。",
+    );
+    expect(within(button).getByText("バス停から遠すぎ").closest("[aria-hidden]")).not.toBeNull();
+  });
+
+  it("遠すぎる候補は地図のアイコンをバツ付きにして、色に頼らず示す", () => {
+    const { container } = render(
+      <LocationCandidates
+        candidates={[
+          { ...candidates[0], walkMeters: 537 },
+          { ...candidates[1], walkMeters: 939 },
+        ]}
+        label="目的地"
+        onSelect={jest.fn()}
+      />,
+    );
+
+    const icons = container.querySelectorAll("svg.lucide");
+    expect(icons).toHaveLength(2);
+    expect(icons[0].getAttribute("class")).toContain("lucide-map-pin");
+    expect(icons[1].getAttribute("class")).toContain("lucide-map-pin-x");
+    icons.forEach((icon) => expect(icon).toHaveAttribute("aria-hidden", "true"));
   });
 
   it("徒歩距離のない候補は警告を出さずに選べる", () => {

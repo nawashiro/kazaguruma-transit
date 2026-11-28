@@ -103,7 +103,7 @@
     {
       "id": "urn:uuid:019fa880-5cd5-7241-a976-801eef6324a9",
       "name": "昌平童夢館",
-      "includeInRouteForm": true,
+      "includeInRouteForm": false,
       "walkToStopMeters": 92
     },
     {
@@ -163,7 +163,7 @@
     {
       "id": "urn:uuid:019fa880-5cd5-788b-86e8-0ac1e6c4811a",
       "name": "富士見みらい館",
-      "includeInRouteForm": true,
+      "includeInRouteForm": false,
       "walkToStopMeters": 233
     },
     {
@@ -193,13 +193,13 @@
     {
       "id": "urn:uuid:019fa880-5cd5-7b01-9dd8-2e4787f423aa",
       "name": "西神田コスモス館",
-      "includeInRouteForm": true,
+      "includeInRouteForm": false,
       "walkToStopMeters": 27
     },
     {
       "id": "urn:uuid:019fa880-5cd5-7b6f-882e-4d07aad02219",
       "name": "子育てひろば あい・ぽーと麹町",
-      "includeInRouteForm": true,
+      "includeInRouteForm": false,
       "walkToStopMeters": 305
     },
     {
@@ -235,7 +235,7 @@
     {
       "id": "urn:uuid:019fa880-5cd5-7d23-9c07-684d56afd77e",
       "name": "ちよだパークサイドプラザ",
-      "includeInRouteForm": true,
+      "includeInRouteForm": false,
       "walkToStopMeters": 102
     },
     {
@@ -265,13 +265,13 @@
     {
       "id": "urn:uuid:019fa880-5cd5-7e0d-8300-8ab683bd0c1d",
       "name": "千代田区立四番町児童館",
-      "includeInRouteForm": true,
+      "includeInRouteForm": false,
       "walkToStopMeters": 216
     },
     {
       "id": "urn:uuid:019fa880-5cd5-7e95-9ea4-e8808e845cd7",
       "name": "一番町児童館",
-      "includeInRouteForm": true,
+      "includeInRouteForm": false,
       "walkToStopMeters": 231
     },
     {

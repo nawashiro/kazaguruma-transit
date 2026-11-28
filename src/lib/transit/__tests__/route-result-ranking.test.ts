@@ -26,15 +26,17 @@ const directCandidate: TestRouteCandidate = {
 
 const walking = { prioritizeSpeed: false, isDeparture: true };
 const speedy = { prioritizeSpeed: true, isDeparture: true };
+const arrivalMode = { prioritizeSpeed: false, isDeparture: false };
+const arrivalSpeedy = { prioritizeSpeed: true, isDeparture: false };
 
 describe("selectBestRouteCandidate", () => {
-  test("徒歩優先では乗換10分のコストで直通が勝つ", () => {
+  test("徒歩優先では乗換が5分早いだけなら直通を選ぶ", () => {
     expect(
       selectBestRouteCandidate([transferCandidate, directCandidate], walking)?.id
     ).toBe("direct");
   });
 
-  test("徒歩優先でも速さの差がコストを上回れば乗換が勝つ", () => {
+  test("徒歩優先でも乗換の到着が35分早ければ乗換を選ぶ", () => {
     const farDirect: TestRouteCandidate = {
       ...directCandidate,
       arrival: "11:30:00",
@@ -44,14 +46,39 @@ describe("selectBestRouteCandidate", () => {
     ).toBe("transfer");
   });
 
-  test("はやさ優先では到着の早い乗換が勝つ", () => {
+  test("乗換の到着がちょうど30分早ければ乗換を選ぶ", () => {
+    const boundaryDirect: TestRouteCandidate = {
+      ...directCandidate,
+      arrival: "11:25:00",
+    };
+    expect(
+      selectBestRouteCandidate([boundaryDirect, transferCandidate], walking)?.id
+    ).toBe("transfer");
+  });
+
+  test("直通がなければ乗換を選ぶ", () => {
+    expect(selectBestRouteCandidate([transferCandidate], walking)?.id).toBe(
+      "transfer"
+    );
+  });
+
+  test("はやさ優先では到着の早い乗換を選ぶ", () => {
     expect(
       selectBestRouteCandidate([directCandidate, transferCandidate], speedy)?.id
     ).toBe("transfer");
   });
 
-  test("到着時刻指定では遅く出発する経路を選ぶ", () => {
-    const arrivalMode = { prioritizeSpeed: false, isDeparture: false };
+  test("はやさ優先では直通の方が早ければ直通を選ぶ", () => {
+    const earlyDirect: TestRouteCandidate = {
+      ...directCandidate,
+      arrival: "10:50:00",
+    };
+    expect(
+      selectBestRouteCandidate([earlyDirect, transferCandidate], speedy)?.id
+    ).toBe("direct");
+  });
+
+  test("到着時刻指定では乗換が15分しか遅く出発できないなら直通を選ぶ", () => {
     const direct: TestRouteCandidate = {
       ...directCandidate,
       departure: "10:35:00",
@@ -61,12 +88,25 @@ describe("selectBestRouteCandidate", () => {
       departure: "10:50:00",
     };
     expect(selectBestRouteCandidate([direct, transfer], arrivalMode)?.id).toBe(
+      "direct"
+    );
+  });
+
+  test("到着時刻指定では乗換が45分遅く出発できるなら乗換を選ぶ", () => {
+    const direct: TestRouteCandidate = {
+      ...directCandidate,
+      departure: "09:50:00",
+    };
+    const transfer: TestRouteCandidate = {
+      ...transferCandidate,
+      departure: "10:35:00",
+    };
+    expect(selectBestRouteCandidate([direct, transfer], arrivalMode)?.id).toBe(
       "transfer"
     );
   });
 
   test("到着時刻指定のはやさ優先では出発の遅い経路を選ぶ", () => {
-    const arrivalMode = { prioritizeSpeed: true, isDeparture: false };
     const early: TestRouteCandidate = {
       ...directCandidate,
       id: "early",
@@ -77,16 +117,15 @@ describe("selectBestRouteCandidate", () => {
       id: "late",
       departure: "10:50:00",
     };
-    expect(selectBestRouteCandidate([early, late], arrivalMode)?.id).toBe("late");
+    expect(selectBestRouteCandidate([early, late], arrivalSpeedy)?.id).toBe(
+      "late"
+    );
   });
 
   test("到着と徒歩距離が同じなら乗換回数の少ない経路を選ぶ", () => {
     expect(
       selectBestRouteCandidate(
-        [
-          { ...transferCandidate, arrival: "11:00:00" },
-          directCandidate,
-        ],
+        [{ ...transferCandidate, arrival: "11:00:00" }, directCandidate],
         walking
       )?.id
     ).toBe("direct");

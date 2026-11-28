@@ -13,57 +13,63 @@ export interface RouteSelectionOptions {
   isDeparture: boolean;
 }
 
-/** 乗換1回あたりのコスト（分）。徒歩優先で到着・出発時刻に足し引きする。 */
-export const TRANSFER_PENALTY_MINUTES = 10;
+/** 乗換を選ぶために必要な、直通との差（分）。 */
+export const TRANSFER_AVOIDANCE_THRESHOLD_MINUTES = 30;
 
-interface ComparisonKey {
-  /** 主値。出発時刻指定では小さいほど、到着時刻指定では大きいほど望ましい。 */
-  primary: number;
-  walkingDistance: number;
-  transfers: number;
-  /** 同値時の時刻。小さいほど望ましい。 */
-  time: number;
-}
-
-function toComparisonKey(
+/** 出発時刻指定では到着時刻、到着時刻指定では出発時刻。 */
+function preferredSeconds(
   candidate: RouteCandidateMetrics,
   options: RouteSelectionOptions
-): ComparisonKey {
-  const penaltySeconds = TRANSFER_PENALTY_MINUTES * 60 * candidate.transfers;
-  const transitTime = parseGtfsTime(
+): number {
+  return parseGtfsTime(
     options.isDeparture ? candidate.arrival : candidate.departure
   );
-  return {
-    primary: options.prioritizeSpeed
-      ? transitTime
-      : options.isDeparture
-        ? transitTime + penaltySeconds
-        : transitTime - penaltySeconds,
-    walkingDistance: candidate.totalWalkingDistance,
-    transfers: candidate.transfers,
-    time: parseGtfsTime(
-      options.isDeparture ? candidate.departure : candidate.arrival
-    ),
-  };
 }
 
-function isBetter(
-  candidate: ComparisonKey,
-  best: ComparisonKey,
+function isDirect(candidate: RouteCandidateMetrics): boolean {
+  return candidate.transfers === 0;
+}
+
+function isPreferredWithinKind(
+  candidate: RouteCandidateMetrics,
+  best: RouteCandidateMetrics,
   options: RouteSelectionOptions
 ): boolean {
-  if (candidate.primary !== best.primary) {
+  const candidateTime = preferredSeconds(candidate, options);
+  const bestTime = preferredSeconds(best, options);
+  if (candidateTime !== bestTime) {
     return options.isDeparture
-      ? candidate.primary < best.primary
-      : candidate.primary > best.primary;
+      ? candidateTime < bestTime
+      : candidateTime > bestTime;
   }
-  if (candidate.walkingDistance !== best.walkingDistance) {
-    return candidate.walkingDistance < best.walkingDistance;
+  if (candidate.totalWalkingDistance !== best.totalWalkingDistance) {
+    return candidate.totalWalkingDistance < best.totalWalkingDistance;
   }
-  if (candidate.transfers !== best.transfers) {
-    return candidate.transfers < best.transfers;
+  return parseGtfsTime(candidate.departure) < parseGtfsTime(best.departure);
+}
+
+function pickWithinKind<Candidate extends RouteCandidateMetrics>(
+  candidates: readonly Candidate[],
+  options: RouteSelectionOptions
+): Candidate | undefined {
+  let best: Candidate | undefined;
+  for (const candidate of candidates) {
+    if (best === undefined || isPreferredWithinKind(candidate, best, options)) {
+      best = candidate;
+    }
   }
-  return candidate.time < best.time;
+  return best;
+}
+
+function transferBeatsDirect(
+  transfer: RouteCandidateMetrics,
+  direct: RouteCandidateMetrics,
+  options: RouteSelectionOptions
+): boolean {
+  const difference = options.isDeparture
+    ? preferredSeconds(direct, options) - preferredSeconds(transfer, options)
+    : preferredSeconds(transfer, options) - preferredSeconds(direct, options);
+  return difference >= TRANSFER_AVOIDANCE_THRESHOLD_MINUTES * 60;
 }
 
 /** 優先条件に従って最適な経路候補を返す。 */
@@ -73,14 +79,20 @@ export function selectBestRouteCandidate<
   candidates: readonly Candidate[],
   options: RouteSelectionOptions
 ): Candidate | undefined {
-  let bestCandidate: Candidate | undefined;
-  let bestKey: ComparisonKey | undefined;
-  for (const candidate of candidates) {
-    const key = toComparisonKey(candidate, options);
-    if (bestKey === undefined || isBetter(key, bestKey, options)) {
-      bestCandidate = candidate;
-      bestKey = key;
-    }
+  const direct = pickWithinKind(
+    candidates.filter(isDirect),
+    options
+  );
+  const transfer = pickWithinKind(
+    candidates.filter((candidate) => !isDirect(candidate)),
+    options
+  );
+  if (options.prioritizeSpeed) {
+    if (direct === undefined) return transfer;
+    if (transfer === undefined) return direct;
+    return isPreferredWithinKind(transfer, direct, options) ? transfer : direct;
   }
-  return bestCandidate;
+  if (direct === undefined) return transfer;
+  if (transfer === undefined) return direct;
+  return transferBeatsDirect(transfer, direct, options) ? transfer : direct;
 }

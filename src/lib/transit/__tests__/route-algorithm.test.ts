@@ -69,8 +69,59 @@ describe("TimeTableRouter", () => {
     expect(ROUTE_PARAMS.MAX_TRANSFERS).toBe(1);
   });
 
-  test("乗換1回のコストを10分として探索パラメータに置く", () => {
-    expect(ROUTE_PARAMS.TRANSFER_PENALTY_MINUTES).toBe(10);
+  test("乗換の待ち上限を60分にする", () => {
+    expect(ROUTE_PARAMS.MAX_TRANSFER_WAIT).toBe(60);
+  });
+
+  test("乗換の待ちが16分以上でも60分以内なら乗り継ぎを候補にする", async () => {
+    mockedTripFindMany.mockResolvedValue([
+      trip("first", "前半", [
+        stopTime("origin", 1, "09:05:00"),
+        stopTime("transfer", 2, "09:20:00"),
+      ]),
+      trip("second", "後半", [
+        stopTime("transfer", 1, "09:50:00"),
+        stopTime("destination", 2, "10:10:00"),
+      ]),
+    ] as never);
+
+    const routes = await new TimeTableRouter().findOptimalRoute(
+      "origin",
+      "destination",
+      new Date(2026, 6, 20, 9, 0),
+      true,
+      1
+    );
+
+    expect(routes).toHaveLength(1);
+    expect(routes[0]).toMatchObject({
+      transfers: 1,
+      departure: "09:05:00",
+      arrival: "10:10:00",
+    });
+  });
+
+  test("乗換の待ちが60分を超える乗り継ぎは候補にしない", async () => {
+    mockedTripFindMany.mockResolvedValue([
+      trip("first", "前半", [
+        stopTime("origin", 1, "09:05:00"),
+        stopTime("transfer", 2, "09:20:00"),
+      ]),
+      trip("second", "後半", [
+        stopTime("transfer", 1, "10:21:00"),
+        stopTime("destination", 2, "10:41:00"),
+      ]),
+    ] as never);
+
+    const routes = await new TimeTableRouter().findOptimalRoute(
+      "origin",
+      "destination",
+      new Date(2026, 6, 20, 9, 0),
+      true,
+      1
+    );
+
+    expect(routes).toHaveLength(0);
   });
 
   test("一括取得した時刻表を索引化して直通便と1回乗換便を探す", async () => {

@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
 
       // PDFバッファをクライアントに返す
       logger.log("PDF送信開始");
-      return new NextResponse(pdfBuffer, {
+      return new NextResponse(new Uint8Array(pdfBuffer), {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename="${encodeURIComponent(
